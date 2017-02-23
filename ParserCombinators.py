@@ -82,7 +82,7 @@ def DEBUG_DUMP_SYNTAX_TREE(parser_root, syntax_tree, compiler, ext):
             prefix = "DEBUG"
         ast_file_name = (DEBUG_DUMP_AST or compiler.grammar_name or \
                          parser_root.__class__.__name__) + ext
-        with open(os.path.join(prefix, ast_file_name), "w") as f:
+        with open(os.path.join(prefix, ast_file_name), "w", encoding="utf-8") as f:
             f.write(syntax_tree.as_sexpr())
 
 
@@ -1232,7 +1232,7 @@ def load_if_file(text_or_file):
     a multiline string) returns the content of `text_or_file`.
     """
     if text_or_file and text_or_file.find('\n') < 0:
-        with open(text_or_file) as f:
+        with open(text_or_file, encoding="utf-8") as f:
             content = f.read()
         return content
     else:
@@ -1722,7 +1722,7 @@ def self_test():
             DELIMITER = "\n\n### DON'T EDIT OR REMOVE THIS LINE ###\n\n"
 
             try:
-                f = open(rootname + '_compiler.py', 'r')
+                f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
                 source = f.read()
                 scanner, parser, ast, compiler = source.split(DELIMITER)
             except (PermissionError, FileNotFoundError, IOError) as error:
@@ -1733,7 +1733,7 @@ def self_test():
                 if f:  f.close()
 
             try:
-                f = open(rootname + '_compiler.py', 'w')
+                f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
                 f.write(scanner)
                 f.write(DELIMITER)
                 f.write(result)
@@ -1760,7 +1760,7 @@ def self_test():
 
         def test(file_name):
             print(file_name)
-            with open('examples/' + file_name) as f:
+            with open('examples/' + file_name, encoding="utf-8") as f:
                 grammar = f.read()
             compiler_name = os.path.basename(os.path.splitext(file_name)[0])
             compiler = EBNFCompiler(compiler_name, grammar)
