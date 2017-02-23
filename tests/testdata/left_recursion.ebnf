@@ -1,0 +1,6 @@
+formula = expr "." .
+expr = expr ("+"|"-") term | term.
+term = term ("*"|"/") factor | factor.
+factor = /[0-9]+/.
+
+# example:  "5 + 3 * 4"

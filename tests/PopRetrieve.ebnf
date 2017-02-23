@@ -1,0 +1,5 @@
+document       = { text | codeblock }
+codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
+delimiter      = delimiter_sign
+delimiter_sign = /`+/
+text           = /[^`]+/ 
