@@ -1,0 +1,26 @@
+# Markdown-Grammar
+
+
+text = [pbreak] { blockelem (pbreak | EOF)}
+blockelem = paragraph
+paragraph = flowtext
+
+flowtext = flowline { (linebreak | softbreak) flowline }
+flowline = { WSPC | chunk | escaped | inlinemarker }
+
+inlinemarker = ST | EM | BT
+
+
+
+linebreak = /(?:\t ?\n)|(?: [ \t]+)\n(?![ \t]*\n)/
+softbreak = /\n(?![ \t]*\n)/
+pbreak = /(?:^|\n)(?:[ \t]*\n)+/
+
+url = /(?:\w+:)?(?:\w|[.\/\\+\-?=&])+/
+
+ST = /\*\*(?!\*)/ | /__(?!_)/
+EM = /\*(?!\*)/ | /_(?!_)/
+BT = /`/ ;                      # backtick
+
+WSP = /(?:(?!\t\n)[ \t](?! \n))+/
+EOF = !/./

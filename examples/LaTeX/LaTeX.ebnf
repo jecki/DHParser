@@ -1,0 +1,33 @@
+# latex Grammar
+
+@ whitespace := /[ \t]*\n?(?!\s*\n)[ \t]*/
+@ comment    := /%.*(?:\n|$)/
+
+genericenv := beginenv sequence endenv
+beginenv   := "\begin" §( "{" name "}" )
+endenv     := "\end" §( "{" @name "}" )
+
+name       := ~/\w+/
+
+genericcmd := command [ config ] block
+command    := /\\\w+/
+config     := "[" cfgtext §"]"
+
+sequence   := { partext | parblock }
+
+parblock   := "{" { partext | parblock } §"}"
+block      := "{" { text | block } §"}"
+
+partext    := text | par
+text       := cfgtext | brackets
+cfgtext    := chunk | wspc | escaped
+
+escaped    := /\\[%$&]/
+brackets   := /[\[\]]/                   # left and right square brackets: [ ]
+chunk      := /[^\\%$&\{\}\[\]\s\n]+/    # some piece of text excluding whitespace,
+                                         # linefeed and special characters
+wspc       := /[ \t]*\n?(?!\s*\n)[ \t]*/ # whitespace, including at most one linefeed
+lf         := /[ \t]*\n(?!\s*\n)/        # a linefeed, but not an empty line (i.e. par)
+par        := /\s*\n\s*\n/               # at least one empty line, i.e.
+                                         # [whitespace] linefeed [whitespace] linefeed
+

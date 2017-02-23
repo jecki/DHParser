@@ -1,0 +1,24 @@
+# EBNF-Syntax von MLW-Einträgen (Versuch!!!)
+
+lemma           = "LEMMA" wort ["," flexion] erklaerung	      
+flexion         = endung { "," endung | " " genus "." }
+endung          = [MINUS] KLEIBUCHSTABEN
+genus           = KLEINBUCHSTABE
+erklaerung      = "ERKLÄRUNG" [interpretament] { bedeutung }
+bedeutung       = "BEDEUTUNG" (interpretament | kategorie) { beleg }
+interpretament  = lateinisch "---" deutsch
+lateinisch      = WORT { !"---" (WORT | SONDERZEICHEN | LEERRAUM) }
+deutsch         = WORT { WORT | SONDERZEICHEN | LEERRAUM }
+kategorie       = WORT { WORT | SONDERZEICHEN | LEERRAUM }
+beleg           = "*" { TEXT | erlaeuterung }
+erlaeuterung    = "{" TEXT "}"
+
+TEXT            = WORT { WORT | SONDERZEICHEN | LEERRAUM | ZAHL }
+LEERRAUM        = /\s+/
+KLEINBUCHSTABE  = /[a-z]/
+KLEINBUCHSTABEN = /[a-z]+/
+WORT            = /[A-ZÄÖÜ]?[a-zäöüß]*/
+ZAHL            = /[0-9]+/
+MINUS           = /-/
+SONDERZEICHEN   = /[.,-'"`()]/
+

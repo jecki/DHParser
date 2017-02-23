@@ -1,0 +1,3 @@
+regex := /\w+    # one or more alphabetical characters including the underscore
+          [+]    # followed by a plus sign
+          \w*    # possibly followed by more alpha chracters/

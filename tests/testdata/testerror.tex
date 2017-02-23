@@ -1,0 +1,33 @@
+% This file contains several errors to test error catching by the parser
+
+\documentclass[12pt, english, a4paper}{article}
+\usepackage[natbib=true][biblatex}
+
+\begin{document}
+
+\title{What's wrong with social simulations?}
+
+\date{May 2016}
+
+\maketitle
+
+\begin{abstract}
+Here comes the Abstract \ldots. This part is {\em emphasized}
+\end{noabstract}
+
+\newpage
+
+\tableofcontents
+
+\section{Simple text components}
+
+This is the [first] section. It contains a reference to
+Willibald \citet[32]{Willibald2015}. Plus, it also refers to
+Kunigunde's completed works \citep{Kunigunde2010}.
+
+% this is a comment
+This is line that ends with a LaTeX-comment. % this is another comment
+% this is a comment line within(!) a paragraph
+This line continues the paragraph!
+
+\end{document}

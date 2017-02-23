@@ -1,0 +1,26 @@
+# Starting comment
+@ whitespace := /\s*/         # '@' means the folowing assingment is a compiler directive
+
+syntax     := { production }
+production := symbol "=" expression "."
+
+expression := term { "|" term }
+term       := factor { factor }
+factor     := symbol
+           | literal
+           | regexp    # regular expressions
+           | option
+           | repetition
+           | group
+
+option     := "[" expression "]"
+repetition := "{" expression "}"
+group      := "(" expression ")"
+
+symbol     := ~/\w+/~
+literal    := ~/"(?:[^"]|\\")*"/~
+           | ~/'(?:[^']|\\')*'/~
+regexp     := ~/~\/(?:[^\/]|(?<=\\)\/)*\/~/~
+           | ~/\/(?:[^\/]|(?<=\\)\/)*\//~
+
+# trailing whitespace and comments
