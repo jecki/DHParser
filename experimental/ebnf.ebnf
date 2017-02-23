@@ -1,26 +1,40 @@
-# Starting comment
-@ whitespace := /\s*/         # '@' means the folowing assingment is a compiler directive
+# EBNF-Grammar in EBNF
 
-syntax     := { production }
-production := symbol "=" expression "."
+@ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars upto and including '\n'
+@ whitespace =  /\s*/                            # whitespace includes linefeed
+@ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
 
-expression := term { "|" term }
-term       := factor { factor }
-factor     := symbol
-           | literal
-           | regexp    # regular expressions
-           | option
-           | repetition
-           | group
+syntax     =  [~//] { definition | directive } §EOF
+definition =  symbol §"=" expression
+directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
-option     := "[" expression "]"
-repetition := "{" expression "}"
-group      := "(" expression ")"
+expression =  term { "|" term }
+term       =  factor { factor }
+factor     =  [flowmarker] [retrieveop] symbol !"="    # negative lookahead to be sure it's not a definition
+            | [flowmarker] literal
+            | [flowmarker] regexp
+            | [flowmarker] group
+            | [flowmarker] oneormore
+            | repetition
+            | option
 
-symbol     := ~/\w+/~
-literal    := ~/"(?:[^"]|\\")*"/~
-           | ~/'(?:[^']|\\')*'/~
-regexp     := ~/~\/(?:[^\/]|(?<=\\)\/)*\/~/~
-           | ~/\/(?:[^\/]|(?<=\\)\/)*\//~
+flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
+              "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+retrieveop =  "::" | ":"                          # '::' pop, ':' retrieve
 
-# trailing whitespace and comments
+group      =  "(" expression §")"
+option     =  "[" expression §"]"
+repetition =  "{" expression §"}"
+oneormore  =  "<" expression §">"
+
+symbol     =  /\w+/~                             # e.g. expression, factor, parameter_list
+literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+            | /'(?:[^']|\\')*?'/~                # whitespace surrounding literals will be ignored tacitly.
+regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                 # '~' is a whitespace-marker, if present leading or trailing
+                                                 # whitespace of a regular expression will be ignored tacitly.
+list_      =  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                 # BEGIN_QUOTE, END_QUOTE ; see markdown.py for an exmaple
+EOF =  !/./
+
+
