@@ -1,0 +1,45 @@
+# Markdown-Grammar WORK IN PROGRESS!!!
+
+@ tokens  := CONTINUATION, BEGIN_QUOTE, END_QUOTE, BEGIN_VERBATIM, END_VERBATIM,
+             BEGIN_FENCED, END_FENCED, BEGIN_BULLET, END_BULLET,
+             BEGIN_ORDERED, END_ORDERED, BEGIN_PARAGRAPH, END_PARAGRAPH
+
+document  := [vspace] { block [ vspace ] } EOF
+
+block     := paragraph
+           | verbatim
+
+#        | blockquote
+#        | horizontalrule
+#        | heading
+#        | orderedlist
+#        | bulletlist
+
+paragraph := BEGIN_PARAGRAPH { CONTINUATION | line } END_PARAGRAPH
+verbatim  := BEGIN_VERBATIM { CONTINUATION | line } END_VERBATIM
+
+textchunk := /[^\\!*_]/
+line      := /[^\x1b\x1c\r\n]*/ NL
+vspace    := < blankline >
+blankline := [ SP ] NL
+
+
+delim_run := stars | underscrs
+
+stars     := /[*]+/
+underscrs := /_+/
+
+EXT_WSPC  := BEGIN_ANY | END_ANY | CONTINUATION |       # extended whitespace
+             WSPC | SP | HBR | NL | EOF
+WSPC      := /\s/                                       # whitespace
+SP        := /(?: |\t)+/                                # real space
+BEGIN_ANY := BEGIN_QUOTE | BEGIN_VERBATIM |
+             BEGIN_FENCED | BEGIN_BULLET |
+             BEGIN_ORDERED | BEGIN_PARAGRAPH
+END_ANY   := END_QUOTE | END_VERBATIM |
+             END_FENCED | END_BULLET |
+             END_ORDERED | END_PARAGRAPH
+PUNCT     := /[!"#$%&'()*+\-.\/:;<=>?@\[\\\]^_`{|}~]/   # punctuation
+HBR       := /(?:\\\r?\n)|(?:  \r?\n)/                  # hard line break
+NL        := /\r?\n/                                    # newline
+EOF       := !/./                                       # end of file
