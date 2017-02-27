@@ -457,9 +457,7 @@ class ParserRoot:
 ZOMBIE_PARSER = Parser()  # zombie object to avoid distinction of cases
 # for the Node.parser variable
 RE_WSPC = Parser(WHITESPACE_KEYWORD)  # Dummy Parser for comments that were captured
-
-
-# by an RE Parser via the `comment`-parameter
+                                      # by an RE Parser via the `comment`-parameter
 
 
 ##############################################################################
@@ -1162,7 +1160,7 @@ class EBNFGrammar(ParserRoot):
 
     symbol     :  /\w+/~                             # e.g. expression, factor, parameter_list
     literal    :  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                | /'(?:[^']|\\')*?'/~                # whitespace surrounding literals will be ignored tacitly.
+                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
     regexp     :  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                      # '~' is a whitespace-marker, if present leading or trailing
                                                      # whitespace of a regular expression will be ignored tacitly.

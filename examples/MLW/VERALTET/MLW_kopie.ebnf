@@ -1,0 +1,25 @@
+# EBNF-Syntax für MLW-Artikel
+
+@ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+@ whitespace    =  /\s*/            # Auch Zeilenspränge zählen als Leerraum
+@ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
+
+
+Artikel         = LemmaPosition  ArtikelKopf  BedeutungsPosition
+
+LemmaPosition   = Lemma [ LemmaVarianten ] §"," GrammatikPosition
+Lemma           = { _tll | _gesichert } /[a-z]+/~
+_tll            = "*"
+_gesichert      = NIEMALS           # Zeichenfolge noch nicht festgelegt
+
+LemmaVarianten  = "(" LVariante { "," LVariante } [LVZusatz] ")"
+LVariante       = ~/(?:[a-z]|-)+/~  # Buchstabenfolge mit Trennzeichen "-"
+LVZusatz        = _typ
+_typ            = "sim."            # | "sim..."
+
+
+
+LEER            = [~//]
+DATEI_ENDE      = !/./
+NIEMALS         = /(?!.)/
+
