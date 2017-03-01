@@ -2,7 +2,6 @@
 
 """ParserCombinators.py - parser combinators for left-recursive grammers
 
-
 Copyright 2016  by Eckhart Arnold
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +49,7 @@ Juancarlo Añez: grako, a PEG parser generator in Python,
 https://bitbucket.org/apalala/grako
 """
 
-# TODO: Replace copy.deepcopy() call in ParserRoot class by custom copy()-methods in the Parser classes. Is that really better?
+# TODO: Replace copy.deepcopy() call in ParserHeadquarter class by custom copy()-methods in the Parser classes. Is that really better?
 
 
 import collections
@@ -220,7 +219,7 @@ class Node:
                     line and column.
         """
         def opening(node):
-            s = '(' + (node.parser.component or node.parser.__class__.__name__)
+            s = '(' + str(node.parser) # (node.parser.component or node.parser.__class__.__name__)
             # s += " '(pos %i)" % node.pos
             if src:
                 s += " '(pos %i  %i %i)" % (node.pos, *line_col(src, node.pos))
@@ -297,8 +296,8 @@ def error_messages(text, errors):
 #
 ##############################################################################
 
-LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
-                           # value ought not to be set too high
+LEFT_RECURSION_DEPTH = 10   # because of pythons recursion depth limit, this
+                            # value ought not to be set too high
 MAX_DROPOUTS = 25  # stop trying to recover parsing after so many
 
 WHITESPACE_KEYWORD = 'wspc__'
@@ -324,15 +323,27 @@ def left_recursion_guard(callfunc):
             # # call preprocess hook
             # if parser.preprocess is not None:
             #     text = parser.preprocess(parser, text)
+            parser.headquarter.call_stack.append(parser)
+            parser.headquarter.moving_forward = True
 
             # run original __call__ method
             result = callfunc(parser, text)
+            # if DEBUG: print(str(parser), len(result[1]))
+
+            if parser.headquarter.moving_forward:  # and result[0] == None
+                parser.headquarter.moving_forward = False
+                st = "->".join((str(p) for p in parser.headquarter.call_stack))
+                if result[0]:
+                    print("HIT!", st, '\t"%s"' % str(result[0]).replace('\n', ' '))
+                else:
+                    print("FAIL", st, '\t"%s"' % (text[:20].replace('\n',' ') + "..."))
+            parser.headquarter.call_stack.pop()
 
             if result[0] is not None:
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 parser.visited[location] = result
-                parser.head.last_node = result[0]
+                parser.headquarter.last_node = result[0]
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -366,7 +377,7 @@ class Parser(metaclass=ParserMetaClass):
     def __init__(self, component=None):
         assert component is None or isinstance(component, str)
         self.component = component or ''
-        self.head = None          # head quater for global variables etc.
+        self.headquarter = None          # head quater for global variables etc.
         self.visited = dict()
         self.recursion_counter = dict()
         self.cycle_detection = set()
@@ -377,7 +388,7 @@ class Parser(metaclass=ParserMetaClass):
         raise NotImplementedError
 
     def __str__(self):
-        return self.component + ("<%s>" % self.__class__.__name__)
+        return self.component or self.__class__.__name__
 
     def apply(self, func):
         """Applies function `func(parser)` recursively to this parser and all
@@ -400,20 +411,22 @@ class Parser(metaclass=ParserMetaClass):
         return self
 
 
-class ParserRoot:
+class ParserHeadquarter:
     def __init__(self, root=None):
         self.root__ = root if root else copy.deepcopy(self.__class__.root__)
         self.root__.apply(self._add_parser)
         self.variables = dict()
         self.last_node = None
+        self.call_stack = []
+        self.moving_forward = True
         self.unused = True
 
     def _add_parser(self, parser):
-        """Adds the copy of the parser object to this instance of ParserRoot.
+        """Adds the copy of the parser object to this instance of ParserHeadquarter.
         """
         if parser.component:  # overwrite class variable with instance variable
             self.__setattr__(parser.component, parser)
-        parser.head = self
+        parser.headquarter = self
 
     def parse(self, document):
         """Parses a document with with parser-combinators.
@@ -426,7 +439,7 @@ class ParserRoot:
             Node: The root node ot the parse tree.
         """
         assert self.unused, ("Parser has been used up. Please create a new "
-                             "instance of the ParserRoot class!")
+                             "instance of the ParserHeadquarter class!")
         self.unused = False
         parser = self.root__
         stitches = [];
@@ -513,7 +526,7 @@ class RegExp(Parser):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = RegExp(self.component, regexp, self.orig_re)
-        duplicate.head = self.head
+        duplicate.headquarter = self.headquarter
         duplicate.visited = copy.deepcopy(self.visited, memo)
         duplicate.recursion_counter = copy.deepcopy(self.recursion_counter,
                                                     memo)
@@ -539,8 +552,9 @@ class RegExp(Parser):
         return None, text
 
     def __str__(self):
-        pattern = self.orig_re if self.orig_re else self.regexp.pattern  # for readability of error messages !
-        return Parser.__str__(self) + "(" + pattern + ")"
+        pattern = self.orig_re or self.regexp.pattern  # for readability of error messages !
+        return Parser.__str__(self).replace(TOKEN_KEYWORD, "RE") \
+               + "/" + pattern + "/"
 
 
 def escape_re(s):
@@ -589,9 +603,9 @@ class UnaryOperator(Parser):
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
 
-    def __str__(self):
-        return Parser.__str__(self) + \
-               ("" if self.component else "(" + str(self.parser) + ")")
+    # def __str__(self):
+    #     return Parser.__str__(self) + \
+    #            ("" if self.component else "(" + str(self.parser) + ")")
 
 
 class NaryOperator(Parser):
@@ -605,11 +619,11 @@ class NaryOperator(Parser):
             for parser in self.parsers:
                 parser.apply(func)
 
-    def __str__(self):
-        return Parser.__str__(self) + \
-               ("" if self.component else str([str(p) for p in self.parsers]))
-        # return "(" + ",\n".join(["\n    ".join(str(parser).split("\n"))
-        #                          for parser in self.parsers]) + ")"
+    # def __str__(self):
+    #     return Parser.__str__(self) + \
+    #            ("" if self.component else str([str(p) for p in self.parsers]))
+    #     # return "(" + ",\n".join(["\n    ".join(str(parser).split("\n"))
+    #     #                          for parser in self.parsers]) + ")"
 
 
 class Optional(UnaryOperator):
@@ -617,9 +631,11 @@ class Optional(UnaryOperator):
         super(Optional, self).__init__(component, parser)
         assert isinstance(parser, Parser)
         assert not isinstance(parser, Optional), \
-            "Nesting options would be redundant!"
+            "Nesting options would be redundant: %s(%s)" % \
+            (str(component), str(parser.component))
         assert not isinstance(parser, Required), \
-            "Nestion options with required elemts is contradictory!"
+            "Nestion options with required elements is contradictory: " \
+            "%s(%s)" % (str(component), str(parser.component))
 
     def __call__(self, text):
         node, text = self.parser(text)
@@ -760,7 +776,7 @@ class Lookbehind(FlowOperator):
         self.sign = sign
 
     def __call__(self, text):
-        if isinstance(self.head.last_node, Lookahead):
+        if isinstance(self.headquarter.last_node, Lookahead):
             return Node(self, '').add_error('Lookbehind right after Lookahead '
                                             'does not make sense!'), text
         if self.sign(self.condition()):
@@ -770,7 +786,7 @@ class Lookbehind(FlowOperator):
 
     def condition(self):
         node = None
-        for node in iter_right_branch(self.head.last_node):
+        for node in iter_right_branch(self.headquarter.last_node):
             if node.parser.component == self.parser.component:
                 return True
         if node and isinstance(self.parser, RegExp) and \
@@ -802,7 +818,7 @@ class Capture(UnaryOperator):
     def __call__(self, text):
         node, text = self.parser(text)
         if node:
-            stack = self.head.variables.setdefault(self.component, [])
+            stack = self.headquarter.variables.setdefault(self.component, [])
             stack.append(str(node))
         return Node(self, node), text
 
@@ -814,7 +830,7 @@ class Retrieve(Parser):
         assert self.component
 
     def __call__(self, text):
-        stack = self.head.variables[self.component]
+        stack = self.headquarter.variables[self.component]
         value = self.pick_value(stack)
         if text.startswith(value):
             return Node(self, value), text[len(value):]
@@ -878,7 +894,8 @@ class Forward(Parser):
 PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
                   'PositiveLookahead', 'NegativeLookahead', 'Optional',
                   'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
-                  'OneOrMore', 'ParserRoot', 'Capture', 'Retrieve', 'Pop'}
+                  'OneOrMore', 'ParserHeadquarter', 'Capture', 'Retrieve',
+                  'Pop'}
 
 
 ##############################################################################
@@ -1075,7 +1092,7 @@ class CompilerBase:
             return compiler(node)
 
 
-def full_compilation(source, parser_root, AST_transformations, compiler):
+def full_compilation(source, parser_HQ, AST_transformations, compiler):
     """Compiles a source in three stages:
         1. Parsing
         2. AST-transformation
@@ -1085,7 +1102,7 @@ def full_compilation(source, parser_root, AST_transformations, compiler):
 
     Args:
         source (str):                the input source for compilation
-        parser_root (ParserRoot):    the ParserRoot object
+        parser_HQ (ParserHQ):        the ParserHeadquarter object
         AST_transformations (dict):  a table that assigns AST transformation
                 functions to parser components (see function ASTTransform)
         compiler (object):  an instance of a class derived from `CompilerBase`
@@ -1096,8 +1113,8 @@ def full_compilation(source, parser_root, AST_transformations, compiler):
             during parsing or AST-transformation and the compiler wasn't
             invoked; error messages; abstract syntax tree
     """
-    syntax_tree = parser_root.parse(source)
-    DEBUG_DUMP_SYNTAX_TREE(parser_root, syntax_tree, compiler, ext='.cst')
+    syntax_tree = parser_HQ.parse(source)
+    DEBUG_DUMP_SYNTAX_TREE(parser_HQ, syntax_tree, compiler, ext='.cst')
 
     errors = syntax_tree.collect_errors(clear=True)
     assert errors or str(syntax_tree) == source
@@ -1105,7 +1122,7 @@ def full_compilation(source, parser_root, AST_transformations, compiler):
     # likely that error list gets littered with compile error messages
     if not errors:
         ASTTransform(syntax_tree, AST_transformations)
-        DEBUG_DUMP_SYNTAX_TREE(parser_root, syntax_tree, compiler, ext='.ast')
+        DEBUG_DUMP_SYNTAX_TREE(parser_HQ, syntax_tree, compiler, ext='.ast')
         # print(syntax_tree.as_sexpr())
         result = compiler.compile__(syntax_tree)
         errors.extend(syntax_tree.collect_errors(clear=True))
@@ -1126,7 +1143,7 @@ COMPILER_SYMBOLS = {'CompilerBase', 'Error', 'Node'}
 ##############################################################################
 
 
-class EBNFGrammar(ParserRoot):
+class EBNFGrammar(ParserHeadquarter):
     r"""Parser for an EBNF source file, with this grammar:
 
     # EBNF-Grammar in EBNF
@@ -1352,7 +1369,8 @@ class EBNFCompiler(CompilerBase):
         # add EBNF grammar to the doc string of the parser class
         article = 'an ' if self.grammar_name[0:1].upper() \
                            in EBNFCompiler.VOWELS else 'a '
-        declarations = ['class ' + self.grammar_name + 'Grammar(ParserRoot):',
+        declarations = ['class ' + self.grammar_name +
+                        'Grammar(ParserHeadquarter):',
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
                         (', with this grammar:' if self.source_text else '.')]
@@ -1624,7 +1642,7 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
 def get_grammar_instance(grammar):
     """Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
-    python-code, a ParserRoot-derived grammar class or an instance of
+    python-code, a ParserHeadquarter-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
     """
     if isinstance(grammar, str):
@@ -1639,9 +1657,9 @@ def get_grammar_instance(grammar):
             raise GrammarError(errors, grammar_src)
         parser_root = compile_python_object(parser_py, 'Grammar')()
     else:
-        # assume that dsl_grammar is a ParserRoot object or Grammar class
+        # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
-        if isinstance(grammar, ParserRoot):
+        if isinstance(grammar, ParserHeadquarter):
             parser_root = grammar
         else:
             # assume `grammar` is a grammar class and get the root object
@@ -1652,6 +1670,7 @@ def get_grammar_instance(grammar):
 def load_compiler_suite(compiler_suite):
     """
     """
+    global DELIMITER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
     if is_python_code(compiler_suite):
@@ -1661,8 +1680,8 @@ def load_compiler_suite(compiler_suite):
         compiler = compile_python_object(compiler_py, 'Compiler')
     else:
         # assume source is an ebnf grammar
-        parser_py, errors, AST = full_compilation(source,
-                                                  EBNFGrammar(), EBNFTransTable, EBNFCompiler())
+        parser_py, errors, AST = full_compilation(
+                source, EBNFGrammar(), EBNFTransTable, EBNFCompiler())
         if errors:
             raise GrammarError(errors, source)
         scanner = nil_scanner
@@ -1690,91 +1709,109 @@ def compileDSL(text_or_file, dsl_grammar, trans_table, compiler,
     return result
 
 
+def run_compiler(source_file, compiler_suite="", extension=".dst"):
+    """Compiles the a source file with a given compiler and writes the result
+     to a file. If no `compiler_suite` is given it is assumed that the source
+     file is an EBNF grammar. In this case the result will be a Python
+     script containing a parser for that grammar as well as the skeletons
+     for a scanner, AST transformation table, and compiler. If the Python
+     script already exists only the parser component in the script will be
+     updated. (For this to work, the different components need to be delimited
+     by the standard `DELIMITER`-line!).
+     """
+    filepath = os.path.normpath(source_file)
+    with open(source_file, encoding="utf-8") as f:
+        source = f.read()
+    rootname = os.path.splitext(filepath)[0]
+    if compiler_suite:
+        scanner, parser, trans, compiler = load_compiler_suite(compiler_suite)
+    else:
+        scanner = nil_scanner
+        parser = EBNFGrammar()
+        trans = EBNFTransTable
+        compiler = EBNFCompiler(os.path.basename(rootname), source)
+    global DEBUG_DUMP_AST
+    DEBUG_DUMP_AST = rootname
+    print(compiler)
+    result, errors, ast = full_compilation(scanner(source), parser,
+                                           trans, compiler)
+    if errors:
+        print(errors)
+        sys.exit(1)
+
+    elif trans == EBNFTransTable:
+        f = None
+
+        global DELIMITER
+        try:
+            f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
+            source = f.read()
+            scanner, parser, ast, compiler = source.split(DELIMITER)
+        except (PermissionError, FileNotFoundError, IOError) as error:
+            scanner = compiler.gen_Scanner_Skeleton()
+            ast = compiler.gen_AST_Skeleton()
+            compiler = compiler.gen_Compiler_Skeleton()
+        finally:
+            if f:  f.close()
+
+        try:
+            f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
+            f.write(scanner)
+            f.write(DELIMITER)
+            f.write(result)
+            f.write(DELIMITER)
+            f.write(ast)
+            f.write(DELIMITER)
+            f.write(compiler)
+        except (PermissionError, FileNotFoundError, IOError) as error:
+            print('# Could not write file "' + rootname + '.py" because of: '
+                  + "\n# ".join(str(error).split('\n)')))
+            print(result)
+        finally:
+            if f:  f.close()
+
+    else:
+        try:
+            f = open(rootname + extension, 'w', encoding="utf-8")
+            f.write(result)
+        except (PermissionError, FileNotFoundError, IOError) as error:
+            print('# Could not write file "' + rootname + '.py" because of: '
+                  + "\n# ".join(str(error).split('\n)')))
+            print(result)
+        finally:
+            if f:  f.close()
+        if DEBUG:
+            print(ast)
+
+
 ##############################################################################
 #
 # quick system test
 #
 ##############################################################################
 
-def self_test():
-    if len(sys.argv) > 1:
-        filepath = os.path.normpath(sys.argv[1])
-        source = load_if_file(sys.argv[1])
-        rootname = os.path.splitext(filepath)[0]
-        if len(sys.argv) > 2:
-            scanner, parser, trans, compiler = load_compiler_suite(sys.argv[2])
-        else:
-            scanner = nil_scanner
-            parser = EBNFGrammar()
-            trans = EBNFTransTable
-            compiler = EBNFCompiler(os.path.basename(rootname), source)
-        DEBUG_DUMP_AST = rootname
-        print(compiler)
-        result, errors, ast = full_compilation(scanner(source), parser,
-                                               trans, compiler)
-        if errors:
-            print(errors)
-            sys.exit(1)
-        elif trans == EBNFTransTable:
-            f = None
-            DELIMITER = "\n\n### DON'T EDIT OR REMOVE THIS LINE ###\n\n"
-
-            try:
-                f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
-                source = f.read()
-                scanner, parser, ast, compiler = source.split(DELIMITER)
-            except (PermissionError, FileNotFoundError, IOError) as error:
-                scanner = compiler.gen_Scanner_Skeleton()
-                ast = compiler.gen_AST_Skeleton()
-                compiler = compiler.gen_Compiler_Skeleton()
-            finally:
-                if f:  f.close()
-
-            try:
-                f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
-                f.write(scanner)
-                f.write(DELIMITER)
-                f.write(result)
-                f.write(DELIMITER)
-                f.write(ast)
-                f.write(DELIMITER)
-                f.write(compiler)
-            except (PermissionError, FileNotFoundError, IOError) as error:
-                print('# Could not write file "' + rootname + '.py" because of: '
-                      + "\n# ".join(str(error).split('\n)')))
-                print(result)
-            finally:
-                if f:  f.close()
-        else:
-            print(result)
-            print(errors)
-            print(ast)
-
-    else:
-        # self-test
-        # compileDSL("examples/EBNF/EBNF.ebnf", "examples/EBNF/grammars/EBNF.ebnf", EBNFTransTable, EBNFCompiler())
-
-        assert (str(EBNFGrammar.syntax) == str(EBNFGrammar.syntax))
-
-        def test(file_name):
-            print(file_name)
-            with open('examples/' + file_name, encoding="utf-8") as f:
-                grammar = f.read()
-            compiler_name = os.path.basename(os.path.splitext(file_name)[0])
-            compiler = EBNFCompiler(compiler_name, grammar)
-            result, errors, syntax_tree = full_compilation(grammar, 
-                    EBNFGrammar(), EBNFTransTable, compiler)
-            # print(syntax_tree.as_xml())
-            print(syntax_tree.as_sexpr(grammar))
-            print(errors)
-            print(compiler.gen_AST_Skeleton())
-            print(compiler.gen_Compiler_Skeleton())
-            result = compileDSL(grammar, result, EBNFTransTable, compiler)
-            print(result)
-            return result
-
-        test('EBNF/EBNF.ebnf')
+def test(file_name):
+    print(file_name)
+    with open('examples/' + file_name, encoding="utf-8") as f:
+        grammar = f.read()
+    compiler_name = os.path.basename(os.path.splitext(file_name)[0])
+    compiler = EBNFCompiler(compiler_name, grammar)
+    result, errors, syntax_tree = full_compilation(grammar,
+            EBNFGrammar(), EBNFTransTable, compiler)
+    # print(syntax_tree.as_xml())
+    print(syntax_tree.as_sexpr(grammar))
+    print(errors)
+    print(compiler.gen_AST_Skeleton())
+    print(compiler.gen_Compiler_Skeleton())
+    result = compileDSL(grammar, result, EBNFTransTable, compiler)
+    print(result)
+    return result
 
 
 if __name__ == "__main__":
-    self_test()
+    print(sys.argv)
+    if len(sys.argv) > 1:
+        run_compiler(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "")
+    else:
+        # self-test
+        test('EBNF/EBNF.ebnf')

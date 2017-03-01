@@ -1,2 +1,5 @@
+* Fehler im Required-Operator!?
+
 * finally split ParserCombinators.py into different modules, like:
   SyntaxTree, ErrorMessages, ParserCombinators, ASTTransform, EBNFCompiler, DSLCompiler
+
