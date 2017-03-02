@@ -34,7 +34,7 @@ regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                  # '~' is a whitespace-marker, if present leading or trailing
                                                  # whitespace of a regular expression will be ignored tacitly.
 list_      =  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                 # BEGIN_QUOTE, END_QUOTE ; see markdown.py for an exmaple
+                                                 # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
 EOF =  !/./
 
 

@@ -54,6 +54,7 @@ https://bitbucket.org/apalala/grako
 
 import collections
 import copy
+import hashlib
 import keyword
 import os
 
@@ -81,7 +82,8 @@ def DEBUG_DUMP_SYNTAX_TREE(parser_root, syntax_tree, compiler, ext):
             prefix = "DEBUG"
         ast_file_name = (DEBUG_DUMP_AST or compiler.grammar_name or \
                          parser_root.__class__.__name__) + ext
-        with open(os.path.join(prefix, ast_file_name), "w", encoding="utf-8") as f:
+        with open(os.path.join(prefix, ast_file_name), "w",
+                  encoding="utf-8") as f:
             f.write(syntax_tree.as_sexpr())
 
 
@@ -336,7 +338,8 @@ def left_recursion_guard(callfunc):
                 if result[0]:
                     print("HIT!", st, '\t"%s"' % str(result[0]).replace('\n', ' '))
                 else:
-                    print("FAIL", st, '\t"%s"' % (text[:20].replace('\n',' ') + "..."))
+                    t = text[:20].replace('\n',' ')
+                    print("FAIL", st, '\t"%s"' % (t + ("..." if t else "")))
             parser.headquarter.call_stack.pop()
 
             if result[0] is not None:
@@ -659,7 +662,8 @@ class OneOrMore(UnaryOperator):
     def __init__(self, component, parser):
         super(OneOrMore, self).__init__(component, parser)
         assert not isinstance(parser, Optional), \
-            "Use ZeroOrMore instead of nesting OneOrMore and Optional!"
+            "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
+            "%s(%s)" % (str(component), str(parser.component))
 
     def __call__(self, text):
         results = ()
@@ -669,7 +673,7 @@ class OneOrMore(UnaryOperator):
             if not node:
                 break
             results += (node,)
-        if results == ():
+        if results == ():       # TODO: Add debugging print statements or breakpoint for `Bedeutungsposition` here!!
             return None, text
         return Node(self, results), text_
 
@@ -718,11 +722,12 @@ class Alternative(NaryOperator):
 
 
 class FlowOperator(UnaryOperator):
-    def __init__(self, parser):
-        super(FlowOperator, self).__init__(None, parser)
+    def __init__(self, component, parser):
+        super(FlowOperator, self).__init__(component, parser)
 
 
 class Required(FlowOperator):
+    # TODO: Add constructor that checks for logical errors, like `Required(Optional(...))` constructs
     def __call__(self, text):
         node, text_ = self.parser(text)
         if not node:
@@ -730,16 +735,15 @@ class Required(FlowOperator):
             i = max(1, m.regs[1][0]) if m else 1
             node = Node(self, text[:i])
             text_ = text[i:]
-            # assert False, "*"+text[:i]+"*"
+            assert False, "*"+text[:i]+"*"
             node.add_error('%s expected; "%s..." found!' %
                            (str(self.parser), text[:10]))
         return node, text_
 
 
 class Lookahead(FlowOperator):
-    def __init__(self, parser, sign):
-        super(Lookahead, self).__init__(parser)
-        self.sign = sign
+    def __init__(self, component, parser):
+        super(Lookahead, self).__init__(component, parser)
 
     def __call__(self, text):
         node, text_ = self.parser(text)
@@ -748,13 +752,13 @@ class Lookahead(FlowOperator):
         else:
             return None, text
 
+    def sign(self, bool_value):
+        return bool_value
 
-def PositiveLookahead(parser):
-    return Lookahead(parser, lambda boolean: boolean)
 
-
-def NegativeLookahead(parser):
-    return Lookahead(parser, lambda boolean: not boolean)
+class NegativeLookahead(Lookahead):
+    def sign(self, bool_value):
+        return not bool_value
 
 
 def iter_right_branch(node):
@@ -770,10 +774,9 @@ def iter_right_branch(node):
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, parser, sign):
+    def __init__(self, parser):
         print("WARNING: Lookbehind Operator is experimental!")
-        super(Lookbehind, self).__init__(parser)
-        self.sign = sign
+        super(Lookbehind, self).__init__(component, parser)
 
     def __call__(self, text):
         if isinstance(self.headquarter.last_node, Lookahead):
@@ -783,6 +786,9 @@ class Lookbehind(FlowOperator):
             return Node(self, ''), text
         else:
             return None, text
+
+    def sign(self, bool_value):
+        return bool_value
 
     def condition(self):
         node = None
@@ -795,12 +801,9 @@ class Lookbehind(FlowOperator):
         return False
 
 
-def PositiveLookbehind(parser):
-    return Lookbehind(parser, lambda boolean: boolean)
-
-
-def NegativeLookbehind(parser):
-    return Lookbehind(parser, lambda boolean: not boolean)
+def NegativeLookbehind(Lookbehind):
+    def sign(self, bool_value):
+        return not bool_value
 
 
 ##############################################################################
@@ -892,7 +895,8 @@ class Forward(Parser):
 
 
 PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
-                  'PositiveLookahead', 'NegativeLookahead', 'Optional',
+                  'Lookahead', 'NegativeLookahead', 'Optional',
+                  'Lookbehind', 'NegativeLookbehind',
                   'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
                   'OneOrMore', 'ParserHeadquarter', 'Capture', 'Retrieve',
                   'Pop'}
@@ -990,6 +994,45 @@ def reduce_single_child(node):
     if node.children and len(node.result) == 1:
         node.errors.extend(node.result[0].errors)
         node.result = node.result[0].result
+        return "STOP"   # discard any further transformations if node has been reduced
+
+
+def continue_after(node, transform):
+    """Applies `transform()` to node but filters out any "STOP" signal
+    that function `transform` might have returned.
+    """
+    transform(node)
+
+
+def extract_prefixes(node, prefixes):
+    """Expands a flat structure with prefixes into a tree by
+    successively moving anything that follows a prefix one level up
+    to the subtree of that prefix.
+    """
+    if node.children and len(node.result) > 1:
+        if (node.result[0].children
+            and node.result[0].result[0].result in prefixes):
+            node.result[0].result = node.result[0].result + node.result[1:]
+            node.result = node.result[:1]
+            extract_prefixes(node.result[0].result[1], prefixes)
+
+
+def extract_postfixes(node, postfixes):
+    """Expands a flat structure with postfixes into a tree by
+    successively moving anything that preceeds a postfix one level up
+    to the subtree of that postfix.
+    WARNING: Because the postfix becomes the parent of its
+    predecessors, this has the (possibly unexpected) consequence that
+    the children will a have  `pos`-value that is lower than their
+    parent's.
+    """
+    assert False, "WARNING: NOT YET TESTED!"
+    if node.children and len(node.result) > 1:
+        if (node.result[-1].children
+            and node.result[-1].result[-1].result in postfixes):
+            node.result[-1].result = node.result[:-1].result + node.result[-1]
+            node.result = node.result[-1:]
+            extract_prefixes(node.result[-1].result[0], postfixes)
 
 
 # ------------------------------------------------
@@ -1081,7 +1124,7 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
 class CompilerBase:
     def compile__(self, node):
         comp, cls = node.parser.component, node.parser.__class__.__name__
-        elem = comp if comp else cls
+        elem = comp or cls
         if elem == 'compile__' or elem[:2] == '__' or elem[-2:] == '__':
             node.add_error("Must not use reserved name '%s' as parser "
                            "component! " % elem + "(Any name starting with "
@@ -1113,6 +1156,8 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
             during parsing or AST-transformation and the compiler wasn't
             invoked; error messages; abstract syntax tree
     """
+    assert isinstance(compiler, CompilerBase)
+
     syntax_tree = parser_HQ.parse(source)
     DEBUG_DUMP_SYNTAX_TREE(parser_HQ, syntax_tree, compiler, ext='.cst')
 
@@ -1133,7 +1178,7 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
     return result, messages, syntax_tree
 
 
-COMPILER_SYMBOLS = {'CompilerBase', 'Error', 'Node'}
+COMPILER_SYMBOLS = {'CompilerBase', 'Error', 'Node', 're'}
 
 
 ##############################################################################
@@ -1186,34 +1231,39 @@ class EBNFGrammar(ParserHeadquarter):
     EOF :  !/./
     """
     expression = Forward()
+    source_hash__ = "b1291fa35ac696654838fc94cabf439b"
     wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
-    EOF = NegativeLookahead(RE('.', "EOF"))
+    EOF = NegativeLookahead(None, RE('.', "EOF"))
     list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', "list_", wspcR=wspc__)
     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', "regexp", wspcR=wspc__)
     literal = Alternative("literal", RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
     symbol = RE('\\w+', "symbol", wspcR=wspc__)
-    oneormore = Sequence("oneormore", Token("<", wspcR=wspc__), expression, Required(Token(">", wspcR=wspc__)))
-    repetition = Sequence("repetition", Token("{", wspcR=wspc__), expression, Required(Token("}", wspcR=wspc__)))
-    option = Sequence("option", Token("[", wspcR=wspc__), expression, Required(Token("]", wspcR=wspc__)))
-    group = Sequence("group", Token("(", wspcR=wspc__), expression, Required(Token(")", wspcR=wspc__)))
-    retrieveop = Alternative("retrieveop", Token("=", wspcR=wspc__), Token("@", wspcR=wspc__))
+    oneormore = Sequence("oneormore", Token("<", wspcR=wspc__), expression, Required(None, Token(">", wspcR=wspc__)))
+    repetition = Sequence("repetition", Token("{", wspcR=wspc__), expression, Required(None, Token("}", wspcR=wspc__)))
+    option = Sequence("option", Token("[", wspcR=wspc__), expression, Required(None, Token("]", wspcR=wspc__)))
+    group = Sequence("group", Token("(", wspcR=wspc__), expression, Required(None, Token(")", wspcR=wspc__)))
+    retrieveop = Alternative("retrieveop", Token("::", wspcR=wspc__), Token(":", wspcR=wspc__))
     flowmarker = Alternative("flowmarker", Token("!", wspcR=wspc__), Token("&", wspcR=wspc__), Token("§", wspcR=wspc__),
                              Token("-!", wspcR=wspc__), Token("-&", wspcR=wspc__))
     factor = Alternative("factor", Sequence(None, Optional(None, flowmarker), Optional(None, retrieveop), symbol,
-                                            NegativeLookahead(Token("=", wspcR=wspc__))),
+                                            NegativeLookahead(None, Token("=", wspcR=wspc__))),
                          Sequence(None, Optional(None, flowmarker), literal),
                          Sequence(None, Optional(None, flowmarker), regexp),
                          Sequence(None, Optional(None, flowmarker), group),
                          Sequence(None, Optional(None, flowmarker), oneormore), repetition, option)
     term = Sequence("term", factor, ZeroOrMore(None, factor))
     expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Token("|", wspcR=wspc__), term))))
-    directive = Sequence("directive", Token("@", wspcR=wspc__), Required(symbol), Required(Token("=", wspcR=wspc__)),
+    directive = Sequence("directive", Token("@", wspcR=wspc__), Required(None, symbol), Required(None, Token("=", wspcR=wspc__)),
                          Alternative(None, regexp, literal, list_))
-    definition = Sequence("definition", symbol, Required(Token("=", wspcR=wspc__)), expression)
+    definition = Sequence("definition", symbol, Required(None, Token("=", wspcR=wspc__)), expression)
     syntax = Sequence("syntax", Optional(None, RE('', wspcL=wspc__)),
-                      ZeroOrMore(None, Alternative(None, definition, directive)), Required(EOF))
+                      ZeroOrMore(None, Alternative(None, definition, directive)), Required(None, EOF))
     root__ = syntax
 
+
+def INSPECT(node):
+    print("INSPECT")
+    print(node.as_sexpr())
 
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
@@ -1226,12 +1276,17 @@ EBNFTransTable = {
          partial(remove_tokens, tokens={'|'})],
     "term":
         [replace_by_single_child, flatten],
-    "factor, flowmarker, retrieveop":
-        replace_by_single_child,
+    "factor":
+        [partial(continue_after, transform=replace_by_single_child),
+         partial(extract_prefixes, prefixes={'!','&','§','-!','-&','::',':'}),
+         replace_by_single_child],
+    "flowmarker, retrieveop":
+        [],
     "group":
         [remove_enclosing_delimiters, replace_by_single_child],
     "oneormore, repetition, option":
-        [reduce_single_child, remove_enclosing_delimiters],
+        [partial(continue_after, transform=reduce_single_child),
+         remove_enclosing_delimiters],
     "symbol, literal, regexp, list_":
         [remove_expendables, reduce_single_child],
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
@@ -1262,6 +1317,15 @@ class EBNFCompilerError(Error):
 
 Scanner = collections.namedtuple('Scanner',
                                  'symbol instantiation_call cls_name cls')
+
+
+def md5(txt):
+    """Returns the md5-checksum for `txt`. This can be used to test if
+    some piece of text, for example a grammar source file, has changed.
+    """
+    md5_hash = hashlib.md5()
+    md5_hash.update(txt.encode('utf8'))
+    return md5_hash.hexdigest()
 
 
 class EBNFCompiler(CompilerBase):
@@ -1375,6 +1439,8 @@ class EBNFCompiler(CompilerBase):
                         ' source file' +
                         (', with this grammar:' if self.source_text else '.')]
         if self.source_text:
+            definitions.append(('source_hash__',
+                                '"%s"' % md5(self.source_text)))
             declarations.append('')
             declarations += [line for line in self.source_text.split('\n')]
             while declarations[-1].strip() == '':
@@ -1492,9 +1558,9 @@ class EBNFCompiler(CompilerBase):
     def factor(self, node):
         assert isinstance(node.parser, Sequence)  # these assert statements can be removed
         assert node.children
-        assert len(node.result) >= 2
-        assert isinstance(node.result[0].parser, RegExp), str(node.as_sexpr())
+        assert len(node.result) >= 2, node.as_sexpr()
         prefix = node.result[0].result
+        assert False, str(node.result[0].parser.component) + str(node.result[0])
         if len(node.result) > 2:
             assert prefix not in {':', '::'}
             node.result = node.result[1:]
@@ -1506,11 +1572,11 @@ class EBNFCompiler(CompilerBase):
         elif prefix == '!':
             return 'NegativeLookahead(' + arg + ')'
         elif prefix == '&':
-            return 'PositiveLookahead(' + arg + ')'
+            return 'Lookahead(' + arg + ')'
         elif prefix == '-!':
             return 'NegativeLookbehind(' + arg + ')'
         elif prefix == '-&':
-            return 'PositiveLookbehind(' + arg + ')'
+            return 'Lookbehind(' + arg + ')'
         else:
             if node.result[1].parser.component != 'symbol':
                 node.add_error(('Can apply retrieve operator "%s" only to '
@@ -1523,6 +1589,31 @@ class EBNFCompiler(CompilerBase):
             elif prefix == "::":
                 return 'Pop(' + arg + ')'
             assert False, ("Unknown prefix %s \n" % prefix) + node.as_sexpr()
+
+    def _prefix(self, node, prefix_table):
+        prefix = node.result[0].result
+        node.result = node.result[1:]
+        for match, parser in prefix_table:
+            if match == prefix:
+                return self.non_terminal(node, parser)
+        assert False, ("Unknown prefix %s \n" % prefix) + node.as_sexpr()
+
+    def factor(self, node):
+        assert False, "Error in AST-transformation. Otherwise this code " + \
+            "could never be reached!"
+
+    def flowmarker(self, node):
+        return self._prefix(node, [('§', 'Required'),
+                ('&', 'Lookahead'), ('!', 'NegativeLookahead'),
+                ('-&', 'Lookbehind'), ('-!', 'NegativeLookbehind')])
+
+    def retrieveop(self, node):
+        if node.result[1].parser.component != 'symbol':
+            node.add_error(('Can apply retrieve operator "%s" only to '
+                            'symbols, but not to %s.') %
+                           (node.result[0].result,
+                            str(node.result[1].parser)))
+        return self._prefix(node, [('::', 'Pop'), (':', 'Retrieve')])
 
     def option(self, node):
         return self.non_terminal(node, 'Optional')
@@ -1631,6 +1722,8 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
     module_vars = globals()
     allowed_symbols = PARSER_SYMBOLS | AST_SYMBOLS | COMPILER_SYMBOLS
     namespace = {k: module_vars[k] for k in allowed_symbols}
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    print(python_src)
     exec(code, namespace)  # safety risk?
     for key in namespace.keys():
         if key.endswith(obj_name_ending):
@@ -1718,13 +1811,16 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
      script already exists only the parser component in the script will be
      updated. (For this to work, the different components need to be delimited
      by the standard `DELIMITER`-line!).
+     `run_compiler()` returns a list of error messages or an empty list if no
+     errors occured.
      """
     filepath = os.path.normpath(source_file)
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
     rootname = os.path.splitext(filepath)[0]
     if compiler_suite:
-        scanner, parser, trans, compiler = load_compiler_suite(compiler_suite)
+        scanner, parser, trans, cclass = load_compiler_suite(compiler_suite)
+        compiler = cclass()
     else:
         scanner = nil_scanner
         parser = EBNFGrammar()
@@ -1732,14 +1828,12 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
         compiler = EBNFCompiler(os.path.basename(rootname), source)
     global DEBUG_DUMP_AST
     DEBUG_DUMP_AST = rootname
-    print(compiler)
     result, errors, ast = full_compilation(scanner(source), parser,
                                            trans, compiler)
     if errors:
-        print(errors)
-        sys.exit(1)
+        return errors
 
-    elif trans == EBNFTransTable:
+    elif trans == EBNFTransTable:  # either an EBNF- or no compiter suite given
         f = None
 
         global DELIMITER
@@ -1773,7 +1867,7 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
     else:
         try:
             f = open(rootname + extension, 'w', encoding="utf-8")
-            f.write(result)
+            f.write(result.as_sexpr(source))
         except (PermissionError, FileNotFoundError, IOError) as error:
             print('# Could not write file "' + rootname + '.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))
@@ -1783,12 +1877,33 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
         if DEBUG:
             print(ast)
 
+    return []
+
+
+def has_source_changed(grammar_source, grammar_class):
+    """Returns `True` if `grammar_class` does not reflect the latest
+    changes of `grammar_source`
+
+    :param grammar_source: file name or string representation of the
+        grammar source
+    :param grammar_class: the parser class representing the grammar
+        or the file name of a compiler suite containing the grammar
+    :return:    True, if the source text of the grammar is different
+        from the source from which the grammar class was generated
+    """
+    grammar = load_if_file(grammar_source)
+    chksum = md5(grammar)
+    if isinstance(grammar_class, str):
+        grammar_class = load_compiler_suite(grammar_class)[1]
+    return chksum != grammar_class.source_hash__
+
 
 ##############################################################################
 #
-# quick system test
+# system test
 #
 ##############################################################################
+
 
 def test(file_name):
     print(file_name)
@@ -1799,6 +1914,7 @@ def test(file_name):
     result, errors, syntax_tree = full_compilation(grammar,
             EBNFGrammar(), EBNFTransTable, compiler)
     # print(syntax_tree.as_xml())
+    print(result)
     print(syntax_tree.as_sexpr(grammar))
     print(errors)
     print(compiler.gen_AST_Skeleton())
@@ -1808,10 +1924,22 @@ def test(file_name):
     return result
 
 
+# Changes in the EBNF source that are not reflected in this file usually are
+# a source of sometimes obscure errors! Therefore, we will check this.
+if (os.path.exists('examples/EBNF/EBNF.ebnf')
+    and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
+    assert False, "WARNING: Grammar source has changed. The parser may not " \
+        "represent the actual grammar any more!!!"
+
+
 if __name__ == "__main__":
     print(sys.argv)
     if len(sys.argv) > 1:
-        run_compiler(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "")
+        errors = run_compiler(sys.argv[1],
+                              sys.argv[2] if len(sys.argv) > 2 else "")
+        if (errors):
+            print(errors)
+            sys.exit(1)
     else:
         # self-test
         test('EBNF/EBNF.ebnf')

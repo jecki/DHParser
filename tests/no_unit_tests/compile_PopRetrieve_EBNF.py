@@ -21,10 +21,17 @@ limitations under the License.
 
 import os
 import sys
-sys.path.append(os.path.abspath('../'))
-from ParserCombinators import run_compiler
-errors = run_compiler("MLW.ebnf")
+sys.path.append(os.path.abspath('../../'))
+from ParserCombinators import run_compiler, has_source_changed
+
+if (not os.path.exists('PopRetrieve_compiler.py') or
+    has_source_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):
+    errors = run_compiler("PopRetrieve.ebnf")
+    if errors:
+        print(errors)
+        sys.exit(1)
+
+errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
 if errors:
     print(errors)
     sys.exit(1)
-

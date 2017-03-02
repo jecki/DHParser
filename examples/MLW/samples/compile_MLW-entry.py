@@ -23,4 +23,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('../'))
 from ParserCombinators import run_compiler
-run_compiler("fascitergula.mlw", os.path.join('..', 'MLW_compiler.py'), ".xml")
+errors = run_compiler("fascitergula.mlw", os.path.join('..', 'MLW_compiler.py'), ".xml")
+if errors:
+    print(errors)
+    sys.exit(1)
