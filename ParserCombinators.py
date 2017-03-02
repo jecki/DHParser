@@ -338,8 +338,9 @@ def left_recursion_guard(callfunc):
                 if result[0]:
                     print("HIT!", st, '\t"%s"' % str(result[0]).replace('\n', ' '))
                 else:
-                    t = text[:20].replace('\n',' ')
-                    print("FAIL", st, '\t"%s"' % (t + ("..." if t else "")))
+                    # t = text[:20].replace('\n',' ')
+                    # print("FAIL", st, '\t"%s"' % (t + ("..." if t else "")))
+                    pass
             parser.headquarter.call_stack.pop()
 
             if result[0] is not None:
@@ -372,7 +373,11 @@ def left_recursion_guard(callfunc):
 
 class ParserMetaClass(type):
     def __init__(C, name, bases, attrs):
-        C.__call__ = left_recursion_guard(C.__call__)
+        # The following condition is necessary for classes that don't override
+        # the __call__() method, because in these cases the non-overridden
+        # __call__()-method would be substituted a second time!
+        if C.__call__.__code__ != left_recursion_guard(C.__call__).__code__:
+            C.__call__ = left_recursion_guard(C.__call__)
         super(ParserMetaClass, C).__init__(name, bases, attrs)
 
 
@@ -405,13 +410,6 @@ class Parser(metaclass=ParserMetaClass):
             self.cycle_detection.add(func)
             func(self)
             return True
-
-    def addHooks(self, preprocess, postprocess):
-        assert preprocess is None or isinstance(preprocess, types.FunctionType)
-        assert postprocess is None or isinstance(postprocess, types.FunctionType)
-        self.preprocess = preprocess
-        self.postprocess = postprocess
-        return self
 
 
 class ParserHeadquarter:
@@ -735,7 +733,7 @@ class Required(FlowOperator):
             i = max(1, m.regs[1][0]) if m else 1
             node = Node(self, text[:i])
             text_ = text[i:]
-            assert False, "*"+text[:i]+"*"
+            # assert False, "*"+text[:i]+"*"
             node.add_error('%s expected; "%s..." found!' %
                            (str(self.parser), text[:10]))
         return node, text_
@@ -774,9 +772,9 @@ def iter_right_branch(node):
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, parser):
-        print("WARNING: Lookbehind Operator is experimental!")
+    def __init__(self, component, parser):
         super(Lookbehind, self).__init__(component, parser)
+        print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text):
         if isinstance(self.headquarter.last_node, Lookahead):
@@ -815,7 +813,6 @@ def NegativeLookbehind(Lookbehind):
 
 class Capture(UnaryOperator):
     def __init__(self, component, parser):
-        assert component
         super(Capture, self).__init__(component, parser)
 
     def __call__(self, text):
@@ -827,13 +824,12 @@ class Capture(UnaryOperator):
 
 
 class Retrieve(Parser):
-    def __init__(self, symbol):
-        super(Retrieve, self).__init__(symbol if isinstance(symbol, str)
-                                       else symbol.component)
-        assert self.component
+    def __init__(self, component, symbol):
+        super(Retrieve, self).__init__(component)
+        self.symbol = symbol if isinstance(symbol, str) else symbol.component
 
     def __call__(self, text):
-        stack = self.headquarter.variables[self.component]
+        stack = self.headquarter.variables[self.symbol]
         value = self.pick_value(stack)
         if text.startswith(value):
             return Node(self, value), text[len(value):]
@@ -882,13 +878,6 @@ class Forward(Parser):
         self.parser = parser
 
     def apply(self, func):
-        # old code to avoid endless loop (can be eliminated)
-        # if not self.cycle_reached:
-        #     self.cycle_reached = True
-        #     super(Forward, self).apply(func)
-        #     assert not self.visited
-        #     self.parser.apply(func)
-        #     self.cycle_reached = False
         if super(Forward, self).apply(func):
             assert not self.visited
             self.parser.apply(func)
@@ -957,8 +946,7 @@ def ASTTransform(node, transtable):
         transformation = table.get(node.parser.component,
                                    table.get('*', [lambda node: None]))
         for transform in transformation:
-            if transform(node):
-                break   # break loop if a transformation is already complete
+            transform(node)
 
     recursive_ASTTransform(node)
 
@@ -984,7 +972,6 @@ def replace_by_single_child(node):
         node.parser = node.result[0].parser
         node.errors.extend(node.result[0].errors)
         node.result = node.result[0].result
-        return "STOP"    # discard any further transformations if node has been replaced
 
 
 def reduce_single_child(node):
@@ -994,45 +981,6 @@ def reduce_single_child(node):
     if node.children and len(node.result) == 1:
         node.errors.extend(node.result[0].errors)
         node.result = node.result[0].result
-        return "STOP"   # discard any further transformations if node has been reduced
-
-
-def continue_after(node, transform):
-    """Applies `transform()` to node but filters out any "STOP" signal
-    that function `transform` might have returned.
-    """
-    transform(node)
-
-
-def extract_prefixes(node, prefixes):
-    """Expands a flat structure with prefixes into a tree by
-    successively moving anything that follows a prefix one level up
-    to the subtree of that prefix.
-    """
-    if node.children and len(node.result) > 1:
-        if (node.result[0].children
-            and node.result[0].result[0].result in prefixes):
-            node.result[0].result = node.result[0].result + node.result[1:]
-            node.result = node.result[:1]
-            extract_prefixes(node.result[0].result[1], prefixes)
-
-
-def extract_postfixes(node, postfixes):
-    """Expands a flat structure with postfixes into a tree by
-    successively moving anything that preceeds a postfix one level up
-    to the subtree of that postfix.
-    WARNING: Because the postfix becomes the parent of its
-    predecessors, this has the (possibly unexpected) consequence that
-    the children will a have  `pos`-value that is lower than their
-    parent's.
-    """
-    assert False, "WARNING: NOT YET TESTED!"
-    if node.children and len(node.result) > 1:
-        if (node.result[-1].children
-            and node.result[-1].result[-1].result in postfixes):
-            node.result[-1].result = node.result[:-1].result + node.result[-1]
-            node.result = node.result[-1:]
-            extract_prefixes(node.result[-1].result[0], postfixes)
 
 
 # ------------------------------------------------
@@ -1071,12 +1019,15 @@ remove_expendables = partial(remove_children_if, condition=is_expendable)
 
 
 def flatten(node):
-    """Recursively flattens all unnamed sub-nodes. Flattening means that
+    """Recursively flattens all unnamed sub-nodes, in case there is more
+    than one sub-node present. Flattening means that
     wherever a node has child nodes, the child nodes are inserted in place
     of the node. In other words, all leaves of this node and its child nodes
     are collected in-order as direct children of this node.
+    This is meant to achieve the following structural transformation:
+    X (+ Y + Z)  ->   X + Y + Z
     """
-    if node.children:
+    if len(node.children) >= 2:
         new_result = []
         for child in node.result:
             if not child.parser.component:
@@ -1091,10 +1042,10 @@ def remove_tokens(node, tokens):
     """Reomoves any of a set of tokens whereever they appear in the result
     of the node.
     """
-    assert node.children
-    node.result = tuple(child for child in node.result
-                        if child.parser.component != TOKEN_KEYWORD or
-                        child.result not in tokens)
+    if node.children:
+        node.result = tuple(child for child in node.result
+                            if child.parser.component != TOKEN_KEYWORD or
+                            child.result not in tokens)
 
 
 def remove_enclosing_delimiters(node):
@@ -1188,22 +1139,95 @@ COMPILER_SYMBOLS = {'CompilerBase', 'Error', 'Node', 're'}
 ##############################################################################
 
 
+# class EBNFGrammar(ParserHeadquarter):
+#     r"""Parser for an EBNF source file, with this grammar:
+#
+#     # EBNF-Grammar in EBNF
+#
+#     @ comment    :  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars upto and including '\n'
+#     @ whitespace :  /\s*/                            # whitespace includes linefeed
+#     @ literalws  :  right                            # trailing whitespace of literals will be ignored tacitly
+#
+#     syntax     :  [~//] { definition | directive } §EOF
+#     definition :  symbol §":" expression
+#     directive  :  "@" §symbol §":" ( regexp | literal | list_ )
+#
+#     expression :  term { "|" term }
+#     term       :  factor { factor }
+#     factor     :  [flowmarker] [retrieveop] symbol !":"    # negative lookahead to be sure it's not a definition
+#                 | [flowmarker] literal
+#                 | [flowmarker] regexp
+#                 | [flowmarker] group
+#                 | [flowmarker] oneormore
+#                 | repetition
+#                 | option
+#
+#     flowmarker :  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
+#                   "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+#     retrieveop :  "=" | "@"                          # '=' retrieve,  '@' pop
+#
+#     group      :  "(" expression §")"
+#     option     :  "[" expression §"]"
+#     repetition :  "{" expression §"}"
+#     oneormore  :  "<" expression §">"
+#
+#     symbol     :  /\w+/~                             # e.g. expression, factor, parameter_list
+#     literal    :  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+#                 | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+#     regexp     :  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+#                                                      # '~' is a whitespace-marker, if present leading or trailing
+#                                                      # whitespace of a regular expression will be ignored tacitly.
+#     list_      :  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+#                                                      # BEGIN_QUOTE, END_QUOTE ; see markdown.py for an exmaple
+#     EOF :  !/./
+#     """
+#     expression = Forward()
+#     source_hash__ = "b1291fa35ac696654838fc94cabf439b"
+#     wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+#     EOF = NegativeLookahead(None, RE('.', "EOF"))
+#     list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', "list_", wspcR=wspc__)
+#     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', "regexp", wspcR=wspc__)
+#     literal = Alternative("literal", RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
+#     symbol = RE('\\w+', "symbol", wspcR=wspc__)
+#     oneormore = Sequence("oneormore", Token("<", wspcR=wspc__), expression, Required(None, Token(">", wspcR=wspc__)))
+#     repetition = Sequence("repetition", Token("{", wspcR=wspc__), expression, Required(None, Token("}", wspcR=wspc__)))
+#     option = Sequence("option", Token("[", wspcR=wspc__), expression, Required(None, Token("]", wspcR=wspc__)))
+#     group = Sequence("group", Token("(", wspcR=wspc__), expression, Required(None, Token(")", wspcR=wspc__)))
+#     retrieveop = Alternative("retrieveop", Token("::", wspcR=wspc__), Token(":", wspcR=wspc__))
+#     flowmarker = Alternative("flowmarker", Token("!", wspcR=wspc__), Token("&", wspcR=wspc__), Token("§", wspcR=wspc__),
+#                              Token("-!", wspcR=wspc__), Token("-&", wspcR=wspc__))
+#     factor = Alternative("factor", Sequence(None, Optional(None, flowmarker), Optional(None, retrieveop), symbol,
+#                                             NegativeLookahead(None, Token("=", wspcR=wspc__))),
+#                          Sequence(None, Optional(None, flowmarker), literal),
+#                          Sequence(None, Optional(None, flowmarker), regexp),
+#                          Sequence(None, Optional(None, flowmarker), group),
+#                          Sequence(None, Optional(None, flowmarker), oneormore), repetition, option)
+#     term = Sequence("term", factor, ZeroOrMore(None, factor))
+#     expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Token("|", wspcR=wspc__), term))))
+#     directive = Sequence("directive", Token("@", wspcR=wspc__), Required(None, symbol), Required(None, Token("=", wspcR=wspc__)),
+#                          Alternative(None, regexp, literal, list_))
+#     definition = Sequence("definition", symbol, Required(None, Token("=", wspcR=wspc__)), expression)
+#     syntax = Sequence("syntax", Optional(None, RE('', wspcL=wspc__)),
+#                       ZeroOrMore(None, Alternative(None, definition, directive)), Required(None, EOF))
+#     root__ = syntax
+
+
 class EBNFGrammar(ParserHeadquarter):
     r"""Parser for an EBNF source file, with this grammar:
 
     # EBNF-Grammar in EBNF
 
-    @ comment    :  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars upto and including '\n'
-    @ whitespace :  /\s*/                            # whitespace includes linefeed
-    @ literalws  :  right                            # trailing whitespace of literals will be ignored tacitly
+    @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace =  /\s*/                            # whitespace includes linefeed
+    @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
 
-    syntax     :  [~//] { definition | directive } §EOF
-    definition :  symbol §":" expression
-    directive  :  "@" §symbol §":" ( regexp | literal | list_ )
+    syntax     =  [~//] { definition | directive } §EOF
+    definition =  symbol §"=" expression
+    directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
-    expression :  term { "|" term }
-    term       :  factor { factor }
-    factor     :  [flowmarker] [retrieveop] symbol !":"    # negative lookahead to be sure it's not a definition
+    expression =  term { "|" term }
+    term       =  factor { factor }
+    factor     =  [flowmarker] [retrieveop] symbol !"="    # negative lookahead to be sure it's not a definition
                 | [flowmarker] literal
                 | [flowmarker] regexp
                 | [flowmarker] group
@@ -1211,33 +1235,33 @@ class EBNFGrammar(ParserHeadquarter):
                 | repetition
                 | option
 
-    flowmarker :  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
+    flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
                   "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop :  "=" | "@"                          # '=' retrieve,  '@' pop
+    retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
-    group      :  "(" expression §")"
-    option     :  "[" expression §"]"
-    repetition :  "{" expression §"}"
-    oneormore  :  "<" expression §">"
+    group      =  "(" expression §")"
+    option     =  "[" expression §"]"
+    repetition =  "{" expression §"}"
+    oneormore  =  "<" expression §">"
 
-    symbol     :  /\w+/~                             # e.g. expression, factor, parameter_list
-    literal    :  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+    symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                 | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    regexp     :  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                      # '~' is a whitespace-marker, if present leading or trailing
                                                      # whitespace of a regular expression will be ignored tacitly.
-    list_      :  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                     # BEGIN_QUOTE, END_QUOTE ; see markdown.py for an exmaple
-    EOF :  !/./
+    list_      =  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                     # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+    EOF =  !/./
     """
     expression = Forward()
     source_hash__ = "b1291fa35ac696654838fc94cabf439b"
     wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
-    EOF = NegativeLookahead(None, RE('.', "EOF"))
+    EOF = NegativeLookahead("EOF", RE('.'))
     list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', "list_", wspcR=wspc__)
     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', "regexp", wspcR=wspc__)
     literal = Alternative("literal", RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
-    symbol = RE('\\w+', "symbol", wspcR=wspc__)
+    symbol = RE('(?!\\d)\\w+', "symbol", wspcR=wspc__)
     oneormore = Sequence("oneormore", Token("<", wspcR=wspc__), expression, Required(None, Token(">", wspcR=wspc__)))
     repetition = Sequence("repetition", Token("{", wspcR=wspc__), expression, Required(None, Token("}", wspcR=wspc__)))
     option = Sequence("option", Token("[", wspcR=wspc__), expression, Required(None, Token("]", wspcR=wspc__)))
@@ -1253,8 +1277,8 @@ class EBNFGrammar(ParserHeadquarter):
                          Sequence(None, Optional(None, flowmarker), oneormore), repetition, option)
     term = Sequence("term", factor, ZeroOrMore(None, factor))
     expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Token("|", wspcR=wspc__), term))))
-    directive = Sequence("directive", Token("@", wspcR=wspc__), Required(None, symbol), Required(None, Token("=", wspcR=wspc__)),
-                         Alternative(None, regexp, literal, list_))
+    directive = Sequence("directive", Token("@", wspcR=wspc__), Required(None, symbol),
+                         Required(None, Token("=", wspcR=wspc__)), Alternative(None, regexp, literal, list_))
     definition = Sequence("definition", symbol, Required(None, Token("=", wspcR=wspc__)), expression)
     syntax = Sequence("syntax", Optional(None, RE('', wspcL=wspc__)),
                       ZeroOrMore(None, Alternative(None, definition, directive)), Required(None, EOF))
@@ -1264,6 +1288,7 @@ class EBNFGrammar(ParserHeadquarter):
 def INSPECT(node):
     print("INSPECT")
     print(node.as_sexpr())
+
 
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
@@ -1276,17 +1301,12 @@ EBNFTransTable = {
          partial(remove_tokens, tokens={'|'})],
     "term":
         [replace_by_single_child, flatten],
-    "factor":
-        [partial(continue_after, transform=replace_by_single_child),
-         partial(extract_prefixes, prefixes={'!','&','§','-!','-&','::',':'}),
-         replace_by_single_child],
-    "flowmarker, retrieveop":
-        [],
+    "factor, flowmarker, retrieveop":
+        replace_by_single_child,
     "group":
         [remove_enclosing_delimiters, replace_by_single_child],
     "oneormore, repetition, option":
-        [partial(continue_after, transform=reduce_single_child),
-         remove_enclosing_delimiters],
+        [reduce_single_child, remove_enclosing_delimiters],
     "symbol, literal, regexp, list_":
         [remove_expendables, reduce_single_child],
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
@@ -1335,9 +1355,13 @@ class EBNFCompiler(CompilerBase):
     # RX_DIRECTIVE = re.compile('(?:#|@)\s*(?P<key>\w*)\s*=\s*(?P<value>.*)')  # this can be removed, soon
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, 'wspc__'}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
-    VOWELS = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc. ?
-    AST_ERROR = "Badly structured syntax tree. " \
-                "Potentially due to erroneuos AST transformation."
+    VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc. ?
+    AST_ERROR        = "Badly structured syntax tree. " \
+                       "Potentially due to erroneuos AST transformation."
+    PREFIX_TABLE     = [('§', 'Required'), ('&', 'Lookahead'),
+                        ('!', 'NegativeLookahead'), ('-&', 'Lookbehind'),
+                        ('-!', 'NegativeLookbehind'), ('::', 'Pop'),
+                        (':', 'Retrieve')]
 
     def __init__(self, grammar_name="", source_text=""):
         super(EBNFCompiler, self).__init__()
@@ -1422,7 +1446,6 @@ class EBNFCompiler(CompilerBase):
                     definitions[i] = (definitions[i][0],
                                       'Capture("%s", %s)' % definitions[i])
 
-        # remember definition names for AST skeleton generation
         self.definition_names = [defn[0] for defn in definitions]
         definitions.append(('wspc__',
                             ("mixin_comment(whitespace="
@@ -1539,15 +1562,15 @@ class EBNFCompiler(CompilerBase):
                             ', '.join(list(EBNFCompiler.KNOWN_DIRECTIVES))))
         return ""
 
-    def non_terminal(self, node, kind):
-        """Compiles any non-terminal, where `kind` indicates the Parser class
+    def non_terminal(self, node, parser_class):
+        """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
         comp = self.component
         self.component = str(None)
         arguments = filter(lambda arg: arg,  # remove comments at this stage
                            [comp] + [self.compile__(r) for r in node.result])
-        return kind + '(' + ', '.join(arguments) + ')'
+        return parser_class + '(' + ', '.join(arguments) + ')'
 
     def expression(self, node):
         return self.non_terminal(node, 'Alternative')
@@ -1560,60 +1583,31 @@ class EBNFCompiler(CompilerBase):
         assert node.children
         assert len(node.result) >= 2, node.as_sexpr()
         prefix = node.result[0].result
-        assert False, str(node.result[0].parser.component) + str(node.result[0])
+
+        arg = node.result[-1]
+        if prefix in {'::', ':'}:
+            assert len(node.result) == 2
+            if arg.parser.component != 'symbol':
+                node.add_error(('Retrieve Operator "%s" requires a symbols, '
+                                'and not a %s.') % (prefix, str(arg.parser)))
+                return str(arg.result)
+            self.variables.add(arg.result)
+
         if len(node.result) > 2:
-            assert prefix not in {':', '::'}
-            node.result = node.result[1:]
-            arg = self.factor(node)
-        else:
-            arg = self.compile__(node.result[1])
-        if prefix == '§':
-            return 'Required(' + arg + ')'
-        elif prefix == '!':
-            return 'NegativeLookahead(' + arg + ')'
-        elif prefix == '&':
-            return 'Lookahead(' + arg + ')'
-        elif prefix == '-!':
-            return 'NegativeLookbehind(' + arg + ')'
-        elif prefix == '-&':
-            return 'Lookbehind(' + arg + ')'
-        else:
-            if node.result[1].parser.component != 'symbol':
-                node.add_error(('Can apply retrieve operator "%s" only to '
-                                'symbols, but not to %s.') %
-                               (prefix, str(node.result[1].parser)))
-                return arg
-            self.variables.add(arg)
-            if prefix == ":":
-                return 'Retrieve(' + arg + ')'
-            elif prefix == "::":
-                return 'Pop(' + arg + ')'
-            assert False, ("Unknown prefix %s \n" % prefix) + node.as_sexpr()
-
-    def _prefix(self, node, prefix_table):
-        prefix = node.result[0].result
+            # shift = (Node(node.parser, node.result[1].result),)
+            # node.result[1].result = shift + node.result[2:]
+            node.result[1].result = (Node(node.result[1].parser,
+                                          node.result[1].result),) \
+                                    + node.result[2:]
+            node.result[1].parser = node.parser
+            node.result = (node.result[0], node.result[1])
+            #assert False, node.as_sexpr()
         node.result = node.result[1:]
-        for match, parser in prefix_table:
-            if match == prefix:
-                return self.non_terminal(node, parser)
+        for match, parser_class in self.PREFIX_TABLE:
+            if prefix == match:
+                return self.non_terminal(node, parser_class)
+
         assert False, ("Unknown prefix %s \n" % prefix) + node.as_sexpr()
-
-    def factor(self, node):
-        assert False, "Error in AST-transformation. Otherwise this code " + \
-            "could never be reached!"
-
-    def flowmarker(self, node):
-        return self._prefix(node, [('§', 'Required'),
-                ('&', 'Lookahead'), ('!', 'NegativeLookahead'),
-                ('-&', 'Lookbehind'), ('-!', 'NegativeLookbehind')])
-
-    def retrieveop(self, node):
-        if node.result[1].parser.component != 'symbol':
-            node.add_error(('Can apply retrieve operator "%s" only to '
-                            'symbols, but not to %s.') %
-                           (node.result[0].result,
-                            str(node.result[1].parser)))
-        return self._prefix(node, [('::', 'Pop'), (':', 'Retrieve')])
 
     def option(self, node):
         return self.non_terminal(node, 'Optional')

@@ -5,6 +5,7 @@ __pycache__/
 *_parser.py
 *_compiler.py
 *.ast
+*.dst
 *.st
 *.bcf
 *.aux
