@@ -385,7 +385,7 @@ def sane_parser_name(name):
 
 class Parser(metaclass=ParserMetaClass):
     def __init__(self, component=None):
-        assert component is None or isinstance(component, str)
+        assert component is None or isinstance(component, str), str(component)
         self.component = '' #component or ''
         self.headquarter = None          # head quater for global variables etc.
         self.visited = dict()
@@ -786,7 +786,7 @@ def iter_right_branch(node):
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, parser, component):
+    def __init__(self, parser, component=None):
         super(Lookbehind, self).__init__(parser, component)
         print("WARNING: Lookbehind Operator is experimental!")
 
@@ -826,8 +826,8 @@ def NegativeLookbehind(Lookbehind):
 
 
 class Capture(UnaryOperator):
-    def __init__(self, component, parser):
-        super(Capture, self).__init__(component, parser)
+    def __init__(self, parser, component=None):
+        super(Capture, self).__init__(parser, component)
 
     def __call__(self, text):
         node, text = self.parser(text)
@@ -838,7 +838,7 @@ class Capture(UnaryOperator):
 
 
 class Retrieve(Parser):
-    def __init__(self, symbol, component):
+    def __init__(self, symbol, component=None):
         super(Retrieve, self).__init__(component)
         self.symbol = symbol # if isinstance(symbol, str) else symbol.component
 
@@ -1380,8 +1380,8 @@ class EBNFCompiler(CompilerBase):
         if self.variables:
             for i in range(len(definitions)):
                 if definitions[i][0] in self.variables:
-                    definitions[i] = (definitions[i][0],
-                                      'Capture("%s", %s)' % definitions[i])
+                    definitions[i] = (definitions[i][0], 'Capture(%s, "%s")' %
+                                      (definitions[1], definitions[0]))
 
         self.definition_names = [defn[0] for defn in definitions]
         definitions.append(('wspc__',
@@ -1443,7 +1443,7 @@ class EBNFCompiler(CompilerBase):
             self.rules.add(rule)
             defn = self.compile__(node.result[1])
             if rule in self.variables:
-                defn = 'Capture("%s", %s)' % (rule, defn)
+                defn = 'Capture(%s, "%s")' % (defn, rule)
                 self.variables.remove(rule)
         except TypeError as error:
             errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
@@ -1498,15 +1498,21 @@ class EBNFCompiler(CompilerBase):
                             ', '.join(list(EBNFCompiler.KNOWN_DIRECTIVES))))
         return ""
 
+    def _current_component(self):
+        if self.component in {'', str(None)}:
+            comp = []
+        else:
+            comp = ["component=" + self.component]
+        self.component = str(None)
+        return comp
+
     def non_terminal(self, node, parser_class):
         """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        comp = self.component
-        self.component = str(None)
+        comp = self._current_component()
         arguments = filter(lambda arg: arg,
-                           [self.compile__(r) for r in node.result]
-                           + ["component=" + comp])
+                           [self.compile__(r) for r in node.result] + comp)
         return parser_class + '(' + ', '.join(arguments) + ')'
 
     def expression(self, node):
@@ -1569,13 +1575,11 @@ class EBNFCompiler(CompilerBase):
             return node.result
 
     def literal(self, node):
-        comp = self.directives["literalws"] + ["component=" + self.component]
-        self.component = str(None)
+        comp = self.directives["literalws"] + self._current_component()
         return 'Token(' + ', '.join([node.result] + comp) + ')'
 
     def regexp(self, node):
-        comp = ["component=" + self.component]
-        self.component = str(None)
+        comp = self._current_component()
         rx = node.result
         if rx[:2] == '~/':
             comp = ['wspcL=wspc__'] + comp
@@ -1650,8 +1654,6 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
     module_vars = globals()
     allowed_symbols = PARSER_SYMBOLS | AST_SYMBOLS | COMPILER_SYMBOLS
     namespace = {k: module_vars[k] for k in allowed_symbols}
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-    print(python_src)
     exec(code, namespace)  # safety risk?
     for key in namespace.keys():
         if key.endswith(obj_name_ending):

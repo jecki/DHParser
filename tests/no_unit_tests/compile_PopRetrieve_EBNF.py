@@ -35,3 +35,9 @@ errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
 if errors:
     print(errors)
     sys.exit(1)
+
+
+errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+if errors:
+    print(errors)
+    sys.exit(1)
