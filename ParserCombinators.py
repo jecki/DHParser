@@ -333,7 +333,8 @@ def left_recursion_guard(callfunc):
                 parser.headquarter.moving_forward = False
                 st = "->".join((str(p) for p in parser.headquarter.call_stack))
                 if result[0]:
-                    print("HIT!", st, '\t"%s"' % str(result[0]).replace('\n', ' '))
+                    # print("HIT!", st, '\t"%s"' % str(result[0]).replace('\n', ' '))
+                    pass
                 else:
                     # t = text[:20].replace('\n',' ')
                     # print("FAIL", st, '\t"%s"' % (t + ("..." if t else "")))
@@ -420,7 +421,7 @@ class ParserHeadquarter:
             if sane_parser_name(entry):
                 parser = Cdict[entry]
                 if isinstance(parser, Parser):
-                    print(type(parser), parser.component, entry)
+                    # print(type(parser), parser.component, entry)
                     if isinstance(parser, Forward):
                         parser.parser.component = entry
                     else:
@@ -436,7 +437,7 @@ class ParserHeadquarter:
     def _add_parser(self, parser):
         """Adds the copy of the parser object to this instance of ParserHeadquarter.
         """
-        print(parser.component)
+        # print(parser.component)
         if sane_parser_name(parser.component):  # overwrite class variable with instance variable
             setattr(self, parser.component, parser)
         parser.headquarter = self
@@ -527,7 +528,7 @@ class ScannerToken(Parser):
 
 
 class RegExp(Parser):
-    def __init__(self, component, regexp, orig_re = ''):
+    def __init__(self, regexp, orig_re = '', component=None):
         super(RegExp, self).__init__(component)
         self.component = component
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
@@ -588,16 +589,16 @@ def mixin_comment(whitespace, comment):
     return wspc
 
 
-def RE(regexp, component=None, wspcL='', wspcR=''):
+def RE(regexp, wspcL='', wspcR='', component=None):
     rA = '('
     rB = '\n)' if regexp.find('(?x)') >= 0 else ')'     # otherwise the closing bracket might erroneously
                                                         # be append to the end of a line comment!
-    return RegExp(component or TOKEN_KEYWORD, wspcL + rA + regexp + rB + wspcR,
-                  regexp)
+    return RegExp(wspcL + rA + regexp + rB + wspcR, regexp,
+                  component or TOKEN_KEYWORD)
 
 
-def Token(token, component=None, wspcL='', wspcR=''):
-    return RE(escape_re(token), component, wspcL, wspcR)
+def Token(token, wspcL='', wspcR='', component=None):
+    return RE(escape_re(token), wspcL, wspcR, component)
 
 
 ##############################################################################
@@ -608,7 +609,7 @@ def Token(token, component=None, wspcL='', wspcR=''):
 
 
 class UnaryOperator(Parser):
-    def __init__(self, component, parser):
+    def __init__(self, parser, component=None):
         super(UnaryOperator, self).__init__(component)
         assert isinstance(parser, Parser)
         self.parser = parser
@@ -623,9 +624,9 @@ class UnaryOperator(Parser):
 
 
 class NaryOperator(Parser):
-    def __init__(self, component, *parsers):
+    def __init__(self, *parsers, component=None):
         super(NaryOperator, self).__init__(component)
-        assert all([isinstance(parser, Parser) for parser in parsers])
+        assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers
 
     def apply(self, func):
@@ -641,8 +642,8 @@ class NaryOperator(Parser):
 
 
 class Optional(UnaryOperator):
-    def __init__(self, component, parser):
-        super(Optional, self).__init__(component, parser)
+    def __init__(self, parser, component=None):
+        super(Optional, self).__init__(parser, component)
         assert isinstance(parser, Parser)
         assert not isinstance(parser, Optional), \
             "Nesting options would be redundant: %s(%s)" % \
@@ -670,8 +671,8 @@ class ZeroOrMore(Optional):
 
 
 class OneOrMore(UnaryOperator):
-    def __init__(self, component, parser):
-        super(OneOrMore, self).__init__(component, parser)
+    def __init__(self, parser, component=None):
+        super(OneOrMore, self).__init__(parser, component)
         assert not isinstance(parser, Optional), \
             "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
             "%s(%s)" % (str(component), str(parser.component))
@@ -690,8 +691,8 @@ class OneOrMore(UnaryOperator):
 
 
 class Sequence(NaryOperator):
-    def __init__(self, component, *parsers):
-        super(Sequence, self).__init__(component, *parsers)
+    def __init__(self, *parsers, component=None):
+        super(Sequence, self).__init__(*parsers, component=component)
         assert len(self.parsers) >= 1
         # commented, because sequences can be empty:
         # assert not all(isinstance(p, Optional) for p in self.parsers)
@@ -712,8 +713,8 @@ class Sequence(NaryOperator):
 
 
 class Alternative(NaryOperator):
-    def __init__(self, component, *parsers):
-        super(Alternative, self).__init__(component, *parsers)
+    def __init__(self, *parsers, component=None):
+        super(Alternative, self).__init__(*parsers, component=component)
         assert len(self.parsers) >= 1
         assert all(not isinstance(p, Optional) for p in self.parsers)
 
@@ -733,8 +734,8 @@ class Alternative(NaryOperator):
 
 
 class FlowOperator(UnaryOperator):
-    def __init__(self, component, parser):
-        super(FlowOperator, self).__init__(component, parser)
+    def __init__(self, parser, component=None):
+        super(FlowOperator, self).__init__(parser, component)
 
 
 class Required(FlowOperator):
@@ -753,8 +754,8 @@ class Required(FlowOperator):
 
 
 class Lookahead(FlowOperator):
-    def __init__(self, component, parser):
-        super(Lookahead, self).__init__(component, parser)
+    def __init__(self, parser, component=None):
+        super(Lookahead, self).__init__(parser, component)
 
     def __call__(self, text):
         node, text_ = self.parser(text)
@@ -785,8 +786,8 @@ def iter_right_branch(node):
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, component, parser):
-        super(Lookbehind, self).__init__(component, parser)
+    def __init__(self, parser, component):
+        super(Lookbehind, self).__init__(parser, component)
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text):
@@ -837,7 +838,7 @@ class Capture(UnaryOperator):
 
 
 class Retrieve(Parser):
-    def __init__(self, component, symbol):
+    def __init__(self, symbol, component):
         super(Retrieve, self).__init__(component)
         self.symbol = symbol # if isinstance(symbol, str) else symbol.component
 
@@ -889,7 +890,7 @@ class Forward(Parser):
 
     def set(self, parser):
         assert isinstance(parser, Parser)
-        # self.component = parser.component  # this is now assigned by the constructor of ParserHeadquarter
+        self.component = parser.component  # redundant, because of constructor of ParserHeadquarter
         self.parser = parser
 
     def apply(self, func):
@@ -1134,7 +1135,6 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
     if not errors:
         ASTTransform(syntax_tree, AST_transformations)
         DEBUG_DUMP_SYNTAX_TREE(parser_HQ, syntax_tree, compiler, ext='.ast')
-        # print(syntax_tree.as_sexpr())
         result = compiler.compile__(syntax_tree)
         errors.extend(syntax_tree.collect_errors(clear=True))
     else:
@@ -1199,37 +1199,32 @@ class EBNFGrammar(ParserHeadquarter):
     expression = Forward()
     source_hash__ = "c8e9cee1d0218a6c4a9c5cbc781c215a"
     wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
-    EOF = NegativeLookahead("EOF", RE('.'))
-    list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', "list_", wspcR=wspc__)
-    regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', "regexp", wspcR=wspc__)
-    literal = Alternative("literal", RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
-    symbol = RE('(?!\\d)\\w+', "symbol", wspcR=wspc__)
-    oneormore = Sequence("oneormore", Token("<", wspcR=wspc__), expression, Required(None, Token(">", wspcR=wspc__)))
-    repetition = Sequence("repetition", Token("{", wspcR=wspc__), expression, Required(None, Token("}", wspcR=wspc__)))
-    option = Sequence("option", Token("[", wspcR=wspc__), expression, Required(None, Token("]", wspcR=wspc__)))
-    group = Sequence("group", Token("(", wspcR=wspc__), expression, Required(None, Token(")", wspcR=wspc__)))
-    retrieveop = Alternative("retrieveop", Token("::", wspcR=wspc__), Token(":", wspcR=wspc__))
-    flowmarker = Alternative("flowmarker", Token("!", wspcR=wspc__), Token("&", wspcR=wspc__), Token("§", wspcR=wspc__),
+    EOF = NegativeLookahead(RE('.'))
+    list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', wspcR=wspc__)
+    regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', wspcR=wspc__)
+    literal = Alternative(RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
+    symbol = RE('(?!\\d)\\w+', wspcR=wspc__)
+    oneormore = Sequence(Token("<", wspcR=wspc__), expression, Required(Token(">", wspcR=wspc__)))
+    repetition = Sequence(Token("{", wspcR=wspc__), expression, Required(Token("}", wspcR=wspc__)))
+    option = Sequence(Token("[", wspcR=wspc__), expression, Required(Token("]", wspcR=wspc__)))
+    group = Sequence(Token("(", wspcR=wspc__), expression, Required(Token(")", wspcR=wspc__)))
+    retrieveop = Alternative(Token("::", wspcR=wspc__), Token(":", wspcR=wspc__))
+    flowmarker = Alternative(Token("!", wspcR=wspc__), Token("&", wspcR=wspc__), Token("§", wspcR=wspc__),
                              Token("-!", wspcR=wspc__), Token("-&", wspcR=wspc__))
-    factor = Alternative("factor", Sequence(None, Optional(None, flowmarker), Optional(None, retrieveop), symbol,
-                                            NegativeLookahead(None, Token("=", wspcR=wspc__))),
-                         Sequence(None, Optional(None, flowmarker), literal),
-                         Sequence(None, Optional(None, flowmarker), regexp),
-                         Sequence(None, Optional(None, flowmarker), group),
-                         Sequence(None, Optional(None, flowmarker), oneormore), repetition, option)
-    term = Sequence("term", factor, ZeroOrMore(None, factor))
-    expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Token("|", wspcR=wspc__), term))))
-    directive = Sequence("directive", Token("@", wspcR=wspc__), Required(None, symbol),
-                         Required(None, Token("=", wspcR=wspc__)), Alternative(None, regexp, literal, list_))
-    definition = Sequence("definition", symbol, Required(None, Token("=", wspcR=wspc__)), expression)
-    syntax = Sequence("syntax", Optional(None, RE('', wspcL=wspc__)),
-                      ZeroOrMore(None, Alternative(None, definition, directive)), Required(None, EOF))
+    factor = Alternative(Sequence(Optional(flowmarker), Optional(retrieveop), symbol,
+                                        NegativeLookahead(Token("=", wspcR=wspc__))),
+                         Sequence(Optional(flowmarker), literal),
+                         Sequence(Optional(flowmarker), regexp),
+                         Sequence(Optional(flowmarker), group),
+                         Sequence(Optional(flowmarker), oneormore), repetition, option)
+    term = Sequence(factor, ZeroOrMore(factor))
+    expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|", wspcR=wspc__), term))))
+    directive = Sequence(Token("@", wspcR=wspc__), Required(symbol),
+                         Required(Token("=", wspcR=wspc__)), Alternative(regexp, literal, list_))
+    definition = Sequence(symbol, Required(Token("=", wspcR=wspc__)), expression)
+    syntax = Sequence(Optional(RE('', wspcL=wspc__)),
+                      ZeroOrMore(Alternative(definition, directive)), Required(EOF))
     root__ = syntax
-
-
-def INSPECT(node):
-    print("INSPECT")
-    print(node.as_sexpr())
 
 
 EBNFTransTable = {
@@ -1451,10 +1446,9 @@ class EBNFCompiler(CompilerBase):
                 defn = 'Capture("%s", %s)' % (rule, defn)
                 self.variables.remove(rule)
         except TypeError as error:
-            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + \
-                     node.as_sexpr()
+            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
             node.add_error(errmsg)
-            rule, defn = 'error', '"' + errmsg + '"'
+            rule, defn = rule + ':error', '"' + errmsg + '"'
         return (rule, defn)
 
     def _check_rx(self, node, rx):
@@ -1510,8 +1504,9 @@ class EBNFCompiler(CompilerBase):
         """
         comp = self.component
         self.component = str(None)
-        arguments = filter(lambda arg: arg,  # remove comments at this stage
-                           [comp] + [self.compile__(r) for r in node.result])
+        arguments = filter(lambda arg: arg,
+                           [self.compile__(r) for r in node.result]
+                           + ["component=" + comp])
         return parser_class + '(' + ', '.join(arguments) + ')'
 
     def expression(self, node):
@@ -1573,23 +1568,20 @@ class EBNFCompiler(CompilerBase):
                 self.recursive.add(node.result)
             return node.result
 
-    def _get_component(self):
-        comp = [self.component] if self.component != str(None) else []
-        self.component = str(None)
-        return comp
-
     def literal(self, node):
-        comp = self._get_component() + self.directives["literalws"]
+        comp = self.directives["literalws"] + ["component=" + self.component]
+        self.component = str(None)
         return 'Token(' + ', '.join([node.result] + comp) + ')'
 
     def regexp(self, node):
-        comp = self._get_component()
+        comp = ["component=" + self.component]
+        self.component = str(None)
         rx = node.result
         if rx[:2] == '~/':
-            comp += ['wspcL=wspc__']
+            comp = ['wspcL=wspc__'] + comp
             rx = rx[1:]
         if rx[-2:] == '/~':
-            comp += ['wspcR=wspc__']
+            comp = ['wspcR=wspc__'] + comp
             rx = rx[:-1]
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
@@ -1850,11 +1842,11 @@ def test(file_name):
     result, errors, syntax_tree = full_compilation(grammar,
             EBNFGrammar(), EBNFTransTable, compiler)
     # print(syntax_tree.as_xml())
-    print(result)
-    print(syntax_tree.as_sexpr(grammar))
     print(errors)
-    print(compiler.gen_AST_Skeleton())
-    print(compiler.gen_Compiler_Skeleton())
+    # print(syntax_tree.as_sexpr(grammar))
+    # print(errors)
+    # print(compiler.gen_AST_Skeleton())
+    # print(compiler.gen_Compiler_Skeleton())
     result = compileDSL(grammar, result, EBNFTransTable, compiler)
     print(result)
     return result
