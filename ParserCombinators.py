@@ -300,7 +300,7 @@ def error_messages(text, errors):
 
 LEFT_RECURSION_DEPTH = 10   # because of pythons recursion depth limit, this
                             # value ought not to be set too high
-MAX_DROPOUTS = 25  # stop trying to recover parsing after so many
+MAX_DROPOUTS = 25   # stop trying to recover parsing after so many errors
 
 WHITESPACE_KEYWORD = 'wspc__'
 TOKEN_KEYWORD = 'token__'
@@ -1137,79 +1137,6 @@ COMPILER_SYMBOLS = {'CompilerBase', 'Error', 'Node', 're'}
 # EBNF-Grammar-Compiler
 #
 ##############################################################################
-
-
-# class EBNFGrammar(ParserHeadquarter):
-#     r"""Parser for an EBNF source file, with this grammar:
-#
-#     # EBNF-Grammar in EBNF
-#
-#     @ comment    :  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars upto and including '\n'
-#     @ whitespace :  /\s*/                            # whitespace includes linefeed
-#     @ literalws  :  right                            # trailing whitespace of literals will be ignored tacitly
-#
-#     syntax     :  [~//] { definition | directive } §EOF
-#     definition :  symbol §":" expression
-#     directive  :  "@" §symbol §":" ( regexp | literal | list_ )
-#
-#     expression :  term { "|" term }
-#     term       :  factor { factor }
-#     factor     :  [flowmarker] [retrieveop] symbol !":"    # negative lookahead to be sure it's not a definition
-#                 | [flowmarker] literal
-#                 | [flowmarker] regexp
-#                 | [flowmarker] group
-#                 | [flowmarker] oneormore
-#                 | repetition
-#                 | option
-#
-#     flowmarker :  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
-#                   "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-#     retrieveop :  "=" | "@"                          # '=' retrieve,  '@' pop
-#
-#     group      :  "(" expression §")"
-#     option     :  "[" expression §"]"
-#     repetition :  "{" expression §"}"
-#     oneormore  :  "<" expression §">"
-#
-#     symbol     :  /\w+/~                             # e.g. expression, factor, parameter_list
-#     literal    :  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-#                 | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-#     regexp     :  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
-#                                                      # '~' is a whitespace-marker, if present leading or trailing
-#                                                      # whitespace of a regular expression will be ignored tacitly.
-#     list_      :  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-#                                                      # BEGIN_QUOTE, END_QUOTE ; see markdown.py for an exmaple
-#     EOF :  !/./
-#     """
-#     expression = Forward()
-#     source_hash__ = "b1291fa35ac696654838fc94cabf439b"
-#     wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
-#     EOF = NegativeLookahead(None, RE('.', "EOF"))
-#     list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', "list_", wspcR=wspc__)
-#     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', "regexp", wspcR=wspc__)
-#     literal = Alternative("literal", RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
-#     symbol = RE('\\w+', "symbol", wspcR=wspc__)
-#     oneormore = Sequence("oneormore", Token("<", wspcR=wspc__), expression, Required(None, Token(">", wspcR=wspc__)))
-#     repetition = Sequence("repetition", Token("{", wspcR=wspc__), expression, Required(None, Token("}", wspcR=wspc__)))
-#     option = Sequence("option", Token("[", wspcR=wspc__), expression, Required(None, Token("]", wspcR=wspc__)))
-#     group = Sequence("group", Token("(", wspcR=wspc__), expression, Required(None, Token(")", wspcR=wspc__)))
-#     retrieveop = Alternative("retrieveop", Token("::", wspcR=wspc__), Token(":", wspcR=wspc__))
-#     flowmarker = Alternative("flowmarker", Token("!", wspcR=wspc__), Token("&", wspcR=wspc__), Token("§", wspcR=wspc__),
-#                              Token("-!", wspcR=wspc__), Token("-&", wspcR=wspc__))
-#     factor = Alternative("factor", Sequence(None, Optional(None, flowmarker), Optional(None, retrieveop), symbol,
-#                                             NegativeLookahead(None, Token("=", wspcR=wspc__))),
-#                          Sequence(None, Optional(None, flowmarker), literal),
-#                          Sequence(None, Optional(None, flowmarker), regexp),
-#                          Sequence(None, Optional(None, flowmarker), group),
-#                          Sequence(None, Optional(None, flowmarker), oneormore), repetition, option)
-#     term = Sequence("term", factor, ZeroOrMore(None, factor))
-#     expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Token("|", wspcR=wspc__), term))))
-#     directive = Sequence("directive", Token("@", wspcR=wspc__), Required(None, symbol), Required(None, Token("=", wspcR=wspc__)),
-#                          Alternative(None, regexp, literal, list_))
-#     definition = Sequence("definition", symbol, Required(None, Token("=", wspcR=wspc__)), expression)
-#     syntax = Sequence("syntax", Optional(None, RE('', wspcL=wspc__)),
-#                       ZeroOrMore(None, Alternative(None, definition, directive)), Required(None, EOF))
-#     root__ = syntax
 
 
 class EBNFGrammar(ParserHeadquarter):

@@ -1,4 +1,6 @@
-* Fehler im Required-Operator!?
+* Romove component parameter from all Parser contructors and set component in ParserHeadquarter-constructors
+
+* smarter handling of whitespace parameters in RE and Token
 
 * finally split ParserCombinators.py into different modules, like:
   SyntaxTree, ErrorMessages, ParserCombinators, ASTTransform, EBNFCompiler, DSLCompiler
