@@ -1,7 +1,7 @@
-* Romove component parameter from all Parser contructors and set component in ParserHeadquarter-constructors
-
-* smarter handling of whitespace parameters in RE and Token
+* change EBNF-syntax to PEG syntax, e.g. `a*` or `(a b)*` instead of `{a}` or `{a b}`
 
 * finally split ParserCombinators.py into different modules, like:
   SyntaxTree, ErrorMessages, ParserCombinators, ASTTransform, EBNFCompiler, DSLCompiler
+
+* smarter handling of whitespace parameters in RE and Token (not important...)
 

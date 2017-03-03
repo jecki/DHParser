@@ -221,7 +221,7 @@ class Node:
                     line and column.
         """
         def opening(node):
-            s = '(' + str(node.parser) # (node.parser.component or node.parser.__class__.__name__)
+            s = '(' + str(node.parser) # (node.parser.name or node.parser.__class__.__name__)
             # s += " '(pos %i)" % node.pos
             if src:
                 s += " '(pos %i  %i %i)" % (node.pos, *line_col(src, node.pos))
@@ -241,7 +241,7 @@ class Node:
         """
 
         def opening(node):
-            s = '<' + (node.parser.component or node.parser.__class__.__name__)
+            s = '<' + (node.parser.name or node.parser.__class__.__name__)
             # s += ' pos="%i"' % node.pos
             if src:
                 s += ' line="%i" col="%i"' % line_col(src, node.pos)
@@ -253,7 +253,7 @@ class Node:
 
         def closing(node):
             s = '</' + \
-                (node.parser.component or node.parser.__class__.__name__) + '>'
+                (node.parser.name or node.parser.__class__.__name__) + '>'
             return s
 
         return self.as_tree('    ', opening, closing, lambda s: s)
@@ -302,7 +302,7 @@ LEFT_RECURSION_DEPTH = 10   # because of pythons recursion depth limit, this
                             # value ought not to be set too high
 MAX_DROPOUTS = 25   # stop trying to recover parsing after so many errors
 
-WHITESPACE_KEYWORD = 'wspc__'
+WHITESPACE_KEYWORD = 'wsp__'
 TOKEN_KEYWORD = 'token__'
 
 
@@ -312,7 +312,6 @@ def left_recursion_guard(callfunc):
             location = len(text)
             # if location has already been visited by the current parser,
             # return saved result
-            #### if parser.component: print(parser.component, location, text[:10] + '...')
             if location in parser.visited:
                 return parser.visited[location]
             # break left recursion at the maximum allowed depth
@@ -384,9 +383,9 @@ def sane_parser_name(name):
 
 
 class Parser(metaclass=ParserMetaClass):
-    def __init__(self, component=None):
-        assert component is None or isinstance(component, str), str(component)
-        self.component = component or ''
+    def __init__(self, name=None):
+        assert name is None or isinstance(name, str), str(name)
+        self.name = name or ''
         self.headquarter = None          # head quater for global variables etc.
         self.visited = dict()
         self.recursion_counter = dict()
@@ -396,7 +395,7 @@ class Parser(metaclass=ParserMetaClass):
         raise NotImplementedError
 
     def __str__(self):
-        return self.component or self.__class__.__name__
+        return self.name or self.__class__.__name__
 
     def apply(self, func):
         """Applies function `func(parser)` recursively to this parser and all
@@ -414,36 +413,39 @@ class Parser(metaclass=ParserMetaClass):
 
 class ParserHeadquarter:
     @classmethod
-    def _connect_commponent_names_to_parsers(cls):
-        """Initializes the `parser.component` fields of those
+    def _assign_parser_names(C):
+        """Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.
             class Grammar(ParserHeadquarter):
                 ...
                 symbol = RE('(?!\\d)\\w+')
-        After the call of this method symbol.component == "symbol"
-        holds. If the `component` field has been assigned a different
+        After the call of this method symbol.name == "symbol"
+        holds. If the `name` field has been assigned a different
         name in the constructor, a ValueError will be raised.
         """
-        Cdict = cls.__dict__
+        if C.parser_initialization__ == "done":
+            return
+        Cdict = C.__dict__
         for entry in Cdict:
             if sane_parser_name(entry):
                 parser = Cdict[entry]
                 if isinstance(parser, Parser):
-                    # print(type(parser), parser.component, entry)
+                    # print(type(parser), parser.name, entry)
                     if isinstance(parser, Forward):
-                        assert not parser.component or parser.component == entry
-                        if parser.component and parser.component != entry:
+                        assert not parser.name or parser.name == entry
+                        if parser.name and parser.name != entry:
                             raise ValueError(("Parser named %s should not be "
                                 " assigned to field with different name: %s"
-                                % (parser.component, entry)))
-                        parser.parser.component = entry
+                                              % (parser.name, entry)))
+                        parser.parser.name = entry
                     else:
-                        parser.component = entry
+                        parser.name = entry
+        C.parser_initialization__ = "done"
 
 
     def __init__(self):
-        self._connect_commponent_names_to_parsers()
+        self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
         self.root__.apply(self._add_parser)
         self.variables = dict()                 # support for Pop and Retrieve operators
@@ -456,9 +458,9 @@ class ParserHeadquarter:
     def _add_parser(self, parser):
         """Adds the copy of the parser object to this instance of ParserHeadquarter.
         """
-        # print(parser.component)
-        if sane_parser_name(parser.component):  # overwrite class variable with instance variable
-            setattr(self, parser.component, parser)
+        # print(parser.name)
+        if sane_parser_name(parser.name):  # overwrite class variable with instance variable
+            setattr(self, parser.name, parser)
         parser.headquarter = self
 
     def parse(self, document):
@@ -534,22 +536,22 @@ class ScannerToken(Parser):
                     '(Most likely due to a scanner bug!)')
                 return node, text[2:]
             elif text.find(BEGIN_SCANNER_TOKEN, 1, end) >= 0:
-                node = Node(self, text[len(self.component) + 1:end])
+                node = Node(self, text[len(self.name) + 1:end])
                 node.add_error(
                     'Scanner tokens must not be nested or contain '
                     'BEGIN_SCANNER_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a scanner bug!)')
                 return node, text[end:]
-            if text[1:len(self.component) + 1] == self.component:
-                return Node(self, text[len(self.component) + 1:end]), \
+            if text[1:len(self.name) + 1] == self.name:
+                return Node(self, text[len(self.name) + 1:end]), \
                        text[end + 1:]
         return None, text
 
 
 class RegExp(Parser):
-    def __init__(self, regexp, orig_re = '', component=None):
-        super(RegExp, self).__init__(component)
-        self.component = component
+    def __init__(self, regexp, orig_re = '', name=None):
+        super(RegExp, self).__init__(name)
+        # self.name = name
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
         self.orig_re = orig_re
 
@@ -559,8 +561,8 @@ class RegExp(Parser):
             regexp = copy.deepcopy(self.regexp)
         except TypeError:
             regexp = self.regexp.pattern
-        duplicate = RegExp(self.component, regexp, self.orig_re)
-        duplicate.component = self.component # this ist needed!!!!
+        duplicate = RegExp(self.name, regexp, self.orig_re)
+        duplicate.name = self.name # this ist needed!!!!
         duplicate.regexp = self.regexp
         duplicate.orig_re = self.orig_re
         duplicate.headquarter = self.headquarter
@@ -608,16 +610,16 @@ def mixin_comment(whitespace, comment):
     return wspc
 
 
-def RE(regexp, wspcL='', wspcR='', component=None):
+def RE(regexp, wL='', wR='', name=None):
     rA = '('
     rB = '\n)' if regexp.find('(?x)') >= 0 else ')'     # otherwise the closing bracket might erroneously
                                                         # be append to the end of a line comment!
-    return RegExp(wspcL + rA + regexp + rB + wspcR, regexp,
-                  component or TOKEN_KEYWORD)
+    return RegExp(wL + rA + regexp + rB + wR, regexp,
+                  name or TOKEN_KEYWORD)
 
 
-def Token(token, wspcL='', wspcR='', component=None):
-    return RE(escape_re(token), wspcL, wspcR, component)
+def Token(token, wL='', wR='', name=None):
+    return RE(escape_re(token), wL, wR, name)
 
 
 ##############################################################################
@@ -628,8 +630,8 @@ def Token(token, wspcL='', wspcR='', component=None):
 
 
 class UnaryOperator(Parser):
-    def __init__(self, parser, component=None):
-        super(UnaryOperator, self).__init__(component)
+    def __init__(self, parser, name=None):
+        super(UnaryOperator, self).__init__(name)
         assert isinstance(parser, Parser)
         self.parser = parser
 
@@ -639,12 +641,12 @@ class UnaryOperator(Parser):
 
     # def __str__(self):
     #     return Parser.__str__(self) + \
-    #            ("" if self.component else "(" + str(self.parser) + ")")
+    #            ("" if self.name else "(" + str(self.parser) + ")")
 
 
 class NaryOperator(Parser):
-    def __init__(self, *parsers, component=None):
-        super(NaryOperator, self).__init__(component)
+    def __init__(self, *parsers, name=None):
+        super(NaryOperator, self).__init__(name)
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers
 
@@ -655,21 +657,21 @@ class NaryOperator(Parser):
 
     # def __str__(self):
     #     return Parser.__str__(self) + \
-    #            ("" if self.component else str([str(p) for p in self.parsers]))
+    #            ("" if self.name else str([str(p) for p in self.parsers]))
     #     # return "(" + ",\n".join(["\n    ".join(str(parser).split("\n"))
     #     #                          for parser in self.parsers]) + ")"
 
 
 class Optional(UnaryOperator):
-    def __init__(self, parser, component=None):
-        super(Optional, self).__init__(parser, component)
+    def __init__(self, parser, name=None):
+        super(Optional, self).__init__(parser, name)
         assert isinstance(parser, Parser)
         assert not isinstance(parser, Optional), \
             "Nesting options would be redundant: %s(%s)" % \
-            (str(component), str(parser.component))
+            (str(name), str(parser.name))
         assert not isinstance(parser, Required), \
             "Nestion options with required elements is contradictory: " \
-            "%s(%s)" % (str(component), str(parser.component))
+            "%s(%s)" % (str(name), str(parser.name))
 
     def __call__(self, text):
         node, text = self.parser(text)
@@ -690,11 +692,11 @@ class ZeroOrMore(Optional):
 
 
 class OneOrMore(UnaryOperator):
-    def __init__(self, parser, component=None):
-        super(OneOrMore, self).__init__(parser, component)
+    def __init__(self, parser, name=None):
+        super(OneOrMore, self).__init__(parser, name)
         assert not isinstance(parser, Optional), \
             "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
-            "%s(%s)" % (str(component), str(parser.component))
+            "%s(%s)" % (str(name), str(parser.name))
 
     def __call__(self, text):
         results = ()
@@ -710,8 +712,8 @@ class OneOrMore(UnaryOperator):
 
 
 class Sequence(NaryOperator):
-    def __init__(self, *parsers, component=None):
-        super(Sequence, self).__init__(*parsers, component=component)
+    def __init__(self, *parsers, name=None):
+        super(Sequence, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         # commented, because sequences can be empty:
         # assert not all(isinstance(p, Optional) for p in self.parsers)
@@ -732,8 +734,8 @@ class Sequence(NaryOperator):
 
 
 class Alternative(NaryOperator):
-    def __init__(self, *parsers, component=None):
-        super(Alternative, self).__init__(*parsers, component=component)
+    def __init__(self, *parsers, name=None):
+        super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         assert all(not isinstance(p, Optional) for p in self.parsers)
 
@@ -753,8 +755,8 @@ class Alternative(NaryOperator):
 
 
 class FlowOperator(UnaryOperator):
-    def __init__(self, parser, component=None):
-        super(FlowOperator, self).__init__(parser, component)
+    def __init__(self, parser, name=None):
+        super(FlowOperator, self).__init__(parser, name)
 
 
 class Required(FlowOperator):
@@ -773,8 +775,8 @@ class Required(FlowOperator):
 
 
 class Lookahead(FlowOperator):
-    def __init__(self, parser, component=None):
-        super(Lookahead, self).__init__(parser, component)
+    def __init__(self, parser, name=None):
+        super(Lookahead, self).__init__(parser, name)
 
     def __call__(self, text):
         node, text_ = self.parser(text)
@@ -805,8 +807,8 @@ def iter_right_branch(node):
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, parser, component=None):
-        super(Lookbehind, self).__init__(parser, component)
+    def __init__(self, parser, name=None):
+        super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text):
@@ -824,7 +826,7 @@ class Lookbehind(FlowOperator):
     def condition(self):
         node = None
         for node in iter_right_branch(self.headquarter.last_node):
-            if node.parser.component == self.parser.component:
+            if node.parser.name == self.parser.name:
                 return True
         if node and isinstance(self.parser, RegExp) and \
                 self.parser.regexp.match(str(node)):    # Is there really a use case for this?
@@ -845,25 +847,25 @@ def NegativeLookbehind(Lookbehind):
 
 
 class Capture(UnaryOperator):
-    def __init__(self, parser, component=None):
-        super(Capture, self).__init__(parser, component)
+    def __init__(self, parser, name=None):
+        super(Capture, self).__init__(parser, name)
 
     def __call__(self, text):
         node, text = self.parser(text)
         if node:
-            stack = self.headquarter.variables.setdefault(self.component, [])
+            stack = self.headquarter.variables.setdefault(self.name, [])
             stack.append(str(node))
         return Node(self, node), text
 
 
 class Retrieve(Parser):
-    def __init__(self, symbol, component=None):
-        super(Retrieve, self).__init__(component)
-        self.symbol = symbol # if isinstance(symbol, str) else symbol.component
+    def __init__(self, symbol, name=None):
+        super(Retrieve, self).__init__(name)
+        self.symbol = symbol # if isinstance(symbol, str) else symbol.name
 
     def __call__(self, text):
         symbol = self.symbol if isinstance(self.symbol, str) \
-                             else self.symbol.component
+                             else self.symbol.name
         stack = self.headquarter.variables[symbol]
         value = self.pick_value(stack)
         if text.startswith(value):
@@ -898,8 +900,8 @@ class Forward(Parser):
 
     def __str__(self):
         if self.cycle_reached:
-            if self.parser and self.parser.component:
-                return str(self.parser.component)
+            if self.parser and self.parser.name:
+                return str(self.parser.name)
             return "..."
         else:
             self.cycle_reached = True
@@ -909,7 +911,7 @@ class Forward(Parser):
 
     def set(self, parser):
         assert isinstance(parser, Parser)
-        self.component = parser.component  # redundant, because of constructor of ParserHeadquarter
+        self.name = parser.name  # redundant, because of constructor of ParserHeadquarter
         self.parser = parser
 
     def apply(self, func):
@@ -964,21 +966,21 @@ def ASTTransform(node, transtable):
         node (Node): The root note of the parse tree (or sub-tree) to be
                 transformed into the abstract syntax tree.
         trans_table (dict): A dictionary that assigns a transformation
-                transformation functions to parser component strings.
+                transformation functions to parser name strings.
     """
     # normalize transformation entries by turning single transformations
     # into lists with a single item
-    table = {component: transformation
+    table = {name: transformation
     if isinstance(transformation, collections.abc.Sequence)
     else [transformation]
-             for component, transformation in list(transtable.items())}
+             for name, transformation in list(transtable.items())}
     table = expand_table(table)
 
     def recursive_ASTTransform(node):
         if node.children:
             for child in node.result:
                 recursive_ASTTransform(child)
-        transformation = table.get(node.parser.component,
+        transformation = table.get(node.parser.name,
                                    table.get('*', [lambda node: None]))
         for transform in transformation:
             transform(node)
@@ -998,12 +1000,12 @@ def ASTTransform(node, transtable):
 
 def replace_by_single_child(node):
     """Remove single branch node, replacing it by its immediate descendant.
-    (In case the descendant's component is empty (i.e. anonymous) the
-    component of this node's parser is kept.)
+    (In case the descendant's name is empty (i.e. anonymous) the
+    name of this node's parser is kept.)
     """
     if node.children and len(node.result) == 1:
-        if not node.result[0].parser.component:
-            node.result[0].parser.component = node.parser.component
+        if not node.result[0].parser.name:
+            node.result[0].parser.name = node.parser.name
         node.parser = node.result[0].parser
         node.errors.extend(node.result[0].errors)
         node.result = node.result[0].result
@@ -1065,7 +1067,7 @@ def flatten(node):
     if len(node.children) >= 2:
         new_result = []
         for child in node.result:
-            if not child.parser.component:
+            if not child.parser.name:
                 flatten(child)
                 new_result.extend(child.result)
             else:
@@ -1079,7 +1081,7 @@ def remove_tokens(node, tokens):
     """
     if node.children:
         node.result = tuple(child for child in node.result
-                            if child.parser.component != TOKEN_KEYWORD or
+                            if child.parser.name != TOKEN_KEYWORD or
                             child.result not in tokens)
 
 
@@ -1109,11 +1111,11 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
 
 class CompilerBase:
     def compile__(self, node):
-        comp, cls = node.parser.component, node.parser.__class__.__name__
+        comp, cls = node.parser.name, node.parser.__class__.__name__
         elem = comp or cls
         if not sane_parser_name(elem):
             node.add_error("Must not use reserved name '%s' as parser "
-                           "component! " % elem + "(Any name starting with "
+                           "name! " % elem + "(Any name starting with "
                            "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
@@ -1133,9 +1135,9 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
         source (str):                the input source for compilation
         parser_HQ (ParserHQ):        the ParserHeadquarter object
         AST_transformations (dict):  a table that assigns AST transformation
-                functions to parser components (see function ASTTransform)
+                functions to parser names (see function ASTTransform)
         compiler (object):  an instance of a class derived from `CompilerBase`
-                with a suitable method for every parser component or class.
+                with a suitable method for every parser name or class.
     Returns:
         tuple: (result (?), messages (str), syntax_tree (Node))
             Result as returned by the compiler or `None` if an error occurred
@@ -1217,31 +1219,32 @@ class EBNFGrammar(ParserHeadquarter):
     """
     expression = Forward()
     source_hash__ = "c8e9cee1d0218a6c4a9c5cbc781c215a"
-    wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+    parser_initialization__ = "upon instantiation"
+    ws__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     EOF = NegativeLookahead(RE('.'))
-    list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', wspcR=wspc__)
-    regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', wspcR=wspc__)
-    literal = Alternative(RE('"(?:[^"]|\\\\")*?"', wspcR=wspc__), RE("'(?:[^']|\\\\')*?'", wspcR=wspc__))
-    symbol = RE('(?!\\d)\\w+', wspcR=wspc__)
-    oneormore = Sequence(Token("<", wspcR=wspc__), expression, Required(Token(">", wspcR=wspc__)))
-    repetition = Sequence(Token("{", wspcR=wspc__), expression, Required(Token("}", wspcR=wspc__)))
-    option = Sequence(Token("[", wspcR=wspc__), expression, Required(Token("]", wspcR=wspc__)))
-    group = Sequence(Token("(", wspcR=wspc__), expression, Required(Token(")", wspcR=wspc__)))
-    retrieveop = Alternative(Token("::", wspcR=wspc__), Token(":", wspcR=wspc__))
-    flowmarker = Alternative(Token("!", wspcR=wspc__), Token("&", wspcR=wspc__), Token("§", wspcR=wspc__),
-                             Token("-!", wspcR=wspc__), Token("-&", wspcR=wspc__))
+    list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', wR=ws__)
+    regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', wR=ws__)
+    literal = Alternative(RE('"(?:[^"]|\\\\")*?"', wR=ws__), RE("'(?:[^']|\\\\')*?'", wR=ws__))
+    symbol = RE('(?!\\d)\\w+', wR=ws__)
+    oneormore = Sequence(Token("<", wR=ws__), expression, Required(Token(">", wR=ws__)))
+    repetition = Sequence(Token("{", wR=ws__), expression, Required(Token("}", wR=ws__)))
+    option = Sequence(Token("[", wR=ws__), expression, Required(Token("]", wR=ws__)))
+    group = Sequence(Token("(", wR=ws__), expression, Required(Token(")", wR=ws__)))
+    retrieveop = Alternative(Token("::", wR=ws__), Token(":", wR=ws__))
+    flowmarker = Alternative(Token("!", wR=ws__), Token("&", wR=ws__), Token("§", wR=ws__),
+                             Token("-!", wR=ws__), Token("-&", wR=ws__))
     factor = Alternative(Sequence(Optional(flowmarker), Optional(retrieveop), symbol,
-                                        NegativeLookahead(Token("=", wspcR=wspc__))),
+                                        NegativeLookahead(Token("=", wR=ws__))),
                          Sequence(Optional(flowmarker), literal),
                          Sequence(Optional(flowmarker), regexp),
                          Sequence(Optional(flowmarker), group),
                          Sequence(Optional(flowmarker), oneormore), repetition, option)
     term = Sequence(factor, ZeroOrMore(factor))
-    expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|", wspcR=wspc__), term))))
-    directive = Sequence(Token("@", wspcR=wspc__), Required(symbol),
-                         Required(Token("=", wspcR=wspc__)), Alternative(regexp, literal, list_))
-    definition = Sequence(symbol, Required(Token("=", wspcR=wspc__)), expression)
-    syntax = Sequence(Optional(RE('', wspcL=wspc__)),
+    expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|", wR=ws__), term))))
+    directive = Sequence(Token("@", wR=ws__), Required(symbol),
+                         Required(Token("=", wR=ws__)), Alternative(regexp, literal, list_))
+    definition = Sequence(symbol, Required(Token("=", wR=ws__)), expression)
+    syntax = Sequence(Optional(RE('', wL=ws__)),
                       ZeroOrMore(Alternative(definition, directive)), Required(EOF))
     root__ = syntax
 
@@ -1309,7 +1312,7 @@ class EBNFCompiler(CompilerBase):
     in EBNF-Notation.
     """
     # RX_DIRECTIVE = re.compile('(?:#|@)\s*(?P<key>\w*)\s*=\s*(?P<value>.*)')  # this can be removed, soon
-    RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, 'wspc__'}
+    RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
     VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc. ?
     AST_ERROR        = "Badly structured syntax tree. " \
@@ -1332,12 +1335,12 @@ class EBNFCompiler(CompilerBase):
         self.variables = set()
         self.scanner_tokens = set()
         self.definition_names = []
-        self.component = str(None)
+        self.curr_name = str(None)
         self.recursive = set()
         self.root = ""
         self.directives = {'whitespace': '\s*',
                            'comment': '',
-                           'literalws': ['wspcR=wspc__']}
+                           'literalws': ['wR=' + WHITESPACE_KEYWORD]}
 
     def gen_Scanner_Skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -1389,10 +1392,10 @@ class EBNFCompiler(CompilerBase):
 
         # compile definitions and directives and collect definitions
         for nd in node.result:
-            if nd.parser.component == "definition":
+            if nd.parser.name == "definition":
                 definitions.append(self.compile__(nd))
             else:
-                assert nd.parser.component == "directive", nd.as_sexpr()
+                assert nd.parser.name == "directive", nd.as_sexpr()
                 self.compile__(nd)
 
         # fix capture of variables that have been defined before usage [sic!]
@@ -1403,7 +1406,7 @@ class EBNFCompiler(CompilerBase):
                                       (definitions[1], definitions[0]))
 
         self.definition_names = [defn[0] for defn in definitions]
-        definitions.append(('wspc__',
+        definitions.append((WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')"). \
                             format(**self.directives)))
@@ -1417,6 +1420,7 @@ class EBNFCompiler(CompilerBase):
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
                         (', with this grammar:' if self.source_text else '.')]
+        definitions.append(('parser_initialization__', '"upon instatiation"'))
         if self.source_text:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.source_text)))
@@ -1458,7 +1462,7 @@ class EBNFCompiler(CompilerBase):
             node.add_error('A rule with name "%s" has already been defined.' %
                            rule)
         try:
-            self.component = '"' + rule + '"'
+            self.curr_name = '"' + rule + '"'
             self.rules.add(rule)
             defn = self.compile__(node.result[1])
             if rule in self.variables:
@@ -1497,7 +1501,8 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = value
         elif key == 'literalws':
             value = {item.lower() for item in self.compile__(node.result[1])}
-            conv = {'left': 'wspcL=wspc__', 'right': 'wspcR=wspc__'}
+            conv = {'left': 'wL=' + WHITESPACE_KEYWORD,
+                    'right': 'wR=' + WHITESPACE_KEYWORD}
             ws = {conv['left'], conv['right']} if 'both' in value else set()
             value.discard('both')
             value.discard('none')  # 'none' will be overridden if combined with other values
@@ -1517,22 +1522,22 @@ class EBNFCompiler(CompilerBase):
                             ', '.join(list(EBNFCompiler.KNOWN_DIRECTIVES))))
         return ""
 
-    def _current_component(self):
-        # if self.component in {'', str(None)}:
-        #     comp = []
+    def _current_name(self):
+        # if self.curr_name in {'', str(None)}:
+        #     name = []
         # else:
-        #     comp = ["component=" + self.component]
-        comp = [] # turn explicit components declaration off
-        self.component = str(None)
-        return comp
+        #     name = ["name=" + self.curr_name]
+        name = [] # turn explicit names declaration off
+        self.curr_name = str(None)
+        return name
 
     def non_terminal(self, node, parser_class):
         """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        comp = self._current_component()
+        name = self._current_name()
         arguments = filter(lambda arg: arg,
-                           [self.compile__(r) for r in node.result] + comp)
+                           [self.compile__(r) for r in node.result] + name)
         return parser_class + '(' + ', '.join(arguments) + ')'
 
     def expression(self, node):
@@ -1550,7 +1555,7 @@ class EBNFCompiler(CompilerBase):
         arg = node.result[-1]
         if prefix in {'::', ':'}:
             assert len(node.result) == 2
-            if arg.parser.component != 'symbol':
+            if arg.parser.name != 'symbol':
                 node.add_error(('Retrieve Operator "%s" requires a symbols, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
@@ -1595,17 +1600,17 @@ class EBNFCompiler(CompilerBase):
             return node.result
 
     def literal(self, node):
-        comp = self.directives["literalws"] + self._current_component()
-        return 'Token(' + ', '.join([node.result] + comp) + ')'
+        name = self.directives["literalws"] + self._current_name()
+        return 'Token(' + ', '.join([node.result] + name) + ')'
 
     def regexp(self, node):
-        comp = self._current_component()
+        name = self._current_name()
         rx = node.result
         if rx[:2] == '~/':
-            comp = ['wspcL=wspc__'] + comp
+            name = ['wL=' + WHITESPACE_KEYWORD] + name
             rx = rx[1:]
         if rx[-2:] == '/~':
-            comp = ['wspcR=wspc__'] + comp
+            name = ['wR=' + WHITESPACE_KEYWORD] + name
             rx = rx[:-1]
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
@@ -1614,7 +1619,7 @@ class EBNFCompiler(CompilerBase):
                      node.as_sexpr()
             node.add_error(errmsg)
             return '"' + errmsg + '"'
-        return 'RE(' + ', '.join([arg] + comp) + ')'
+        return 'RE(' + ', '.join([arg] + name) + ')'
 
     def list_(self, node):
         return set(item.strip() for item in node.result.split(','))
@@ -1758,8 +1763,8 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
      file is an EBNF grammar. In this case the result will be a Python
      script containing a parser for that grammar as well as the skeletons
      for a scanner, AST transformation table, and compiler. If the Python
-     script already exists only the parser component in the script will be
-     updated. (For this to work, the different components need to be delimited
+     script already exists only the parser name in the script will be
+     updated. (For this to work, the different names need to be delimited
      by the standard `DELIMITER`-line!).
      `run_compiler()` returns a list of error messages or an empty list if no
      errors occured.
@@ -1864,7 +1869,7 @@ def test(file_name):
     result, errors, syntax_tree = full_compilation(grammar,
             EBNFGrammar(), EBNFTransTable, compiler)
     # print(syntax_tree.as_xml())
-    print(errors)
+    # print(result)
     # print(syntax_tree.as_sexpr(grammar))
     # print(errors)
     # print(compiler.gen_AST_Skeleton())
