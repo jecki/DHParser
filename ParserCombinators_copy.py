@@ -385,7 +385,7 @@ def sane_parser_name(name):
 class Parser(metaclass=ParserMetaClass):
     def __init__(self, component=None):
         assert component is None or isinstance(component, str)
-        self.component = '' #component or ''
+        self.component = component or ''
         self.headquarter = None          # head quater for global variables etc.
         self.visited = dict()
         self.recursion_counter = dict()
@@ -412,20 +412,17 @@ class Parser(metaclass=ParserMetaClass):
 
 
 class ParserHeadquarter:
-    def __init__(self):
+    def __init__(self, root=None):
         # initialize parser components
         C = self.__class__
         Cdict = C.__dict__
         for entry in Cdict:
             if sane_parser_name(entry):
-                parser = Cdict[entry]
-                if isinstance(parser, Parser):
-                    print(type(parser), parser.component, entry)
-                    if isinstance(parser, Forward):
-                        parser.parser.component = entry
-                    else:
-                        parser.component = entry
-        self.root__ = copy.deepcopy(self.__class__.root__)
+                attribute = Cdict[entry]
+                if isinstance(attribute, Parser):
+                    print(type(attribute), attribute.component, entry)
+                    attribute.component = entry
+        self.root__ = root if root else copy.deepcopy(self.__class__.root__)
         self.root__.apply(self._add_parser)
         self.variables = dict()                 # support for Pop and Retrieve operators
         self.last_node = None
@@ -436,9 +433,8 @@ class ParserHeadquarter:
     def _add_parser(self, parser):
         """Adds the copy of the parser object to this instance of ParserHeadquarter.
         """
-        print(parser.component)
         if sane_parser_name(parser.component):  # overwrite class variable with instance variable
-            setattr(self, parser.component, parser)
+            self.__setattr__(parser.component, parser)
         parser.headquarter = self
 
     def parse(self, document):
@@ -529,7 +525,6 @@ class ScannerToken(Parser):
 class RegExp(Parser):
     def __init__(self, component, regexp, orig_re = ''):
         super(RegExp, self).__init__(component)
-        self.component = component
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
         self.orig_re = orig_re
 
@@ -540,13 +535,12 @@ class RegExp(Parser):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = RegExp(self.component, regexp, self.orig_re)
-        duplicate.component = self.component # this ist needed!!!!
-        duplicate.regexp = self.regexp
-        duplicate.orig_re = self.orig_re
         duplicate.headquarter = self.headquarter
         duplicate.visited = copy.deepcopy(self.visited, memo)
         duplicate.recursion_counter = copy.deepcopy(self.recursion_counter,
                                                     memo)
+        # duplicate.preprocess = self.preprocess
+        # duplicate.postprocess = self.postprocess
         return duplicate
 
     def __call__(self, text):
@@ -839,12 +833,10 @@ class Capture(UnaryOperator):
 class Retrieve(Parser):
     def __init__(self, component, symbol):
         super(Retrieve, self).__init__(component)
-        self.symbol = symbol # if isinstance(symbol, str) else symbol.component
+        self.symbol = symbol if isinstance(symbol, str) else symbol.component
 
     def __call__(self, text):
-        symbol = self.symbol if isinstance(self.symbol, str) \
-                             else self.symbol.component
-        stack = self.headquarter.variables[symbol]
+        stack = self.headquarter.variables[self.symbol]
         value = self.pick_value(stack)
         if text.startswith(value):
             return Node(self, value), text[len(value):]
@@ -1197,7 +1189,7 @@ class EBNFGrammar(ParserHeadquarter):
     EOF =  !/./
     """
     expression = Forward()
-    source_hash__ = "c8e9cee1d0218a6c4a9c5cbc781c215a"
+    source_hash__ = "b1291fa35ac696654838fc94cabf439b"
     wspc__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     EOF = NegativeLookahead("EOF", RE('.'))
     list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', "list_", wspcR=wspc__)
@@ -1866,7 +1858,7 @@ if (os.path.exists('examples/EBNF/EBNF.ebnf')
     and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
     assert False, "WARNING: Grammar source has changed. The parser may not " \
         "represent the actual grammar any more!!!"
-    pass
+
 
 if __name__ == "__main__":
     print(sys.argv)

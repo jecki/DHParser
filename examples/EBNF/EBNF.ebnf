@@ -10,7 +10,7 @@ directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
 expression =  term { "|" term }
 term       =  factor { factor }
-factor     =  [flowmarker] [retrieveop] symbol !"="    # negative lookahead to be sure it's not a definition
+factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
             | [flowmarker] literal
             | [flowmarker] regexp
             | [flowmarker] group
