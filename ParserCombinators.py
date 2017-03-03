@@ -386,7 +386,7 @@ def sane_parser_name(name):
 class Parser(metaclass=ParserMetaClass):
     def __init__(self, component=None):
         assert component is None or isinstance(component, str), str(component)
-        self.component = '' #component or ''
+        self.component = component or ''
         self.headquarter = None          # head quater for global variables etc.
         self.visited = dict()
         self.recursion_counter = dict()
@@ -413,19 +413,37 @@ class Parser(metaclass=ParserMetaClass):
 
 
 class ParserHeadquarter:
-    def __init__(self):
-        # initialize parser components
-        C = self.__class__
-        Cdict = C.__dict__
+    @classmethod
+    def _connect_commponent_names_to_parsers(cls):
+        """Initializes the `parser.component` fields of those
+        Parser objects that are directly assigned to a class field with
+        the field's name, e.g.
+            class Grammar(ParserHeadquarter):
+                ...
+                symbol = RE('(?!\\d)\\w+')
+        After the call of this method symbol.component == "symbol"
+        holds. If the `component` field has been assigned a different
+        name in the constructor, a ValueError will be raised.
+        """
+        Cdict = cls.__dict__
         for entry in Cdict:
             if sane_parser_name(entry):
                 parser = Cdict[entry]
                 if isinstance(parser, Parser):
                     # print(type(parser), parser.component, entry)
                     if isinstance(parser, Forward):
+                        assert not parser.component or parser.component == entry
+                        if parser.component and parser.component != entry:
+                            raise ValueError(("Parser named %s should not be "
+                                " assigned to field with different name: %s"
+                                % (parser.component, entry)))
                         parser.parser.component = entry
                     else:
                         parser.component = entry
+
+
+    def __init__(self):
+        self._connect_commponent_names_to_parsers()
         self.root__ = copy.deepcopy(self.__class__.root__)
         self.root__.apply(self._add_parser)
         self.variables = dict()                 # support for Pop and Retrieve operators
@@ -433,6 +451,7 @@ class ParserHeadquarter:
         self.call_stack = []
         self.moving_forward = True
         self.unused = True
+
 
     def _add_parser(self, parser):
         """Adds the copy of the parser object to this instance of ParserHeadquarter.
@@ -1499,10 +1518,11 @@ class EBNFCompiler(CompilerBase):
         return ""
 
     def _current_component(self):
-        if self.component in {'', str(None)}:
-            comp = []
-        else:
-            comp = ["component=" + self.component]
+        # if self.component in {'', str(None)}:
+        #     comp = []
+        # else:
+        #     comp = ["component=" + self.component]
+        comp = [] # turn explicit components declaration off
         self.component = str(None)
         return comp
 
