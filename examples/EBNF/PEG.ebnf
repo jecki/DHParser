@@ -1,40 +1,41 @@
-# EBNF-Grammar in EBNF
+# PEG-Grammar in EBNF
 
-@ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-@ whitespace =  /\s*/                            # whitespace includes linefeed
-@ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
+# PEG is an alternative version to EBNF, unsing postifixes instead
+# of braces to express options, repetitions etc.
+# e.g. PEG: term?    EBNF: [term]
+
+@ comment    =  /#.*(?:\n|$)/                   # comments start with '#' and eat all chars up to and including '\n'
+@ whitespace =  /\s*/                           # whitespace includes linefeed
+@ literalws  =  right                           # trailing whitespace of literals will be ignored tacitly
 
 syntax     =  [~//] { definition | directive } §EOF
 definition =  symbol §"=" expression
 directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
 expression =  term { "|" term }
-term       =  factor { factor }
-factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-            | [flowmarker] literal
-            | [flowmarker] regexp
-            | [flowmarker] group
-            | [flowmarker] oneormore
-            | repetition
-            | option
+term       =  flow { flow }
 
-flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
-              "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
+flow       =  [flowmarker] repetition
+repetition =  retrival [repeatop]
+retrival   =  [retrieveop] factor
+
+flowmarker =  "!"  | "&"  | "§" |               # '!' negative lookahead, '&' positive lookahead, '§' required
+              "-!" | "-&"                       # '-' negative lookbehind, '-&' positive lookbehind
+repeatop   =  "?"  | "*"  | "+"                 # '?' optional, '*' zero or more, '+' one or more
+retrieveop =  "::" | ":"                        # '::' pop, ':' retrieve
+
+factor     = symbol !"=" | literal | regexp | group
 
 group      =  "(" expression §")"
-option     =  "[" expression §"]"
-repetition =  "{" expression §"}"
-oneormore  =  "<" expression §">"
 
-symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-            | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                 # '~' is a whitespace-marker, if present leading or trailing
-                                                 # whitespace of a regular expression will be ignored tacitly.
-list_      =  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                 # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+symbol     =  /(?!\d)\w+/~                      # e.g. expression, factor, parameter_list
+literal    =  /"(?:[^"]|\\")*?"/~               # e.g. "(", '+', 'while'
+            | /'(?:[^']|\\')*?'/~               # whitespace following literals will be ignored tacitly.
+regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                # '~' is a whitespace-marker, if present leading or trailing
+                                                # whitespace of a regular expression will be ignored tacitly.
+list_      =  /\w+\s*(?:,\s*\w+\s*)*/~          # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
 EOF =  !/./
 
 

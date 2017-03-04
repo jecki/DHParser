@@ -9,7 +9,7 @@ definition =  symbol §"=" expression
 directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
 expression =  term { "|" term }
-term       =  factor { factor }
+term       =  { factor }+
 factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
             | [flowmarker] literal
             | [flowmarker] regexp
@@ -24,8 +24,8 @@ retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" expression §")"
 option     =  "[" expression §"]"
+oneormore  =  "{" expression "}+"
 repetition =  "{" expression §"}"
-oneormore  =  "<" expression §">"
 
 symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
 literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
