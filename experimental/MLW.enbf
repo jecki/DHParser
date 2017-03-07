@@ -1,6 +1,6 @@
 # EBNF-Syntax von MLW-Einträgen (Versuch!!!)
 
-lemma           = "LEMMA" wort ["," flexion] erklaerung	      
+lemma           = "LEMMA" WORT ["," flexion] erklaerung
 flexion         = endung { "," endung | " " genus "." }
 endung          = [MINUS] KLEIBUCHSTABEN
 genus           = KLEINBUCHSTABE

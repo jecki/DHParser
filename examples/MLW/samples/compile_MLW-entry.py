@@ -22,8 +22,27 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../'))
-from ParserCombinators import run_compiler
-errors = run_compiler("fascitergula.mlw", os.path.join('..', 'MLW_compiler.py'), ".xml")
+import ParserCombinators
+from ParserCombinators import run_compiler, has_source_changed
+
+MLW_ebnf = os.path.join('..', 'MLW.ebnf')
+MLW_compiler = os.path.join('..', 'MLW_compiler.py')
+
+# print(has_source_changed(MLW_ebnf, MLW_compiler))
+
+ParserCombinators.DEBUG = False
+
+if (not os.path.exists(MLW_compiler) or
+    has_source_changed(MLW_ebnf, MLW_compiler)):
+    print("recompiling parser")
+    errors = run_compiler(MLW_ebnf)
+    if errors:
+        print(errors)
+        sys.exit(1)
+
+ParserCombinators.DEBUG = True
+
+errors = run_compiler("fascitergula.mlw", MLW_compiler, ".xml")
 if errors:
     print(errors)
     sys.exit(1)

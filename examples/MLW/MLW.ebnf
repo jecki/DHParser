@@ -25,7 +25,7 @@ LVZusatz        = "sim."
 
 #### GRAMMATIK-POSITION ######################################################
 
-GrammatikPosition = "GRAMMATIK" §_wortart §";"  §Flexionen  [_genus]  [GrammatikVarianten] ["."]
+GrammatikPosition = "GRAMMATIK" §_wortart §";"  §Flexionen  [_genus]  {GrammatikVarianten} [";" | "."]
 
 _wortart        = "nomen"  | "n." |
                   "verb"   | "v." |
@@ -33,7 +33,7 @@ _wortart        = "nomen"  | "n." |
                   "adjektiv" | "adj."
 
 
-GrammatikVarianten = "("  §GVariante  { ";" §GVariante }  §")"
+GrammatikVarianten = ";" §GVariante
 GVariante       = Flexionen  [_genus]  ":"  Beleg
 
 Flexionen       = Flexion { "," §Flexion }
@@ -60,7 +60,7 @@ VerweisZiel     = ~/<\w+>/~
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition = < "BEDEUTUNG" Bedeutung >
+BedeutungsPosition = { "BEDEUTUNG" Bedeutung }+
 
 Bedeutung       = Interpretamente | Bedeutungskategorie
 Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
@@ -79,8 +79,10 @@ Name            = WORT { WORT | /[A-ZÄÖÜÁÀ]\./ }
 
 #### MISZELLANEEN ############################################################
 
-WORT            = /[A-ZÄÖÜ]*[a-zäöüÄÜÖß]+/~
-WORT_KLEIN      = /[a-z]+/~
+WORT            = /[A-ZÄÖÜ]?[a-zäöüß]+/~
+WORT_GROSS      = /[A-ZÄÖÜ][a-zäöüß]+/~
+WORT_KLEIN      = /[a-zäöüß]+/~
+LAT_WORT        = /[a-z]+/~
 GROSSSCHRIFT    = /[A-ZÄÖÜ]+/~
 
 LEER            = /\s*/

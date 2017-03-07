@@ -17,7 +17,7 @@ GRAMMATIK
 
 
 SCHREIBWEISE
-    script:
+    script.:
         vizreg-:      >>beleg_id_3,
         festregel(a): >>beleg_id_4,
         fezdregl(a):  >>beleg_id5

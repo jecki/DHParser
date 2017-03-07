@@ -68,6 +68,9 @@ import types
 from functools import reduce, partial
 
 
+__version__ = '0.5.1' + '_dev' + str(os.stat(__file__).st_mtime)
+
+
 DEBUG = True
 DEBUG_DUMP_AST = ""
 
@@ -149,6 +152,10 @@ class Node:
         return str(self.result)
 
     @property
+    def name(self):
+        return self.parser.name or self.parser.__class__.__name__
+
+    @property
     def result(self):
         return self._result
 
@@ -212,6 +219,7 @@ class Node:
         return head + '\n'.join([tab + dataF(s)
                                  for s in str(self.result).split('\n')]) + tail
 
+
     def as_sexpr(self, src=None):
         """Returns content as S-expression, i.e. in lisp-like form.
 
@@ -221,7 +229,7 @@ class Node:
                     line and column.
         """
         def opening(node):
-            s = '(' + str(node.parser)  # (node.parser.name or node.parser.__class__.__name__)
+            s = '(' + node.name
             # s += " '(pos %i)" % node.pos
             if src:
                 s += " '(pos %i  %i %i)" % (node.pos, *line_col(src, node.pos))
@@ -241,7 +249,7 @@ class Node:
         """
 
         def opening(node):
-            s = '<' + (node.parser.name or node.parser.__class__.__name__)
+            s = '<' + node.name
             # s += ' pos="%i"' % node.pos
             if src:
                 s += ' line="%i" col="%i"' % line_col(src, node.pos)
@@ -252,8 +260,7 @@ class Node:
             return s
 
         def closing(node):
-            s = '</' + \
-                (node.parser.name or node.parser.__class__.__name__) + '>'
+            s = '</' + node.name + '>'
             return s
 
         return self.as_tree('    ', opening, closing)
@@ -280,6 +287,29 @@ class Node:
                 offset += child.len_before_AST
         return errors
 
+    def navigate(self, path):
+        """Returns the first descendant element matched by `path`, e.g.
+        'd/s' returns 'l' from (d (s l)(e (r x1) (r x2))
+        'e/r' returns 'x2'
+        'e'   returns (r x1)(r x2)
+        :param path: the path of the object, e.g. 'a/b/c'
+        :return: the object at the path, either a string or a Node or
+                 `None`, if the path did not match.
+        """
+        pl = path.strip('')
+        assert pl[0] != '/', 'Path must noch start with "/"!'
+        nd = self
+        for p in pl:
+            if isinstance(nd.result, str):
+                return p if (p == nd.result) and (p == pl[-1]) else None
+            for child in nd.result:
+                if str(child) == p:
+                    nd = child
+                    break
+            else:
+                return None
+        return child
+
 
 def error_messages(text, errors):
     """Converts the list of `errors` collected from the root node of the
@@ -290,6 +320,9 @@ def error_messages(text, errors):
     return "\n\n".join("line: %i, column: %i, error: %s" %
                        (*line_col(text, entry[0]), " and ".join(entry[1]))
                        for entry in errors)
+
+
+# lambda compact_sexpr s : re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
 
 
 ##############################################################################
@@ -329,14 +362,16 @@ def wrap_parser(parser_func):
 
             if parser.headquarter.moving_forward:  # and result[0] == None
                 parser.headquarter.moving_forward = False
-                st = "->".join((str(p) for p in parser.headquarter.call_stack))
-                if result[0]:
-                    # print("HIT!", st, '\t"%s"' % str(result[0]).replace('\n', ' '))
-                    pass
-                else:
-                    # t = text[:20].replace('\n',' ')
-                    # print("FAIL", st, '\t"%s"' % (t + ("..." if t else "")))
-                    pass
+                global DEBUG
+                if DEBUG:
+                    st = "->".join((str(p) for p in parser.headquarter.call_stack))
+                    if result[0]:
+                        print(st, '\t"%s"' % str(result[0]).replace('\n', ' '), "\tHIT")
+                        pass
+                    else:
+                        t = text[:20].replace('\n',' ')
+                        print(st, '\t"%s"' % (t + ("..." if t else "")), "\tfail")
+                        pass
             parser.headquarter.call_stack.pop()
 
             if result[0] is not None:
@@ -471,6 +506,8 @@ class ParserHeadquarter:
         """
         assert self.unused, ("Parser has been used up. Please create a new "
                              "instance of the ParserHeadquarter class!")
+        if self.root__ is None:
+            raise NotImplementedError()
         self.unused = False
         parser = self.root__
         result = ""
@@ -499,8 +536,8 @@ class ParserHeadquarter:
         return result if not stitches else Node(None, tuple(stitches))
 
 
-ZOMBIE_PARSER = Parser()    # zombie object to avoid distinction of cases
-                            # for the Node.parser variable
+ZOMBIE_PARSER = Parser(name="Zombie")   # zombie object to avoid distinction of cases
+                                        # for the Node.parser variable
 RE_WSPC = Parser(WHITESPACE_KEYWORD)    # Dummy Parser for comments that were captured
                                         # by an RE Parser via the `comment`-parameter
 
@@ -587,7 +624,7 @@ class RegExp(Parser):
 
     def __str__(self):
         pattern = self.orig_re or self.regexp.pattern  # for readability of error messages !
-        return Parser.__str__(self) # + "/" + pattern + "/"
+        return Parser.__str__(self) + "/" + pattern + "/"
 
 
 def escape_re(s):
@@ -768,6 +805,7 @@ class Required(FlowOperator):
             # assert False, "*"+text[:i]+"*"
             node.add_error('%s expected; "%s..." found!' %
                            (str(self.parser), text[:10]))
+            node.fatal_error = True
         return node, text_
 
 
@@ -1292,12 +1330,13 @@ Scanner = collections.namedtuple('Scanner',
                                  'symbol instantiation_call cls_name cls')
 
 
-def md5(txt):
+def md5(*txt):
     """Returns the md5-checksum for `txt`. This can be used to test if
     some piece of text, for example a grammar source file, has changed.
     """
     md5_hash = hashlib.md5()
-    md5_hash.update(txt.encode('utf8'))
+    for t in txt:
+        md5_hash.update(t.encode('utf8'))
     return md5_hash.hexdigest()
 
 
@@ -1305,7 +1344,7 @@ class EBNFCompiler(CompilerBase):
     """Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
     """
-    # RX_DIRECTIVE = re.compile('(?:#|@)\s*(?P<key>\w*)\s*=\s*(?P<value>.*)')  # this can be removed, soon
+    # RX_DIRECTIVE = re.compile('(?:#|@)\s*(?P<key>\w*)\s*=\s*(?P<value>.*)')  # old, can be removed!
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
     VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc. ?
@@ -1400,7 +1439,7 @@ class EBNFCompiler(CompilerBase):
         definitions.append(('parser_initialization__', '"upon instatiation"'))
         if self.source_text:
             definitions.append(('source_hash__',
-                                '"%s"' % md5(self.source_text)))
+                                '"%s"' % md5(self.source_text, __version__)))
             declarations.append('')
             declarations += [line for line in self.source_text.split('\n')]
             while declarations[-1].strip() == '':
@@ -1846,10 +1885,20 @@ def has_source_changed(grammar_source, grammar_class):
         from the source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
-    chksum = md5(grammar)
+    chksum = md5(grammar, __version__)
     if isinstance(grammar_class, str):
-        grammar_class = load_compiler_suite(grammar_class)[1]
-    return chksum != grammar_class.source_hash__
+        # grammar_class = load_compiler_suite(grammar_class)[1]
+        with open(grammar_class, 'r', encoding='utf8') as f:
+            pycode = f.read()
+        m = re.search('class \w*\(ParserHeadquarter\)', pycode)
+        if m:
+            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
+                          pycode[m.span()[1]:])
+            return not (m and m.groups() and m.groups()[-1] == chksum)
+        else:
+            return True
+    else:
+        return chksum != grammar_class.source_hash__
 
 
 ##############################################################################
@@ -1882,8 +1931,8 @@ def test(file_name):
 # a source of sometimes obscure errors! Therefore, we will check this.
 if (os.path.exists('examples/EBNF/EBNF.ebnf')
     and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
-    assert False, "WARNING: Grammar source has changed. The parser may not " \
-        "represent the actual grammar any more!!!"
+#    assert False, "WARNING: Grammar source has changed. The parser may not " \
+#        "represent the actual grammar any more!!!"
     pass
 
 if __name__ == "__main__":
