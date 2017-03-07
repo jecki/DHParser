@@ -538,8 +538,6 @@ class ParserHeadquarter:
 
 ZOMBIE_PARSER = Parser(name="Zombie")   # zombie object to avoid distinction of cases
                                         # for the Node.parser variable
-RE_WSPC = Parser(WHITESPACE_KEYWORD)    # Dummy Parser for comments that were captured
-                                        # by an RE Parser via the `comment`-parameter
 
 
 ##############################################################################
@@ -582,6 +580,11 @@ class ScannerToken(Parser):
         return None, text
 
 
+RE_WS = Parser(WHITESPACE_KEYWORD)  # Dummy Parser for comments that were captured
+                                    # by an RE Parser via the `comment`-parameter
+RE_GRP = Parser(name="RE_group")    # Parser to indicate re groups
+
+
 class RegExp(Parser):
     def __init__(self, regexp, orig_re = '', name=None):
         super(RegExp, self).__init__(name)
@@ -614,10 +617,10 @@ class RegExp(Parser):
                 split = sorted([i for i in reduce(lambda s, r: s | set(r),
                                                 match.regs, set()) if i >= 0])
                 parts = (text[i:j] for i, j in zip(split[:-1], split[1:]))
-                result = tuple(Node(None if part in groups else RE_WSPC, part)
+                result = tuple(Node(RE_GRP if part in groups else RE_WS, part)
                                for part in parts)
-                if all(r.parser == RE_WSPC for r in result):
-                    return Node(RE_WSPC, text[:end]), text[end:]
+                if all(r.parser == RE_WS for r in result):
+                    return Node(RE_WS, text[:end]), text[end:]
                 return Node(self, result), text[end:]
             return Node(self, match.group()), text[end:]
         return None, text
@@ -1079,7 +1082,7 @@ def remove_children_if(node, condition):
 
 is_whitespace = lambda node: not node.result or (isinstance(node.result, str)
                                                  and not node.result.strip())
-is_comment = lambda node: node.parser == RE_WSPC
+is_comment = lambda node: node.parser == RE_WS
 is_scanner_token = lambda node: isinstance(node.parser, ScannerToken)
 is_expendable = lambda node: is_whitespace(node) or is_comment(node) or \
                              is_scanner_token(node)
@@ -1860,7 +1863,10 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
     else:
         try:
             f = open(rootname + extension, 'w', encoding="utf-8")
-            f.write(result.as_sexpr(source))
+            if extension.lower() == ".xml":
+                f.write(result.as_xml(source))
+            else:
+                f.write(result.as_sexpr(source))
         except (PermissionError, FileNotFoundError, IOError) as error:
             print('# Could not write file "' + rootname + '.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))

@@ -51,7 +51,7 @@ ArtikelKopf     = SchreibweisenPosition
 SchreibweisenPosition =  "SCHREIBWEISE" §SWTyp ":" §SWVariante { "," §SWVariante}
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
-Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregel(a)" | "fat-"
+Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
 
 Beleg           = Verweis
 Verweis         = ~/>>\w+/~
@@ -68,7 +68,7 @@ Interpretamente = LateinischeBedeutung  DeutscheBedeutung  [Belege]
 LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Belege          = "BELEGE" { "* " EinBeleg }
-EinBeleg        = /(?:(?!(?:(?:BEDEUTUNG)|\*).))+/~
+EinBeleg        = /((?!((BEDEUTUNG)|\*))(.|\n))*/~
 
 
 #### AUTOR/AUTORIN ###########################################################
