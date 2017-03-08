@@ -585,51 +585,6 @@ class ScannerToken(Parser):
         return None, text
 
 
-# class RegExp(Parser):
-#     def __init__(self, regexp, orig_re = '', name=None):
-#         super(RegExp, self).__init__(name)
-#         # self.name = name
-#         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
-#         self.orig_re = orig_re
-#
-#     def __deepcopy__(self, memo):
-#         # this method is obsolete with the new `regex` module!
-#         try:
-#             regexp = copy.deepcopy(self.regexp)
-#         except TypeError:
-#             regexp = self.regexp.pattern
-#         duplicate = RegExp(self.name, regexp, self.orig_re)
-#         duplicate.name = self.name  # this ist needed!!!!
-#         duplicate.regexp = self.regexp
-#         duplicate.orig_re = self.orig_re
-#         duplicate.headquarter = self.headquarter
-#         duplicate.visited = copy.deepcopy(self.visited, memo)
-#         duplicate.recursion_counter = copy.deepcopy(self.recursion_counter,
-#                                                     memo)
-#         return duplicate
-#
-#     def __call__(self, text):
-#         match = text[0:1] != BEGIN_SCANNER_TOKEN and self.regexp.match(text)  # ESC starts a scanner token.
-#         if match:
-#             end = match.end()
-#             groups = set(match.groups())
-#             if len(groups) >= 1:
-#                 split = sorted([i for i in reduce(lambda s, r: s | set(r),
-#                                                 match.regs, set()) if i >= 0])
-#                 parts = (text[i:j] for i, j in zip(split[:-1], split[1:]))
-#                 result = tuple(Node(None if part in groups else RE_WS, part)
-#                                for part in parts)
-#                 if all(r.parser == RE_WS for r in result):
-#                     return Node(RE_WS, text[:end]), text[end:]
-#                 return Node(self, result), text[end:]
-#             return Node(self, match.group()), text[end:]
-#         return None, text
-#
-#     def __str__(self):
-#         pattern = self.orig_re or self.regexp.pattern  # for readability of error messages !
-#         return Parser.__str__(self) + "/" + pattern + "/"
-
-
 class RegExp(Parser):
     def __init__(self, regexp, name=None):
         super(RegExp, self).__init__(name)
@@ -662,7 +617,9 @@ class RegExp(Parser):
 
 
 class RE(Parser):
-    def __init__(self, regexp, wL=None, wR=None, name=None):
+    """Regular Expressions with optional leading or trailing whitespace.
+    """
+    def __init__(self, regexp, wL='', wR='', name=None):
         super(RE, self).__init__(name)
         self.wL = RegExp(wL, WHITESPACE_KEYWORD) if wL else ''
         self.wR = RegExp(wR, WHITESPACE_KEYWORD) if wR else ''
@@ -708,14 +665,6 @@ def mixin_comment(whitespace, comment):
     wspc = '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
     return wspc
 
-#
-# def RE(regexp, wL='', wR='', name=None):
-#     rA = '('
-#     rB = '\n)' if regexp.find('(?x)') >= 0 else ')'     # otherwise the closing bracket might erroneously
-#                                                         # be append to the end of a line comment!
-#     return RegExp(wL + rA + regexp + rB + wR, regexp,
-#                   name or TOKEN_KEYWORD)
-
 
 def Token(token, wL='', wR='', name=None):
     return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
@@ -753,12 +702,6 @@ class NaryOperator(Parser):
         if super(NaryOperator, self).apply(func):
             for parser in self.parsers:
                 parser.apply(func)
-
-    # def __str__(self):
-    #     return Parser.__str__(self) + \
-    #            ("" if self.name else str([str(p) for p in self.parsers]))
-    #     # return "(" + ",\n".join(["\n    ".join(str(parser).split("\n"))
-    #     #                          for parser in self.parsers]) + ")"
 
 
 class Optional(UnaryOperator):
@@ -1359,10 +1302,6 @@ class EBNFGrammar(ParserHeadquarter):
     root__ = syntax
 
 
-def TTTest(node):
-    # assert not (str(node.parser).startswith("RE") and node.children[0].result == '"-&"'), node.as_sexpr()
-    return node
-
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
     "syntax":
@@ -1385,7 +1324,7 @@ EBNFTransTable = {
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
     "":
-        [TTTest, remove_expendables, replace_by_single_child]
+        [remove_expendables, replace_by_single_child]
 }
 
 
@@ -2001,11 +1940,6 @@ def test(file_name):
     compiler = EBNFCompiler(compiler_name, grammar)
     result, errors, syntax_tree = full_compilation(grammar,
             EBNFGrammar(), EBNFTransTable, compiler)
-    # print(syntax_tree.as_xml())
-    # print(result)
-    # print(syntax_tree.as_sexpr(grammar))
-    # print(compiler.gen_AST_Skeleton())
-    # print(compiler.gen_Compiler_Skeleton())
     if errors:
         print(errors)
         sys.exit(1)
@@ -2015,13 +1949,13 @@ def test(file_name):
     return result
 
 
-# Changes in the EBNF source that are not reflected in this file usually are
-# a source of sometimes obscure errors! Therefore, we will check this.
-if (os.path.exists('examples/EBNF/EBNF.ebnf')
-    and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
-#    assert False, "WARNING: Grammar source has changed. The parser may not " \
-#        "represent the actual grammar any more!!!"
-    pass
+# # Changes in the EBNF source that are not reflected in this file could be
+# # a source of sometimes obscure errors! Therefore, we will check this.
+# if (os.path.exists('examples/EBNF/EBNF.ebnf')
+#     and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
+#     assert False, "WARNING: Grammar source has changed. The parser may not " \
+#         "represent the actual grammar any more!!!"
+#     pass
 
 if __name__ == "__main__":
     print(sys.argv)
