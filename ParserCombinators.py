@@ -471,19 +471,18 @@ class ParserHeadquarter:
             return
         cdict = cls.__dict__
         for entry in cdict:
-            if sane_parser_name(entry):
+            if sane_parser_name(entry):  # implies isinstance(parser, Parser) qua convention
                 parser = cdict[entry]
-                if isinstance(parser, Parser):
-                    # print(type(parser), parser.name, entry)
-                    if isinstance(parser, Forward):
-                        assert not parser.name or parser.name == entry
-                        if parser.name and parser.name != entry:
-                            raise ValueError(("Parser named %s should not be "
-                                " assigned to field with different name: %s"
-                                % (parser.name, entry)))
-                        parser.parser.name = entry
-                    else:
-                        parser.name = entry
+                assert isinstance(parser, Parser)
+                if isinstance(parser, Forward):
+                    assert not parser.name or parser.name == entry
+                    if parser.name and parser.name != entry:
+                        raise ValueError(("Parser named %s should not be "
+                            " assigned to field with different name: %s"
+                            % (parser.name, entry)))
+                    parser.parser.name = entry
+                else:
+                    parser.name = entry
         cls.parser_initialization__ = "done"
 
     def __init__(self):
@@ -500,7 +499,9 @@ class ParserHeadquarter:
         """Adds the copy of the parser object to this instance of ParserHeadquarter.
         """
         # print(parser.name)
-        if sane_parser_name(parser.name):  # overwrite class variable with instance variable
+        if sane_parser_name(parser.name):  # implies isinstance(parser, Parser) qua convention
+            assert isinstance(parser, Parser)
+            # overwrite class variable with instance variable!!!
             setattr(self, parser.name, parser)
         parser.headquarter = self
 
@@ -661,7 +662,7 @@ class RegExp(Parser):
 
 
 class RE(Parser):
-    def __init__(self, regexp, wL='', wR='', name=None):
+    def __init__(self, regexp, wL=None, wR=None, name=None):
         super(RE, self).__init__(name)
         self.wL = RegExp(wL, WHITESPACE_KEYWORD) if wL else ''
         self.wR = RegExp(wR, WHITESPACE_KEYWORD) if wR else ''
