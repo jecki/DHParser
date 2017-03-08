@@ -2,8 +2,6 @@ __pycache__/
 *.pyc
 .idea/
 .cache/
-*_parser.py
-*_compiler.py
 *.ast
 *.dst
 *.st
