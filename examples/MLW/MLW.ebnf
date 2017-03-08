@@ -67,8 +67,10 @@ Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Interpretamente = LateinischeBedeutung  DeutscheBedeutung  [Belege]
 LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-Belege          = "BELEGE" { "* " EinBeleg }
-EinBeleg        = /((?!((BEDEUTUNG)|\*))(.|\n))*/~
+Belege          = "BELEGE" { "*" EinBeleg }
+EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s?.*/ }+
+                  [Zusatz]
+Zusatz          = "ZUSATZ" /\s?.*/
 
 
 #### AUTOR/AUTORIN ###########################################################

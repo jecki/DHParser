@@ -138,7 +138,7 @@ class Node:
         self.result = result   # sets self.children to `True` if there are any
         self.parser = parser or ZOMBIE_PARSER
         self.errors = []
-        self.fatal_error = any(r.fatal_error for r in self.result) \
+        self.error_flag = any(r.error_flag for r in self.result) \
             if self.children else False
         self.len_before_AST = len(self.result) if not self.children \
             else sum(child.len_before_AST for child in self.result)
@@ -267,6 +267,7 @@ class Node:
 
     def add_error(self, error):
         self.errors.append(error)
+        self.error_flag = True
         return self
 
     def collect_errors(self, clear=False):
@@ -278,7 +279,7 @@ class Node:
         errors = [(0, self.errors)] if self.errors else []
         if clear:
             self.errors = []
-            self.fatal_error = False
+            self.error_flag = False
         if self.children:
             offset = 0
             for child in self.result:
@@ -363,7 +364,7 @@ def wrap_parser(parser_func):
             if parser.headquarter.moving_forward:  # and result[0] == None
                 parser.headquarter.moving_forward = False
                 global DEBUG
-                if DEBUG:
+                if DEBUG and False:
                     st = "->".join((str(p) for p in parser.headquarter.call_stack))
                     if result[0]:
                         print(st, '\t"%s"' % str(result[0]).replace('\n', ' '), "\tHIT")
@@ -390,7 +391,7 @@ def wrap_parser(parser_func):
             node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
             node.add_error("maximum recursion depth of parser reached; "
                            "potentially due to too many errors!")
-            node.fatal_error = True
+            node.error_flag = True
             result = (node, '')
 
         return result
@@ -536,8 +537,8 @@ class ParserHeadquarter:
         return result if not stitches else Node(None, tuple(stitches))
 
 
-ZOMBIE_PARSER = Parser(name="Zombie")   # zombie object to avoid distinction of cases
-                                        # for the Node.parser variable
+ZOMBIE_PARSER = Parser()    # zombie object to avoid distinction of cases
+                            # for the Node.parser variable
 
 
 ##############################################################################
@@ -580,9 +581,8 @@ class ScannerToken(Parser):
         return None, text
 
 
-RE_WS = Parser(WHITESPACE_KEYWORD)  # Dummy Parser for comments that were captured
-                                    # by an RE Parser via the `comment`-parameter
 RE_GRP = Parser(name="RE_group")    # Parser to indicate re groups
+RE_WS  = Parser(WHITESPACE_KEYWORD)
 
 
 class RegExp(Parser):
@@ -617,7 +617,7 @@ class RegExp(Parser):
                 split = sorted([i for i in reduce(lambda s, r: s | set(r),
                                                 match.regs, set()) if i >= 0])
                 parts = (text[i:j] for i, j in zip(split[:-1], split[1:]))
-                result = tuple(Node(RE_GRP if part in groups else RE_WS, part)
+                result = tuple(Node(None if part in groups else RE_WS, part)
                                for part in parts)
                 if all(r.parser == RE_WS for r in result):
                     return Node(RE_WS, text[:end]), text[end:]
@@ -764,7 +764,7 @@ class Sequence(NaryOperator):
                 return node, text
             if node.result:  # Nodes with zero-length result are silently omitted
                 results += (node,)
-            if node.fatal_error:
+            if node.error_flag:
                 break
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
@@ -808,7 +808,6 @@ class Required(FlowOperator):
             # assert False, "*"+text[:i]+"*"
             node.add_error('%s expected; "%s..." found!' %
                            (str(self.parser), text[:10]))
-            node.fatal_error = True
         return node, text_
 
 
@@ -1001,7 +1000,7 @@ def ASTTransform(node, transtable):
     transformation table.
 
     Args:
-        node (Node): The root note of the parse tree (or sub-tree) to be
+        node (Node): The root node of the parse tree (or sub-tree) to be
                 transformed into the abstract syntax tree.
         transtable (dict): A dictionary that assigns a transformation
                 transformation functions to parser name strings.
@@ -1019,7 +1018,7 @@ def ASTTransform(node, transtable):
             for child in node.result:
                 recursive_ASTTransform(child)
         transformation = table.get(node.parser.name,
-                                   table.get('*', [lambda nd: None]))
+                            table.get('~', [])) + table.get('*', [])
         for transform in transformation:
             transform(node)
 
@@ -1114,13 +1113,25 @@ def flatten(node):
 
 
 def remove_tokens(node, tokens):
-    """Reomoves any of a set of tokens whereever they appear in the result
-    of the node.
+    """Reomoves any among a particular set of tokens from the immediate
+    descendants of a node.
     """
     if node.children:
         node.result = tuple(child for child in node.result
                             if child.parser.name != TOKEN_KEYWORD or
                             child.result not in tokens)
+
+
+def remove_all_tokens(node):
+    """Removes all tokens from the immediate descendants of a node.
+
+    :param node:  the node from which children that represent tokens
+                  shall be removed
+    :return:      the node with all children that are tokens removed
+    """
+    if node.children:
+        node.result = tuple(child for child in node.result
+                            if child.parser.name != TOKEN_KEYWORD)
 
 
 def remove_enclosing_delimiters(node):
@@ -1138,7 +1149,8 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
                'is_comment', 'is_scanner_token', 'is_expendable',
                'remove_whitespace', 'remove_comments',
                'remove_scanner_tokens', 'remove_expendables', 'flatten',
-               'remove_tokens', 'remove_enclosing_delimiters'}
+               'remove_tokens', 'remove_enclosing_delimiters', 'partial',
+               'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'RE_GRP', 'RE_WS'}
 
 
 ##############################################################################
@@ -1863,10 +1875,10 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
     else:
         try:
             f = open(rootname + extension, 'w', encoding="utf-8")
-            if extension.lower() == ".xml":
-                f.write(result.as_xml(source))
+            if isinstance(result, Node):
+                f.write(result.as_xml())
             else:
-                f.write(result.as_sexpr(source))
+                f.write(result)
         except (PermissionError, FileNotFoundError, IOError) as error:
             print('# Could not write file "' + rootname + '.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))
@@ -1883,11 +1895,11 @@ def has_source_changed(grammar_source, grammar_class):
     """Returns `True` if `grammar_class` does not reflect the latest
     changes of `grammar_source`
 
-    :param grammar_source: file name or string representation of the
+    :param grammar_source:  file name or string representation of the
         grammar source
-    :param grammar_class: the parser class representing the grammar
+    :param grammar_class:  the parser class representing the grammar
         or the file name of a compiler suite containing the grammar
-    :return:    True, if the source text of the grammar is different
+    :return:  True, if the source text of the grammar is different
         from the source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
