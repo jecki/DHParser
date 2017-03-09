@@ -428,12 +428,15 @@ class Parser(metaclass=ParserMetaClass):
         assert name is None or isinstance(name, str), str(name)
         self.name = name or ''
         self.headquarter = None          # headquarter for global variables etc.
+        self.reset()
+
+    def reset(self):
         self.visited = dict()
         self.recursion_counter = dict()
         self.cycle_detection = set()
 
     def __call__(self, text):
-        raise NotImplementedError
+        return None, text               # default behaviour: don't match
 
     def __str__(self):
         return self.name or self.__class__.__name__
@@ -445,9 +448,9 @@ class Parser(metaclass=ParserMetaClass):
     @headquarter.setter
     def headquarter(self, headquarter):
         self._headquarter = headquarter
-        self.changed_HQ(headquarter)
+        self._headquarter_changed()
 
-    def changed_HQ(self, headquarter):
+    def _headquarter_changed(self):
         pass
 
     def apply(self, func):
@@ -476,48 +479,51 @@ class ParserHeadquarter:
                 ...
                 symbol = RE('(?!\\d)\\w+')
         After the call of this method symbol.name == "symbol"
-        holds. If the `name` field has been assigned a different
-        name in the constructor, a ValueError will be raised.
+        holds. Names assigned via the `name`-parameter of the
+        constructor will not be overwritten.
         """
         if cls.parser_initialization__ == "done":
             return
         cdict = cls.__dict__
-        for entry in cdict:
-            if sane_parser_name(entry):  # implies isinstance(parser, Parser) qua convention
-                parser = cdict[entry]
-                assert isinstance(parser, Parser), \
-                    "Symbol not ending with '__' should by convention only " \
-                    "be used for parsers."
-                if isinstance(parser, Forward):
-                    assert not parser.name or parser.name == entry
-                    if parser.name and parser.name != entry:
-                        raise ValueError(("Parser named %s should not be "
-                            " assigned to field with different name: %s"
-                            % (parser.name, entry)))
-                    parser.parser.name = entry
-                else:
+        for entry, parser in cdict.items():
+            if isinstance(parser, Parser):
+                if not parser.name or parser.name == TOKEN_KEYWORD:
                     parser.name = entry
+                if (isinstance(parser, Forward) and not parser.parser.name
+                    or parser.name == TOKEN_KEYWORD):
+                    parser.parser.name = entry
         cls.parser_initialization__ = "done"
 
     def __init__(self):
+        self.all_parsers = set()
+        self.dirty_flag = False
+        self._reset()
         self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
+        if self.wspL__:
+            self.wsp_left_parser__ = RegExp(self.wspL__, WHITESPACE_KEYWORD)
+            self.wsp_left_parser__.headquarter = self
+        else:
+            self.wsp_left_parser__ = lambda t: (None, t)
+        if self.wspR__:
+            self.wsp_right_parser__ = RegExp(self.wspR__, WHITESPACE_KEYWORD)
+            self.wsp_right_parser__.headquarter = self
+        else:
+            self.wsp_right_parser__ = lambda t: (None, t)
         self.root__.apply(self._add_parser)
+
+    def _reset(self):
         self.variables = dict()                 # support for Pop and Retrieve operators
         self.last_node = None
-        self.call_stack = []
-        self.moving_forward = True
-        self.unused = True
+        self.call_stack = []                    # support for call stack tracing
+        self.moving_forward = True              # also needed for call stack tracing
 
     def _add_parser(self, parser):
-        """Adds the copy of the parser object to this instance of ParserHeadquarter.
+        """Adds the copy of the classes parser object to this
+        particular instance of ParserHeadquarter.
         """
-        if sane_parser_name(parser.name):  # implies isinstance(parser, Parser) qua convention
-            assert isinstance(parser, Parser), \
-                "Symbol not ending with '__' should by convention only " \
-                "be used for parsers."
-            # overwrite class variable with instance variable!!!
-            setattr(self, parser.name, parser)
+        setattr(self, parser.name, parser)
+        self.all_parsers.add(parser)
         parser.headquarter = self
 
     def parse(self, document):
@@ -528,11 +534,14 @@ class ParserHeadquarter:
         Returns:
             Node: The root node ot the parse tree.
         """
-        assert self.unused, ("Parser has been used up. Please create a new "
-                             "instance of the ParserHeadquarter class!")
         if self.root__ is None:
             raise NotImplementedError()
-        self.unused = False
+        if self.dirty_flag:
+            for parser in self.all_parsers:
+                parser.reset()
+            self._reset()
+        else:
+            self.dirty_flag = True
         parser = self.root__
         result = ""
         stitches = []
@@ -651,13 +660,21 @@ class RE(Parser):
         main, t = self.main(t)
         if main:
             wR, t = self.wspRight(t)
-            result = tuple(nd for nd in (wL, main, wR) if nd)
+            result = tuple(nd for nd in (wL, main, wR)
+                           if nd and nd.result != '')
             return Node(self, result), t
         return None, text
 
     def __str__(self):
         return Parser.__str__(self) + ('~' if self.wL else '') + \
                '/' + self.main.regexp.pattern + '/' + ('~' if self.wR else '')
+
+    def _headquarter_changed(self):
+        if self.headquarter:
+            if self.wL is None:
+                self.wspLeft = self.headquarter.wsp_left_parser__
+            if self.wR is None:
+                self.wspRight = self.headquarter.wsp_right_parser__
 
     def apply(self, func):
         if super(RE, self).apply(func):
@@ -685,7 +702,7 @@ def mixin_comment(whitespace, comment):
     return wspc
 
 
-def Token(token, wL='', wR='', name=None):
+def Token(token, wL=None, wR=None, name=None):
     return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
 
 
@@ -1289,30 +1306,30 @@ class EBNFGrammar(ParserHeadquarter):
     EOF =  !/./
     """
     expression = Forward()
-    source_hash__ = "205fd680c1c77175b9b9807ea4b96160"
+    source_hash__ = "10a1a9de25992e0d3df5fee607e27d31"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+    wspL__ = ''
+    wspR__ = wsp__
     EOF = NegativeLookahead(RE('.'))
     list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*', wR=wsp__)
     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?', wR=wsp__)
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"', wR=wsp__), RE("'(?:[^']|\\\\')*?'", wR=wsp__))
     symbol = RE('(?!\\d)\\w+', wR=wsp__)
-    repetition = Sequence(Token("{", wR=wsp__), expression, Required(Token("}", wR=wsp__)))
-    oneormore = Sequence(Token("{", wR=wsp__), expression, Token("}+", wR=wsp__))
-    option = Sequence(Token("[", wR=wsp__), expression, Required(Token("]", wR=wsp__)))
-    group = Sequence(Token("(", wR=wsp__), expression, Required(Token(")", wR=wsp__)))
-    retrieveop = Alternative(Token("::", wR=wsp__), Token(":", wR=wsp__))
-    flowmarker = Alternative(Token("!", wR=wsp__), Token("&", wR=wsp__), Token("§", wR=wsp__), Token("-!", wR=wsp__),
-                             Token("-&", wR=wsp__))
-    factor = Alternative(
-        Sequence(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("=", wR=wsp__))),
-        Sequence(Optional(flowmarker), literal), Sequence(Optional(flowmarker), regexp),
-        Sequence(Optional(flowmarker), group), Sequence(Optional(flowmarker), oneormore), repetition, option)
+    repetition = Sequence(Token("{"), expression, Required(Token("}")))
+    oneormore = Sequence(Token("{"), expression, Token("}+"))
+    option = Sequence(Token("["), expression, Required(Token("]")))
+    group = Sequence(Token("("), expression, Required(Token(")")))
+    retrieveop = Alternative(Token("::"), Token(":"))
+    flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
+    factor = Alternative(Sequence(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("="))),
+                         Sequence(Optional(flowmarker), literal), Sequence(Optional(flowmarker), regexp),
+                         Sequence(Optional(flowmarker), group), Sequence(Optional(flowmarker), oneormore), repetition,
+                         option)
     term = OneOrMore(factor)
-    expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|", wR=wsp__), term))))
-    directive = Sequence(Token("@", wR=wsp__), Required(symbol), Required(Token("=", wR=wsp__)),
-                         Alternative(regexp, literal, list_))
-    definition = Sequence(symbol, Required(Token("=", wR=wsp__)), expression)
+    expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|"), term))))
+    directive = Sequence(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
+    definition = Sequence(symbol, Required(Token("=")), expression)
     syntax = Sequence(Optional(RE('', wL=wsp__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
     root__ = syntax
 
@@ -1458,6 +1475,10 @@ class EBNFCompiler(CompilerBase):
                                       (definitions[1], definitions[0]))
 
         self.definition_names = [defn[0] for defn in definitions]
+        definitions.append(('wspR__', 'wsp__' \
+            if 'right' in self.directives['literalws'] else "''"))
+        definitions.append(('wspL__', 'wsp__' \
+            if 'left' in self.directives['literalws'] else "''"))
         definitions.append((WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')").
@@ -1573,17 +1594,13 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = value
         elif key == 'literalws':
             value = {item.lower() for item in self.compile__(node.result[1])}
-            conv = {'left': 'wL=' + WHITESPACE_KEYWORD,
-                    'right': 'wR=' + WHITESPACE_KEYWORD}
-            ws = {conv['left'], conv['right']} if 'both' in value else set()
-            value.discard('both')
-            value.discard('none')  # 'none' will be overridden if combined with other values
-            try:
-                ws |= {conv[it] for it in value}
-            except KeyError as key_error:
+            if (len(value - {'left', 'right', 'both', 'none'}) > 0
+                or ('none' in value and len(value) > 1)):
                 node.add_error('Directive "literalws" allows the values '
                                '`left`, `right`, `both` or `none`, '
-                               'but not `%s`' % key_error.args[0])
+                               'but not `%s`' % ", ".join(value))
+            ws = {'left', 'right'} if 'both' in value \
+                else {} if 'none' in value else value
             self.directives[key] = list(ws)
 
         elif key == 'tokens':
@@ -1672,8 +1689,7 @@ class EBNFCompiler(CompilerBase):
             return node.result
 
     def literal(self, node):
-        name = self.directives["literalws"] + self._current_name()
-        return 'Token(' + ', '.join([node.result] + name) + ')'
+        return 'Token(' + ', '.join([node.result]) + ')'
 
     def regexp(self, node):
         name = self._current_name()
@@ -1953,8 +1969,9 @@ def test(file_name):
         grammar = f.read()
     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
     compiler = EBNFCompiler(compiler_name, grammar)
+    parser = EBNFGrammar()
     result, errors, syntax_tree = full_compilation(grammar,
-            EBNFGrammar(), EBNFTransTable, compiler)
+            parser, EBNFTransTable, compiler)
     if errors:
         print(errors)
         sys.exit(1)

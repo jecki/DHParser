@@ -1,8 +1,5 @@
 <Artikel>
     <LemmaPosition>
-        <token__>
-            LEMMA
-        </token__>
         <Lemma>
             <_tll>
                 *
@@ -13,134 +10,68 @@
         </Lemma>
         <LemmaVarianten>
             <LVariante>
-                <RegExp>
-                    fasc-itergula
-                </RegExp>
+                fasc-itergula
             </LVariante>
             <LVariante>
-                <RegExp>
-                    fac-iet-ergula
-                </RegExp>
+                fac-iet-ergula
             </LVariante>
             <LVariante>
-                <RegExp>
-                    fac-ist-ergula
-                </RegExp>
+                fac-ist-ergula
             </LVariante>
             <LVariante>
-                <RegExp>
-                    fa-rcu-tergula
-                </RegExp>
+                fa-rcu-tergula
             </LVariante>
             <LVZusatz>
-                <RegExp>
-                    sim.
-                </RegExp>
+                sim.
             </LVZusatz>
         </LemmaVarianten>
         <GrammatikPosition>
-            <token__>
-                GRAMMATIK
-            </token__>
             <_wortart>
-                <token__>
-                    nomen
-                </token__>
+                nomen
             </_wortart>
-            <token__>
-                ;
-            </token__>
             <Flexionen>
                 <Flexion>
-                    <RegExp>
-                        -ar
-                    </RegExp>
+                    -ar
                 </Flexion>
             </Flexionen>
             <_genus>
-                <token__>
-                    f.
-                </token__>
+                f.
             </_genus>
-            <ZeroOrMore>
-                <GrammatikVarianten>
-                    <token__>
-                        ;
-                    </token__>
-                    <GVariante>
-                        <Flexionen>
-                            <Flexion>
-                                <RegExp>
-                                    -us
-                                </RegExp>
-                            </Flexion>
-                            <Sequence>
-                                <token__>
-                                    ,
-                                </token__>
-                                <Flexion>
-                                    <RegExp>
-                                        -i
-                                    </RegExp>
-                                </Flexion>
-                            </Sequence>
-                        </Flexionen>
-                        <_genus>
-                            <token__>
-                                m.
-                            </token__>
-                        </_genus>
-                        <token__>
-                            :
-                        </token__>
-                        <Beleg>
-                            <RegExp>
-                                >>beleg_id_1
-                            </RegExp>
-                        </Beleg>
-                    </GVariante>
-                </GrammatikVarianten>
-                <GrammatikVarianten>
-                    <token__>
-                        ;
-                    </token__>
-                    <GVariante>
-                        <Flexionen>
-                            <Flexion>
-                                <RegExp>
-                                    -um
-                                </RegExp>
-                            </Flexion>
-                            <Sequence>
-                                <token__>
-                                    ,
-                                </token__>
-                                <Flexion>
-                                    <RegExp>
-                                        -i
-                                    </RegExp>
-                                </Flexion>
-                            </Sequence>
-                        </Flexionen>
-                        <_genus>
-                            <token__>
-                                n.
-                            </token__>
-                        </_genus>
-                        <token__>
-                            :
-                        </token__>
-                        <Beleg>
-                            <RegExp>
-                                >>beleg_id_2
-                            </RegExp>
-                        </Beleg>
-                    </GVariante>
-                </GrammatikVarianten>
-            </ZeroOrMore>
+            <GVariante>
+                <Flexionen>
+                    <Flexion>
+                        -us
+                    </Flexion>
+                    <Flexion>
+                        -i
+                    </Flexion>
+                </Flexionen>
+                <_genus>
+                    m.
+                </_genus>
+                <Verweis>
+                    >>beleg_id_1
+                </Verweis>
+            </GVariante>
+            <GVariante>
+                <Flexionen>
+                    <Flexion>
+                        -um
+                    </Flexion>
+                    <Flexion>
+                        -i
+                    </Flexion>
+                </Flexionen>
+                <_genus>
+                    n.
+                </_genus>
+                <Verweis>
+                    >>beleg_id_2
+                </Verweis>
+            </GVariante>
         </GrammatikPosition>
     </LemmaPosition>
-    <ArtikelKopf>
+    <SchreibweisenPosition>
         <token__>
             SCHREIBWEISE
         </token__>
@@ -161,11 +92,9 @@
             <token__>
                 :
             </token__>
-            <Beleg>
-                <RegExp>
-                    >>beleg_id_3
-                </RegExp>
-            </Beleg>
+            <Verweis>
+                >>beleg_id_3
+            </Verweis>
         </SWVariante>
         <ZeroOrMore>
             <Sequence>
@@ -181,11 +110,9 @@
                     <token__>
                         :
                     </token__>
-                    <Beleg>
-                        <RegExp>
-                            >>beleg_id_4
-                        </RegExp>
-                    </Beleg>
+                    <Verweis>
+                        >>beleg_id_4
+                    </Verweis>
                 </SWVariante>
             </Sequence>
             <Sequence>
@@ -201,15 +128,13 @@
                     <token__>
                         :
                     </token__>
-                    <Beleg>
-                        <RegExp>
-                            >>beleg_id5
-                        </RegExp>
-                    </Beleg>
+                    <Verweis>
+                        >>beleg_id5
+                    </Verweis>
                 </SWVariante>
             </Sequence>
         </ZeroOrMore>
-    </ArtikelKopf>
+    </SchreibweisenPosition>
     <BedeutungsPosition>
         <Sequence>
             <token__>
@@ -258,8 +183,7 @@
                                             Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
                                         </RegExp>
                                         <RegExp>
-                                            
-                                              -as duas."
+                                            -as duas."
                                         </RegExp>
                                     </OneOrMore>
                                 </EinBeleg>
@@ -284,8 +208,7 @@
                                             Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
                                         </RegExp>
                                         <RegExp>
-                                            
-                                              circumdari  iussit  pontifex."
+                                            circumdari  iussit  pontifex."
                                         </RegExp>
                                     </OneOrMore>
                                 </EinBeleg>
@@ -300,12 +223,10 @@
                                             Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
                                         </RegExp>
                                         <RegExp>
-                                            
-                                              II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
+                                            II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
                                         </RegExp>
                                         <RegExp>
-                                            
-                                              VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                                            VII. 92,6 fascercule tres. 21,20 IIII festregele.
                                         </RegExp>
                                     </OneOrMore>
                                     <Zusatz>
@@ -370,8 +291,7 @@
                                             II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
                                         </RegExp>
                                         <RegExp>
-                                            
-                                              clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
+                                            clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
                                         </RegExp>
                                     </OneOrMore>
                                 </EinBeleg>

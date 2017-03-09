@@ -100,9 +100,11 @@ class MLWGrammar(ParserHeadquarter):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "460019891fffc4dbf8d8e8573f5f699c"
+    source_hash__ = "ae6d6896307766bb8965321636b0ed54"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+    wspL__ = wsp__
+    wspR__ = wsp__
     NIEMALS = RE('(?!.)')
     DATEI_ENDE = NegativeLookahead(RE('.'))
     LEER = RE('\\s*')
@@ -112,37 +114,37 @@ class MLWGrammar(ParserHeadquarter):
     WORT_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+', wR=wsp__)
     WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wR=wsp__)
     Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.'))))
-    Autorinfo = Sequence(Alternative(Token("AUTORIN", wL=wsp__, wR=wsp__), Token("AUTOR", wL=wsp__, wR=wsp__)), Name)
-    Zusatz = Sequence(Token("ZUSATZ", wL=wsp__, wR=wsp__), RE('\\s?.*'))
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*'), Alternative(Token("*", wL=wsp__, wR=wsp__), Token("BEDEUTUNG", wL=wsp__, wR=wsp__), Token("AUTOR", wL=wsp__, wR=wsp__), Token("NAME", wL=wsp__, wR=wsp__), Token("ZUSATZ", wL=wsp__, wR=wsp__)))), RE('\\s?.*'))), Optional(Zusatz))
-    Belege = Sequence(Token("BELEGE", wL=wsp__, wR=wsp__), ZeroOrMore(Sequence(Token("*", wL=wsp__, wR=wsp__), EinBeleg)))
-    DeutscheBedeutung = Sequence(Token("DEU", wL=wsp__, wR=wsp__), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
-    LateinischeBedeutung = Sequence(Token("LAT", wL=wsp__, wR=wsp__), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
+    Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s?.*'))
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*'), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s?.*'))), Optional(Zusatz))
+    Belege = Sequence(Token("BELEGE"), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
+    DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
+    LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
     Interpretamente = Sequence(LateinischeBedeutung, DeutscheBedeutung, Optional(Belege))
     Bedeutungskategorie = RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__)
     Bedeutung = Alternative(Interpretamente, Bedeutungskategorie)
-    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG", wL=wsp__, wR=wsp__), Bedeutung))
+    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Bedeutung))
     VerweisZiel = RE('<\\w+>', wR=wsp__, wL=wsp__)
     Verweis = RE('>>\\w+', wR=wsp__, wL=wsp__)
     Beleg = Verweis
-    Schreibweise = Alternative(Token("vizreg-", wL=wsp__, wR=wsp__), Token("festregel(a)", wL=wsp__, wR=wsp__), Token("fezdregl(a)", wL=wsp__, wR=wsp__), Token("fat-", wL=wsp__, wR=wsp__))
-    SWVariante = Sequence(Schreibweise, Token(":", wL=wsp__, wR=wsp__), Beleg)
-    SWTyp = Alternative(Token("script.", wL=wsp__, wR=wsp__), Token("script. fat-", wL=wsp__, wR=wsp__))
-    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE", wL=wsp__, wR=wsp__), Required(SWTyp), Token(":", wL=wsp__, wR=wsp__), Required(SWVariante), ZeroOrMore(Sequence(Token(",", wL=wsp__, wR=wsp__), Required(SWVariante))))
+    Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
+    SWVariante = Sequence(Schreibweise, Token(":"), Beleg)
+    SWTyp = Alternative(Token("script."), Token("script. fat-"))
+    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Required(SWTyp), Token(":"), Required(SWVariante), ZeroOrMore(Sequence(Token(","), Required(SWVariante))))
     ArtikelKopf = SchreibweisenPosition
-    _genus = Alternative(Token("maskulinum", wL=wsp__, wR=wsp__), Token("m.", wL=wsp__, wR=wsp__), Token("femininum", wL=wsp__, wR=wsp__), Token("f.", wL=wsp__, wR=wsp__), Token("neutrum", wL=wsp__, wR=wsp__), Token("n.", wL=wsp__, wR=wsp__))
+    _genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
     Flexion = RE('-?[a-z]+', wR=wsp__)
-    Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(",", wL=wsp__, wR=wsp__), Required(Flexion))))
-    GVariante = Sequence(Flexionen, Optional(_genus), Token(":", wL=wsp__, wR=wsp__), Beleg)
-    GrammatikVarianten = Sequence(Token(";", wL=wsp__, wR=wsp__), Required(GVariante))
-    _wortart = Alternative(Token("nomen", wL=wsp__, wR=wsp__), Token("n.", wL=wsp__, wR=wsp__), Token("verb", wL=wsp__, wR=wsp__), Token("v.", wL=wsp__, wR=wsp__), Token("adverb", wL=wsp__, wR=wsp__), Token("adv.", wL=wsp__, wR=wsp__), Token("adjektiv", wL=wsp__, wR=wsp__), Token("adj.", wL=wsp__, wR=wsp__))
-    GrammatikPosition = Sequence(Token("GRAMMATIK", wL=wsp__, wR=wsp__), Required(_wortart), Required(Token(";", wL=wsp__, wR=wsp__)), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(Alternative(Token(";", wL=wsp__, wR=wsp__), Token(".", wL=wsp__, wR=wsp__))))
-    LVZusatz = Token("sim.", wL=wsp__, wR=wsp__)
+    Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(","), Required(Flexion))))
+    GVariante = Sequence(Flexionen, Optional(_genus), Token(":"), Beleg)
+    GrammatikVarianten = Sequence(Token(";"), Required(GVariante))
+    _wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
+    GrammatikPosition = Sequence(Token("GRAMMATIK"), Required(_wortart), Required(Token(";")), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(Alternative(Token(";"), Token("."))))
+    LVZusatz = Token("sim.")
     LVariante = RE('(?:[a-z]|-)+', wR=wsp__, wL=wsp__)
-    LemmaVarianten = Sequence(Token("VARIANTEN", wL=wsp__, wR=wsp__), Required(LVariante), ZeroOrMore(Sequence(Token(",", wL=wsp__, wR=wsp__), Required(LVariante))), Optional(Sequence(Token(";", wL=wsp__, wR=wsp__), Required(LVZusatz))))
-    _tll = Token("*", wL=wsp__, wR=wsp__)
+    LemmaVarianten = Sequence(Token("VARIANTEN"), Required(LVariante), ZeroOrMore(Sequence(Token(","), Required(LVariante))), Optional(Sequence(Token(";"), Required(LVZusatz))))
+    _tll = Token("*")
     Lemma = Sequence(Optional(_tll), WORT_KLEIN)
-    LemmaPosition = Sequence(Token("LEMMA", wL=wsp__, wR=wsp__), Required(Lemma), Optional(LemmaVarianten), Required(GrammatikPosition))
+    LemmaPosition = Sequence(Token("LEMMA"), Required(Lemma), Optional(LemmaVarianten), Required(GrammatikPosition))
     Artikel = Sequence(Optional(LEER), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LEER), DATEI_ENDE)
     root__ = Artikel
     
@@ -157,27 +159,33 @@ def test(node):
         assert False, node.parser.name
     return node
 
+def test(node):
+    print(node.as_sexpr())
+    return node
+
 MLWTransTable = {
     # AST Transformations for the MLW-grammar
     "Artikel": no_transformation,
-    "LemmaPosition": no_transformation,
-    "Lemma":
-        partial(remove_tokens, tokens={'LEMMA'}),
-    "_tll":
+    "LemmaPosition":
+        [partial(remove_tokens, tokens={'LEMMA'})],
+    "Lemma": no_transformation,
+    "_tll, _wortart, _genus":
         [remove_expendables, reduce_single_child],
     "LemmaVarianten":
         [partial(remove_tokens, tokens={'VARIANTEN'}), flatten,
          partial(remove_tokens, tokens={',', ';'})],
-    "LVariante":
-        [reduce_single_child],
-    "LVZusatz": no_transformation,
-    "GrammatikPosition": no_transformation,
-    "_wortart": no_transformation,
-    "GrammatikVarianten": no_transformation,
-    "GVariante": no_transformation,
-    "Flexionen": no_transformation,
-    "Flexion": no_transformation,
-    "_genus": no_transformation,
+    "LVariante, LVZusatz":
+        [remove_expendables, reduce_single_child],
+    "GrammatikPosition":
+        [partial(remove_tokens, tokens={'GRAMMATIK', ';'}), flatten],
+    "GrammatikVarianten":
+        [partial(remove_tokens, tokens={';'}), replace_by_single_child],
+    "GVariante":
+        [partial(remove_tokens, tokens={':'})],
+    "Flexionen":
+        [flatten, partial(remove_tokens, tokens={',', ';'})],
+    "Flexion, Verweis":
+        [remove_expendables, reduce_single_child],
     "ArtikelKopf": no_transformation,
     "SchreibweisenPosition": no_transformation,
     "SWTyp": no_transformation,
@@ -192,7 +200,6 @@ MLWTransTable = {
     "Belege": no_transformation,
     "EinBeleg": no_transformation,
     "Beleg": no_transformation,
-    "Verweis": no_transformation,
     "VerweisZiel": no_transformation,
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
         # test,

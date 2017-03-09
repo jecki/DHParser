@@ -13,9 +13,11 @@ class PopRetrieveGrammar(ParserHeadquarter):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "bb49baf9598a85673181fafce17e2503"
+    source_hash__ = "b1b316e7525fa8130f132877eb2c8d55"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'')
+    wspL__ = ''
+    wspR__ = ''
     text = RE('[^`]+')
     delimiter_sign = RE('`+')
     delimiter = Capture(delimiter_sign, "delimiter")
