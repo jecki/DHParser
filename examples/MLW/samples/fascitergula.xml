@@ -72,68 +72,35 @@
         </GrammatikPosition>
     </LemmaPosition>
     <SchreibweisenPosition>
-        <token__>
-            SCHREIBWEISE
-        </token__>
         <SWTyp>
             <token__>
                 script.
             </token__>
         </SWTyp>
-        <token__>
-            :
-        </token__>
         <SWVariante>
             <Schreibweise>
-                <token__>
-                    vizreg-
-                </token__>
+                vizreg-
             </Schreibweise>
-            <token__>
-                :
-            </token__>
             <Verweis>
                 >>beleg_id_3
             </Verweis>
         </SWVariante>
-        <ZeroOrMore>
-            <Sequence>
-                <token__>
-                    ,
-                </token__>
-                <SWVariante>
-                    <Schreibweise>
-                        <token__>
-                            festregel(a)
-                        </token__>
-                    </Schreibweise>
-                    <token__>
-                        :
-                    </token__>
-                    <Verweis>
-                        >>beleg_id_4
-                    </Verweis>
-                </SWVariante>
-            </Sequence>
-            <Sequence>
-                <token__>
-                    ,
-                </token__>
-                <SWVariante>
-                    <Schreibweise>
-                        <token__>
-                            fezdregl(a)
-                        </token__>
-                    </Schreibweise>
-                    <token__>
-                        :
-                    </token__>
-                    <Verweis>
-                        >>beleg_id5
-                    </Verweis>
-                </SWVariante>
-            </Sequence>
-        </ZeroOrMore>
+        <SWVariante>
+            <Schreibweise>
+                festregel(a)
+            </Schreibweise>
+            <Verweis>
+                >>beleg_id_4
+            </Verweis>
+        </SWVariante>
+        <SWVariante>
+            <Schreibweise>
+                fezdregl(a)
+            </Schreibweise>
+            <Verweis>
+                >>beleg_id5
+            </Verweis>
+        </SWVariante>
     </SchreibweisenPosition>
     <BedeutungsPosition>
         <Sequence>

@@ -100,7 +100,7 @@ class MLWGrammar(ParserHeadquarter):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "ae6d6896307766bb8965321636b0ed54"
+    source_hash__ = "d7afa7bb0037ee25c0cabfa6e5a956c6"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -174,8 +174,10 @@ MLWTransTable = {
     "LemmaVarianten":
         [partial(remove_tokens, tokens={'VARIANTEN'}), flatten,
          partial(remove_tokens, tokens={',', ';'})],
-    "LVariante, LVZusatz":
+    "LVariante, LVZusatz, Schreibweise":
         [remove_expendables, reduce_single_child],
+    "SWVariante":
+        [remove_expendables, partial(remove_tokens, tokens={':'})],
     "GrammatikPosition":
         [partial(remove_tokens, tokens={'GRAMMATIK', ';'}), flatten],
     "GrammatikVarianten":
@@ -187,10 +189,10 @@ MLWTransTable = {
     "Flexion, Verweis":
         [remove_expendables, reduce_single_child],
     "ArtikelKopf": no_transformation,
-    "SchreibweisenPosition": no_transformation,
+    "SchreibweisenPosition":
+        [partial(remove_tokens, tokens={'SCHREIBWEISE', ':'}),
+         flatten, partial(remove_tokens, tokens={','})],
     "SWTyp": no_transformation,
-    "SWVariante": no_transformation,
-    "Schreibweise": no_transformation,
     "BedeutungsPosition": no_transformation,
     "Bedeutung": no_transformation,
     "Bedeutungskategorie": no_transformation,

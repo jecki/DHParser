@@ -68,7 +68,7 @@ import types
 from functools import reduce, partial
 
 
-__version__ = '0.5.1' + '_dev' + str(os.stat(__file__).st_mtime)
+__version__ = '0.5.2' + '_dev' + str(os.stat(__file__).st_mtime)
 
 
 DEBUG = True
@@ -1211,7 +1211,7 @@ class CompilerBase:
             return compiler(node)
 
 
-def full_compilation(source, parser_HQ, AST_transformations, compiler):
+def full_compilation(source, parserHQ, AST_transformations, compiler):
     """Compiles a source in three stages:
         1. Parsing
         2. AST-transformation
@@ -1221,7 +1221,7 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
 
     Args:
         source (str):                the input source for compilation
-        parser_HQ (ParserHQ):        the ParserHeadquarter object
+        parserHQ (ParserHQ):        the ParserHeadquarter object
         AST_transformations (dict):  a table that assigns AST transformation
                 functions to parser names (see function ASTTransform)
         compiler (object):  an instance of a class derived from `CompilerBase`
@@ -1234,8 +1234,8 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
     """
     assert isinstance(compiler, CompilerBase)
 
-    syntax_tree = parser_HQ.parse(source)
-    DEBUG_DUMP_SYNTAX_TREE(parser_HQ, syntax_tree, compiler, ext='.cst')
+    syntax_tree = parserHQ.parse(source)
+    DEBUG_DUMP_SYNTAX_TREE(parserHQ, syntax_tree, compiler, ext='.cst')
 
     errors = syntax_tree.collect_errors(clear=True)
     assert errors or str(syntax_tree) == source
@@ -1243,7 +1243,7 @@ def full_compilation(source, parser_HQ, AST_transformations, compiler):
     # likely that error list gets littered with compile error messages
     if not errors:
         ASTTransform(syntax_tree, AST_transformations)
-        DEBUG_DUMP_SYNTAX_TREE(parser_HQ, syntax_tree, compiler, ext='.ast')
+        DEBUG_DUMP_SYNTAX_TREE(parserHQ, syntax_tree, compiler, ext='.ast')
         result = compiler.compile__(syntax_tree)
         errors.extend(syntax_tree.collect_errors(clear=True))
     else:
@@ -1421,7 +1421,6 @@ class EBNFCompiler(CompilerBase):
         self.variables = set()
         self.scanner_tokens = set()
         self.definition_names = []
-        self.curr_name = str(None)
         self.recursive = set()
         self.root = ""
         self.directives = {'whitespace': '\s*',
@@ -1554,7 +1553,6 @@ class EBNFCompiler(CompilerBase):
             node.add_error('A rule with name "%s" has already been defined.' %
                            rule)
         try:
-            self.curr_name = '"' + rule + '"'
             self.rules.add(rule)
             defn = self.compile__(node.result[1])
             if rule in self.variables:
@@ -1611,22 +1609,12 @@ class EBNFCompiler(CompilerBase):
                             ', '.join(list(EBNFCompiler.KNOWN_DIRECTIVES))))
         return ""
 
-    def _current_name(self):
-        # if self.curr_name in {'', str(None)}:
-        #     name = []
-        # else:
-        #     name = ["name=" + self.curr_name]
-        name = []  # turn explicit names declaration off
-        self.curr_name = str(None)
-        return name
-
     def non_terminal(self, node, parser_class):
         """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        name = self._current_name()
         arguments = filter(lambda arg: arg,
-                           [self.compile__(r) for r in node.result] + name)
+                           [self.compile__(r) for r in node.result])
         return parser_class + '(' + ', '.join(arguments) + ')'
 
     def expression(self, node):
@@ -1692,10 +1680,10 @@ class EBNFCompiler(CompilerBase):
         return 'Token(' + ', '.join([node.result]) + ')'
 
     def regexp(self, node):
-        name = self._current_name()
         rx = node.result
+        name = []
         if rx[:2] == '~/':
-            name = ['wL=' + WHITESPACE_KEYWORD] + name
+            name = ['wL=' + WHITESPACE_KEYWORD]
             rx = rx[1:]
         if rx[-2:] == '/~':
             name = ['wR=' + WHITESPACE_KEYWORD] + name
