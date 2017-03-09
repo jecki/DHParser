@@ -427,7 +427,7 @@ class Parser(metaclass=ParserMetaClass):
     def __init__(self, name=None):
         assert name is None or isinstance(name, str), str(name)
         self.name = name or ''
-        self.headquarter = None          # head quater for global variables etc.
+        self.headquarter = None          # headquarter for global variables etc.
         self.visited = dict()
         self.recursion_counter = dict()
         self.cycle_detection = set()
@@ -437,6 +437,18 @@ class Parser(metaclass=ParserMetaClass):
 
     def __str__(self):
         return self.name or self.__class__.__name__
+
+    @property
+    def headquarter(self):
+        return self._headquarter
+
+    @headquarter.setter
+    def headquarter(self, headquarter):
+        self._headquarter = headquarter
+        self.changed_HQ(headquarter)
+
+    def changed_HQ(self, headquarter):
+        pass
 
     def apply(self, func):
         """Applies function `func(parser)` recursively to this parser and all
@@ -473,7 +485,9 @@ class ParserHeadquarter:
         for entry in cdict:
             if sane_parser_name(entry):  # implies isinstance(parser, Parser) qua convention
                 parser = cdict[entry]
-                assert isinstance(parser, Parser)
+                assert isinstance(parser, Parser), \
+                    "Symbol not ending with '__' should by convention only " \
+                    "be used for parsers."
                 if isinstance(parser, Forward):
                     assert not parser.name or parser.name == entry
                     if parser.name and parser.name != entry:
@@ -498,9 +512,10 @@ class ParserHeadquarter:
     def _add_parser(self, parser):
         """Adds the copy of the parser object to this instance of ParserHeadquarter.
         """
-        # print(parser.name)
         if sane_parser_name(parser.name):  # implies isinstance(parser, Parser) qua convention
-            assert isinstance(parser, Parser)
+            assert isinstance(parser, Parser), \
+                "Symbol not ending with '__' should by convention only " \
+                "be used for parsers."
             # overwrite class variable with instance variable!!!
             setattr(self, parser.name, parser)
         parser.headquarter = self
@@ -619,19 +634,23 @@ class RegExp(Parser):
 class RE(Parser):
     """Regular Expressions with optional leading or trailing whitespace.
     """
-    def __init__(self, regexp, wL='', wR='', name=None):
+    def __init__(self, regexp, wL=None, wR=None, name=None):
         super(RE, self).__init__(name)
-        self.wL = RegExp(wL, WHITESPACE_KEYWORD) if wL else ''
-        self.wR = RegExp(wR, WHITESPACE_KEYWORD) if wR else ''
+        self.wL = wL
+        self.wR = wR
+        self.wspLeft = RegExp(wL, WHITESPACE_KEYWORD) if wL \
+            else lambda t: (None, t)
+        self.wspRight = RegExp(wR, WHITESPACE_KEYWORD) if wR \
+            else lambda t: (None, t)
         self.main = RegExp(regexp)
 
     def __call__(self, text):
         # assert self.main.regexp.pattern != "@"
         t = text
-        wL, t = self.wL(t) if self.wL else (None, t)
+        wL, t = self.wspLeft(t)
         main, t = self.main(t)
         if main:
-            wR, t = self.wR(t) if self.wR else (None, t)
+            wR, t = self.wspRight(t)
             result = tuple(nd for nd in (wL, main, wR) if nd)
             return Node(self, result), t
         return None, text
@@ -643,9 +662,9 @@ class RE(Parser):
     def apply(self, func):
         if super(RE, self).apply(func):
             if self.wL:
-                self.wL.apply(func)
+                self.wspLeft.apply(func)
             if self.wR:
-                self.wR.apply(func)
+                self.wspRight.apply(func)
             self.main.apply(func)
 
 
@@ -686,10 +705,6 @@ class UnaryOperator(Parser):
     def apply(self, func):
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
-
-    # def __str__(self):
-    #     return Parser.__str__(self) + \
-    #            ("" if self.name else "(" + str(self.parser) + ")")
 
 
 class NaryOperator(Parser):
