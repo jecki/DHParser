@@ -12,44 +12,46 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied.  See the License for the specific language governing
+permissions and limitations under the License.
 
 
-Module parser_combinators contains a number of classes that together make up
-parser combinators for left-recursive grammers. For each element of the
-extended Backus-Naur-Form as well as for a regular expression token a class is
-defined. The set of classes can be used to define a parser for
-(ambiguous) left-recursive grammers.
+Module parser_combinators contains a number of classes that together
+make up parser combinators for left-recursive grammers. For each
+element of the extended Backus-Naur-Form as well as for a regular
+expression token a class is defined. The set of classes can be used to
+define a parser for (ambiguous) left-recursive grammers.
 
 
 References and Acknowledgements:
 
 Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
-Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
-links rund um informatik-themen, URL:
+Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
+anregungen und links rund um informatik-themen, URL:
 http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
 
-Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post, September,
-18th 2008 on denkspuren. gedanken, ideen, anregungen und links rund
-um informatik-themen, URL:
+Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
+September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
+links rund um informatik-themen, URL:
 http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
 
 Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
-denkspuren. gedanken, ideen, anregungen und links rund um informatik-themen,
-URL:
+denkspuren. gedanken, ideen, anregungen und links rund um
+informatik-themen, URL:
 http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
 
-Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser Combinators
-for Ambiguous Left-Recursive Grammars, in: P. Hudak and D.S. Warren (Eds.):
-PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag Berlin Heidelberg 2008.
+Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser
+Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
+D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
+Berlin Heidelberg 2008.
 
 Juancarlo Añez: grako, a PEG parser generator in Python,
 https://bitbucket.org/apalala/grako
+
 """
 
-# TODO: Replace copy.deepcopy() call in ParserHeadquarter class by custom copy()-methods in the Parser classes. Is that really better?
+# TODO: Replace copy.deepcopy() call in ParserCenter class by custom copy()-methods in the Parser classes. Is that really better?
 
 
 import collections
@@ -64,7 +66,6 @@ import os
 #     import re
 import re       # as of now use `re` - even hough `regex` appears to be better
 import sys
-import types
 from functools import reduce, partial
 
 
@@ -83,24 +84,23 @@ def DEBUG_DUMP_SYNTAX_TREE(parser_root, syntax_tree, compiler, ext):
         else:
             os.mkdir("DEBUG")
             prefix = "DEBUG"
-        ast_file_name = (DEBUG_DUMP_AST or compiler.grammar_name or
-                         parser_root.__class__.__name__) + ext
-        with open(os.path.join(prefix, ast_file_name), "w",
-                  encoding="utf-8") as f:
+        ast_file_name = (DEBUG_DUMP_AST or compiler.grammar_name
+                         or parser_root.__class__.__name__) + ext
+        with open(os.path.join(prefix, ast_file_name), "w",  encoding="utf-8") as f:
             f.write(syntax_tree.as_sexpr())
 
 
 class Error(Exception):
-    """Base class for errors in module `ParserCombinators`.
+    """Base class for PyDSL-errors.
     """
     pass
 
 
-##############################################################################
+########################################################################
 #
 # Scanner / Preprocessor support
 #
-##############################################################################
+########################################################################
 
 
 RX_SCANNER_TOKEN = re.compile('\w+')
@@ -109,24 +109,50 @@ END_SCANNER_TOKEN = '\x1c'
 
 
 def make_token(token, argument=''):
+    """
+    Turns the ``token`` and ``argument`` into a special token that
+    will be caught by the `ScannerToken`-parser.
+
+    Args:
+        token (str): The token to be wrapped into a scanner token
+        argument (str): The optional argument string added to the token
+
+    Returns (str):
+        The scanner token, starting with the `BEGIN_SCANNER_TOKEN`-
+        character and ending with the `END_SCANNER_TOKEN`-character.
+    """
     assert RX_SCANNER_TOKEN.match(token)
     assert argument.find(BEGIN_SCANNER_TOKEN) < 0
     assert argument.find(END_SCANNER_TOKEN) < 0
+
     return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
 
 
 nil_scanner = lambda text: text
 
 
-##############################################################################
+
+########################################################################
 #
 # Parser tree
 #
-##############################################################################
+########################################################################
+
 
 def line_col(text, pos):
-    """Returns the 'pos' within text as (line, column)-tuple.
     """
+    Returns the position within a text as (line, column)-tuple.
+
+    Args:
+        text (str):  The text for which the line and column of the
+                position ``pos`` shall be returned
+        pos (int):  The position in the text starting with 0, e.g. 2536
+                means the 2537th character. Must be lower than the
+                text's length
+    Returns (tuple):
+        The line and column of the given position
+    """
+    assert pos < len(text)
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
     return line, column
@@ -139,21 +165,49 @@ class ZOMBIE_PARSER:
 
 
 class Node:
+    """
+    Represents a node in the concrete or abstract syntax tree.
+
+    Attributes:
+        name (str):  The name of the node, which is either its parser's
+                name or, if that is empty, the parser's class name
+        result (str or tuple):  The result of the parser which
+                generated this node, which can be either a string or a
+                tuple of child nodes.
+        children (tuple):  The tuple of child nodes or an empty tuple
+                if there are no child nodes. READ ONLY
+        parser (Parser):  The parser which generated this node.
+        errors (set):  A set of parser- or compiler-errors (strings)
+                attached to this n
+        len_before_AST (int):  the full length of the node's string
+                result if the node is a leaf node or, otherwise, the
+                concatenated string result's of its descendants
+        pos (int):  the position of the node within the parsed text.
+                The value of ``pos`` is zero by default and is will be
+                updated if the node or any of its parents is attached
+                to a new parent.
+    """
+
     def __init__(self, parser, result):
-        self.children = () # will be set by the following assignment
-        self.result = result   # sets self.children to `True` if there are any
+        """
+        Initializes the ``Node``-object.
+
+        Args:
+            parser (Parser):  The `Parser`-instance which generated
+                    this node
+            result (Union):  The parsing result, which can either be a
+                    string or a tuple of child nodes
+        """
+        self.result = result
         self.parser = parser or ZOMBIE_PARSER
-        self.errors = []
-        self.error_flag = any(r.error_flag for r in self.result) \
-            if self.children else False
+        self.errors = set()
+        self.error_flag = any(r.error_flag for r in self.result) if self.children else False
         self.len_before_AST = len(self.result) if not self.children \
             else sum(child.len_before_AST for child in self.result)
         self.pos = 0
 
     def __str__(self):
         if self.children:
-            # assert all(isinstance(child, Node) for child in self.result), \
-            #     str(self.result)
             return "".join([str(child) for child in self.result])
         return str(self.result)
 
@@ -167,14 +221,15 @@ class Node:
 
     @result.setter
     def result(self, result):
-        assert (isinstance(result, tuple) and
-                all(isinstance(child, Node) for child in result)) or \
-               isinstance(result, Node) or \
-               isinstance(result, str), str(result)
-        if isinstance(result, Node):
-            result = (result,)
-        self._result = result or ''
-        self.children = result if isinstance(result, tuple) else ()
+        assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
+                or isinstance(result, Node)
+                or isinstance(result, str)), str(result)
+        self._result = (result,) if isinstance(result, Node) else result or ''
+        self._children = self._result if isinstance(self._result, tuple) else ()
+
+    @property
+    def children(self):
+        return self._children
 
     @property
     def pos(self):
@@ -188,22 +243,25 @@ class Node:
             child.pos = pos + offset
             offset += child.len_before_AST
 
-    def as_tree(self, tab, openF, closeF, dataF=lambda s: s):
-        """Generates a tree representation of this node and its children
-        in string from. This could be an XML-representation or a lisp-like
+    def _tree_repr(self, tab, openF, closeF, dataF=lambda s: s):
+        """
+        Generates a tree representation of this node and its children
+        in string from.
+
+        This could be an XML-representation or a lisp-like
         S-expression. Exactly which form the tree representation takes is
         defined by the parameters of the function.
 
         Args:
-            tab:      the tab string for indentation, e.g. '\t' or '    '
-            openF:    a function that returns an opening string (e.g. an
-                      XML-tag) for a given node.
-            closeF:   a function that returns a closeF string (e.g. an
-                      XML-tag for a given node.
-            dataF:    filters data string before printing, e.g. to add
-                      quotation marks
-        Returns:
-            a string that contains a (serialized) tree representation of the
+            tab (str): The indentation string, e.g. '\t' or '    '
+            openF (Node->str):  A function that returns an opening
+                    string (e.g. an XML-tag) for a given node
+            closeF (Node->str): A function that returns a closeF string
+                    (e.g. an XML-tag) for a given node.
+            dataF (str->str): A function that filters the data string
+                    before printing, e.g. to add quotation marks
+        Returns (str):
+            A string that contains a (serialized) tree representation of the
             node and its children.
         """
         head = openF(self)
@@ -218,7 +276,7 @@ class Node:
         if self.children:
             content = []
             for child in self.result:
-                subtree = child.as_tree(tab, openF, closeF, dataF).split('\n')
+                subtree = child._tree_repr(tab, openF, closeF, dataF).split('\n')
                 content.append('\n'.join((tab + s) for s in subtree))
             return head + '\n'.join(content) + tail
 
@@ -226,12 +284,13 @@ class Node:
                                  for s in str(self.result).split('\n')]) + tail
 
     def as_sexpr(self, src=None):
-        """Returns content as S-expression, i.e. in lisp-like form.
+        """
+        Returns content as S-expression, i.e. in lisp-like form.
 
         Args:
-            src:    The source text or `None`. In case the source text is given
-                    the position of the element in the text will be reported as
-                    line and column.
+            src (str or None):  The source text or `None`. In case the
+                    source text is given the position of the element
+                    in the text will be reported as line and column.
         """
         def opening(node):
             s = '(' + node.name
@@ -246,14 +305,16 @@ class Node:
             return '"%s"' % s if s.find('"') < 0 \
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
-        return self.as_tree('    ', opening, lambda node: ')', pretty)
+        return self._tree_repr('    ', opening, lambda node: ')', pretty)
 
     def as_xml(self, src=None):
-        """Returns content as XML-tree.
+        """
+        Returns content as XML-tree.
 
         Args:
-            src:    The source text or `None`. In case the source text is given
-                    the position will also be reported as line and column.
+            src (str):  The source text or `None`. In case the source
+                    text is given the position will also be reported
+                    as line and column.
         """
 
         def opening(node):
@@ -262,8 +323,7 @@ class Node:
             if src:
                 s += ' line="%i" col="%i"' % line_col(src, node.pos)
             if node.errors:
-                s += ' err="%s"' % ''.join(str(err).replace('"', r'\"')
-                                           for err in node.errors)
+                s += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
             s += ">"
             return s
 
@@ -271,18 +331,19 @@ class Node:
             s = '</' + node.name + '>'
             return s
 
-        return self.as_tree('    ', opening, closing)
+        return self._tree_repr('    ', opening, closing)
 
     def add_error(self, error):
-        self.errors.append(error)
+        self.errors.add(error)
         self.error_flag = True
         return self
 
     def collect_errors(self, clear=False):
-        """Returns all errors of this node or any child node in the form of a
-        list of tuples (position: int, error_message: string), where position
-        is always relative to this node. If `clear` is true, errors messages
-        are cleared after collecting.
+        """
+        Returns all errors of this node or any child node in the form
+        of a list of tuples (position, error_message), where position
+        is always relative to this node. If ``clear`` is true, errors
+        messages are cleared after collecting.
         """
         errors = [(0, self.errors)] if self.errors else []
         if clear:
@@ -291,19 +352,23 @@ class Node:
         if self.children:
             offset = 0
             for child in self.result:
-                errors.extend((pos + offset, err)
-                              for pos, err in child.collect_errors(clear))
+                errors.extend((pos + offset, err) for pos, err in child.collect_errors(clear))
                 offset += child.len_before_AST
         return errors
 
     def navigate(self, path):
-        """Returns the first descendant element matched by `path`, e.g.
+        """EXPERIMENTAL! NOT YET TESTED!!!
+        Returns the first descendant element matched by `path`, e.g.
         'd/s' returns 'l' from (d (s l)(e (r x1) (r x2))
         'e/r' returns 'x2'
         'e'   returns (r x1)(r x2)
-        :param path: the path of the object, e.g. 'a/b/c'
-        :return: the object at the path, either a string or a Node or
-                 `None`, if the path did not match.
+
+        Args:
+            path (str): The path of the object, e.g. 'a/b/c'
+
+        Returns:
+            The object at the path, either a string or a Node or
+            `None`, if the path did not match.
         """
         pl = path.strip('')
         assert pl[0] != '/', 'Path must noch start with "/"!'
@@ -321,24 +386,27 @@ class Node:
 
 
 def error_messages(text, errors):
-    """Converts the list of `errors` collected from the root node of the
-    parse tree of `text` into a human readable (and IDE or editor parsable
-    text) with line an column numbers. Error messages are separated by an
-    empty line.
+    """
+    Converts the list of ``errors`` collected from the root node of the
+    parse tree of `text` into a human readable (and IDE or editor
+    parsable text) with line an column numbers. Error messages are
+    separated by an empty line.
     """
     return "\n\n".join("line: %i, column: %i, error: %s" %
                        (*line_col(text, entry[0]), " and ".join(entry[1]))
-                       for entry in errors)
+                       for entry in sorted(list(errors)))
 
 
 # lambda compact_sexpr s : re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
 
 
-##############################################################################
+
+########################################################################
 #
 # Parser base classes
 #
-##############################################################################
+########################################################################
+
 
 LEFT_RECURSION_DEPTH = 10   # because of pythons recursion depth limit, this
                             # value ought not to be set too high
@@ -357,23 +425,22 @@ def wrap_parser(parser_func):
             if location in parser.visited:
                 return parser.visited[location]
             # break left recursion at the maximum allowed depth
-            if parser.recursion_counter.setdefault(location, 0) > \
-                    LEFT_RECURSION_DEPTH:
+            if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
                 return None, text
 
             parser.recursion_counter[location] += 1
 
-            parser.headquarter.call_stack.append(parser)
-            parser.headquarter.moving_forward = True
+            parser.center.call_stack.append(parser)
+            parser.center.moving_forward = True
 
             # run original __call__ method
             result = parser_func(parser, text)
 
-            if parser.headquarter.moving_forward:  # and result[0] == None
-                parser.headquarter.moving_forward = False
+            if parser.center.moving_forward:  # and result[0] == None
+                parser.center.moving_forward = False
                 global DEBUG
                 if DEBUG and False:
-                    st = "->".join((str(p) for p in parser.headquarter.call_stack))
+                    st = "->".join((str(p) for p in parser.center.call_stack))
                     if result[0]:
                         print(st, '\t"%s"' % str(result[0]).replace('\n', ' '), "\tHIT")
                         pass
@@ -381,13 +448,13 @@ def wrap_parser(parser_func):
                         t = text[:20].replace('\n',' ')
                         print(st, '\t"%s"' % (t + ("..." if t else "")), "\tfail")
                         pass
-            parser.headquarter.call_stack.pop()
+            parser.center.call_stack.pop()
 
             if result[0] is not None:
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 parser.visited[location] = result
-                parser.headquarter.last_node = result[0]
+                parser.center.last_node = result[0]
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -428,7 +495,7 @@ class Parser(metaclass=ParserMetaClass):
     def __init__(self, name=None):
         assert name is None or isinstance(name, str), str(name)
         self.name = name or ''
-        self.headquarter = None          # headquarter for global variables etc.
+        self.center = None          # center for global variables etc.
         self.reset()
 
     def reset(self):
@@ -443,15 +510,15 @@ class Parser(metaclass=ParserMetaClass):
         return self.name or self.__class__.__name__
 
     @property
-    def headquarter(self):
-        return self._headquarter
+    def center(self):
+        return self._center
 
-    @headquarter.setter
-    def headquarter(self, headquarter):
-        self._headquarter = headquarter
-        self._headquarter_changed()
+    @center.setter
+    def center(self, center):
+        self._center = center
+        self._center_changed()
 
-    def _headquarter_changed(self):
+    def _center_changed(self):
         pass
 
     def apply(self, func):
@@ -468,7 +535,7 @@ class Parser(metaclass=ParserMetaClass):
             return True
 
 
-class ParserHeadquarter:
+class ParserCenter:
     root__ = None   # should be overwritten by grammar subclass
 
     @classmethod
@@ -476,7 +543,7 @@ class ParserHeadquarter:
         """Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.
-            class Grammar(ParserHeadquarter):
+            class Grammar(ParserCenter):
                 ...
                 symbol = RE('(?!\\d)\\w+')
         After the call of this method symbol.name == "symbol"
@@ -503,12 +570,12 @@ class ParserHeadquarter:
         self.root__ = copy.deepcopy(self.__class__.root__)
         if self.wspL__:
             self.wsp_left_parser__ = RegExp(self.wspL__, WHITESPACE_KEYWORD)
-            self.wsp_left_parser__.headquarter = self
+            self.wsp_left_parser__.center = self
         else:
             self.wsp_left_parser__ = lambda t: (None, t)
         if self.wspR__:
             self.wsp_right_parser__ = RegExp(self.wspR__, WHITESPACE_KEYWORD)
-            self.wsp_right_parser__.headquarter = self
+            self.wsp_right_parser__.center = self
         else:
             self.wsp_right_parser__ = lambda t: (None, t)
         self.root__.apply(self._add_parser)
@@ -521,11 +588,11 @@ class ParserHeadquarter:
 
     def _add_parser(self, parser):
         """Adds the copy of the classes parser object to this
-        particular instance of ParserHeadquarter.
+        particular instance of ParserCenter.
         """
         setattr(self, parser.name, parser)
         self.all_parsers.add(parser)
-        parser.headquarter = self
+        parser.center = self
 
     def parse(self, document):
         """Parses a document with with parser-combinators.
@@ -570,11 +637,11 @@ class ParserHeadquarter:
         return result if not stitches else Node(None, tuple(stitches))
 
 
-##############################################################################
+########################################################################
 #
 # Token and Regular Expression parser classes (i.e. leaf classes)
 #
-##############################################################################
+########################################################################
 
 
 class ScannerToken(Parser):
@@ -624,7 +691,7 @@ class RegExp(Parser):
         duplicate = RegExp(self.name, regexp)
         duplicate.name = self.name  # this ist needed!!!!
         duplicate.regexp = self.regexp
-        duplicate.headquarter = self.headquarter
+        duplicate.center = self.center
         duplicate.visited = copy.deepcopy(self.visited, memo)
         duplicate.recursion_counter = copy.deepcopy(self.recursion_counter,
                                                     memo)
@@ -670,12 +737,12 @@ class RE(Parser):
         return Parser.__str__(self) + ('~' if self.wL else '') + \
                '/' + self.main.regexp.pattern + '/' + ('~' if self.wR else '')
 
-    def _headquarter_changed(self):
-        if self.headquarter:
+    def _center_changed(self):
+        if self.center:
             if self.wL is None:
-                self.wspLeft = self.headquarter.wsp_left_parser__
+                self.wspLeft = self.center.wsp_left_parser__
             if self.wR is None:
-                self.wspRight = self.headquarter.wsp_right_parser__
+                self.wspRight = self.center.wsp_right_parser__
 
     def apply(self, func):
         if super(RE, self).apply(func):
@@ -707,11 +774,11 @@ def Token(token, wL=None, wR=None, name=None):
     return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
 
 
-##############################################################################
+########################################################################
 #
 # Combinator parser classes (i.e. trunk classes of the parser tree)
 #
-##############################################################################
+########################################################################
 
 
 class UnaryOperator(Parser):
@@ -781,7 +848,7 @@ class OneOrMore(UnaryOperator):
             if not node:
                 break
             results += (node,)
-        if results == ():       # TODO: Add debugging print statements or breakpoint for `Bedeutungsposition` here!!
+        if results == ():
             return None, text
         return Node(self, results), text_
 
@@ -822,11 +889,11 @@ class Alternative(NaryOperator):
         return None, text
 
 
-##############################################################################
+########################################################################
 #
 # Flow control operators
 #
-##############################################################################
+########################################################################
 
 
 class FlowOperator(UnaryOperator):
@@ -887,7 +954,7 @@ class Lookbehind(FlowOperator):
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text):
-        if isinstance(self.headquarter.last_node, Lookahead):
+        if isinstance(self.center.last_node, Lookahead):
             return Node(self, '').add_error('Lookbehind right after Lookahead '
                                             'does not make sense!'), text
         if self.sign(self.condition()):
@@ -900,7 +967,7 @@ class Lookbehind(FlowOperator):
 
     def condition(self):
         node = None
-        for node in iter_right_branch(self.headquarter.last_node):
+        for node in iter_right_branch(self.center.last_node):
             if node.parser.name == self.parser.name:
                 return True
         if node and isinstance(self.parser, RegExp) and \
@@ -914,11 +981,11 @@ class NegativeLookbehind(Lookbehind):
         return not bool_value
 
 
-##############################################################################
+########################################################################
 #
 # Capture and Retrieve operators (for passing variables in the parser)
 #
-##############################################################################
+########################################################################
 
 
 class Capture(UnaryOperator):
@@ -928,7 +995,7 @@ class Capture(UnaryOperator):
     def __call__(self, text):
         node, text = self.parser(text)
         if node:
-            stack = self.headquarter.variables.setdefault(self.name, [])
+            stack = self.center.variables.setdefault(self.name, [])
             stack.append(str(node))
         return Node(self, node), text
 
@@ -941,7 +1008,7 @@ class Retrieve(Parser):
     def __call__(self, text):
         symbol = self.symbol if isinstance(self.symbol, str) \
                              else self.symbol.name
-        stack = self.headquarter.variables[symbol]
+        stack = self.center.variables[symbol]
         value = self.pick_value(stack)
         if text.startswith(value):
             return Node(self, value), text[len(value):]
@@ -957,11 +1024,11 @@ class Pop(Retrieve):
         return stack.pop()
 
 
-##############################################################################
+########################################################################
 #
 # Forward class (for recursive symbols)
 #
-##############################################################################
+########################################################################
 
 
 class Forward(Parser):
@@ -986,7 +1053,7 @@ class Forward(Parser):
 
     def set(self, parser):
         assert isinstance(parser, Parser)
-        self.name = parser.name  # redundant, because of constructor of ParserHeadquarter
+        self.name = parser.name  # redundant, because of constructor of ParserCenter
         self.parser = parser
 
     def apply(self, func):
@@ -999,15 +1066,15 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
                   'Lookahead', 'NegativeLookahead', 'Optional',
                   'Lookbehind', 'NegativeLookbehind',
                   'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
-                  'OneOrMore', 'ParserHeadquarter', 'Capture', 'Retrieve',
+                  'OneOrMore', 'ParserCenter', 'Capture', 'Retrieve',
                   'Pop'}
 
 
-##############################################################################
+########################################################################
 #
 # Abstract syntax tree support
 #
-##############################################################################
+########################################################################
 
 
 def expand_table(compact_table):
@@ -1187,11 +1254,11 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
                'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
 
 
-##############################################################################
+########################################################################
 #
 # Syntax driven compilation support
 #
-##############################################################################
+########################################################################
 
 class CompilerBase:
     def compile__(self, node):
@@ -1217,7 +1284,7 @@ def full_compilation(source, parserHQ, AST_transformations, compiler):
 
     Args:
         source (str):                the input source for compilation
-        parserHQ (ParserHQ):        the ParserHeadquarter object
+        parserHQ (ParserHQ):        the ParserCenter object
         AST_transformations (dict):  a table that assigns AST transformation
                 functions to parser names (see function ASTTransform)
         compiler (object):  an instance of a class derived from `CompilerBase`
@@ -1234,8 +1301,8 @@ def full_compilation(source, parserHQ, AST_transformations, compiler):
     DEBUG_DUMP_SYNTAX_TREE(parserHQ, syntax_tree, compiler, ext='.cst')
 
     errors = syntax_tree.collect_errors(clear=True)
-    assert errors or str(syntax_tree) == source
-    # only compile if there were no snytax errors, for otherwise it is
+    assert errors or str(syntax_tree) == source, str(syntax_tree)
+    # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     if not errors:
         ASTTransform(syntax_tree, AST_transformations)
@@ -1252,14 +1319,14 @@ def full_compilation(source, parserHQ, AST_transformations, compiler):
 COMPILER_SYMBOLS = {'CompilerBase', 'Error', 'Node', 're'}
 
 
-##############################################################################
+########################################################################
 #
 # EBNF-Grammar-Compiler
 #
-##############################################################################
+########################################################################
 
 
-class EBNFGrammar(ParserHeadquarter):
+class EBNFGrammar(ParserCenter):
     r"""Parser for an EBNF source file, with this grammar:
 
     # EBNF-Grammar in EBNF
@@ -1484,7 +1551,7 @@ class EBNFCompiler(CompilerBase):
         article = 'an ' if self.grammar_name[0:1].upper() \
                 in EBNFCompiler.VOWELS else 'a '
         declarations = ['class ' + self.grammar_name +
-                        'Grammar(ParserHeadquarter):',
+                        'Grammar(ParserCenter):',
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
                         (', with this grammar:' if self.source_text else '.')]
@@ -1697,11 +1764,11 @@ class EBNFCompiler(CompilerBase):
         return set(item.strip() for item in node.result.split(','))
 
 
-##############################################################################
+########################################################################
 #
 # support for compiling DSLs based on an EBNF-grammar
 #
-##############################################################################
+########################################################################
 
 DELIMITER = "\n\n### DON'T EDIT OR REMOVE THIS LINE ###\n\n"
 
@@ -1764,7 +1831,7 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
 def get_grammar_instance(grammar):
     """Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
-    python-code, a ParserHeadquarter-derived grammar class or an instance of
+    python-code, a ParserCenter-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
     """
     if isinstance(grammar, str):
@@ -1781,7 +1848,7 @@ def get_grammar_instance(grammar):
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
-        if isinstance(grammar, ParserHeadquarter):
+        if isinstance(grammar, ParserCenter):
             parser_root = grammar
         else:
             # assume `grammar` is a grammar class and get the root object
@@ -1929,7 +1996,7 @@ def has_source_changed(grammar_source, grammar_class):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
             pycode = f.read()
-        m = re.search('class \w*\(ParserHeadquarter\)', pycode)
+        m = re.search('class \w*\(ParserCenter\)', pycode)
         if m:
             m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
                           pycode[m.span()[1]:])
@@ -1940,11 +2007,11 @@ def has_source_changed(grammar_source, grammar_class):
         return chksum != grammar_class.source_hash__
 
 
-##############################################################################
+########################################################################
 #
 # system test
 #
-##############################################################################
+########################################################################
 
 
 def test(file_name):

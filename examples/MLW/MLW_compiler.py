@@ -4,7 +4,7 @@ def MLWScanner(text):
 
 ### DON'T EDIT OR REMOVE THIS LINE ###
 
-class MLWGrammar(ParserHeadquarter):
+class MLWGrammar(ParserCenter):
     r"""Parser for a MLW source file, with this grammar:
     
     # EBNF-Syntax für MLW-Artikel
@@ -100,7 +100,7 @@ class MLWGrammar(ParserHeadquarter):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "ca55553a5e483fa08341abecc2aa284c"
+    source_hash__ = "33595036ca8cff5d8dcf0e0fe70c493a"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
