@@ -21,7 +21,7 @@ limitations under the License.
 
 import os
 import sys
-sys.path.append(os.path.abspath('../'))
+sys.path.append(os.path.abspath('../../'))
 from ParserCombinators import run_compiler
 errors = run_compiler("MLW.ebnf")
 if errors:

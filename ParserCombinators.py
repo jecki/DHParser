@@ -1150,26 +1150,18 @@ def flatten(node):
         node.result = tuple(new_result)
 
 
-def remove_tokens(node, tokens):
+def remove_tokens(node, tokens={}):
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node.
     """
     if node.children:
-        node.result = tuple(child for child in node.result
-                            if child.parser.name != TOKEN_KEYWORD or
-                            child.result not in tokens)
-
-
-def remove_all_tokens(node):
-    """Removes all tokens from the immediate descendants of a node.
-
-    :param node:  the node from which children that represent tokens
-                  shall be removed
-    :return:      the node with all children that are tokens removed
-    """
-    if node.children:
-        node.result = tuple(child for child in node.result
-                            if child.parser.name != TOKEN_KEYWORD)
+        if tokens:
+            node.result = tuple(child for child in node.result
+                                if child.parser.name != TOKEN_KEYWORD or
+                                child.result not in tokens)
+        else:
+            node.result = tuple(child for child in node.result
+                                if child.parser.name != TOKEN_KEYWORD)
 
 
 def remove_enclosing_delimiters(node):

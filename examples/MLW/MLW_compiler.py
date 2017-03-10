@@ -100,7 +100,7 @@ class MLWGrammar(ParserHeadquarter):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "d7afa7bb0037ee25c0cabfa6e5a956c6"
+    source_hash__ = "2c3456ee74172407cbe1f15e3649b41f"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -151,17 +151,26 @@ class MLWGrammar(ParserHeadquarter):
 
 ### DON'T EDIT OR REMOVE THIS LINE ###
 
-def test(node):
-    if node.parser.name == "WORT_KLEIN":
-        assert False, node.as_sexpr()
-        node = remove_expendables(node)
-        node = reduce_single_child(node)
-        assert False, node.parser.name
-    return node
 
 def test(node):
     print(node.as_sexpr())
-    return node
+
+
+def join_strings(node, delimiter='\n'):
+    new_result = []
+    n = 0
+    while n < len(node.result):
+        nd = node.result[n]
+        if not nd.children:
+            a = n
+            n += 1
+            while n < len(node.result) and not node.result[n].children:
+                n += 1
+            nd.result = delimiter.join((r.result for r in node.result[a:n]))
+        new_result.append(nd)
+    node.result = tuple(new_result)
+    print(node.as_sexpr())
+
 
 MLWTransTable = {
     # AST Transformations for the MLW-grammar
@@ -174,7 +183,7 @@ MLWTransTable = {
     "LemmaVarianten":
         [partial(remove_tokens, tokens={'VARIANTEN'}), flatten,
          partial(remove_tokens, tokens={',', ';'})],
-    "LVariante, LVZusatz, Schreibweise":
+    "LVariante, LVZusatz, Schreibweise, Name":
         [remove_expendables, reduce_single_child],
     "SWVariante":
         [remove_expendables, partial(remove_tokens, tokens={':'})],
@@ -197,10 +206,12 @@ MLWTransTable = {
     "Bedeutung": no_transformation,
     "Bedeutungskategorie": no_transformation,
     "Interpretamente": no_transformation,
-    "LateinischeBedeutung": no_transformation,
-    "DeutscheBedeutung": no_transformation,
-    "Belege": no_transformation,
-    "EinBeleg": no_transformation,
+    "LateinischeBedeutung, DeutscheBedeutung":
+        [remove_expendables, remove_tokens, reduce_single_child],
+    "Belege":
+        [flatten, remove_tokens],
+    "EinBeleg":
+        [flatten], # remove_expendables], # join_strings],
     "Beleg": no_transformation,
     "VerweisZiel": no_transformation,
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
