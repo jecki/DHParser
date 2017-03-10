@@ -103,111 +103,59 @@
         </SWVariante>
     </SchreibweisenPosition>
     <BedeutungsPosition>
-        <Sequence>
-            <token__>
-                BEDEUTUNG
-            </token__>
-            <Bedeutung>
-                <Interpretamente>
-                    <LateinischeBedeutung>
-                        pannus, faciale, sudarium
-                    </LateinischeBedeutung>
-                    <DeutscheBedeutung>
-                        Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]
-                    </DeutscheBedeutung>
-                    <Belege>
-                        <EinBeleg>
-                            <RegExp>
-                                Catal. thes. Germ. 28,11 (post 851) -um III.
-                            </RegExp>
-                        </EinBeleg>
-                        <EinBeleg>
-                            <OneOrMore>
-                                <RegExp>
-                                    Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
-                                </RegExp>
-                                <RegExp>
-                                    -as duas."
-                                </RegExp>
-                            </OneOrMore>
-                        </EinBeleg>
-                        <EinBeleg>
-                            <RegExp>
-                                Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
-                            </RegExp>
-                        </EinBeleg>
-                        <EinBeleg>
-                            <OneOrMore>
-                                <RegExp>
-                                    Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
-                                </RegExp>
-                                <RegExp>
-                                    circumdari  iussit  pontifex."
-                                </RegExp>
-                            </OneOrMore>
-                        </EinBeleg>
-                        <EinBeleg>
-                            <OneOrMore>
-                                <RegExp>
-                                    Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
-                                </RegExp>
-                                <RegExp>
-                                    II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
-                                </RegExp>
-                                <RegExp>
-                                    VII. 92,6 fascercule tres. 21,20 IIII festregele.
-                                </RegExp>
-                            </OneOrMore>
-                            <Zusatz>
-                                <token__>
-                                    ZUSATZ
-                                </token__>
-                                <RegExp>
-                                    saepe.
-                                </RegExp>
-                            </Zusatz>
-                        </EinBeleg>
-                    </Belege>
-                </Interpretamente>
-            </Bedeutung>
-        </Sequence>
-        <Sequence>
-            <token__>
-                BEDEUTUNG
-            </token__>
-            <Bedeutung>
-                <Interpretamente>
-                    <LateinischeBedeutung>
-                        capital, rica
-                    </LateinischeBedeutung>
-                    <DeutscheBedeutung>
-                        Kopftuch
-                    </DeutscheBedeutung>
-                    <Belege>
-                        <EinBeleg>
-                            <RegExp>
-                                Transl. Libor.  I 32  raptis  feminarum -is  (fa[s]citergiis  var.  l.).
-                            </RegExp>
-                        </EinBeleg>
-                        <EinBeleg>
-                            <OneOrMore>
-                                <RegExp>
-                                    II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
-                                </RegExp>
-                                <RegExp>
-                                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
-                                </RegExp>
-                            </OneOrMore>
-                        </EinBeleg>
-                    </Belege>
-                </Interpretamente>
-            </Bedeutung>
-        </Sequence>
+        <Bedeutung>
+            <Interpretamente>
+                <LateinischeBedeutung>
+                    pannus, faciale, sudarium
+                </LateinischeBedeutung>
+                <DeutscheBedeutung>
+                    Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]
+                </DeutscheBedeutung>
+            </Interpretamente>
+            <Belege>
+                <EinBeleg>
+                    Catal. thes. Germ. 28,11 (post 851) -um III.
+                </EinBeleg>
+                <EinBeleg>
+                    Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+                    -as duas."
+                </EinBeleg>
+                <EinBeleg>
+                    Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
+                </EinBeleg>
+                <EinBeleg>
+                    Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+                    circumdari  iussit  pontifex."
+                </EinBeleg>
+                <EinBeleg>
+                    Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
+                    II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
+                    VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                    saepe.
+                </EinBeleg>
+            </Belege>
+        </Bedeutung>
+        <Bedeutung>
+            <Interpretamente>
+                <LateinischeBedeutung>
+                    capital, rica
+                </LateinischeBedeutung>
+                <DeutscheBedeutung>
+                    Kopftuch
+                </DeutscheBedeutung>
+            </Interpretamente>
+            <Belege>
+                <EinBeleg>
+                    Transl. Libor.  I 32  raptis  feminarum -is  (fa[s]citergiis  var.  l.).
+                </EinBeleg>
+                <EinBeleg>
+                    II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
+                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
+                </EinBeleg>
+            </Belege>
+        </Bedeutung>
     </BedeutungsPosition>
     <Autorinfo>
-        <token__>
-            AUTORIN
-        </token__>
         <Name>
             Weber
         </Name>

@@ -140,7 +140,7 @@ class ZOMBIE_PARSER:
 
 class Node:
     def __init__(self, parser, result):
-        # self.children = False # will be set by the following assignment
+        self.children = () # will be set by the following assignment
         self.result = result   # sets self.children to `True` if there are any
         self.parser = parser or ZOMBIE_PARSER
         self.errors = []
@@ -247,6 +247,7 @@ class Node:
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
         return self.as_tree('    ', opening, lambda node: ')', pretty)
+
     def as_xml(self, src=None):
         """Returns content as XML-tree.
 
@@ -1130,6 +1131,7 @@ remove_expendables = partial(remove_children_if, condition=is_expendable)
 
 
 def flatten(node):
+    # TODO: ensure error messages are preserved!!!
     """Recursively flattens all unnamed sub-nodes, in case there is more
     than one sub-node present. Flattening means that
     wherever a node has child nodes, the child nodes are inserted in place
@@ -1138,11 +1140,11 @@ def flatten(node):
     This is meant to achieve the following structural transformation:
     X (+ Y + Z)  ->   X + Y + Z
     """
-    if len(node.children) >= 2:
+    if len(node.children) >= 1:
         new_result = []
         for child in node.result:
-            if not child.parser.name:
-                assert isinstance(child.result, tuple), node.as_sexpr()
+            if not child.parser.name and child.children:
+                assert child.children, node.as_sexpr()
                 flatten(child)
                 new_result.extend(child.result)
             else:
@@ -1151,6 +1153,7 @@ def flatten(node):
 
 
 def remove_tokens(node, tokens={}):
+    # TODO: ensure error messages are preserved!!!
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node.
     """
@@ -1165,6 +1168,7 @@ def remove_tokens(node, tokens={}):
 
 
 def remove_enclosing_delimiters(node):
+    # TODO: ensure error messages are preserved!!!
     """Removes the enclosing delimiters from a structure (e.g. quotation marks
     from a literal or braces from a group).
     """

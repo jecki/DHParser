@@ -62,9 +62,9 @@ VerweisZiel     = ~/<\w+>/~
 
 BedeutungsPosition = { "BEDEUTUNG" Bedeutung }+
 
-Bedeutung       = Interpretamente | Bedeutungskategorie
+Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
 Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-Interpretamente = LateinischeBedeutung  DeutscheBedeutung  [Belege]
+Interpretamente = LateinischeBedeutung  DeutscheBedeutung
 LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Belege          = "BELEGE" { "*" EinBeleg }

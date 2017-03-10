@@ -71,9 +71,9 @@ class MLWGrammar(ParserHeadquarter):
     
     BedeutungsPosition = { "BEDEUTUNG" Bedeutung }+
     
-    Bedeutung       = Interpretamente | Bedeutungskategorie
+    Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
     Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-    Interpretamente = LateinischeBedeutung  DeutscheBedeutung  [Belege]
+    Interpretamente = LateinischeBedeutung  DeutscheBedeutung
     LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     Belege          = "BELEGE" { "*" EinBeleg }
@@ -100,7 +100,7 @@ class MLWGrammar(ParserHeadquarter):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "2c3456ee74172407cbe1f15e3649b41f"
+    source_hash__ = "ca55553a5e483fa08341abecc2aa284c"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -120,9 +120,9 @@ class MLWGrammar(ParserHeadquarter):
     Belege = Sequence(Token("BELEGE"), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
     LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
-    Interpretamente = Sequence(LateinischeBedeutung, DeutscheBedeutung, Optional(Belege))
+    Interpretamente = Sequence(LateinischeBedeutung, DeutscheBedeutung)
     Bedeutungskategorie = RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__)
-    Bedeutung = Alternative(Interpretamente, Bedeutungskategorie)
+    Bedeutung = Sequence(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
     BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Bedeutung))
     VerweisZiel = RE('<\\w+>', wR=wsp__, wL=wsp__)
     Verweis = RE('>>\\w+', wR=wsp__, wL=wsp__)
@@ -197,12 +197,15 @@ MLWTransTable = {
         [flatten, partial(remove_tokens, tokens={',', ';'})],
     "Flexion, Verweis":
         [remove_expendables, reduce_single_child],
+    "Zusatz":
+        [remove_expendables, remove_tokens, reduce_single_child],
     "ArtikelKopf": no_transformation,
     "SchreibweisenPosition":
         [partial(remove_tokens, tokens={'SCHREIBWEISE', ':'}),
          flatten, partial(remove_tokens, tokens={','})],
     "SWTyp": no_transformation,
-    "BedeutungsPosition": no_transformation,
+    "BedeutungsPosition":
+        [flatten, partial(remove_tokens, tokens={'BEDEUTUNG'})],
     "Bedeutung": no_transformation,
     "Bedeutungskategorie": no_transformation,
     "Interpretamente": no_transformation,
@@ -211,9 +214,11 @@ MLWTransTable = {
     "Belege":
         [flatten, remove_tokens],
     "EinBeleg":
-        [flatten], # remove_expendables], # join_strings],
+        [flatten, remove_expendables, join_strings, reduce_single_child],
     "Beleg": no_transformation,
     "VerweisZiel": no_transformation,
+    "Autorinfo":
+        [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
         # test,
         [remove_expendables, reduce_single_child],
