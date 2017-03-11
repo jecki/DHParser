@@ -59,6 +59,7 @@ import copy
 import hashlib
 import keyword
 import os
+import typing
 
 # try:
 #     import regex as re
@@ -175,17 +176,25 @@ class Node:
                 generated this node, which can be either a string or a
                 tuple of child nodes.
         children (tuple):  The tuple of child nodes or an empty tuple
-                if there are no child nodes. READ ONLY
+                if there are no child nodes. READ ONLY!
         parser (Parser):  The parser which generated this node.
         errors (set):  A set of parser- or compiler-errors (strings)
                 attached to this n
-        len_before_AST (int):  the full length of the node's string
-                result if the node is a leaf node or, otherwise, the
-                concatenated string result's of its descendants
+        len (int):  The full length of the node's string result if the
+                node is a leaf node or, otherwise, the concatenated
+                string result's of its descendants. The figure always
+                represents the length before AST-transformation and
+                will never change through AST-transformation.
+                READ ONLY!
         pos (int):  the position of the node within the parsed text.
                 The value of ``pos`` is zero by default and is will be
                 updated if the node or any of its parents is attached
                 to a new parent.
+
+                From the point of view of a client, this value should
+                be considered READ ONLY. At any rate, it should never
+                be reassigned only during parsing stage and never
+                during or after AST-transformation.
     """
 
     def __init__(self, parser, result):
@@ -202,8 +211,8 @@ class Node:
         self.parser = parser or ZOMBIE_PARSER
         self.errors = set()
         self.error_flag = any(r.error_flag for r in self.result) if self.children else False
-        self.len_before_AST = len(self.result) if not self.children \
-            else sum(child.len_before_AST for child in self.result)
+        self._len = len(self.result) if not self.children else \
+            sum(child._len for child in self.result)
         self.pos = 0
 
     def __str__(self):
@@ -232,6 +241,10 @@ class Node:
         return self._children
 
     @property
+    def len(self):
+        return self._len
+
+    @property
     def pos(self):
         return self._pos
 
@@ -241,7 +254,7 @@ class Node:
         offset = 0
         for child in self.children:
             child.pos = pos + offset
-            offset += child.len_before_AST
+            offset += child.len
 
     def _tree_repr(self, tab, openF, closeF, dataF=lambda s: s):
         """
@@ -333,8 +346,8 @@ class Node:
 
         return self._tree_repr('    ', opening, closing)
 
-    def add_error(self, error):
-        self.errors.add(error)
+    def add_error(self, error_str):
+        self.errors.add(error_str)
         self.error_flag = True
         return self
 
@@ -353,7 +366,7 @@ class Node:
             offset = 0
             for child in self.result:
                 errors.extend((pos + offset, err) for pos, err in child.collect_errors(clear))
-                offset += child.len_before_AST
+                offset += child.len
         return errors
 
     def navigate(self, path):
@@ -393,11 +406,196 @@ def error_messages(text, errors):
     separated by an empty line.
     """
     return "\n\n".join("line: %i, column: %i, error: %s" %
-                       (*line_col(text, entry[0]), " and ".join(entry[1]))
-                       for entry in sorted(list(errors)))
+                       (*line_col(text, err[0]), " and ".join(err[1]))
+                       for err in sorted(list(errors)))
 
 
 # lambda compact_sexpr s : re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
+
+
+
+########################################################################
+#
+# Abstract syntax tree support
+#
+########################################################################
+
+
+def expand_table(compact_table):
+    """Expands a table by separating keywords that are tuples or strings
+    containing comma separated words into single keyword entries with
+    the same values. Returns the expanded table.
+    Example:
+    expand_table({"a, b": 1, "b": 1, ('d','e','f'):5, "c":3}) yields
+    {'a': 1, 'b': 1, 'c': 3, 'd': 5, 'e': 5, 'f': 5}
+    """
+    expanded_table = {}
+    keys = list(compact_table.keys())
+    for key in keys:
+        value = compact_table[key]
+        if isinstance(key, str):
+            parts = (s.strip() for s in key.split(','))
+        else:
+            assert isinstance(key, collections.abc.Iterable)
+            parts = key
+        for p in parts:
+            expanded_table[p] = value
+    return expanded_table
+
+
+def ASTTransform(node, transtable):
+    """Transforms the parse tree starting with the given `node` into an
+    abstract syntax tree by calling transformation functions registered in a
+    transformation table.
+
+    Args:
+        node (Node): The root node of the parse tree (or sub-tree) to be
+                transformed into the abstract syntax tree.
+        transtable (dict): A dictionary that assigns a transformation
+                transformation functions to parser name strings.
+    """
+    # normalize transformation entries by turning single transformations
+    # into lists with a single item
+    table = {name: transformation
+             if isinstance(transformation, collections.abc.Sequence)
+             else [transformation]
+             for name, transformation in list(transtable.items())}
+    table = expand_table(table)
+
+    def recursive_ASTTransform(node):
+        if node.children:
+            for child in node.result:
+                recursive_ASTTransform(child)
+        transformation = table.get(node.parser.name,
+                            table.get('~', [])) + table.get('*', [])
+        for transform in transformation:
+            transform(node)
+
+    recursive_ASTTransform(node)
+
+
+# ------------------------------------------------
+#
+# rearranging transformations:
+#     - tree may be rearranged (flattened)
+#     - order is preserved
+#     - all leaves are kept
+#
+# ------------------------------------------------
+
+
+def replace_by_single_child(node):
+    """Remove single branch node, replacing it by its immediate descendant.
+    (In case the descendant's name is empty (i.e. anonymous) the
+    name of this node's parser is kept.)
+    """
+    if node.children and len(node.result) == 1:
+        if not node.result[0].parser.name:
+            node.result[0].parser.name = node.parser.name
+        node.parser = node.result[0].parser
+        node.errors.extend(node.result[0].errors)
+        node.result = node.result[0].result
+
+
+def reduce_single_child(node):
+    """Reduce a single branch node, by transferring the result of its
+    immediate descendant to this node, but keeping this node's parser entry.
+    """
+    if node.children and len(node.result) == 1:
+        node.errors.extend(node.result[0].errors)
+        node.result = node.result[0].result
+
+
+# ------------------------------------------------
+#
+# destructive transformations:
+#     - tree may be rearranged (flattened),
+#     - order is preserved
+#     - but (irrelevant) leaves may be destroyed
+#
+# ------------------------------------------------
+
+def no_transformation(node):
+    pass
+
+
+def remove_children_if(node, condition):
+    """Removes all nodes from the result field if the function `condition` evaluates
+    to `True`."""
+    if node.children:
+        new_result = tuple(r for r in node.result if not condition(r))
+        if len(new_result) < len(node.result):
+            node.result = new_result
+
+
+is_whitespace = lambda node: not node.result or (isinstance(node.result, str)
+                                                 and not node.result.strip())
+is_comment = lambda node: node.name == WHITESPACE_KEYWORD
+is_scanner_token = lambda node: isinstance(node.parser, ScannerToken)
+is_expendable = lambda node: is_whitespace(node) or is_comment(node) or \
+                             is_scanner_token(node)
+
+remove_whitespace = partial(remove_children_if, condition=is_whitespace)
+remove_comments = partial(remove_children_if, condition=is_comment)
+remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
+remove_expendables = partial(remove_children_if, condition=is_expendable)
+
+
+def flatten(node):
+    # TODO: ensure error messages are preserved!!!
+    """Recursively flattens all unnamed sub-nodes, in case there is more
+    than one sub-node present. Flattening means that
+    wherever a node has child nodes, the child nodes are inserted in place
+    of the node. In other words, all leaves of this node and its child nodes
+    are collected in-order as direct children of this node.
+    This is meant to achieve the following structural transformation:
+    X (+ Y + Z)  ->   X + Y + Z
+    """
+    if len(node.children) >= 1:
+        new_result = []
+        for child in node.result:
+            if not child.parser.name and child.children:
+                assert child.children, node.as_sexpr()
+                flatten(child)
+                new_result.extend(child.result)
+            else:
+                new_result.append(child)
+        node.result = tuple(new_result)
+
+
+def remove_tokens(node, tokens={}):
+    # TODO: ensure error messages are preserved!!!
+    """Reomoves any among a particular set of tokens from the immediate
+    descendants of a node.
+    """
+    if node.children:
+        if tokens:
+            node.result = tuple(child for child in node.result
+                                if child.parser.name != TOKEN_KEYWORD or
+                                child.result not in tokens)
+        else:
+            node.result = tuple(child for child in node.result
+                                if child.parser.name != TOKEN_KEYWORD)
+
+
+def remove_enclosing_delimiters(node):
+    # TODO: ensure error messages are preserved!!!
+    """Removes the enclosing delimiters from a structure (e.g. quotation marks
+    from a literal or braces from a group).
+    """
+    if node.children and len(node.result) >= 3:
+        assert isinstance(node.result[0].result, str) and \
+               isinstance(node.result[-1].result, str)
+        node.result = node.result[1:-1]
+
+
+AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
+               'no_transformation', 'remove_children_if', 'is_whitespace',
+               'is_comment', 'is_scanner_token', 'is_expendable',
+               'remove_whitespace', 'remove_comments',
+               'remove_scanner_tokens', 'remove_expendables', 'flatten',
+               'remove_tokens', 'remove_enclosing_delimiters',
+               'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
 
 
 
@@ -1068,190 +1266,6 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
                   'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
                   'OneOrMore', 'ParserCenter', 'Capture', 'Retrieve',
                   'Pop'}
-
-
-########################################################################
-#
-# Abstract syntax tree support
-#
-########################################################################
-
-
-def expand_table(compact_table):
-    """Expands a table by separating keywords that are tuples or strings
-    containing comma separated words into single keyword entries with
-    the same values. Returns the expanded table.
-    Example:
-    expand_table({"a, b": 1, "b": 1, ('d','e','f'):5, "c":3}) yields
-    {'a': 1, 'b': 1, 'c': 3, 'd': 5, 'e': 5, 'f': 5}
-    """
-    expanded_table = {}
-    keys = list(compact_table.keys())
-    for key in keys:
-        value = compact_table[key]
-        if isinstance(key, str):
-            parts = (s.strip() for s in key.split(','))
-        else:
-            assert isinstance(key, collections.abc.Iterable)
-            parts = key
-        for p in parts:
-            expanded_table[p] = value
-    return expanded_table
-
-
-def ASTTransform(node, transtable):
-    """Transforms the parse tree starting with the given `node` into an
-    abstract syntax tree by calling transformation functions registered in a
-    transformation table.
-
-    Args:
-        node (Node): The root node of the parse tree (or sub-tree) to be
-                transformed into the abstract syntax tree.
-        transtable (dict): A dictionary that assigns a transformation
-                transformation functions to parser name strings.
-    """
-    # normalize transformation entries by turning single transformations
-    # into lists with a single item
-    table = {name: transformation
-             if isinstance(transformation, collections.abc.Sequence)
-             else [transformation]
-             for name, transformation in list(transtable.items())}
-    table = expand_table(table)
-
-    def recursive_ASTTransform(node):
-        if node.children:
-            for child in node.result:
-                recursive_ASTTransform(child)
-        transformation = table.get(node.parser.name,
-                            table.get('~', [])) + table.get('*', [])
-        for transform in transformation:
-            transform(node)
-
-    recursive_ASTTransform(node)
-
-
-# ------------------------------------------------
-#
-# rearranging transformations:
-#     - tree may be rearranged (flattened)
-#     - order is preserved
-#     - all leaves are kept
-#
-# ------------------------------------------------
-
-
-def replace_by_single_child(node):
-    """Remove single branch node, replacing it by its immediate descendant.
-    (In case the descendant's name is empty (i.e. anonymous) the
-    name of this node's parser is kept.)
-    """
-    if node.children and len(node.result) == 1:
-        if not node.result[0].parser.name:
-            node.result[0].parser.name = node.parser.name
-        node.parser = node.result[0].parser
-        node.errors.extend(node.result[0].errors)
-        node.result = node.result[0].result
-
-
-def reduce_single_child(node):
-    """Reduce a single branch node, by transferring the result of its
-    immediate descendant to this node, but keeping this node's parser entry.
-    """
-    if node.children and len(node.result) == 1:
-        node.errors.extend(node.result[0].errors)
-        node.result = node.result[0].result
-
-
-# ------------------------------------------------
-#
-# destructive transformations:
-#     - tree may be rearranged (flattened),
-#     - order is preserved
-#     - but (irrelevant) leaves may be destroyed
-#
-# ------------------------------------------------
-
-def no_transformation(node):
-    pass
-
-
-def remove_children_if(node, condition):
-    """Removes all nodes from the result field if the function `condition` evaluates
-    to `True`."""
-    if node.children:
-        new_result = tuple(r for r in node.result if not condition(r))
-        if len(new_result) < len(node.result):
-            node.result = new_result
-
-
-is_whitespace = lambda node: not node.result or (isinstance(node.result, str)
-                                                 and not node.result.strip())
-is_comment = lambda node: node.name == WHITESPACE_KEYWORD
-is_scanner_token = lambda node: isinstance(node.parser, ScannerToken)
-is_expendable = lambda node: is_whitespace(node) or is_comment(node) or \
-                             is_scanner_token(node)
-
-remove_whitespace = partial(remove_children_if, condition=is_whitespace)
-remove_comments = partial(remove_children_if, condition=is_comment)
-remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
-remove_expendables = partial(remove_children_if, condition=is_expendable)
-
-
-def flatten(node):
-    # TODO: ensure error messages are preserved!!!
-    """Recursively flattens all unnamed sub-nodes, in case there is more
-    than one sub-node present. Flattening means that
-    wherever a node has child nodes, the child nodes are inserted in place
-    of the node. In other words, all leaves of this node and its child nodes
-    are collected in-order as direct children of this node.
-    This is meant to achieve the following structural transformation:
-    X (+ Y + Z)  ->   X + Y + Z
-    """
-    if len(node.children) >= 1:
-        new_result = []
-        for child in node.result:
-            if not child.parser.name and child.children:
-                assert child.children, node.as_sexpr()
-                flatten(child)
-                new_result.extend(child.result)
-            else:
-                new_result.append(child)
-        node.result = tuple(new_result)
-
-
-def remove_tokens(node, tokens={}):
-    # TODO: ensure error messages are preserved!!!
-    """Reomoves any among a particular set of tokens from the immediate
-    descendants of a node.
-    """
-    if node.children:
-        if tokens:
-            node.result = tuple(child for child in node.result
-                                if child.parser.name != TOKEN_KEYWORD or
-                                child.result not in tokens)
-        else:
-            node.result = tuple(child for child in node.result
-                                if child.parser.name != TOKEN_KEYWORD)
-
-
-def remove_enclosing_delimiters(node):
-    # TODO: ensure error messages are preserved!!!
-    """Removes the enclosing delimiters from a structure (e.g. quotation marks
-    from a literal or braces from a group).
-    """
-    if node.children and len(node.result) >= 3:
-        assert isinstance(node.result[0].result, str) and \
-               isinstance(node.result[-1].result, str)
-        node.result = node.result[1:-1]
-
-
-AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
-               'no_transformation', 'remove_children_if', 'is_whitespace',
-               'is_comment', 'is_scanner_token', 'is_expendable',
-               'remove_whitespace', 'remove_comments',
-               'remove_scanner_tokens', 'remove_expendables', 'flatten',
-               'remove_tokens', 'remove_enclosing_delimiters',
-               'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
 
 
 ########################################################################
