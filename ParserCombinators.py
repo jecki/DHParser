@@ -189,7 +189,7 @@ class Node:
     Represents a node in the concrete or abstract syntax tree.
 
     Attributes:
-        name (str):  The name of the node, which is either its parser's
+        tag (str):  The name of the node, which is either its parser's
                 name or, if that is empty, the parser's class name
         result (str or tuple):  The result of the parser which
                 generated this node, which can be either a string or a
@@ -241,7 +241,7 @@ class Node:
         return str(self.result)
 
     @property
-    def name(self):
+    def tag(self):
         return self.parser.name or self.parser.__class__.__name__
 
     @property
@@ -330,7 +330,7 @@ class Node:
                     in the text will be reported as line and column.
         """
         def opening(node):
-            s = '(' + node.name
+            s = '(' + node.tag
             # s += " '(pos %i)" % node.pos
             if src:
                 s += " '(pos %i  %i %i)" % (node.pos, *line_col(src, node.pos))
@@ -355,7 +355,7 @@ class Node:
         """
 
         def opening(node):
-            s = '<' + node.name
+            s = '<' + node.tag
             # s += ' pos="%i"' % node.pos
             if src:
                 s += ' line="%i" col="%i"' % line_col(src, node.pos)
@@ -365,7 +365,7 @@ class Node:
             return s
 
         def closing(node):
-            s = '</' + node.name + '>'
+            s = '</' + node.tag + '>'
             return s
 
         return self._tree_repr('    ', opening, closing)
@@ -578,7 +578,7 @@ def is_whitespace(node):
 
 
 def is_comment(node):
-    return node.name == WHITESPACE_KEYWORD
+    return node.parser.name == WHITESPACE_KEYWORD
 
 
 def is_scanner_token(node):
@@ -719,7 +719,7 @@ def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
         for record in grammar_base.history:
             line = ";  ".join(prepare_line(record))
             full_history.append(line)
-            if record.node and record.node.name != WHITESPACE_KEYWORD:
+            if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
                 match_history.append(line)
                 if record.node.errors:
                     errors_only.append(line)
