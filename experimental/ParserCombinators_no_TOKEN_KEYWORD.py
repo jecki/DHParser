@@ -500,8 +500,8 @@ def ASTTransform(node, transtable):
         if node.children:
             for child in node.result:
                 recursive_ASTTransform(child)
-        transformation = table.get(node.parser.name,
-                            table.get('~', [])) + table.get('*', [])
+        transformation = table.get(node.name,
+                            table.get('', [])) + table.get('*', [])
         for transform in transformation:
             transform(node)
 
@@ -631,11 +631,11 @@ def remove_tokens(node, tokens=set()):
     if node.children:
         if tokens:
             node.result = tuple(child for child in node.children
-                                if child.parser.name != TOKEN_KEYWORD or
-                                child.result not in tokens)
+                                if child.children or child.result not in tokens
+                                or not isinstance(child.parser, Token))
         else:
             node.result = tuple(child for child in node.children
-                                if child.parser.name != TOKEN_KEYWORD)
+                                if child.children or isinstance(child.parser, Token))
 
 
 def remove_enclosing_delimiters(node):
@@ -654,7 +654,7 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
                'remove_whitespace', 'remove_comments',
                'remove_scanner_tokens', 'remove_expendables', 'flatten',
                'remove_tokens', 'remove_enclosing_delimiters',
-               'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
+               'WHITESPACE_KEYWORD', 'partial'}
 
 
 
@@ -670,7 +670,6 @@ LEFT_RECURSION_DEPTH = 10   # because of pythons recursion depth limit, this
 MAX_DROPOUTS = 25   # stop trying to recover parsing after so many errors
 
 WHITESPACE_KEYWORD = 'wsp__'
-TOKEN_KEYWORD = 'token__'
 
 
 class HistoryRecord:
@@ -866,10 +865,9 @@ class GrammarBase:
         cdict = cls.__dict__
         for entry, parser in cdict.items():
             if isinstance(parser, Parser):
-                if not parser.name or parser.name == TOKEN_KEYWORD:
+                if not parser.name:
                     parser.name = entry
-                if (isinstance(parser, Forward) and (not parser.parser.name
-                    or parser.parser.name == TOKEN_KEYWORD)):
+                if (isinstance(parser, Forward) and not parser.parser.name):
                     parser.parser.name = entry
         cls.parser_initialization__ = "done"
 
@@ -1044,10 +1042,12 @@ class RE(Parser):
         return None, text
 
     def __str__(self):
-        if self.name == TOKEN_KEYWORD:
-            return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
         return self.name or ('RE ' + ('~' if self.wL else '')
                              + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
+        # pattern = self.main.regexp.pattern
+        # details = ('' if self.name
+        #            else ('~' if self.wL else '') + '/%s/' % pattern + ('~' if self.wR else ''))
+        # return super(RE, self).__str__() + ' ' + details
 
     def _grammar_assigned_notifier(self):
         if self.grammar:
@@ -1074,16 +1074,13 @@ def escape_re(s):
         s = s.replace(esc_ch, '\\' + esc_ch)
     return s
 
-#
-# class Token(RE):
-#     def __init__(self, token, wL=None, wR=None, name=None):
-#         super(Token, self).__init__(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
-#
-#     def __str__(self):
-#         return self.name or 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
 
-def Token(token, wL=None, wR=None, name=None):
-    return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
+class Token(RE):
+    def __init__(self, token, wL=None, wR=None, name=None):
+        super(Token, self).__init__(escape_re(token), wL, wR, name)
+
+    def __str__(self):
+        return self.name or 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
 
 
 def mixin_comment(whitespace, comment):
@@ -1551,7 +1548,7 @@ EBNFTransTable = {
         [reduce_single_child, remove_enclosing_delimiters],
     "symbol, literal, regexp, list_":
         [remove_expendables, reduce_single_child],
-    (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
+    ("Token", WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
     "":
         [remove_expendables, replace_by_single_child]
@@ -1596,7 +1593,7 @@ class EBNFCompiler(CompilerBase):
     in EBNF-Notation.
     """
     # RX_DIRECTIVE = re.compile('(?:#|@)\s*(?P<key>\w*)\s*=\s*(?P<value>.*)')  # old, can be removed!
-    RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD}
+    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
     VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc. ?
     AST_ERROR        = "Badly structured syntax tree. " \

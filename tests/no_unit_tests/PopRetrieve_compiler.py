@@ -4,7 +4,7 @@ def PopRetrieveScanner(text):
 
 ### DON'T EDIT OR REMOVE THIS LINE ###
 
-class PopRetrieveGrammar(ParserCenter):
+class PopRetrieveGrammar(GrammarBase):
     r"""Parser for a PopRetrieve source file, with this grammar:
     
     document       = { text | codeblock }
@@ -13,7 +13,7 @@ class PopRetrieveGrammar(ParserCenter):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "525d71c131f2dfeed4edeec81070201c"
+    source_hash__ = "a87c48db3e6abbf554ab452a946e6a3c"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'')
     wspL__ = ''

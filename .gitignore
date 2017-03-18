@@ -3,7 +3,8 @@ __pycache__/
 .idea/
 .cache/
 *.ast
-*.dst
+*.cst
+*.log
 *.st
 *.bcf
 *.aux

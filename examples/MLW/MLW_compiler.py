@@ -4,7 +4,7 @@ def MLWScanner(text):
 
 ### DON'T EDIT OR REMOVE THIS LINE ###
 
-class MLWGrammar(ParserCenter):
+class MLWGrammar(GrammarBase):
     r"""Parser for a MLW source file, with this grammar:
     
     # EBNF-Syntax für MLW-Artikel
@@ -100,32 +100,32 @@ class MLWGrammar(ParserCenter):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "33595036ca8cff5d8dcf0e0fe70c493a"
+    source_hash__ = "4632b08b0de268e81efb1b92b322076e"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
     wspR__ = wsp__
-    NIEMALS = RE('(?!.)')
-    DATEI_ENDE = NegativeLookahead(RE('.'))
-    LEER = RE('\\s*')
-    GROSSSCHRIFT = RE('[A-ZÄÖÜ]+', wR=wsp__)
-    LAT_WORT = RE('[a-z]+', wR=wsp__)
-    WORT_KLEIN = RE('[a-zäöüß]+', wR=wsp__)
-    WORT_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+', wR=wsp__)
-    WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wR=wsp__)
-    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.'))))
+    NIEMALS = RE('(?!.)', wR='', wL='')
+    DATEI_ENDE = NegativeLookahead(RE('.', wR='', wL=''))
+    LEER = RE('\\s*', wR='', wL='')
+    GROSSSCHRIFT = RE('[A-ZÄÖÜ]+', wL='')
+    LAT_WORT = RE('[a-z]+', wL='')
+    WORT_KLEIN = RE('[a-zäöüß]+', wL='')
+    WORT_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+', wL='')
+    WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wL='')
+    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL=''))))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s?.*'))
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*'), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s?.*'))), Optional(Zusatz))
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s?.*', wR='', wL=''))
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s?.*', wR='', wL=''))), Optional(Zusatz))
     Belege = Sequence(Token("BELEGE"), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
-    DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
-    LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__))
+    DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
+    LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     Interpretamente = Sequence(LateinischeBedeutung, DeutscheBedeutung)
-    Bedeutungskategorie = RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wR=wsp__)
+    Bedeutungskategorie = RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL='')
     Bedeutung = Sequence(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
     BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Bedeutung))
-    VerweisZiel = RE('<\\w+>', wR=wsp__, wL=wsp__)
-    Verweis = RE('>>\\w+', wR=wsp__, wL=wsp__)
+    VerweisZiel = RE('<\\w+>')
+    Verweis = RE('>>\\w+')
     Beleg = Verweis
     Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
     SWVariante = Sequence(Schreibweise, Token(":"), Beleg)
@@ -133,14 +133,14 @@ class MLWGrammar(ParserCenter):
     SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Required(SWTyp), Token(":"), Required(SWVariante), ZeroOrMore(Sequence(Token(","), Required(SWVariante))))
     ArtikelKopf = SchreibweisenPosition
     _genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
-    Flexion = RE('-?[a-z]+', wR=wsp__)
+    Flexion = RE('-?[a-z]+', wL='')
     Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(","), Required(Flexion))))
     GVariante = Sequence(Flexionen, Optional(_genus), Token(":"), Beleg)
     GrammatikVarianten = Sequence(Token(";"), Required(GVariante))
     _wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
     GrammatikPosition = Sequence(Token("GRAMMATIK"), Required(_wortart), Required(Token(";")), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(Alternative(Token(";"), Token("."))))
     LVZusatz = Token("sim.")
-    LVariante = RE('(?:[a-z]|-)+', wR=wsp__, wL=wsp__)
+    LVariante = RE('(?:[a-z]|-)+')
     LemmaVarianten = Sequence(Token("VARIANTEN"), Required(LVariante), ZeroOrMore(Sequence(Token(","), Required(LVariante))), Optional(Sequence(Token(";"), Required(LVZusatz))))
     _tll = Token("*")
     Lemma = Sequence(Optional(_tll), WORT_KLEIN)

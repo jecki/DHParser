@@ -26,7 +26,7 @@ import sys
 sys.path.append(os.path.abspath('../'))
 
 from ParserCombinators import EBNFGrammar, EBNFTransTable, EBNFCompiler, full_compilation, Forward, RegExp, \
-    Alternative, Sequence, Token, compile_python_object, compileDSL, ParserCenter
+    Alternative, Sequence, Token, compile_python_object, compileDSL, GrammarBase
 
 arithmetic_EBNF = r"""
 expression =  term  { ("+" | "-") term}
@@ -103,7 +103,7 @@ class EBNFGrammar(ParserRoot):
 """
 
 
-class LeftRecursiveGrammar(ParserCenter):
+class LeftRecursiveGrammar(GrammarBase):
     """formula = expr "."
     expr = expr ("+"|"-") term | term
     term = term ("*"|"/") factor | factor
