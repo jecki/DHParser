@@ -1,8 +1,40 @@
+
+
+#######################################################################
+#
+# SYMBOLS SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+
+from PyDSL import ZeroOrMore, Capture, mixin_comment, OneOrMore, \
+    remove_comments, partial, Lookahead, remove_scanner_tokens, \
+    Lookbehind, flatten, NegativeLookbehind, remove_enclosing_delimiters, \
+    NegativeLookahead, remove_whitespace, is_whitespace, reduce_single_child, \
+    RE, is_scanner_token, Retrieve, remove_children_if, \
+    Sequence, Token, CompilerBase, is_comment, \
+    remove_expendables, remove_tokens, Alternative, is_expendable, \
+    Optional, no_transformation, TOKEN_KEYWORD, RegExp, \
+    replace_by_single_child, Required, GrammarBase, WHITESPACE_KEYWORD, \
+    Forward, Pop
+
+
+
+#######################################################################
+#
+# SCANNER SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
 def PopRetrieveScanner(text):
     return text
 
 
-### DON'T EDIT OR REMOVE THIS LINE ###
+#######################################################################
+#
+# PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
+#
+#######################################################################
 
 class PopRetrieveGrammar(GrammarBase):
     r"""Parser for a PopRetrieve source file, with this grammar:
@@ -13,7 +45,7 @@ class PopRetrieveGrammar(GrammarBase):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "a87c48db3e6abbf554ab452a946e6a3c"
+    source_hash__ = "0aa2d29dd82f5a304e393f1f4b253ac8"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'')
     wspL__ = ''
@@ -26,7 +58,11 @@ class PopRetrieveGrammar(GrammarBase):
     root__ = document
     
 
-### DON'T EDIT OR REMOVE THIS LINE ###
+#######################################################################
+#
+# AST SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
 
 PopRetrieveTransTable = {
     # AST Transformations for the PopRetrieve-grammar
@@ -39,7 +75,11 @@ PopRetrieveTransTable = {
 }
 
 
-### DON'T EDIT OR REMOVE THIS LINE ###
+#######################################################################
+#
+# COMPILER SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
 
 class PopRetrieveCompiler(CompilerBase):
     """Compiler for the abstract-syntax-tree of a PopRetrieve source file.
@@ -63,4 +103,12 @@ class PopRetrieveCompiler(CompilerBase):
 
     def text(self, node):
         pass
+
+
+
+#######################################################################
+#
+# END OF PYDSL-SECTIONS
+#
+#######################################################################
 

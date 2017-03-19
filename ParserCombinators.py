@@ -508,24 +508,6 @@ def ASTTransform(node, transtable):
     recursive_ASTTransform(node)
 
 
-# def preserve_errors(transformation):
-#     """Wrapper that moves errors of child nodes that have been removed
-#     after the application of function ``transformation()`` to the root
-#     node. As an optimization, ``transformation()`` will only be called
-#     if its ``node``-argument (i.e. the root-node) has children at all.
-#     """
-#     # requires nd.collect_errors() to return a set
-#     @functools.wraps(transformation)
-#     def preserve_errors_wrapper(*args, **kwds):
-#         nd = kwds['node'] if 'node' in kwds else args[0]
-#         if nd.children:
-#             errors = nd.collect_errors()
-#             transformation(*args, **kwds)
-#             for err in errors - nd.collect_errors():
-#                 nd.add_error(err[1], err[0])
-#     return preserve_errors_wrapper
-
-
 def no_transformation(node):
     pass
 
@@ -726,10 +708,7 @@ def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
         write_log(full_history, '_full')
         write_log(match_history, '_match')
         write_log(errors_only, '_errors')
-        # hist = [";  ".join(prepare_line(r)) for r in grammar_base.history]
-        # lines = [prepare_line(r) for r in grammar_base.history]
-        # n = max(len(line[0]) for line in lines)
-        # hist = ["    ".join((l[0] + ' ' * (n - len(l[0])), l[1], l[2])) for l in lines]
+
 
 
 def add_parser_guard(parser_func):
@@ -1074,13 +1053,6 @@ def escape_re(s):
         s = s.replace(esc_ch, '\\' + esc_ch)
     return s
 
-#
-# class Token(RE):
-#     def __init__(self, token, wL=None, wR=None, name=None):
-#         super(Token, self).__init__(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
-#
-#     def __str__(self):
-#         return self.name or 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
 
 def Token(token, wL=None, wR=None, name=None):
     return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
@@ -1390,11 +1362,11 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
                   'Pop'}
 
 
-########################################################################
+#######################################################################
 #
 # Syntax driven compilation support
 #
-########################################################################
+#######################################################################
 
 class CompilerBase:
     def compile__(self, node):
@@ -1595,10 +1567,9 @@ class EBNFCompiler(CompilerBase):
     """Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
     """
-    # RX_DIRECTIVE = re.compile('(?:#|@)\s*(?P<key>\w*)\s*=\s*(?P<value>.*)')  # old, can be removed!
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
-    VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc. ?
+    VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc.?
     AST_ERROR        = "Badly structured syntax tree. " \
                        "Potentially due to erroneuos AST transformation."
     PREFIX_TABLE     = [('§', 'Required'), ('&', 'Lookahead'),
@@ -1905,13 +1876,30 @@ class EBNFCompiler(CompilerBase):
         return set(item.strip() for item in node.result.split(','))
 
 
-########################################################################
+#######################################################################
 #
 # support for compiling DSLs based on an EBNF-grammar
 #
-########################################################################
+#######################################################################
 
-DELIMITER = "\n\n### DON'T EDIT OR REMOVE THIS LINE ###\n\n"
+SECTION_MARKER = """\n
+#######################################################################
+#
+# {marker}
+#
+#######################################################################
+\n"""
+
+RX_SECTION_MARKER = re.compile(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
+
+SYMBOLS_SECTION = "SYMBOLS SECTION - Can be edited. Changes will be preserved."
+SCANNER_SECTION = "SCANNER SECTION - Can be edited. Changes will be preserved."
+PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
+AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
+COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
+END_SECTIONS_MARKER = "END OF PYDSL-SECTIONS"
+
+# DELIMITER = "\n\n### DON'T EDIT OR REMOVE THIS LINE ###\n\n"
 
 
 def is_python_code(text_or_file):
@@ -1955,6 +1943,7 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
     """Compiles the python source code and returns the object the name of which
     ends with `obj_name_ending`.
      """
+
     code = compile(python_src, '<string>', 'exec')
     module_vars = globals()
     allowed_symbols = PARSER_SYMBOLS | AST_SYMBOLS | COMPILER_SYMBOLS
@@ -2000,11 +1989,16 @@ def get_grammar_instance(grammar):
 def load_compiler_suite(compiler_suite):
     """
     """
-    global DELIMITER
+    global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
     if is_python_code(compiler_suite):
-        scanner_py, parser_py, ast_py, compiler_py = source.split(DELIMITER)
+        try:
+            intro, syms, scanner_py, parser_py, ast_py, compiler_py, outro = \
+                RX_SECTION_MARKER.split(source)
+        except ValueError as error:
+            raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
+                             'Please delete or repair file manually.')
         scanner = compile_python_object(scanner_py, 'Scanner')
         ast = compile_python_object(ast_py, 'TransTable')
         compiler = compile_python_object(compiler_py, 'Compiler')
@@ -2039,7 +2033,7 @@ def compileDSL(text_or_file, dsl_grammar, trans_table, compiler,
     return result
 
 
-def run_compiler(source_file, compiler_suite="", extension=".dst"):
+def run_compiler(source_file, compiler_suite="", extension=".xml"):
     """Compiles the a source file with a given compiler and writes the result
      to a file. If no `compiler_suite` is given it is assumed that the source
      file is an EBNF grammar. In this case the result will be a Python
@@ -2047,10 +2041,17 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
      for a scanner, AST transformation table, and compiler. If the Python
      script already exists only the parser name in the script will be
      updated. (For this to work, the different names need to be delimited
-     by the standard `DELIMITER`-line!).
+     section marker blocks.).
      `run_compiler()` returns a list of error messages or an empty list if no
      errors occured.
      """
+
+    def import_block(module, symbols):
+        symlist = list(symbols)
+        grouped = [symlist[i:i + 4] for i in range(0, len(symlist), 4)]
+        return ("\nfrom " + module + " import "
+                + ', \\\n    '.join(', '.join(g) for g in grouped) + '\n\n')
+
     filepath = os.path.normpath(source_file)
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
@@ -2068,32 +2069,44 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
     if errors:
         return errors
 
-    elif trans == EBNFTransTable:  # either an EBNF- or no compiter suite given
+    elif trans == EBNFTransTable:  # either an EBNF- or no compiler suite given
         f = None
 
-        global DELIMITER
+        global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
+            AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER
         try:
             f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
             source = f.read()
-            scanner, parser, ast, compiler = source.split(DELIMITER)
+            intro, syms, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
         except (PermissionError, FileNotFoundError, IOError) as error:
+            intro, outro = '', ''
+            syms = import_block("PyDSL", PARSER_SYMBOLS | AST_SYMBOLS | {'CompilerBase'})
             scanner = compiler.gen_scanner_skeleton()
             ast = compiler.gen_AST_skeleton()
             compiler = compiler.gen_compiler_skeleton()
+        except ValueError as error:
+            raise ValueError('File "' + rootname + '_compiler.py" seems to be corrupted. '
+                             'Please delete or repair file manually!')
         finally:
             if f:  f.close()
 
         try:
             f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
+            f.write(intro)
+            f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
+            f.write(syms)
+            f.write(SECTION_MARKER.format(marker=SCANNER_SECTION))
             f.write(scanner)
-            f.write(DELIMITER)
+            f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
             f.write(result)
-            f.write(DELIMITER)
+            f.write(SECTION_MARKER.format(marker=AST_SECTION))
             f.write(ast)
-            f.write(DELIMITER)
+            f.write(SECTION_MARKER.format(marker=COMPILER_SECTION))
             f.write(compiler)
+            f.write(SECTION_MARKER.format(marker=END_SECTIONS_MARKER))
+            f.write(outro)
         except (PermissionError, FileNotFoundError, IOError) as error:
-            print('# Could not write file "' + rootname + '.py" because of: '
+            print('# Could not write file "' + rootname + '_compiler.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))
             print(result)
         finally:

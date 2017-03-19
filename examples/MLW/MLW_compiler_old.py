@@ -1,40 +1,8 @@
-
-
-#######################################################################
-#
-# SYMBOLS SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
-
-
-from PyDSL import Pop, NegativeLookbehind, Capture, no_transformation, \
-    Token, Alternative, mixin_comment, RE, \
-    Sequence, remove_comments, Retrieve, is_scanner_token, \
-    Lookbehind, replace_by_single_child, remove_scanner_tokens, remove_whitespace, \
-    is_whitespace, ZeroOrMore, remove_enclosing_delimiters, CompilerBase, \
-    RegExp, NegativeLookahead, WHITESPACE_KEYWORD, GrammarBase, \
-    reduce_single_child, Optional, remove_children_if, remove_expendables, \
-    remove_tokens, is_comment, partial, OneOrMore, \
-    Forward, TOKEN_KEYWORD, Required, flatten, \
-    is_expendable, Lookahead
-
-
-
-#######################################################################
-#
-# SCANNER SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
-
 def MLWScanner(text):
     return text
 
 
-#######################################################################
-#
-# PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
-#
-#######################################################################
+### DON'T EDIT OR REMOVE THIS LINE ###
 
 class MLWGrammar(GrammarBase):
     r"""Parser for a MLW source file, with this grammar:
@@ -132,7 +100,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "26b36c7d970ea079fb4207bdcffd5237"
+    source_hash__ = "4632b08b0de268e81efb1b92b322076e"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -181,11 +149,8 @@ class MLWGrammar(GrammarBase):
     root__ = Artikel
     
 
-#######################################################################
-#
-# AST SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
+### DON'T EDIT OR REMOVE THIS LINE ###
+
 
 def test(node):
     print(node.as_sexpr())
@@ -271,11 +236,7 @@ MLWTransTable = {
 }
 
 
-#######################################################################
-#
-# COMPILER SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
+### DON'T EDIT OR REMOVE THIS LINE ###
 
 class MLWCompiler(CompilerBase):
     """Compiler for the abstract-syntax-tree of a MLW source file.
@@ -342,15 +303,6 @@ class MLWCompiler(CompilerBase):
     def Schreibweise(self, node):
         pass
 
-    def Beleg(self, node):
-        pass
-
-    def Verweis(self, node):
-        pass
-
-    def VerweisZiel(self, node):
-        pass
-
     def BedeutungsPosition(self, node):
         pass
 
@@ -375,25 +327,19 @@ class MLWCompiler(CompilerBase):
     def EinBeleg(self, node):
         pass
 
-    def Zusatz(self, node):
+    def Beleg(self, node):
         pass
 
-    def Autorinfo(self, node):
+    def Verweis(self, node):
         pass
 
-    def Name(self, node):
+    def VerweisZiel(self, node):
         pass
 
     def WORT(self, node):
         pass
 
-    def WORT_GROSS(self, node):
-        pass
-
     def WORT_KLEIN(self, node):
-        pass
-
-    def LAT_WORT(self, node):
         pass
 
     def GROSSSCHRIFT(self, node):
@@ -407,12 +353,4 @@ class MLWCompiler(CompilerBase):
 
     def NIEMALS(self, node):
         pass
-
-
-
-#######################################################################
-#
-# END OF PYDSL-SECTIONS
-#
-#######################################################################
 

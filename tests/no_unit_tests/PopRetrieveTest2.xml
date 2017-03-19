@@ -1,0 +1,90 @@
+<document>
+    <Alternative>
+        <text>
+            <RegExp>
+                Anfang 
+            </RegExp>
+        </text>
+    </Alternative>
+    <Alternative>
+        <codeblock>
+            <delimiter>
+                <delimiter_sign>
+                    <RegExp>
+                        ```
+                    </RegExp>
+                </delimiter_sign>
+            </delimiter>
+            <ZeroOrMore>
+                <Alternative>
+                    <text>
+                        <RegExp>
+                            code block 
+                        </RegExp>
+                    </text>
+                </Alternative>
+                <Alternative>
+                    <Sequence>
+                        <delimiter_sign>
+                            <RegExp>
+                                ``
+                            </RegExp>
+                        </delimiter_sign>
+                    </Sequence>
+                </Alternative>
+                <Alternative>
+                    <text>
+                        <RegExp>
+                             <- keine Ende-Zeichen ! 
+                        </RegExp>
+                    </text>
+                </Alternative>
+            </ZeroOrMore>
+            <Pop>
+                ```
+            </Pop>
+        </codeblock>
+    </Alternative>
+    <Alternative>
+        <text>
+            <RegExp>
+                 Ebde
+                
+                Absatz ohne 
+            </RegExp>
+        </text>
+    </Alternative>
+    <Alternative>
+        <codeblock>
+            <delimiter>
+                <delimiter_sign>
+                    <RegExp>
+                        ```
+                    </RegExp>
+                </delimiter_sign>
+            </delimiter>
+            <ZeroOrMore>
+                <Alternative>
+                    <text>
+                        <RegExp>
+                             codeblock, aber
+                            das stellt sich erst am Ende herause...
+                            
+                            Mehrzeliger 
+                        </RegExp>
+                    </text>
+                </Alternative>
+            </ZeroOrMore>
+            <Pop>
+                ```
+            </Pop>
+        </codeblock>
+    </Alternative>
+    <Alternative>
+        <text>
+            <RegExp>
+                code block 
+            </RegExp>
+        </text>
+    </Alternative>
+</document>
