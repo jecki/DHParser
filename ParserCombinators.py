@@ -56,42 +56,49 @@ https://bitbucket.org/apalala/grako
 
 import collections
 import copy
-import enum
 from functools import partial
 import hashlib
 import keyword
 import os
 from typing import NamedTuple
-
-# try:
-#     import regex as re
-# except ImportError:
-#     import re
-import re       # as of now use `re` - even hough `regex` appears to be better
+try:
+    import regex as re
+except ImportError:
+    import re
 import sys
 
 
-__version__ = '0.5.2' + '_dev' + str(os.stat(__file__).st_mtime)
+__version__ = '0.5.3' + '_dev' + str(os.stat(__file__).st_mtime)
 
 
 DEBUG = "DEBUG"
 
 
 def DEBUG_DIR():
+    """Returns a path of a directory where debug files will be stored.
+    Usually, this is just a sub-directory named 'DEBUG'. The directory
+    will be created if it does not exist.
+    """
     global DEBUG
-    dirname = ""
-    if DEBUG:
-        if os.path.exists(DEBUG):
-            dirname = DEBUG if os.path.isdir(DEBUG) else ""
-        else:
-            os.mkdir(DEBUG)
-            dirname = DEBUG
+    if not DEBUG:
+        raise AssertionError("Cannot use DEBUG_DIR() if debugging is turned off!")
+    dirname = DEBUG
+    if os.path.exists(DEBUG):
+        if not os.path.isdir(DEBUG):
+            raise IOError('"' + DEBUG + '" cannot be used as debug directory, '
+                          'because it is not a directory!')
+    else:
+        os.mkdir(DEBUG)
     return dirname
 
 
 def DEBUG_FILE_NAME(grammar_base):
+    """Returns a file name without extension based on the class name of
+     the ``grammar_base``-object.
+     """
     name = grammar_base.__class__.__name__
     return name[:-7] if name.endswith('Grammar') else name
+
 
 
 ########################################################################
@@ -107,17 +114,8 @@ END_SCANNER_TOKEN = '\x1c'
 
 
 def make_token(token, argument=''):
-    """
-    Turns the ``token`` and ``argument`` into a special token that
+    """Turns the ``token`` and ``argument`` into a special token that
     will be caught by the `ScannerToken`-parser.
-
-    Args:
-        token (str): The token to be wrapped into a scanner token
-        argument (str): The optional argument string added to the token
-
-    Returns (str):
-        The scanner token, starting with the `BEGIN_SCANNER_TOKEN`-
-        character and ending with the `END_SCANNER_TOKEN`-character.
     """
     assert RX_SCANNER_TOKEN.match(token)
     assert argument.find(BEGIN_SCANNER_TOKEN) < 0
@@ -138,17 +136,7 @@ nil_scanner = lambda text: text
 
 
 def line_col(text, pos):
-    """
-    Returns the position within a text as (line, column)-tuple.
-
-    Args:
-        text (str):  The text for which the line and column of the
-                position ``pos`` shall be returned
-        pos (int):  The position in the text starting with 0, e.g. 2536
-                means the 2537th character. Must be lower than the
-                text's length
-    Returns (tuple):
-        The line and column of the given position
+    """Returns the position within a text as (line, column)-tuple.
     """
     assert pos < len(text)
     line = text.count("\n", 0, pos) + 1
@@ -157,9 +145,14 @@ def line_col(text, pos):
 
 
 class ZombieParser:
-    """Serves as a substitute for a Parser instance. Required by
-    `Node`-objects, for example. The ZOMBIE_PARSER has a name and can
-    be called, but it never matches.
+    """
+    Serves as a substitute for a Parser instance.
+
+    ``ZombieParser`` is the class of the singelton object
+    ``ZOMBIE_PARSER``. The  ``ZOMBIE_PARSER`` has a name and can be
+    called, but it never matches. It serves as a substitute where only
+    these (or one of these properties) is needed, but no real Parser-
+    object is instantiated.
     """
     alive = False
     def __init__(self):
@@ -189,7 +182,7 @@ class Node:
     Represents a node in the concrete or abstract syntax tree.
 
     Attributes:
-        tag (str):  The name of the node, which is either its parser's
+        tag_name (str):  The name of the node, which is either its parser's
                 name or, if that is empty, the parser's class name
         result (str or tuple):  The result of the parser which
                 generated this node, which can be either a string or a
@@ -207,7 +200,7 @@ class Node:
                 READ ONLY!
         pos (int):  the position of the node within the parsed text.
 
-                The value of ``pos`` is zero by default and is will be
+                The value of ``pos`` is zero by default and it will be
                 updated if the node or any of its parents is attached
                 to a new parent.
 
@@ -218,14 +211,8 @@ class Node:
     """
 
     def __init__(self, parser, result):
-        """
-        Initializes the ``Node``-object.
-
-        Args:
-            parser (Parser):  The `Parser`-instance which generated
-                    this node
-            result (Union):  The parsing result, which can either be a
-                    string or a tuple of child nodes
+        """Initializes the ``Node``-object with the ``Parser``-Instance
+        that generated the node and the parser's result.
         """
         self.result = result
         self.parser = parser or ZOMBIE_PARSER
@@ -241,7 +228,7 @@ class Node:
         return str(self.result)
 
     @property
-    def tag(self):
+    def tag_name(self):
         return self.parser.name or self.parser.__class__.__name__
 
     @property
@@ -285,21 +272,22 @@ class Node:
         Generates a tree representation of this node and its children
         in string from.
 
-        This could be an XML-representation or a lisp-like
-        S-expression. Exactly which form the tree representation takes is
-        defined by the parameters of the function.
+        The kind ot tree-representation that is determined by several
+        function parameters. This could be an XML-representation or a
+        lisp-like S-expression.
 
-        Args:
-            tab (str): The indentation string, e.g. '\t' or '    '
-            openF (Node->str):  A function that returns an opening
-                    string (e.g. an XML-tag) for a given node
-            closeF (Node->str): A function that returns a closeF string
-                    (e.g. an XML-tag) for a given node.
-            dataF (str->str): A function that filters the data string
-                    before printing, e.g. to add quotation marks
+        Parameters:
+            tab (str):  The indentation string, e.g. '\t' or '    '
+            openF:  (Node->str) A function that returns an opening
+                string (e.g. an XML-tag_name) for a given node
+            closeF:  (Node->str) A function that returns a closeF
+                string (e.g. an XML-tag_name) for a given node.
+            dataF:  (str->str) A function that filters the data string
+                before printing, e.g. to add quotation marks
+
         Returns (str):
-            A string that contains a (serialized) tree representation of the
-            node and its children.
+            A string that contains a (serialized) tree representation
+            of the node and its children.
         """
         head = openF(self)
         tail = closeF(self)
@@ -324,13 +312,13 @@ class Node:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
-        Args:
-            src (str or None):  The source text or `None`. In case the
-                    source text is given the position of the element
-                    in the text will be reported as line and column.
+        Parameters:
+            src:  The source text or `None`. In case the source text is
+                given the position of the element in the text will be
+                reported as line and column.
         """
         def opening(node):
-            s = '(' + node.tag
+            s = '(' + node.tag_name
             # s += " '(pos %i)" % node.pos
             if src:
                 s += " '(pos %i  %i %i)" % (node.pos, *line_col(src, node.pos))
@@ -348,14 +336,14 @@ class Node:
         """
         Returns content as XML-tree.
 
-        Args:
-            src (str):  The source text or `None`. In case the source
-                    text is given the position will also be reported
-                    as line and column.
+        Parameters:
+            src:  The source text or `None`. In case the source text is
+                given the position will also be reported as line and
+                column.
         """
 
         def opening(node):
-            s = '<' + node.tag
+            s = '<' + node.tag_name
             # s += ' pos="%i"' % node.pos
             if src:
                 s += ' line="%i" col="%i"' % line_col(src, node.pos)
@@ -365,7 +353,7 @@ class Node:
             return s
 
         def closing(node):
-            s = '</' + node.tag + '>'
+            s = '</' + node.tag_name + '>'
             return s
 
         return self._tree_repr('    ', opening, closing)
@@ -399,12 +387,12 @@ class Node:
         'e/r' returns 'x2'
         'e'   returns (r x1)(r x2)
 
-        Args:
-            path (str): The path of the object, e.g. 'a/b/c'
+        Parameters:
+            path (str):  The path of the object, e.g. 'a/b/c'
 
         Returns:
             The object at the path, either a string or a Node or
-            `None`, if the path did not match.
+            ``None``, if the path did not match.
         """
         pl = path.strip('')
         assert pl[0] != '/', 'Path must noch start with "/"!'
@@ -431,9 +419,6 @@ def error_messages(text, errors):
     return "\n\n".join("line: %i, column: %i, error: %s" %
                        (*line_col(text, err.pos), err.msg)
                        for err in sorted(list(errors)))
-    # return "\n\n".join("line: %i, column: %i, error: %s" %
-    #                    (*line_col(text, err[0]), " and ".join(err[1]))
-    #                    for err in sorted(list(errors)))
 
 
 # lambda compact_sexpr s : re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
@@ -460,7 +445,7 @@ def expand_table(compact_table):
     containing comma separated words into single keyword entries with
     the same values. Returns the expanded table.
     Example:
-    expand_table({"a, b": 1, "b": 1, ('d','e','f'):5, "c":3}) yields
+    >>> expand_table({"a, b": 1, "b": 1, ('d','e','f'):5, "c":3})
     {'a': 1, 'b': 1, 'c': 3, 'd': 5, 'e': 5, 'f': 5}
     """
     expanded_table = {}
@@ -478,15 +463,9 @@ def expand_table(compact_table):
 
 
 def ASTTransform(node, transtable):
-    """Transforms the parse tree starting with the given `node` into an
-    abstract syntax tree by calling transformation functions registered in a
-    transformation table.
-
-    Args:
-        node (Node): The root node of the parse tree (or sub-tree) to be
-                transformed into the abstract syntax tree.
-        transtable (dict): A dictionary that assigns a transformation
-                transformation functions to parser name strings.
+    """Transforms the parse tree starting with the given ``node`` into
+    an abstract syntax tree by calling transformation functions
+    registered in the transformation dictionary ``transtable``.
     """
     # normalize transformation entries by turning single transformations
     # into lists with a single item
@@ -591,7 +570,6 @@ def flatten(node):
     of the node. In other words, all leaves of this node and its child nodes
     are collected in-order as direct children of this node.
     This is meant to achieve the following structural transformation:
-    X (+ Y + Z)  ->   X + Y + Z
     """
     if node.children:
         new_result = []
@@ -679,36 +657,6 @@ class HistoryRecord:
     def extent(self):
         return ((-self.remaining - self.node.len, -self.remaining) if self.node
                 else (-self.remaining, None))
-
-
-def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
-    def prepare_line(record):
-        excerpt = document.__getitem__(slice(*record.extent))[:25].replace('\n','\\n')
-        excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
-        return (record.stack, record.status, excerpt)
-
-    def write_log(history, log_name):
-        path = os.path.join(DEBUG_DIR(), DEBUG_FILE_NAME(grammar_base) + log_name + "_parser.log")
-        if history:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write("\n".join(history))
-        elif os.path.exists(path):
-            os.remove(path)
-
-    global DEBUG
-    if DEBUG:
-        full_history, match_history, errors_only = [], [], []
-        for record in grammar_base.history:
-            line = ";  ".join(prepare_line(record))
-            full_history.append(line)
-            if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
-                match_history.append(line)
-                if record.node.errors:
-                    errors_only.append(line)
-        write_log(full_history, '_full')
-        write_log(match_history, '_match')
-        write_log(errors_only, '_errors')
-
 
 
 def add_parser_guard(parser_func):
@@ -928,6 +876,34 @@ class GrammarBase:
                 stitches.append(Node(None, rest))
         return result if not stitches else Node(None, tuple(stitches))
 
+
+def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
+    def prepare_line(record):
+        excerpt = document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
+        excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
+        return (record.stack, record.status, excerpt)
+
+    def write_log(history, log_name):
+        path = os.path.join(DEBUG_DIR(), DEBUG_FILE_NAME(grammar_base) + log_name + "_parser.log")
+        if history:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(history))
+        elif os.path.exists(path):
+            os.remove(path)
+
+    global DEBUG
+    if DEBUG:
+        full_history, match_history, errors_only = [], [], []
+        for record in grammar_base.history:
+            line = ";  ".join(prepare_line(record))
+            full_history.append(line)
+            if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
+                match_history.append(line)
+                if record.node.errors:
+                    errors_only.append(line)
+        write_log(full_history, '_full')
+        write_log(match_history, '_match')
+        write_log(errors_only, '_errors')
 
 
 ########################################################################
@@ -1368,6 +1344,7 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
 #
 #######################################################################
 
+
 class CompilerBase:
     def compile__(self, node):
         comp, cls = node.parser.name, node.parser.__class__.__name__
@@ -1387,21 +1364,27 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
         1. Parsing
         2. AST-transformation
         3. Compiling.
-    The compilations stage is only invoked if no errors occurred in either of
-    the two previous stages.
+    The compilations stage is only invoked if no errors occurred in
+    either of the two previous stages.
 
-    Args:
-        source (str):                the input source for compilation
-        grammar_base (GrammarBase):  the GrammarBase object
-        AST_transformations (dict):  a table that assigns AST transformation
-                functions to parser names (see function ASTTransform)
-        compiler (object):  an instance of a class derived from `CompilerBase`
-                with a suitable method for every parser name or class.
-    Returns:
-        tuple: (result (?), messages (str), syntax_tree (Node))
-            Result as returned by the compiler or `None` if an error occurred
-            during parsing or AST-transformation and the compiler wasn't
-            invoked; error messages; abstract syntax tree
+    Paraemters:
+        source (str): The input text for compilation
+        grammar_base (GrammarBase):  The GrammarBase object
+        AST_transformations (dict):  The transformation-table that
+            assigns AST transformation functions to parser names (see
+            function ASTTransform)
+        compiler (object):  An instance of a class derived from
+            ``CompilerBase`` with a suitable method for every parser
+            name or class.
+
+    Returns (tuple):
+        The result of the compilation as a 3-tuple
+        (result, errors, abstract syntax tree). In detail:
+        1. The result as returned by the compiler or ``None`` in case
+            of failure,
+        2. A list of error messages, each of which is a tuple
+            (position: int, error: str)
+        3. The root-node of the abstract syntax tree
     """
     assert isinstance(compiler, CompilerBase)
 
@@ -1876,11 +1859,13 @@ class EBNFCompiler(CompilerBase):
         return set(item.strip() for item in node.result.split(','))
 
 
+
 #######################################################################
 #
 # support for compiling DSLs based on an EBNF-grammar
 #
 #######################################################################
+
 
 SECTION_MARKER = """\n
 #######################################################################
@@ -2131,16 +2116,19 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     return []
 
 
-def has_source_changed(grammar_source, grammar_class):
+def source_changed(grammar_source, grammar_class):
     """Returns `True` if `grammar_class` does not reflect the latest
     changes of `grammar_source`
 
-    :param grammar_source:  file name or string representation of the
-        grammar source
-    :param grammar_class:  the parser class representing the grammar
-        or the file name of a compiler suite containing the grammar
-    :return:  True, if the source text of the grammar is different
-        from the source from which the grammar class was generated
+    Parameters:
+        grammar_source:  File name or string representation of the
+            grammar source
+        grammar_class:  the parser class representing the grammar
+            or the file name of a compiler suite containing the grammar
+
+    Returns (bool):
+        True, if the source text of the grammar is different from the
+        source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
     chksum = md5(grammar, __version__)
@@ -2188,7 +2176,7 @@ def test(file_name):
 # # Changes in the EBNF source that are not reflected in this file could be
 # # a source of sometimes obscure errors! Therefore, we will check this.
 # if (os.path.exists('examples/EBNF/EBNF.ebnf')
-#     and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
+#     and source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
 #     assert False, "WARNING: Grammar source has changed. The parser may not " \
 #         "represent the actual grammar any more!!!"
 #     pass

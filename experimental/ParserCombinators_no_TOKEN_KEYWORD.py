@@ -2172,7 +2172,7 @@ def test(file_name):
 # # Changes in the EBNF source that are not reflected in this file could be
 # # a source of sometimes obscure errors! Therefore, we will check this.
 # if (os.path.exists('examples/EBNF/EBNF.ebnf')
-#     and has_source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
+#     and source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
 #     assert False, "WARNING: Grammar source has changed. The parser may not " \
 #         "represent the actual grammar any more!!!"
 #     pass

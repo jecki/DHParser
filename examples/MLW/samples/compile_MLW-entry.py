@@ -23,17 +23,17 @@ import os
 import sys
 sys.path.append(os.path.abspath('../../../'))
 import ParserCombinators
-from ParserCombinators import run_compiler, has_source_changed
+from ParserCombinators import run_compiler, source_changed
 
 MLW_ebnf = os.path.join('..', 'MLW.ebnf')
 MLW_compiler = os.path.join('..', 'MLW_compiler.py')
 
-# print(has_source_changed(MLW_ebnf, MLW_compiler))
+# print(source_changed(MLW_ebnf, MLW_compiler))
 
 ParserCombinators.DEBUG = False
 
 if (not os.path.exists(MLW_compiler) or
-    has_source_changed(MLW_ebnf, MLW_compiler)):
+    source_changed(MLW_ebnf, MLW_compiler)):
     print("recompiling parser")
     errors = run_compiler(MLW_ebnf)
     if errors:
