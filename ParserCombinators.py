@@ -182,32 +182,31 @@ class Node:
     Represents a node in the concrete or abstract syntax tree.
 
     Attributes:
-        tag_name (str):  The name of the node, which is either its parser's
-                name or, if that is empty, the parser's class name
+        tag_name (str):  The name of the node, which is either its
+            parser's name or, if that is empty, the parser's class name
         result (str or tuple):  The result of the parser which
-                generated this node, which can be either a string or a
-                tuple of child nodes.
+            generated this node, which can be either a string or a
+            tuple of child nodes.
         children (tuple):  The tuple of child nodes or an empty tuple
-                if there are no child nodes. READ ONLY!
+            if there are no child nodes. READ ONLY!
         parser (Parser):  The parser which generated this node.
         errors (list):  A list of parser- or compiler-errors:
-                tuple(position, string) attached to this node
+            tuple(position, string) attached to this node
         len (int):  The full length of the node's string result if the
-                node is a leaf node or, otherwise, the concatenated
-                string result's of its descendants. The figure always
-                represents the length before AST-transformation and
-                will never change through AST-transformation.
-                READ ONLY!
+            node is a leaf node or, otherwise, the concatenated string
+            result's of its descendants. The figure always represents
+            the length before AST-transformation ans will never change
+            through AST-transformation. READ ONLY!
         pos (int):  the position of the node within the parsed text.
 
-                The value of ``pos`` is zero by default and it will be
-                updated if the node or any of its parents is attached
-                to a new parent.
+            The value of ``pos`` is zero by default and it will be
+            updated if the node or any of its parents is attached
+            to a new parent.
 
-                From the point of view of a client, this value should
-                be considered READ ONLY. At any rate, it should never
-                be reassigned only during parsing stage and never
-                during or after AST-transformation.
+            From the point of view of a client, this value should
+            be considered READ ONLY. At any rate, it should only be
+            reassigned only during parsing stage and never during or
+            after the AST-transformation.
     """
 
     def __init__(self, parser, result):
@@ -723,13 +722,6 @@ class ParserMetaClass(type):
         super(ParserMetaClass, cls).__init__(name, bases, attrs)
 
 
-def sane_parser_name(name):
-    """Checks whether given name is an acceptable parser name. Parser names
-    must not be preceeded or succeeded by a double underscore '__'!
-    """
-    return name and name[:2] != '__' and name[-2:] != '__'
-
-
 class Parser(metaclass=ParserMetaClass):
     def __init__(self, name=None):
         assert name is None or isinstance(name, str), str(name)
@@ -952,7 +944,8 @@ class RegExp(Parser):
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
-        # this method is obsolete with the new `regex` module!
+        # This method is obsolete with the new `regex` module! It's
+        # being kept for compatibility with Python's standard library
         try:
             regexp = copy.deepcopy(self.regexp)
         except TypeError:
@@ -1345,6 +1338,13 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
 #######################################################################
 
 
+def sane_parser_name(name):
+    """Checks whether given name is an acceptable parser name. Parser names
+    must not be preceeded or succeeded by a double underscore '__'!
+    """
+    return name and name[:2] != '__' and name[-2:] != '__'
+
+
 class CompilerBase:
     def compile__(self, node):
         comp, cls = node.parser.name, node.parser.__class__.__name__
@@ -1695,6 +1695,9 @@ class EBNFCompiler(CompilerBase):
         rule = node.result[0].result
         if rule in EBNFCompiler.RESERVED_SYMBOLS:
             node.add_error('Symbol "%s" is a reserved symbol.' % rule)
+        elif not sane_parser_name(rule):
+            node.add_error('Illegal symbol "%s". Symbols must not start or '
+                           ' end with a doube underscore "__".' % rule)
         elif rule in self.scanner_tokens:
             node.add_error('Symbol "%s" has already been defined as '
                            'a scanner token.' % rule)
@@ -1928,7 +1931,6 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
     """Compiles the python source code and returns the object the name of which
     ends with `obj_name_ending`.
      """
-
     code = compile(python_src, '<string>', 'exec')
     module_vars = globals()
     allowed_symbols = PARSER_SYMBOLS | AST_SYMBOLS | COMPILER_SYMBOLS
@@ -2009,7 +2011,6 @@ def compileDSL(text_or_file, dsl_grammar, trans_table, compiler,
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
     assert isinstance(trans_table, dict)
-
     parser_root, grammar_src = get_grammar_instance(dsl_grammar)
     src = scanner(load_if_file(text_or_file))
     result, errors, AST = full_compilation(src, parser_root, trans_table,
@@ -2019,19 +2020,23 @@ def compileDSL(text_or_file, dsl_grammar, trans_table, compiler,
 
 
 def run_compiler(source_file, compiler_suite="", extension=".xml"):
-    """Compiles the a source file with a given compiler and writes the result
-     to a file. If no `compiler_suite` is given it is assumed that the source
-     file is an EBNF grammar. In this case the result will be a Python
-     script containing a parser for that grammar as well as the skeletons
-     for a scanner, AST transformation table, and compiler. If the Python
-     script already exists only the parser name in the script will be
-     updated. (For this to work, the different names need to be delimited
-     section marker blocks.).
-     `run_compiler()` returns a list of error messages or an empty list if no
-     errors occured.
-     """
+    """Compiles the a source file with a given compiler and writes the
+    result to a file.
 
+     If no ``compiler_suite`` is given it is assumed that the source
+     file is an EBNF grammar. In this case the result will be a Python
+     script containing a parser for that grammar as well as the
+     skeletons for a scanner, AST transformation table, and compiler.
+     If the Python script already exists only the parser name in the
+     script will be updated. (For this to work, the different names
+     need to be delimited section marker blocks.). `run_compiler()`
+     returns a list of error messages or an empty list if no errors
+     occurred.
+     """
     def import_block(module, symbols):
+        """Generates an Python-``import`` statement that imports all
+        alls symbols in ``symbols`` (set or other container) from
+        module ``module``."""
         symlist = list(symbols)
         grouped = [symlist[i:i + 4] for i in range(0, len(symlist), 4)]
         return ("\nfrom " + module + " import "
