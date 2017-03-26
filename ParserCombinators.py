@@ -534,10 +534,8 @@ def reduce_single_child(node):
 
 
 def is_whitespace(node):
-    return not node.result or (isinstance(node.result, str) and not node.result.strip())
-
-
-def is_comment(node):
+    """Removes whitespace and comments defined with the
+    ``@comment``-directive."""
     return node.parser.name == WHITESPACE_KEYWORD
 
 
@@ -545,8 +543,12 @@ def is_scanner_token(node):
     return isinstance(node.parser, ScannerToken)
 
 
+def is_empty(node):
+    return not node.result
+
+
 def is_expendable(node):
-    return is_whitespace(node) or is_comment(node) or is_scanner_token(node)
+    return is_empty(node) or is_whitespace(node) or is_scanner_token(node)
 
 
 def is_token(node, token_set={}):
@@ -561,7 +563,6 @@ def remove_children_if(node, condition):
 
 
 remove_whitespace = partial(remove_children_if, condition=is_whitespace)
-remove_comments = partial(remove_children_if, condition=is_comment)
 remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
 remove_expendables = partial(remove_children_if, condition=is_expendable)
 
@@ -604,11 +605,11 @@ def remove_brackets(node):
 
 
 AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
-               'no_transformation', 'remove_children_if', 'is_whitespace',
-               'is_comment', 'is_scanner_token', 'is_expendable',
-               'remove_whitespace', 'remove_comments',
-               'remove_scanner_tokens', 'remove_expendables', 'flatten',
-               'remove_tokens', 'remove_enclosing_delimiters',
+               'no_transformation', 'remove_children_if',
+               'is_whitespace', 'is_scanner_token', 'is_expendable',
+               'remove_whitespace', 'remove_scanner_tokens',
+               'remove_expendables', 'flatten', 'remove_tokens',
+               'remove_brackets',
                'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
 
 
