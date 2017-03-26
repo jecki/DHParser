@@ -1489,8 +1489,6 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
-remove_enclosing_delimiters = partial(remove_tokens, tokens={})
-
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
     "syntax":
