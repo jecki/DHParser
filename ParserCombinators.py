@@ -581,7 +581,12 @@ def flatten(node):
     wherever a node has child nodes, the child nodes are inserted in place
     of the node. In other words, all leaves of this node and its child nodes
     are collected in-order as direct children of this node.
-    This is meant to achieve the following structural transformation:
+    This is meant to achieve these kinds of structural transformation:
+        (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
+        (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
+        
+    Warning: Use with care. Du tue its recursive nature, flattening can
+    have unexpected side-effects.
     """
     if node.children:
         new_result = []
