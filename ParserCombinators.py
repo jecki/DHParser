@@ -549,17 +549,29 @@ def is_expendable(node):
     return is_whitespace(node) or is_comment(node) or is_scanner_token(node)
 
 
+def is_token(node, token_set={}):
+    return node.parser.name == TOKEN_KEYWORD and (not token_set or node.result in token_set)
+
+
 def remove_children_if(node, condition):
-    """Removes all nodes from the result field if the function `condition` evaluates
-    to `True`."""
+    """Removes all nodes from the result field if the function 
+    ``condition(child_node)`` evaluates to ``True``."""
     if node.children:
-        node.result = tuple(r for r in node.result if not condition(r))
+        node.result = tuple(c for c in node.children if not condition(c))
 
 
 remove_whitespace = partial(remove_children_if, condition=is_whitespace)
 remove_comments = partial(remove_children_if, condition=is_comment)
 remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
 remove_expendables = partial(remove_children_if, condition=is_expendable)
+
+
+def remove_tokens(node, tokens=set()):
+    """Reomoves any among a particular set of tokens from the immediate
+    descendants of a node. If ``tokens`` is the empty set, all tokens
+    are removed.
+    """
+    remove_children_if(node, partial(is_token, token_set=tokens))
 
 
 def flatten(node):
@@ -582,28 +594,12 @@ def flatten(node):
         node.result = tuple(new_result)
 
 
-def remove_tokens(node, tokens=set()):
-    """Reomoves any among a particular set of tokens from the immediate
-    descendants of a node. If ``tokens`` is the empty set, all tokens
-    are removed.
-    """
-    if node.children:
-        if tokens:
-            node.result = tuple(child for child in node.children
-                                if child.parser.name != TOKEN_KEYWORD or
-                                child.result not in tokens)
-        else:
-            node.result = tuple(child for child in node.children
-                                if child.parser.name != TOKEN_KEYWORD)
-
-
-def remove_enclosing_delimiters(node):
-    """Removes the enclosing delimiters from a structure (e.g. quotation marks
+def remove_brackets(node):
+    """Removes any enclosing delimiters from a structure (e.g. quotation marks
     from a literal or braces from a group).
     """
     if len(node.children) >= 3:
-        assert isinstance(node.children[0].result, str) and \
-               isinstance(node.children[-1].result, str), node.as_sexpr()
+        assert not node.children[0].children and not node.children[-1].children, node.as_sexpr()
         node.result = node.result[1:-1]
 
 
@@ -1487,23 +1483,25 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
+remove_enclosing_delimiters = partial(remove_tokens, tokens={})
+
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
     "syntax":
         remove_expendables,
     "directive, definition":
         partial(remove_tokens, tokens={'@', '='}),
-    "expression":
+    "expression, chain":
         [replace_by_single_child, flatten,
-         partial(remove_tokens, tokens={'|'})],
+         partial(remove_tokens, tokens={'|', '--'})],
     "term":
         [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
-        [remove_enclosing_delimiters, replace_by_single_child],
+        [remove_brackets, replace_by_single_child],
     "oneormore, repetition, option":
-        [reduce_single_child, remove_enclosing_delimiters],
+        [reduce_single_child, remove_brackets],
     "symbol, literal, regexp, list_":
         [remove_expendables, reduce_single_child],
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
@@ -2160,6 +2158,8 @@ def source_changed(grammar_source, grammar_class):
 
 
 def test(file_name):
+    global DEBUG
+    DEBUG = "DEBUG"
     print(file_name)
     with open('examples/' + file_name, encoding="utf-8") as f:
         grammar = f.read()

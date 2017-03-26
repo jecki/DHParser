@@ -10,8 +10,7 @@ directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
 expression =  term { "|" term }
 term       =  { factor }+
-factor     =  [flowmarker] chain
-            | [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
             | [flowmarker] literal
             | [flowmarker] regexp
             | [flowmarker] group
@@ -28,9 +27,6 @@ option     =  "[" expression §"]"
 oneormore  =  "{" expression "}+"
 repetition =  "{" expression §"}"
 
-chain      = { link "--" }+ link                 # chained regular expressions
-link       = regexp | symbol                     # semantic restriction: symbol must evaluate to a regexp or chain
-
 symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
 literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
             | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
@@ -40,3 +36,5 @@ regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
 list_      =  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
                                                  # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
 EOF =  !/./
+
+
