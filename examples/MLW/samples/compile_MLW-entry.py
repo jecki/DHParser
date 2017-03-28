@@ -40,7 +40,7 @@ if (not os.path.exists(MLW_compiler) or
         print(errors)
         sys.exit(1)
 
-ParserCombinators.DEBUG = True
+ParserCombinators.DEBUG = "DEBUG"
 
 errors = run_compiler("fascitergula.mlw", MLW_compiler, ".xml")
 if errors:

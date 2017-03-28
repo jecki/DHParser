@@ -42,7 +42,7 @@ class MLWGrammar(GrammarBase):
     # EBNF-Syntax für MLW-Artikel
     
     @ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
-    @ whitespace    =  /\s*/            # Auch Zeilenspränge zählen als Leerraum
+    @ whitespace    =  /[\t\r\ ]*/      # Auch Zeilensprünge zählen als Leerraum
     @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
     
     
@@ -55,12 +55,13 @@ class MLWGrammar(GrammarBase):
     
     LemmaPosition   = "LEMMA"  §Lemma  [LemmaVarianten]  §GrammatikPosition
     
-    Lemma           = [_tll]  WORT_KLEIN
+    Lemma           = [_tll]  WORT_KLEIN [LEER]
     _tll            = "*"
     
-    LemmaVarianten  = "VARIANTEN" §LVariante  { "," §LVariante }  [";" §LVZusatz]
-    LVariante       = ~/(?:[a-z]|-)+/~  # Buchstabenfolge mit Trennzeichen "-"
-    LVZusatz        = "sim."
+    LemmaVarianten  = "VARIANTEN" [LEER] §LVariante  { TRENNER LVariante }
+                      [TRENNER LVZusatz] [LEER]
+    LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
+    LVZusatz        = "ZUSATZ" "sim."
     
     
     
@@ -128,18 +129,23 @@ class MLWGrammar(GrammarBase):
     LAT_WORT        = /[a-z]+/~
     GROSSSCHRIFT    = /[A-ZÄÖÜ]+/~
     
-    LEER            = /\s*/
+    TRENNER         = /\s*;\s*/ | { ZSPRUNG }+
+    ZSPRUNG         = /\n/~
+    
+    LEER            = /\s+/                     # horizontaler und(!) vertikaler Leerraum
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "26b36c7d970ea079fb4207bdcffd5237"
+    source_hash__ = "80f86a639074d1c7dac188925032c7d0"
     parser_initialization__ = "upon instatiation"
-    wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+    wsp__ = mixin_comment(whitespace=r'[\t\r\ ]*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
     wspR__ = wsp__
     NIEMALS = RE('(?!.)', wR='', wL='')
     DATEI_ENDE = NegativeLookahead(RE('.', wR='', wL=''))
-    LEER = RE('\\s*', wR='', wL='')
+    LEER = RE('\\s+', wR='', wL='')
+    ZSPRUNG = RE('\\n', wL='')
+    TRENNER = Alternative(RE('\\s*;\\s*', wR='', wL=''), OneOrMore(ZSPRUNG))
     GROSSSCHRIFT = RE('[A-ZÄÖÜ]+', wL='')
     LAT_WORT = RE('[a-z]+', wL='')
     WORT_KLEIN = RE('[a-zäöüß]+', wL='')
@@ -171,11 +177,11 @@ class MLWGrammar(GrammarBase):
     GrammatikVarianten = Sequence(Token(";"), Required(GVariante))
     _wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
     GrammatikPosition = Sequence(Token("GRAMMATIK"), Required(_wortart), Required(Token(";")), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(Alternative(Token(";"), Token("."))))
-    LVZusatz = Token("sim.")
+    LVZusatz = Sequence(Token("ZUSATZ"), Token("sim."))
     LVariante = RE('(?:[a-z]|-)+')
-    LemmaVarianten = Sequence(Token("VARIANTEN"), Required(LVariante), ZeroOrMore(Sequence(Token(","), Required(LVariante))), Optional(Sequence(Token(";"), Required(LVZusatz))))
+    LemmaVarianten = Sequence(Token("VARIANTEN"), Optional(LEER), Required(LVariante), ZeroOrMore(Sequence(TRENNER, LVariante)), Optional(Sequence(TRENNER, LVZusatz)), Optional(LEER))
     _tll = Token("*")
-    Lemma = Sequence(Optional(_tll), WORT_KLEIN)
+    Lemma = Sequence(Optional(_tll), WORT_KLEIN, Optional(LEER))
     LemmaPosition = Sequence(Token("LEMMA"), Required(Lemma), Optional(LemmaVarianten), Required(GrammatikPosition))
     Artikel = Sequence(Optional(LEER), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LEER), DATEI_ENDE)
     root__ = Artikel

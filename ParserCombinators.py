@@ -952,7 +952,7 @@ class RegExp(Parser):
             regexp = copy.deepcopy(self.regexp)
         except TypeError:
             regexp = self.regexp.pattern
-        duplicate = RegExp(self.name, regexp)
+        duplicate = RegExp(regexp, self.name)
         duplicate.name = self.name  # this ist needed!!!!
         duplicate.regexp = self.regexp
         duplicate.grammar = self.grammar

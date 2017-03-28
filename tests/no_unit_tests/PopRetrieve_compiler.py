@@ -45,7 +45,7 @@ class PopRetrieveGrammar(GrammarBase):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "0aa2d29dd82f5a304e393f1f4b253ac8"
+    source_hash__ = "50f817c35d08825b20a95664a555d9b0"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'\s*', comment=r'')
     wspL__ = ''
