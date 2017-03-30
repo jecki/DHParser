@@ -18,7 +18,7 @@ Lemma           = [_tll]  WORT_KLEIN [LEER]
 _tll            = "*"
 
 LemmaVarianten  = "VARIANTEN" [LEER] §LVariante  { TRENNER LVariante }
-                  [TRENNER LVZusatz] [LEER]
+                  [TRENNER LVZusatz] [TRENNER]
 LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
 LVZusatz        = "ZUSATZ" "sim."
 
@@ -26,7 +26,8 @@ LVZusatz        = "ZUSATZ" "sim."
 
 #### GRAMMATIK-POSITION ######################################################
 
-GrammatikPosition = "GRAMMATIK" §_wortart §";"  §Flexionen  [_genus]  {GrammatikVarianten} [";" | "."]
+GrammatikPosition = "GRAMMATIK" [LEER] §_wortart §TRENNER §Flexionen [_genus]
+                    {GrammatikVarianten} [TRENNER]
 
 _wortart        = "nomen"  | "n." |
                   "verb"   | "v." |
@@ -34,7 +35,7 @@ _wortart        = "nomen"  | "n." |
                   "adjektiv" | "adj."
 
 
-GrammatikVarianten = ";" §GVariante
+GrammatikVarianten = TRENNER GVariante
 GVariante       = Flexionen  [_genus]  ":"  Beleg
 
 Flexionen       = Flexion { "," §Flexion }
@@ -49,29 +50,30 @@ _genus          = "maskulinum" | "m." |
 #### ARTIKEL-KOPF ############################################################
 
 ArtikelKopf     = SchreibweisenPosition
-SchreibweisenPosition =  "SCHREIBWEISE" §SWTyp ":" §SWVariante { "," §SWVariante}
+SchreibweisenPosition =  "SCHREIBWEISE" [LEER] §SWTyp ":" [LEER]
+                         §SWVariante { TRENNER SWVariante} [LEER]
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
 
 Beleg           = Verweis
-Verweis         = ~/>>\w+/~
+Verweis         = ~/\w+/~
 VerweisZiel     = ~/<\w+>/~
 
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition = { "BEDEUTUNG" Bedeutung }+
+BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung [LEER] }+
 
 Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
-Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-Interpretamente = LateinischeBedeutung  DeutscheBedeutung
+Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LEER]
+Interpretamente = LateinischeBedeutung [LEER] §DeutscheBedeutung [LEER]
 LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-Belege          = "BELEGE" { "*" EinBeleg }
-EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s?.*/ }+
-                  [Zusatz]
-Zusatz          = "ZUSATZ" /\s?.*/
+Belege          = "BELEGE" [LEER] { "*" EinBeleg }
+EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
+                  [Zusatz] [LEER]
+Zusatz          = "ZUSATZ" /\s*.*/
 
 
 #### AUTOR/AUTORIN ###########################################################

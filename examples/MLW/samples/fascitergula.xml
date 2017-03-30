@@ -7,28 +7,119 @@
             <WORT_KLEIN>
                 facitergula
             </WORT_KLEIN>
+            <LEER>
+                <RegExp>
+                    
+                    
+                    
+                </RegExp>
+            </LEER>
         </Lemma>
         <LemmaVarianten>
+            <LEER>
+                <RegExp>
+                    
+                        
+                </RegExp>
+            </LEER>
             <LVariante>
                 fasc-itergula
             </LVariante>
+            <TRENNER>
+                <ZSPRUNG>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </ZSPRUNG>
+            </TRENNER>
             <LVariante>
                 fac-iet-ergula
             </LVariante>
+            <TRENNER>
+                <ZSPRUNG>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </ZSPRUNG>
+            </TRENNER>
             <LVariante>
                 fac-ist-ergula
             </LVariante>
+            <TRENNER>
+                <ZSPRUNG>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </ZSPRUNG>
+            </TRENNER>
             <LVariante>
                 fa-rcu-tergula
             </LVariante>
+            <TRENNER>
+                <OneOrMore>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                </OneOrMore>
+            </TRENNER>
             <LVZusatz>
-                sim.
+                <token__>
+                    ZUSATZ
+                </token__>
+                <token__>
+                    sim.
+                </token__>
             </LVZusatz>
+            <TRENNER>
+                <OneOrMore>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                </OneOrMore>
+            </TRENNER>
         </LemmaVarianten>
         <GrammatikPosition>
+            <LEER>
+                <RegExp>
+                    
+                        
+                </RegExp>
+            </LEER>
             <_wortart>
                 nomen
             </_wortart>
+            <TRENNER>
+                <RegExp>
+                    ; 
+                </RegExp>
+            </TRENNER>
             <Flexionen>
                 <Flexion>
                     -ar
@@ -37,125 +128,270 @@
             <_genus>
                 f.
             </_genus>
-            <GVariante>
-                <Flexionen>
-                    <Flexion>
-                        -us
-                    </Flexion>
-                    <Flexion>
-                        -i
-                    </Flexion>
-                </Flexionen>
-                <_genus>
-                    m.
-                </_genus>
-                <Verweis>
-                    >>beleg_id_1
-                </Verweis>
-            </GVariante>
-            <GVariante>
-                <Flexionen>
-                    <Flexion>
-                        -um
-                    </Flexion>
-                    <Flexion>
-                        -i
-                    </Flexion>
-                </Flexionen>
-                <_genus>
-                    n.
-                </_genus>
-                <Verweis>
-                    >>beleg_id_2
-                </Verweis>
-            </GVariante>
+            <GrammatikVarianten>
+                <TRENNER>
+                    <RegExp>
+                        ;
+                        
+                            
+                    </RegExp>
+                </TRENNER>
+                <GVariante>
+                    <Flexionen>
+                        <Flexion>
+                            -us
+                        </Flexion>
+                        <Flexion>
+                            -i
+                        </Flexion>
+                    </Flexionen>
+                    <_genus>
+                        m.
+                    </_genus>
+                    <Verweis>
+                        beleg_id_1
+                    </Verweis>
+                </GVariante>
+            </GrammatikVarianten>
+            <GrammatikVarianten>
+                <TRENNER>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                </TRENNER>
+                <GVariante>
+                    <Flexionen>
+                        <Flexion>
+                            -um
+                        </Flexion>
+                        <Flexion>
+                            -i
+                        </Flexion>
+                    </Flexionen>
+                    <_genus>
+                        n.
+                    </_genus>
+                    <Verweis>
+                        beleg_id_2
+                    </Verweis>
+                </GVariante>
+            </GrammatikVarianten>
+            <TRENNER>
+                <OneOrMore>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                    <ZSPRUNG>
+                        <RegExp>
+                            
+                            
+                        </RegExp>
+                    </ZSPRUNG>
+                </OneOrMore>
+            </TRENNER>
         </GrammatikPosition>
     </LemmaPosition>
     <SchreibweisenPosition>
+        <LEER>
+            <RegExp>
+                
+                    
+            </RegExp>
+        </LEER>
         <SWTyp>
             <token__>
                 script.
             </token__>
         </SWTyp>
+        <LEER>
+            <RegExp>
+                
+                        
+            </RegExp>
+        </LEER>
         <SWVariante>
             <Schreibweise>
                 vizreg-
             </Schreibweise>
             <Verweis>
-                >>beleg_id_3
+                beleg_id_3
             </Verweis>
         </SWVariante>
+        <TRENNER>
+            <ZSPRUNG>
+                <RegExp>
+                    
+                    
+                </RegExp>
+            </ZSPRUNG>
+        </TRENNER>
         <SWVariante>
             <Schreibweise>
                 festregel(a)
             </Schreibweise>
             <Verweis>
-                >>beleg_id_4
+                beleg_id_4
             </Verweis>
         </SWVariante>
+        <TRENNER>
+            <ZSPRUNG>
+                <RegExp>
+                    
+                    
+                </RegExp>
+            </ZSPRUNG>
+        </TRENNER>
         <SWVariante>
             <Schreibweise>
                 fezdregl(a)
             </Schreibweise>
             <Verweis>
-                >>beleg_id5
+                beleg_id5
             </Verweis>
         </SWVariante>
+        <LEER>
+            <RegExp>
+                
+                
+                
+            </RegExp>
+        </LEER>
     </SchreibweisenPosition>
     <BedeutungsPosition>
+        <LEER>
+            <RegExp>
+                
+                
+                
+            </RegExp>
+        </LEER>
         <Bedeutung>
             <Interpretamente>
                 <LateinischeBedeutung>
                     pannus, faciale, sudarium
                 </LateinischeBedeutung>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </LEER>
                 <DeutscheBedeutung>
                     Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]
                 </DeutscheBedeutung>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                        
+                    </RegExp>
+                </LEER>
             </Interpretamente>
             <Belege>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </LEER>
                 <EinBeleg>
                     Catal. thes. Germ. 28,11 (post 851) -um III.
+                    
                 </EinBeleg>
                 <EinBeleg>
                     Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+                      
+                    -as duas."
                     
-                      -as duas."
                 </EinBeleg>
                 <EinBeleg>
                     Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
+                    
                 </EinBeleg>
                 <EinBeleg>
                     Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+                      
+                    circumdari  iussit  pontifex."
                     
-                      circumdari  iussit  pontifex."
                 </EinBeleg>
                 <EinBeleg>
                     Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
-                    
-                      II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
-                    
-                      VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                      
+                    II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
+                      
+                    VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                      
                     saepe.
                 </EinBeleg>
             </Belege>
         </Bedeutung>
+        <LEER>
+            <RegExp>
+                
+                
+                
+                
+            </RegExp>
+        </LEER>
+        <LEER>
+            <RegExp>
+                
+                
+                
+            </RegExp>
+        </LEER>
         <Bedeutung>
             <Interpretamente>
                 <LateinischeBedeutung>
                     capital, rica
                 </LateinischeBedeutung>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </LEER>
                 <DeutscheBedeutung>
                     Kopftuch
                 </DeutscheBedeutung>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                        
+                    </RegExp>
+                </LEER>
             </Interpretamente>
             <Belege>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                    </RegExp>
+                </LEER>
                 <EinBeleg>
                     Transl. Libor.  I 32  raptis  feminarum -is  (fa[s]citergiis  var.  l.).
+                    
                 </EinBeleg>
                 <EinBeleg>
                     II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
+                      
+                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
                     
-                      clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
+                    
+                    
                 </EinBeleg>
             </Belege>
         </Bedeutung>
@@ -165,4 +401,10 @@
             Weber
         </Name>
     </Autorinfo>
+    <LEER>
+        <RegExp>
+            
+            
+        </RegExp>
+    </LEER>
 </Artikel>

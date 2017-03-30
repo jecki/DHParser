@@ -59,7 +59,7 @@ class MLWGrammar(GrammarBase):
     _tll            = "*"
     
     LemmaVarianten  = "VARIANTEN" [LEER] §LVariante  { TRENNER LVariante }
-                      [TRENNER LVZusatz] [LEER]
+                      [TRENNER LVZusatz] [TRENNER]
     LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
     LVZusatz        = "ZUSATZ" "sim."
     
@@ -67,7 +67,8 @@ class MLWGrammar(GrammarBase):
     
     #### GRAMMATIK-POSITION ######################################################
     
-    GrammatikPosition = "GRAMMATIK" §_wortart §";"  §Flexionen  [_genus]  {GrammatikVarianten} [";" | "."]
+    GrammatikPosition = "GRAMMATIK" [LEER] §_wortart §TRENNER §Flexionen [_genus]
+                        {GrammatikVarianten} [TRENNER]
     
     _wortart        = "nomen"  | "n." |
                       "verb"   | "v." |
@@ -75,7 +76,7 @@ class MLWGrammar(GrammarBase):
                       "adjektiv" | "adj."
     
     
-    GrammatikVarianten = ";" §GVariante
+    GrammatikVarianten = TRENNER GVariante
     GVariante       = Flexionen  [_genus]  ":"  Beleg
     
     Flexionen       = Flexion { "," §Flexion }
@@ -90,29 +91,30 @@ class MLWGrammar(GrammarBase):
     #### ARTIKEL-KOPF ############################################################
     
     ArtikelKopf     = SchreibweisenPosition
-    SchreibweisenPosition =  "SCHREIBWEISE" §SWTyp ":" §SWVariante { "," §SWVariante}
+    SchreibweisenPosition =  "SCHREIBWEISE" [LEER] §SWTyp ":" [LEER]
+                             §SWVariante { TRENNER SWVariante} [LEER]
     SWTyp           = "script." | "script. fat-"
     SWVariante      = Schreibweise ":" Beleg
     Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
     
     Beleg           = Verweis
-    Verweis         = ~/>>\w+/~
+    Verweis         = ~/\w+/~
     VerweisZiel     = ~/<\w+>/~
     
     
     #### BEDEUTUNGS-POSITION #####################################################
     
-    BedeutungsPosition = { "BEDEUTUNG" Bedeutung }+
+    BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung [LEER] }+
     
     Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
-    Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-    Interpretamente = LateinischeBedeutung  DeutscheBedeutung
+    Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LEER]
+    Interpretamente = LateinischeBedeutung [LEER] §DeutscheBedeutung [LEER]
     LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-    Belege          = "BELEGE" { "*" EinBeleg }
-    EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s?.*/ }+
-                      [Zusatz]
-    Zusatz          = "ZUSATZ" /\s?.*/
+    Belege          = "BELEGE" [LEER] { "*" EinBeleg }
+    EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
+                      [Zusatz] [LEER]
+    Zusatz          = "ZUSATZ" /\s*.*/
     
     
     #### AUTOR/AUTORIN ###########################################################
@@ -136,7 +138,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "80f86a639074d1c7dac188925032c7d0"
+    source_hash__ = "ab1cb5e0828e27aa217345f61803efd1"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'[\t\r\ ]*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -153,33 +155,33 @@ class MLWGrammar(GrammarBase):
     WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wL='')
     Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL=''))))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s?.*', wR='', wL=''))
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s?.*', wR='', wL=''))), Optional(Zusatz))
-    Belege = Sequence(Token("BELEGE"), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''))
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz), Optional(LEER))
+    Belege = Sequence(Token("BELEGE"), Optional(LEER), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
-    Interpretamente = Sequence(LateinischeBedeutung, DeutscheBedeutung)
-    Bedeutungskategorie = RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL='')
+    Interpretamente = Sequence(LateinischeBedeutung, Optional(LEER), Required(DeutscheBedeutung), Optional(LEER))
+    Bedeutungskategorie = Sequence(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''), Optional(LEER))
     Bedeutung = Sequence(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
-    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Bedeutung))
+    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Optional(LEER), Required(Bedeutung), Optional(LEER)))
     VerweisZiel = RE('<\\w+>')
-    Verweis = RE('>>\\w+')
+    Verweis = RE('\\w+')
     Beleg = Verweis
     Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
     SWVariante = Sequence(Schreibweise, Token(":"), Beleg)
     SWTyp = Alternative(Token("script."), Token("script. fat-"))
-    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Required(SWTyp), Token(":"), Required(SWVariante), ZeroOrMore(Sequence(Token(","), Required(SWVariante))))
+    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Optional(LEER), Required(SWTyp), Token(":"), Optional(LEER), Required(SWVariante), ZeroOrMore(Sequence(TRENNER, SWVariante)), Optional(LEER))
     ArtikelKopf = SchreibweisenPosition
     _genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
     Flexion = RE('-?[a-z]+', wL='')
     Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(","), Required(Flexion))))
     GVariante = Sequence(Flexionen, Optional(_genus), Token(":"), Beleg)
-    GrammatikVarianten = Sequence(Token(";"), Required(GVariante))
+    GrammatikVarianten = Sequence(TRENNER, GVariante)
     _wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
-    GrammatikPosition = Sequence(Token("GRAMMATIK"), Required(_wortart), Required(Token(";")), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(Alternative(Token(";"), Token("."))))
+    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LEER), Required(_wortart), Required(TRENNER), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(TRENNER))
     LVZusatz = Sequence(Token("ZUSATZ"), Token("sim."))
     LVariante = RE('(?:[a-z]|-)+')
-    LemmaVarianten = Sequence(Token("VARIANTEN"), Optional(LEER), Required(LVariante), ZeroOrMore(Sequence(TRENNER, LVariante)), Optional(Sequence(TRENNER, LVZusatz)), Optional(LEER))
+    LemmaVarianten = Sequence(Token("VARIANTEN"), Optional(LEER), Required(LVariante), ZeroOrMore(Sequence(TRENNER, LVariante)), Optional(Sequence(TRENNER, LVZusatz)), Optional(TRENNER))
     _tll = Token("*")
     Lemma = Sequence(Optional(_tll), WORT_KLEIN, Optional(LEER))
     LemmaPosition = Sequence(Token("LEMMA"), Required(Lemma), Optional(LemmaVarianten), Required(GrammatikPosition))

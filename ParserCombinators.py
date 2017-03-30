@@ -138,7 +138,7 @@ nil_scanner = lambda text: text
 def line_col(text, pos):
     """Returns the position within a text as (line, column)-tuple.
     """
-    assert pos < len(text)
+    assert pos < len(text), str(pos) + " >= " + str(len(text))
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
     return line, column
@@ -218,7 +218,7 @@ class Node:
         self._errors = []
         self.error_flag = any(r.error_flag for r in self.result) if self.children else False
         self._len = len(self.result) if not self.children else \
-            sum(child._len for child in self.result)
+            sum(child._len for child in self.children)
         self.pos = 0
 
     def __str__(self):
@@ -248,6 +248,7 @@ class Node:
 
     @property
     def len(self):
+        # DEBUGGING: print(str(self.parser), str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
         return self._len
 
     @property
@@ -863,11 +864,15 @@ class GrammarBase:
                                  else " too often! Terminating parser.")
                 stitches.append(Node(None, skip))
                 stitches[-1].add_error(error_msg)
-        if stitches:
+        # if stitches:
+        #     if result and stitches[-1] != result:
+        #         stitches.append(result)
+        #     if rest:
+        #         stitches.append(Node(None, rest))
+        if stitches and rest:
             if result and stitches[-1] != result:
                 stitches.append(result)
-            if rest:
-                stitches.append(Node(None, rest))
+            stitches.append(Node(None, rest))
         return result if not stitches else Node(None, tuple(stitches))
 
 
