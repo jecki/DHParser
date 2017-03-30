@@ -138,7 +138,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "ab1cb5e0828e27aa217345f61803efd1"
+    source_hash__ = "b7a2723dbd0e974ea5f5052e5a322791"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'[\t\r\ ]*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -195,8 +195,8 @@ class MLWGrammar(GrammarBase):
 #
 #######################################################################
 
-def test(node):
-    print(node.as_sexpr())
+# def test(node):
+#     print(node.as_sexpr())
 
 
 def join_strings(node, delimiter='\n'):
@@ -210,9 +210,10 @@ def join_strings(node, delimiter='\n'):
             while n < len(node.result) and not node.result[n].children:
                 n += 1
             nd.result = delimiter.join((r.result for r in node.result[a:n]))
+        else:
+            raise AssertionError(node.as_sexpr())
         new_result.append(nd)
     node.result = tuple(new_result)
-    print(node.as_sexpr())
 
 
 MLWTransTable = {

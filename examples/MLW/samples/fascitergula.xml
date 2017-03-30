@@ -311,40 +311,56 @@
                     
                 </EinBeleg>
                 <EinBeleg>
-                    Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
-                      
-                    -as duas."
-                    
+                    <RegExp>
+                        Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+                          
+                    </RegExp>
+                    <RegExp>
+                        -as duas."
+                        
+                    </RegExp>
                 </EinBeleg>
                 <EinBeleg>
                     Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
                     
                 </EinBeleg>
                 <EinBeleg>
-                    Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
-                      
-                    circumdari  iussit  pontifex."
-                    
+                    <RegExp>
+                        Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+                          
+                    </RegExp>
+                    <RegExp>
+                        circumdari  iussit  pontifex."
+                        
+                    </RegExp>
                 </EinBeleg>
                 <EinBeleg>
-                    Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
-                      
-                    II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
-                      
-                    VII. 92,6 fascercule tres. 21,20 IIII festregele.
-                      
-                    saepe.
+                    <RegExp>
+                        Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
+                          
+                    </RegExp>
+                    <RegExp>
+                        II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
+                          
+                    </RegExp>
+                    <RegExp>
+                        VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                          
+                    </RegExp>
+                    <Zusatz>
+                        saepe.
+                    </Zusatz>
+                    <LEER>
+                        <RegExp>
+                            
+                            
+                            
+                            
+                        </RegExp>
+                    </LEER>
                 </EinBeleg>
             </Belege>
         </Bedeutung>
-        <LEER>
-            <RegExp>
-                
-                
-                
-                
-            </RegExp>
-        </LEER>
         <LEER>
             <RegExp>
                 
@@ -386,12 +402,16 @@
                     
                 </EinBeleg>
                 <EinBeleg>
-                    II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
-                      
-                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
-                    
-                    
-                    
+                    <RegExp>
+                        II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
+                          
+                    </RegExp>
+                    <RegExp>
+                        clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
+                        
+                        
+                        
+                    </RegExp>
                 </EinBeleg>
             </Belege>
         </Bedeutung>
