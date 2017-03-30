@@ -636,6 +636,18 @@ TOKEN_KEYWORD = 'token__'
 
 
 class HistoryRecord:
+    """
+    Stores debugging information about one completed step in the
+    parsing history. 
+    
+    A parsing step is "completed" when the last one of a nested
+    sequence of parser-calls returns. The call stack including
+    the last parser call will be frozen in the ``HistoryRecord``-
+    object. In addition a reference to the generated leaf node
+    (if any) will be stored and the result status of the last
+    parser call, which ist either MATCH, FAIL (i.e. no match)
+    or ERROR.
+    """
     __slots__ = ('call_stack', 'node', 'remaining')
 
     MATCH = "MATCH"
