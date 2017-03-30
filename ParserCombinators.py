@@ -248,7 +248,7 @@ class Node:
 
     @property
     def len(self):
-        # DEBUGGING: print(str(self.parser), str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
+        # DEBUGGING:  print(str(self.parser), str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
         return self._len
 
     @property
@@ -876,15 +876,17 @@ class GrammarBase:
                                  else " too often! Terminating parser.")
                 stitches.append(Node(None, skip))
                 stitches[-1].add_error(error_msg)
+        if stitches and rest:
+            stitches.append(Node(None, rest))
         # if stitches:
         #     if result and stitches[-1] != result:
         #         stitches.append(result)
         #     if rest:
         #         stitches.append(Node(None, rest))
-        if stitches and rest:
-            if result and stitches[-1] != result:
-                stitches.append(result)
-            stitches.append(Node(None, rest))
+        # if stitches and rest:
+        #     if result and stitches[-1] != result:
+        #         stitches.append(result)
+        #     stitches.append(Node(None, rest))
         return result if not stitches else Node(None, tuple(stitches))
 
 

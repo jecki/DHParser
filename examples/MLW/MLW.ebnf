@@ -63,7 +63,7 @@ VerweisZiel     = ~/<\w+>/~
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung [LEER] }+
+BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung }+
 
 Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
 Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LEER]
@@ -72,7 +72,7 @@ LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Belege          = "BELEGE" [LEER] { "*" EinBeleg }
 EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
-                  [Zusatz] [LEER]
+                  [Zusatz]
 Zusatz          = "ZUSATZ" /\s*.*/
 
 

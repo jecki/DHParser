@@ -104,7 +104,7 @@ class MLWGrammar(GrammarBase):
     
     #### BEDEUTUNGS-POSITION #####################################################
     
-    BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung [LEER] }+
+    BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung }+
     
     Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
     Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LEER]
@@ -113,7 +113,7 @@ class MLWGrammar(GrammarBase):
     DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     Belege          = "BELEGE" [LEER] { "*" EinBeleg }
     EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
-                      [Zusatz] [LEER]
+                      [Zusatz]
     Zusatz          = "ZUSATZ" /\s*.*/
     
     
@@ -138,7 +138,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "b7a2723dbd0e974ea5f5052e5a322791"
+    source_hash__ = "cf1ef8acfc5e15dffc53b1b48eda89b0"
     parser_initialization__ = "upon instatiation"
     wsp__ = mixin_comment(whitespace=r'[\t\r\ ]*', comment=r'#.*(?:\n|$)')
     wspL__ = wsp__
@@ -156,14 +156,14 @@ class MLWGrammar(GrammarBase):
     Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL=''))))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
     Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''))
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz), Optional(LEER))
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
     Belege = Sequence(Token("BELEGE"), Optional(LEER), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     Interpretamente = Sequence(LateinischeBedeutung, Optional(LEER), Required(DeutscheBedeutung), Optional(LEER))
     Bedeutungskategorie = Sequence(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''), Optional(LEER))
     Bedeutung = Sequence(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
-    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Optional(LEER), Required(Bedeutung), Optional(LEER)))
+    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Optional(LEER), Required(Bedeutung)))
     VerweisZiel = RE('<\\w+>')
     Verweis = RE('\\w+')
     Beleg = Verweis
