@@ -199,14 +199,18 @@ class Node:
             through AST-transformation. READ ONLY!
         pos (int):  the position of the node within the parsed text.
 
-            The value of ``pos`` is zero by default and it will be
-            updated if the node or any of its parents is attached
-            to a new parent.
+            The value of ``pos`` is -1 meaning invalid by default. 
+            Setting this value will set the positions of all child
+            nodes relative to this value.  
 
-            From the point of view of a client, this value should
-            be considered READ ONLY. At any rate, it should only be
-            reassigned only during parsing stage and never during or
-            after the AST-transformation.
+            To set the pos values of all nodes in a syntax tree, the
+            pos value of the root node should be set to 0 right 
+            after parsing.
+
+            Other than that, this value should be considered READ ONLY. 
+            At any rate, it should only be reassigned only during
+            parsing stage and never during or after the
+            AST-transformation.
     """
 
     def __init__(self, parser, result):
@@ -219,7 +223,8 @@ class Node:
         self.error_flag = any(r.error_flag for r in self.result) if self.children else False
         self._len = len(self.result) if not self.children else \
             sum(child._len for child in self.children)
-        self.pos = 0
+        # self.pos = 0
+        self._pos = -1
 
     def __str__(self):
         if self.children:
@@ -253,6 +258,7 @@ class Node:
 
     @property
     def pos(self):
+        assert self._pos >= 0, "position value not initialized!"
         return self._pos
 
     @pos.setter
@@ -540,8 +546,8 @@ def is_whitespace(node):
     return node.parser.name == WHITESPACE_KEYWORD
 
 
-def is_scanner_token(node):
-    return isinstance(node.parser, ScannerToken)
+# def is_scanner_token(node):
+#     return isinstance(node.parser, ScannerToken)
 
 
 def is_empty(node):
@@ -549,7 +555,7 @@ def is_empty(node):
 
 
 def is_expendable(node):
-    return is_empty(node) or is_whitespace(node) or is_scanner_token(node)
+    return is_empty(node) or is_whitespace(node)  # or is_scanner_token(node)
 
 
 def is_token(node, token_set={}):
@@ -564,7 +570,7 @@ def remove_children_if(node, condition):
 
 
 remove_whitespace = partial(remove_children_if, condition=is_whitespace)
-remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
+# remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
 remove_expendables = partial(remove_children_if, condition=is_expendable)
 
 
@@ -612,8 +618,8 @@ def remove_brackets(node):
 
 AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
                'no_transformation', 'remove_children_if',
-               'is_whitespace', 'is_scanner_token', 'is_expendable',
-               'remove_whitespace', 'remove_scanner_tokens',
+               'is_whitespace', 'is_expendable', 'remove_whitespace',
+               # 'remove_scanner_tokens', 'is_scanner_token',
                'remove_expendables', 'flatten', 'remove_tokens',
                'remove_brackets',
                'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
@@ -876,18 +882,12 @@ class GrammarBase:
                                  else " too often! Terminating parser.")
                 stitches.append(Node(None, skip))
                 stitches[-1].add_error(error_msg)
-        if stitches and rest:
-            stitches.append(Node(None, rest))
-        # if stitches:
-        #     if result and stitches[-1] != result:
-        #         stitches.append(result)
-        #     if rest:
-        #         stitches.append(Node(None, rest))
-        # if stitches and rest:
-        #     if result and stitches[-1] != result:
-        #         stitches.append(result)
-        #     stitches.append(Node(None, rest))
-        return result if not stitches else Node(None, tuple(stitches))
+        if stitches:
+            if rest:
+                stitches.append(Node(None, rest))
+            result = Node(None, tuple(stitches))
+        result.pos = 0 # calculate all positions
+        return result
 
 
 def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
@@ -931,7 +931,7 @@ class ScannerToken(Parser):
         assert isinstance(scanner_token, str) and scanner_token and \
                scanner_token.isupper()
         assert RX_SCANNER_TOKEN.match(scanner_token)
-        super(ScannerToken, self).__init__(scanner_token)
+        super(ScannerToken, self).__init__(scanner_token, name=TOKEN_KEYWORD)
 
     def __call__(self, text):
         if text[0:1] == BEGIN_SCANNER_TOKEN:
@@ -2181,8 +2181,6 @@ def source_changed(grammar_source, grammar_class):
 
 
 def test(file_name):
-    global DEBUG
-    DEBUG = "DEBUG"
     print(file_name)
     with open('examples/' + file_name, encoding="utf-8") as f:
         grammar = f.read()
@@ -2199,6 +2197,16 @@ def test(file_name):
         result = compileDSL(grammar, result, EBNFTransTable, compiler)
         print(result)
     return result
+
+
+def profile(func):
+    import cProfile
+    pr = cProfile.Profile()
+    pr.enable()
+    func()
+    pr.disable()
+    # after your program ends
+    pr.print_stats(sort="tottime")
 
 
 # # Changes in the EBNF source that are not reflected in this file could be
@@ -2219,4 +2227,4 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         # self-test
-        test('EBNF/EBNF.ebnf')
+        profile(partial(test, file_name='EBNF/EBNF.ebnf'))
