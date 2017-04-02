@@ -1,0 +1,852 @@
+#!/usr/bin/python3
+
+"""parser.py - parser combinators for for DHParser
+
+Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+                Bavarian Academy of Sciences an Humanities (badw.de)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied.  See the License for the specific language governing
+permissions and limitations under the License.
+"""
+
+import copy
+import os
+
+try:
+    import regex as re
+except ImportError:
+    import re
+
+from logging import LOGGING, LOGS_DIR
+from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, error_messages, \
+    ASTTransform
+
+LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
+# value ought not to be set too high
+MAX_DROPOUTS = 25  # stop trying to recover parsing after so many errors
+
+
+class HistoryRecord:
+    """
+    Stores debugging information about one completed step in the
+    parsing history. 
+
+    A parsing step is "completed" when the last one of a nested
+    sequence of parser-calls returns. The call stack including
+    the last parser call will be frozen in the ``HistoryRecord``-
+    object. In addition a reference to the generated leaf node
+    (if any) will be stored and the result status of the last
+    parser call, which ist either MATCH, FAIL (i.e. no match)
+    or ERROR.
+    """
+    __slots__ = ('call_stack', 'node', 'remaining')
+
+    MATCH = "MATCH"
+    ERROR = "ERROR"
+    FAIL = "FAIL"
+
+    def __init__(self, call_stack, node, remaining):
+        self.call_stack = call_stack
+        self.node = node
+        self.remaining = remaining
+
+    @property
+    def stack(self):
+        return "->".join(str(parser) for parser in self.call_stack)
+
+    @property
+    def status(self):
+        return self.FAIL if self.node is None else self.ERROR if self.node._errors else self.MATCH
+
+    @property
+    def extent(self):
+        return ((-self.remaining - self.node.len, -self.remaining) if self.node
+                else (-self.remaining, None))
+
+
+def add_parser_guard(parser_func):
+    def guarded_call(parser, text):
+        try:
+            location = len(text)
+            # if location has already been visited by the current parser,
+            # return saved result
+            if location in parser.visited:
+                return parser.visited[location]
+            # break left recursion at the maximum allowed depth
+            if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
+                return None, text
+
+            parser.recursion_counter[location] += 1
+            grammar = parser.grammar
+
+            if grammar.track_history:
+                grammar.call_stack.append(parser)
+                grammar.moving_forward = True
+
+            # run original __call__ method
+            node, rest = parser_func(parser, text)
+
+            if grammar.track_history:
+                if grammar.moving_forward:  # and result[0] == None
+                    grammar.moving_forward = False
+                    record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
+                    grammar.history.append(record)
+                grammar.call_stack.pop()
+
+            if node is not None:
+                # in case of a recursive call saves the result of the first
+                # (or left-most) call that matches
+                parser.visited[location] = (node, rest)
+                grammar.last_node = node
+            elif location in parser.visited:
+                # if parser did non match but a saved result exits, assume
+                # left recursion and use the saved result
+                node, rest = parser.visited[location]
+
+            parser.recursion_counter[location] -= 1
+
+        except RecursionError:
+            node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
+            node.add_error("maximum recursion depth of parser reached; "
+                           "potentially due to too many errors!")
+            node.error_flag = True
+            rest = ''
+
+        return node, rest
+
+    return guarded_call
+
+
+class ParserMetaClass(type):
+    def __init__(cls, name, bases, attrs):
+        # The following condition is necessary for classes that don't override
+        # the __call__() method, because in these cases the non-overridden
+        # __call__()-method would be substituted a second time!
+        guarded_parser_call = add_parser_guard(cls.__call__)
+        if cls.__call__.__code__ != guarded_parser_call.__code__:
+            cls.__call__ = guarded_parser_call
+        super(ParserMetaClass, cls).__init__(name, bases, attrs)
+
+
+class Parser(metaclass=ParserMetaClass):
+    def __init__(self, name=None):
+        assert name is None or isinstance(name, str), str(name)
+        self.name = name or ''
+        self.grammar = None  # center for global variables etc.
+        self.reset()
+
+    def reset(self):
+        self.visited = dict()
+        self.recursion_counter = dict()
+        self.cycle_detection = set()
+
+    def __call__(self, text):
+        return None, text  # default behaviour: don't match
+
+    def __str__(self):
+        return self.name or self.__class__.__name__
+
+    @property
+    def grammar(self):
+        return self._grammar
+
+    @grammar.setter
+    def grammar(self, grammar_base):
+        self._grammar = grammar_base
+        self._grammar_assigned_notifier()
+
+    def _grammar_assigned_notifier(self):
+        pass
+
+    def apply(self, func):
+        """Applies function `func(parser)` recursively to this parser and all
+        descendendants of the tree of parsers. The same function can never
+        be applied twice between calls of the ``reset()``-method!
+        """
+        if func in self.cycle_detection:
+            return False
+        else:
+            self.cycle_detection.add(func)
+            func(self)
+            return True
+
+
+class GrammarBase:
+    root__ = None  # should be overwritten by grammar subclass
+
+    @classmethod
+    def _assign_parser_names(cls):
+        """Initializes the `parser.name` fields of those
+        Parser objects that are directly assigned to a class field with
+        the field's name, e.g.
+            class Grammar(GrammarBase):
+                ...
+                symbol = RE('(?!\\d)\\w+')
+        After the call of this method symbol.name == "symbol"
+        holds. Names assigned via the `name`-parameter of the
+        constructor will not be overwritten.
+        """
+        if cls.parser_initialization__ == "done":
+            return
+        cdict = cls.__dict__
+        for entry, parser in cdict.items():
+            if isinstance(parser, Parser):
+                if not parser.name or parser.name == TOKEN_KEYWORD:
+                    parser.name = entry
+                if (isinstance(parser, Forward) and (not parser.parser.name
+                                                     or parser.parser.name == TOKEN_KEYWORD)):
+                    parser.parser.name = entry
+        cls.parser_initialization__ = "done"
+
+    def __init__(self):
+        self.all_parsers = set()
+        self.dirty_flag = False
+        self.track_history = LOGGING
+        name = self.__class__.__name__
+        self.log_file_name = name[:-7] if name.lower().endswith('grammar') else name
+        self._reset()
+        self._assign_parser_names()
+        self.root__ = copy.deepcopy(self.__class__.root__)
+        if self.wspL__:
+            self.wsp_left_parser__ = RegExp(self.wspL__, WHITESPACE_KEYWORD)
+            self.wsp_left_parser__.grammar = self
+        else:
+            self.wsp_left_parser__ = ZOMBIE_PARSER
+        if self.wspR__:
+            self.wsp_right_parser__ = RegExp(self.wspR__, WHITESPACE_KEYWORD)
+            self.wsp_right_parser__.grammar = self
+        else:
+            self.wsp_right_parser__ = ZOMBIE_PARSER
+        self.root__.apply(self._add_parser)
+
+    def _reset(self):
+        self.variables = dict()  # support for Pop and Retrieve operators
+        self.document = ""  # source document
+        self.last_node = None
+        self.call_stack = []  # support for call stack tracing
+        self.history = []  # snapshots of call stacks
+        self.moving_forward = True  # also needed for call stack tracing
+
+    def _add_parser(self, parser):
+        """Adds the copy of the classes parser object to this
+        particular instance of GrammarBase.
+        """
+        setattr(self, parser.name, parser)
+        self.all_parsers.add(parser)
+        parser.grammar = self
+
+    def parse(self, document):
+        """Parses a document with with parser-combinators.
+
+        Args:
+            document (str): The source text to be parsed.
+        Returns:
+            Node: The root node ot the parse tree.
+        """
+        if self.root__ is None:
+            raise NotImplementedError()
+        if self.dirty_flag:
+            self._reset()
+            for parser in self.all_parsers:
+                parser.reset()
+        else:
+            self.dirty_flag = True
+        self.document = document
+        parser = self.root__
+        result = ""
+        stitches = []
+        rest = document
+        while rest and len(stitches) < MAX_DROPOUTS:
+            result, rest = parser(rest)
+            if rest:
+                fwd = rest.find("\n") + 1 or len(rest)
+                skip, rest = rest[:fwd], rest[fwd:]
+                if result is None:
+                    error_msg = "Parser did not match! Invalid source file?"
+                else:
+                    stitches.append(result)
+                    error_msg = "Parser stopped before end" + \
+                                ("! trying to recover..."
+                                 if len(stitches) < MAX_DROPOUTS
+                                 else " too often! Terminating parser.")
+                stitches.append(Node(None, skip))
+                stitches[-1].add_error(error_msg)
+        if stitches:
+            if rest:
+                stitches.append(Node(None, rest))
+            result = Node(None, tuple(stitches))
+        result.pos = 0  # calculate all positions
+        return result
+
+    def log_parsing_history(self):
+        """Writes a log of the parsing history of the most recently parsed
+        document. 
+        """
+
+        def prepare_line(record):
+            excerpt = self.document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
+            excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
+            return (record.stack, record.status, excerpt)
+
+        def write_log(history, log_name):
+            path = os.path.join(LOGS_DIR(), self.log_file_name + log_name + "_parser.log")
+            if history:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(history))
+            elif os.path.exists(path):
+                os.remove(path)
+
+        if LOGGING:
+            assert self.history
+            full_history, match_history, errors_only = [], [], []
+            for record in self.history:
+                line = ";  ".join(prepare_line(record))
+                full_history.append(line)
+                if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
+                    match_history.append(line)
+                    if record.node.errors:
+                        errors_only.append(line)
+            write_log(full_history, '_full')
+            write_log(match_history, '_match')
+            write_log(errors_only, '_errors')
+
+
+########################################################################
+#
+# Token and Regular Expression parser classes (i.e. leaf classes)
+#
+########################################################################
+
+
+
+RX_SCANNER_TOKEN = re.compile('\w+')
+BEGIN_SCANNER_TOKEN = '\x1b'
+END_SCANNER_TOKEN = '\x1c'
+
+
+def make_token(token, argument=''):
+    """Turns the ``token`` and ``argument`` into a special token that
+    will be caught by the `ScannerToken`-parser.
+
+    This function is a support function that should be used by scanners
+    to inject scanner tokens into the source text.
+    """
+    assert RX_SCANNER_TOKEN.match(token)
+    assert argument.find(BEGIN_SCANNER_TOKEN) < 0
+    assert argument.find(END_SCANNER_TOKEN) < 0
+
+    return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
+
+
+nil_scanner = lambda text: text
+
+
+class ScannerToken(Parser):
+    def __init__(self, scanner_token):
+        assert isinstance(scanner_token, str) and scanner_token and \
+               scanner_token.isupper()
+        assert RX_SCANNER_TOKEN.match(scanner_token)
+        super(ScannerToken, self).__init__(scanner_token, name=TOKEN_KEYWORD)
+
+    def __call__(self, text):
+        if text[0:1] == BEGIN_SCANNER_TOKEN:
+            end = text.find(END_SCANNER_TOKEN, 1)
+            if end < 0:
+                node = Node(self, '').add_error(
+                    'END_SCANNER_TOKEN delimiter missing from scanner token. '
+                    '(Most likely due to a scanner bug!)')
+                return node, text[1:]
+            elif end == 0:
+                node = Node(self, '').add_error(
+                    'Scanner token cannot have zero length. '
+                    '(Most likely due to a scanner bug!)')
+                return node, text[2:]
+            elif text.find(BEGIN_SCANNER_TOKEN, 1, end) >= 0:
+                node = Node(self, text[len(self.name) + 1:end])
+                node.add_error(
+                    'Scanner tokens must not be nested or contain '
+                    'BEGIN_SCANNER_TOKEN delimiter as part of their argument. '
+                    '(Most likely due to a scanner bug!)')
+                return node, text[end:]
+            if text[1:len(self.name) + 1] == self.name:
+                return Node(self, text[len(self.name) + 1:end]), \
+                       text[end + 1:]
+        return None, text
+
+
+class RegExp(Parser):
+    def __init__(self, regexp, name=None):
+        super(RegExp, self).__init__(name)
+        self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
+
+    def __deepcopy__(self, memo):
+        # This method is obsolete with the new `regex` module! It's
+        # being kept for compatibility with Python's standard library
+        try:
+            regexp = copy.deepcopy(self.regexp)
+        except TypeError:
+            regexp = self.regexp.pattern
+        duplicate = RegExp(regexp, self.name)
+        duplicate.name = self.name  # this ist needed!!!!
+        duplicate.regexp = self.regexp
+        duplicate.grammar = self.grammar
+        duplicate.visited = copy.deepcopy(self.visited, memo)
+        duplicate.recursion_counter = copy.deepcopy(self.recursion_counter,
+                                                    memo)
+        return duplicate
+
+    def __call__(self, text):
+        match = text[0:1] != BEGIN_SCANNER_TOKEN and self.regexp.match(text)  # ESC starts a scanner token.
+        if match:
+            end = match.end()
+            return Node(self, text[:end]), text[end:]
+        return None, text
+
+
+class RE(Parser):
+    """Regular Expressions with optional leading or trailing whitespace.
+    """
+
+    def __init__(self, regexp, wL=None, wR=None, name=None):
+        super(RE, self).__init__(name)
+        # assert wR or regexp == '.' or isinstance(self, Token)
+        self.wL = wL
+        self.wR = wR
+        self.wspLeft = RegExp(wL, WHITESPACE_KEYWORD) if wL else ZOMBIE_PARSER
+        self.wspRight = RegExp(wR, WHITESPACE_KEYWORD) if wR else ZOMBIE_PARSER
+        self.main = RegExp(regexp)
+
+    def __call__(self, text):
+        # assert self.main.regexp.pattern != "@"
+        t = text
+        wL, t = self.wspLeft(t)
+        main, t = self.main(t)
+        if main:
+            wR, t = self.wspRight(t)
+            result = tuple(nd for nd in (wL, main, wR)
+                           if nd and nd.result != '')
+            return Node(self, result), t
+        return None, text
+
+    def __str__(self):
+        if self.name == TOKEN_KEYWORD:
+            return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
+        return self.name or ('RE ' + ('~' if self.wL else '')
+                             + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
+
+    def _grammar_assigned_notifier(self):
+        if self.grammar:
+            if self.wL is None:
+                self.wspLeft = self.grammar.wsp_left_parser__
+            if self.wR is None:
+                self.wspRight = self.grammar.wsp_right_parser__
+
+    def apply(self, func):
+        if super(RE, self).apply(func):
+            if self.wL:
+                self.wspLeft.apply(func)
+            if self.wR:
+                self.wspRight.apply(func)
+            self.main.apply(func)
+
+
+def escape_re(s):
+    """Returns `s` with all regular expression special characters escaped.
+    """
+    assert isinstance(s, str)
+    re_chars = r"\.^$*+?{}[]()#<>=|!"
+    for esc_ch in re_chars:
+        s = s.replace(esc_ch, '\\' + esc_ch)
+    return s
+
+
+def Token(token, wL=None, wR=None, name=None):
+    return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
+
+
+def mixin_comment(whitespace, comment):
+    """Mixes comment-regexp into whitespace regexp.
+    """
+    wspc = '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
+    return wspc
+
+
+########################################################################
+#
+# Combinator parser classes (i.e. trunk classes of the parser tree)
+#
+########################################################################
+
+
+class UnaryOperator(Parser):
+    def __init__(self, parser, name=None):
+        super(UnaryOperator, self).__init__(name)
+        assert isinstance(parser, Parser)
+        self.parser = parser
+
+    def apply(self, func):
+        if super(UnaryOperator, self).apply(func):
+            self.parser.apply(func)
+
+
+class NaryOperator(Parser):
+    def __init__(self, *parsers, name=None):
+        super(NaryOperator, self).__init__(name)
+        assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        self.parsers = parsers
+
+    def apply(self, func):
+        if super(NaryOperator, self).apply(func):
+            for parser in self.parsers:
+                parser.apply(func)
+
+
+class Optional(UnaryOperator):
+    def __init__(self, parser, name=None):
+        super(Optional, self).__init__(parser, name)
+        assert isinstance(parser, Parser)
+        assert not isinstance(parser, Optional), \
+            "Nesting options would be redundant: %s(%s)" % \
+            (str(name), str(parser.name))
+        assert not isinstance(parser, Required), \
+            "Nestion options with required elements is contradictory: " \
+            "%s(%s)" % (str(name), str(parser.name))
+
+    def __call__(self, text):
+        node, text = self.parser(text)
+        if node:
+            return Node(self, node), text
+        return Node(self, ()), text
+
+
+class ZeroOrMore(Optional):
+    def __call__(self, text):
+        results = ()
+        while text:
+            node, text = self.parser(text)
+            if not node:
+                break
+            results += (node,)
+        return Node(self, results), text
+
+
+class OneOrMore(UnaryOperator):
+    def __init__(self, parser, name=None):
+        super(OneOrMore, self).__init__(parser, name)
+        assert not isinstance(parser, Optional), \
+            "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
+            "%s(%s)" % (str(name), str(parser.name))
+
+    def __call__(self, text):
+        results = ()
+        text_ = text
+        while text_:
+            node, text_ = self.parser(text_)
+            if not node:
+                break
+            results += (node,)
+        if results == ():
+            return None, text
+        return Node(self, results), text_
+
+
+class Sequence(NaryOperator):
+    def __init__(self, *parsers, name=None):
+        super(Sequence, self).__init__(*parsers, name=name)
+        assert len(self.parsers) >= 1
+
+    def __call__(self, text):
+        results = ()
+        text_ = text
+        for parser in self.parsers:
+            node, text_ = parser(text_)
+            if not node:
+                return node, text
+            if node.result:  # Nodes with zero-length result are silently omitted
+                results += (node,)
+            if node.error_flag:
+                break
+        assert len(results) <= len(self.parsers)
+        return Node(self, results), text_
+
+
+class Alternative(NaryOperator):
+    def __init__(self, *parsers, name=None):
+        super(Alternative, self).__init__(*parsers, name=name)
+        assert len(self.parsers) >= 1
+        assert all(not isinstance(p, Optional) for p in self.parsers)
+
+    def __call__(self, text):
+        for parser in self.parsers:
+            node, text_ = parser(text)
+            if node:
+                return Node(self, node), text_
+        return None, text
+
+
+########################################################################
+#
+# Flow control operators
+#
+########################################################################
+
+
+class FlowOperator(UnaryOperator):
+    def __init__(self, parser, name=None):
+        super(FlowOperator, self).__init__(parser, name)
+
+
+class Required(FlowOperator):
+    # TODO: Add constructor that checks for logical errors, like `Required(Optional(...))` constructs
+    def __call__(self, text):
+        node, text_ = self.parser(text)
+        if not node:
+            m = re.search(r'\s(\S)', text)
+            i = max(1, m.regs[1][0]) if m else 1
+            node = Node(self, text[:i])
+            text_ = text[i:]
+            # assert False, "*"+text[:i]+"*"
+            node.add_error('%s expected; "%s..." found!' %
+                           (str(self.parser), text[:10]))
+        return node, text_
+
+
+class Lookahead(FlowOperator):
+    def __init__(self, parser, name=None):
+        super(Lookahead, self).__init__(parser, name)
+
+    def __call__(self, text):
+        node, text_ = self.parser(text)
+        if self.sign(node is not None):
+            return Node(self, ''), text
+        else:
+            return None, text
+
+    def sign(self, bool_value):
+        return bool_value
+
+
+class NegativeLookahead(Lookahead):
+    def sign(self, bool_value):
+        return not bool_value
+
+
+def iter_right_branch(node):
+    """Iterates over the right branch of `node` starting with node itself.
+    Iteration is stopped if either there are no child nodes any more or
+    if the parser of a node is a Lookahead parser. (Reason is: Since
+    lookahead nodes do not advance the parser, it does not make sense
+    to look back to them.)
+    """
+    while node and not isinstance(node.parser, Lookahead):  # the second condition should not be necessary
+        yield node  # for well-formed EBNF code
+        node = node.children[-1] if node.children else None
+
+
+class Lookbehind(FlowOperator):
+    def __init__(self, parser, name=None):
+        super(Lookbehind, self).__init__(parser, name)
+        print("WARNING: Lookbehind Operator is experimental!")
+
+    def __call__(self, text):
+        if isinstance(self.grammar.last_node, Lookahead):
+            return Node(self, '').add_error('Lookbehind right after Lookahead '
+                                            'does not make sense!'), text
+        if self.sign(self.condition()):
+            return Node(self, ''), text
+        else:
+            return None, text
+
+    def sign(self, bool_value):
+        return bool_value
+
+    def condition(self):
+        node = None
+        for node in iter_right_branch(self.grammar.last_node):
+            if node.parser.name == self.parser.name:
+                return True
+        if node and isinstance(self.parser, RegExp) and \
+                self.parser.regexp.match(str(node)):  # Is there really a use case for this?
+            return True
+        return False
+
+
+class NegativeLookbehind(Lookbehind):
+    def sign(self, bool_value):
+        return not bool_value
+
+
+########################################################################
+#
+# Capture and Retrieve operators (for passing variables in the parser)
+#
+########################################################################
+
+
+class Capture(UnaryOperator):
+    def __init__(self, parser, name=None):
+        super(Capture, self).__init__(parser, name)
+
+    def __call__(self, text):
+        node, text = self.parser(text)
+        if node:
+            stack = self.grammar.variables.setdefault(self.name, [])
+            stack.append(str(node))
+        return Node(self, node), text
+
+
+class Retrieve(Parser):
+    def __init__(self, symbol, name=None):
+        super(Retrieve, self).__init__(name)
+        self.symbol = symbol  # if isinstance(symbol, str) else symbol.name
+
+    def __call__(self, text):
+        symbol = self.symbol if isinstance(self.symbol, str) \
+            else self.symbol.name
+        stack = self.grammar.variables[symbol]
+        value = self.pick_value(stack)
+        if text.startswith(value):
+            return Node(self, value), text[len(value):]
+        else:
+            return None, text
+
+    def pick_value(self, stack):
+        return stack[-1]
+
+
+class Pop(Retrieve):
+    def pick_value(self, stack):
+        return stack.pop()
+
+
+########################################################################
+#
+# Forward class (for recursive symbols)
+#
+########################################################################
+
+
+class Forward(Parser):
+    def __init__(self):
+        Parser.__init__(self)
+        self.parser = None
+        self.cycle_reached = False
+
+    def __call__(self, text):
+        return self.parser(text)
+
+    def __str__(self):
+        if self.cycle_reached:
+            if self.parser and self.parser.name:
+                return str(self.parser.name)
+            return "..."
+        else:
+            self.cycle_reached = True
+            s = str(self.parser)
+            self.cycle_reached = False
+            return s
+
+    def set(self, parser):
+        assert isinstance(parser, Parser)
+        self.name = parser.name  # redundant, because of constructor of GrammarBase
+        self.parser = parser
+
+    def apply(self, func):
+        if super(Forward, self).apply(func):
+            assert not self.visited
+            self.parser.apply(func)
+
+
+PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
+                  'Lookahead', 'NegativeLookahead', 'Optional',
+                  'Lookbehind', 'NegativeLookbehind',
+                  'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
+                  'OneOrMore', 'GrammarBase', 'Capture', 'Retrieve',
+                  'Pop'}
+
+
+#######################################################################
+#
+# Syntax driven compilation support
+#
+#######################################################################
+
+
+def sane_parser_name(name):
+    """Checks whether given name is an acceptable parser name. Parser names
+    must not be preceeded or succeeded by a double underscore '__'!
+    """
+    return name and name[:2] != '__' and name[-2:] != '__'
+
+
+class CompilerBase:
+    def compile__(self, node):
+        comp, cls = node.parser.name, node.parser.__class__.__name__
+        elem = comp or cls
+        if not sane_parser_name(elem):
+            node.add_error("Must not use reserved name '%s' as parser "
+                           "name! " % elem + "(Any name starting with "
+                                             "'_' or '__' or ending with '__' is reserved.)")
+            return None
+        else:
+            compiler = self.__getattribute__(elem)  # TODO Add support for python keyword attributes
+            return compiler(node)
+
+
+def full_compilation(source, grammar_base, AST_transformations, compiler):
+    """Compiles a source in three stages:
+        1. Parsing
+        2. AST-transformation
+        3. Compiling.
+    The compilations stage is only invoked if no errors occurred in
+    either of the two previous stages.
+
+    Paraemters:
+        source (str): The input text for compilation
+        grammar_base (GrammarBase):  The GrammarBase object
+        AST_transformations (dict):  The transformation-table that
+            assigns AST transformation functions to parser names (see
+            function ASTTransform)
+        compiler (object):  An instance of a class derived from
+            ``CompilerBase`` with a suitable method for every parser
+            name or class.
+
+    Returns (tuple):
+        The result of the compilation as a 3-tuple
+        (result, errors, abstract syntax tree). In detail:
+        1. The result as returned by the compiler or ``None`` in case
+            of failure,
+        2. A list of error messages, each of which is a tuple
+            (position: int, error: str)
+        3. The root-node of the abstract syntax tree
+    """
+    assert isinstance(compiler, CompilerBase)
+
+    syntax_tree = grammar_base.parse(source)
+    syntax_tree.log(grammar_base.log_file_name, ext='.cst')
+    grammar_base.log_parsing_history()
+
+    assert syntax_tree.error_flag or str(syntax_tree) == source, str(syntax_tree)
+    # only compile if there were no syntax errors, for otherwise it is
+    # likely that error list gets littered with compile error messages
+    if syntax_tree.error_flag:
+        result = None
+    else:
+        ASTTransform(syntax_tree, AST_transformations)
+        syntax_tree.log(grammar_base.log_file_name, ext='.ast')
+        result = compiler.compile__(syntax_tree)
+    errors = syntax_tree.collect_errors()
+    messages = error_messages(source, errors)
+    return result, messages, syntax_tree
+
+
+COMPILER_SYMBOLS = {'CompilerBase', 'Node', 're'}

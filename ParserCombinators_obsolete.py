@@ -56,11 +56,13 @@ https://bitbucket.org/apalala/grako
 
 import collections
 import copy
-from functools import partial
 import hashlib
 import keyword
 import os
+from functools import partial
+
 from typing import NamedTuple
+
 try:
     import regex as re
 except ImportError:
@@ -70,67 +72,31 @@ import sys
 
 __version__ = '0.5.3' + '_dev' + str(os.stat(__file__).st_mtime)
 
+LOGGING = "LOGS"
 
-DEBUG = "DEBUG"
 
-
-def DEBUG_DIR():
-    """Returns a path of a directory where debug files will be stored.
-    Usually, this is just a sub-directory named 'DEBUG'. The directory
+def LOGS_DIR():
+    """Returns a path of a directory where log files will be stored.
+    Usually, this is just a sub-directory named 'LOGS'. The directory
     will be created if it does not exist.
     """
-    global DEBUG
-    if not DEBUG:
-        raise AssertionError("Cannot use DEBUG_DIR() if debugging is turned off!")
-    dirname = DEBUG
-    if os.path.exists(DEBUG):
-        if not os.path.isdir(DEBUG):
-            raise IOError('"' + DEBUG + '" cannot be used as debug directory, '
+    global LOGGING
+    if not LOGGING:
+        raise AssertionError("Cannot use LOGGING_DIR() if LOGGINGging is turned off!")
+    dirname = LOGGING
+    if os.path.exists(LOGGING):
+        if not os.path.isdir(LOGGING):
+            raise IOError('"' + LOGGING + '" cannot be used as log directory, '
                           'because it is not a directory!')
     else:
-        os.mkdir(DEBUG)
+        os.mkdir(LOGGING)
     return dirname
 
 
-def DEBUG_FILE_NAME(grammar_base):
-    """Returns a file name without extension based on the class name of
-     the ``grammar_base``-object.
-     """
-    name = grammar_base.__class__.__name__
-    return name[:-7] if name.endswith('Grammar') else name
-
-
 
 ########################################################################
 #
-# Scanner / Preprocessor support
-#
-########################################################################
-
-
-RX_SCANNER_TOKEN = re.compile('\w+')
-BEGIN_SCANNER_TOKEN = '\x1b'
-END_SCANNER_TOKEN = '\x1c'
-
-
-def make_token(token, argument=''):
-    """Turns the ``token`` and ``argument`` into a special token that
-    will be caught by the `ScannerToken`-parser.
-    """
-    assert RX_SCANNER_TOKEN.match(token)
-    assert argument.find(BEGIN_SCANNER_TOKEN) < 0
-    assert argument.find(END_SCANNER_TOKEN) < 0
-
-    return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
-
-
-nil_scanner = lambda text: text
-
-
-
-########################################################################
-#
-# Parser tree
+# syntax tree
 #
 ########################################################################
 
@@ -223,7 +189,7 @@ class Node:
         self.error_flag = any(r.error_flag for r in self.result) if self.children else False
         self._len = len(self.result) if not self.children else \
             sum(child._len for child in self.children)
-        # self.pos = 0
+        # self.pos = 0  # coninuous updating of pos values
         self._pos = -1
 
     def __str__(self):
@@ -386,6 +352,13 @@ class Node:
             return errors
         return []
 
+    def log(self, log_file_name, ext):
+        global LOGGING
+        if LOGGING:
+            st_file_name = log_file_name + ext
+            with open(os.path.join(LOGS_DIR(), st_file_name), "w", encoding="utf-8") as f:
+                f.write(self.as_sexpr())
+
     def navigate(self, path):
         """EXPERIMENTAL! NOT YET TESTED!!!
         Returns the first descendant element matched by `path`, e.g.
@@ -433,17 +406,9 @@ def error_messages(text, errors):
 
 ########################################################################
 #
-# Abstract syntax tree support
+# syntax tree transformation
 #
 ########################################################################
-
-
-def DEBUG_DUMP_SYNTAX_TREE(grammar_base, syntax_tree, ext):
-    global DEBUG
-    if DEBUG:
-        st_file_name = DEBUG_FILE_NAME(grammar_base) + ext
-        with open(os.path.join(DEBUG_DIR(), st_file_name), "w",  encoding="utf-8") as f:
-            f.write(syntax_tree.as_sexpr())
 
 
 def expand_table(compact_table):
@@ -637,8 +602,8 @@ LEFT_RECURSION_DEPTH = 10   # because of pythons recursion depth limit, this
                             # value ought not to be set too high
 MAX_DROPOUTS = 25   # stop trying to recover parsing after so many errors
 
-WHITESPACE_KEYWORD = 'wsp__'
-TOKEN_KEYWORD = 'token__'
+WHITESPACE_KEYWORD = 'WSP__'
+TOKEN_KEYWORD = 'TOKEN__'
 
 
 class HistoryRecord:
@@ -816,7 +781,9 @@ class GrammarBase:
     def __init__(self):
         self.all_parsers = set()
         self.dirty_flag = False
-        self.track_history = DEBUG
+        self.track_history = LOGGING
+        name = self.__class__.__name__
+        self.log_file_name = name[:-7] if name.lower().endswith('grammar') else name
         self._reset()
         self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
@@ -834,6 +801,7 @@ class GrammarBase:
 
     def _reset(self):
         self.variables = dict()                 # support for Pop and Retrieve operators
+        self.document = ""  # source document
         self.last_node = None
         self.call_stack = []                    # support for call stack tracing
         self.history = []                       # snapshots of call stacks
@@ -863,6 +831,7 @@ class GrammarBase:
                 parser.reset()
         else:
             self.dirty_flag = True
+        self.document = document
         parser = self.root__
         result = ""
         stitches = []
@@ -889,34 +858,39 @@ class GrammarBase:
         result.pos = 0 # calculate all positions
         return result
 
+    def log_parsing_history(self):
+        """Writes a log of the parsing history of the most recently parsed
+        document. 
+        """
 
-def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
-    def prepare_line(record):
-        excerpt = document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
-        excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
-        return (record.stack, record.status, excerpt)
+        def prepare_line(record):
+            excerpt = self.document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
+            excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
+            return (record.stack, record.status, excerpt)
 
-    def write_log(history, log_name):
-        path = os.path.join(DEBUG_DIR(), DEBUG_FILE_NAME(grammar_base) + log_name + "_parser.log")
-        if history:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write("\n".join(history))
-        elif os.path.exists(path):
-            os.remove(path)
+        def write_log(history, log_name):
+            path = os.path.join(LOGS_DIR(), self.log_file_name + log_name + "_parser.log")
+            if history:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(history))
+            elif os.path.exists(path):
+                os.remove(path)
 
-    global DEBUG
-    if DEBUG:
-        full_history, match_history, errors_only = [], [], []
-        for record in grammar_base.history:
-            line = ";  ".join(prepare_line(record))
-            full_history.append(line)
-            if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
-                match_history.append(line)
-                if record.node.errors:
-                    errors_only.append(line)
-        write_log(full_history, '_full')
-        write_log(match_history, '_match')
-        write_log(errors_only, '_errors')
+        global LOGGING
+        if LOGGING:
+            assert self.history
+            full_history, match_history, errors_only = [], [], []
+            for record in self.history:
+                line = ";  ".join(prepare_line(record))
+                full_history.append(line)
+                if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
+                    match_history.append(line)
+                    if record.node.errors:
+                        errors_only.append(line)
+            write_log(full_history, '_full')
+            write_log(match_history, '_match')
+            write_log(errors_only, '_errors')
+
 
 
 ########################################################################
@@ -924,6 +898,29 @@ def DEBUG_DUMP_PARSING_HISTORY(grammar_base, document):
 # Token and Regular Expression parser classes (i.e. leaf classes)
 #
 ########################################################################
+
+
+
+RX_SCANNER_TOKEN = re.compile('\w+')
+BEGIN_SCANNER_TOKEN = '\x1b'
+END_SCANNER_TOKEN = '\x1c'
+
+
+def make_token(token, argument=''):
+    """Turns the ``token`` and ``argument`` into a special token that
+    will be caught by the `ScannerToken`-parser.
+    
+    This function is a support function that should be used by scanners
+    to inject scanner tokens into the source text.
+    """
+    assert RX_SCANNER_TOKEN.match(token)
+    assert argument.find(BEGIN_SCANNER_TOKEN) < 0
+    assert argument.find(END_SCANNER_TOKEN) < 0
+
+    return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
+
+
+nil_scanner = lambda text: text
 
 
 class ScannerToken(Parser):
@@ -1139,8 +1136,6 @@ class Sequence(NaryOperator):
     def __init__(self, *parsers, name=None):
         super(Sequence, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
-        # commented, because sequences can be empty:
-        # assert not all(isinstance(p, Optional) for p in self.parsers)
 
     def __call__(self, text):
         results = ()
@@ -1410,8 +1405,8 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     assert isinstance(compiler, CompilerBase)
 
     syntax_tree = grammar_base.parse(source)
-    DEBUG_DUMP_SYNTAX_TREE(grammar_base, syntax_tree, ext='.cst')
-    DEBUG_DUMP_PARSING_HISTORY(grammar_base, source)
+    syntax_tree.log(grammar_base.log_file_name, ext='.cst')
+    grammar_base.log_parsing_history()
 
     assert syntax_tree.error_flag or str(syntax_tree) == source, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
@@ -1420,7 +1415,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
         result = None
     else:
         ASTTransform(syntax_tree, AST_transformations)
-        DEBUG_DUMP_SYNTAX_TREE(grammar_base, syntax_tree, ext='.ast')
+        syntax_tree.log(grammar_base.log_file_name, ext='.ast')
         result = compiler.compile__(syntax_tree)
     errors = syntax_tree.collect_errors()
     messages = error_messages(source, errors)
@@ -1571,7 +1566,8 @@ class EBNFCompiler(CompilerBase):
     """Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
     """
-    RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD}
+    COMMENT_KEYWORD = "COMMENT__"
+    RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, COMMENT_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
     VOWELS           = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc.?
     AST_ERROR        = "Badly structured syntax tree. " \
@@ -1647,14 +1643,15 @@ class EBNFCompiler(CompilerBase):
                                       (definitions[1], definitions[0]))
 
         self.definition_names = [defn[0] for defn in definitions]
-        definitions.append(('wspR__', 'wsp__' \
+        definitions.append(('wspR__', WHITESPACE_KEYWORD \
             if 'right' in self.directives['literalws'] else "''"))
-        definitions.append(('wspL__', 'wsp__' \
+        definitions.append(('wspL__', WHITESPACE_KEYWORD \
             if 'left' in self.directives['literalws'] else "''"))
         definitions.append((WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')").
                             format(**self.directives)))
+        definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -1995,8 +1992,6 @@ def get_grammar_instance(grammar):
 
 
 def load_compiler_suite(compiler_suite):
-    """
-    """
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
@@ -2136,7 +2131,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             print(result)
         finally:
             if f:  f.close()
-        if DEBUG:
+        if LOGGING:
             print(ast)
 
     return []
