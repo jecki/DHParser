@@ -69,7 +69,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         _errors = run_compiler(sys.argv[1],
                                sys.argv[2] if len(sys.argv) > 2 else "")
-        if (_errors):
+        if _errors:
             print(_errors)
             sys.exit(1)
     else:

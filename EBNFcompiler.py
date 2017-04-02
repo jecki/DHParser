@@ -18,29 +18,27 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-import collections
+# import collections
 import hashlib
 import keyword
 from functools import partial
-
 try:
     import regex as re
 except ImportError:
     import re
 
-from parser import mixin_comment, RE, Token, Required, NegativeLookahead, Optional, ZeroOrMore, \
-    Sequence, Alternative, Forward, OneOrMore, GrammarBase, CompilerBase, escape_re, \
-    sane_parser_name
-from syntaxtree import replace_by_single_child, reduce_single_child, remove_expendables, \
-    flatten, remove_tokens, remove_brackets, TOKEN_KEYWORD, WHITESPACE_KEYWORD, Node
+from parser import *
+from syntaxtree import *
 from version import __version__
 
 
-########################################################################
-#
-# EBNF-Grammar-Compiler
-#
-########################################################################
+__all__ = ['EBNFGrammar',
+           'EBNFTransTable',
+           'load_if_file',
+           'EBNFCompilerError',
+           # 'Scanner',
+           'md5',
+           'EBNFCompiler']
 
 
 class EBNFGrammar(GrammarBase):
@@ -159,8 +157,8 @@ class EBNFCompilerError(Exception):
     pass
 
 
-Scanner = collections.namedtuple('Scanner',
-                                 'symbol instantiation_call cls_name cls')
+# Scanner = collections.namedtuple('Scanner',
+#                                  'symbol instantiation_call cls_name cls')
 
 
 def md5(*txt):
@@ -254,10 +252,10 @@ class EBNFCompiler(CompilerBase):
                                       (definitions[1], definitions[0]))
 
         self.definition_names = [defn[0] for defn in definitions]
-        definitions.append(('wspR__', WHITESPACE_KEYWORD \
-            if 'right' in self.directives['literalws'] else "''"))
-        definitions.append(('wspL__', WHITESPACE_KEYWORD \
-            if 'left' in self.directives['literalws'] else "''"))
+        definitions.append(('wspR__', WHITESPACE_KEYWORD
+                            if 'right' in self.directives['literalws'] else "''"))
+        definitions.append(('wspL__', WHITESPACE_KEYWORD
+                            if 'left' in self.directives['literalws'] else "''"))
         definitions.append((WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')").
@@ -346,7 +344,7 @@ class EBNFCompiler(CompilerBase):
             errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
             node.add_error(errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
-        return (rule, defn)
+        return rule, defn
 
     @staticmethod
     def _check_rx(node, rx):
@@ -377,7 +375,7 @@ class EBNFCompiler(CompilerBase):
         elif key == 'literalws':
             value = {item.lower() for item in self.compile__(node.result[1])}
             if (len(value - {'left', 'right', 'both', 'none'}) > 0
-                or ('none' in value and len(value) > 1)):
+                    or ('none' in value and len(value) > 1)):
                 node.add_error('Directive "literalws" allows the values '
                                '`left`, `right`, `both` or `none`, '
                                'but not `%s`' % ", ".join(value))
@@ -473,7 +471,7 @@ class EBNFCompiler(CompilerBase):
         elif 'left' in self.directives['literalws']:
             name = ["wL=''"] + name
         if rx[-2:] == '/~':
-            if not 'right' in self.directives['literalws']:
+            if 'right' not in self.directives['literalws']:
                 name = ['wR=' + WHITESPACE_KEYWORD] + name
             rx = rx[:-1]
         elif 'right' in self.directives['literalws']:

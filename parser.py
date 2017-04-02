@@ -16,22 +16,94 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied.  See the License for the specific language governing
 permissions and limitations under the License.
+
+Module ``parsers.py`` contains a number of classes that together
+make up parser combinators for left-recursive grammers. For each
+element of the extended Backus-Naur-Form as well as for a regular
+expression token a class is defined. The set of classes can be used to
+define a parser for (ambiguous) left-recursive grammers.
+
+
+References and Acknowledgements:
+
+Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
+Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
+anregungen und links rund um informatik-themen, URL:
+http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
+
+Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
+September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
+links rund um informatik-themen, URL:
+http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
+
+Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
+denkspuren. gedanken, ideen, anregungen und links rund um
+informatik-themen, URL:
+http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
+
+Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser
+Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
+D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
+Berlin Heidelberg 2008.
+
+Juancarlo Añez: grako, a PEG parser generator in Python,
+https://bitbucket.org/apalala/grako
+
+
 """
 
 import copy
 import os
-
 try:
     import regex as re
 except ImportError:
     import re
 
 from logging import LOGGING, LOGS_DIR
-from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, error_messages, \
-    ASTTransform
+from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
+    error_messages, ASTTransform
+
+
+__all__ = ['HistoryRecord',
+           'Parser',
+           'GrammarBase',
+           'RX_SCANNER_TOKEN',
+           'BEGIN_SCANNER_TOKEN',
+           'END_SCANNER_TOKEN',
+           'make_token',
+           'nil_scanner',
+           'ScannerToken',
+           'RegExp',
+           'RE',
+           'escape_re',
+           'Token',
+           'mixin_comment',
+           'UnaryOperator',
+           'NaryOperator',
+           'Optional',
+           'ZeroOrMore',
+           'OneOrMore',
+           'Sequence',
+           'Alternative',
+           'FlowOperator',
+           'Required',
+           'Lookahead',
+           'NegativeLookahead',
+           'Lookbehind',
+           'NegativeLookbehind',
+           'Capture',
+           'Retrieve',
+           'Pop',
+           'Forward',
+           'PARSER_SYMBOLS',
+           'sane_parser_name',
+           'CompilerBase',
+           'full_compilation',
+           'COMPILER_SYMBOLS']
+
 
 LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
-# value ought not to be set too high
+                           # value ought not to be set too high
 MAX_DROPOUTS = 25  # stop trying to recover parsing after so many errors
 
 
@@ -169,7 +241,7 @@ class Parser(metaclass=ParserMetaClass):
 
     def apply(self, func):
         """Applies function `func(parser)` recursively to this parser and all
-        descendendants of the tree of parsers. The same function can never
+        descendants of the tree of parsers. The same function can never
         be applied twice between calls of the ``reset()``-method!
         """
         if func in self.cycle_detection:
@@ -320,12 +392,12 @@ class GrammarBase:
             write_log(errors_only, '_errors')
 
 
+
 ########################################################################
 #
 # Token and Regular Expression parser classes (i.e. leaf classes)
 #
 ########################################################################
-
 
 
 RX_SCANNER_TOKEN = re.compile('\w+')
@@ -347,7 +419,8 @@ def make_token(token, argument=''):
     return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
 
 
-nil_scanner = lambda text: text
+def nil_scanner(text):
+    return text
 
 
 class ScannerToken(Parser):
@@ -355,7 +428,7 @@ class ScannerToken(Parser):
         assert isinstance(scanner_token, str) and scanner_token and \
                scanner_token.isupper()
         assert RX_SCANNER_TOKEN.match(scanner_token)
-        super(ScannerToken, self).__init__(scanner_token, name=TOKEN_KEYWORD)
+        super(ScannerToken, self).__init__(scanner_token)
 
     def __call__(self, text):
         if text[0:1] == BEGIN_SCANNER_TOKEN:
@@ -400,8 +473,7 @@ class RegExp(Parser):
         duplicate.regexp = self.regexp
         duplicate.grammar = self.grammar
         duplicate.visited = copy.deepcopy(self.visited, memo)
-        duplicate.recursion_counter = copy.deepcopy(self.recursion_counter,
-                                                    memo)
+        duplicate.recursion_counter = copy.deepcopy(self.recursion_counter, memo)
         return duplicate
 
     def __call__(self, text):

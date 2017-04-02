@@ -27,6 +27,31 @@ from typing import NamedTuple
 
 from logging import LOGGING, LOGS_DIR
 
+
+__all__ = ['WHITESPACE_KEYWORD',
+           'TOKEN_KEYWORD',
+           'line_col',
+           'ZOMBIE_PARSER',
+           'Error',
+           'Node',
+           'error_messages',
+           'ASTTransform',
+           'no_transformation',
+           'replace_by_single_child',
+           'reduce_single_child',
+           'is_whitespace',
+           'is_empty',
+           'is_expendable',
+           'is_token',
+           'remove_children_if',
+           'remove_whitespace',
+           'remove_expendables',
+           'remove_tokens',
+           'flatten',
+           'remove_brackets',
+           'AST_SYMBOLS']
+
+
 WHITESPACE_KEYWORD = 'WSP__'
 TOKEN_KEYWORD = 'TOKEN__'
 
@@ -373,10 +398,8 @@ def ASTTransform(node, transtable):
     """
     # normalize transformation entries by turning single transformations
     # into lists with a single item
-    table = {name: transformation
-    if isinstance(transformation, collections.abc.Sequence)
-    else [transformation]
-             for name, transformation in list(transtable.items())}
+    table = {name: transformation if isinstance(transformation, collections.abc.Sequence)
+             else [transformation] for name, transformation in list(transtable.items())}
     table = expand_table(table)
 
     def recursive_ASTTransform(nd):
@@ -456,7 +479,7 @@ def is_expendable(node):
     return is_empty(node) or is_whitespace(node)  # or is_scanner_token(node)
 
 
-def is_token(node, token_set={}):
+def is_token(node, token_set=frozenset()):
     return node.parser.name == TOKEN_KEYWORD and (not token_set or node.result in token_set)
 
 
@@ -472,7 +495,7 @@ remove_whitespace = partial(remove_children_if, condition=is_whitespace)
 remove_expendables = partial(remove_children_if, condition=is_expendable)
 
 
-def remove_tokens(node, tokens=set()):
+def remove_tokens(node, tokens=frozenset()):
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed.

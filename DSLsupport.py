@@ -21,8 +21,8 @@ Module ``DSLsupport`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
+from functools import partial
 import os
-
 try:
     import regex as re
 except ImportError:
@@ -30,10 +30,18 @@ except ImportError:
 
 from EBNFcompiler import EBNFGrammar, EBNFCompiler, EBNFTransTable, load_if_file, md5
 from logging import LOGGING
-from parser import PARSER_SYMBOLS, COMPILER_SYMBOLS, GrammarBase, CompilerBase, \
-    full_compilation, nil_scanner
-from syntaxtree import AST_SYMBOLS, Node
+from parser import *
+from syntaxtree import *
 from version import __version__
+
+
+__all__ = ['GrammarError',
+           'CompilationError',
+           'load_compiler_suite',
+           'compileDSL',
+           'run_compiler',
+           'source_changed']
+
 
 SECTION_MARKER = """\n
 #######################################################################
@@ -142,6 +150,9 @@ def get_grammar_instance(grammar):
 
 
 def load_compiler_suite(compiler_suite):
+    """Extracts a compiler suite from file or string ``compiler suite``
+    and returns it as a tuple (scanner, parser, ast, compiler).
+    """
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
@@ -189,24 +200,24 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     """Compiles the a source file with a given compiler and writes the
     result to a file.
 
-     If no ``compiler_suite`` is given it is assumed that the source
-     file is an EBNF grammar. In this case the result will be a Python
-     script containing a parser for that grammar as well as the
-     skeletons for a scanner, AST transformation table, and compiler.
-     If the Python script already exists only the parser name in the
-     script will be updated. (For this to work, the different names
-     need to be delimited section marker blocks.). `run_compiler()`
-     returns a list of error messages or an empty list if no errors
-     occurred.
-     """
+    If no ``compiler_suite`` is given it is assumed that the source
+    file is an EBNF grammar. In this case the result will be a Python
+    script containing a parser for that grammar as well as the
+    skeletons for a scanner, AST transformation table, and compiler.
+    If the Python script already exists only the parser name in the
+    script will be updated. (For this to work, the different names
+    need to be delimited section marker blocks.). `run_compiler()`
+    returns a list of error messages or an empty list if no errors
+    occurred.
+    """
 
-    def import_block(module, symbols):
+    def import_block(python_module, symbols):
         """Generates an Python-``import`` statement that imports all
         alls symbols in ``symbols`` (set or other container) from
-        module ``module``."""
+        python_module ``python_module``."""
         symlist = list(symbols)
         grouped = [symlist[i:i + 4] for i in range(0, len(symlist), 4)]
-        return ("\nfrom " + module + " import "
+        return ("\nfrom " + python_module + " import "
                 + ', \\\n    '.join(', '.join(g) for g in grouped) + '\n\n')
 
     filepath = os.path.normpath(source_file)

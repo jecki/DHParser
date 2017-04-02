@@ -30,6 +30,10 @@ already exists.
 
 import os
 
+
+__all__ = ['LOGGING', 'LOGS_DIR']
+
+
 LOGGING: str = "LOGS"  # LOGGING = "" turns logging off!
 
 
