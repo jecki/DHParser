@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-"""compile_MLW.py - simple utility script for compiling MLW.ebnf
+"""compile_PopRetrieve.py - test of Pop and Retrieve operators 
+                             
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -22,7 +23,7 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from ParserCombinators import run_compiler, source_changed
+from DSLsupport import run_compiler, source_changed
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
     source_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):

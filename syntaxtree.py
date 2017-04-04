@@ -20,12 +20,16 @@ permissions and limitations under the License.
 """
 
 import collections
+import itertools
 import os
 from functools import partial
-
+try:
+    import regex as re
+except ImportError:
+    import re
 from typing import NamedTuple
 
-from logging import LOGGING, LOGS_DIR
+from logs import LOGGING, LOGS_DIR
 
 
 __all__ = ['WHITESPACE_KEYWORD',
@@ -35,6 +39,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'Error',
            'Node',
            'error_messages',
+           'compact_sexpr',
            'ASTTransform',
            'no_transformation',
            'replace_by_single_child',
@@ -150,7 +155,7 @@ class Node:
 
     def __str__(self):
         if self.children:
-            return "".join([str(child) for child in self.result])
+            return "".join(str(child) for child in self.result)
         return str(self.result)
 
     @property
@@ -236,7 +241,7 @@ class Node:
         return head + '\n'.join([tab + dataF(s)
                                  for s in str(self.result).split('\n')]) + tail
 
-    def as_sexpr(self, src=None):
+    def as_sexpr(self, src=None, prettyprint=True):
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -244,6 +249,8 @@ class Node:
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
+            prettyprint(bool):  True (default), if pretty printing 
+                of leaf nodes shall be applied for better readability.
         """
 
         def opening(node):
@@ -261,7 +268,8 @@ class Node:
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, lambda node: ')', pretty)
+        return self._tree_repr('    ', opening, lambda node: ')',
+                               pretty if prettyprint else lambda s: s)
 
     def as_xml(self, src=None):
         """
@@ -318,33 +326,50 @@ class Node:
             with open(os.path.join(LOGS_DIR(), st_file_name), "w", encoding="utf-8") as f:
                 f.write(self.as_sexpr())
 
+    def find(self, match_function):
+        """Finds nodes in the tree that match a specific criterion.
+        
+        ``find`` is a generator that yields all nodes for which the
+        given ``match_function`` evaluates to True. The tree is 
+        traversed pre-order.
+        
+        Args:
+            match_function (function): A function  that takes as Node
+                object as argument and returns True or False
+
+        Yields:
+            Node: all nodes of the tree for which 
+            ``match_function(node)`` returns True
+        """
+        if match_function(self):
+            yield self
+        else:
+            for child in self.children:
+                for nd in child.find(match_function):
+                    yield nd
+
     def navigate(self, path):
-        """EXPERIMENTAL! NOT YET TESTED!!!
-        Returns the first descendant element matched by `path`, e.g.
-        'd/s' returns 'l' from (d (s l)(e (r x1) (r x2))
-        'e/r' returns 'x2'
-        'e'   returns (r x1)(r x2)
+        """Yields the results of all descendant elements matched by
+        ``path``, e.g.
+        'd/s' yields 'l' from (d (s l)(e (r x1) (r x2))
+        'e/r' yields 'x1', then 'x2'
+        'e'   yields (r x1)(r x2)
 
         Parameters:
-            path (str):  The path of the object, e.g. 'a/b/c'
+            path (str):  The path of the object, e.g. 'a/b/c'. The
+                components of ``path`` can be regular expressions
 
         Returns:
             The object at the path, either a string or a Node or
             ``None``, if the path did not match.
         """
-        pl = path.strip('')
-        assert pl[0] != '/', 'Path must noch start with "/"!'
-        nd = self
-        for p in pl:
-            if isinstance(nd.result, str):
-                return p if (p == nd.result) and (p == pl[-1]) else None
-            for child in nd.result:
-                if str(child) == p:
-                    nd = child
-                    break
+        def nav(node, pl):
+            if pl:
+                return itertools.chain(nav(child, pl[1:]) for child in node.children
+                                       if re.match(pl[0], child.tag_name))
             else:
-                return None
-        return nd
+                return self.result,
+        return nav(path.split('/'))
 
 
 def error_messages(text, errors):
@@ -359,7 +384,15 @@ def error_messages(text, errors):
                        for err in sorted(list(errors)))
 
 
-# lambda compact_sexpr s : re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
+def compact_sexpr(s):
+    """Returns S-expression ``s`` as a one liner without unnecessary
+    whitespace.
+    
+    Example:
+        >>> compact_sexpr("(a\n    (b\n        c\n    )\n)\n")
+        (a (b c))
+    """
+    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
 
 
 ########################################################################

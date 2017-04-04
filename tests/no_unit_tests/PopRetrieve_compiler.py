@@ -6,17 +6,21 @@
 #
 #######################################################################
 
+import re
 
-from PyDSL import ZeroOrMore, Capture, mixin_comment, OneOrMore, \
-    remove_comments, partial, Lookahead, remove_scanner_tokens, \
-    Lookbehind, flatten, NegativeLookbehind, remove_enclosing_delimiters, \
-    NegativeLookahead, remove_whitespace, is_whitespace, reduce_single_child, \
-    RE, is_scanner_token, Retrieve, remove_children_if, \
-    Sequence, Token, CompilerBase, is_comment, \
-    remove_expendables, remove_tokens, Alternative, is_expendable, \
-    Optional, no_transformation, TOKEN_KEYWORD, RegExp, \
-    replace_by_single_child, Required, GrammarBase, WHITESPACE_KEYWORD, \
-    Forward, Pop
+
+from DHParser.syntaxtree import remove_whitespace, no_transformation, replace_by_single_child, \
+    is_expendable, remove_children_if, TOKEN_KEYWORD, \
+    remove_brackets, partial, flatten, \
+    remove_expendables, WHITESPACE_KEYWORD, is_whitespace, \
+    remove_tokens, reduce_single_child
+from DHParser.parser import mixin_comment, Required, Pop, \
+    ZeroOrMore, Token, CompilerBase, \
+    Sequence, Retrieve, Lookahead, \
+    GrammarBase, Optional, NegativeLookbehind, \
+    RegExp, Lookbehind, Capture, \
+    NegativeLookahead, Alternative, OneOrMore, \
+    Forward, RE
 
 
 
@@ -45,9 +49,10 @@ class PopRetrieveGrammar(GrammarBase):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "50f817c35d08825b20a95664a555d9b0"
+    source_hash__ = "4a1025732f79bf6787d1f753cbec7fc3"
     parser_initialization__ = "upon instatiation"
-    wsp__ = mixin_comment(whitespace=r'\s*', comment=r'')
+    COMMENT__ = r''
+    WSP__ = mixin_comment(whitespace=r'\s*', comment=r'')
     wspL__ = ''
     wspR__ = ''
     text = RE('[^`]+')

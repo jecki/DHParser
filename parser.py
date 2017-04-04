@@ -59,7 +59,7 @@ try:
 except ImportError:
     import re
 
-from logging import LOGGING, LOGS_DIR
+from logs import LOGGING, LOGS_DIR
 from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     error_messages, ASTTransform
 
@@ -160,14 +160,14 @@ def add_parser_guard(parser_func):
             parser.recursion_counter[location] += 1
             grammar = parser.grammar
 
-            if grammar.track_history:
+            if grammar.history_tracking:
                 grammar.call_stack.append(parser)
                 grammar.moving_forward = True
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
 
-            if grammar.track_history:
+            if grammar.history_tracking:
                 if grammar.moving_forward:  # and result[0] == None
                     grammar.moving_forward = False
                     record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
@@ -213,13 +213,14 @@ class Parser(metaclass=ParserMetaClass):
     def __init__(self, name=None):
         assert name is None or isinstance(name, str), str(name)
         self.name = name or ''
-        self.grammar = None  # center for global variables etc.
+        self._grammar = None  # center for global variables etc.
         self.reset()
 
     def reset(self):
         self.visited = dict()
         self.recursion_counter = dict()
         self.cycle_detection = set()
+        return self
 
     def __call__(self, text):
         return None, text  # default behaviour: don't match
@@ -282,9 +283,7 @@ class GrammarBase:
     def __init__(self):
         self.all_parsers = set()
         self.dirty_flag = False
-        self.track_history = LOGGING
-        name = self.__class__.__name__
-        self.log_file_name = name[:-7] if name.lower().endswith('grammar') else name
+        self.history_tracking = LOGGING
         self._reset()
         self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
@@ -359,7 +358,7 @@ class GrammarBase:
         result.pos = 0  # calculate all positions
         return result
 
-    def log_parsing_history(self):
+    def log_parsing_history(self, log_file_name=''):
         """Writes a log of the parsing history of the most recently parsed
         document. 
         """
@@ -367,10 +366,10 @@ class GrammarBase:
         def prepare_line(record):
             excerpt = self.document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
             excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
-            return (record.stack, record.status, excerpt)
+            return record.stack, record.status, excerpt
 
         def write_log(history, log_name):
-            path = os.path.join(LOGS_DIR(), self.log_file_name + log_name + "_parser.log")
+            path = os.path.join(LOGS_DIR(), log_name + "_parser.log")
             if history:
                 with open(path, "w", encoding="utf-8") as f:
                     f.write("\n".join(history))
@@ -379,6 +378,9 @@ class GrammarBase:
 
         if LOGGING:
             assert self.history
+            if not log_file_name:
+                name = self.__class__.__name__
+                log_file_name = name[:-7] if name.lower().endswith('grammar') else name
             full_history, match_history, errors_only = [], [], []
             for record in self.history:
                 line = ";  ".join(prepare_line(record))
@@ -387,9 +389,9 @@ class GrammarBase:
                     match_history.append(line)
                     if record.node.errors:
                         errors_only.append(line)
-            write_log(full_history, '_full')
-            write_log(match_history, '_match')
-            write_log(errors_only, '_errors')
+            write_log(full_history, log_file_name + '_full')
+            write_log(match_history, log_file_name + '_match')
+            write_log(errors_only, log_file_name + '_errors')
 
 
 
@@ -590,7 +592,7 @@ class Optional(UnaryOperator):
             "Nesting options would be redundant: %s(%s)" % \
             (str(name), str(parser.name))
         assert not isinstance(parser, Required), \
-            "Nestion options with required elements is contradictory: " \
+            "Nesting options with required elements is contradictory: " \
             "%s(%s)" % (str(name), str(parser.name))
 
     def __call__(self, text):
@@ -899,12 +901,14 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
             of failure,
         2. A list of error messages, each of which is a tuple
             (position: int, error: str)
-        3. The root-node of the abstract syntax tree
+        3. The root-node of the abstract syntax treelow
     """
     assert isinstance(compiler, CompilerBase)
 
     syntax_tree = grammar_base.parse(source)
-    syntax_tree.log(grammar_base.log_file_name, ext='.cst')
+    cname = grammar_base.__class__.__name__
+    log_file_name = cname[:-7] if cname.endswith('Grammar') else cname
+    syntax_tree.log(log_file_name, ext='.cst')
     grammar_base.log_parsing_history()
 
     assert syntax_tree.error_flag or str(syntax_tree) == source, str(syntax_tree)
@@ -914,7 +918,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
         result = None
     else:
         ASTTransform(syntax_tree, AST_transformations)
-        syntax_tree.log(grammar_base.log_file_name, ext='.ast')
+        syntax_tree.log(log_file_name, ext='.ast')
         result = compiler.compile__(syntax_tree)
     errors = syntax_tree.collect_errors()
     messages = error_messages(source, errors)

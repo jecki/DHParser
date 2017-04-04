@@ -29,7 +29,7 @@ except ImportError:
     import re
 
 from EBNFcompiler import EBNFGrammar, EBNFCompiler, EBNFTransTable, load_if_file, md5
-from logging import LOGGING
+from logs import LOGGING
 from parser import *
 from syntaxtree import *
 from version import __version__
@@ -114,11 +114,11 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
     exec(code, namespace)  # safety risk?
     for key in namespace.keys():
         if key.endswith(obj_name_ending):
-            parser = namespace[key]
+            obj = namespace[key]
             break
     else:
-        parser = None
-    return parser
+        obj = None
+    return obj
 
 
 def get_grammar_instance(grammar):
@@ -196,6 +196,25 @@ def compileDSL(text_or_file, dsl_grammar, trans_table, compiler,
     return result
 
 
+def compileEBNF(ebnf_src, ebnf_grammar_obj=None):
+    """Compiles an EBNF source file into a Grammar class
+
+    Args:
+        ebnf_src(str):  Either the file name of an EBNF grammar or
+            the EBNF grammar itself as a string.
+        ebnf_grammar_obj:  An existing instance of the 
+            DHParser.EBNFcompiler.EBNFGrammar object. This can speed
+            up compilation, because no new EBNFGrammar object needs to
+            be instantiated.
+    Returns:
+        A Grammar class that can be instantiated for parsing a text
+        which conforms to the language defined by ``ebnf_src``
+    """
+    grammar = ebnf_grammar_obj or EBNFGrammar()
+    grammar_src = compileDSL(ebnf_src, grammar, EBNFTransTable, EBNFCompiler())
+    return compile_python_object(grammar_src)
+
+
 def run_compiler(source_file, compiler_suite="", extension=".xml"):
     """Compiles the a source file with a given compiler and writes the
     result to a file.
@@ -216,9 +235,9 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
         alls symbols in ``symbols`` (set or other container) from
         python_module ``python_module``."""
         symlist = list(symbols)
-        grouped = [symlist[i:i + 4] for i in range(0, len(symlist), 4)]
+        grouped = [symlist[i:i + 3] for i in range(0, len(symlist), 3)]
         return ("\nfrom " + python_module + " import "
-                + ', \\\n    '.join(', '.join(g) for g in grouped) + '\n\n')
+                + ', \\\n    '.join(', '.join(g) for g in grouped))
 
     filepath = os.path.normpath(source_file)
     with open(source_file, encoding="utf-8") as f:
@@ -248,7 +267,8 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             intro, syms, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, outro = '', ''
-            syms = import_block("PyDSL", PARSER_SYMBOLS | AST_SYMBOLS | {'CompilerBase'})
+            syms = 'import re\n' + import_block("DHParser.syntaxtree", AST_SYMBOLS)
+            syms += import_block("DHParser.parser", PARSER_SYMBOLS | {'CompilerBase'}) + '\n\n'
             scanner = compiler.gen_scanner_skeleton()
             ast = compiler.gen_AST_skeleton()
             compiler = compiler.gen_compiler_skeleton()

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""logging.py - basic log file support for DHParser
+"""logs.py - basic log file support for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -18,7 +18,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 
 
-Module ``logging`` defines the global variable LOGGING which contains
+Module ``logs`` defines the global variable LOGGING which contains
 the name of a directory where log files shall be placed. By setting
 its value to the empty string "" logging can be turned off.
 
