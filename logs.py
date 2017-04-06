@@ -31,10 +31,22 @@ already exists.
 import os
 
 
-__all__ = ['LOGGING', 'LOGS_DIR']
+__all__ = ['logging_on', 'logging_off', 'LOGGING', 'LOGS_DIR']
 
 
 LOGGING: str = "LOGS"  # LOGGING = "" turns logging off!
+
+
+def logging_on(log_subdir="LOGS"):
+    "Turns logging of syntax trees and parser history on."
+    global LOGGING
+    LOGGING = log_subdir
+
+
+def logging_off():
+    "Turns logging of syntax trees and parser history off."
+    global LOGGING
+    LOGGING = ""
 
 
 def LOGS_DIR() -> str:
@@ -53,7 +65,7 @@ def LOGS_DIR() -> str:
     """
     global LOGGING
     if not LOGGING:
-        raise AssertionError("Cannot use LOGGING_DIR() if logging is turned off!")
+        raise AssertionError("Cannot use LOGS_DIR() if logging is turned off!")
     dirname = LOGGING
     if os.path.exists(LOGGING):
         if not os.path.isdir(LOGGING):

@@ -39,6 +39,14 @@ class DummyParser:
 
 def from_sexpr(s):
     """Generates a tree of nodes from an S-expression.
+    
+    Example: 
+    >>> from_sexpr("(a (b c))").as_sexpr()
+    (a 
+        (b 
+            c 
+        )
+    )
     """
     def next_block(s):
         s = s.strip()

@@ -14,8 +14,8 @@ class SelfTest:
 
 
 def run_tests(tests, namespace):
-    """ Runs selected tests.
-    
+    """ Runs only some selected tests from a test suite.
+
     Args:
         tests: Either a string or a list of strings that contains the
             names of test or test classes. Each test and, in the case
