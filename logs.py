@@ -31,7 +31,7 @@ already exists.
 import os
 
 
-__all__ = ['logging_on', 'logging_off', 'LOGGING', 'LOGS_DIR']
+__all__ = ['logging_on', 'logging_off', 'IS_LOGGING', 'LOGS_DIR']
 
 
 LOGGING: str = "LOGS"  # LOGGING = "" turns logging off!
@@ -47,6 +47,11 @@ def logging_off():
     "Turns logging of syntax trees and parser history off."
     global LOGGING
     LOGGING = ""
+
+
+def IS_LOGGING():
+    """-> True, if logging is turned on."""
+    return bool(LOGGING)
 
 
 def LOGS_DIR() -> str:

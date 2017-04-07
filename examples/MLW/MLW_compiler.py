@@ -42,7 +42,7 @@ class MLWGrammar(GrammarBase):
     # EBNF-Syntax für MLW-Artikel
     
     @ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
-    @ whitespace    =  /[\t\r\ ]*/      # Auch Zeilensprünge zählen als Leerraum
+    @ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
     @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
     
     
@@ -138,11 +138,12 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "cf1ef8acfc5e15dffc53b1b48eda89b0"
+    source_hash__ = "f373a397a48cc57bcca18b90dd7028bf"
     parser_initialization__ = "upon instatiation"
-    wsp__ = mixin_comment(whitespace=r'[\t\r\ ]*', comment=r'#.*(?:\n|$)')
-    wspL__ = wsp__
-    wspR__ = wsp__
+    COMMENT__ = r'#.*(?:\n|$)'
+    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
+    wspL__ = WSP__
+    wspR__ = WSP__
     NIEMALS = RE('(?!.)', wR='', wL='')
     DATEI_ENDE = NegativeLookahead(RE('.', wR='', wL=''))
     LEER = RE('\\s+', wR='', wL='')

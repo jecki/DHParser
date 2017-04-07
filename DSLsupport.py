@@ -29,8 +29,8 @@ except ImportError:
     import re
 
 from EBNFcompiler import EBNFGrammar, EBNFCompiler, EBNFTransTable, load_if_file, md5
-from logs import LOGGING
-from parser import *
+from logs import IS_LOGGING
+from parsercombinators import *
 from syntaxtree import *
 from version import __version__
 
@@ -313,7 +313,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             print(result)
         finally:
             if f:  f.close()
-        if LOGGING:
+        if IS_LOGGING():
             print(ast)
 
     return []

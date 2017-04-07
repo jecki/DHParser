@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""parser.py - parser combinators for for DHParser
+"""parsercombinators.py - parser combinators for for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -59,7 +59,7 @@ try:
 except ImportError:
     import re
 
-from logs import LOGGING, LOGS_DIR
+from logs import IS_LOGGING, LOGS_DIR
 from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     error_messages, ASTTransform
 
@@ -283,7 +283,7 @@ class GrammarBase:
     def __init__(self):
         self.all_parsers = set()
         self.dirty_flag = False
-        self.history_tracking = LOGGING
+        self.history_tracking = IS_LOGGING()
         self._reset()
         self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
@@ -376,7 +376,7 @@ class GrammarBase:
             elif os.path.exists(path):
                 os.remove(path)
 
-        if LOGGING:
+        if IS_LOGGING():
             assert self.history
             if not log_file_name:
                 name = self.__class__.__name__
@@ -392,7 +392,6 @@ class GrammarBase:
             write_log(full_history, log_file_name + '_full')
             write_log(match_history, log_file_name + '_match')
             write_log(errors_only, log_file_name + '_errors')
-
 
 
 ########################################################################

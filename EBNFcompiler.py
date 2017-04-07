@@ -27,7 +27,7 @@ try:
 except ImportError:
     import re
 
-from parser import *
+from parsercombinators import *
 from syntaxtree import *
 from version import __version__
 

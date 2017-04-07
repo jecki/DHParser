@@ -29,7 +29,7 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from logs import LOGGING, LOGS_DIR
+from logs import IS_LOGGING, LOGS_DIR
 
 
 __all__ = ['WHITESPACE_KEYWORD',
@@ -320,8 +320,7 @@ class Node:
         return []
 
     def log(self, log_file_name, ext):
-        # global LOGGING
-        if LOGGING:
+        if IS_LOGGING():
             st_file_name = log_file_name + ext
             with open(os.path.join(LOGS_DIR(), st_file_name), "w", encoding="utf-8") as f:
                 f.write(self.as_sexpr())

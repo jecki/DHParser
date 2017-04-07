@@ -24,7 +24,7 @@ from functools import partial
 
 from DSLsupport import compileDSL, run_compiler
 from EBNFcompiler import EBNFGrammar, EBNFTransTable, EBNFCompiler
-from parser import full_compilation
+from parsercombinators import full_compilation
 
 
 def selftest(file_name):
