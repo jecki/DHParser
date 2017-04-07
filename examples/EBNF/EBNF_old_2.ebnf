@@ -10,11 +10,11 @@ directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
 expression =  term { "|" term }
 term       =  { factor }+
-factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+factor     =  [flowmarker] chain
+            | [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
             | [flowmarker] literal
             | [flowmarker] regexp
             | [flowmarker] group
-            | [flowmarker] regexchain
             | [flowmarker] oneormore
             | repetition
             | option
@@ -24,11 +24,11 @@ flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' 
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" expression §")"
-regexchain =  "<" expression §">"                # compiles "expression" into a singular regular expression
+option     =  "[" expression §"]"
 oneormore  =  "{" expression "}+"
 repetition =  "{" expression §"}"
-option     =  "[" expression §"]"
 
+chain      = { link "--" }+ link                 # chained regular expressions
 link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
 
 symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list

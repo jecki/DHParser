@@ -680,7 +680,7 @@ class FlowOperator(UnaryOperator):
 
 
 class Required(FlowOperator):
-    # TODO: Add constructor that checks for logical errors, like `Required(Optional(...))` constructs
+    # Add constructor that checks for logical errors, like `Required(Optional(...))` constructs ?
     def __call__(self, text):
         node, text_ = self.parser(text)
         if not node:

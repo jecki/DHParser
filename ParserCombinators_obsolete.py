@@ -586,7 +586,7 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
                'is_whitespace', 'is_expendable', 'remove_whitespace',
                # 'remove_scanner_tokens', 'is_scanner_token',
                'remove_expendables', 'flatten', 'remove_tokens',
-               'remove_brackets',
+               'remove_enclosing_delimiters',
                'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}
 
 

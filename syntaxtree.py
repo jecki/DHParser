@@ -53,7 +53,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'remove_expendables',
            'remove_tokens',
            'flatten',
-           'remove_brackets',
+           'remove_enclosing_delimiters',
            'AST_SYMBOLS']
 
 
@@ -561,7 +561,7 @@ def flatten(node):
         node.result = tuple(new_result)
 
 
-def remove_brackets(node):
+def remove_enclosing_delimiters(node):
     """Removes any enclosing delimiters from a structure (e.g. quotation marks
     from a literal or braces from a group).
     """
@@ -575,5 +575,5 @@ AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
                'is_whitespace', 'is_expendable', 'remove_whitespace',
                # 'remove_scanner_tokens', 'is_scanner_token',
                'remove_expendables', 'flatten', 'remove_tokens',
-               'remove_brackets',
+               'remove_enclosing_delimiters',
                'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}

@@ -1,7 +1,7 @@
 # EBNF-Syntax für MLW-Artikel
 
 @ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
-@ whitespace    =  /[\t\r\ ]*/      # Auch Zeilensprünge zählen als Leerraum
+@ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
 @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
 
 

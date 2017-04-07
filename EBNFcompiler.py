@@ -112,6 +112,7 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
+# TODO: Add some sanity checks to Transformations, e.g. "Required(Optional(..." should yield an error.
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
     "syntax":
@@ -126,9 +127,9 @@ EBNFTransTable = {
     "factor, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
-        [remove_brackets, replace_by_single_child],
-    "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets],
+        [remove_enclosing_delimiters, replace_by_single_child],
+    "oneormore, repetition, option, regexchain":
+        [reduce_single_child, remove_enclosing_delimiters],
     "symbol, literal, regexp, list_":
         [remove_expendables, reduce_single_child],
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
@@ -176,6 +177,7 @@ class EBNFCompiler(CompilerBase):
     in EBNF-Notation.
     """
     COMMENT_KEYWORD = "COMMENT__"
+    DEFAULT_WHITESPACE = '[\t ]*'
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, COMMENT_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
     VOWELS = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc.?
@@ -201,9 +203,9 @@ class EBNFCompiler(CompilerBase):
         self.definition_names = []
         self.recursive = set()
         self.root = ""
-        self.directives = {'whitespace': '\s*',
+        self.directives = {'whitespace': self.DEFAULT_WHITESPACE,
                            'comment': '',
-                           'literalws': ['wR=' + WHITESPACE_KEYWORD]}
+                           'literalws': ['right']}
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -370,6 +372,10 @@ class EBNFCompiler(CompilerBase):
             elif value[0] + value[-1] == '//':
                 value = self._check_rx(node, value[1:-1])
             else:
+                if value == "linefeed":
+                    value = '\s*'
+                elif value == "standard":
+                    value = self.DEFAULT_WHITESPACE
                 value = self._check_rx(node, value)
             self.directives[key] = value
         elif key == 'literalws':
@@ -444,6 +450,9 @@ class EBNFCompiler(CompilerBase):
 
     def oneormore(self, node):
         return self.non_terminal(node, 'OneOrMore')
+
+    def regexchain(self, node):
+        raise EBNFCompilerError("Not yet implemented!")
 
     def group(self, node):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
