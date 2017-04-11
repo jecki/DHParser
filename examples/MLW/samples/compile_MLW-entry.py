@@ -22,7 +22,7 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../../'))
-import logs
+import toolkit
 from DSLsupport import run_compiler, source_changed
 
 MLW_ebnf = os.path.join('..', 'MLW.ebnf')
@@ -30,7 +30,7 @@ MLW_compiler = os.path.join('..', 'MLW_compiler.py')
 
 # print(source_changed(MLW_ebnf, MLW_compiler))
 
-logs.logging_off()
+toolkit.logging_off()
 
 if (not os.path.exists(MLW_compiler) or
     source_changed(MLW_ebnf, MLW_compiler)):
@@ -40,7 +40,7 @@ if (not os.path.exists(MLW_compiler) or
         print(errors)
         sys.exit(1)
 
-logs.logging_on()
+toolkit.logging_on()
 
 errors = run_compiler("fascitergula.mlw", MLW_compiler, ".xml")
 if errors:

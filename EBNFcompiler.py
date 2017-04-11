@@ -19,7 +19,6 @@ permissions and limitations under the License.
 """
 
 # import collections
-import hashlib
 import keyword
 from functools import partial
 try:
@@ -27,17 +26,18 @@ try:
 except ImportError:
     import re
 
-from parsercombinators import *
+from toolkit import load_if_file, escape_re, md5
+from parsercombinators import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
+    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
+    sane_parser_name
 from syntaxtree import *
 from version import __version__
 
 
 __all__ = ['EBNFGrammar',
            'EBNFTransTable',
-           'load_if_file',
            'EBNFCompilerError',
            # 'Scanner',
-           'md5',
            'EBNFCompiler']
 
 
@@ -139,19 +139,6 @@ EBNFTransTable = {
 }
 
 
-def load_if_file(text_or_file):
-    """Reads and returns content of a file if parameter `text_or_file` is a
-    file name (i.e. a single line string), otherwise (i.e. if `text_or_file` is
-    a multiline string) returns the content of `text_or_file`.
-    """
-    if text_or_file and text_or_file.find('\n') < 0:
-        with open(text_or_file, encoding="utf-8") as f:
-            content = f.read()
-        return content
-    else:
-        return text_or_file
-
-
 class EBNFCompilerError(Exception):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
     in the strict sense, see `CompilationError` below)"""
@@ -160,16 +147,6 @@ class EBNFCompilerError(Exception):
 
 # Scanner = collections.namedtuple('Scanner',
 #                                  'symbol instantiation_call cls_name cls')
-
-
-def md5(*txt):
-    """Returns the md5-checksum for `txt`. This can be used to test if
-    some piece of text, for example a grammar source file, has changed.
-    """
-    md5_hash = hashlib.md5()
-    for t in txt:
-        md5_hash.update(t.encode('utf8'))
-    return md5_hash.hexdigest()
 
 
 class EBNFCompiler(CompilerBase):

@@ -28,8 +28,8 @@ try:
 except ImportError:
     import re
 
-from EBNFcompiler import EBNFGrammar, EBNFCompiler, EBNFTransTable, load_if_file, md5
-from logs import IS_LOGGING
+from EBNFcompiler import *
+from toolkit import *
 from parsercombinators import *
 from syntaxtree import *
 from version import __version__
@@ -59,23 +59,6 @@ PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
 END_SECTIONS_MARKER = "END OF PYDSL-SECTIONS"
-
-
-# DELIMITER = "\n\n### DON'T EDIT OR REMOVE THIS LINE ###\n\n"
-
-
-def is_python_code(text_or_file):
-    """Checks whether 'text_or_file' is python code or the name of a file that
-    contains python code.
-    """
-    if text_or_file.find('\n') < 0:
-        return text_or_file[-3:].lower() == '.py'
-    try:
-        compile(text_or_file, '<string>', 'exec')
-        return True
-    except (SyntaxError, ValueError, OverflowError):
-        pass
-    return False
 
 
 class GrammarError(Exception):

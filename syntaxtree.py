@@ -29,7 +29,7 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from logs import IS_LOGGING, LOGS_DIR
+from toolkit import IS_LOGGING, LOGS_DIR, expand_table
 
 
 __all__ = ['WHITESPACE_KEYWORD',
@@ -399,28 +399,6 @@ def compact_sexpr(s):
 # syntax tree transformation functions
 #
 ########################################################################
-
-
-def expand_table(compact_table):
-    """Expands a table by separating keywords that are tuples or strings
-    containing comma separated words into single keyword entries with
-    the same values. Returns the expanded table.
-    Example:
-    >>> expand_table({"a, b": 1, "b": 1, ('d','e','f'):5, "c":3})
-    {'a': 1, 'b': 1, 'c': 3, 'd': 5, 'e': 5, 'f': 5}
-    """
-    expanded_table = {}
-    keys = list(compact_table.keys())
-    for key in keys:
-        value = compact_table[key]
-        if isinstance(key, str):
-            parts = (s.strip() for s in key.split(','))
-        else:
-            assert isinstance(key, collections.abc.Iterable)
-            parts = key
-        for p in parts:
-            expanded_table[p] = value
-    return expanded_table
 
 
 def ASTTransform(node, transtable):

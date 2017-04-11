@@ -59,7 +59,7 @@ try:
 except ImportError:
     import re
 
-from logs import IS_LOGGING, LOGS_DIR
+from toolkit import IS_LOGGING, LOGS_DIR, escape_re
 from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     error_messages, ASTTransform
 
@@ -75,7 +75,6 @@ __all__ = ['HistoryRecord',
            'ScannerToken',
            'RegExp',
            'RE',
-           'escape_re',
            'Token',
            'mixin_comment',
            'UnaryOperator',
@@ -530,16 +529,6 @@ class RE(Parser):
             if self.wR:
                 self.wspRight.apply(func)
             self.main.apply(func)
-
-
-def escape_re(s):
-    """Returns `s` with all regular expression special characters escaped.
-    """
-    assert isinstance(s, str)
-    re_chars = r"\.^$*+?{}[]()#<>=|!"
-    for esc_ch in re_chars:
-        s = s.replace(esc_ch, '\\' + esc_ch)
-    return s
 
 
 def Token(token, wL=None, wR=None, name=None):
