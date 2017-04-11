@@ -26,10 +26,9 @@ try:
 except ImportError:
     import re
 
-from toolkit import load_if_file, escape_re, md5
+from toolkit import load_if_file, escape_re, md5, sane_parser_name
 from parsercombinators import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
-    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
-    sane_parser_name
+    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
 from syntaxtree import *
 from version import __version__
 
@@ -112,7 +111,6 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
-# TODO: Add some sanity checks to Transformations, e.g. "Required(Optional(..." should yield an error.
 EBNFTransTable = {
     # AST Transformations for EBNF-grammar
     "syntax":

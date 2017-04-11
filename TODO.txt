@@ -1,7 +1,0 @@
-* split ParserCombinators.py into different modules, like:
-  SyntaxTree, ErrorMessages, ParserCombinators, ASTTransform, EBNFCompiler, DSLCompiler
-
-* smarter handling of whitespace parameters in RE and Token (not important...)
-
-* add warning when overlapping groups in REs occur! (should possibly change whitespace
-  handling or REs!?)

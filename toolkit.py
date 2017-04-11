@@ -41,10 +41,14 @@ __all__ = ['logging_on',
            'logging_off',
            'IS_LOGGING',
            'LOGS_DIR',
+           'line_col',
            'escape_re',
            'load_if_file',
            'is_python_code',
-           'md5']
+           'md5',
+           'expand_table',
+           'sequence',
+           'sane_parser_name']
 
 
 LOGGING: str = "LOGS"  # LOGGING = "" turns logging off!
@@ -99,6 +103,15 @@ def LOGS_DIR() -> str:
                     "do not place any files here or edit existing files in this directory\n"
                     "manually.\n")
     return dirname
+
+
+def line_col(text, pos):
+    """Returns the position within a text as (line, column)-tuple.
+    """
+    assert pos < len(text), str(pos) + " >= " + str(len(text))
+    line = text.count("\n", 0, pos) + 1
+    column = pos - text.rfind("\n", 0, pos)
+    return line, column
 
 
 def escape_re(s):
@@ -168,3 +181,16 @@ def expand_table(compact_table):
         for p in parts:
             expanded_table[p] = value
     return expanded_table
+
+
+def sequence(arg):
+    """Returns the argument if it is a sequence, otherwise returns a
+    list containing the argument as sole item."""
+    return arg if isinstance(arg, collections.abc.Sequence) else [arg]
+
+
+def sane_parser_name(name):
+    """Checks whether given name is an acceptable parser name. Parser names
+    must not be preceeded or succeeded by a double underscore '__'!
+    """
+    return name and name[:2] != '__' and name[-2:] != '__'

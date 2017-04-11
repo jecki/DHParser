@@ -1388,7 +1388,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
         grammar_base (GrammarBase):  The GrammarBase object
         AST_transformations (dict):  The transformation-table that
             assigns AST transformation functions to parser names (see
-            function ASTTransform)
+            function traverse)
         compiler (object):  An instance of a class derived from
             ``CompilerBase`` with a suitable method for every parser
             name or class.

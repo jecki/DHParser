@@ -1419,7 +1419,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
         source (str):                the input source for compilation
         grammar_base (GrammarBase):  the GrammarBase object
         AST_transformations (dict):  a table that assigns AST transformation
-                functions to parser names (see function ASTTransform)
+                functions to parser names (see function traverse)
         compiler (object):  an instance of a class derived from `CompilerBase`
                 with a suitable method for every parser name or class.
     Returns:

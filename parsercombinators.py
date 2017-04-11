@@ -59,9 +59,9 @@ try:
 except ImportError:
     import re
 
-from toolkit import IS_LOGGING, LOGS_DIR, escape_re
+from toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name
 from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
-    error_messages, ASTTransform
+    error_messages, traverse
 
 
 __all__ = ['HistoryRecord',
@@ -95,7 +95,6 @@ __all__ = ['HistoryRecord',
            'Pop',
            'Forward',
            'PARSER_SYMBOLS',
-           'sane_parser_name',
            'CompilerBase',
            'full_compilation',
            'COMPILER_SYMBOLS']
@@ -843,13 +842,6 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
 #######################################################################
 
 
-def sane_parser_name(name):
-    """Checks whether given name is an acceptable parser name. Parser names
-    must not be preceeded or succeeded by a double underscore '__'!
-    """
-    return name and name[:2] != '__' and name[-2:] != '__'
-
-
 class CompilerBase:
     def compile__(self, node):
         comp, cls = node.parser.name, node.parser.__class__.__name__
@@ -877,7 +869,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
         grammar_base (GrammarBase):  The GrammarBase object
         AST_transformations (dict):  The transformation-table that
             assigns AST transformation functions to parser names (see
-            function ASTTransform)
+            function ``syntaxtree.traverse``)
         compiler (object):  An instance of a class derived from
             ``CompilerBase`` with a suitable method for every parser
             name or class.
@@ -905,7 +897,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     if syntax_tree.error_flag:
         result = None
     else:
-        ASTTransform(syntax_tree, AST_transformations)
+        traverse(syntax_tree, AST_transformations)
         syntax_tree.log(log_file_name, ext='.ast')
         result = compiler.compile__(syntax_tree)
     errors = syntax_tree.collect_errors()

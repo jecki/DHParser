@@ -29,18 +29,17 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from toolkit import IS_LOGGING, LOGS_DIR, expand_table
+from toolkit import IS_LOGGING, LOGS_DIR, expand_table, line_col, sequence
 
 
 __all__ = ['WHITESPACE_KEYWORD',
            'TOKEN_KEYWORD',
-           'line_col',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
            'error_messages',
            'compact_sexpr',
-           'ASTTransform',
+           'traverse',
            'no_transformation',
            'replace_by_single_child',
            'reduce_single_child',
@@ -55,19 +54,6 @@ __all__ = ['WHITESPACE_KEYWORD',
            'flatten',
            'remove_enclosing_delimiters',
            'AST_SYMBOLS']
-
-
-WHITESPACE_KEYWORD = 'WSP__'
-TOKEN_KEYWORD = 'TOKEN__'
-
-
-def line_col(text, pos):
-    """Returns the position within a text as (line, column)-tuple.
-    """
-    assert pos < len(text), str(pos) + " >= " + str(len(text))
-    line = text.count("\n", 0, pos) + 1
-    column = pos - text.rfind("\n", 0, pos)
-    return line, column
 
 
 class ZombieParser:
@@ -209,7 +195,7 @@ class Node:
         function parameters. This could be an XML-representation or a
         lisp-like S-expression.
 
-        Parameters:
+        Args:
             tab (str):  The indentation string, e.g. '\t' or '    '
             openF:  (Node->str) A function that returns an opening
                 string (e.g. an XML-tag_name) for a given node
@@ -245,7 +231,7 @@ class Node:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
-        Parameters:
+        Args:
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
@@ -275,7 +261,7 @@ class Node:
         """
         Returns content as XML-tree.
 
-        Parameters:
+        Args:
             src:  The source text or `None`. In case the source text is
                 given the position will also be reported as line and
                 column.
@@ -354,7 +340,7 @@ class Node:
         'e/r' yields 'x1', then 'x2'
         'e'   yields (r x1)(r x2)
 
-        Parameters:
+        Args:
             path (str):  The path of the object, e.g. 'a/b/c'. The
                 components of ``path`` can be regular expressions
 
@@ -401,27 +387,45 @@ def compact_sexpr(s):
 ########################################################################
 
 
-def ASTTransform(node, transtable):
-    """Transforms the parse tree starting with the given ``node`` into
-    an abstract syntax tree by calling transformation functions
-    registered in the transformation dictionary ``transtable``.
+WHITESPACE_KEYWORD = 'WSP__'
+TOKEN_KEYWORD = 'TOKEN__'
+
+
+def traverse(node, calltable):
+    """Traverses the snytax tree starting with the given ``node`` depth
+    first and applies the sequences of callback functions registered
+    in the ``calltable``-dictionary.
+    
+    Possible use cases are the transformation of a concrete syntax tree
+    into an abstract tree (AST) or the semantic analysis of the AST.
+    
+    Args:
+        node (Node): The root-node of the syntax tree to be traversed 
+        calltable (dict): parser.name -> sequence of functions that
+            will be applied to the current node in order. This 
+            dictionary is interpreted as a ``compact_table``. See 
+            ``toolkit.expand_table`` or ``EBNFCompiler.EBNFTransTable``
+            
+    Example:
+        table = { "term": [replace_by_single_child, flatten], 
+            "factor, flowmarker, retrieveop": replace_by_single_child }
+        traverse(node, table)
     """
-    # normalize transformation entries by turning single transformations
-    # into lists with a single item
-    table = {name: transformation if isinstance(transformation, collections.abc.Sequence)
-             else [transformation] for name, transformation in list(transtable.items())}
+    # normalize calltable entries by turning single values into lists
+    # with a single value
+    table = {name: sequence(call) for name, call in list(calltable.items())}
     table = expand_table(table)
 
-    def recursive_ASTTransform(nd):
+    def traverse_recursive(nd):
         if nd.children:
             for child in nd.result:
-                recursive_ASTTransform(child)
-        transformation = table.get(nd.parser.name,
+                traverse_recursive(child)
+        sequence = table.get(nd.parser.name,
                                    table.get('~', [])) + table.get('*', [])
-        for transform in transformation:
-            transform(nd)
+        for call in sequence:
+            call(nd)
 
-    recursive_ASTTransform(node)
+    traverse_recursive(node)
 
 
 def no_transformation(node):
