@@ -29,7 +29,7 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from toolkit import IS_LOGGING, LOGS_DIR, expand_table, line_col, sequence
+from .toolkit import IS_LOGGING, LOGS_DIR, expand_table, line_col, sequence
 
 
 __all__ = ['WHITESPACE_KEYWORD',

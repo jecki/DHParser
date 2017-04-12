@@ -22,3 +22,5 @@ import os
 
 __version__ = '0.5.4' + '_dev' + str(os.stat(__file__).st_mtime)
 __all__ = ['toolkit', 'syntaxtree', 'parsercombinators', 'EBNFcompiler', 'DSLsupport']
+__author__ = "Eckhart Arnold <eckhart.arnold@posteo.de>"
+__copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"

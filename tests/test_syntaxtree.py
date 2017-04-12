@@ -24,7 +24,7 @@ import os
 import re
 import sys
 sys.path.append(os.path.abspath('../../'))
-from syntaxtree import Node, compact_sexpr
+from DHParser.syntaxtree import Node, compact_sexpr
 
 class DummyParser:
     def __init__(self, name=''):

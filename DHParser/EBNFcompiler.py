@@ -26,13 +26,13 @@ try:
 except ImportError:
     import re
 
-from toolkit import load_if_file, escape_re, md5, sane_parser_name
-from parsercombinators import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
+from .__init__ import __version__
+from .toolkit import load_if_file, escape_re, md5, sane_parser_name
+from .parsercombinators import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
-from syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
+from .syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
     WHITESPACE_KEYWORD
-from __init__ import __version__
 
 
 __all__ = ['EBNFGrammar',
@@ -202,7 +202,7 @@ class EBNFCompiler(CompilerBase):
                       self.grammar_name + '-grammar']
         for name in self.definition_names:
             transtable.append('    "' + name + '": no_operation,')
-        transtable += ['    "": no_operation', '}', '',  pl_name + ' = [%s]' % tt_name]
+        transtable += ['    "": no_operation', '}', '',  pl_name + ' = [%s]' % tt_name, '']
         return '\n'.join(transtable)
 
     def gen_compiler_skeleton(self):
@@ -225,7 +225,7 @@ class EBNFCompiler(CompilerBase):
             else:
                 compiler += ['    def ' + name + '(self, node):',
                              '        pass', '']
-        return '\n'.join(compiler + [''])
+        return '\n'.join(compiler)
 
     def gen_parser(self, definitions):
         # fix capture of variables that have been defined before usage [sic!]

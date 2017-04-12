@@ -1,4 +1,4 @@
-
+#!/usr/bin/python
 
 #######################################################################
 #
@@ -8,15 +8,17 @@
 
 
 from functools import partial
+import sys
 try:
     import regex as re
 except ImportError:
     import re
-from parsercombinators import GrammarBase, CompilerBase, nil_scanner, \
+from DHParser.toolkit import load_if_file    
+from DHParser.parsercombinators import GrammarBase, CompilerBase, nil_scanner, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment
-from syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
+from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \
     no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \
     is_whitespace, is_expendable
@@ -47,7 +49,7 @@ class PopRetrieveGrammar(GrammarBase):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "48a3fd5a35aeaa7ce1729e09c65594b0"
+    source_hash__ = "a418b812a36733a4713eb4e06322e1b5"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
     WSP__ = mixin_comment(whitespace=r'[	 ]*', comment=r'')
@@ -79,6 +81,7 @@ PopRetrieve_ASTTransform = {
 
 PopRetrieve_ASTPipeline = [PopRetrieve_ASTTransform]
 
+
 #######################################################################
 #
 # COMPILER SECTION - Can be edited. Changes will be preserved.
@@ -109,10 +112,28 @@ class PopRetrieveCompiler(CompilerBase):
         pass
 
 
-
 #######################################################################
 #
-# END OF PYDSL-SECTIONS
+# END OF DHPARSER-SECTIONS
 #
 #######################################################################
 
+
+def compile_PopRetrieve(source):
+    """Compiles ``source`` and returns (result, errors, ast).
+    """
+    source_text = load_if_file(source)
+    return full_compilation(PopRetrieveScanner(source_text),
+        PopRetrieveGrammar(), PopRetrieve_ASTPipeline, PopRetrieveCompiler())
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        result, errors, ast = compile_PopRetrieve(sys.argv[1])
+        if errors:
+            for error in errors:
+                print(error)
+                sys.exit(1)
+        else:
+            print(result)
+    else:
+        print("Usage: PopRetrieve_compiler.py [FILENAME]")

@@ -29,10 +29,11 @@ try:
 except ImportError:
     import re
 
-from EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
-from toolkit import IS_LOGGING, load_if_file, is_python_code, md5, compile_python_object
-from parsercombinators import GrammarBase, CompilerBase, full_compilation, nil_scanner
-from syntaxtree import Node
+from .__init__ import __version__
+from .EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from .toolkit import IS_LOGGING, load_if_file, is_python_code, md5, compile_python_object
+from .parsercombinators import GrammarBase, CompilerBase, full_compilation, nil_scanner
+from .syntaxtree import Node
 
 
 __all__ = ['GrammarError',
@@ -88,20 +89,43 @@ class CompilationError(Exception):
 
 DHPARSER_IMPORTS = """
 from functools import partial
+import sys
 try:
     import regex as re
 except ImportError:
     import re
-from parsercombinators import GrammarBase, CompilerBase, nil_scanner, \\
+from DHParser.toolkit import load_if_file    
+from DHParser.parsercombinators import GrammarBase, CompilerBase, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment
-from syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \\
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
+from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \\
     reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \\
     no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \\
     is_whitespace, is_expendable
 """
 
+
+DHPARSER_COMPILER = '''
+def compile_{NAME}(source):
+    """Compiles ``source`` and returns (result, errors, ast).
+    """
+    source_text = load_if_file(source)
+    return full_compilation({NAME}Scanner(source_text),
+        {NAME}Grammar(), {NAME}_ASTPipeline, {NAME}Compiler())
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        result, errors, ast = compile_{NAME}(sys.argv[1])
+        if errors:
+            for error in errors:
+                print(error)
+                sys.exit(1)
+        else:
+            print(result)
+    else:
+        print("Usage: {NAME}_compiler.py [FILENAME]")
+'''
 
 
 def get_grammar_instance(grammar):
@@ -141,14 +165,14 @@ def load_compiler_suite(compiler_suite):
     source = load_if_file(compiler_suite)
     if is_python_code(compiler_suite):
         try:
-            intro, syms, scanner_py, parser_py, ast_py, compiler_py, outro = \
+            intro, imports, scanner_py, parser_py, ast_py, compiler_py, outro = \
                 RX_SECTION_MARKER.split(source)
         except ValueError as error:
             raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
                                                          'Please delete or repair file manually.')
-        scanner = compile_python_object(DHPARSER_IMPORTS + scanner_py, '\w*Scanner$')
-        ast = compile_python_object(DHPARSER_IMPORTS + ast_py, '\w*Pipeline$')
-        compiler = compile_python_object(DHPARSER_IMPORTS + compiler_py, '\w*Compiler$')
+        scanner = compile_python_object(imports + scanner_py, '\w*Scanner$')
+        ast = compile_python_object(imports + ast_py, '\w*Pipeline$')
+        compiler = compile_python_object(imports + compiler_py, '\w*Compiler$')
     else:
         # assume source is an ebnf grammar
         parser_py, errors, AST = full_compilation(
@@ -215,6 +239,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
     rootname = os.path.splitext(filepath)[0]
+    compiler_name = os.path.basename(rootname)
     if compiler_suite:
         scanner, parser, trans, cclass = load_compiler_suite(compiler_suite)
         compiler = cclass()
@@ -222,7 +247,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
         scanner = nil_scanner
         parser = EBNFGrammar()
         trans = EBNF_ASTPipeline
-        compiler = EBNFCompiler(os.path.basename(rootname), source)
+        compiler = EBNFCompiler(compiler_name, source)
     result, errors, ast = full_compilation(scanner(source), parser,
                                            trans, compiler)
     if errors:
@@ -236,10 +261,10 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
         try:
             f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
             source = f.read()
-            intro, syms, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
+            intro, imports, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, outro = '', ''
-            syms = DHPARSER_IMPORTS
+            imports = DHPARSER_IMPORTS
             scanner = compiler.gen_scanner_skeleton()
             ast = compiler.gen_AST_skeleton()
             compiler = compiler.gen_compiler_skeleton()
@@ -251,9 +276,10 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
 
         try:
             f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
+            f.write("#!/usr/bin/python")
             f.write(intro)
             f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
-            f.write(syms)
+            f.write(imports)
             f.write(SECTION_MARKER.format(marker=SCANNER_SECTION))
             f.write(scanner)
             f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
@@ -264,6 +290,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             f.write(compiler)
             f.write(SECTION_MARKER.format(marker=END_SECTIONS_MARKER))
             f.write(outro)
+            f.write(DHPARSER_COMPILER.format(NAME=compiler_name))
         except (PermissionError, FileNotFoundError, IOError) as error:
             print('# Could not write file "' + rootname + '_compiler.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))

@@ -18,13 +18,15 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+#TODO: This is still a stub...
+
 import os
 import sys
 from functools import partial
 
-from DSLsupport import compileDSL, run_compiler
-from EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
-from parsercombinators import full_compilation
+from DHParser.DSLsupport import compileDSL, run_compiler
+from DHParser.EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from DHParser.parsercombinators import full_compilation
 
 
 def selftest(file_name):
@@ -34,8 +36,7 @@ def selftest(file_name):
     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
     compiler = EBNFCompiler(compiler_name, grammar)
     parser = EBNFGrammar()
-    result, errors, syntax_tree = full_compilation(grammar,
-                                                   parser, EBNF_ASTPipeline, compiler)
+    result, errors, syntax_tree = full_compilation(grammar, parser, EBNF_ASTPipeline, compiler)
     print(result)
     if errors:
         print(errors)

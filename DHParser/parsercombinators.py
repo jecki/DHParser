@@ -59,8 +59,8 @@ try:
 except ImportError:
     import re
 
-from toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, sequence
-from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
+from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, sequence
+from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     error_messages, traverse
 
 

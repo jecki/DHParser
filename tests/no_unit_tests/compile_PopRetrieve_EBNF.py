@@ -23,7 +23,7 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DSLsupport import run_compiler, source_changed
+from DHParser.DSLsupport import run_compiler, source_changed
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
     source_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):
@@ -33,12 +33,29 @@ if (not os.path.exists('PopRetrieve_compiler.py') or
         print(errors)
         sys.exit(1)
 
-errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
-if errors:
-    print(errors)
-    sys.exit(1)
+from PopRetrieve_compiler import compile_PopRetrieve
 
-errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+result, errors, ast = compile_PopRetrieve("PopRetrieveTest.txt")
 if errors:
     print(errors)
     sys.exit(1)
+else:
+    print(result)
+
+result, errors, ast = compile_PopRetrieve("PopRetrieveTest2.txt")
+if errors:
+    print(errors)
+    sys.exit(1)
+else:
+    print(result)
+
+
+# errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
+# if errors:
+#     print(errors)
+#     sys.exit(1)
+#
+# errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+# if errors:
+#     print(errors)
+#     sys.exit(1)

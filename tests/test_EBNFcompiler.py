@@ -23,7 +23,7 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DSLsupport import compileEBNF, run_compiler, source_changed
+from DHParser.DSLsupport import compileEBNF, run_compiler, source_changed
 
 
 WRITE_LOGS = True
