@@ -22,17 +22,17 @@ compilation of domain specific languages based on an EBNF-grammar.
 """
 
 from functools import partial
+import collections
 import os
 try:
     import regex as re
 except ImportError:
     import re
 
-from EBNFcompiler import *
-from toolkit import *
-from parsercombinators import *
-from syntaxtree import *
-from version import __version__
+from EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from toolkit import IS_LOGGING, load_if_file, is_python_code, md5, compile_python_object
+from parsercombinators import GrammarBase, CompilerBase, full_compilation, nil_scanner
+from syntaxtree import Node
 
 
 __all__ = ['GrammarError',
@@ -58,7 +58,7 @@ SCANNER_SECTION = "SCANNER SECTION - Can be edited. Changes will be preserved."
 PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
-END_SECTIONS_MARKER = "END OF PYDSL-SECTIONS"
+END_SECTIONS_MARKER = "END OF DHPARSER-SECTIONS"
 
 
 class GrammarError(Exception):
@@ -86,22 +86,22 @@ class CompilationError(Exception):
         return self.error_messages
 
 
-def compile_python_object(python_src, obj_name_ending="Grammar"):
-    """Compiles the python source code and returns the object the name of which
-    ends with `obj_name_ending`.
-     """
-    code = compile(python_src, '<string>', 'exec')
-    module_vars = globals()
-    allowed_symbols = PARSER_SYMBOLS | AST_SYMBOLS | COMPILER_SYMBOLS
-    namespace = {k: module_vars[k] for k in allowed_symbols}
-    exec(code, namespace)  # safety risk?
-    for key in namespace.keys():
-        if key.endswith(obj_name_ending):
-            obj = namespace[key]
-            break
-    else:
-        obj = None
-    return obj
+DHPARSER_IMPORTS = """
+from functools import partial
+try:
+    import regex as re
+except ImportError:
+    import re
+from parsercombinators import GrammarBase, CompilerBase, nil_scanner, \\
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment
+from syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \\
+    reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \\
+    no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \\
+    is_whitespace, is_expendable
+"""
+
 
 
 def get_grammar_instance(grammar):
@@ -117,10 +117,10 @@ def get_grammar_instance(grammar):
             parser_py, errors, AST = grammar_src, '', None
         else:
             parser_py, errors, AST = full_compilation(grammar_src,
-                                                      EBNFGrammar(), EBNFTransTable, EBNFCompiler())
+                    EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
         if errors:
             raise GrammarError(errors, grammar_src)
-        parser_root = compile_python_object(parser_py, 'Grammar')()
+        parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
@@ -146,35 +146,34 @@ def load_compiler_suite(compiler_suite):
         except ValueError as error:
             raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
                                                          'Please delete or repair file manually.')
-        scanner = compile_python_object(scanner_py, 'Scanner')
-        ast = compile_python_object(ast_py, 'TransTable')
-        compiler = compile_python_object(compiler_py, 'Compiler')
+        scanner = compile_python_object(DHPARSER_IMPORTS + scanner_py, '\w*Scanner$')
+        ast = compile_python_object(DHPARSER_IMPORTS + ast_py, '\w*Pipeline$')
+        compiler = compile_python_object(DHPARSER_IMPORTS + compiler_py, '\w*Compiler$')
     else:
         # assume source is an ebnf grammar
         parser_py, errors, AST = full_compilation(
-            source, EBNFGrammar(), EBNFTransTable, EBNFCompiler())
+            source, EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
         if errors:
             raise GrammarError(errors, source)
         scanner = nil_scanner
-        ast = EBNFTransTable
+        ast = EBNF_ASTPipeline
         compiler = EBNFCompiler()
-    parser = compile_python_object(parser_py, 'Grammar')()
+    parser = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
 
     return scanner, parser, ast, compiler
 
 
-def compileDSL(text_or_file, dsl_grammar, trans_table, compiler,
+def compileDSL(text_or_file, dsl_grammar, ast_pipeline, compiler,
                scanner=nil_scanner):
     """Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text.
     """
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
-    assert isinstance(trans_table, dict)
+    assert isinstance(ast_pipeline, collections.abc.Sequence) or isinstance(ast_pipeline, dict)
     parser_root, grammar_src = get_grammar_instance(dsl_grammar)
     src = scanner(load_if_file(text_or_file))
-    result, errors, AST = full_compilation(src, parser_root, trans_table,
-                                           compiler)
+    result, errors, AST = full_compilation(src, parser_root, ast_pipeline, compiler)
     if errors:  raise CompilationError(errors, src, grammar_src, AST)
     return result
 
@@ -194,8 +193,8 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None):
         which conforms to the language defined by ``ebnf_src``
     """
     grammar = ebnf_grammar_obj or EBNFGrammar()
-    grammar_src = compileDSL(ebnf_src, grammar, EBNFTransTable, EBNFCompiler())
-    return compile_python_object(grammar_src)
+    grammar_src = compileDSL(ebnf_src, grammar, EBNF_ASTPipeline, EBNFCompiler())
+    return compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
 
 
 def run_compiler(source_file, compiler_suite="", extension=".xml"):
@@ -212,16 +211,6 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     returns a list of error messages or an empty list if no errors
     occurred.
     """
-
-    def import_block(python_module, symbols):
-        """Generates an Python-``import`` statement that imports all
-        alls symbols in ``symbols`` (set or other container) from
-        python_module ``python_module``."""
-        symlist = list(symbols)
-        grouped = [symlist[i:i + 3] for i in range(0, len(symlist), 3)]
-        return ("\nfrom " + python_module + " import "
-                + ', \\\n    '.join(', '.join(g) for g in grouped))
-
     filepath = os.path.normpath(source_file)
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
@@ -232,14 +221,14 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     else:
         scanner = nil_scanner
         parser = EBNFGrammar()
-        trans = EBNFTransTable
+        trans = EBNF_ASTPipeline
         compiler = EBNFCompiler(os.path.basename(rootname), source)
     result, errors, ast = full_compilation(scanner(source), parser,
                                            trans, compiler)
     if errors:
         return errors
 
-    elif trans == EBNFTransTable:  # either an EBNF- or no compiler suite given
+    elif trans == EBNF_ASTPipeline:  # either an EBNF- or no compiler suite given
         f = None
 
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
@@ -250,8 +239,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             intro, syms, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, outro = '', ''
-            syms = 'import re\n' + import_block("DHParser.syntaxtree", AST_SYMBOLS)
-            syms += import_block("DHParser.parser", PARSER_SYMBOLS | {'CompilerBase'}) + '\n\n'
+            syms = DHPARSER_IMPORTS
             scanner = compiler.gen_scanner_skeleton()
             ast = compiler.gen_AST_skeleton()
             compiler = compiler.gen_compiler_skeleton()

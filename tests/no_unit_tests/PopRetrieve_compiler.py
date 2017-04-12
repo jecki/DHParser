@@ -6,22 +6,20 @@
 #
 #######################################################################
 
-import re
 
-
-from DHParser.syntaxtree import remove_whitespace, no_transformation, replace_by_single_child, \
-    is_expendable, remove_children_if, TOKEN_KEYWORD, \
-    remove_brackets, partial, flatten, \
-    remove_expendables, WHITESPACE_KEYWORD, is_whitespace, \
-    remove_tokens, reduce_single_child
-from DHParser.parser import mixin_comment, Required, Pop, \
-    ZeroOrMore, Token, CompilerBase, \
-    Sequence, Retrieve, Lookahead, \
-    GrammarBase, Optional, NegativeLookbehind, \
-    RegExp, Lookbehind, Capture, \
-    NegativeLookahead, Alternative, OneOrMore, \
-    Forward, RE
-
+from functools import partial
+try:
+    import regex as re
+except ImportError:
+    import re
+from parsercombinators import GrammarBase, CompilerBase, nil_scanner, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment
+from syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \
+    no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \
+    is_whitespace, is_expendable
 
 
 #######################################################################
@@ -49,14 +47,14 @@ class PopRetrieveGrammar(GrammarBase):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "4a1025732f79bf6787d1f753cbec7fc3"
+    source_hash__ = "48a3fd5a35aeaa7ce1729e09c65594b0"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
-    WSP__ = mixin_comment(whitespace=r'\s*', comment=r'')
+    WSP__ = mixin_comment(whitespace=r'[	 ]*', comment=r'')
     wspL__ = ''
-    wspR__ = ''
-    text = RE('[^`]+')
-    delimiter_sign = RE('`+')
+    wspR__ = WSP__
+    text = RE('[^`]+', wR='')
+    delimiter_sign = RE('`+', wR='')
     delimiter = Capture(delimiter_sign, "delimiter")
     codeblock = Sequence(delimiter, ZeroOrMore(Alternative(text, Sequence(NegativeLookahead(Retrieve(delimiter)), delimiter_sign))), Pop(delimiter))
     document = ZeroOrMore(Alternative(text, codeblock))
@@ -69,16 +67,17 @@ class PopRetrieveGrammar(GrammarBase):
 #
 #######################################################################
 
-PopRetrieveTransTable = {
+PopRetrieve_ASTTransform = {
     # AST Transformations for the PopRetrieve-grammar
-    "document": no_transformation,
-    "codeblock": no_transformation,
-    "delimiter": no_transformation,
-    "delimiter_sign": no_transformation,
-    "text": no_transformation,
-    "": no_transformation
+    "document": no_operation,
+    "codeblock": no_operation,
+    "delimiter": no_operation,
+    "delimiter_sign": no_operation,
+    "text": no_operation,
+    "": no_operation
 }
 
+PopRetrieve_ASTPipeline = [PopRetrieve_ASTTransform]
 
 #######################################################################
 #

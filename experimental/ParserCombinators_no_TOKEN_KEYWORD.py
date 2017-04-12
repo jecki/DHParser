@@ -649,7 +649,7 @@ def remove_enclosing_delimiters(node):
 
 
 AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
-               'no_transformation', 'remove_children_if', 'is_whitespace',
+               'no_operation', 'remove_children_if', 'is_whitespace',
                'is_comment', 'is_scanner_token', 'is_expendable',
                'remove_whitespace', 'remove_comments',
                'remove_scanner_tokens', 'remove_expendables', 'flatten',
@@ -1634,8 +1634,8 @@ class EBNFCompiler(CompilerBase):
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
         for name in self.definition_names:
-            transtable.append('    "' + name + '": no_transformation,')
-        transtable += ['    "": no_transformation', '}', '']
+            transtable.append('    "' + name + '": no_operation,')
+        transtable += ['    "": no_operation', '}', '']
         return '\n'.join(transtable)
 
     def gen_compiler_skeleton(self):

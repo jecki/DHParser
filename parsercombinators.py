@@ -59,7 +59,7 @@ try:
 except ImportError:
     import re
 
-from toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name
+from toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, sequence
 from syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     error_messages, traverse
 
@@ -94,10 +94,8 @@ __all__ = ['HistoryRecord',
            'Retrieve',
            'Pop',
            'Forward',
-           'PARSER_SYMBOLS',
            'CompilerBase',
-           'full_compilation',
-           'COMPILER_SYMBOLS']
+           'full_compilation']
 
 
 LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
@@ -827,14 +825,6 @@ class Forward(Parser):
             self.parser.apply(func)
 
 
-PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
-                  'Lookahead', 'NegativeLookahead', 'Optional',
-                  'Lookbehind', 'NegativeLookbehind',
-                  'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
-                  'OneOrMore', 'GrammarBase', 'Capture', 'Retrieve',
-                  'Pop'}
-
-
 #######################################################################
 #
 # Syntax driven compilation support
@@ -856,7 +846,7 @@ class CompilerBase:
             return compiler(node)
 
 
-def full_compilation(source, grammar_base, AST_transformations, compiler):
+def full_compilation(source, grammar_base, AST_pipeline, compiler):
     """Compiles a source in three stages:
         1. Parsing
         2. AST-transformation
@@ -867,9 +857,10 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     Paraemters:
         source (str): The input text for compilation
         grammar_base (GrammarBase):  The GrammarBase object
-        AST_transformations (dict):  The transformation-table that
-            assigns AST transformation functions to parser names (see
-            function ``syntaxtree.traverse``)
+        AST_pipeline (dict or list of dicts):  A syntax-tree processing
+            table or a sequence of processing tables. The first of
+            these table usually contains the transformations for 
+            turning the concrete into the abstract syntax tree.
         compiler (object):  An instance of a class derived from
             ``CompilerBase`` with a suitable method for every parser
             name or class.
@@ -897,7 +888,8 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     if syntax_tree.error_flag:
         result = None
     else:
-        traverse(syntax_tree, AST_transformations)
+        for processing_table in sequence(AST_pipeline):
+            traverse(syntax_tree, processing_table)
         syntax_tree.log(log_file_name, ext='.ast')
         result = compiler.compile__(syntax_tree)
     errors = syntax_tree.collect_errors()
@@ -905,4 +897,3 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     return result, messages, syntax_tree
 
 
-COMPILER_SYMBOLS = {'CompilerBase', 'Node', 're'}

@@ -40,7 +40,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'error_messages',
            'compact_sexpr',
            'traverse',
-           'no_transformation',
+           'no_operation',
            'replace_by_single_child',
            'reduce_single_child',
            'is_whitespace',
@@ -52,8 +52,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'remove_expendables',
            'remove_tokens',
            'flatten',
-           'remove_enclosing_delimiters',
-           'AST_SYMBOLS']
+           'remove_enclosing_delimiters']
 
 
 class ZombieParser:
@@ -391,7 +390,7 @@ WHITESPACE_KEYWORD = 'WSP__'
 TOKEN_KEYWORD = 'TOKEN__'
 
 
-def traverse(node, calltable):
+def traverse(root_node, processing_table):
     """Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback functions registered
     in the ``calltable``-dictionary.
@@ -400,10 +399,10 @@ def traverse(node, calltable):
     into an abstract tree (AST) or the semantic analysis of the AST.
     
     Args:
-        node (Node): The root-node of the syntax tree to be traversed 
-        calltable (dict): parser.name -> sequence of functions that
-            will be applied to the current node in order. This 
-            dictionary is interpreted as a ``compact_table``. See 
+        root_node (Node): The root-node of the syntax tree to be traversed 
+        processing_table (dict): parser.name -> sequence of functions that
+            will be applied to matching nodes in order. This dictionary
+            is interpreted as a ``compact_table``. See 
             ``toolkit.expand_table`` or ``EBNFCompiler.EBNFTransTable``
             
     Example:
@@ -411,24 +410,24 @@ def traverse(node, calltable):
             "factor, flowmarker, retrieveop": replace_by_single_child }
         traverse(node, table)
     """
-    # normalize calltable entries by turning single values into lists
+    # normalize processing_table entries by turning single values into lists
     # with a single value
-    table = {name: sequence(call) for name, call in list(calltable.items())}
+    table = {name: sequence(call) for name, call in list(processing_table.items())}
     table = expand_table(table)
 
-    def traverse_recursive(nd):
-        if nd.children:
-            for child in nd.result:
+    def traverse_recursive(node):
+        if node.children:
+            for child in node.result:
                 traverse_recursive(child)
-        sequence = table.get(nd.parser.name,
-                                   table.get('~', [])) + table.get('*', [])
+        sequence = table.get(node.parser.name,
+                             table.get('~', [])) + table.get('*', [])
         for call in sequence:
-            call(nd)
+            call(node)
 
-    traverse_recursive(node)
+    traverse_recursive(root_node)
 
 
-def no_transformation(node):
+def no_operation(node):
     pass
 
 
@@ -551,10 +550,3 @@ def remove_enclosing_delimiters(node):
         node.result = node.result[1:-1]
 
 
-AST_SYMBOLS = {'replace_by_single_child', 'reduce_single_child',
-               'no_transformation', 'remove_children_if',
-               'is_whitespace', 'is_expendable', 'remove_whitespace',
-               # 'remove_scanner_tokens', 'is_scanner_token',
-               'remove_expendables', 'flatten', 'remove_tokens',
-               'remove_enclosing_delimiters',
-               'TOKEN_KEYWORD', 'WHITESPACE_KEYWORD', 'partial'}

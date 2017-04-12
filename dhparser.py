@@ -23,7 +23,7 @@ import sys
 from functools import partial
 
 from DSLsupport import compileDSL, run_compiler
-from EBNFcompiler import EBNFGrammar, EBNFTransTable, EBNFCompiler
+from EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
 from parsercombinators import full_compilation
 
 
@@ -35,13 +35,13 @@ def selftest(file_name):
     compiler = EBNFCompiler(compiler_name, grammar)
     parser = EBNFGrammar()
     result, errors, syntax_tree = full_compilation(grammar,
-                                                   parser, EBNFTransTable, compiler)
+                                                   parser, EBNF_ASTPipeline, compiler)
     print(result)
     if errors:
         print(errors)
         sys.exit(1)
     else:
-        result = compileDSL(grammar, result, EBNFTransTable, compiler)
+        result = compileDSL(grammar, result, EBNF_ASTPipeline, compiler)
         print(result)
     return result
 

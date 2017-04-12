@@ -29,8 +29,10 @@ except ImportError:
 from toolkit import load_if_file, escape_re, md5, sane_parser_name
 from parsercombinators import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
-from syntaxtree import *
-from version import __version__
+from syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
+    replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
+    WHITESPACE_KEYWORD
+from __init__ import __version__
 
 
 __all__ = ['EBNFGrammar',
@@ -111,7 +113,7 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
-EBNFTransTable = {
+EBNF_ASTTransform = {
     # AST Transformations for EBNF-grammar
     "syntax":
         remove_expendables,
@@ -135,6 +137,9 @@ EBNFTransTable = {
     "":
         [remove_expendables, replace_by_single_child]
 }
+
+
+EBNF_ASTPipeline = [EBNF_ASTTransform]
 
 
 class EBNFCompilerError(Exception):
@@ -190,12 +195,14 @@ class EBNFCompiler(CompilerBase):
         if not self.definition_names:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_AST_Skeleton()"!')
-        transtable = [self.grammar_name + 'TransTable = {',
+        tt_name = self.grammar_name + '_ASTTransform'
+        pl_name = self.grammar_name + '_ASTPipeline'
+        transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
         for name in self.definition_names:
-            transtable.append('    "' + name + '": no_transformation,')
-        transtable += ['    "": no_transformation', '}', '']
+            transtable.append('    "' + name + '": no_operation,')
+        transtable += ['    "": no_operation', '}', '',  pl_name + ' = [%s]' % tt_name]
         return '\n'.join(transtable)
 
     def gen_compiler_skeleton(self):

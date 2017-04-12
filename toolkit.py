@@ -35,6 +35,10 @@ already exists.
 import collections
 import hashlib
 import os
+try:
+    import regex as re
+except ImportError:
+    import re
 
 
 __all__ = ['logging_on',
@@ -194,3 +198,19 @@ def sane_parser_name(name):
     must not be preceeded or succeeded by a double underscore '__'!
     """
     return name and name[:2] != '__' and name[-2:] != '__'
+
+
+def compile_python_object(python_src, catch_obj_regex):
+    """Compiles the python source code and returns the object the name of which
+    ends is matched by ``catch_obj_regex``.
+    """
+    if isinstance(catch_obj_regex, str):
+        catch_obj_regex = re.compile(catch_obj_regex)
+    code = compile(python_src, '<string>', 'exec')
+    namespace = {}
+    exec(code, namespace)  # safety risk?
+    matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
+    if len(matches) > 1:
+        raise AssertionError("Ambigous matches for %s : %s" %
+                             (str(catch_obj_regex), str(matches)))
+    return namespace[matches[0]] if matches else None

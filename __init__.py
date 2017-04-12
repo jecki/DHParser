@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""version.py - Version number of DHParser
+"""__init__.py - package definition module for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -21,3 +21,4 @@ permissions and limitations under the License.
 import os
 
 __version__ = '0.5.4' + '_dev' + str(os.stat(__file__).st_mtime)
+__all__ = ['toolkit', 'syntaxtree', 'parsercombinators', 'EBNFcompiler', 'DSLsupport']
