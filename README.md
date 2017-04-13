@@ -1,7 +1,7 @@
 DHParser
 ========
 
-A parser combinator based parsing and compiling infrastructure for domain
+A parser-combinator-based parsing and compiling infrastructure for domain
 specific languages (DSL) in Digital Humanities projects.
 
 Author: Eckhart Arnold, Bavarian Academy of Sciences
@@ -32,8 +32,8 @@ parser generators, but employs the more modern form called
 recursive descent parser.
 
 Why another parser generator? There are plenty of good parser
-generators out there,
-e.g. [Añez's grako parser generator][Añez_2017]. However, DHParser is
+generators out there, e.g. [Añez's grako parser generator][Añez_2017], 
+[Eclipse XText][XText_Website]. However, DHParser is
 intended as a tool that is specifically geared towards digital
 humanities applications, while most existing parser generators come
 from compiler construction toolkits for programming languages. Also,
@@ -157,3 +157,5 @@ München 2016. Short-URL: [tiny.badw.de/2JVy][Müller_2016]
 [tex_stackexchange_no_bnf]: http://tex.stackexchange.com/questions/4201/is-there-a-bnf-grammar-of-the-tex-language
  
 [tex_stackexchange_latex_parsers]: http://tex.stackexchange.com/questions/4223/what-parsers-for-latex-mathematics-exist-outside-of-the-tex-engines 
+
+[XText_website]: https://www.eclipse.org/Xtext/

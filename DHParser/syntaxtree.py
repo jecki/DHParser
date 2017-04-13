@@ -368,17 +368,6 @@ def error_messages(text, errors):
                        for err in sorted(list(errors)))
 
 
-def compact_sexpr(s):
-    """Returns S-expression ``s`` as a one liner without unnecessary
-    whitespace.
-    
-    Example:
-        >>> compact_sexpr("(a\n    (b\n        c\n    )\n)\n")
-        (a (b c))
-    """
-    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
-
-
 ########################################################################
 #
 # syntax tree transformation functions

@@ -240,6 +240,7 @@ class EBNFCompiler(CompilerBase):
                             if 'right' in self.directives['literalws'] else "''"))
         definitions.append(('wspL__', WHITESPACE_KEYWORD
                             if 'left' in self.directives['literalws'] else "''"))
+        print(self.directives) ####
         definitions.append((WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')").

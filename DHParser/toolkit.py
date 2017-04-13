@@ -118,6 +118,17 @@ def line_col(text, pos):
     return line, column
 
 
+def compact_sexpr(s):
+    """Returns S-expression ``s`` as a one liner without unnecessary
+    whitespace.
+
+    Example:
+        >>> compact_sexpr("(a\n    (b\n        c\n    )\n)\n")
+        (a (b c))
+    """
+    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
+
+
 def escape_re(s):
     """Returns `s` with all regular expression special characters escaped.
     """

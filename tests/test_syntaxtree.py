@@ -24,7 +24,8 @@ import os
 import re
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.syntaxtree import Node, compact_sexpr
+from DHParser.toolkit import compact_sexpr
+from DHParser.syntaxtree import Node
 
 class DummyParser:
     def __init__(self, name=''):
@@ -116,4 +117,4 @@ class TestNode:
 
 if __name__ == "__main__":
     from run import run_tests
-    run_tests("TestNode", globals())
+    run_tests("TestSExpr TestNode", globals())

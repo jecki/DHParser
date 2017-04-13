@@ -23,7 +23,7 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.DSLsupport import compileEBNF, run_compiler, source_changed
+from DHParser.DSLsupport import compileEBNF
 
 
 WRITE_LOGS = True
@@ -66,3 +66,8 @@ class TestPopRetrieve:
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
             self.minilang_parser.log_parsing_history("test_PopRetrieve_multi_line")
+
+
+if __name__ == "__main__":
+    from run import run_tests
+    run_tests("TestPopRetrieve", globals())

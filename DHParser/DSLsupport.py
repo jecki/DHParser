@@ -21,7 +21,6 @@ Module ``DSLsupport`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
-from functools import partial
 import collections
 import os
 try:
