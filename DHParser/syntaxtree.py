@@ -19,7 +19,6 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-import collections
 import itertools
 import os
 from functools import partial
@@ -37,7 +36,6 @@ __all__ = ['WHITESPACE_KEYWORD',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
-           'error_messages',
            'compact_sexpr',
            'traverse',
            'no_operation',
@@ -354,18 +352,6 @@ class Node:
             else:
                 return self.result,
         return nav(path.split('/'))
-
-
-def error_messages(text, errors):
-    """
-    Converts the list of ``errors`` collected from the root node of the
-    parse tree of `text` into a human readable (and IDE or editor
-    parsable text) with line an column numbers. Error messages are
-    separated by an empty line.
-    """
-    return "\n\n".join("line: %i, column: %i, error: %s" %
-                       (*line_col(text, err.pos), err.msg)
-                       for err in sorted(list(errors)))
 
 
 ########################################################################

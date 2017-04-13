@@ -46,6 +46,7 @@ __all__ = ['logging_on',
            'IS_LOGGING',
            'LOGS_DIR',
            'line_col',
+           'error_messages',
            'escape_re',
            'load_if_file',
            'is_python_code',
@@ -116,6 +117,18 @@ def line_col(text, pos):
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
     return line, column
+
+
+def error_messages(text, errors):
+    """
+    Converts the list of ``errors`` collected from the root node of the
+    parse tree of `text` into a human readable (and IDE or editor
+    parsable text) with line an column numbers. Error messages are
+    separated by an empty line.
+    """
+    return "\n\n".join("line: %i, column: %i, error: %s" %
+                       (*line_col(text, err.pos), err.msg)
+                       for err in sorted(list(errors)))
 
 
 def compact_sexpr(s):
@@ -225,3 +238,4 @@ def compile_python_object(python_src, catch_obj_regex):
         raise AssertionError("Ambigous matches for %s : %s" %
                              (str(catch_obj_regex), str(matches)))
     return namespace[matches[0]] if matches else None
+

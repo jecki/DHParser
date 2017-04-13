@@ -30,7 +30,7 @@ except ImportError:
 
 from .__init__ import __version__
 from .EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
-from .toolkit import IS_LOGGING, load_if_file, is_python_code, md5, compile_python_object
+from .toolkit import load_if_file, is_python_code, md5, compile_python_object
 from .parsercombinators import GrammarBase, CompilerBase, full_compilation, nil_scanner
 from .syntaxtree import Node
 
@@ -189,7 +189,8 @@ def load_compiler_suite(compiler_suite):
 def compileDSL(text_or_file, dsl_grammar, ast_pipeline, compiler,
                scanner=nil_scanner):
     """Compiles a text in a domain specific language (DSL) with an
-    EBNF-specified grammar. Returns the compiled text.
+    EBNF-specified grammar. Returns the compiled text or raises a
+    compilation error.
     """
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
@@ -201,7 +202,7 @@ def compileDSL(text_or_file, dsl_grammar, ast_pipeline, compiler,
     return result
 
 
-def compileEBNF(ebnf_src, ebnf_grammar_obj=None):
+def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
     """Compiles an EBNF source file into a Grammar class
 
     Args:
@@ -211,13 +212,16 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None):
             DHParser.EBNFcompiler.EBNFGrammar object. This can speed
             up compilation, because no new EBNFGrammar object needs to
             be instantiated.
+        source_only (bool):  If True, the source code of the Grammar
+            class is returned instead of the class itself.
     Returns:
         A Grammar class that can be instantiated for parsing a text
         which conforms to the language defined by ``ebnf_src``
     """
     grammar = ebnf_grammar_obj or EBNFGrammar()
     grammar_src = compileDSL(ebnf_src, grammar, EBNF_ASTPipeline, EBNFCompiler())
-    return compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
+    return grammar_src if source_only else \
+        compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
 
 
 def run_compiler(source_file, compiler_suite="", extension=".xml"):

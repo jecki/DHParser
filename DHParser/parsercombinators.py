@@ -61,8 +61,8 @@ except ImportError:
 
 from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, sequence
 from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
-    error_messages, traverse
-
+    traverse
+from DHParser.toolkit import error_messages
 
 __all__ = ['HistoryRecord',
            'Parser',
@@ -286,13 +286,13 @@ class GrammarBase:
         if self.wspL__:
             self.wsp_left_parser__ = RegExp(self.wspL__, WHITESPACE_KEYWORD)
             self.wsp_left_parser__.grammar = self
-            self.all_parsers.add(self.wsp_left_parser__)
+            self.all_parsers.add(self.wsp_left_parser__)  # don't you forget about me...
         else:
             self.wsp_left_parser__ = ZOMBIE_PARSER
         if self.wspR__:
             self.wsp_right_parser__ = RegExp(self.wspR__, WHITESPACE_KEYWORD)
             self.wsp_right_parser__.grammar = self
-            self.all_parsers.add(self.wsp_right_parser__)
+            self.all_parsers.add(self.wsp_right_parser__)  # don't you forget about me...
         else:
             self.wsp_right_parser__ = ZOMBIE_PARSER
         self.root__.apply(self._add_parser)
@@ -309,7 +309,8 @@ class GrammarBase:
         """Adds the copy of the classes parser object to this
         particular instance of GrammarBase.
         """
-        setattr(self, parser.name, parser)
+        if parser.name:
+            setattr(self, parser.name, parser)
         self.all_parsers.add(parser)
         parser.grammar = self
 
@@ -469,7 +470,7 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         duplicate = RegExp(regexp, self.name)
         duplicate.name = self.name  # this ist needed!!!!
-        duplicate.regexp = self.regexp
+        # duplicate.regexp = self.regexp
         duplicate.grammar = self.grammar
         duplicate.visited = copy.deepcopy(self.visited, memo)
         duplicate.recursion_counter = copy.deepcopy(self.recursion_counter, memo)
@@ -818,7 +819,7 @@ class Forward(Parser):
 
     def set(self, parser):
         assert isinstance(parser, Parser)
-        self.name = parser.name  # redundant, because of constructor of GrammarBase
+        self.name = parser.name  # redundant, see GrammarBase-constructor
         self.parser = parser
 
     def apply(self, func):
