@@ -80,7 +80,7 @@ class TestPopRetrieve:
         assert not syntax_tree.collect_errors()
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_single_line", '.cst')
-            self.minilang_parser.log_parsing_history("test_PopRetrieve_single_line")
+            # self.minilang_parser.log_parsing_history("test_PopRetrieve_single_line")
 
     def test_multi_line(self):
         teststr = """
@@ -95,7 +95,7 @@ class TestPopRetrieve:
         assert not syntax_tree.collect_errors()
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
-            self.minilang_parser.log_parsing_history("test_PopRetrieve_multi_line")
+            # self.minilang_parser.log_parsing_history("test_PopRetrieve_multi_line")
 
 
 if __name__ == "__main__":

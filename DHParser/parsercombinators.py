@@ -819,7 +819,6 @@ class Forward(Parser):
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
-        assert id(self) not in memo
         duplicate = self.__class__()
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)

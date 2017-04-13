@@ -56,7 +56,7 @@ class TestLeftRecursion:
         assert snippet == str(syntax_tree)
         if WRITE_LOGS:
             syntax_tree.log("test_LeftRecursion_direct", '.cst')
-            self.minilang_parser1.log_parsing_history("test_LeftRecursion_direct")
+            # self.minilang_parser1.log_parsing_history("test_LeftRecursion_direct")
 
     def test_indirect_left_recursion(self):
         pass
