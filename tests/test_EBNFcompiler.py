@@ -44,8 +44,10 @@ class TestDirectives:
         parser = MinilangParser()
         assert parser
         syntax_tree = parser.parse("3 + 4 * 12")
+        parser.log_parsing_history("WSP")
         assert not syntax_tree.collect_errors()
         syntax_tree = parser.parse("3 + 4 \n * 12")
+        parser.log_parsing_history("WSPLF")
         assert not syntax_tree.collect_errors()
 
     def test_whitespace_standard(self):

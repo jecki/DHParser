@@ -71,6 +71,12 @@ class ZombieParser:
         self.name = "ZOMBIE"
         self.__class__.alive = True
 
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        return self
+
     def __str__(self):
         return self.name
 

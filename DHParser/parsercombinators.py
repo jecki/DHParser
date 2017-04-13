@@ -212,6 +212,9 @@ class Parser(metaclass=ParserMetaClass):
         self._grammar = None  # center for global variables etc.
         self.reset()
 
+    def __deepcopy__(self, memo):
+        return self.__class__(self.name)
+
     def reset(self):
         self.visited = dict()
         self.recursion_counter = dict()
@@ -462,19 +465,12 @@ class RegExp(Parser):
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
-        # This method is obsolete with the new `regex` module! It's
-        # being kept for compatibility with Python's standard library
+        # `regex` supports deep copies, but not `re`
         try:
-            regexp = copy.deepcopy(self.regexp)
+            regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        duplicate = RegExp(regexp, self.name)
-        duplicate.name = self.name  # this ist needed!!!!
-        # duplicate.regexp = self.regexp
-        duplicate.grammar = self.grammar
-        duplicate.visited = copy.deepcopy(self.visited, memo)
-        duplicate.recursion_counter = copy.deepcopy(self.recursion_counter, memo)
-        return duplicate
+        return RegExp(regexp, self.name)
 
     def __call__(self, text):
         match = text[0:1] != BEGIN_SCANNER_TOKEN and self.regexp.match(text)  # ESC starts a scanner token.
@@ -496,6 +492,13 @@ class RE(Parser):
         self.wspLeft = RegExp(wL, WHITESPACE_KEYWORD) if wL else ZOMBIE_PARSER
         self.wspRight = RegExp(wR, WHITESPACE_KEYWORD) if wR else ZOMBIE_PARSER
         self.main = RegExp(regexp)
+
+    def __deepcopy__(self, memo={}):
+        try:
+            regexp = copy.deepcopy(self.main.regexp, memo)
+        except TypeError:
+            regexp = self.main.regexp.pattern
+        return self.__class__(regexp, self.wL, self.wR, self.name)
 
     def __call__(self, text):
         # assert self.main.regexp.pattern != "@"
@@ -555,6 +558,10 @@ class UnaryOperator(Parser):
         assert isinstance(parser, Parser)
         self.parser = parser
 
+    def __deepcopy__(self, memo):
+        parser = copy.deepcopy(self.parser, memo)
+        return self.__class__(parser, self.name)
+
     def apply(self, func):
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
@@ -565,6 +572,10 @@ class NaryOperator(Parser):
         super(NaryOperator, self).__init__(name)
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers
+
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        return self.__class__(*parsers, name=self.name)
 
     def apply(self, func):
         if super(NaryOperator, self).apply(func):
@@ -771,6 +782,9 @@ class Retrieve(Parser):
         super(Retrieve, self).__init__(name)
         self.symbol = symbol  # if isinstance(symbol, str) else symbol.name
 
+    def __deepcopy__(self, memo):
+        return self.__class__(self.symbol, self.name)
+
     def __call__(self, text):
         symbol = self.symbol if isinstance(self.symbol, str) \
             else self.symbol.name
@@ -801,7 +815,16 @@ class Forward(Parser):
     def __init__(self):
         Parser.__init__(self)
         self.parser = None
+        self.name = ''
         self.cycle_reached = False
+
+    def __deepcopy__(self, memo):
+        assert id(self) not in memo
+        duplicate = self.__class__()
+        memo[id(self)] = duplicate
+        parser = copy.deepcopy(self.parser, memo)
+        duplicate.set(parser)
+        return duplicate
 
     def __call__(self, text):
         return self.parser(text)

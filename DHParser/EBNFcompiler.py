@@ -352,13 +352,13 @@ class EBNFCompiler(CompilerBase):
         if key in {'comment', 'whitespace'}:
             if node.result[1].parser.name == "list_":
                 if len(node.result[1].result) != 1:
-                    node.add_error("Directive %s must have one, but not %i values" %
+                    node.add_error('Directive "%s" must have one, but not %i values.' %
                                    (key, len(node.result[1])))
                 value = self.compile__(node.result[1]).pop()
                 if value in {'linefeed', 'standard'} and key == 'whitespace':
                     value = '\s*' if value == "linefeed" else self.DEFAULT_WHITESPACE
                 else:
-                    node.add_error('Value "%" not allowed for directive %s' % (value, key))
+                    node.add_error('Value "%" not allowed for directive "%s".' % (value, key))
             else:
                 value = node.result[1].result.strip("~")
                 if value != node.result[1].result:
