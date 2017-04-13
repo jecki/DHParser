@@ -310,8 +310,6 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             print(result)
         finally:
             if f:  f.close()
-        if IS_LOGGING():
-            print(ast)
 
     return []
 

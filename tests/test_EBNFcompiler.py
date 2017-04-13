@@ -29,6 +29,36 @@ from DHParser.DSLsupport import compileEBNF
 WRITE_LOGS = True
 
 
+class TestDirectives:
+    mini_language = """
+        expression =  term  { ("+" | "-") term }
+        term       =  factor  { ("*" | "/") factor }
+        factor     =  constant | "("  expression  ")"
+        constant   =  digit { digit } [ //~ ]
+        digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
+        """
+
+    def test_whitespace_linefeed(self):
+        lang = "@ whitespace = linefeed\n" + self.mini_language
+        MinilangParser = compileEBNF(lang)
+        parser = MinilangParser()
+        assert parser
+        syntax_tree = parser.parse("3 + 4 * 12")
+        parser.log_parsing_history('WSP1')
+        assert not syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n * 12")
+        parser.log_parsing_history('WSP2')
+        assert not syntax_tree.collect_errors()
+
+    def test_whitespace_standard(self):
+        lang = "@ whitespace = standard\n" + self.mini_language
+        parser = compileEBNF(lang)()
+        assert parser
+        syntax_tree = parser.parse("3 + 4 * 12")
+        assert not syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n * 12")
+        assert syntax_tree.collect_errors()
+
 class TestPopRetrieve:
     mini_language = """
         document       = { text | codeblock }
@@ -70,4 +100,4 @@ class TestPopRetrieve:
 
 if __name__ == "__main__":
     from run import run_tests
-    run_tests("TestPopRetrieve", globals())
+    run_tests("TestDirectives TestPopRetrieve", globals())

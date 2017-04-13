@@ -28,7 +28,6 @@ from DHParser.DSLsupport import compileDSL, run_compiler
 from DHParser.EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
 from DHParser.parsercombinators import full_compilation
 
-
 def selftest(file_name):
     print(file_name)
     with open('examples/' + file_name, encoding="utf-8") as f:

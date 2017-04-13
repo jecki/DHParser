@@ -49,10 +49,10 @@ class PopRetrieveGrammar(GrammarBase):
     delimiter_sign = /`+/
     text           = /[^`]+/ 
     """
-    source_hash__ = "a418b812a36733a4713eb4e06322e1b5"
+    source_hash__ = "1312f8befacbc4d03bcc320644f37015"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
-    WSP__ = mixin_comment(whitespace=r'[	 ]*', comment=r'')
+    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'')
     wspL__ = ''
     wspR__ = WSP__
     text = RE('[^`]+', wR='')

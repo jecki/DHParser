@@ -286,11 +286,13 @@ class GrammarBase:
         if self.wspL__:
             self.wsp_left_parser__ = RegExp(self.wspL__, WHITESPACE_KEYWORD)
             self.wsp_left_parser__.grammar = self
+            self.all_parsers.add(self.wsp_left_parser__)
         else:
             self.wsp_left_parser__ = ZOMBIE_PARSER
         if self.wspR__:
             self.wsp_right_parser__ = RegExp(self.wspR__, WHITESPACE_KEYWORD)
             self.wsp_right_parser__.grammar = self
+            self.all_parsers.add(self.wsp_right_parser__)
         else:
             self.wsp_right_parser__ = ZOMBIE_PARSER
         self.root__.apply(self._add_parser)

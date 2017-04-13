@@ -130,10 +130,12 @@ EBNF_ASTTransform = {
         [remove_enclosing_delimiters, replace_by_single_child],
     "oneormore, repetition, option, regexchain":
         [reduce_single_child, remove_enclosing_delimiters],
-    "symbol, literal, regexp, list_":
+    "symbol, literal, regexp":
         [remove_expendables, reduce_single_child],
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
+    "list_":
+        [partial(remove_tokens, tokens={','})],
     "":
         [remove_expendables, replace_by_single_child]
 }
@@ -157,7 +159,7 @@ class EBNFCompiler(CompilerBase):
     in EBNF-Notation.
     """
     COMMENT_KEYWORD = "COMMENT__"
-    DEFAULT_WHITESPACE = '[\t ]*'
+    DEFAULT_WHITESPACE = r'[\t ]*'
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, COMMENT_KEYWORD}
     KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
     VOWELS = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc.?
@@ -240,7 +242,6 @@ class EBNFCompiler(CompilerBase):
                             if 'right' in self.directives['literalws'] else "''"))
         definitions.append(('wspL__', WHITESPACE_KEYWORD
                             if 'left' in self.directives['literalws'] else "''"))
-        print(self.directives) ####
         definitions.append((WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')").
@@ -349,17 +350,24 @@ class EBNFCompiler(CompilerBase):
         key = node.result[0].result.lower()
         assert key not in self.scanner_tokens
         if key in {'comment', 'whitespace'}:
-            value = node.result[1].result
-            if value[0] + value[-1] in {'""', "''"}:
-                value = escape_re(value[1:-1])
-            elif value[0] + value[-1] == '//':
-                value = self._check_rx(node, value[1:-1])
+            if node.result[1].parser.name == "list_":
+                if len(node.result[1].result) != 1:
+                    node.add_error("Directive %s must have one, but not %i values" %
+                                   (key, len(node.result[1])))
+                value = self.compile__(node.result[1]).pop()
+                if value in {'linefeed', 'standard'} and key == 'whitespace':
+                    value = '\s*' if value == "linefeed" else self.DEFAULT_WHITESPACE
+                else:
+                    node.add_error('Value "%" not allowed for directive %s' % (value, key))
             else:
-                if value == "linefeed":
-                    value = '\s*'
-                elif value == "standard":
-                    value = self.DEFAULT_WHITESPACE
-                value = self._check_rx(node, value)
+                value = node.result[1].result.strip("~")
+                if value != node.result[1].result:
+                    node.add_error("Whitespace marker '~' not allowed in definition of "
+                                   "%s regular expression." % key)
+                if value[0] + value[-1] in {'""', "''"}:
+                    value = escape_re(value[1:-1])
+                elif value[0] + value[-1] == '//':
+                    value = self._check_rx(node, value[1:-1])
             self.directives[key] = value
         elif key == 'literalws':
             value = {item.lower() for item in self.compile__(node.result[1])}
@@ -478,4 +486,5 @@ class EBNFCompiler(CompilerBase):
         return 'RE(' + ', '.join([arg] + name) + ')'
 
     def list_(self, node):
-        return set(item.strip() for item in node.result.split(','))
+        assert node.children
+        return set(item.result.strip() for item in node.result)
