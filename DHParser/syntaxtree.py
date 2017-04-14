@@ -28,7 +28,7 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from .toolkit import IS_LOGGING, LOGS_DIR, expand_table, line_col, sequence
+from .toolkit import IS_LOGGING, LOGS_DIR, expand_table, line_col, smart_list
 
 
 __all__ = ['WHITESPACE_KEYWORD',
@@ -50,7 +50,10 @@ __all__ = ['WHITESPACE_KEYWORD',
            'remove_expendables',
            'remove_tokens',
            'flatten',
-           'remove_enclosing_delimiters']
+           'remove_enclosing_delimiters',
+           'forbid',
+           'require',
+           'assert_content']
 
 
 class ZombieParser:
@@ -297,6 +300,7 @@ class Node:
         of a set of tuples (position, error_message), where position
         is always relative to this node.
         """
+        errors = []
         if self.error_flag:
             errors = self.errors
             if clear_errors:
@@ -305,8 +309,7 @@ class Node:
             if self.children:
                 for child in self.result:
                     errors.extend(child.collect_errors(clear_errors))
-            return errors
-        return []
+        return errors
 
     def log(self, log_file_name, ext):
         if IS_LOGGING():
@@ -393,13 +396,14 @@ def traverse(root_node, processing_table):
     """
     # normalize processing_table entries by turning single values into lists
     # with a single value
-    table = {name: sequence(call) for name, call in list(processing_table.items())}
+    table = {name: smart_list(call) for name, call in list(processing_table.items())}
     table = expand_table(table)
 
     def traverse_recursive(node):
         if node.children:
             for child in node.result:
                 traverse_recursive(child)
+                node.error_flag |= child.error_flag  # propagate error flag
         sequence = table.get(node.parser.name,
                              table.get('~', [])) + table.get('*', [])
         for call in sequence:
@@ -531,3 +535,29 @@ def remove_enclosing_delimiters(node):
         node.result = node.result[1:-1]
 
 
+########################################################################
+#
+# syntax tree validation functions
+#
+########################################################################
+
+
+def require(node, child_tags):
+    for child in node.children:
+        if child.tag_name not in child_tags:
+            node.add_error('Element "%s" is not allowed inside "%s".' %
+                           (child.tag_name, node.tag_name))
+
+
+def forbid(node, child_tags):
+    for child in node.children:
+        if child.tag_name in child_tags:
+            node.add_error('Element "%s" cannot be nested inside "%s".' %
+                           (child.tag_name, node.tag_name))
+
+
+def assert_content(node, regex):
+    content = str(node)
+    if not re.match(regex, content):
+        node.add_error('Element "%s" violates %s on %s' %
+                       (node.tag_name, str(regex), content))

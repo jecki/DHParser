@@ -25,7 +25,8 @@ import re
 import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.toolkit import compact_sexpr
-from DHParser.syntaxtree import Node
+from DHParser.syntaxtree import Node, traverse
+
 
 class DummyParser:
     def __init__(self, name=''):
@@ -115,6 +116,21 @@ class TestNode:
         assert found[0].result == 'x' and found[1].result == 'y'
 
 
+class TestErrorHandling:
+    def test_error_propagations(self):
+        tree = from_sexpr('(a (b c) (d (e (f (g h)))))')
+
+        def find_h(node):
+            if node.result == "h":
+                node.add_error("an error deep inside the syntax tree")
+
+        assert not tree.error_flag
+        traverse(tree, {"*": find_h})
+        assert tree.error_flag
+
+
+
 if __name__ == "__main__":
     from run import run_tests
-    run_tests("TestSExpr TestNode", globals())
+
+    run_tests("TestErrorHandling", globals())

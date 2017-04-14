@@ -59,7 +59,7 @@ try:
 except ImportError:
     import re
 
-from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, sequence
+from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, smart_list
 from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     traverse
 from DHParser.toolkit import error_messages
@@ -460,6 +460,13 @@ class ScannerToken(Parser):
 
 
 class RegExp(Parser):
+    """Regular expression parser.
+    
+    The RegExp-parser parses text that matches a regular expression.
+    RegExp can also be considered as the "atomic parser", because all
+    other parsers delegate part of the parsing job to other parsers,
+    but do not match text directly.
+    """
     def __init__(self, regexp, name=None):
         super(RegExp, self).__init__(name)
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
@@ -482,9 +489,33 @@ class RegExp(Parser):
 
 class RE(Parser):
     """Regular Expressions with optional leading or trailing whitespace.
+    
+    The RE-parser parses pieces of text that match a given regular
+    expression. Other than the ``RegExp``-Parser it can also skip 
+    "implicit whitespace" before or after the matched text.
+    
+    The whitespace is in turn defined by a regular expression. It
+    should be made sure that this expression also matches the empty
+    string, e.g. use r'\s*' or r'[\t ]+', but not r'\s+'. If the
+    respective parameters in the constructor are set to ``None`` the
+    default whitespace expression from the Grammar object will be used.
     """
-
     def __init__(self, regexp, wL=None, wR=None, name=None):
+        """Constructor for class RE.
+                
+        Args:
+            regexp (str or regex object):  The regular expression to be
+                used for parsing. 
+            wL (str or regexp):  Left whitespace regular expression, 
+                i.e. either ``None``, the empty string or a regular
+                expression (e.g. "\s*") that defines whitespace. An 
+                empty string means no whitespace will be skipped,
+                ``None`` means that the default whitespace will be 
+                used.
+            wR (str or regexp):  Right whitespace regular expression.
+                See above.
+            name:  The optional name of the parser.
+        """
         super(RE, self).__init__(name)
         # assert wR or regexp == '.' or isinstance(self, Token)
         self.wL = wL
@@ -520,6 +551,7 @@ class RE(Parser):
 
     def _grammar_assigned_notifier(self):
         if self.grammar:
+            # use default whitespace parsers if not otherwise specified
             if self.wL is None:
                 self.wspLeft = self.grammar.wsp_left_parser__
             if self.wR is None:
@@ -535,11 +567,24 @@ class RE(Parser):
 
 
 def Token(token, wL=None, wR=None, name=None):
+    """Returns an RE-parser that matches plain strings that are
+    considered as 'tokens'. 
+    
+    If the ``name``-parameter is empty, the parser's name will be set
+    to the TOKEN_KEYWORD, making it easy to identify tokens in the 
+    abstract syntax tree transformation and compilation stage.
+    """
     return RE(escape_re(token), wL, wR, name or TOKEN_KEYWORD)
 
 
 def mixin_comment(whitespace, comment):
-    """Mixes comment-regexp into whitespace regexp.
+    """Returns a regular expression that merges comment and whitespace
+    regexps. Thus comments cann occur whereever whitespace is allowed
+    and will be skipped just as implicit whitespace.
+    
+    Note, that because this works on the level of regular expressions,
+    nesting comments is not possible. It also makes it much harder to
+    use directives inside comments (which isn't recommended, anyway).
     """
     wspc = '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
     return wspc
@@ -868,7 +913,10 @@ class CompilerBase:
             return None
         else:
             compiler = self.__getattribute__(elem)  # TODO Add support for python keyword attributes
-            return compiler(node)
+            result = compiler(node)
+            for child in node.children:
+                node.error_flag |= child.error_flag
+            return result
 
 
 def full_compilation(source, grammar_base, AST_pipeline, compiler):
@@ -879,7 +927,7 @@ def full_compilation(source, grammar_base, AST_pipeline, compiler):
     The compilations stage is only invoked if no errors occurred in
     either of the two previous stages.
 
-    Paraemters:
+    Args:
         source (str): The input text for compilation
         grammar_base (GrammarBase):  The GrammarBase object
         AST_pipeline (dict or list of dicts):  A syntax-tree processing
@@ -912,12 +960,15 @@ def full_compilation(source, grammar_base, AST_pipeline, compiler):
     # likely that error list gets littered with compile error messages
     if syntax_tree.error_flag:
         result = None
+        errors = syntax_tree.collect_errors()
     else:
-        for processing_table in sequence(AST_pipeline):
+        for processing_table in smart_list(AST_pipeline):
             traverse(syntax_tree, processing_table)
         syntax_tree.log(log_file_name, ext='.ast')
-        result = compiler.compile__(syntax_tree)
-    errors = syntax_tree.collect_errors()
+        errors = syntax_tree.collect_errors()
+        if not errors:
+            result = compiler.compile__(syntax_tree)
+            errors = syntax_tree.collect_errors()
     messages = error_messages(source, errors)
     return result, messages, syntax_tree
 

@@ -23,6 +23,9 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
+from DHParser.syntaxtree import traverse
+from DHParser.parsercombinators import full_compilation
+from DHParser.EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
 from DHParser.DSLsupport import compileEBNF
 
 
@@ -59,6 +62,7 @@ class TestDirectives:
         syntax_tree = parser.parse("3 + 4 \n * 12")
         assert syntax_tree.collect_errors()
 
+
 class TestPopRetrieve:
     mini_language = """
         document       = { text | codeblock }
@@ -78,6 +82,9 @@ class TestPopRetrieve:
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser.parse(teststr)
         assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(lambda node: node.tag_name == "delimiter")))
+        pop = str(next(syntax_tree.find(lambda node: node.tag_name == "Pop")))
+        assert delim == pop
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_single_line", '.cst')
             # self.minilang_parser.log_parsing_history("test_PopRetrieve_single_line")
@@ -93,11 +100,45 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser.parse(teststr)
         assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(lambda node: node.tag_name == "delimiter")))
+        pop = str(next(syntax_tree.find(lambda node: node.tag_name == "Pop")))
+        assert delim == pop
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
             # self.minilang_parser.log_parsing_history("test_PopRetrieve_multi_line")
 
 
+class TestSemanticValidation:
+    def check(self, minilang, bool_filter=lambda x: x):
+        grammar = EBNFGrammar()
+        st = grammar.parse(minilang)
+        assert not st.collect_errors()
+        for table in EBNF_ASTPipeline:
+            traverse(st, table)
+        assert bool_filter(st.collect_errors())
+
+    def test_illegal_nesting(self):
+        self.check('impossible = { [ "an optional requirement" ] }')
+
+    def test_illegal_nesting_option_required(self):
+        self.check('impossible = [ §"an optional requirement" ]')
+
+    def test_illegal_nesting_oneormore_option(self):
+        self.check('impossible = { [ "no use"] }+')
+
+    def test_legal_nesting(self):
+        self.check('possible = { [ "+" ] "1" }', lambda x: not x)
+
+
+class TestCompilerErrors:
+    def test_error_propagation(self):
+        ebnf = "@ literalws = wrongvalue  # testing error propagation"
+        result, messages, st = full_compilation(ebnf, EBNFGrammar(), EBNF_ASTPipeline,
+                                                EBNFCompiler('ErrorPropagationTest'))
+        assert messages
+
+
 if __name__ == "__main__":
     from run import run_tests
-    run_tests("TestDirectives TestPopRetrieve", globals())
+
+    run_tests("TestCompilerErrors", globals())

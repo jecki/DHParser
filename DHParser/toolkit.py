@@ -52,7 +52,7 @@ __all__ = ['logging_on',
            'is_python_code',
            'md5',
            'expand_table',
-           'sequence',
+           'smart_list',
            'sane_parser_name']
 
 
@@ -189,6 +189,47 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
+def smart_list(arg):
+    """Returns the argument as list, depending on its type and content.
+    
+    If the argument is a string, it will be interpreted as a list of
+    comma separated values, trying ';', ',', ' ' as possible delimiters
+    in this order, e.g.
+        >>> smart_list("1; 2, 3; 4")
+        ["1", "2, 3", "4"]
+        >>> smart_list("2, 3")
+        ["2", "3"]
+        >>> smart_list("a b cd")
+        ["a", "b", "cd"]
+    If the argument is a collection other than a string, it will be
+    returned as is, e.g.
+        >>> smart_list((1, 2, 3))
+        (1, 2, 3)
+        >>> smart_list({1, 2, 3})
+        {1, 2, 3}
+    If the argument is another iterable than a collection, it will
+    be converted into a list, e.g.
+        >>> smart_list(i for i in {1,2,3})
+        [1, 2, 3]
+    Finally, if none of the above is true, the argument will be 
+    wrapped in a list and returned, e.g.
+        >>> smart_list(125)
+        [125]
+    """
+    if isinstance(arg, str):
+        for delimiter in (';', ','):
+            lst = arg.split(delimiter)
+            if len(lst) > 1:
+                return (s.strip() for s in lst)
+        return (s.strip() for s in arg.strip().split(' '))
+    elif isinstance(arg, collections.abc.Collection):
+        return arg
+    elif isinstance(arg, collections.abc.Iterable):
+        return list(arg)
+    else:
+        return [arg]
+
+
 def expand_table(compact_table):
     """Expands a table by separating keywords that are tuples or strings
     containing comma separated words into single keyword entries with
@@ -201,20 +242,9 @@ def expand_table(compact_table):
     keys = list(compact_table.keys())
     for key in keys:
         value = compact_table[key]
-        if isinstance(key, str):
-            parts = (s.strip() for s in key.split(','))
-        else:
-            assert isinstance(key, collections.abc.Iterable)
-            parts = key
-        for p in parts:
-            expanded_table[p] = value
+        for k in smart_list(key):
+            expanded_table[k] = value
     return expanded_table
-
-
-def sequence(arg):
-    """Returns the argument if it is a sequence, otherwise returns a
-    list containing the argument as sole item."""
-    return arg if isinstance(arg, collections.abc.Sequence) else [arg]
 
 
 def sane_parser_name(name):

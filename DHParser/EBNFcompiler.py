@@ -32,7 +32,7 @@ from .parsercombinators import GrammarBase, mixin_comment, Forward, RE, Negative
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
 from .syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
-    WHITESPACE_KEYWORD
+    forbid, assert_content, WHITESPACE_KEYWORD
 
 
 __all__ = ['EBNFGrammar',
@@ -61,6 +61,7 @@ class EBNFGrammar(GrammarBase):
                 | [flowmarker] literal
                 | [flowmarker] regexp
                 | [flowmarker] group
+                | [flowmarker] regexchain
                 | [flowmarker] oneormore
                 | repetition
                 | option
@@ -70,9 +71,12 @@ class EBNFGrammar(GrammarBase):
     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
     group      =  "(" expression §")"
-    option     =  "[" expression §"]"
+    regexchain =  "<" expression §">"                # compiles "expression" into a singular regular expression
     oneormore  =  "{" expression "}+"
     repetition =  "{" expression §"}"
+    option     =  "[" expression §"]"
+
+    link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
 
     symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
     literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
@@ -80,36 +84,39 @@ class EBNFGrammar(GrammarBase):
     regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                      # '~' is a whitespace-marker, if present leading or trailing
                                                      # whitespace of a regular expression will be ignored tacitly.
-    list_      =  /\w+\s*(?:,\s*\w+\s*)*/~           # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+    list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
                                                      # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
     EOF =  !/./
     """
     expression = Forward()
-    source_hash__ = "1065c2e43262a5cb3aa438ec4d347c32"
+    source_hash__ = "a410e1727fb7575e98ff8451dbf8f3bd"
     parser_initialization__ = "upon instatiation"
-    wsp__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+    COMMENT__ = r'#.*(?:\n|$)'
+    WSP__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = ''
-    wspR__ = wsp__
+    wspR__ = WSP__
     EOF = NegativeLookahead(RE('.', wR=''))
-    list_ = RE('\\w+\\s*(?:,\\s*\\w+\\s*)*')
+    list_ = Sequence(RE('\\w+'), ZeroOrMore(Sequence(Token(","), RE('\\w+'))))
     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
+    link = Alternative(regexp, symbol, literal)
+    option = Sequence(Token("["), expression, Required(Token("]")))
     repetition = Sequence(Token("{"), expression, Required(Token("}")))
     oneormore = Sequence(Token("{"), expression, Token("}+"))
-    option = Sequence(Token("["), expression, Required(Token("]")))
+    regexchain = Sequence(Token("<"), expression, Required(Token(">")))
     group = Sequence(Token("("), expression, Required(Token(")")))
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
     factor = Alternative(Sequence(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("="))),
                          Sequence(Optional(flowmarker), literal), Sequence(Optional(flowmarker), regexp),
-                         Sequence(Optional(flowmarker), group), Sequence(Optional(flowmarker), oneormore), repetition,
-                         option)
+                         Sequence(Optional(flowmarker), group), Sequence(Optional(flowmarker), regexchain),
+                         Sequence(Optional(flowmarker), oneormore), repetition, option)
     term = OneOrMore(factor)
     expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|"), term))))
     directive = Sequence(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
     definition = Sequence(symbol, Required(Token("=")), expression)
-    syntax = Sequence(Optional(RE('', wR='', wL=wsp__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
+    syntax = Sequence(Optional(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
     root__ = syntax
 
 
@@ -140,8 +147,14 @@ EBNF_ASTTransform = {
         [remove_expendables, replace_by_single_child]
 }
 
+EBNF_semantic_validation = {
+    # Semantic validation on the AST
+    "repetition, option, oneormore":
+        [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
+         partial(assert_content, regex=r'(?!§)')],
+}
 
-EBNF_ASTPipeline = [EBNF_ASTTransform]
+EBNF_ASTPipeline = [EBNF_ASTTransform, EBNF_semantic_validation]
 
 
 class EBNFCompilerError(Exception):
