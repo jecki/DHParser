@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
 """dhparser.py - command line tool for DHParser
 
@@ -24,9 +24,10 @@ import os
 import sys
 from functools import partial
 
-from DHParser.DSLsupport import compileDSL, run_compiler
-from DHParser.EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
-from DHParser.parsercombinators import full_compilation
+from DHParser.dsl import compileDSL, run_compiler
+from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from DHParser.parsers import full_compilation
+
 
 def selftest(file_name):
     print(file_name)
@@ -35,10 +36,11 @@ def selftest(file_name):
     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
     compiler = EBNFCompiler(compiler_name, grammar)
     parser = EBNFGrammar()
-    result, errors, syntax_tree = full_compilation(grammar, parser, EBNF_ASTPipeline, compiler)
+    result, errors, syntax_tree = full_compilation(grammar, None, parser,
+                                                   EBNF_ASTPipeline, compiler)
     print(result)
     if errors:
-        print(errors)
+        print('\n\n'.join(errors))
         sys.exit(1)
     else:
         result = compileDSL(grammar, result, EBNF_ASTPipeline, compiler)
@@ -70,7 +72,7 @@ if __name__ == "__main__":
         _errors = run_compiler(sys.argv[1],
                                sys.argv[2] if len(sys.argv) > 2 else "")
         if _errors:
-            print(_errors)
+            print('\n\n'.join(_errors))
             sys.exit(1)
     else:
         # run self test

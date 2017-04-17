@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""DSLsupport.py - Support for domain specific notations for DHParser
+"""dsl.py - Support for domain specific notations for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -23,15 +23,15 @@ compilation of domain specific languages based on an EBNF-grammar.
 
 import collections
 import os
+
 try:
     import regex as re
 except ImportError:
     import re
 
-from .__init__ import __version__
-from .EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
-from .toolkit import load_if_file, is_python_code, md5, compile_python_object
-from .parsercombinators import GrammarBase, CompilerBase, full_compilation, nil_scanner
+from .ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from .toolkit import load_if_file, is_python_code, compile_python_object
+from .parsers import GrammarBase, CompilerBase, full_compilation, nil_scanner
 from .syntaxtree import Node
 
 
@@ -39,8 +39,7 @@ __all__ = ['GrammarError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
-           'run_compiler',
-           'source_changed']
+           'run_compiler']
 
 
 SECTION_MARKER = """\n
@@ -94,7 +93,7 @@ try:
 except ImportError:
     import re
 from DHParser.toolkit import load_if_file    
-from DHParser.parsercombinators import GrammarBase, CompilerBase, nil_scanner, \\
+from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
@@ -109,8 +108,7 @@ DHPARSER_COMPILER = '''
 def compile_{NAME}(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    source_text = load_if_file(source)
-    return full_compilation({NAME}Scanner(source_text),
+    return full_compilation(source, {NAME}Scanner,
         {NAME}Grammar(), {NAME}_ASTPipeline, {NAME}Compiler())
 
 if __name__ == "__main__":
@@ -139,10 +137,10 @@ def get_grammar_instance(grammar):
         if is_python_code(grammar):
             parser_py, errors, AST = grammar_src, '', None
         else:
-            parser_py, errors, AST = full_compilation(grammar_src,
-                    EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
+            parser_py, errors, AST = full_compilation(grammar_src, None,
+                                                      EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
         if errors:
-            raise GrammarError(errors, grammar_src)
+            raise GrammarError('\n\n'.join(errors), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
@@ -175,9 +173,9 @@ def load_compiler_suite(compiler_suite):
     else:
         # assume source is an ebnf grammar
         parser_py, errors, AST = full_compilation(
-            source, EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
+            source, None, EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
         if errors:
-            raise GrammarError(errors, source)
+            raise GrammarError('\n\n'.join(errors), source)
         scanner = nil_scanner
         ast = EBNF_ASTPipeline
         compiler = EBNFCompiler()
@@ -196,14 +194,20 @@ def compileDSL(text_or_file, dsl_grammar, ast_pipeline, compiler,
     assert isinstance(compiler, CompilerBase)
     assert isinstance(ast_pipeline, collections.abc.Sequence) or isinstance(ast_pipeline, dict)
     parser_root, grammar_src = get_grammar_instance(dsl_grammar)
-    src = scanner(load_if_file(text_or_file))
-    result, errors, AST = full_compilation(src, parser_root, ast_pipeline, compiler)
-    if errors:  raise CompilationError(errors, src, grammar_src, AST)
+    src = load_if_file(text_or_file)
+    result, errors, AST = full_compilation(src, scanner, parser_root, ast_pipeline, compiler)
+    if errors:  raise CompilationError('\n\n'.join(errors), src, grammar_src, AST)
     return result
 
 
 def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
-    """Compiles an EBNF source file into a Grammar class
+    """Compiles an EBNF source file into a Grammar class.
+
+    Please note: This functions returns a class which must be 
+    instantiated before calling its parse()-method! Calling the method
+    directly from the class (which is technically possible in python
+    yields an error message complaining about a missing parameter,
+    the cause of which may not be obvious at first sight. 
 
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
@@ -216,7 +220,7 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
             class is returned instead of the class itself.
     Returns:
         A Grammar class that can be instantiated for parsing a text
-        which conforms to the language defined by ``ebnf_src``
+        which conforms to the language defined by ``ebnf_src``.
     """
     grammar = ebnf_grammar_obj or EBNFGrammar()
     grammar_src = compileDSL(ebnf_src, grammar, EBNF_ASTPipeline, EBNFCompiler())
@@ -251,8 +255,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
         parser = EBNFGrammar()
         trans = EBNF_ASTPipeline
         compiler = EBNFCompiler(compiler_name, source)
-    result, errors, ast = full_compilation(scanner(source), parser,
-                                           trans, compiler)
+    result, errors, ast = full_compilation(source, scanner, parser, trans, compiler)
     if errors:
         return errors
 
@@ -266,7 +269,8 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             source = f.read()
             intro, imports, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
         except (PermissionError, FileNotFoundError, IOError) as error:
-            intro, outro = '', ''
+            intro = '#!/usr/bin/python'
+            outro = DHPARSER_COMPILER.format(NAME=compiler_name)
             imports = DHPARSER_IMPORTS
             scanner = compiler.gen_scanner_skeleton()
             ast = compiler.gen_AST_skeleton()
@@ -279,7 +283,6 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
 
         try:
             f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
-            f.write("#!/usr/bin/python")
             f.write(intro)
             f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
             f.write(imports)
@@ -293,7 +296,6 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             f.write(compiler)
             f.write(SECTION_MARKER.format(marker=END_SECTIONS_MARKER))
             f.write(outro)
-            f.write(DHPARSER_COMPILER.format(NAME=compiler_name))
         except (PermissionError, FileNotFoundError, IOError) as error:
             print('# Could not write file "' + rootname + '_compiler.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))
@@ -318,32 +320,3 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     return []
 
 
-def source_changed(grammar_source, grammar_class):
-    """Returns `True` if `grammar_class` does not reflect the latest
-    changes of `grammar_source`
-
-    Parameters:
-        grammar_source:  File name or string representation of the
-            grammar source
-        grammar_class:  the parser class representing the grammar
-            or the file name of a compiler suite containing the grammar
-
-    Returns (bool):
-        True, if the source text of the grammar is different from the
-        source from which the grammar class was generated
-    """
-    grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
-    if isinstance(grammar_class, str):
-        # grammar_class = load_compiler_suite(grammar_class)[1]
-        with open(grammar_class, 'r', encoding='utf8') as f:
-            pycode = f.read()
-        m = re.search('class \w*\(GrammarBase\)', pycode)
-        if m:
-            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
-                          pycode[m.span()[1]:])
-            return not (m and m.groups() and m.groups()[-1] == chksum)
-        else:
-            return True
-    else:
-        return chksum != grammar_class.source_hash__

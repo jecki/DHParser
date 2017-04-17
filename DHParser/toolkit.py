@@ -119,16 +119,21 @@ def line_col(text, pos):
     return line, column
 
 
-def error_messages(text, errors):
+def error_messages(source_text, errors):
+    """Returns the sequence or iterator of error objects as an intertor
+    of error messages with line and column numbers at the beginning.
+    
+    Args:
+        source_text (str):  The source text on which the errors occurred.
+            (Needed in order to determine the line and column numbers.)
+        errors (list):  The list of errors as returned by the method 
+            ``collect_errors()`` of a Node object     
+    Returns:
+        a list that contains all error messages in string form. Each
+        string starts with "line: [Line-No], column: [Column-No]
     """
-    Converts the list of ``errors`` collected from the root node of the
-    parse tree of `text` into a human readable (and IDE or editor
-    parsable text) with line an column numbers. Error messages are
-    separated by an empty line.
-    """
-    return "\n\n".join("line: %i, column: %i, error: %s" %
-                       (*line_col(text, err.pos), err.msg)
-                       for err in sorted(list(errors)))
+    return ["line: %i, column: %i, error: %s" % (*line_col(source_text, err.pos), err.msg)
+            for err in sorted(list(errors))]
 
 
 def compact_sexpr(s):
@@ -158,9 +163,14 @@ def load_if_file(text_or_file):
     a multiline string) `text_or_file` is returned.
     """
     if text_or_file and text_or_file.find('\n') < 0:
-        with open(text_or_file, encoding="utf-8") as f:
-            content = f.read()
-        return content
+        try:
+            with open(text_or_file, encoding="utf-8") as f:
+                content = f.read()
+            return content
+        except FileNotFoundError as error:
+            if not re.match(r'\w+', text_or_file):
+                raise FileNotFoundError('Not a valid file: ' + text_or_file +
+                                        '\nAdd "\\n" to distinguish source data from a file name!')
     else:
         return text_or_file
 

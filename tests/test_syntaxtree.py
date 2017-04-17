@@ -117,7 +117,7 @@ class TestNode:
 
 
 class TestErrorHandling:
-    def test_error_propagations(self):
+    def test_error_flag_propagation(self):
         tree = from_sexpr('(a (b c) (d (e (f (g h)))))')
 
         def find_h(node):

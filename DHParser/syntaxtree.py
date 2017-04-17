@@ -182,6 +182,7 @@ class Node:
 
     @pos.setter
     def pos(self, pos):
+        assert isinstance(pos, int)
         self._pos = pos
         offset = 0
         for child in self.children:

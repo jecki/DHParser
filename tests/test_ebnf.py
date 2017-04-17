@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_EBNFcompiler.py - tests of the EBNFcompiler-module of DHParser 
+"""test_ebnf.py - tests of the EBNFcompiler-module of DHParser 
                              
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -24,9 +24,9 @@ import os
 import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.syntaxtree import traverse
-from DHParser.parsercombinators import full_compilation
-from DHParser.EBNFcompiler import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
-from DHParser.DSLsupport import compileEBNF
+from DHParser.parsers import full_compilation
+from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from DHParser.dsl import compileEBNF
 
 
 WRITE_LOGS = True
@@ -47,14 +47,31 @@ class TestDirectives:
         parser = MinilangParser()
         assert parser
         syntax_tree = parser.parse("3 + 4 * 12")
-        parser.log_parsing_history("WSP")
+        # parser.log_parsing_history("WSP")
         assert not syntax_tree.collect_errors()
         syntax_tree = parser.parse("3 + 4 \n * 12")
-        parser.log_parsing_history("WSPLF")
+        # parser.log_parsing_history("WSPLF")
+        assert not syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n \n * 12")
+        assert syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n\n * 12")
+        assert syntax_tree.collect_errors()
+
+    def test_whitespace_vertical(self):
+        lang = "@ whitespace = vertical\n" + self.mini_language
+        parser = compileEBNF(lang)()
+        assert parser
+        syntax_tree = parser.parse("3 + 4 * 12")
+        assert not syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n * 12")
+        assert not syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n \n * 12")
+        assert not syntax_tree.collect_errors()
+        syntax_tree = parser.parse("3 + 4 \n\n * 12")
         assert not syntax_tree.collect_errors()
 
-    def test_whitespace_standard(self):
-        lang = "@ whitespace = standard\n" + self.mini_language
+    def test_whitespace_horizontal(self):
+        lang = "@ whitespace = horizontal\n" + self.mini_language
         parser = compileEBNF(lang)()
         assert parser
         syntax_tree = parser.parse("3 + 4 * 12")
@@ -132,8 +149,8 @@ class TestSemanticValidation:
 
 class TestCompilerErrors:
     def test_error_propagation(self):
-        ebnf = "@ literalws = wrongvalue  # testing error propagation"
-        result, messages, st = full_compilation(ebnf, EBNFGrammar(), EBNF_ASTPipeline,
+        ebnf = "@ literalws = wrongvalue  # testing error propagation\n"
+        result, messages, st = full_compilation(ebnf, None, EBNFGrammar(), EBNF_ASTPipeline,
                                                 EBNFCompiler('ErrorPropagationTest'))
         assert messages
 
@@ -141,4 +158,4 @@ class TestCompilerErrors:
 if __name__ == "__main__":
     from run import run_tests
 
-    run_tests("TestCompilerErrors", globals())
+    run_tests("TestDirectives", globals())

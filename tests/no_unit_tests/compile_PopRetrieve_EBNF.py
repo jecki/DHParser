@@ -23,14 +23,15 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.DSLsupport import run_compiler, source_changed
+from DHParser.dsl import run_compiler
+from DHParser.ebnf import source_changed
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
     source_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):
     print("recompiling parser")
     errors = run_compiler("PopRetrieve.ebnf")
     if errors:
-        print(errors)
+        print('\n\n'.join(errors))
         sys.exit(1)
 
 from PopRetrieve_compiler import compile_PopRetrieve

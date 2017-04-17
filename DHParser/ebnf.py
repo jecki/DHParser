@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""EBNFcompiler.py - EBNF -> Python-Parser compilation for DHParser
+"""ebnf.py - EBNF -> Python-Parser compilation for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -21,6 +21,7 @@ permissions and limitations under the License.
 # import collections
 import keyword
 from functools import partial
+
 try:
     import regex as re
 except ImportError:
@@ -28,7 +29,7 @@ except ImportError:
 
 from .__init__ import __version__
 from .toolkit import load_if_file, escape_re, md5, sane_parser_name
-from .parsercombinators import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
+from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
 from .syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
@@ -163,25 +164,21 @@ class EBNFCompilerError(Exception):
     pass
 
 
-# Scanner = collections.namedtuple('Scanner',
-#                                  'symbol instantiation_call cls_name cls')
-
-
 class EBNFCompiler(CompilerBase):
     """Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
     """
     COMMENT_KEYWORD = "COMMENT__"
-    DEFAULT_WHITESPACE = r'[\t ]*'
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, COMMENT_KEYWORD}
-    KNOWN_DIRECTIVES = {'comment', 'whitespace', 'tokens', 'literalws'}
-    VOWELS = {'A', 'E', 'I', 'O', 'U'}  # what about cases like 'hour', 'universe' etc.?
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneuos AST transformation."
     PREFIX_TABLE = [('§', 'Required'), ('&', 'Lookahead'),
                     ('!', 'NegativeLookahead'), ('-&', 'Lookbehind'),
                     ('-!', 'NegativeLookbehind'), ('::', 'Pop'),
                     (':', 'Retrieve')]
+    WHITESPACE = {'horizontal': r'[\t ]*',  # default: horizontal
+                  'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
+                  'vertical': r'\s*'}
 
     def __init__(self, grammar_name="", source_text=""):
         super(EBNFCompiler, self).__init__()
@@ -194,13 +191,13 @@ class EBNFCompiler(CompilerBase):
         self.rules = set()
         self.symbols = set()
         self.variables = set()
-        self.scanner_tokens = set()
         self.definition_names = []
         self.recursive = set()
         self.root = ""
-        self.directives = {'whitespace': self.DEFAULT_WHITESPACE,
+        self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
-                           'literalws': ['right']}
+                           'literalws': ['right'],
+                           'tokens': set()}
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -263,8 +260,7 @@ class EBNFCompiler(CompilerBase):
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
-        article = 'an ' if self.grammar_name[0:1].upper() \
-                           in EBNFCompiler.VOWELS else 'a '
+        article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '  # what about 'hour', 'universe' etc.?
         declarations = ['class ' + self.grammar_name +
                         'Grammar(GrammarBase):',
                         'r"""Parser for ' + article + self.grammar_name +
@@ -324,7 +320,7 @@ class EBNFCompiler(CompilerBase):
         elif not sane_parser_name(rule):
             node.add_error('Illegal symbol "%s". Symbols must not start or '
                            ' end with a doube underscore "__".' % rule)
-        elif rule in self.scanner_tokens:
+        elif rule in self.directives['tokens']:
             node.add_error('Symbol "%s" has already been defined as '
                            'a scanner token.' % rule)
         elif keyword.iskeyword(rule):
@@ -361,17 +357,17 @@ class EBNFCompiler(CompilerBase):
 
     def directive(self, node):
         key = node.result[0].result.lower()
-        assert key not in self.scanner_tokens
+        assert key not in self.directives['tokens']
         if key in {'comment', 'whitespace'}:
             if node.result[1].parser.name == "list_":
                 if len(node.result[1].result) != 1:
                     node.add_error('Directive "%s" must have one, but not %i values.' %
                                    (key, len(node.result[1])))
                 value = self.compile__(node.result[1]).pop()
-                if value in {'linefeed', 'standard'} and key == 'whitespace':
-                    value = '\s*' if value == "linefeed" else self.DEFAULT_WHITESPACE
+                if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
+                    value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
                 else:
-                    node.add_error('Value "%" not allowed for directive "%s".' % (value, key))
+                    node.add_error('Value "%s" not allowed for directive "%s".' % (value, key))
             else:
                 value = node.result[1].result.strip("~")
                 if value != node.result[1].result:
@@ -382,6 +378,7 @@ class EBNFCompiler(CompilerBase):
                 elif value[0] + value[-1] == '//':
                     value = self._check_rx(node, value[1:-1])
             self.directives[key] = value
+
         elif key == 'literalws':
             value = {item.lower() for item in self.compile__(node.result[1])}
             if (len(value - {'left', 'right', 'both', 'none'}) > 0
@@ -394,11 +391,11 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = list(ws)
 
         elif key == 'tokens':
-            self.scanner_tokens |= self.compile__(node.result[1])
+            self.directives['tokens'] |= self.compile__(node.result[1])
         else:
             node.add_error('Unknown directive %s ! (Known ones are %s .)' %
                            (key,
-                            ', '.join(list(EBNFCompiler.KNOWN_DIRECTIVES))))
+                            ', '.join(list(self.directives.keys()))))
         return ""
 
     def non_terminal(self, node, parser_class):
@@ -463,7 +460,7 @@ class EBNFCompiler(CompilerBase):
                                 "AST transformation!")
 
     def symbol(self, node):
-        if node.result in self.scanner_tokens:
+        if node.result in self.directives['tokens']:
             return 'ScannerToken("' + node.result + '")'
         else:
             self.symbols.add(node)
@@ -472,7 +469,7 @@ class EBNFCompiler(CompilerBase):
             return node.result
 
     def literal(self, node):
-        return 'Token(' + ', '.join([node.result]) + ')'
+        return 'Token(' + node.result.replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
 
     def regexp(self, node):
         rx = node.result
@@ -501,3 +498,34 @@ class EBNFCompiler(CompilerBase):
     def list_(self, node):
         assert node.children
         return set(item.result.strip() for item in node.result)
+
+
+def source_changed(grammar_source, grammar_class):
+    """Returns `True` if `grammar_class` does not reflect the latest
+    changes of `grammar_source`
+
+    Parameters:
+        grammar_source:  File name or string representation of the
+            grammar source
+        grammar_class:  the parser class representing the grammar
+            or the file name of a compiler suite containing the grammar
+
+    Returns (bool):
+        True, if the source text of the grammar is different from the
+        source from which the grammar class was generated
+    """
+    grammar = load_if_file(grammar_source)
+    chksum = md5(grammar, __version__)
+    if isinstance(grammar_class, str):
+        # grammar_class = load_compiler_suite(grammar_class)[1]
+        with open(grammar_class, 'r', encoding='utf8') as f:
+            pycode = f.read()
+        m = re.search('class \w*\(GrammarBase\)', pycode)
+        if m:
+            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
+                          pycode[m.span()[1]:])
+            return not (m and m.groups() and m.groups()[-1] == chksum)
+        else:
+            return True
+    else:
+        return chksum != grammar_class.source_hash__

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""parsercombinators.py - parser combinators for for DHParser
+"""parsers.py - parser combinators for for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -62,7 +62,7 @@ except ImportError:
 from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, smart_list
 from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     traverse
-from DHParser.toolkit import error_messages
+from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['HistoryRecord',
            'Parser',
@@ -168,6 +168,7 @@ def add_parser_guard(parser_func):
                     grammar.moving_forward = False
                     record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
                     grammar.history.append(record)
+                    # print(record.stack, record.status, rest[:20].replace('\n', '|'))
                 grammar.call_stack.pop()
 
             if node is not None:
@@ -396,6 +397,27 @@ class GrammarBase:
             write_log(errors_only, log_file_name + '_errors')
 
 
+def dsl_error_msg(parser, error_str):
+    """Returns an error messsage for errors in the parser configuration,
+    e.g. errors that result in infinite loops.
+
+    Args:
+        parser (Parser:  The parser where the error was noticed. Note
+            that this is not necessarily the parser that caused the
+            error but only where the error became apparaent.
+        error_str (str):  A short string describing the error.
+    Returns:  
+        str: An error message including the call stack if history 
+        tacking has been turned in the grammar object.
+    """
+    msg = ["DSL parser specification error:", error_str, "caught by parser", str(parser)]
+    if parser.grammar.history:
+        msg.extend(["\nCall stack:", parser.grammar.history[-1].stack])
+    else:
+        msg.extend(["\nEnable history tracking in Grammar object to display call stack."])
+    return " ".join(msg)
+
+
 ########################################################################
 #
 # Token and Regular Expression parser classes (i.e. leaf classes)
@@ -517,7 +539,6 @@ class RE(Parser):
             name:  The optional name of the parser.
         """
         super(RE, self).__init__(name)
-        # assert wR or regexp == '.' or isinstance(self, Token)
         self.wL = wL
         self.wR = wR
         self.wspLeft = RegExp(wL, WHITESPACE_KEYWORD) if wL else ZOMBIE_PARSER
@@ -649,10 +670,14 @@ class Optional(UnaryOperator):
 class ZeroOrMore(Optional):
     def __call__(self, text):
         results = ()
-        while text:
+        n = len(text) + 1
+        while text and len(text) < n:
+            n = len(text)
             node, text = self.parser(text)
             if not node:
                 break
+            if len(text) == n:
+                node.add_error(dsl_error_msg(self, 'Infinite Loop.'))
             results += (node,)
         return Node(self, results), text
 
@@ -667,10 +692,14 @@ class OneOrMore(UnaryOperator):
     def __call__(self, text):
         results = ()
         text_ = text
-        while text_:
+        n = len(text) + 1
+        while text_ and len(text_) < n:
+            n = len(text_)
             node, text_ = self.parser(text_)
             if not node:
                 break
+            if len(text_) == n:
+                node.add_error(dsl_error_msg(self, 'Infinite Loop.'))
             results += (node,)
         if results == ():
             return None, text
@@ -919,17 +948,21 @@ class CompilerBase:
             return result
 
 
-def full_compilation(source, grammar_base, AST_pipeline, compiler):
-    """Compiles a source in three stages:
-        1. Parsing
-        2. AST-transformation
-        3. Compiling.
+def full_compilation(source, scanner, parser, AST_pipeline, compiler):
+    """Compiles a source in four stages:
+        1. Scanning (if needed)
+        2. Parsing
+        3. AST-transformation
+        4. Compiling.
     The compilations stage is only invoked if no errors occurred in
     either of the two previous stages.
 
     Args:
-        source (str): The input text for compilation
-        grammar_base (GrammarBase):  The GrammarBase object
+        source (str): The input text for compilation or a the name of a
+            file containing the input text.
+        scanner (funciton):  text -> text. A scanner function or None,
+            if no scanner is needed.
+        parser (GrammarBase):  The GrammarBase object
         AST_pipeline (dict or list of dicts):  A syntax-tree processing
             table or a sequence of processing tables. The first of
             these table usually contains the transformations for 
@@ -949,13 +982,16 @@ def full_compilation(source, grammar_base, AST_pipeline, compiler):
     """
     assert isinstance(compiler, CompilerBase)
 
-    syntax_tree = grammar_base.parse(source)
-    cname = grammar_base.__class__.__name__
-    log_file_name = cname[:-7] if cname.endswith('Grammar') else cname
+    source_text = load_if_file(source)
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) if source != source_text \
+        else compiler.__class__.__name__ + '_out'
+    if scanner is not None:
+        source_text = scanner(source_text)
+    syntax_tree = parser.parse(source_text)
     syntax_tree.log(log_file_name, ext='.cst')
-    grammar_base.log_parsing_history()
+    parser.log_parsing_history(log_file_name)
 
-    assert syntax_tree.error_flag or str(syntax_tree) == source, str(syntax_tree)
+    assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     if syntax_tree.error_flag:
@@ -969,7 +1005,6 @@ def full_compilation(source, grammar_base, AST_pipeline, compiler):
         if not errors:
             result = compiler.compile__(syntax_tree)
             errors = syntax_tree.collect_errors()
-    messages = error_messages(source, errors)
+    messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
-
 

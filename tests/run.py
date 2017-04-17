@@ -1,5 +1,7 @@
+import inspect
 
-class SelfTest:
+
+class TestSelf:
     def setup(self):
         print("setup")
 
@@ -14,7 +16,9 @@ class SelfTest:
 
 
 def run_tests(tests, namespace):
-    """ Runs only some selected tests from a test suite.
+    """ Runs only some selected tests from a test suite. To run all
+    tests in a module, call ``run_tests("", globals())`` from within
+    that module.
 
     Args:
         tests: Either a string or a list of strings that contains the
@@ -31,8 +35,16 @@ def run_tests(tests, namespace):
             obj.setup()
         return obj
 
-    if isinstance(tests, str):
-        tests = tests.split(" ")
+    if tests:
+        if isinstance(tests, str):
+            tests = tests.split(" ")
+    else:
+        # collect all test classes, in case no methods or classes have been passed explicitly
+        tests = []
+        for name in namespace.keys():
+            if name.lower().startswith('test') and inspect.isclass(namespace[name]):
+                tests.append(name)
+
     for test in tests:
         if test.find('.') >= 0:
             cls_name, method_name = test.split('.')
@@ -49,6 +61,10 @@ def run_tests(tests, namespace):
             obj.teardown()
 
 if __name__ == "__main__":
-    # run_tests("SelfTest.test1 SelfTest")
+    # run_tests("", globals())
+    # run_tests("TestSelf.test1 TestSelf", globals())
     import os
+
+    os.chdir('..')
+    print("Running nosetests:")
     os.system("nosetests")
