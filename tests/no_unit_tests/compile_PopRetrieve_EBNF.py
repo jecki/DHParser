@@ -24,10 +24,10 @@ import os
 import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.dsl import run_compiler
-from DHParser.ebnf import source_changed
+from DHParser.ebnf import grammar_changed
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
-    source_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):
+    grammar_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):
     print("recompiling parser")
     errors = run_compiler("PopRetrieve.ebnf")
     if errors:

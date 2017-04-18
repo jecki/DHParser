@@ -1,4 +1,4 @@
-#!/usr/bin/python
+
 
 #######################################################################
 #
@@ -7,21 +7,17 @@
 #######################################################################
 
 
-from functools import partial
-import sys
-try:
-    import regex as re
-except ImportError:
-    import re
-from DHParser.toolkit import load_if_file    
-from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
-from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \
-    no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \
-    is_whitespace, is_expendable
+from PyDSL import Pop, NegativeLookbehind, Capture, no_transformation, \
+    Token, Alternative, mixin_comment, RE, \
+    Sequence, remove_comments, Retrieve, is_scanner_token, \
+    Lookbehind, replace_by_single_child, remove_scanner_tokens, remove_whitespace, \
+    is_whitespace, ZeroOrMore, remove_enclosing_delimiters, CompilerBase, \
+    RegExp, NegativeLookahead, WHITESPACE_KEYWORD, GrammarBase, \
+    reduce_single_child, Optional, remove_children_if, remove_expendables, \
+    remove_tokens, is_comment, partial, OneOrMore, \
+    Forward, TOKEN_KEYWORD, Required, flatten, \
+    is_expendable, Lookahead
+
 
 
 #######################################################################
@@ -118,7 +114,7 @@ class MLWGrammar(GrammarBase):
     Belege          = "BELEGE" [LEER] { "*" EinBeleg }
     EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
                       [Zusatz]
-    Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
+    Zusatz          = "ZUSATZ" /\s*.*/
     
     
     #### AUTOR/AUTORIN ###########################################################
@@ -142,7 +138,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE      = !/./
     NIEMALS         = /(?!.)/
     """
-    source_hash__ = "c679466fdd21965264a35c185e2224a0"
+    source_hash__ = "f373a397a48cc57bcca18b90dd7028bf"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -160,7 +156,7 @@ class MLWGrammar(GrammarBase):
     WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wL='')
     Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL=''))))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''), TRENNER)
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''))
     EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
     Belege = Sequence(Token("BELEGE"), Optional(LEER), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
@@ -200,6 +196,10 @@ class MLWGrammar(GrammarBase):
 #
 #######################################################################
 
+# def test(node):
+#     print(node.as_sexpr())
+
+
 def join_strings(node, delimiter='\n'):
     new_result = []
     n = 0
@@ -211,20 +211,18 @@ def join_strings(node, delimiter='\n'):
             while n < len(node.result) and not node.result[n].children:
                 n += 1
             nd.result = delimiter.join((r.result for r in node.result[a:n]))
-        elif nd.parser.name != "Zusatz":
-            raise AssertionError(nd.as_sexpr())
         else:
-            n += 1
+            raise AssertionError(node.as_sexpr())
         new_result.append(nd)
     node.result = tuple(new_result)
 
 
-MLW_ASTTransform = {
+MLWTransTable = {
     # AST Transformations for the MLW-grammar
-    "Artikel": no_operation,
+    "Artikel": no_transformation,
     "LemmaPosition":
         [partial(remove_tokens, tokens={'LEMMA'})],
-    "Lemma": no_operation,
+    "Lemma": no_transformation,
     "_tll, _wortart, _genus":
         [remove_expendables, reduce_single_child],
     "LemmaVarianten":
@@ -246,32 +244,32 @@ MLW_ASTTransform = {
         [remove_expendables, reduce_single_child],
     "Zusatz":
         [remove_expendables, remove_tokens, reduce_single_child],
-    "ArtikelKopf": no_operation,
+    "ArtikelKopf": no_transformation,
     "SchreibweisenPosition":
         [partial(remove_tokens, tokens={'SCHREIBWEISE', ':'}),
          flatten, partial(remove_tokens, tokens={','})],
-    "SWTyp": no_operation,
+    "SWTyp": no_transformation,
     "BedeutungsPosition":
         [flatten, partial(remove_tokens, tokens={'BEDEUTUNG'})],
-    "Bedeutung": no_operation,
-    "Bedeutungskategorie": no_operation,
-    "Interpretamente": no_operation,
+    "Bedeutung": no_transformation,
+    "Bedeutungskategorie": no_transformation,
+    "Interpretamente": no_transformation,
     "LateinischeBedeutung, DeutscheBedeutung":
         [remove_expendables, remove_tokens, reduce_single_child],
     "Belege":
         [flatten, remove_tokens],
     "EinBeleg":
         [flatten, remove_expendables, join_strings, reduce_single_child],
-    "Beleg": no_operation,
-    "VerweisZiel": no_operation,
+    "Beleg": no_transformation,
+    "VerweisZiel": no_transformation,
     "Autorinfo":
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
         # test,
         [remove_expendables, reduce_single_child],
-    "LEER": no_operation,
-    "DATEI_ENDE": no_operation,
-    "NIEMALS": no_operation,
+    "LEER": no_transformation,
+    "DATEI_ENDE": no_transformation,
+    "NIEMALS": no_transformation,
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
     "*":
@@ -281,8 +279,6 @@ MLW_ASTTransform = {
     "":
         [remove_expendables, replace_by_single_child]
 }
-
-MLW_ASTPipeline = [MLW_ASTTransform]
 
 
 #######################################################################
@@ -413,12 +409,6 @@ class MLWCompiler(CompilerBase):
     def GROSSSCHRIFT(self, node):
         pass
 
-    def TRENNER(self, node):
-        pass
-
-    def ZSPRUNG(self, node):
-        pass
-
     def LEER(self, node):
         pass
 
@@ -429,27 +419,10 @@ class MLWCompiler(CompilerBase):
         pass
 
 
+
 #######################################################################
 #
-# END OF DHPARSER-SECTIONS
+# END OF PYDSL-SECTIONS
 #
 #######################################################################
 
-
-def compile_MLW(source):
-    """Compiles ``source`` and returns (result, errors, ast).
-    """
-    return full_compilation(source, MLWScanner,
-        MLWGrammar(), MLW_ASTPipeline, MLWCompiler())
-
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        result, errors, ast = compile_MLW(sys.argv[1])
-        if errors:
-            for error in errors:
-                print(error)
-                sys.exit(1)
-        else:
-            print(result)
-    else:
-        print("Usage: MLW_compiler.py [FILENAME]")

@@ -22,9 +22,9 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from ParserCombinators import run_compiler
+from DHParser.dsl import run_compiler
 errors = run_compiler("MLW.ebnf")
 if errors:
-    print(errors)
+    print("\n".join(errors))
     sys.exit(1)
 

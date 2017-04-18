@@ -108,4 +108,4 @@ class TestRegex:
 if __name__ == "__main__":
     from run import run_tests
 
-    run_tests("TestInfiLoopsAndRecursion", globals())
+    run_tests("", globals())

@@ -500,13 +500,13 @@ class EBNFCompiler(CompilerBase):
         return set(item.result.strip() for item in node.result)
 
 
-def source_changed(grammar_source, grammar_class):
+def grammar_changed(grammar_source, grammar_class):
     """Returns `True` if `grammar_class` does not reflect the latest
     changes of `grammar_source`
 
     Parameters:
         grammar_source:  File name or string representation of the
-            grammar source
+            EBNF code of the grammar
         grammar_class:  the parser class representing the grammar
             or the file name of a compiler suite containing the grammar
 

@@ -73,7 +73,7 @@ DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Belege          = "BELEGE" [LEER] { "*" EinBeleg }
 EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
                   [Zusatz]
-Zusatz          = "ZUSATZ" /\s*.*/
+Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
 
 
 #### AUTOR/AUTORIN ###########################################################

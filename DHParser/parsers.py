@@ -677,7 +677,7 @@ class ZeroOrMore(Optional):
             if not node:
                 break
             if len(text) == n:
-                node.add_error(dsl_error_msg(self, 'Infinite Loop.'))
+                node.add_error(dsl_error_msg(self, 'Infinite Loop detected.'))
             results += (node,)
         return Node(self, results), text
 
@@ -699,7 +699,7 @@ class OneOrMore(UnaryOperator):
             if not node:
                 break
             if len(text_) == n:
-                node.add_error(dsl_error_msg(self, 'Infinite Loop.'))
+                node.add_error(dsl_error_msg(self, 'Infinite Loop dtected.'))
             results += (node,)
         if results == ():
             return None, text
