@@ -106,6 +106,5 @@ class TestRegex:
 
 
 if __name__ == "__main__":
-    from run import run_tests
-
-    run_tests("", globals())
+    from run import runner
+    runner("", globals())

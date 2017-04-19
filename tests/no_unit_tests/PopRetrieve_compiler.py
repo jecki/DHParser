@@ -7,15 +7,21 @@
 #######################################################################
 
 
+from functools import partial
 import sys
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import load_if_file
-from DHParser.parsers import GrammarBase, CompilerBase, Alternative, Pop, Retrieve, Sequence, RE, Capture, \
-    ZeroOrMore, NegativeLookahead, mixin_comment, full_compilation
-from DHParser.syntaxtree import no_operation
+from DHParser.toolkit import load_if_file    
+from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
+from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \
+    no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \
+    is_whitespace, is_expendable
 
 
 #######################################################################
@@ -116,9 +122,8 @@ class PopRetrieveCompiler(CompilerBase):
 def compile_PopRetrieve(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    source_text = load_if_file(source)
-    return full_compilation(source_text, PopRetrieveScanner,
-                            PopRetrieveGrammar(), PopRetrieve_ASTPipeline, PopRetrieveCompiler())
+    return full_compilation(source, PopRetrieveScanner,
+        PopRetrieveGrammar(), PopRetrieve_ASTPipeline, PopRetrieveCompiler())
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

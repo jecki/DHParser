@@ -34,7 +34,7 @@ MLW_compiler = os.path.join('..', 'MLW_compiler.py')
 toolkit.logging_off()
 
 if (not os.path.exists(MLW_compiler) or
-    grammar_changed(MLW_ebnf, MLW_compiler)):
+    grammar_changed(MLW_compiler, MLW_ebnf)):
     print("recompiling parser")
     errors = run_compiler(MLW_ebnf)
     if errors:

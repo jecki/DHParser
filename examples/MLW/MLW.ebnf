@@ -4,7 +4,6 @@
 @ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
 @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
 
-
 Artikel         = [LEER]
                   §LemmaPosition  [ArtikelKopf]  §BedeutungsPosition  §Autorinfo
                   [LEER]  DATEI_ENDE
@@ -33,7 +32,6 @@ _wortart        = "nomen"  | "n." |
                   "verb"   | "v." |
                   "adverb" | "adv." |
                   "adjektiv" | "adj."
-
 
 GrammatikVarianten = TRENNER GVariante
 GVariante       = Flexionen  [_genus]  ":"  Beleg
@@ -71,7 +69,8 @@ Interpretamente = LateinischeBedeutung [LEER] §DeutscheBedeutung [LEER]
 LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Belege          = "BELEGE" [LEER] { "*" EinBeleg }
-EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
+EinBeleg        = { !([LEER] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
+                    /\s*.*\s*/ }+
                   [Zusatz]
 Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
 
@@ -79,21 +78,23 @@ Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
 #### AUTOR/AUTORIN ###########################################################
 
 Autorinfo       = ("AUTORIN" | "AUTOR") Name
-Name            = WORT { WORT | /[A-ZÄÖÜÁÀ]\./ }
+Name            = WORT { WORT | NAMENS_ABKÜRZUNG }
 
 
-#### MISZELLANEEN ############################################################
+#### ATOMARE AUSDRÜCKE #######################################################
 
-WORT            = /[A-ZÄÖÜ]?[a-zäöüß]+/~
-WORT_GROSS      = /[A-ZÄÖÜ][a-zäöüß]+/~
-WORT_KLEIN      = /[a-zäöüß]+/~
-LAT_WORT        = /[a-z]+/~
-GROSSSCHRIFT    = /[A-ZÄÖÜ]+/~
+NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀ]\./
 
-TRENNER         = /\s*;\s*/ | { ZSPRUNG }+
-ZSPRUNG         = /\n/~
+WORT             = /[A-ZÄÖÜ]?[a-zäöüß]+/~
+WORT_GROSS       = /[A-ZÄÖÜ][a-zäöüß]+/~
+WORT_KLEIN       = /[a-zäöüß]+/~
+LAT_WORT         = /[a-z]+/~
+GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 
-LEER            = /\s+/                     # horizontaler und(!) vertikaler Leerraum
-DATEI_ENDE      = !/./
-NIEMALS         = /(?!.)/
+TRENNER          = /\s*;\s*/ | { ZSPRUNG }+
+ZSPRUNG          = /\n/~
+
+LEER             = /\s+/        # horizontaler und(!) vertikaler Leerraum
+DATEI_ENDE       = !/./
+NIEMALS          = /(?!.)/
 

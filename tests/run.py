@@ -1,7 +1,7 @@
 import inspect
 
 
-class TestSelf:
+class SelfTest:
     def setup(self):
         print("setup")
 
@@ -15,9 +15,9 @@ class TestSelf:
         print("test2")
 
 
-def run_tests(tests, namespace):
+def runner(tests, namespace):
     """ Runs only some selected tests from a test suite. To run all
-    tests in a module, call ``run_tests("", globals())`` from within
+    tests in a module, call ``runner("", globals())`` from within
     that module.
 
     Args:
@@ -61,8 +61,8 @@ def run_tests(tests, namespace):
             obj.teardown()
 
 if __name__ == "__main__":
-    # run_tests("", globals())
-    # run_tests("TestSelf.test1 TestSelf", globals())
+    # runner("", globals())
+    # runner("TestSelf.test1 TestSelf", globals())
     import os
 
     os.chdir('..')

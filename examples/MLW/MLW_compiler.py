@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
+
+
 #######################################################################
 #
 # SYMBOLS SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
-
 
 from functools import partial
 import sys
@@ -23,7 +24,6 @@ from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_childr
     no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \
     is_whitespace, is_expendable
 
-
 #######################################################################
 #
 # SCANNER SECTION - Can be edited. Changes will be preserved.
@@ -32,7 +32,6 @@ from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_childr
 
 def MLWScanner(text):
     return text
-
 
 #######################################################################
 #
@@ -48,7 +47,6 @@ class MLWGrammar(GrammarBase):
     @ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
     @ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
     @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
-    
     
     Artikel         = [LEER]
                       §LemmaPosition  [ArtikelKopf]  §BedeutungsPosition  §Autorinfo
@@ -78,7 +76,6 @@ class MLWGrammar(GrammarBase):
                       "verb"   | "v." |
                       "adverb" | "adv." |
                       "adjektiv" | "adj."
-    
     
     GrammatikVarianten = TRENNER GVariante
     GVariante       = Flexionen  [_genus]  ":"  Beleg
@@ -116,7 +113,8 @@ class MLWGrammar(GrammarBase):
     LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     Belege          = "BELEGE" [LEER] { "*" EinBeleg }
-    EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
+    EinBeleg        = { !([LEER] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
+                        /\s*.*\s*/ }+
                       [Zusatz]
     Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
     
@@ -124,25 +122,27 @@ class MLWGrammar(GrammarBase):
     #### AUTOR/AUTORIN ###########################################################
     
     Autorinfo       = ("AUTORIN" | "AUTOR") Name
-    Name            = WORT { WORT | /[A-ZÄÖÜÁÀ]\./ }
+    Name            = WORT { WORT | NAMENS_ABKÜRZUNG }
     
     
-    #### MISZELLANEEN ############################################################
+    #### ATOMARE AUSDRÜCKE #######################################################
     
-    WORT            = /[A-ZÄÖÜ]?[a-zäöüß]+/~
-    WORT_GROSS      = /[A-ZÄÖÜ][a-zäöüß]+/~
-    WORT_KLEIN      = /[a-zäöüß]+/~
-    LAT_WORT        = /[a-z]+/~
-    GROSSSCHRIFT    = /[A-ZÄÖÜ]+/~
+    NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀ]\./
     
-    TRENNER         = /\s*;\s*/ | { ZSPRUNG }+
-    ZSPRUNG         = /\n/~
+    WORT             = /[A-ZÄÖÜ]?[a-zäöüß]+/~
+    WORT_GROSS       = /[A-ZÄÖÜ][a-zäöüß]+/~
+    WORT_KLEIN       = /[a-zäöüß]+/~
+    LAT_WORT         = /[a-z]+/~
+    GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
     
-    LEER            = /\s+/                     # horizontaler und(!) vertikaler Leerraum
-    DATEI_ENDE      = !/./
-    NIEMALS         = /(?!.)/
+    TRENNER          = /\s*;\s*/ | { ZSPRUNG }+
+    ZSPRUNG          = /\n/~
+    
+    LEER             = /\s+/        # horizontaler und(!) vertikaler Leerraum
+    DATEI_ENDE       = !/./
+    NIEMALS          = /(?!.)/
     """
-    source_hash__ = "c679466fdd21965264a35c185e2224a0"
+    source_hash__ = "c286ef13eadbfca1130da7eee9f4011c"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -158,10 +158,11 @@ class MLWGrammar(GrammarBase):
     WORT_KLEIN = RE('[a-zäöüß]+', wL='')
     WORT_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+', wL='')
     WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wL='')
-    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL=''))))
+    NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL='')
+    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, NAMENS_ABKÜRZUNG)))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
     Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''), TRENNER)
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(Optional(LEER), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
     Belege = Sequence(Token("BELEGE"), Optional(LEER), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
@@ -283,7 +284,6 @@ MLW_ASTTransform = {
 }
 
 MLW_ASTPipeline = [MLW_ASTTransform]
-
 
 #######################################################################
 #
@@ -428,13 +428,11 @@ class MLWCompiler(CompilerBase):
     def NIEMALS(self, node):
         pass
 
-
 #######################################################################
 #
 # END OF DHPARSER-SECTIONS
 #
 #######################################################################
-
 
 def compile_MLW(source):
     """Compiles ``source`` and returns (result, errors, ast).

@@ -315,7 +315,9 @@ class EBNFCompiler(CompilerBase):
 
     def definition(self, node):
         rule = node.result[0].result
-        if rule in EBNFCompiler.RESERVED_SYMBOLS:
+        if rule in self.rules:
+            node.add_error('A rule with name "%s" has already been defined.' % rule)
+        elif rule in EBNFCompiler.RESERVED_SYMBOLS:
             node.add_error('Symbol "%s" is a reserved symbol.' % rule)
         elif not sane_parser_name(rule):
             node.add_error('Illegal symbol "%s". Symbols must not start or '
@@ -326,9 +328,6 @@ class EBNFCompiler(CompilerBase):
         elif keyword.iskeyword(rule):
             node.add_error('Python keyword "%s" may not be used as a symbol. '
                            % rule + '(This may change in the furute.)')
-        elif rule in self.rules:
-            node.add_error('A rule with name "%s" has already been defined.' %
-                           rule)
         try:
             self.rules.add(rule)
             defn = self.compile__(node.result[1])
@@ -377,6 +376,9 @@ class EBNFCompiler(CompilerBase):
                     value = escape_re(value[1:-1])
                 elif value[0] + value[-1] == '//':
                     value = self._check_rx(node, value[1:-1])
+                if key == 'whitespace' and not re.match(value, ''):
+                    node.add_error("Implicit whitespace should always match the empty string, "
+                                   "/%s/ does not." % value)
             self.directives[key] = value
 
         elif key == 'literalws':
@@ -500,16 +502,16 @@ class EBNFCompiler(CompilerBase):
         return set(item.result.strip() for item in node.result)
 
 
-def grammar_changed(grammar_source, grammar_class):
-    """Returns `True` if `grammar_class` does not reflect the latest
-    changes of `grammar_source`
+def grammar_changed(grammar_class, grammar_source):
+    """Returns ``True`` if ``grammar_class`` does not reflect the latest
+    changes of ``grammar_source``
 
     Parameters:
-        grammar_source:  File name or string representation of the
-            EBNF code of the grammar
         grammar_class:  the parser class representing the grammar
             or the file name of a compiler suite containing the grammar
-
+        grammar_source:  File name or string representation of the
+            EBNF code of the grammar
+            
     Returns (bool):
         True, if the source text of the grammar is different from the
         source from which the grammar class was generated

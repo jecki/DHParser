@@ -105,8 +105,8 @@ def LOGS_DIR() -> str:
         with open(info_file_name, 'w') as f:
             f.write("This directory has been created by DHParser to store log files from\n"
                     "parsing. ANY FILE IN THIS DIRECTORY CAN BE OVERWRITTEN! Therefore,\n"
-                    "do not place any files here or edit existing files in this directory\n"
-                    "manually.\n")
+                    "do not place any files here and do not bother editing files in this\n"
+                    "directory as any changes will get lost.\n")
     return dirname
 
 
@@ -274,8 +274,10 @@ def compile_python_object(python_src, catch_obj_regex):
     namespace = {}
     exec(code, namespace)  # safety risk?
     matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
-    if len(matches) > 1:
-        raise AssertionError("Ambigous matches for %s : %s" %
-                             (str(catch_obj_regex), str(matches)))
+    if len(matches) == 0:
+        raise ValueError("No object matching /%s/ defined in source code." %
+                         catch_obj_regex.pattern)
+    elif len(matches) > 1:
+        raise ValueError("Ambigous matches for %s : %s" %
+                         (str(catch_obj_regex), str(matches)))
     return namespace[matches[0]] if matches else None
-

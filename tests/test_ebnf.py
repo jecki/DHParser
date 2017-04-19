@@ -24,7 +24,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.syntaxtree import traverse
-from DHParser.parsers import full_compilation
+from DHParser.parsers import full_compilation, WHITESPACE_KEYWORD
 from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
 from DHParser.dsl import compileEBNF
 
@@ -78,6 +78,21 @@ class TestDirectives:
         assert not syntax_tree.collect_errors()
         syntax_tree = parser.parse("3 + 4 \n * 12")
         assert syntax_tree.collect_errors()
+
+
+class TestEBNFParser:
+    def setup(self):
+        self.EBNF = EBNFGrammar()
+
+    def test_literal(self):
+        snippet = '"literal" '
+        result = self.EBNF.parse(snippet, 'literal')
+        assert not result.error_flag
+        assert str(result) == snippet
+        assert result.find(lambda node: str(node) == WHITESPACE_KEYWORD)
+
+        result = self.EBNF.parse(' "literal"', 'literal')
+        assert result.error_flag  # literals catch following, but not leading whitespace
 
 
 class TestPopRetrieve:
@@ -156,6 +171,5 @@ class TestCompilerErrors:
 
 
 if __name__ == "__main__":
-    from run import run_tests
-
-    run_tests("", globals())
+    from run import runner
+    runner("TestEBNFParser", globals())

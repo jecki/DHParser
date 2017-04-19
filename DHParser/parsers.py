@@ -58,6 +58,7 @@ try:
     import regex as re
 except ImportError:
     import re
+import sys
 
 from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, smart_list
 from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
@@ -265,14 +266,22 @@ class GrammarBase:
                 ...
                 symbol = RE('(?!\\d)\\w+')
         After the call of this method symbol.name == "symbol"
-        holds. Names assigned via the `name`-parameter of the
-        constructor will not be overwritten.
+        holds. Names assigned via the ``name``-parameter of the
+        constructor will not be overwritten. Parser names starting or
+        ending with a double underscore like ``root__`` will be
+        ignored. See ``toolkit.sane_parser_name()``
+        
+        Attention: If there exists more than one reference to the same
+        parser, only the first one will be chosen for python versions 
+        greater or equal 3.6.  For python version <= 3.5 an arbitrarily
+        selected reference will be chosen. See PEP 520
+        (www.python.org/dev/peps/pep-0520/) for an explanation of why. 
         """
         if cls.parser_initialization__ == "done":
             return
         cdict = cls.__dict__
         for entry, parser in cdict.items():
-            if isinstance(parser, Parser):
+            if isinstance(parser, Parser) and sane_parser_name(entry):
                 if not parser.name or parser.name == TOKEN_KEYWORD:
                     parser.name = entry
                 if (isinstance(parser, Forward) and (not parser.parser.name
@@ -301,6 +310,9 @@ class GrammarBase:
             self.wsp_right_parser__ = ZOMBIE_PARSER
         self.root__.apply(self._add_parser)
 
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
     def _reset(self):
         self.variables = dict()  # support for Pop and Retrieve operators
         self.document = ""  # source document
@@ -318,7 +330,7 @@ class GrammarBase:
         self.all_parsers.add(parser)
         parser.grammar = self
 
-    def parse(self, document):
+    def parse(self, document, start_parser="root__"):
         """Parses a document with with parser-combinators.
 
         Args:
@@ -335,10 +347,10 @@ class GrammarBase:
         else:
             self.dirty_flag = True
         self.document = document
-        parser = self.root__
-        result = ""
+        parser = self[start_parser]
         stitches = []
         rest = document
+        result = Node(None, '')
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
             if rest:

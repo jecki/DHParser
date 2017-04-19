@@ -23,40 +23,43 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.dsl import run_compiler
-from DHParser.ebnf import grammar_changed
+from DHParser.dsl import run_compiler, suite_outdated
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
-    grammar_changed('PopRetrieve.ebnf', 'PopRetrieve_compiler.py')):
+    suite_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
     print("recompiling parser")
     errors = run_compiler("PopRetrieve.ebnf")
     if errors:
         print('\n\n'.join(errors))
         sys.exit(1)
 
-from PopRetrieve_compiler import compile_PopRetrieve
-
-result, errors, ast = compile_PopRetrieve("PopRetrieveTest.txt")
-if errors:
-    print(errors)
-    sys.exit(1)
-else:
-    print(result)
-
-result, errors, ast = compile_PopRetrieve("PopRetrieveTest2.txt")
-if errors:
-    print(errors)
-    sys.exit(1)
-else:
-    print(result)
-
-
-# errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
-# if errors:
-#     print(errors)
-#     sys.exit(1)
+# from PopRetrieve_compiler import compile_PopRetrieve
 #
-# errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+# print("PopRetrieveTest 1")
+# result, errors, ast = compile_PopRetrieve("PopRetrieveTest.txt")
 # if errors:
 #     print(errors)
 #     sys.exit(1)
+# else:
+#     print(result)
+#
+# print("PopRetrieveTest 2")
+# result, errors, ast = compile_PopRetrieve("PopRetrieveTest2.txt")
+# if errors:
+#     print(errors)
+#     sys.exit(1)
+# else:
+#     print(result)
+
+
+print("PopRetrieveTest 1")
+errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
+if errors:
+    print(errors)
+    sys.exit(1)
+
+print("PopRetrieveTest 2")
+errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+if errors:
+    print(errors)
+    sys.exit(1)
