@@ -25,9 +25,9 @@ partext    = text | PARSEP
 text       = cfgtext | brackets
 cfgtext    = chunk | escaped | WSPC
 
-escaped    = /\\[%$&]/
-brackets   = /[\[\]]/                   # left and right square brackets: [ ]
-chunk      = /[^\\%$&\{\}\[\]\s\n]+/    # some piece of text excluding whitespace,
+ESCAPED    = /\\[%$&]/
+BRACKET    = /[\[\]]/                   # left or right square bracket: [ ]
+TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/    # some piece of text excluding whitespace,
                                         # linefeed and special characters
 WSPC       = /[ \t]*\n?(?!\s*\n)[ \t]*/ # whitespace, including at most one linefeed
 LF         = /[ \t]*\n(?!\s*\n)/        # a linefeed, but not an empty line (i.e. par)

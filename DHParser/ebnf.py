@@ -436,7 +436,7 @@ class EBNFCompiler(CompilerBase):
             arg = node.result[-1]
             argstr = str(arg)
             if arg.parser.name != 'symbol':
-                node.add_error(('Retrieve Operator "%s" requires a symbols, '
+                node.add_error(('Retrieve Operator "%s" requires a symbol, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
             if str(arg) in self.directives['complement']:
