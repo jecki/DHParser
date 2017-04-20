@@ -853,6 +853,7 @@ class NegativeLookbehind(Lookbehind):
 class Capture(UnaryOperator):
     def __init__(self, parser, name=None):
         super(Capture, self).__init__(parser, name)
+        print("WARNING: Capture operator is experimental")
 
     def __call__(self, text):
         node, text = self.parser(text)
@@ -871,6 +872,7 @@ class Retrieve(Parser):
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
         self.counterpart = counterpart if counterpart else lambda value: value
+        print("WARNING: Retrieve operator is experimental")
 
     def __deepcopy__(self, memo):
         return self.__class__(self.symbol, self.counterpart, self.name)
