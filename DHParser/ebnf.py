@@ -30,7 +30,8 @@ except ImportError:
 from .__init__ import __version__
 from .toolkit import load_if_file, escape_re, md5, sane_parser_name
 from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
-    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
+    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
+    Capture, Retrieve
 from .syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
     forbid, assert_content, WHITESPACE_KEYWORD
@@ -121,6 +122,8 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
+#TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!?
+
 EBNF_ASTTransform = {
     # AST Transformations for EBNF-grammar
     "syntax":
@@ -148,14 +151,16 @@ EBNF_ASTTransform = {
         [remove_expendables, replace_by_single_child]
 }
 
-EBNF_semantic_validation = {
+
+EBNF_AST_validation = {
     # Semantic validation on the AST
     "repetition, option, oneormore":
         [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
          partial(assert_content, regex=r'(?!§)')],
 }
 
-EBNF_ASTPipeline = [EBNF_ASTTransform, EBNF_semantic_validation]
+
+EBNF_ASTPipeline = [EBNF_ASTTransform, EBNF_AST_validation]
 
 
 class EBNFCompilerError(Exception):
@@ -198,7 +203,7 @@ class EBNFCompiler(CompilerBase):
                            'comment': '',
                            'literalws': ['right'],
                            'tokens': set(),     # alt. 'scanner_tokens'
-                           'complement': set()}     # alt. 'retrieve_complement'
+                           'counterpart': set()}     # alt. 'retrieve_counterpart'
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -276,12 +281,13 @@ class EBNFCompiler(CompilerBase):
                 declarations = declarations[:-1]
         declarations.append('"""')
 
-        # add default functions for complement filters of pop or retrieve operators
-        for symbol in self.directives['complement']:
-            declarations.append('@staticmethod\n'
-                                'def complement_%s(value): \n' % symbol +
-                                '    return value.replace("(", ")").replace("[", "]")'
-                                '.replace("{", "}").replace(">", "<")\n')
+        # add default functions for counterpart filters of pop or retrieve operators
+        for symbol in self.directives['counterpart']:
+            # declarations.append('def %s_counterpart(value): \n' % symbol +
+            #                     '        return value.replace("(", ")").replace("[", "]")'
+            #                     '.replace("{", "}").replace(">", "<")\n')
+            declarations.append(symbol + '_counterpart = lambda value: value.replace("(", ")")'
+                                '.replace("[", "]").replace("{", "}").replace(">", "<")')
 
         # turn definitions into declarations in reverse order
         self.root = definitions[0][0] if definitions else ""
@@ -402,8 +408,8 @@ class EBNFCompiler(CompilerBase):
         elif key in {'tokens', 'scanner_tokens'}:
             self.directives['tokens'] |= self.compile__(node.result[1])
 
-        elif key in {'complement', 'retrieve_complement'}:
-            self.directives['complement'] |= self.compile__(node.result[1])
+        elif key in {'counterpart', 'retrieve_counterpart'}:
+            self.directives['counterpart'] |= self.compile__(node.result[1])
 
         else:
             node.add_error('Unknown directive %s ! (Known ones are %s .)' %
@@ -439,8 +445,8 @@ class EBNFCompiler(CompilerBase):
                 node.add_error(('Retrieve Operator "%s" requires a symbol, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
-            if str(arg) in self.directives['complement']:
-                custom_args = ['complement=%s_complement' % str(arg)]
+            if str(arg) in self.directives['counterpart']:
+                custom_args = ['counterpart=%s_counterpart' % str(arg)]
             self.variables.add(arg.result)
 
         elif len(node.result) > 2:

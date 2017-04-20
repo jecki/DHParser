@@ -153,6 +153,7 @@ class Node:
     @property
     def tag_name(self):
         return self.parser.name or self.parser.__class__.__name__
+        # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.__class__.__name__
 
     @property
     def result(self):
@@ -328,7 +329,6 @@ class Node:
         Args:
             match_function (function): A function  that takes as Node
                 object as argument and returns True or False
-
         Yields:
             Node: all nodes of the tree for which 
             ``match_function(node)`` returns True
@@ -339,6 +339,23 @@ class Node:
             for child in self.children:
                 for nd in child.find(match_function):
                     yield nd
+
+    # def range(self, match_first, match_last):
+    #     """Iterates over the range of nodes, starting from the first
+    #     node for which ``match_first`` becomes True until the first node
+    #     after this one for which ``match_last`` becomes true or until
+    #     the end if it never does.
+    #
+    #     Args:
+    #         match_first (function): A function  that takes as Node
+    #             object as argument and returns True or False
+    #         match_last (function): A function  that takes as Node
+    #             object as argument and returns True or False
+    #     Yields:
+    #         Node: all nodes of the tree for which
+    #         ``match_function(node)`` returns True
+    #     """
+
 
     def navigate(self, path):
         """Yields the results of all descendant elements matched by
@@ -405,8 +422,12 @@ def traverse(root_node, processing_table):
             for child in node.result:
                 traverse_recursive(child)
                 node.error_flag |= child.error_flag  # propagate error flag
-        sequence = table.get(node.parser.name,
-                             table.get('~', [])) + table.get('*', [])
+        sequence = table.get('*', []) + \
+                   table.get(node.parser.name, table.get('?', [])) + \
+                   table.get('~', [])
+        # '*' always called (before any other processing function)
+        # '?' called for those nodes for which no (other) processing functions is in the table
+        # '~' always called (after any other processing function)
         for call in sequence:
             call(node)
 

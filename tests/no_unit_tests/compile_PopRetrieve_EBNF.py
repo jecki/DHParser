@@ -27,11 +27,12 @@ from DHParser.dsl import run_compiler, suite_outdated
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
     suite_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
-    print("recompiling parser")
+    print("recompiling PopRetrieve parser")
     errors = run_compiler("PopRetrieve.ebnf")
     if errors:
         print('\n\n'.join(errors))
         sys.exit(1)
+
 
 # from PopRetrieve_compiler import compile_PopRetrieve
 #
@@ -63,3 +64,32 @@ errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
 if errors:
     print(errors)
     sys.exit(1)
+
+
+
+if (not os.path.exists('PopRetrieveComplement_compiler.py') or
+        suite_outdated('PopRetrieveComplement_compiler.py', 'PopRetrieveComplement.ebnf')):
+    print("recompiling PopRetrieveComplement parser")
+    errors = run_compiler("PopRetrieveComplement.ebnf")
+    if errors:
+        print('\n\n'.join(errors))
+        sys.exit(1)
+
+
+from PopRetrieveComplement_compiler import compile_PopRetrieveComplement
+
+print("PopRetrieveComplement Test 1")
+result, errors, ast = compile_PopRetrieveComplement("PopRetrieveComplementTest.txt")
+if errors:
+    print(errors)
+    sys.exit(1)
+else:
+    print(result)
+
+print("PopRetrieveComplement Test 2")
+result, errors, ast = compile_PopRetrieveComplement("PopRetrieveComplementTest2.txt")
+if errors:
+    print(errors)
+    sys.exit(1)
+else:
+    print(result)

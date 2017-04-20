@@ -100,21 +100,23 @@ class TestPopRetrieve:
     mini_language = """
         document       = { text | codeblock }
         codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
-        delimiter      = delimiter_sign
+        delimiter      = delimiter_sign  # never use delimiter between capture and retrieve!!!
         delimiter_sign = /`+/
         text           = /[^`]+/ 
         """
     mini_lang2 = """
-        @retrieve_filter = delimiter
+        @retrieve_counterpart = braces
         document       = { text | codeblock }
-        codeblock      = braces { text | (!:braces closing_braces) } ::braces
-        braces         = /\{+/
+        codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
+        braces         = opening_braces
+        opening_braces = /\{+/
         closing_braces = /\}+/
-        text           = /[^`]+/ 
+        text           = /[^{}]+/
         """
 
     def setup(self):
         self.minilang_parser = compileEBNF(self.mini_language)()
+        self.minilang_parser2 = compileEBNF(self.mini_lang2)()
 
     @staticmethod
     def opening_delimiter(node, name):
@@ -126,6 +128,7 @@ class TestPopRetrieve:
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
+        assert self.minilang_parser2
 
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
@@ -136,7 +139,6 @@ class TestPopRetrieve:
         assert delim == pop
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_single_line", '.cst')
-            # self.minilang_parser.log_parsing_history("test_PopRetrieve_single_line")
 
     def test_multi_line(self):
         teststr = """
@@ -154,7 +156,33 @@ class TestPopRetrieve:
         assert delim == pop
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
-            # self.minilang_parser.log_parsing_history("test_PopRetrieve_multi_line")
+
+    def test_single_line_complement(self):
+        teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
+        syntax_tree = self.minilang_parser2.parse(teststr)
+        assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
+        assert len(delim) == len(pop) and delim != pop
+        if WRITE_LOGS:
+            syntax_tree.log("test_PopRetrieve_single_line", '.cst')
+
+    def test_multi_line_complement(self):
+        teststr = """
+            Anfang {{{code block {{ <- keine Ende-Zeichen ! }}} Ende
+
+            Absatz ohne {{{ codeblock, aber
+            das stellt sich erst am Ende heraus...
+
+            Mehrzeliger }}}code block
+            """
+        syntax_tree = self.minilang_parser2.parse(teststr)
+        assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
+        assert len(delim) == len(pop) and delim != pop
+        if WRITE_LOGS:
+            syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
 
 
 class TestSemanticValidation:

@@ -1,6 +1,6 @@
-Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ebde
+Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende
 
 Absatz ohne ``` codeblock, aber
-das stellt sich erst am Ende herause...
+das stellt sich erst am Ende heraus...
 
 Mehrzeliger ```code block 

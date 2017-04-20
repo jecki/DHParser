@@ -1,90 +1,90 @@
-<document>
-    <Alternative>
-        <text>
-            <RegExp>
+<document:ZeroOrMore>
+    <:Alternative>
+        <text:RE>
+            <:RegExp>
                 Anfang 
-            </RegExp>
-        </text>
-    </Alternative>
-    <Alternative>
-        <codeblock>
-            <delimiter>
-                <delimiter_sign>
-                    <RegExp>
+            </:RegExp>
+        </text:RE>
+    </:Alternative>
+    <:Alternative>
+        <codeblock:Sequence>
+            <delimiter:Capture>
+                <delimiter_sign:RE>
+                    <:RegExp>
                         ```
-                    </RegExp>
-                </delimiter_sign>
-            </delimiter>
-            <ZeroOrMore>
-                <Alternative>
-                    <text>
-                        <RegExp>
+                    </:RegExp>
+                </delimiter_sign:RE>
+            </delimiter:Capture>
+            <:ZeroOrMore>
+                <:Alternative>
+                    <text:RE>
+                        <:RegExp>
                             code block 
-                        </RegExp>
-                    </text>
-                </Alternative>
-                <Alternative>
-                    <Sequence>
-                        <delimiter_sign>
-                            <RegExp>
+                        </:RegExp>
+                    </text:RE>
+                </:Alternative>
+                <:Alternative>
+                    <:Sequence>
+                        <delimiter_sign:RE>
+                            <:RegExp>
                                 ``
-                            </RegExp>
-                        </delimiter_sign>
-                    </Sequence>
-                </Alternative>
-                <Alternative>
-                    <text>
-                        <RegExp>
+                            </:RegExp>
+                        </delimiter_sign:RE>
+                    </:Sequence>
+                </:Alternative>
+                <:Alternative>
+                    <text:RE>
+                        <:RegExp>
                              <- keine Ende-Zeichen ! 
-                        </RegExp>
-                    </text>
-                </Alternative>
-            </ZeroOrMore>
-            <delimiter>
+                        </:RegExp>
+                    </text:RE>
+                </:Alternative>
+            </:ZeroOrMore>
+            <delimiter:Pop>
                 ```
-            </delimiter>
-        </codeblock>
-    </Alternative>
-    <Alternative>
-        <text>
-            <RegExp>
-                 Ebde
+            </delimiter:Pop>
+        </codeblock:Sequence>
+    </:Alternative>
+    <:Alternative>
+        <text:RE>
+            <:RegExp>
+                 Ende
                 
                 Absatz ohne 
-            </RegExp>
-        </text>
-    </Alternative>
-    <Alternative>
-        <codeblock>
-            <delimiter>
-                <delimiter_sign>
-                    <RegExp>
+            </:RegExp>
+        </text:RE>
+    </:Alternative>
+    <:Alternative>
+        <codeblock:Sequence>
+            <delimiter:Capture>
+                <delimiter_sign:RE>
+                    <:RegExp>
                         ```
-                    </RegExp>
-                </delimiter_sign>
-            </delimiter>
-            <ZeroOrMore>
-                <Alternative>
-                    <text>
-                        <RegExp>
+                    </:RegExp>
+                </delimiter_sign:RE>
+            </delimiter:Capture>
+            <:ZeroOrMore>
+                <:Alternative>
+                    <text:RE>
+                        <:RegExp>
                              codeblock, aber
-                            das stellt sich erst am Ende herause...
+                            das stellt sich erst am Ende heraus...
                             
                             Mehrzeliger 
-                        </RegExp>
-                    </text>
-                </Alternative>
-            </ZeroOrMore>
-            <delimiter>
+                        </:RegExp>
+                    </text:RE>
+                </:Alternative>
+            </:ZeroOrMore>
+            <delimiter:Pop>
                 ```
-            </delimiter>
-        </codeblock>
-    </Alternative>
-    <Alternative>
-        <text>
-            <RegExp>
+            </delimiter:Pop>
+        </codeblock:Sequence>
+    </:Alternative>
+    <:Alternative>
+        <text:RE>
+            <:RegExp>
                 code block 
-            </RegExp>
-        </text>
-    </Alternative>
-</document>
+            </:RegExp>
+        </text:RE>
+    </:Alternative>
+</document:ZeroOrMore>

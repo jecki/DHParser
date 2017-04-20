@@ -859,23 +859,25 @@ class Capture(UnaryOperator):
         if node:
             stack = self.grammar.variables.setdefault(self.name, [])
             stack.append(str(node))
-        return Node(self, node), text
+            return Node(self, node), text
+        else:
+            return None, text
 
 
 class Retrieve(Parser):
-    def __init__(self, symbol, complement=None, name=None):
+    def __init__(self, symbol, counterpart=None, name=None):
         if not name:
             name = symbol.name
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
-        self.complement = complement if complement else lambda value: value
+        self.counterpart = counterpart if counterpart else lambda value: value
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.complement, self.name)
+        return self.__class__(self.symbol, self.counterpart, self.name)
 
     def __call__(self, text):
         stack = self.grammar.variables[self.symbol.name]
-        value = self.complement(self.pick_value(stack))
+        value = self.counterpart(self.pick_value(stack))
         if text.startswith(value):
             return Node(self, value), text[len(value):]
         else:
