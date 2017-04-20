@@ -20,11 +20,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from functools import partial
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.syntaxtree import traverse
-from DHParser.parsers import full_compilation, WHITESPACE_KEYWORD
+from DHParser.parsers import full_compilation, Retrieve, WHITESPACE_KEYWORD
 from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
 from DHParser.dsl import compileEBNF
 
@@ -103,9 +104,25 @@ class TestPopRetrieve:
         delimiter_sign = /`+/
         text           = /[^`]+/ 
         """
+    mini_lang2 = """
+        @retrieve_filter = delimiter
+        document       = { text | codeblock }
+        codeblock      = braces { text | (!:braces closing_braces) } ::braces
+        braces         = /\{+/
+        closing_braces = /\}+/
+        text           = /[^`]+/ 
+        """
 
     def setup(self):
         self.minilang_parser = compileEBNF(self.mini_language)()
+
+    @staticmethod
+    def opening_delimiter(node, name):
+        return node.tag_name == name and not isinstance(node.parser, Retrieve)
+
+    @staticmethod
+    def closing_delimiter(node):
+        return isinstance(node.parser, Retrieve)
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
@@ -114,8 +131,8 @@ class TestPopRetrieve:
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser.parse(teststr)
         assert not syntax_tree.collect_errors()
-        delim = str(next(syntax_tree.find(lambda node: node.tag_name == "delimiter")))
-        pop = str(next(syntax_tree.find(lambda node: node.tag_name == "Pop")))
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert delim == pop
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_single_line", '.cst')
@@ -132,8 +149,8 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser.parse(teststr)
         assert not syntax_tree.collect_errors()
-        delim = str(next(syntax_tree.find(lambda node: node.tag_name == "delimiter")))
-        pop = str(next(syntax_tree.find(lambda node: node.tag_name == "Pop")))
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert delim == pop
         if WRITE_LOGS:
             syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
@@ -172,4 +189,4 @@ class TestCompilerErrors:
 
 if __name__ == "__main__":
     from run import runner
-    runner("TestEBNFParser", globals())
+    runner("TestPopRetrieve", globals())

@@ -172,10 +172,10 @@ class EBNFCompiler(CompilerBase):
     RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneuos AST transformation."
-    PREFIX_TABLE = [('§', 'Required'), ('&', 'Lookahead'),
-                    ('!', 'NegativeLookahead'), ('-&', 'Lookbehind'),
-                    ('-!', 'NegativeLookbehind'), ('::', 'Pop'),
-                    (':', 'Retrieve')]
+    PREFIX_TABLE = {'§': 'Required',
+                    '&': 'Lookahead', '!': 'NegativeLookahead',
+                    '-&': 'Lookbehind', '-!': 'NegativeLookbehind',
+                    '::': 'Pop', ':': 'Retrieve'}
     WHITESPACE = {'horizontal': r'[\t ]*',  # default: horizontal
                   'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
                   'vertical': r'\s*'}
@@ -197,7 +197,8 @@ class EBNFCompiler(CompilerBase):
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
                            'literalws': ['right'],
-                           'tokens': set()}
+                           'tokens': set(),     # alt. 'scanner_tokens'
+                           'complement': set()}     # alt. 'retrieve_complement'
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -244,8 +245,7 @@ class EBNFCompiler(CompilerBase):
         if self.variables:
             for i in range(len(definitions)):
                 if definitions[i][0] in self.variables:
-                    definitions[i] = (definitions[i][0], 'Capture(%s, "%s")' %
-                                      (definitions[1], definitions[0]))
+                    definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[1])
 
         self.definition_names = [defn[0] for defn in definitions]
         definitions.append(('wspR__', WHITESPACE_KEYWORD
@@ -275,6 +275,13 @@ class EBNFCompiler(CompilerBase):
             while declarations[-1].strip() == '':
                 declarations = declarations[:-1]
         declarations.append('"""')
+
+        # add default functions for complement filters of pop or retrieve operators
+        for symbol in self.directives['complement']:
+            declarations.append('@staticmethod\n'
+                                'def complement_%s(value): \n' % symbol +
+                                '    return value.replace("(", ")").replace("[", "]")'
+                                '.replace("{", "}").replace(">", "<")\n')
 
         # turn definitions into declarations in reverse order
         self.root = definitions[0][0] if definitions else ""
@@ -332,7 +339,7 @@ class EBNFCompiler(CompilerBase):
             self.rules.add(rule)
             defn = self.compile__(node.result[1])
             if rule in self.variables:
-                defn = 'Capture(%s, "%s")' % (defn, rule)
+                defn = 'Capture(%s)' % defn
                 self.variables.remove(rule)
         except TypeError as error:
             errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
@@ -392,20 +399,23 @@ class EBNFCompiler(CompilerBase):
                 else {} if 'none' in value else value
             self.directives[key] = list(ws)
 
-        elif key == 'tokens':
+        elif key in {'tokens', 'scanner_tokens'}:
             self.directives['tokens'] |= self.compile__(node.result[1])
+
+        elif key in {'complement', 'retrieve_complement'}:
+            self.directives['complement'] |= self.compile__(node.result[1])
+
         else:
             node.add_error('Unknown directive %s ! (Known ones are %s .)' %
                            (key,
                             ', '.join(list(self.directives.keys()))))
         return ""
 
-    def non_terminal(self, node, parser_class):
+    def non_terminal(self, node, parser_class, custom_args=[]):
         """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        arguments = filter(lambda arg: arg,
-                           [self.compile__(r) for r in node.result])
+        arguments = [self.compile__(r) for r in node.result] + custom_args
         return parser_class + '(' + ', '.join(arguments) + ')'
 
     def expression(self, node):
@@ -419,31 +429,34 @@ class EBNFCompiler(CompilerBase):
         assert node.children
         assert len(node.result) >= 2, node.as_sexpr()
         prefix = node.result[0].result
+        custom_args = []
 
-        arg = node.result[-1]
         if prefix in {'::', ':'}:
             assert len(node.result) == 2
+            arg = node.result[-1]
+            argstr = str(arg)
             if arg.parser.name != 'symbol':
                 node.add_error(('Retrieve Operator "%s" requires a symbols, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
+            if str(arg) in self.directives['complement']:
+                custom_args = ['complement=%s_complement' % str(arg)]
             self.variables.add(arg.result)
 
-        if len(node.result) > 2:
+        elif len(node.result) > 2:
             # shift = (Node(node.parser, node.result[1].result),)
             # node.result[1].result = shift + node.result[2:]
-            node.result[1].result = (Node(node.result[1].parser,
-                                          node.result[1].result),) \
+            node.result[1].result = (Node(node.result[1].parser, node.result[1].result),) \
                                     + node.result[2:]
             node.result[1].parser = node.parser
             node.result = (node.result[0], node.result[1])
 
         node.result = node.result[1:]
-        for match, parser_class in self.PREFIX_TABLE:
-            if prefix == match:
-                return self.non_terminal(node, parser_class)
-
-        assert False, ("Unknown prefix %s \n" % prefix) + node.as_sexpr()
+        try:
+            parser_class = self.PREFIX_TABLE[prefix]
+            return self.non_terminal(node, parser_class, custom_args)
+        except KeyError:
+            node.add_error('Unknown prefix "%s".' % prefix)
 
     def option(self, node):
         return self.non_terminal(node, 'Optional')

@@ -48,9 +48,8 @@ Berlin Heidelberg 2008.
 
 Juancarlo Añez: grako, a PEG parser generator in Python,
 https://bitbucket.org/apalala/grako
-
-
 """
+
 
 import copy
 import os
@@ -864,18 +863,19 @@ class Capture(UnaryOperator):
 
 
 class Retrieve(Parser):
-    def __init__(self, symbol, name=None):
+    def __init__(self, symbol, complement=None, name=None):
+        if not name:
+            name = symbol.name
         super(Retrieve, self).__init__(name)
-        self.symbol = symbol  # if isinstance(symbol, str) else symbol.name
+        self.symbol = symbol
+        self.complement = complement if complement else lambda value: value
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.name)
+        return self.__class__(self.symbol, self.complement, self.name)
 
     def __call__(self, text):
-        symbol = self.symbol if isinstance(self.symbol, str) \
-            else self.symbol.name
-        stack = self.grammar.variables[symbol]
-        value = self.pick_value(stack)
+        stack = self.grammar.variables[self.symbol.name]
+        value = self.complement(self.pick_value(stack))
         if text.startswith(value):
             return Node(self, value), text[len(value):]
         else:

@@ -24,7 +24,7 @@ flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' 
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" expression §")"
-regexchain =  "<" expression §">"                # compiles "expression" into a singular regular expression
+regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
 oneormore  =  "{" expression "}+"
 repetition =  "{" expression §"}"
 option     =  "[" expression §"]"

@@ -57,7 +57,7 @@ class PopRetrieveGrammar(GrammarBase):
     wspR__ = WSP__
     text = RE('[^`]+', wR='')
     delimiter_sign = RE('`+', wR='')
-    delimiter = Capture(delimiter_sign, "delimiter")
+    delimiter = Capture(delimiter_sign)
     codeblock = Sequence(delimiter, ZeroOrMore(Alternative(text, Sequence(NegativeLookahead(Retrieve(delimiter)), delimiter_sign))), Pop(delimiter))
     document = ZeroOrMore(Alternative(text, codeblock))
     root__ = document
