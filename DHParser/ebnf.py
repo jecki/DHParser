@@ -424,7 +424,7 @@ class EBNFCompiler(CompilerBase):
         if prefix in {'::', ':'}:
             assert len(node.result) == 2
             if arg.parser.name != 'symbol':
-                node.add_error(('Retrieve Operator "%s" requires a symbols, '
+                node.add_error(('Retrieve Operator "%s" requires a symbol, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
             self.variables.add(arg.result)
