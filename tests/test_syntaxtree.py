@@ -2,7 +2,6 @@
 
 """test_syntaxtree.py - test of syntaxtree-module of DHParser 
                              
-
 Author: Eckhart Arnold <arnold@badw.de>
 
 Copyright 2017 Bavarian Academy of Sciences and Humanities

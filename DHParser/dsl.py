@@ -110,7 +110,7 @@ def compile_{NAME}(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     return full_compilation(source, {NAME}Scanner,
-        {NAME}Grammar(), {NAME}_ASTPipeline, {NAME}Compiler())
+        {NAME}Grammar(), {NAME}Transform, {NAME}Compiler())
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

@@ -215,14 +215,15 @@ class EBNFCompiler(CompilerBase):
         if not self.definition_names:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_AST_Skeleton()"!')
-        tt_name = self.grammar_name + '_ASTTransform'
-        pl_name = self.grammar_name + '_ASTPipeline'
+        tt_name = self.grammar_name + '_AST_transformation_table'
+        tf_name = self.grammar_name + 'Transform'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
         for name in self.definition_names:
             transtable.append('    "' + name + '": no_operation,')
-        transtable += ['    "": no_operation', '}', '',  pl_name + ' = [%s]' % tt_name, '']
+        transtable += ['    "": no_operation', '}', '',  tf_name +
+                       ' = partial(traverse, processing_table=%s)' % tt_name, '']
         return '\n'.join(transtable)
 
     def gen_compiler_skeleton(self):

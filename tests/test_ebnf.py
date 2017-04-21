@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_ebnf.py - tests of the EBNFcompiler-module of DHParser 
+"""test_ebnf.py - tests of the ebnf module of DHParser 
                              
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -24,7 +24,6 @@ from functools import partial
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.syntaxtree import traverse
 from DHParser.parsers import full_compilation, Retrieve, WHITESPACE_KEYWORD
 from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
 from DHParser.dsl import compileEBNF
