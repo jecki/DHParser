@@ -25,7 +25,7 @@ import sys
 from functools import partial
 
 from DHParser.dsl import compileDSL, run_compiler
-from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
 from DHParser.parsers import full_compilation
 
 
@@ -37,13 +37,15 @@ def selftest(file_name):
     compiler = EBNFCompiler(compiler_name, grammar)
     parser = EBNFGrammar()
     result, errors, syntax_tree = full_compilation(grammar, None, parser,
-                                                   EBNF_ASTPipeline, compiler)
+                                                   EBNFTransform, compiler)
     print(result)
     if errors:
         print('\n\n'.join(errors))
         sys.exit(1)
     else:
-        result = compileDSL(grammar, result, EBNF_ASTPipeline, compiler)
+        # compile the grammar again using the result of the previous
+        # compilation as parser
+        result = compileDSL(grammar, result, EBNFTransform, compiler)
         print(result)
     return result
 

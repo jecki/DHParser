@@ -964,7 +964,7 @@ class CompilerBase:
             return result
 
 
-def full_compilation(source, scanner, parser, AST_pipeline, compiler):
+def full_compilation(source, scanner, parser, transform, compiler):
     """Compiles a source in four stages:
         1. Scanning (if needed)
         2. Parsing
@@ -979,10 +979,9 @@ def full_compilation(source, scanner, parser, AST_pipeline, compiler):
         scanner (funciton):  text -> text. A scanner function or None,
             if no scanner is needed.
         parser (GrammarBase):  The GrammarBase object
-        AST_pipeline (dict or list of dicts):  A syntax-tree processing
-            table or a sequence of processing tables. The first of
-            these table usually contains the transformations for 
-            turning the concrete into the abstract syntax tree.
+        transform (function):  A transformation function that takes
+            the root-node of the concrete syntax tree as an argument and
+            transforms it (in place) into an abstract syntax tree.
         compiler (object):  An instance of a class derived from
             ``CompilerBase`` with a suitable method for every parser
             name or class.
@@ -1014,8 +1013,7 @@ def full_compilation(source, scanner, parser, AST_pipeline, compiler):
         result = None
         errors = syntax_tree.collect_errors()
     else:
-        for processing_table in smart_list(AST_pipeline):
-            traverse(syntax_tree, processing_table)
+        transform(syntax_tree)
         syntax_tree.log(log_file_name, ext='.ast')
         errors = syntax_tree.collect_errors()
         if not errors:

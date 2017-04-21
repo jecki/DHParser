@@ -26,7 +26,7 @@ import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.syntaxtree import traverse
 from DHParser.parsers import full_compilation, Retrieve, WHITESPACE_KEYWORD
-from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
 from DHParser.dsl import compileEBNF
 
 
@@ -190,8 +190,7 @@ class TestSemanticValidation:
         grammar = EBNFGrammar()
         st = grammar.parse(minilang)
         assert not st.collect_errors()
-        for table in EBNF_ASTPipeline:
-            traverse(st, table)
+        EBNFTransform(st)
         assert bool_filter(st.collect_errors())
 
     def test_illegal_nesting(self):
@@ -210,7 +209,7 @@ class TestSemanticValidation:
 class TestCompilerErrors:
     def test_error_propagation(self):
         ebnf = "@ literalws = wrongvalue  # testing error propagation\n"
-        result, messages, st = full_compilation(ebnf, None, EBNFGrammar(), EBNF_ASTPipeline,
+        result, messages, st = full_compilation(ebnf, None, EBNFGrammar(), EBNFTransform,
                                                 EBNFCompiler('ErrorPropagationTest'))
         assert messages
 

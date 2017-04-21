@@ -27,7 +27,7 @@ import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.toolkit import compile_python_object
 from DHParser.parsers import full_compilation
-from DHParser.ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler
+from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
 from DHParser.dsl import compileEBNF, DHPARSER_IMPORTS
 
 WRITE_LOGS = True
@@ -73,7 +73,7 @@ class TestRegex:
                   \w*    # possibly followed by more alpha chracters/
         """
         result, messages, syntax_tree = full_compilation(mlregex, None,
-                                                         EBNFGrammar(), EBNF_ASTPipeline,
+                                                         EBNFGrammar(), EBNFTransform,
                                                          EBNFCompiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -96,7 +96,7 @@ class TestRegex:
             \end{document}
             """
         result, messages, syntax_tree = full_compilation(tokenlang, None,
-                                                         EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler("TokenTest"))
+                                                         EBNFGrammar(), EBNFTransform, EBNFCompiler("TokenTest"))
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()

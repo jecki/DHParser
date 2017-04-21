@@ -32,7 +32,7 @@ from .toolkit import load_if_file, escape_re, md5, sane_parser_name
 from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
     Capture, Retrieve
-from .syntaxtree import Node, remove_enclosing_delimiters, reduce_single_child, \
+from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
     forbid, assert_content, WHITESPACE_KEYWORD
 
@@ -124,7 +124,7 @@ class EBNFGrammar(GrammarBase):
 
 #TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!?
 
-EBNF_ASTTransform = {
+EBNF_transformation_table = {
     # AST Transformations for EBNF-grammar
     "syntax":
         remove_expendables,
@@ -152,7 +152,7 @@ EBNF_ASTTransform = {
 }
 
 
-EBNF_AST_validation = {
+EBNF_validation_table = {
     # Semantic validation on the AST
     "repetition, option, oneormore":
         [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
@@ -160,7 +160,9 @@ EBNF_AST_validation = {
 }
 
 
-EBNF_ASTPipeline = [EBNF_ASTTransform, EBNF_AST_validation]
+def EBNFTransform(syntax_tree):
+    for processing_table in [EBNF_transformation_table, EBNF_validation_table]:
+        traverse(syntax_tree, processing_table)
 
 
 class EBNFCompilerError(Exception):

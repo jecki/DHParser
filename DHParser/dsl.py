@@ -29,7 +29,7 @@ try:
 except ImportError:
     import re
 
-from .ebnf import EBNFGrammar, EBNF_ASTPipeline, EBNFCompiler, grammar_changed
+from .ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler, grammar_changed
 from .toolkit import load_if_file, is_python_code, compile_python_object
 from .parsers import GrammarBase, CompilerBase, full_compilation, nil_scanner
 from .syntaxtree import Node
@@ -139,7 +139,7 @@ def get_grammar_instance(grammar):
             parser_py, errors, AST = grammar_src, '', None
         else:
             parser_py, errors, AST = full_compilation(grammar_src, None,
-                                                      EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
+                                                      EBNFGrammar(), EBNFTransform, EBNFCompiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
@@ -154,7 +154,7 @@ def get_grammar_instance(grammar):
     return parser_root, grammar_src
 
 
-def compileDSL(text_or_file, dsl_grammar, ast_pipeline, compiler,
+def compileDSL(text_or_file, dsl_grammar, ast_transformation, compiler,
                scanner=nil_scanner):
     """Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
@@ -165,10 +165,10 @@ def compileDSL(text_or_file, dsl_grammar, ast_pipeline, compiler,
     """
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
-    assert isinstance(ast_pipeline, collections.abc.Sequence) or isinstance(ast_pipeline, dict)
     parser_root, grammar_src = get_grammar_instance(dsl_grammar)
     src = load_if_file(text_or_file)
-    result, errors, AST = full_compilation(src, scanner, parser_root, ast_pipeline, compiler)
+    result, errors, AST = full_compilation(src, scanner, parser_root,
+                                           ast_transformation, compiler)
     if errors:  raise CompilationError(errors, src, grammar_src, AST)
     return result
 
@@ -196,7 +196,7 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
         which conforms to the language defined by ``ebnf_src``.
     """
     grammar = ebnf_grammar_obj or EBNFGrammar()
-    grammar_src = compileDSL(ebnf_src, grammar, EBNF_ASTPipeline, EBNFCompiler())
+    grammar_src = compileDSL(ebnf_src, grammar, EBNFTransform, EBNFCompiler())
     return grammar_src if source_only else \
         compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
 
@@ -221,11 +221,11 @@ def load_compiler_suite(compiler_suite):
     else:
         # assume source is an ebnf grammar
         parser_py, errors, AST = full_compilation(
-            source, None, EBNFGrammar(), EBNF_ASTPipeline, EBNFCompiler())
+            source, None, EBNFGrammar(), EBNFTransform, EBNFCompiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), source)
         scanner = nil_scanner
-        ast = EBNF_ASTPipeline
+        ast = EBNFTransform
         compiler = EBNFCompiler()
     parser = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
 
@@ -282,13 +282,13 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     else:
         scanner = nil_scanner
         parser = EBNFGrammar()
-        trans = EBNF_ASTPipeline
+        trans = EBNFTransform
         compiler1 = EBNFCompiler(compiler_name, source_file)
     result, errors, ast = full_compilation(source_file, scanner, parser, trans, compiler1)
     if errors:
         return errors
 
-    elif trans == EBNF_ASTPipeline:  # either an EBNF- or no compiler suite given
+    elif trans == EBNFTransform:  # either an EBNF- or no compiler suite given
         f = None
 
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
