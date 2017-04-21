@@ -22,6 +22,8 @@ permissions and limitations under the License.
 import itertools
 import os
 from functools import partial
+
+
 try:
     import regex as re
 except ImportError:
@@ -56,7 +58,19 @@ __all__ = ['WHITESPACE_KEYWORD',
            'assert_content']
 
 
-class ZombieParser:
+class MockParser:
+    def __init__(self, name=''):
+        self.name = name
+
+    def __str__(self):
+        return self.name or self.__class__.__name__
+
+    def __call__(self, text):
+        """Better call Saul ;-)"""
+        return None, text
+
+
+class ZombieParser(MockParser):
     """
     Serves as a substitute for a Parser instance.
 
@@ -69,9 +83,9 @@ class ZombieParser:
     alive = False
 
     def __init__(self):
+        super(ZombieParser, self).__init__("ZOMBIE")
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.name = "ZOMBIE"
         self.__class__.alive = True
 
     def __copy__(self):
@@ -79,13 +93,6 @@ class ZombieParser:
 
     def __deepcopy__(self, memo):
         return self
-
-    def __str__(self):
-        return self.name
-
-    def __call__(self, text):
-        """Better call Saul ;-)"""
-        return None, text
 
 
 ZOMBIE_PARSER = ZombieParser()
@@ -379,6 +386,48 @@ class Node:
             else:
                 return self.result,
         return nav(path.split('/'))
+
+
+def mock_syntax_tree(sexpr):
+    """Generates a tree of nodes from an S-expression.
+
+    Example: 
+    >>> mock_syntax_tree("(a (b c))").as_sexpr()
+    (a 
+        (b 
+            c 
+        )
+    )
+    """
+    def next_block(s):
+        s = s.strip()
+        while s[0] != ')':
+            assert s[0] == '(', s
+            level = 1;
+            i = 1
+            while level > 0:
+                if s[i] == '(':
+                    level += 1
+                elif s[i] == ')':
+                    level -= 1
+                i += 1
+            yield s[:i]
+            s = s[i:].strip()
+
+    sexpr = sexpr.strip()
+    assert sexpr[0] == '(', sexpr
+    sexpr = sexpr[1:].strip()
+    m = re.match('\w+', sexpr)
+    name = sexpr[:m.end()]
+    sexpr = sexpr[m.end():].strip()
+    if sexpr[0] == '(':
+        result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
+    else:
+        m = re.match('\w+', sexpr)
+        result = sexpr[:m.end()]
+        sexpr = sexpr[m.end():].strip()
+        assert sexpr[0] == ')', sexpr
+    return Node(MockParser(name), result)
 
 
 ########################################################################

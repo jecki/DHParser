@@ -20,4 +20,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import sys
+from DHParser.dsl import run_compiler
 
+class TestCompilerGeneration:
+    trivial_lang = """
+        text = { word | WSPC }
+        word = /\w+/
+        WSPC = /\s*/
+        """
+    trivial_text = """Es war ein König in Thule."""
+
+
+    def setup(self):
+
+
+if (not os.path.exists('PopRetrieve_compiler.py') or
+            suite_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
+        print("recompiling PopRetrieve parser")
+        errors = run_compiler("PopRetrieve.ebnf")
+        if errors:
+            print('\n\n'.join(errors))
+            sys.exit(1)
+
+
+if __name__ == "__main__":
+    from run import runner
+    runner("", globals())
