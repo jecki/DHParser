@@ -244,11 +244,12 @@ class EBNFCompiler(CompilerBase):
                     'Compiler, self).__init__()',
                     "        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.definition_names:
+            method_name = CompilerBase.derive_method_name(name)
             if name == self.root:
-                compiler += ['    def ' + name + '__(self, node):',
+                compiler += ['    def ' + method_name + '(self, node):',
                              '        return node', '']
             else:
-                compiler += ['    def ' + name + '__(self, node):',
+                compiler += ['    def ' + method_name + '(self, node):',
                              '        pass', '']
         return '\n'.join(compiler)
 
@@ -314,7 +315,7 @@ class EBNFCompiler(CompilerBase):
         declarations.append('')
         return '\n    '.join(declarations)
 
-    def syntax__(self, node):
+    def on_syntax(self, node):
         self._reset()
         definitions = []
 
@@ -333,7 +334,7 @@ class EBNFCompiler(CompilerBase):
 
         return self.gen_parser(definitions)
 
-    def definition__(self, node):
+    def on_definition(self, node):
         rule = node.result[0].result
         if rule in self.rules:
             node.add_error('A rule with name "%s" has already been defined.' % rule)
@@ -374,7 +375,7 @@ class EBNFCompiler(CompilerBase):
                            (repr(rx), str(re_error)))
         return rx
 
-    def directive__(self, node):
+    def on_directive(self, node):
         key = node.result[0].result.lower()
         assert key not in self.directives['tokens']
         if key in {'comment', 'whitespace'}:
@@ -431,13 +432,13 @@ class EBNFCompiler(CompilerBase):
         arguments = [self._compile(r) for r in node.result] + custom_args
         return parser_class + '(' + ', '.join(arguments) + ')'
 
-    def expression__(self, node):
+    def on_expression(self, node):
         return self.non_terminal(node, 'Alternative')
 
-    def term__(self, node):
+    def on_term(self, node):
         return self.non_terminal(node, 'Sequence')
 
-    def factor__(self, node):
+    def on_factor(self, node):
         assert isinstance(node.parser, Sequence), node.as_sexpr()  # these assert statements can be removed
         assert node.children
         assert len(node.result) >= 2, node.as_sexpr()
@@ -471,23 +472,23 @@ class EBNFCompiler(CompilerBase):
         except KeyError:
             node.add_error('Unknown prefix "%s".' % prefix)
 
-    def option__(self, node):
+    def on_option(self, node):
         return self.non_terminal(node, 'Optional')
 
-    def repetition__(self, node):
+    def on_repetition(self, node):
         return self.non_terminal(node, 'ZeroOrMore')
 
-    def oneormore__(self, node):
+    def on_oneormore(self, node):
         return self.non_terminal(node, 'OneOrMore')
 
-    def regexchain__(self, node):
+    def on_regexchain(self, node):
         raise EBNFCompilerError("Not yet implemented!")
 
-    def group__(self, node):
+    def on_group(self, node):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
-    def symbol__(self, node):
+    def on_symbol(self, node):
         if node.result in self.directives['tokens']:
             return 'ScannerToken("' + node.result + '")'
         else:
@@ -496,10 +497,10 @@ class EBNFCompiler(CompilerBase):
                 self.recursive.add(node.result)
             return node.result
 
-    def literal__(self, node):
+    def on_literal(self, node):
         return 'Token(' + node.result.replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
 
-    def regexp__(self, node):
+    def on_regexp(self, node):
         rx = node.result
         name = []
         if rx[:2] == '~/':
@@ -523,7 +524,7 @@ class EBNFCompiler(CompilerBase):
             return '"' + errmsg + '"'
         return 'RE(' + ', '.join([arg] + name) + ')'
 
-    def list___(self, node):
+    def on_list_(self, node):
         assert node.children
         return set(item.result.strip() for item in node.result)
 

@@ -460,6 +460,16 @@ def nil_scanner(text):
 
 
 class ScannerToken(Parser):
+    """
+    Parses tokens that have been inserted by a Scanner.
+    
+    Scanners can generate Tokens with the ``make_token``-function.
+    These tokens start and end with magic characters that can only be
+    matched by the ScannerToken Parser. Scanner tokens can be used to
+    insert BEGIN - END delimiters at the beginning or ending of an 
+    indented block. Otherwise indented block are difficult to handle 
+    with parsing expression grammars.
+    """
     def __init__(self, scanner_token):
         assert isinstance(scanner_token, str) and scanner_token and \
                scanner_token.isupper()
@@ -493,7 +503,8 @@ class ScannerToken(Parser):
 
 
 class RegExp(Parser):
-    """Regular expression parser.
+    """
+    Regular expression parser.
     
     The RegExp-parser parses text that matches a regular expression.
     RegExp can also be considered as the "atomic parser", because all
@@ -954,8 +965,12 @@ class CompilerBase:
     def _reset(self):
         pass
 
-    def compile_AST(self, node):
+    def compile_all(self, node):
         """Compiles the abstract syntax tree with the root ``node``.
+        
+        It's called `compile_all`` to avoid confusion with the 
+        ``_compile`` that is called from within the local node 
+        compiler methods.
         """
         if self.dirty_flag:
             self._reset()
@@ -963,13 +978,21 @@ class CompilerBase:
             self.dirty_flag = True
         return self._compile(node)
 
+    @staticmethod
+    def derive_method_name(node_name):
+        """Returns the method name for ``node_name``, e.g.
+        >>> CompilerBase.method_name('expression')
+        'on_expression'
+        """
+        return 'on_' + node_name
+
     def _compile(self, node):
         """Calls the compilation method for the given node and returns
          the result of the compilation.
         
         The method's name is dreived from either the node's parser 
         name or, if the parser is anonymous, the node's parser's class
-        name by appending two underscores '__'.
+        name by adding the prefix 'on_'.
         
         Note that ``_compile`` does not call any compilation functions
         for the parsers of the sub nodes by itself. Rather, this should
@@ -982,7 +1005,7 @@ class CompilerBase:
                            "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
-            compiler = self.__getattribute__(elem + '__')
+            compiler = self.__getattribute__(self.derive_method_name(elem))
             result = compiler(node)
             for child in node.children:
                 node.error_flag |= child.error_flag
@@ -1041,7 +1064,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
         syntax_tree.log(log_file_name, ext='.ast')
         errors = syntax_tree.collect_errors()
         if not errors:
-            result = compiler.compile_AST(syntax_tree)
+            result = compiler.compile_all(syntax_tree)
             errors = syntax_tree.collect_errors()
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
