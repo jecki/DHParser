@@ -42,7 +42,6 @@ class TestInfiLoopsAndRecursion:
             # example:  "5 + 3 * 4"
             """
         snippet = "5 + 3 * 4"
-        print(compileEBNF(minilang, source_only=True))
         parser = compileEBNF(minilang)()
         assert parser
         syntax_tree = parser.parse(snippet)

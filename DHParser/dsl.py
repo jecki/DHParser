@@ -163,7 +163,6 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
         CompilationError if any errors occured during compilation
     """
     assert isinstance(text_or_file, str)
-    assert isinstance(dsl_grammar, GrammarBase)
     assert isinstance(compiler, CompilerBase)
     parser_root, grammar_src = get_grammar_instance(dsl_grammar)
     src = load_if_file(text_or_file)

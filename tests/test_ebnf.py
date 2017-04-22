@@ -24,9 +24,9 @@ from functools import partial
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.parsers import full_compilation, Retrieve, WHITESPACE_KEYWORD
+from DHParser.parsers import full_compilation, Retrieve, WHITESPACE_KEYWORD, nil_scanner
 from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
-from DHParser.dsl import compileEBNF
+from DHParser.dsl import compileEBNF, compileDSL
 
 
 WRITE_LOGS = True
@@ -213,6 +213,64 @@ class TestCompilerErrors:
         assert messages
 
 
+class TestSelfHosting:
+    def test_self(self):
+        grammar = r"""
+            # EBNF-Grammar in EBNF
+            
+            @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+            @ whitespace =  /\s*/                            # whitespace includes linefeed
+            @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
+            
+            syntax     =  [~//] { definition | directive } §EOF
+            definition =  symbol §"=" expression
+            directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
+            
+            expression =  term { "|" term }
+            term       =  { factor }+
+            factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+                        | [flowmarker] literal
+                        | [flowmarker] regexp
+                        | [flowmarker] group
+                        | [flowmarker] regexchain
+                        | [flowmarker] oneormore
+                        | repetition
+                        | option
+            
+            flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
+                          "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+            retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
+            
+            group      =  "(" expression §")"
+            regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
+            oneormore  =  "{" expression "}+"
+            repetition =  "{" expression §"}"
+            option     =  "[" expression §"]"
+            
+            link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
+            
+            symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+            literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+                        | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+            regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                             # '~' is a whitespace-marker, if present leading or trailing
+                                                             # whitespace of a regular expression will be ignored tacitly.
+            list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                             # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+            EOF =  !/./        
+            """
+        compiler_name = "EBNF"
+        compiler = EBNFCompiler(compiler_name, grammar)
+        parser = EBNFGrammar()
+        result, errors, syntax_tree = full_compilation(grammar, None, parser,
+                                                       EBNFTransform, compiler)
+        assert not errors, str(errors)
+        # compile the grammar again using the result of the previous
+        # compilation as parser
+        compileDSL(grammar, nil_scanner, result, EBNFTransform, compiler)
+
+
+
 if __name__ == "__main__":
     from run import runner
-    runner("TestPopRetrieve", globals())
+    runner("", globals())

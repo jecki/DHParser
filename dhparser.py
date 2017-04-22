@@ -45,6 +45,7 @@ def selftest(file_name):
     else:
         # compile the grammar again using the result of the previous
         # compilation as parser
+        print(type(result))
         result = compileDSL(grammar, nil_scanner, result, EBNFTransform, compiler)
         print(result)
     return result

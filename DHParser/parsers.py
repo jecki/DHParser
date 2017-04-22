@@ -954,21 +954,35 @@ class CompilerBase:
     def _reset(self):
         pass
 
-    def compile__(self, node):
-        # if self.dirty_flag:
-        #     self._reset()
-        # else:
-        #     self.dirty_flag = True
+    def compile_AST(self, node):
+        """Compiles the abstract syntax tree with the root ``node``.
+        """
+        if self.dirty_flag:
+            self._reset()
+        else:
+            self.dirty_flag = True
+        return self._compile(node)
 
-        comp, cls = node.parser.name, node.parser.__class__.__name__
-        elem = comp or cls
+    def _compile(self, node):
+        """Calls the compilation method for the given node and returns
+         the result of the compilation.
+        
+        The method's name is dreived from either the node's parser 
+        name or, if the parser is anonymous, the node's parser's class
+        name by appending two underscores '__'.
+        
+        Note that ``_compile`` does not call any compilation functions
+        for the parsers of the sub nodes by itself. Rather, this should
+        be done within the compilation methods.
+        """
+        elem = node.parser.name or node.parser.__class__.__name__
         if not sane_parser_name(elem):
-            node.add_error("Must not use reserved name '%s' as parser "
+            node.add_error("Reserved name '%s' not allowed as parser "
                            "name! " % elem + "(Any name starting with "
-                                             "'_' or '__' or ending with '__' is reserved.)")
+                           "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
-            compiler = self.__getattribute__(elem)  # TODO Add support for python keyword attributes
+            compiler = self.__getattribute__(elem + '__')
             result = compiler(node)
             for child in node.children:
                 node.error_flag |= child.error_flag
@@ -1027,7 +1041,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
         syntax_tree.log(log_file_name, ext='.ast')
         errors = syntax_tree.collect_errors()
         if not errors:
-            result = compiler.compile__(syntax_tree)
+            result = compiler.compile_AST(syntax_tree)
             errors = syntax_tree.collect_errors()
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
