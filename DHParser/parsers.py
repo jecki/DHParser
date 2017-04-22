@@ -337,6 +337,7 @@ class GrammarBase:
         Returns:
             Node: The root node ot the parse tree.
         """
+        assert isinstance(document, str)
         if self.root__ is None:
             raise NotImplementedError()
         if self.dirty_flag:
@@ -391,7 +392,6 @@ class GrammarBase:
                 os.remove(path)
 
         if IS_LOGGING():
-            assert self.history
             if not log_file_name:
                 name = self.__class__.__name__
                 log_file_name = name[:-7] if name.lower().endswith('grammar') else name
@@ -948,7 +948,18 @@ class Forward(Parser):
 
 
 class CompilerBase:
+    def __init__(self):
+        self.dirty_flag = False
+
+    def _reset(self):
+        pass
+
     def compile__(self, node):
+        # if self.dirty_flag:
+        #     self._reset()
+        # else:
+        #     self.dirty_flag = True
+
         comp, cls = node.parser.name, node.parser.__class__.__name__
         elem = comp or cls
         if not sane_parser_name(elem):
@@ -976,7 +987,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
     Args:
         source (str): The input text for compilation or a the name of a
             file containing the input text.
-        scanner (funciton):  text -> text. A scanner function or None,
+        scanner (function):  text -> text. A scanner function or None,
             if no scanner is needed.
         parser (GrammarBase):  The GrammarBase object
         transform (function):  A transformation function that takes
@@ -991,8 +1002,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
         (result, errors, abstract syntax tree). In detail:
         1. The result as returned by the compiler or ``None`` in case
             of failure,
-        2. A list of error messages, each of which is a tuple
-            (position: int, error: str)
+        2. A list of error messages
         3. The root-node of the abstract syntax treelow
     """
     assert isinstance(compiler, CompilerBase)

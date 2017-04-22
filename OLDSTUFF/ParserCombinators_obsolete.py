@@ -2045,7 +2045,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
      skeletons for a scanner, AST transformation table, and compiler.
      If the Python script already exists only the parser name in the
      script will be updated. (For this to work, the different names
-     need to be delimited section marker blocks.). `run_compiler()`
+     need to be delimited section marker blocks.). `compile_on_disk()`
      returns a list of error messages or an empty list if no errors
      occurred.
      """

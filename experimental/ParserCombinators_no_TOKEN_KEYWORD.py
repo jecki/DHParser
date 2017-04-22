@@ -2045,7 +2045,7 @@ def run_compiler(source_file, compiler_suite="", extension=".dst"):
      script already exists only the parser name in the script will be
      updated. (For this to work, the different names need to be delimited
      by the standard `DELIMITER`-line!).
-     `run_compiler()` returns a list of error messages or an empty list if no
+     `compile_on_disk()` returns a list of error messages or an empty list if no
      errors occured.
      """
     filepath = os.path.normpath(source_file)

@@ -23,12 +23,12 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.dsl import run_compiler, suite_outdated
+from DHParser.dsl import compile_on_disk, suite_outdated
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
     suite_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
     print("recompiling PopRetrieve parser")
-    errors = run_compiler("PopRetrieve.ebnf")
+    errors = compile_on_disk("PopRetrieve.ebnf")
     if errors:
         print('\n\n'.join(errors))
         sys.exit(1)
@@ -54,13 +54,13 @@ if (not os.path.exists('PopRetrieve_compiler.py') or
 
 
 print("PopRetrieveTest 1")
-errors = run_compiler("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
+errors = compile_on_disk("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
 if errors:
     print(errors)
     sys.exit(1)
 
 print("PopRetrieveTest 2")
-errors = run_compiler("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+errors = compile_on_disk("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
 if errors:
     print(errors)
     sys.exit(1)
@@ -70,7 +70,7 @@ if errors:
 if (not os.path.exists('PopRetrieveComplement_compiler.py') or
         suite_outdated('PopRetrieveComplement_compiler.py', 'PopRetrieveComplement.ebnf')):
     print("recompiling PopRetrieveComplement parser")
-    errors = run_compiler("PopRetrieveComplement.ebnf")
+    errors = compile_on_disk("PopRetrieveComplement.ebnf")
     if errors:
         print('\n\n'.join(errors))
         sys.exit(1)

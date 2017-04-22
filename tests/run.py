@@ -45,20 +45,23 @@ def runner(tests, namespace):
             if name.lower().startswith('test') and inspect.isclass(namespace[name]):
                 tests.append(name)
 
+    obj = None
     for test in tests:
-        if test.find('.') >= 0:
-            cls_name, method_name = test.split('.')
-            obj = instantiate(cls_name)
-            print("Running " + cls_name + "." + method_name)
-            exec('obj.' + method_name + '()')
-        else:
-            obj = instantiate(test)
-            for name in dir(obj):
-                if name.lower().startswith("test"):
-                    print("Running " + test + "." + name)
-                    exec('obj.' + name + '()')
-        if "teardown" in dir(obj):
-            obj.teardown()
+        try:
+            if test.find('.') >= 0:
+                cls_name, method_name = test.split('.')
+                obj = instantiate(cls_name)
+                print("Running " + cls_name + "." + method_name)
+                exec('obj.' + method_name + '()')
+            else:
+                obj = instantiate(test)
+                for name in dir(obj):
+                    if name.lower().startswith("test"):
+                        print("Running " + test + "." + name)
+                        exec('obj.' + name + '()')
+        finally:
+            if "teardown" in dir(obj):
+                obj.teardown()
 
 if __name__ == "__main__":
     # runner("", globals())

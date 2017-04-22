@@ -162,15 +162,17 @@ def load_if_file(text_or_file):
     file name (i.e. a single line string), otherwise (i.e. if `text_or_file` is
     a multiline string) `text_or_file` is returned.
     """
-    if text_or_file and text_or_file.find('\n') < 0:
+    if text_or_file.find('\n') < 0:
         try:
             with open(text_or_file, encoding="utf-8") as f:
                 content = f.read()
             return content
         except FileNotFoundError as error:
-            if not re.match(r'\w+', text_or_file):
-                raise FileNotFoundError('Not a valid file: ' + text_or_file +
-                                        '\nAdd "\\n" to distinguish source data from a file name!')
+            if re.fullmatch(r'[\w/:\\]+', text_or_file):
+                raise FileNotFoundError('Not a valid file: ' + text_or_file + '\nAdd "\\n" '
+                                        'to distinguish source data from a file name!')
+            else:
+                return text_or_file
     else:
         return text_or_file
 
@@ -253,6 +255,8 @@ def expand_table(compact_table):
     for key in keys:
         value = compact_table[key]
         for k in smart_list(key):
+            if k in expanded_table:
+                raise KeyError("Key %s used more than once in compact table!" % key)
             expanded_table[k] = value
     return expanded_table
 
