@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """parsers.py - parser combinators for for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)

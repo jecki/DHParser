@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """dsl.py - Support for domain specific notations for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)

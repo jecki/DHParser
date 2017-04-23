@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """syntaxtree.py - syntax tree classes and transformation functions for 
 converting the concrete into the abstract syntax tree for DHParser
 

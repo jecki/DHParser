@@ -1,0 +1,10 @@
+include *.py
+include *.txt
+include *.md
+include LICENSE.*
+include MANIFEST.*
+include *.sh
+include *.cfg
+include test/run.py
+include examples/EBNF/EBNF.ebnf
+

@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """ebnf.py - EBNF -> Python-Parser compilation for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
@@ -26,7 +24,6 @@ try:
 except ImportError:
     import re
 
-from .__init__ import __version__
 from .toolkit import load_if_file, escape_re, md5, sane_parser_name
 from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
@@ -34,6 +31,7 @@ from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead,
 from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
     forbid, assert_content, WHITESPACE_KEYWORD
+from .versionnumber import __version__
 
 
 __all__ = ['EBNFGrammar',

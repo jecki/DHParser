@@ -1,6 +1,4 @@
-#!/usr/bin/python3
-
-"""__init__.py - package definition module for DHParser
+"""_versionnumber.py - contains the verison number of DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -18,14 +16,6 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-# Flat namespace for the DHParser Package. Is this a good idea...?
-from .toolkit import *
-from .syntaxtree import *
-from .parsers import *
-from .ebnf import *
-from .dsl import *
-from .versionnumber import __version__
+import os
 
-__author__ = "Eckhart Arnold <arnold@badw.de>"
-__copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
-__all__ = ['toolkit', 'syntaxtree', 'parsers', 'ebnf', 'dsl']
+__version__ = '0.6.0' + '_dev' + str(os.stat(__file__).st_mtime)
