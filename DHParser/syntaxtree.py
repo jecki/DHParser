@@ -38,7 +38,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
-           'compact_sexpr',
+           'mock_syntax_tree',
            'traverse',
            'no_operation',
            'replace_by_single_child',
@@ -59,15 +59,21 @@ __all__ = ['WHITESPACE_KEYWORD',
 
 
 class MockParser:
+    """
+    MockParser objects can be used to reconstruct syntax trees from a
+    serialized form like S-expressions or XML. Mock objects are needed,
+    because Node objects require a parser object for instantiation.
+    Mock objects have just enough properties to serve that purpose. 
+    
+    Mock objects should not be used for anything other than 
+    syntax tree (re-)construction. In all other cases where a parser
+    object substitute is needed, chose the singleton ZOMBIE_PARSER.
+    """
     def __init__(self, name=''):
         self.name = name
 
     def __str__(self):
         return self.name or self.__class__.__name__
-
-    def __call__(self, text):
-        """Better call Saul ;-)"""
-        return None, text
 
 
 class ZombieParser(MockParser):
@@ -93,6 +99,10 @@ class ZombieParser(MockParser):
 
     def __deepcopy__(self, memo):
         return self
+
+    def __call__(self, text):
+        """Better call Saul ;-)"""
+        return None, text
 
 
 ZOMBIE_PARSER = ZombieParser()
@@ -242,7 +252,7 @@ class Node:
         return head + '\n'.join([tab + dataF(s)
                                  for s in str(self.result).split('\n')]) + tail
 
-    def as_sexpr(self, src=None, prettyprint=True):
+    def as_sexpr(self, src=None):
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -269,8 +279,7 @@ class Node:
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, lambda node: ')',
-                               pretty if prettyprint else lambda s: s)
+        return self._tree_repr('    ', opening, lambda node: ')', pretty)  # pretty if prettyprint else lambda s: s)
 
     def as_xml(self, src=None):
         """
@@ -395,7 +404,7 @@ def mock_syntax_tree(sexpr):
     >>> mock_syntax_tree("(a (b c))").as_sexpr()
     (a 
         (b 
-            c 
+            "c" 
         )
     )
     """
@@ -423,10 +432,20 @@ def mock_syntax_tree(sexpr):
     if sexpr[0] == '(':
         result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
     else:
-        m = re.match('\w+', sexpr)
-        result = sexpr[:m.end()]
-        sexpr = sexpr[m.end():].strip()
-        assert sexpr[0] == ')', sexpr
+        lines = []
+        while sexpr and sexpr[0] != ')':
+            for qm in ['"""', "'''", '"', "'"]:
+                m = re.match(qm + r'.*?' + qm, sexpr)
+                if m:
+                    i = len(qm)
+                    lines.append(sexpr[i:m.end() - i])
+                    sexpr = sexpr[m.end():].strip()
+                    break
+            else:
+                m = re.match(r'(?:(?!\)).)*', sexpr)
+                lines.append(sexpr[:m.end()])
+                sexpr = sexpr[m.end():]
+        result = "\n".join(lines)
     return Node(MockParser(name), result)
 
 

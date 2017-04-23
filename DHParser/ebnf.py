@@ -37,10 +37,10 @@ from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_sing
 
 
 __all__ = ['EBNFGrammar',
-           'EBNFTransTable',
+           'EBNFTransform',
            'EBNFCompilerError',
-           # 'Scanner',
-           'EBNFCompiler']
+           'EBNFCompiler',
+           'grammar_changed']
 
 
 class EBNFGrammar(GrammarBase):

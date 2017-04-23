@@ -44,10 +44,23 @@ class TestSExpr:
     def test_compact_sexpr(self):
         assert compact_sexpr("(a\n    (b\n        c\n    )\n)\n") == "(a (b c))"
 
-    def test_selftest_from_sexpr(self):
+    def test_mock_syntax_tree(self):
         sexpr = '(a (b c) (d e) (f (g h)))'
         tree = mock_syntax_tree(sexpr)
-        assert compact_sexpr(tree.as_sexpr(prettyprint=False)) == sexpr
+        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr
+
+        # test different quotation marks
+        sexpr = '''(a (b """c""" 'k' "l") (d e) (f (g h)))'''
+        sexpr_stripped = '(a (b c k l) (d e) (f (g h)))'
+        tree = mock_syntax_tree(sexpr)
+        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr_stripped
+
+        sexpr_clean = '(a (b "c" "k" "l") (d "e") (f (g "h")))'
+        tree = mock_syntax_tree(sexpr_clean)
+        assert compact_sexpr(tree.as_sexpr()) == sexpr_clean
+
+        tree = mock_syntax_tree(sexpr_stripped)
+        assert compact_sexpr(tree.as_sexpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
 
 
 class TestNode:
