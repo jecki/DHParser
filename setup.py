@@ -19,13 +19,16 @@ setup(
         'Intended Audience :: Developers',
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
-        'Topic :: Text Processing :: Markup',
+        'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
-        'Programming Language :: Python :: Implementation :: Stackless'
+        'Programming Language :: Python :: Implementation :: Stackless',
+        'Topic :: Text Processing :: Markup',
+        'Topic :: Software Development :: Code Generators',
+        'Topic :: Software Development :: Compilers'
     ]
 )
