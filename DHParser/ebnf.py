@@ -75,8 +75,6 @@ class EBNFGrammar(GrammarBase):
     repetition =  "{" expression §"}"
     option     =  "[" expression §"]"
 
-    link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
-
     symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
     literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                 | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
@@ -99,7 +97,6 @@ class EBNFGrammar(GrammarBase):
     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
-    link = Alternative(regexp, symbol, literal)
     option = Sequence(Token("["), expression, Required(Token("]")))
     repetition = Sequence(Token("{"), expression, Required(Token("}")))
     oneormore = Sequence(Token("{"), expression, Token("}+"))
