@@ -24,9 +24,9 @@ import os
 import sys
 from functools import partial
 
-from DHParser.dsl import compileDSL, run_compiler
+from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
-from DHParser.parsers import full_compilation
+from DHParser.parsers import full_compilation, nil_scanner
 
 
 def selftest(file_name):
@@ -45,7 +45,8 @@ def selftest(file_name):
     else:
         # compile the grammar again using the result of the previous
         # compilation as parser
-        result = compileDSL(grammar, result, EBNFTransform, compiler)
+        print(type(result))
+        result = compileDSL(grammar, nil_scanner, result, EBNFTransform, compiler)
         print(result)
     return result
 
@@ -71,8 +72,8 @@ def profile(func):
 if __name__ == "__main__":
     print(sys.argv)
     if len(sys.argv) > 1:
-        _errors = run_compiler(sys.argv[1],
-                               sys.argv[2] if len(sys.argv) > 2 else "")
+        _errors = compile_on_disk(sys.argv[1],
+                                  sys.argv[2] if len(sys.argv) > 2 else "")
         if _errors:
             print('\n\n'.join(_errors))
             sys.exit(1)

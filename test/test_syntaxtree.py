@@ -20,14 +20,13 @@ limitations under the License.
 """
 
 import os
-import re
 import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.toolkit import compact_sexpr
-from DHParser.syntaxtree import Node, traverse
+from DHParser.syntaxtree import traverse, mock_syntax_tree
 
 
-class DummyParser:
+class MockParser:
     def __init__(self, name=''):
         self.name = name
 
@@ -38,47 +37,6 @@ class DummyParser:
         return None, text
 
 
-def from_sexpr(s):
-    """Generates a tree of nodes from an S-expression.
-    
-    Example: 
-    >>> from_sexpr("(a (b c))").as_sexpr()
-    (a 
-        (b 
-            c 
-        )
-    )
-    """
-    def next_block(s):
-        s = s.strip()
-        while s[0] != ')':
-            assert s[0] == '(', s
-            level = 1;  i = 1
-            while level > 0:
-                if s[i] == '(':
-                    level += 1
-                elif s[i] == ')':
-                    level -= 1
-                i += 1
-            yield s[:i]
-            s = s[i:].strip()
-
-    s = s.strip()
-    assert s[0] == '(', s
-    s = s[1:].strip()
-    m = re.match('\w+', s)
-    name = s[:m.end()]
-    s = s[m.end():].strip()
-    if s[0] == '(':
-        result = tuple(from_sexpr(block) for block in next_block(s))
-    else:
-        m = re.match('\w+', s)
-        result = s[:m.end()]
-        s = s[m.end():].strip()
-        assert s[0] == ')', s
-    return Node(DummyParser(name), result)
-
-
 class TestSExpr:
     """
     Tests for S-expression handling.
@@ -86,10 +44,23 @@ class TestSExpr:
     def test_compact_sexpr(self):
         assert compact_sexpr("(a\n    (b\n        c\n    )\n)\n") == "(a (b c))"
 
-    def test_selftest_from_sexpr(self):
+    def test_mock_syntax_tree(self):
         sexpr = '(a (b c) (d e) (f (g h)))'
-        tree = from_sexpr(sexpr)
-        assert compact_sexpr(tree.as_sexpr(prettyprint=False)) == sexpr
+        tree = mock_syntax_tree(sexpr)
+        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr
+
+        # test different quotation marks
+        sexpr = '''(a (b """c""" 'k' "l") (d e) (f (g h)))'''
+        sexpr_stripped = '(a (b c k l) (d e) (f (g h)))'
+        tree = mock_syntax_tree(sexpr)
+        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr_stripped
+
+        sexpr_clean = '(a (b "c" "k" "l") (d "e") (f (g "h")))'
+        tree = mock_syntax_tree(sexpr_clean)
+        assert compact_sexpr(tree.as_sexpr()) == sexpr_clean
+
+        tree = mock_syntax_tree(sexpr_stripped)
+        assert compact_sexpr(tree.as_sexpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
 
 
 class TestNode:
@@ -98,9 +69,9 @@ class TestNode:
     """
     def setup(self):
         self.unique_nodes_sexpr = '(a (b c) (d e) (f (g h)))'
-        self.unique_tree = from_sexpr(self.unique_nodes_sexpr)
+        self.unique_tree = mock_syntax_tree(self.unique_nodes_sexpr)
         self.recurring_nodes_sexpr = '(a (b x) (c (d e) (b y)))'
-        self.recurr_tree = from_sexpr(self.recurring_nodes_sexpr)
+        self.recurr_tree = mock_syntax_tree(self.recurring_nodes_sexpr)
 
     def test_str(self):
         assert str(self.unique_tree) == "ceh"
@@ -117,7 +88,7 @@ class TestNode:
 
 class TestErrorHandling:
     def test_error_flag_propagation(self):
-        tree = from_sexpr('(a (b c) (d (e (f (g h)))))')
+        tree = mock_syntax_tree('(a (b c) (d (e (f (g h)))))')
 
         def find_h(node):
             if node.result == "h":

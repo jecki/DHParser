@@ -1,344 +1,120 @@
 <Artikel>
     <LemmaPosition>
+        <TOKEN__>
+            <RegExp>
+                LEMMA
+            </RegExp>
+            <WSP__>
+                 
+            </WSP__>
+        </TOKEN__>
         <Lemma>
-            <_tll>
-                *
-            </_tll>
+            <Optional>
+                <_tll>
+                    <RegExp>
+                        *
+                    </RegExp>
+                </_tll>
+            </Optional>
             <WORT_KLEIN>
-                facitergula
+                <RegExp>
+                    facitergula
+                </RegExp>
             </WORT_KLEIN>
-            <LEER>
-                <RegExp>
-                    
-                    
-                    
-                </RegExp>
-            </LEER>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                        
+                    </RegExp>
+                </LEER>
+            </Optional>
         </Lemma>
-        <LemmaVarianten>
-            <LEER>
-                <RegExp>
-                    
-                        
-                </RegExp>
-            </LEER>
-            <LVariante>
-                fasc-itergula
-            </LVariante>
-            <TRENNER>
-                <ZSPRUNG>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </ZSPRUNG>
-            </TRENNER>
-            <LVariante>
-                fac-iet-ergula
-            </LVariante>
-            <TRENNER>
-                <ZSPRUNG>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </ZSPRUNG>
-            </TRENNER>
-            <LVariante>
-                fac-ist-ergula
-            </LVariante>
-            <TRENNER>
-                <ZSPRUNG>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </ZSPRUNG>
-            </TRENNER>
-            <LVariante>
-                fa-rcu-tergula
-            </LVariante>
-            <TRENNER>
-                <OneOrMore>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                </OneOrMore>
-            </TRENNER>
-            <LVZusatz>
+        <Optional>
+            <LemmaVarianten>
                 <TOKEN__>
-                    ZUSATZ
+                    <RegExp>
+                        VARIANTEN
+                    </RegExp>
                 </TOKEN__>
-                <TOKEN__>
-                    sim.
-                </TOKEN__>
-            </LVZusatz>
-            <TRENNER>
-                <OneOrMore>
-                    <ZSPRUNG>
+                <Optional>
+                    <LEER>
                         <RegExp>
                             
-                            
+                                
                         </RegExp>
-                    </ZSPRUNG>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                </OneOrMore>
-            </TRENNER>
-        </LemmaVarianten>
-        <GrammatikPosition>
-            <LEER>
-                <RegExp>
-                    
-                        
-                </RegExp>
-            </LEER>
-            <_wortart>
-                nomen
-            </_wortart>
-            <TRENNER>
-                <RegExp>
-                    ; 
-                </RegExp>
-            </TRENNER>
-            <Flexionen>
-                <Flexion>
-                    -ar
-                </Flexion>
-            </Flexionen>
-            <_genus>
-                f.
-            </_genus>
-            <GrammatikVarianten>
-                <TRENNER>
+                    </LEER>
+                </Optional>
+                <LVariante>
                     <RegExp>
-                        ;
-                        
-                            
+                        fasc-itergula
                     </RegExp>
-                </TRENNER>
-                <GVariante>
-                    <Flexionen>
-                        <Flexion>
-                            -us
-                        </Flexion>
-                        <Flexion>
-                            -i
-                        </Flexion>
-                    </Flexionen>
-                    <_genus>
-                        m.
-                    </_genus>
-                    <Verweis>
-                        beleg_id_1
-                    </Verweis>
-                </GVariante>
-            </GrammatikVarianten>
-            <GrammatikVarianten>
-                <TRENNER>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                </TRENNER>
-                <GVariante>
-                    <Flexionen>
-                        <Flexion>
-                            -um
-                        </Flexion>
-                        <Flexion>
-                            -i
-                        </Flexion>
-                    </Flexionen>
-                    <_genus>
-                        n.
-                    </_genus>
-                    <Verweis>
-                        beleg_id_2
-                    </Verweis>
-                </GVariante>
-            </GrammatikVarianten>
-            <TRENNER>
-                <OneOrMore>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                    <ZSPRUNG>
-                        <RegExp>
-                            
-                            
-                        </RegExp>
-                    </ZSPRUNG>
-                </OneOrMore>
-            </TRENNER>
-        </GrammatikPosition>
-    </LemmaPosition>
-    <SchreibweisenPosition>
-        <LEER>
-            <RegExp>
-                
-                    
-            </RegExp>
-        </LEER>
-        <SWTyp>
-            <TOKEN__>
-                script.
-            </TOKEN__>
-        </SWTyp>
-        <LEER>
-            <RegExp>
-                
-                        
-            </RegExp>
-        </LEER>
-        <SWVariante>
-            <Schreibweise>
-                vizreg-
-            </Schreibweise>
-            <Verweis>
-                beleg_id_3
-            </Verweis>
-        </SWVariante>
-        <TRENNER>
-            <ZSPRUNG>
-                <RegExp>
-                    
-                    
-                </RegExp>
-            </ZSPRUNG>
-        </TRENNER>
-        <SWVariante>
-            <Schreibweise>
-                festregel(a)
-            </Schreibweise>
-            <Verweis>
-                beleg_id_4
-            </Verweis>
-        </SWVariante>
-        <TRENNER>
-            <ZSPRUNG>
-                <RegExp>
-                    
-                    
-                </RegExp>
-            </ZSPRUNG>
-        </TRENNER>
-        <SWVariante>
-            <Schreibweise>
-                fezdregl(a)
-            </Schreibweise>
-            <Verweis>
-                beleg_id5
-            </Verweis>
-        </SWVariante>
-        <LEER>
-            <RegExp>
-                
-                
-                
-            </RegExp>
-        </LEER>
-    </SchreibweisenPosition>
-    <BedeutungsPosition>
-        <LEER>
-            <RegExp>
-                
-                
-                
-            </RegExp>
-        </LEER>
-        <Bedeutung>
-            <Interpretamente>
-                <LateinischeBedeutung>
-                    pannus, faciale, sudarium
-                </LateinischeBedeutung>
-                <LEER>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </LEER>
-                <DeutscheBedeutung>
-                    Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]
-                </DeutscheBedeutung>
-                <LEER>
-                    <RegExp>
-                        
-                        
-                        
-                    </RegExp>
-                </LEER>
-            </Interpretamente>
-            <Belege>
-                <LEER>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </LEER>
-                <EinBeleg>
-                    Catal. thes. Germ. 28,11 (post 851) -um III.
-                    
-                </EinBeleg>
-                <EinBeleg>
-                    Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
-                      
-                    -as duas."
-                    
-                </EinBeleg>
-                <EinBeleg>
-                    Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
-                    
-                </EinBeleg>
-                <EinBeleg>
-                    Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
-                      
-                    circumdari  iussit  pontifex."
-                    
-                </EinBeleg>
-                <EinBeleg>
-                    <RegExp>
-                        Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
-                          
-                        II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
-                          
-                        VII. 92,6 fascercule tres. 21,20 IIII festregele.
-                          
-                    </RegExp>
-                    <Zusatz>
-                        <RegExp>
-                            saepe.
-                        </RegExp>
+                </LVariante>
+                <ZeroOrMore>
+                    <Sequence>
+                        <TRENNER>
+                            <OneOrMore>
+                                <ZSPRUNG>
+                                    <RegExp>
+                                        
+                                        
+                                    </RegExp>
+                                    <WSP__>
+                                            
+                                    </WSP__>
+                                </ZSPRUNG>
+                            </OneOrMore>
+                        </TRENNER>
+                        <LVariante>
+                            <RegExp>
+                                fac-iet-ergula
+                            </RegExp>
+                        </LVariante>
+                    </Sequence>
+                    <Sequence>
+                        <TRENNER>
+                            <OneOrMore>
+                                <ZSPRUNG>
+                                    <RegExp>
+                                        
+                                        
+                                    </RegExp>
+                                    <WSP__>
+                                            
+                                    </WSP__>
+                                </ZSPRUNG>
+                            </OneOrMore>
+                        </TRENNER>
+                        <LVariante>
+                            <RegExp>
+                                fac-ist-ergula
+                            </RegExp>
+                        </LVariante>
+                    </Sequence>
+                    <Sequence>
+                        <TRENNER>
+                            <OneOrMore>
+                                <ZSPRUNG>
+                                    <RegExp>
+                                        
+                                        
+                                    </RegExp>
+                                    <WSP__>
+                                            
+                                    </WSP__>
+                                </ZSPRUNG>
+                            </OneOrMore>
+                        </TRENNER>
+                        <LVariante>
+                            <RegExp>
+                                fa-rcu-tergula
+                            </RegExp>
+                        </LVariante>
+                    </Sequence>
+                </ZeroOrMore>
+                <Optional>
+                    <Sequence>
                         <TRENNER>
                             <OneOrMore>
                                 <ZSPRUNG>
@@ -352,79 +128,834 @@
                                         
                                         
                                     </RegExp>
-                                </ZSPRUNG>
-                                <ZSPRUNG>
-                                    <RegExp>
-                                        
-                                        
-                                    </RegExp>
+                                    <WSP__>
+                                            
+                                    </WSP__>
                                 </ZSPRUNG>
                             </OneOrMore>
                         </TRENNER>
-                    </Zusatz>
-                </EinBeleg>
-            </Belege>
-        </Bedeutung>
+                        <LVZusatz>
+                            <TOKEN__>
+                                <RegExp>
+                                    ZUSATZ
+                                </RegExp>
+                                <WSP__>
+                                     
+                                </WSP__>
+                            </TOKEN__>
+                            <TOKEN__>
+                                <RegExp>
+                                    sim.
+                                </RegExp>
+                            </TOKEN__>
+                        </LVZusatz>
+                    </Sequence>
+                </Optional>
+                <Optional>
+                    <TRENNER>
+                        <OneOrMore>
+                            <ZSPRUNG>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </ZSPRUNG>
+                            <ZSPRUNG>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </ZSPRUNG>
+                            <ZSPRUNG>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </ZSPRUNG>
+                        </OneOrMore>
+                    </TRENNER>
+                </Optional>
+            </LemmaVarianten>
+        </Optional>
+        <GrammatikPosition>
+            <TOKEN__>
+                <RegExp>
+                    GRAMMATIK
+                </RegExp>
+            </TOKEN__>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                            
+                    </RegExp>
+                </LEER>
+            </Optional>
+            <_wortart>
+                <TOKEN__>
+                    <RegExp>
+                        nomen
+                    </RegExp>
+                </TOKEN__>
+            </_wortart>
+            <TRENNER>
+                <RE>
+                    <RegExp>
+                        ; 
+                    </RegExp>
+                </RE>
+            </TRENNER>
+            <Flexionen>
+                <Flexion>
+                    <RegExp>
+                        -ar
+                    </RegExp>
+                    <WSP__>
+                         
+                    </WSP__>
+                </Flexion>
+            </Flexionen>
+            <Optional>
+                <_genus>
+                    <TOKEN__>
+                        <RegExp>
+                            f.
+                        </RegExp>
+                    </TOKEN__>
+                </_genus>
+            </Optional>
+            <ZeroOrMore>
+                <GrammatikVarianten>
+                    <TRENNER>
+                        <RE>
+                            <RegExp>
+                                ;
+                                
+                                    
+                            </RegExp>
+                        </RE>
+                    </TRENNER>
+                    <GVariante>
+                        <Flexionen>
+                            <Flexion>
+                                <RegExp>
+                                    -us
+                                </RegExp>
+                            </Flexion>
+                            <ZeroOrMore>
+                                <Sequence>
+                                    <TOKEN__>
+                                        <RegExp>
+                                            ,
+                                        </RegExp>
+                                        <WSP__>
+                                             
+                                        </WSP__>
+                                    </TOKEN__>
+                                    <Flexion>
+                                        <RegExp>
+                                            -i
+                                        </RegExp>
+                                        <WSP__>
+                                             
+                                        </WSP__>
+                                    </Flexion>
+                                </Sequence>
+                            </ZeroOrMore>
+                        </Flexionen>
+                        <Optional>
+                            <_genus>
+                                <TOKEN__>
+                                    <RegExp>
+                                        m.
+                                    </RegExp>
+                                </TOKEN__>
+                            </_genus>
+                        </Optional>
+                        <TOKEN__>
+                            <RegExp>
+                                :
+                            </RegExp>
+                            <WSP__>
+                                 
+                            </WSP__>
+                        </TOKEN__>
+                        <Verweis>
+                            <RegExp>
+                                beleg_id_1
+                            </RegExp>
+                        </Verweis>
+                    </GVariante>
+                </GrammatikVarianten>
+                <GrammatikVarianten>
+                    <TRENNER>
+                        <OneOrMore>
+                            <ZSPRUNG>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                                <WSP__>
+                                        
+                                </WSP__>
+                            </ZSPRUNG>
+                        </OneOrMore>
+                    </TRENNER>
+                    <GVariante>
+                        <Flexionen>
+                            <Flexion>
+                                <RegExp>
+                                    -um
+                                </RegExp>
+                            </Flexion>
+                            <ZeroOrMore>
+                                <Sequence>
+                                    <TOKEN__>
+                                        <RegExp>
+                                            ,
+                                        </RegExp>
+                                        <WSP__>
+                                             
+                                        </WSP__>
+                                    </TOKEN__>
+                                    <Flexion>
+                                        <RegExp>
+                                            -i
+                                        </RegExp>
+                                        <WSP__>
+                                             
+                                        </WSP__>
+                                    </Flexion>
+                                </Sequence>
+                            </ZeroOrMore>
+                        </Flexionen>
+                        <Optional>
+                            <_genus>
+                                <TOKEN__>
+                                    <RegExp>
+                                        n.
+                                    </RegExp>
+                                </TOKEN__>
+                            </_genus>
+                        </Optional>
+                        <TOKEN__>
+                            <RegExp>
+                                :
+                            </RegExp>
+                            <WSP__>
+                                 
+                            </WSP__>
+                        </TOKEN__>
+                        <Verweis>
+                            <RegExp>
+                                beleg_id_2
+                            </RegExp>
+                        </Verweis>
+                    </GVariante>
+                </GrammatikVarianten>
+            </ZeroOrMore>
+            <Optional>
+                <TRENNER>
+                    <OneOrMore>
+                        <ZSPRUNG>
+                            <RegExp>
+                                
+                                
+                            </RegExp>
+                        </ZSPRUNG>
+                        <ZSPRUNG>
+                            <RegExp>
+                                
+                                
+                            </RegExp>
+                        </ZSPRUNG>
+                        <ZSPRUNG>
+                            <RegExp>
+                                
+                                
+                            </RegExp>
+                        </ZSPRUNG>
+                    </OneOrMore>
+                </TRENNER>
+            </Optional>
+        </GrammatikPosition>
+    </LemmaPosition>
+    <Optional>
+        <SchreibweisenPosition>
+            <TOKEN__>
+                <RegExp>
+                    SCHREIBWEISE
+                </RegExp>
+            </TOKEN__>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                            
+                    </RegExp>
+                </LEER>
+            </Optional>
+            <SWTyp>
+                <TOKEN__>
+                    <RegExp>
+                        script.
+                    </RegExp>
+                </TOKEN__>
+            </SWTyp>
+            <TOKEN__>
+                <RegExp>
+                    :
+                </RegExp>
+            </TOKEN__>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                                
+                    </RegExp>
+                </LEER>
+            </Optional>
+            <SWVariante>
+                <Schreibweise>
+                    <TOKEN__>
+                        <RegExp>
+                            vizreg-
+                        </RegExp>
+                    </TOKEN__>
+                </Schreibweise>
+                <TOKEN__>
+                    <RegExp>
+                        :
+                    </RegExp>
+                    <WSP__>
+                              
+                    </WSP__>
+                </TOKEN__>
+                <Verweis>
+                    <RegExp>
+                        beleg_id_3
+                    </RegExp>
+                </Verweis>
+            </SWVariante>
+            <ZeroOrMore>
+                <Sequence>
+                    <TRENNER>
+                        <OneOrMore>
+                            <ZSPRUNG>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                                <WSP__>
+                                            
+                                </WSP__>
+                            </ZSPRUNG>
+                        </OneOrMore>
+                    </TRENNER>
+                    <SWVariante>
+                        <Schreibweise>
+                            <TOKEN__>
+                                <RegExp>
+                                    festregel(a)
+                                </RegExp>
+                            </TOKEN__>
+                        </Schreibweise>
+                        <TOKEN__>
+                            <RegExp>
+                                :
+                            </RegExp>
+                            <WSP__>
+                                 
+                            </WSP__>
+                        </TOKEN__>
+                        <Verweis>
+                            <RegExp>
+                                beleg_id_4
+                            </RegExp>
+                        </Verweis>
+                    </SWVariante>
+                </Sequence>
+                <Sequence>
+                    <TRENNER>
+                        <OneOrMore>
+                            <ZSPRUNG>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                                <WSP__>
+                                            
+                                </WSP__>
+                            </ZSPRUNG>
+                        </OneOrMore>
+                    </TRENNER>
+                    <SWVariante>
+                        <Schreibweise>
+                            <TOKEN__>
+                                <RegExp>
+                                    fezdregl(a)
+                                </RegExp>
+                            </TOKEN__>
+                        </Schreibweise>
+                        <TOKEN__>
+                            <RegExp>
+                                :
+                            </RegExp>
+                            <WSP__>
+                                  
+                            </WSP__>
+                        </TOKEN__>
+                        <Verweis>
+                            <RegExp>
+                                beleg_id5
+                            </RegExp>
+                        </Verweis>
+                    </SWVariante>
+                </Sequence>
+            </ZeroOrMore>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                        
+                    </RegExp>
+                </LEER>
+            </Optional>
+        </SchreibweisenPosition>
+    </Optional>
+    <BedeutungsPosition>
+        <Sequence>
+            <TOKEN__>
+                <RegExp>
+                    BEDEUTUNG
+                </RegExp>
+            </TOKEN__>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                        
+                    </RegExp>
+                </LEER>
+            </Optional>
+            <Bedeutung>
+                <Alternative>
+                    <Interpretamente>
+                        <LateinischeBedeutung>
+                            <TOKEN__>
+                                <RegExp>
+                                    LAT
+                                </RegExp>
+                                <WSP__>
+                                     
+                                </WSP__>
+                            </TOKEN__>
+                            <RE>
+                                <RegExp>
+                                    pannus, faciale, sudarium
+                                </RegExp>
+                            </RE>
+                        </LateinischeBedeutung>
+                        <Optional>
+                            <LEER>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </LEER>
+                        </Optional>
+                        <DeutscheBedeutung>
+                            <TOKEN__>
+                                <RegExp>
+                                    DEU
+                                </RegExp>
+                                <WSP__>
+                                     
+                                </WSP__>
+                            </TOKEN__>
+                            <RE>
+                                <RegExp>
+                                    Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]
+                                </RegExp>
+                            </RE>
+                        </DeutscheBedeutung>
+                        <Optional>
+                            <LEER>
+                                <RegExp>
+                                    
+                                    
+                                    
+                                </RegExp>
+                            </LEER>
+                        </Optional>
+                    </Interpretamente>
+                </Alternative>
+                <Optional>
+                    <Belege>
+                        <TOKEN__>
+                            <RegExp>
+                                BELEGE
+                            </RegExp>
+                        </TOKEN__>
+                        <Optional>
+                            <LEER>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </LEER>
+                        </Optional>
+                        <ZeroOrMore>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    Catal. thes. Germ. 28,11 (post 851) -um III.
+                                                    
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                </EinBeleg>
+                            </Sequence>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+                                                      
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    -as duas."
+                                                    
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                </EinBeleg>
+                            </Sequence>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
+                                                    
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                </EinBeleg>
+                            </Sequence>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+                                                      
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    circumdari  iussit  pontifex."
+                                                    
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                </EinBeleg>
+                            </Sequence>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
+                                                      
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
+                                                      
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                                                      
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                    <Optional>
+                                        <Zusatz>
+                                            <TOKEN__>
+                                                <RegExp>
+                                                    ZUSATZ
+                                                </RegExp>
+                                                <WSP__>
+                                                     
+                                                </WSP__>
+                                            </TOKEN__>
+                                            <RE>
+                                                <RegExp>
+                                                    saepe.
+                                                </RegExp>
+                                            </RE>
+                                            <TRENNER>
+                                                <OneOrMore>
+                                                    <ZSPRUNG>
+                                                        <RegExp>
+                                                            
+                                                            
+                                                        </RegExp>
+                                                    </ZSPRUNG>
+                                                    <ZSPRUNG>
+                                                        <RegExp>
+                                                            
+                                                            
+                                                        </RegExp>
+                                                    </ZSPRUNG>
+                                                </OneOrMore>
+                                            </TRENNER>
+                                        </Zusatz>
+                                    </Optional>
+                                </EinBeleg>
+                            </Sequence>
+                        </ZeroOrMore>
+                    </Belege>
+                </Optional>
+            </Bedeutung>
+        </Sequence>
+        <Sequence>
+            <TOKEN__>
+                <RegExp>
+                    BEDEUTUNG
+                </RegExp>
+            </TOKEN__>
+            <Optional>
+                <LEER>
+                    <RegExp>
+                        
+                        
+                        
+                    </RegExp>
+                </LEER>
+            </Optional>
+            <Bedeutung>
+                <Alternative>
+                    <Interpretamente>
+                        <LateinischeBedeutung>
+                            <TOKEN__>
+                                <RegExp>
+                                    LAT
+                                </RegExp>
+                                <WSP__>
+                                     
+                                </WSP__>
+                            </TOKEN__>
+                            <RE>
+                                <RegExp>
+                                    capital, rica
+                                </RegExp>
+                            </RE>
+                        </LateinischeBedeutung>
+                        <Optional>
+                            <LEER>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </LEER>
+                        </Optional>
+                        <DeutscheBedeutung>
+                            <TOKEN__>
+                                <RegExp>
+                                    DEU
+                                </RegExp>
+                                <WSP__>
+                                     
+                                </WSP__>
+                            </TOKEN__>
+                            <RE>
+                                <RegExp>
+                                    Kopftuch
+                                </RegExp>
+                            </RE>
+                        </DeutscheBedeutung>
+                        <Optional>
+                            <LEER>
+                                <RegExp>
+                                    
+                                    
+                                    
+                                </RegExp>
+                            </LEER>
+                        </Optional>
+                    </Interpretamente>
+                </Alternative>
+                <Optional>
+                    <Belege>
+                        <TOKEN__>
+                            <RegExp>
+                                BELEGE
+                            </RegExp>
+                        </TOKEN__>
+                        <Optional>
+                            <LEER>
+                                <RegExp>
+                                    
+                                    
+                                </RegExp>
+                            </LEER>
+                        </Optional>
+                        <ZeroOrMore>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    Transl. Libor.  I 32  raptis  feminarum -is  (fa[s]citergiis  var.  l.).
+                                                    
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                </EinBeleg>
+                            </Sequence>
+                            <Sequence>
+                                <TOKEN__>
+                                    <RegExp>
+                                        *
+                                    </RegExp>
+                                    <WSP__>
+                                         
+                                    </WSP__>
+                                </TOKEN__>
+                                <EinBeleg>
+                                    <OneOrMore>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
+                                                      
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                        <Sequence>
+                                            <RE>
+                                                <RegExp>
+                                                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
+                                                    
+                                                    
+                                                    
+                                                </RegExp>
+                                            </RE>
+                                        </Sequence>
+                                    </OneOrMore>
+                                </EinBeleg>
+                            </Sequence>
+                        </ZeroOrMore>
+                    </Belege>
+                </Optional>
+            </Bedeutung>
+        </Sequence>
+    </BedeutungsPosition>
+    <Autorinfo>
+        <Alternative>
+            <TOKEN__>
+                <RegExp>
+                    AUTORIN
+                </RegExp>
+                <WSP__>
+                     
+                </WSP__>
+            </TOKEN__>
+        </Alternative>
+        <Name>
+            <WORT>
+                <RegExp>
+                    Weber
+                </RegExp>
+            </WORT>
+        </Name>
+    </Autorinfo>
+    <Optional>
         <LEER>
             <RegExp>
                 
                 
-                
             </RegExp>
         </LEER>
-        <Bedeutung>
-            <Interpretamente>
-                <LateinischeBedeutung>
-                    capital, rica
-                </LateinischeBedeutung>
-                <LEER>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </LEER>
-                <DeutscheBedeutung>
-                    Kopftuch
-                </DeutscheBedeutung>
-                <LEER>
-                    <RegExp>
-                        
-                        
-                        
-                    </RegExp>
-                </LEER>
-            </Interpretamente>
-            <Belege>
-                <LEER>
-                    <RegExp>
-                        
-                        
-                    </RegExp>
-                </LEER>
-                <EinBeleg>
-                    Transl. Libor.  I 32  raptis  feminarum -is  (fa[s]citergiis  var.  l.).
-                    
-                </EinBeleg>
-                <EinBeleg>
-                    II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
-                      
-                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
-                    
-                    
-                    
-                </EinBeleg>
-            </Belege>
-        </Bedeutung>
-    </BedeutungsPosition>
-    <Autorinfo>
-        <Name>
-            Weber
-        </Name>
-    </Autorinfo>
-    <LEER>
-        <RegExp>
-            
-            
-        </RegExp>
-    </LEER>
+    </Optional>
 </Artikel>

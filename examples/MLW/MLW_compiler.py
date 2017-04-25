@@ -1,12 +1,11 @@
 #!/usr/bin/python
 
-
-
 #######################################################################
 #
 # SYMBOLS SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
+
 
 from functools import partial
 import sys
@@ -19,10 +18,11 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
-from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \
-    no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \
-    is_whitespace, is_expendable
+from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
+    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
+    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
+    WHITESPACE_KEYWORD, TOKEN_KEYWORD
+
 
 #######################################################################
 #
@@ -32,6 +32,7 @@ from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_childr
 
 def MLWScanner(text):
     return text
+
 
 #######################################################################
 #
@@ -142,7 +143,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "c286ef13eadbfca1130da7eee9f4011c"
+    source_hash__ = "9fce888d1b21b2d11a6228e0b97f9291"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -220,7 +221,7 @@ def join_strings(node, delimiter='\n'):
     node.result = tuple(new_result)
 
 
-MLW_ASTTransform = {
+MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
     "Artikel": no_operation,
     "LemmaPosition":
@@ -268,7 +269,7 @@ MLW_ASTTransform = {
     "Autorinfo":
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
-        # test,
+    # test,
         [remove_expendables, reduce_single_child],
     "LEER": no_operation,
     "DATEI_ENDE": no_operation,
@@ -283,7 +284,8 @@ MLW_ASTTransform = {
         [remove_expendables, replace_by_single_child]
 }
 
-MLW_ASTPipeline = [MLW_ASTTransform]
+MLWTransform = partial(traverse, processing_table=MLW_AST_transformation_table)
+
 
 #######################################################################
 #
@@ -299,134 +301,138 @@ class MLWCompiler(CompilerBase):
         super(MLWCompiler, self).__init__()
         assert re.match('\w+\Z', grammar_name)
 
-    def Artikel(self, node):
+    def on_Artikel(self, node):
         return node
 
-    def LemmaPosition(self, node):
+    def on_LemmaPosition(self, node):
         pass
 
-    def Lemma(self, node):
+    def on_Lemma(self, node):
         pass
 
-    def _tll(self, node):
+    def on__tll(self, node):
         pass
 
-    def LemmaVarianten(self, node):
+    def on_LemmaVarianten(self, node):
         pass
 
-    def LVariante(self, node):
+    def on_LVariante(self, node):
         pass
 
-    def LVZusatz(self, node):
+    def on_LVZusatz(self, node):
         pass
 
-    def GrammatikPosition(self, node):
+    def on_GrammatikPosition(self, node):
         pass
 
-    def _wortart(self, node):
+    def on__wortart(self, node):
         pass
 
-    def GrammatikVarianten(self, node):
+    def on_GrammatikVarianten(self, node):
         pass
 
-    def GVariante(self, node):
+    def on_GVariante(self, node):
         pass
 
-    def Flexionen(self, node):
+    def on_Flexionen(self, node):
         pass
 
-    def Flexion(self, node):
+    def on_Flexion(self, node):
         pass
 
-    def _genus(self, node):
+    def on__genus(self, node):
         pass
 
-    def ArtikelKopf(self, node):
+    def on_ArtikelKopf(self, node):
         pass
 
-    def SchreibweisenPosition(self, node):
+    def on_SchreibweisenPosition(self, node):
         pass
 
-    def SWTyp(self, node):
+    def on_SWTyp(self, node):
         pass
 
-    def SWVariante(self, node):
+    def on_SWVariante(self, node):
         pass
 
-    def Schreibweise(self, node):
+    def on_Schreibweise(self, node):
         pass
 
-    def Beleg(self, node):
+    def on_Beleg(self, node):
         pass
 
-    def Verweis(self, node):
+    def on_Verweis(self, node):
         pass
 
-    def VerweisZiel(self, node):
+    def on_VerweisZiel(self, node):
         pass
 
-    def BedeutungsPosition(self, node):
+    def on_BedeutungsPosition(self, node):
         pass
 
-    def Bedeutung(self, node):
+    def on_Bedeutung(self, node):
         pass
 
-    def Bedeutungskategorie(self, node):
+    def on_Bedeutungskategorie(self, node):
         pass
 
-    def Interpretamente(self, node):
+    def on_Interpretamente(self, node):
         pass
 
-    def LateinischeBedeutung(self, node):
+    def on_LateinischeBedeutung(self, node):
         pass
 
-    def DeutscheBedeutung(self, node):
+    def on_DeutscheBedeutung(self, node):
         pass
 
-    def Belege(self, node):
+    def on_Belege(self, node):
         pass
 
-    def EinBeleg(self, node):
+    def on_EinBeleg(self, node):
         pass
 
-    def Zusatz(self, node):
+    def on_Zusatz(self, node):
         pass
 
-    def Autorinfo(self, node):
+    def on_Autorinfo(self, node):
         pass
 
-    def Name(self, node):
+    def on_Name(self, node):
         pass
 
-    def WORT(self, node):
+    def on_NAMENS_ABKÜRZUNG(self, node):
         pass
 
-    def WORT_GROSS(self, node):
+    def on_WORT(self, node):
         pass
 
-    def WORT_KLEIN(self, node):
+    def on_WORT_GROSS(self, node):
         pass
 
-    def LAT_WORT(self, node):
+    def on_WORT_KLEIN(self, node):
         pass
 
-    def GROSSSCHRIFT(self, node):
+    def on_LAT_WORT(self, node):
         pass
 
-    def TRENNER(self, node):
+    def on_GROSSSCHRIFT(self, node):
         pass
 
-    def ZSPRUNG(self, node):
+    def on_TRENNER(self, node):
         pass
 
-    def LEER(self, node):
+    def on_ZSPRUNG(self, node):
         pass
 
-    def DATEI_ENDE(self, node):
+    def on_LEER(self, node):
         pass
 
-    def NIEMALS(self, node):
+    def on_DATEI_ENDE(self, node):
         pass
+
+    def on_NIEMALS(self, node):
+        pass
+
 
 #######################################################################
 #
@@ -434,11 +440,12 @@ class MLWCompiler(CompilerBase):
 #
 #######################################################################
 
+
 def compile_MLW(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     return full_compilation(source, MLWScanner,
-        MLWGrammar(), MLW_ASTPipeline, MLWCompiler())
+        MLWGrammar(), MLWTransform, MLWCompiler())
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

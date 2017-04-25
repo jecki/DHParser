@@ -1,0 +1,5 @@
+DHParser Version 0.6.0 (23.4.2017)
+..................................
+
+first public release
+

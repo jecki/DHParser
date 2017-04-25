@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """parsers.py - parser combinators for for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
@@ -337,6 +335,7 @@ class GrammarBase:
         Returns:
             Node: The root node ot the parse tree.
         """
+        assert isinstance(document, str)
         if self.root__ is None:
             raise NotImplementedError()
         if self.dirty_flag:
@@ -391,7 +390,6 @@ class GrammarBase:
                 os.remove(path)
 
         if IS_LOGGING():
-            assert self.history
             if not log_file_name:
                 name = self.__class__.__name__
                 log_file_name = name[:-7] if name.lower().endswith('grammar') else name
@@ -460,6 +458,16 @@ def nil_scanner(text):
 
 
 class ScannerToken(Parser):
+    """
+    Parses tokens that have been inserted by a Scanner.
+    
+    Scanners can generate Tokens with the ``make_token``-function.
+    These tokens start and end with magic characters that can only be
+    matched by the ScannerToken Parser. Scanner tokens can be used to
+    insert BEGIN - END delimiters at the beginning or ending of an 
+    indented block. Otherwise indented block are difficult to handle 
+    with parsing expression grammars.
+    """
     def __init__(self, scanner_token):
         assert isinstance(scanner_token, str) and scanner_token and \
                scanner_token.isupper()
@@ -493,7 +501,8 @@ class ScannerToken(Parser):
 
 
 class RegExp(Parser):
-    """Regular expression parser.
+    """
+    Regular expression parser.
     
     The RegExp-parser parses text that matches a regular expression.
     RegExp can also be considered as the "atomic parser", because all
@@ -948,16 +957,53 @@ class Forward(Parser):
 
 
 class CompilerBase:
-    def compile__(self, node):
-        comp, cls = node.parser.name, node.parser.__class__.__name__
-        elem = comp or cls
+    def __init__(self):
+        self.dirty_flag = False
+
+    def _reset(self):
+        pass
+
+    def compile_all(self, node):
+        """Compiles the abstract syntax tree with the root ``node``.
+        
+        It's called `compile_all`` to avoid confusion with the 
+        ``_compile`` that is called from within the local node 
+        compiler methods.
+        """
+        if self.dirty_flag:
+            self._reset()
+        else:
+            self.dirty_flag = True
+        return self._compile(node)
+
+    @staticmethod
+    def derive_method_name(node_name):
+        """Returns the method name for ``node_name``, e.g.
+        >>> CompilerBase.method_name('expression')
+        'on_expression'
+        """
+        return 'on_' + node_name
+
+    def _compile(self, node):
+        """Calls the compilation method for the given node and returns
+         the result of the compilation.
+        
+        The method's name is dreived from either the node's parser 
+        name or, if the parser is anonymous, the node's parser's class
+        name by adding the prefix 'on_'.
+        
+        Note that ``_compile`` does not call any compilation functions
+        for the parsers of the sub nodes by itself. Rather, this should
+        be done within the compilation methods.
+        """
+        elem = node.parser.name or node.parser.__class__.__name__
         if not sane_parser_name(elem):
-            node.add_error("Must not use reserved name '%s' as parser "
+            node.add_error("Reserved name '%s' not allowed as parser "
                            "name! " % elem + "(Any name starting with "
-                                             "'_' or '__' or ending with '__' is reserved.)")
+                           "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
-            compiler = self.__getattribute__(elem)  # TODO Add support for python keyword attributes
+            compiler = self.__getattribute__(self.derive_method_name(elem))
             result = compiler(node)
             for child in node.children:
                 node.error_flag |= child.error_flag
@@ -976,7 +1022,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
     Args:
         source (str): The input text for compilation or a the name of a
             file containing the input text.
-        scanner (funciton):  text -> text. A scanner function or None,
+        scanner (function):  text -> text. A scanner function or None,
             if no scanner is needed.
         parser (GrammarBase):  The GrammarBase object
         transform (function):  A transformation function that takes
@@ -991,8 +1037,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
         (result, errors, abstract syntax tree). In detail:
         1. The result as returned by the compiler or ``None`` in case
             of failure,
-        2. A list of error messages, each of which is a tuple
-            (position: int, error: str)
+        2. A list of error messages
         3. The root-node of the abstract syntax treelow
     """
     assert isinstance(compiler, CompilerBase)
@@ -1017,7 +1062,7 @@ def full_compilation(source, scanner, parser, transform, compiler):
         syntax_tree.log(log_file_name, ext='.ast')
         errors = syntax_tree.collect_errors()
         if not errors:
-            result = compiler.compile__(syntax_tree)
+            result = compiler.compile_all(syntax_tree)
             errors = syntax_tree.collect_errors()
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree

@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """dsl.py - Support for domain specific notations for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
@@ -39,7 +37,7 @@ __all__ = ['GrammarError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
-           'run_compiler']
+           'compile_on_disk']
 
 
 SECTION_MARKER = """\n
@@ -98,10 +96,10 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
-from DHParser.syntaxtree import Node, remove_enclosing_delimiters, remove_children_if, \\
-    reduce_single_child, replace_by_single_child, remove_whitespace, TOKEN_KEYWORD, \\
-    no_operation, remove_expendables, remove_tokens, flatten, WHITESPACE_KEYWORD, \\
-    is_whitespace, is_expendable
+from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
+    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
+    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
+    WHITESPACE_KEYWORD, TOKEN_KEYWORD
 '''
 
 
@@ -154,8 +152,7 @@ def get_grammar_instance(grammar):
     return parser_root, grammar_src
 
 
-def compileDSL(text_or_file, dsl_grammar, ast_transformation, compiler,
-               scanner=nil_scanner):
+def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler):
     """Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
     compilation error.
@@ -196,7 +193,7 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
         which conforms to the language defined by ``ebnf_src``.
     """
     grammar = ebnf_grammar_obj or EBNFGrammar()
-    grammar_src = compileDSL(ebnf_src, grammar, EBNFTransform, EBNFCompiler())
+    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransform, EBNFCompiler())
     return grammar_src if source_only else \
         compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
 
@@ -216,7 +213,7 @@ def load_compiler_suite(compiler_suite):
             raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
         scanner = compile_python_object(imports + scanner_py, '\w*Scanner$')
-        ast = compile_python_object(imports + ast_py, '\w*Pipeline$')
+        ast = compile_python_object(imports + ast_py, '\w*Transform$')
         compiler = compile_python_object(imports + compiler_py, '\w*Compiler$')
     else:
         # assume source is an ebnf grammar
@@ -226,8 +223,8 @@ def load_compiler_suite(compiler_suite):
             raise GrammarError('\n\n'.join(errors), source)
         scanner = nil_scanner
         ast = EBNFTransform
-        compiler = EBNFCompiler()
-    parser = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
+        compiler = EBNFCompiler
+    parser = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')
 
     return scanner, parser, ast, compiler
 
@@ -241,7 +238,7 @@ def suite_outdated(compiler_suite, grammar_source):
     with whitespace order to trigger their recreation. Note: Do not
     delete or overwrite the section marker itself. 
 
-    Parameters:
+    Args:
         compiler_suite:  the parser class representing the grammar
             or the file name of a compiler suite containing the grammar
         grammar_source:  File name or string representation of the
@@ -257,7 +254,30 @@ def suite_outdated(compiler_suite, grammar_source):
         return True
 
 
-def run_compiler(source_file, compiler_suite="", extension=".xml"):
+def run_compiler(text_or_file, compiler_suite):
+    """Compiles a source with a given compiler suite.
+
+    Args:
+        text_or_file (str):  Either the file name of the source code or
+            the source code directly. (Which is determined by 
+            heuristics. If ``text_or_file`` contains at least on
+            linefeed then it is always assumed to be a source text and
+            not a file name.)
+        compiler_suite(str):  File name of the compiler suite to be
+            used.
+        
+    Returns:
+        The result of the compilation, the form and type of which 
+        depends entirely on the compiler.
+        
+    Raises:
+        CompilerError
+    """
+    scanner, parser, ast, compiler = load_compiler_suite(compiler_suite)
+    return compileDSL(text_or_file, scanner, parser(), ast, compiler())
+
+
+def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
     """Compiles the a source file with a given compiler and writes the
     result to a file.
 
@@ -267,9 +287,26 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     skeletons for a scanner, AST transformation table, and compiler.
     If the Python script already exists only the parser name in the
     script will be updated. (For this to work, the different names
-    need to be delimited section marker blocks.). `run_compiler()`
+    need to be delimited section marker blocks.). `compile_on_disk()`
     returns a list of error messages or an empty list if no errors
     occurred.
+    
+    Parameters:
+        source_file(str):  The file name of the source text to be
+            compiled.
+        compiler_suite(str):  The file name of the compiler suite
+            (usually ending with '_compiler.py'), with which the source
+            file shall be compiled. If this is left empty, the source
+            file is assumed to be an EBNF-Grammar that will be compiled
+            with the internal EBNF-Compiler.
+        extension(str):  The result of the compilation (if successful)
+            is written to a file with the same name but a different
+            extension than the source file. This parameter sets the
+            extension.
+            
+    Returns:
+        A list of error messages or an empty list if there were no 
+        errors. 
     """
     filepath = os.path.normpath(source_file)
     # with open(source_file, encoding="utf-8") as f:
@@ -277,7 +314,8 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
     rootname = os.path.splitext(filepath)[0]
     compiler_name = os.path.basename(rootname)
     if compiler_suite:
-        scanner, parser, trans, cclass = load_compiler_suite(compiler_suite)
+        scanner, pclass, trans, cclass = load_compiler_suite(compiler_suite)
+        parser = pclass()
         compiler1 = cclass()
     else:
         scanner = nil_scanner
@@ -289,10 +327,9 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
         return errors
 
     elif trans == EBNFTransform:  # either an EBNF- or no compiler suite given
-        f = None
-
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER
+        f = None
         try:
             f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
             source = f.read()
@@ -304,7 +341,9 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             raise ValueError('File "' + rootname + '_compiler.py" seems to be corrupted. '
                                                    'Please delete or repair file manually!')
         finally:
-            if f:  f.close()
+            if f:
+                f.close()
+                f = None
 
         if RX_WHITESPACE.fullmatch(intro):
             intro = '#!/usr/bin/python'

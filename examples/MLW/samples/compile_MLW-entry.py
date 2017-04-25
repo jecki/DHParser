@@ -24,7 +24,7 @@ import sys
 sys.path.append(os.path.abspath('../../../'))
 import DHParser.toolkit as toolkit
 from DHParser.ebnf import grammar_changed
-from DHParser.dsl import run_compiler
+from DHParser.dsl import compile_on_disk
 
 MLW_ebnf = os.path.join('..', 'MLW.ebnf')
 MLW_compiler = os.path.join('..', 'MLW_compiler.py')
@@ -36,14 +36,14 @@ toolkit.logging_off()
 if (not os.path.exists(MLW_compiler) or
     grammar_changed(MLW_compiler, MLW_ebnf)):
     print("recompiling parser")
-    errors = run_compiler(MLW_ebnf)
+    errors = compile_on_disk(MLW_ebnf)
     if errors:
         print('\n'.join(errors))
         sys.exit(1)
 
 toolkit.logging_on()
 
-errors = run_compiler("fascitergula.mlw", MLW_compiler, ".xml")
+errors = compile_on_disk("fascitergula.mlw", MLW_compiler, ".xml")
 if errors:
     print('\n'.join(errors))
     sys.exit(1)

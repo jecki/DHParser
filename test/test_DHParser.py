@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_dsl.py - tests of the dsl-module of DHParser 
+"""test_DHParser.py - tests of global aspects of DHParser 
 
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -20,4 +20,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from DHParser.toolkit import *
+from DHParser.syntaxtree import *
+from DHParser.parsers import *
+from DHParser.ebnf import *
+from DHParser.dsl import *
 
+
+if __name__ == "__main__":
+    from run import runner
+
+    runner("", globals())

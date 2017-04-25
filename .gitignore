@@ -17,4 +17,5 @@ DEBUG*
 LOGS/
 external_resources/
 tmp/
-
+build/
+dist/

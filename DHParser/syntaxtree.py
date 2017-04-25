@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """syntaxtree.py - syntax tree classes and transformation functions for 
 converting the concrete into the abstract syntax tree for DHParser
 
@@ -22,6 +20,8 @@ permissions and limitations under the License.
 import itertools
 import os
 from functools import partial
+
+
 try:
     import regex as re
 except ImportError:
@@ -36,7 +36,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
-           'compact_sexpr',
+           'mock_syntax_tree',
            'traverse',
            'no_operation',
            'replace_by_single_child',
@@ -56,7 +56,25 @@ __all__ = ['WHITESPACE_KEYWORD',
            'assert_content']
 
 
-class ZombieParser:
+class MockParser:
+    """
+    MockParser objects can be used to reconstruct syntax trees from a
+    serialized form like S-expressions or XML. Mock objects are needed,
+    because Node objects require a parser object for instantiation.
+    Mock objects have just enough properties to serve that purpose. 
+    
+    Mock objects should not be used for anything other than 
+    syntax tree (re-)construction. In all other cases where a parser
+    object substitute is needed, chose the singleton ZOMBIE_PARSER.
+    """
+    def __init__(self, name=''):
+        self.name = name
+
+    def __str__(self):
+        return self.name or self.__class__.__name__
+
+
+class ZombieParser(MockParser):
     """
     Serves as a substitute for a Parser instance.
 
@@ -69,9 +87,9 @@ class ZombieParser:
     alive = False
 
     def __init__(self):
+        super(ZombieParser, self).__init__("ZOMBIE")
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.name = "ZOMBIE"
         self.__class__.alive = True
 
     def __copy__(self):
@@ -79,9 +97,6 @@ class ZombieParser:
 
     def __deepcopy__(self, memo):
         return self
-
-    def __str__(self):
-        return self.name
 
     def __call__(self, text):
         """Better call Saul ;-)"""
@@ -235,7 +250,7 @@ class Node:
         return head + '\n'.join([tab + dataF(s)
                                  for s in str(self.result).split('\n')]) + tail
 
-    def as_sexpr(self, src=None, prettyprint=True):
+    def as_sexpr(self, src=None):
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -262,8 +277,7 @@ class Node:
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, lambda node: ')',
-                               pretty if prettyprint else lambda s: s)
+        return self._tree_repr('    ', opening, lambda node: ')', pretty)  # pretty if prettyprint else lambda s: s)
 
     def as_xml(self, src=None):
         """
@@ -379,6 +393,58 @@ class Node:
             else:
                 return self.result,
         return nav(path.split('/'))
+
+
+def mock_syntax_tree(sexpr):
+    """Generates a tree of nodes from an S-expression.
+
+    Example: 
+    >>> mock_syntax_tree("(a (b c))").as_sexpr()
+    (a 
+        (b 
+            "c" 
+        )
+    )
+    """
+    def next_block(s):
+        s = s.strip()
+        while s[0] != ')':
+            assert s[0] == '(', s
+            level = 1;
+            i = 1
+            while level > 0:
+                if s[i] == '(':
+                    level += 1
+                elif s[i] == ')':
+                    level -= 1
+                i += 1
+            yield s[:i]
+            s = s[i:].strip()
+
+    sexpr = sexpr.strip()
+    assert sexpr[0] == '(', sexpr
+    sexpr = sexpr[1:].strip()
+    m = re.match('\w+', sexpr)
+    name = sexpr[:m.end()]
+    sexpr = sexpr[m.end():].strip()
+    if sexpr[0] == '(':
+        result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
+    else:
+        lines = []
+        while sexpr and sexpr[0] != ')':
+            for qm in ['"""', "'''", '"', "'"]:
+                m = re.match(qm + r'.*?' + qm, sexpr)
+                if m:
+                    i = len(qm)
+                    lines.append(sexpr[i:m.end() - i])
+                    sexpr = sexpr[m.end():].strip()
+                    break
+            else:
+                m = re.match(r'(?:(?!\)).)*', sexpr)
+                lines.append(sexpr[:m.end()])
+                sexpr = sexpr[m.end():]
+        result = "\n".join(lines)
+    return Node(MockParser(name), result)
 
 
 ########################################################################

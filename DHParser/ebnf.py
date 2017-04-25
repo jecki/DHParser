@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """ebnf.py - EBNF -> Python-Parser compilation for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
@@ -18,16 +16,14 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-# import collections
-import keyword
 from functools import partial
-
+import keyword
+import os
 try:
     import regex as re
 except ImportError:
     import re
 
-from .__init__ import __version__
 from .toolkit import load_if_file, escape_re, md5, sane_parser_name
 from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
@@ -35,13 +31,14 @@ from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead,
 from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
     forbid, assert_content, WHITESPACE_KEYWORD
+from .versionnumber import __version__
 
 
 __all__ = ['EBNFGrammar',
-           'EBNFTransTable',
+           'EBNFTransform',
            'EBNFCompilerError',
-           # 'Scanner',
-           'EBNFCompiler']
+           'EBNFCompiler',
+           'grammar_changed']
 
 
 class EBNFGrammar(GrammarBase):
@@ -187,11 +184,9 @@ class EBNFCompiler(CompilerBase):
                   'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
                   'vertical': r'\s*'}
 
-    def __init__(self, grammar_name="", source_text=""):
+    def __init__(self, grammar_name="", grammar_source=""):
         super(EBNFCompiler, self).__init__()
-        assert grammar_name == "" or re.match('\w+\Z', grammar_name)
-        self.grammar_name = grammar_name
-        self.source_text = load_if_file(source_text)
+        self.set_grammar_name(grammar_name, grammar_source)
         self._reset()
 
     def _reset(self):
@@ -206,6 +201,13 @@ class EBNFCompiler(CompilerBase):
                            'literalws': ['right'],
                            'tokens': set(),     # alt. 'scanner_tokens'
                            'counterpart': set()}     # alt. 'retrieve_counterpart'
+
+    def set_grammar_name(self, grammar_name, grammar_source):
+        assert grammar_name == "" or re.match('\w+\Z', grammar_name)
+        if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
+            grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
+        self.grammar_name = grammar_name
+        self.grammar_source = load_if_file(grammar_source)
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -240,11 +242,12 @@ class EBNFCompiler(CompilerBase):
                     'Compiler, self).__init__()',
                     "        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.definition_names:
+            method_name = CompilerBase.derive_method_name(name)
             if name == self.root:
-                compiler += ['    def ' + name + '(self, node):',
+                compiler += ['    def ' + method_name + '(self, node):',
                              '        return node', '']
             else:
-                compiler += ['    def ' + name + '(self, node):',
+                compiler += ['    def ' + method_name + '(self, node):',
                              '        pass', '']
         return '\n'.join(compiler)
 
@@ -273,13 +276,13 @@ class EBNFCompiler(CompilerBase):
                         'Grammar(GrammarBase):',
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
-                        (', with this grammar:' if self.source_text else '.')]
+                        (', with this grammar:' if self.grammar_source else '.')]
         definitions.append(('parser_initialization__', '"upon instatiation"'))
-        if self.source_text:
+        if self.grammar_source:
             definitions.append(('source_hash__',
-                                '"%s"' % md5(self.source_text, __version__)))
+                                '"%s"' % md5(self.grammar_source, __version__)))
             declarations.append('')
-            declarations += [line for line in self.source_text.split('\n')]
+            declarations += [line for line in self.grammar_source.split('\n')]
             while declarations[-1].strip() == '':
                 declarations = declarations[:-1]
         declarations.append('"""')
@@ -310,7 +313,7 @@ class EBNFCompiler(CompilerBase):
         declarations.append('')
         return '\n    '.join(declarations)
 
-    def syntax(self, node):
+    def on_syntax(self, node):
         self._reset()
         definitions = []
 
@@ -322,14 +325,14 @@ class EBNFCompiler(CompilerBase):
         # compile definitions and directives and collect definitions
         for nd in node.result:
             if nd.parser.name == "definition":
-                definitions.append(self.compile__(nd))
+                definitions.append(self._compile(nd))
             else:
                 assert nd.parser.name == "directive", nd.as_sexpr()
-                self.compile__(nd)
+                self._compile(nd)
 
         return self.gen_parser(definitions)
 
-    def definition(self, node):
+    def on_definition(self, node):
         rule = node.result[0].result
         if rule in self.rules:
             node.add_error('A rule with name "%s" has already been defined.' % rule)
@@ -346,7 +349,7 @@ class EBNFCompiler(CompilerBase):
                            % rule + '(This may change in the furute.)')
         try:
             self.rules.add(rule)
-            defn = self.compile__(node.result[1])
+            defn = self._compile(node.result[1])
             if rule in self.variables:
                 defn = 'Capture(%s)' % defn
                 self.variables.remove(rule)
@@ -370,7 +373,7 @@ class EBNFCompiler(CompilerBase):
                            (repr(rx), str(re_error)))
         return rx
 
-    def directive(self, node):
+    def on_directive(self, node):
         key = node.result[0].result.lower()
         assert key not in self.directives['tokens']
         if key in {'comment', 'whitespace'}:
@@ -378,7 +381,7 @@ class EBNFCompiler(CompilerBase):
                 if len(node.result[1].result) != 1:
                     node.add_error('Directive "%s" must have one, but not %i values.' %
                                    (key, len(node.result[1])))
-                value = self.compile__(node.result[1]).pop()
+                value = self._compile(node.result[1]).pop()
                 if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
                     value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
                 else:
@@ -398,7 +401,7 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = value
 
         elif key == 'literalws':
-            value = {item.lower() for item in self.compile__(node.result[1])}
+            value = {item.lower() for item in self._compile(node.result[1])}
             if (len(value - {'left', 'right', 'both', 'none'}) > 0
                     or ('none' in value and len(value) > 1)):
                 node.add_error('Directive "literalws" allows the values '
@@ -409,10 +412,10 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = list(ws)
 
         elif key in {'tokens', 'scanner_tokens'}:
-            self.directives['tokens'] |= self.compile__(node.result[1])
+            self.directives['tokens'] |= self._compile(node.result[1])
 
         elif key in {'counterpart', 'retrieve_counterpart'}:
-            self.directives['counterpart'] |= self.compile__(node.result[1])
+            self.directives['counterpart'] |= self._compile(node.result[1])
 
         else:
             node.add_error('Unknown directive %s ! (Known ones are %s .)' %
@@ -424,16 +427,16 @@ class EBNFCompiler(CompilerBase):
         """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        arguments = [self.compile__(r) for r in node.result] + custom_args
+        arguments = [self._compile(r) for r in node.result] + custom_args
         return parser_class + '(' + ', '.join(arguments) + ')'
 
-    def expression(self, node):
+    def on_expression(self, node):
         return self.non_terminal(node, 'Alternative')
 
-    def term(self, node):
+    def on_term(self, node):
         return self.non_terminal(node, 'Sequence')
 
-    def factor(self, node):
+    def on_factor(self, node):
         assert isinstance(node.parser, Sequence), node.as_sexpr()  # these assert statements can be removed
         assert node.children
         assert len(node.result) >= 2, node.as_sexpr()
@@ -467,23 +470,23 @@ class EBNFCompiler(CompilerBase):
         except KeyError:
             node.add_error('Unknown prefix "%s".' % prefix)
 
-    def option(self, node):
+    def on_option(self, node):
         return self.non_terminal(node, 'Optional')
 
-    def repetition(self, node):
+    def on_repetition(self, node):
         return self.non_terminal(node, 'ZeroOrMore')
 
-    def oneormore(self, node):
+    def on_oneormore(self, node):
         return self.non_terminal(node, 'OneOrMore')
 
-    def regexchain(self, node):
+    def on_regexchain(self, node):
         raise EBNFCompilerError("Not yet implemented!")
 
-    def group(self, node):
+    def on_group(self, node):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
-    def symbol(self, node):
+    def on_symbol(self, node):
         if node.result in self.directives['tokens']:
             return 'ScannerToken("' + node.result + '")'
         else:
@@ -492,10 +495,10 @@ class EBNFCompiler(CompilerBase):
                 self.recursive.add(node.result)
             return node.result
 
-    def literal(self, node):
+    def on_literal(self, node):
         return 'Token(' + node.result.replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
 
-    def regexp(self, node):
+    def on_regexp(self, node):
         rx = node.result
         name = []
         if rx[:2] == '~/':
@@ -519,7 +522,7 @@ class EBNFCompiler(CompilerBase):
             return '"' + errmsg + '"'
         return 'RE(' + ', '.join([arg] + name) + ')'
 
-    def list_(self, node):
+    def on_list_(self, node):
         assert node.children
         return set(item.result.strip() for item in node.result)
 

@@ -22,8 +22,8 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.dsl import run_compiler
-errors = run_compiler("MLW.ebnf")
+from DHParser.dsl import compile_on_disk
+errors = compile_on_disk("MLW.ebnf")
 if errors:
     print("\n".join(errors))
     sys.exit(1)

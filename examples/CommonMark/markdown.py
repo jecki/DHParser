@@ -62,7 +62,7 @@ CONTINUATION = "CONTINUATION"
 def continuation(regexp, line, unless):
     m = regexp.match(line)
     if m:
-        content = m.group()
+        content = m.group__()
         if content:
             return not unless, make_token(CONTINUATION, content), line[m.end():]
         return not unless, '', line
@@ -89,7 +89,7 @@ def paragraph_cont(line, blockargs):
 def newblock_if(regexp, blocktype, line):
     m = regexp.match(line)
     if m:
-        return make_token(BEGIN_PREFIX + blocktype, m.group()), line[m.end():], m.end()
+        return make_token(BEGIN_PREFIX + blocktype, m.group__()), line[m.end():], m.end()
     return '', line, 0
 
 
