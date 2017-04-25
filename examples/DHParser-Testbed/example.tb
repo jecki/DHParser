@@ -1,0 +1,31 @@
+# Example for a Testbed. This example contains a few tests for the EBNF
+# language
+
+
+#######################################################################
+match:literal
+
+standard  {"literal test double quoted"}
+
+{'literal test single suoted'}
+
+{'literal
+  multiple lines
+  with gap'}
+
+whitespace
+    {'literal with right-attached whitespace'   }
+
+
+fail:literal
+    {   'literal with left-attached whitespace'}
+    {quotation marks forgotten}
+
+
+#######################################################################
+match:symbol
+
+"letters"     {symbol}
+"underscore"  {symbol_with_underscore}
+""
+
