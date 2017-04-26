@@ -81,6 +81,10 @@ class TestDirectives:
 
 
 class TestEBNFParser:
+    test_json = [
+""
+]
+
     def setup(self):
         self.EBNF = EBNFGrammar()
 
@@ -93,6 +97,8 @@ class TestEBNFParser:
 
         result = self.EBNF.parse(' "literal"', 'literal')
         assert result.error_flag  # literals catch following, but not leading whitespace
+
+
 
 
 class TestPopRetrieve:
