@@ -17,6 +17,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+import copy
 import itertools
 import os
 from functools import partial
@@ -166,9 +167,18 @@ class Node:
     def __eq__(self, other):
         return str(self.parser) == str(other.parser) and self.result == other.result
 
+    def __hash__(self):
+        return hash((str(self.parser), ))
+
+    def __deepcopy__(self, memodict={}):
+        result = copy.deepcopy(self.result)
+        other = Node(self.parser, result)
+        other._pos = self._pos
+        return other
+
     @property
     def tag_name(self):
-        return str(self.parser)
+        return self.parser.name or self.parser.__class__.__name__
         # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.__class__.__name__
 
     @property

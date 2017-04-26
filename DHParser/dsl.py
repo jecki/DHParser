@@ -396,4 +396,3 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
 
     return []
 
-

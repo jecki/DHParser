@@ -31,11 +31,12 @@ class TestCompilerGeneration:
         word = /\w+/
         WSPC = /\s+/
         """
+    tmp = 'tmp/' if os.path.isdir('tmp') else ('test/tmp/')
     trivial_text = """Es war ein König in Thule."""
-    grammar_name = "tmp/TestCompilerGeneration.ebnf"
-    compiler_name = "tmp/TestCompilerGeneration_compiler.py"
-    text_name = "tmp/TestCompilerGeneration_text.txt"
-    result_name = "tmp/TestCompilerGeneration_text.xml"
+    grammar_name = tmp + "TestCompilerGeneration.ebnf"
+    compiler_name = tmp + "TestCompilerGeneration_compiler.py"
+    text_name = tmp + "TestCompilerGeneration_text.txt"
+    result_name = tmp + "TestCompilerGeneration_text.xml"
 
     def setup(self):
         with open(self.grammar_name, "w") as f:
@@ -71,7 +72,7 @@ class TestCompilerGeneration:
         result = run_compiler(self.trivial_text, self.compiler_name)
         assert output == result.as_xml(), str(result)
 
-        sys.path.append('tmp')
+        sys.path.append(self.tmp)
         from TestCompilerGeneration_compiler import compile_TestCompilerGeneration
         result, errors, ast = compile_TestCompilerGeneration(self.trivial_text)
 

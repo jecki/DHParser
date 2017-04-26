@@ -54,7 +54,7 @@ __all__ = ['logging_on',
            'sane_parser_name']
 
 
-LOGGING: str = "LOGS"  # LOGGING = "" turns logging off!
+LOGGING: str = ""  # "LOGS"  # LOGGING = "" turns logging off!
 
 
 def logging_on(log_subdir="LOGS"):

@@ -55,11 +55,10 @@ try:
     import regex as re
 except ImportError:
     import re
-import sys
 
-from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name, smart_list
+from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name
 from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
-    traverse
+    mock_syntax_tree
 from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['HistoryRecord',
@@ -1070,3 +1069,14 @@ def full_compilation(source, scanner, parser, transform, compiler):
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
 
+
+def test_grammar(test_suite, parse_function, transform):
+    for parser_name, tests in test_suite.items():
+        assert set(tests.keys()).issubset({'match', 'fail', 'ast', 'cst'})
+        for test_name, test_code in tests['match'].items():
+            cst = parse_function(test_code, parser_name)
+            if not cst.error_flag:
+                yield "Test %s for parser %s did not match" % (test_name, parser_name)
+            if "cst" in tests:
+                if tests["cst"][test_name] != mock_syntax_tree(cst):
+                    pass # TO BE CONTINUED

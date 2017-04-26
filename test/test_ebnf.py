@@ -81,9 +81,21 @@ class TestDirectives:
 
 
 class TestEBNFParser:
-    test_json = [
-""
-]
+    test_json = {
+        "list_": {
+            "match": {
+                1: "hund",
+                2: "hund, katze,maus",
+                3: "hund , katze"
+            },
+            "fail": {
+                1: "123",
+                2: '"literal"',
+                3: "/regexp/"
+            }
+        }
+    }
+
 
     def setup(self):
         self.EBNF = EBNFGrammar()

@@ -740,7 +740,7 @@ class Parser(metaclass=ParserMetaClass):
 
     def apply(self, func):
         """Applies function `func(parser)` recursively to this parser and all
-        descendendants of the tree of parsers. The same function can never
+        descendants of the tree of parsers. The same function can never
         be applied twice between calls of the ``reset()``-method!
         """
         if func in self.cycle_detection:

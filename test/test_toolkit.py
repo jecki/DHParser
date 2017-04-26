@@ -26,7 +26,7 @@ import sys
 from DHParser.toolkit import load_if_file
 
 class TestToolkit:
-    filename = "tmp/test.py"
+    filename = "tmp/test.py" if os.path.isdir('tmp') else "test/tmp/test.py"
     code1 = "x = 46"
     code2 = "def f():\n    return 46"
 

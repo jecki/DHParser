@@ -19,6 +19,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import copy
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
@@ -90,6 +91,13 @@ class TestNode:
         assert self.recurr_tree != self.unique_tree
         assert mock_syntax_tree('(a (b c))') != mock_syntax_tree('(a (b d))')
 
+    def test_copy(self):
+        cpy = copy.deepcopy(self.unique_tree)
+        assert cpy == self.unique_tree
+        assert cpy.result[0].result != "epsilon" # just to make sure...
+        cpy.result[0].result = "epsilon"
+        assert cpy != self.unique_tree
+
 
 class TestErrorHandling:
     def test_error_flag_propagation(self):
@@ -106,4 +114,4 @@ class TestErrorHandling:
 
 if __name__ == "__main__":
     from run import runner
-    runner("TestNode", globals())
+    runner("", globals())

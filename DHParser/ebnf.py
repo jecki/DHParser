@@ -140,7 +140,7 @@ EBNF_transformation_table = {
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
     "list_":
-        [partial(remove_tokens, tokens={','})],
+        [flatten, partial(remove_tokens, tokens={','})],
     "":
         [remove_expendables, replace_by_single_child]
 }
@@ -188,8 +188,8 @@ class EBNFCompiler(CompilerBase):
 
     def _reset(self):
         self.rules = set()
-        self.symbols = set()
         self.variables = set()
+        self.symbol_nodes = []
         self.definition_names = []
         self.recursive = set()
         self.root = ""
@@ -302,10 +302,10 @@ class EBNFCompiler(CompilerBase):
                 declarations += [symbol + '.set(' + statement + ')']
             else:
                 declarations += [symbol + ' = ' + statement]
-        for nd in self.symbols:
+        for nd in self.symbol_nodes:
             if nd.result not in self.rules:
                 nd.add_error("Missing production for symbol '%s'" % nd.result)
-        if self.root and 'root__' not in self.symbols:
+        if self.root and 'root__' not in self.rules:
             declarations.append('root__ = ' + self.root)
         declarations.append('')
         return '\n    '.join(declarations)
@@ -443,7 +443,6 @@ class EBNFCompiler(CompilerBase):
         if prefix in {'::', ':'}:
             assert len(node.result) == 2
             arg = node.result[-1]
-            argstr = str(arg)
             if arg.parser.name != 'symbol':
                 node.add_error(('Retrieve Operator "%s" requires a symbol, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
@@ -487,7 +486,7 @@ class EBNFCompiler(CompilerBase):
         if node.result in self.directives['tokens']:
             return 'ScannerToken("' + node.result + '")'
         else:
-            self.symbols.add(node)
+            self.symbol_nodes.append(node)
             if node.result in self.rules:
                 self.recursive.add(node.result)
             return node.result

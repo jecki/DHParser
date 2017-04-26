@@ -16,6 +16,6 @@ testdata/*.pdf
 DEBUG*
 LOGS/
 external_resources/
-tmp/
+tmp/*
 build/
 dist/
