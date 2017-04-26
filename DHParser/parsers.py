@@ -332,6 +332,9 @@ class GrammarBase:
 
         Args:
             document (str): The source text to be parsed.
+            start_parser (str): The name of the parser with which to
+                start. This is useful for testing particular parsers
+                (i.e. particular parts of the EBNF-Grammar.)
         Returns:
             Node: The root node ot the parse tree.
         """

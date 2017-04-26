@@ -85,6 +85,11 @@ class TestNode:
         assert len(found) == 2
         assert found[0].result == 'x' and found[1].result == 'y'
 
+    def test_equality(self):
+        assert self.unique_tree == self.unique_tree
+        assert self.recurr_tree != self.unique_tree
+        assert mock_syntax_tree('(a (b c))') != mock_syntax_tree('(a (b d))')
+
 
 class TestErrorHandling:
     def test_error_flag_propagation(self):
@@ -101,4 +106,4 @@ class TestErrorHandling:
 
 if __name__ == "__main__":
     from run import runner
-    runner("", globals())
+    runner("TestNode", globals())

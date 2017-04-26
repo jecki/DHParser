@@ -124,16 +124,16 @@ if __name__ == "__main__":
 '''
 
 
-def get_grammar_instance(grammar):
+def grammar_instance(grammar_representation):
     """Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
     python-code, a GrammarBase-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
     """
-    if isinstance(grammar, str):
+    if isinstance(grammar_representation, str):
         # read grammar
-        grammar_src = load_if_file(grammar)
-        if is_python_code(grammar):
+        grammar_src = load_if_file(grammar_representation)
+        if is_python_code(grammar_representation):
             parser_py, errors, AST = grammar_src, '', None
         else:
             parser_py, errors, AST = full_compilation(grammar_src, None,
@@ -144,11 +144,11 @@ def get_grammar_instance(grammar):
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
-        if isinstance(grammar, GrammarBase):
-            parser_root = grammar
+        if isinstance(grammar_representation, GrammarBase):
+            parser_root = grammar_representation
         else:
             # assume `grammar` is a grammar class and get the root object
-            parser_root = grammar()
+            parser_root = grammar_representation()
     return parser_root, grammar_src
 
 
@@ -162,7 +162,7 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
     """
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
-    parser_root, grammar_src = get_grammar_instance(dsl_grammar)
+    parser_root, grammar_src = grammar_instance(dsl_grammar)
     src = load_if_file(text_or_file)
     result, errors, AST = full_compilation(src, scanner, parser_root,
                                            ast_transformation, compiler)

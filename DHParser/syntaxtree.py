@@ -20,8 +20,6 @@ permissions and limitations under the License.
 import itertools
 import os
 from functools import partial
-
-
 try:
     import regex as re
 except ImportError:
@@ -165,9 +163,12 @@ class Node:
             return "".join(str(child) for child in self.result)
         return str(self.result)
 
+    def __eq__(self, other):
+        return str(self.parser) == str(other.parser) and self.result == other.result
+
     @property
     def tag_name(self):
-        return self.parser.name or self.parser.__class__.__name__
+        return str(self.parser)
         # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.__class__.__name__
 
     @property
