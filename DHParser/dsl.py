@@ -28,7 +28,7 @@ except ImportError:
     import re
 
 from .ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler, grammar_changed, \
-    get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+    get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from .toolkit import logging, load_if_file, is_python_code, compile_python_object
 from .parsers import GrammarBase, CompilerBase, compile_source, nil_scanner
 from .syntaxtree import Node
@@ -266,9 +266,9 @@ def load_compiler_suite(compiler_suite):
         except ValueError as error:
             raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
-        scanner = compile_python_object(imports + scanner_py, '\w*Scanner$')
-        ast = compile_python_object(imports + ast_py, '\w*Transform$')
-        compiler = compile_python_object(imports + compiler_py, '\w*Compiler$')
+        scanner = compile_python_object(imports + scanner_py, 'get_\w*_scanner$')
+        ast = compile_python_object(imports + ast_py, 'get_\w*_transformer$')
+        compiler = compile_python_object(imports + compiler_py, 'get_\w*_compiler$')
     else:
         # assume source is an ebnf grammar
         with logging(False):
@@ -276,10 +276,10 @@ def load_compiler_suite(compiler_suite):
                 get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), source)
-        scanner = nil_scanner
-        ast = EBNFTransform
-        compiler = EBNFCompiler
-    parser = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')
+        scanner = get_ebnf_scanner
+        ast = get_ebnf_transformer
+        compiler = get_ebnf_compiler
+    parser = compile_python_object(DHPARSER_IMPORTS + parser_py, 'get_\w*_grammar$')
 
     return scanner, parser, ast, compiler
 
@@ -304,7 +304,7 @@ def is_outdated(compiler_suite, grammar_source):
     """
     try:
         scanner, grammar, ast, compiler = load_compiler_suite(compiler_suite)
-        return grammar_changed(grammar, grammar_source)
+        return grammar_changed(grammar(), grammar_source)
     except ValueError:
         return True
 
@@ -329,7 +329,7 @@ def run_compiler(text_or_file, compiler_suite):
         CompilerError
     """
     scanner, parser, ast, compiler = load_compiler_suite(compiler_suite)
-    return compileDSL(text_or_file, scanner, parser(), ast, compiler())
+    return compileDSL(text_or_file, scanner(), parser(), ast(), compiler())
 
 
 def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
@@ -369,19 +369,18 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
     rootname = os.path.splitext(filepath)[0]
     compiler_name = os.path.basename(rootname)
     if compiler_suite:
-        scanner, pclass, trans, cclass = load_compiler_suite(compiler_suite)
-        parser = pclass()
-        compiler1 = cclass()
+        scanner, parser, trans, cfactory = load_compiler_suite(compiler_suite)
     else:
-        scanner = nil_scanner
-        parser = get_ebnf_grammar()
-        trans = get_ebnf_transformer()
-        compiler1 = get_ebnf_compiler(compiler_name, source_file)
-    result, errors, ast = compile_source(source_file, scanner, parser, trans, compiler1)
+        scanner = get_ebnf_scanner
+        parser = get_ebnf_grammar
+        trans = get_ebnf_transformer
+        cfactory = get_ebnf_compiler
+    compiler1 = cfactory(compiler_name, source_file)
+    result, errors, ast = compile_source(source_file, scanner(), parser(), trans(), compiler1)
     if errors:
         return errors
 
-    elif trans == EBNFTransform:  # either an EBNF- or no compiler suite given
+    elif trans == get_ebnf_transformer or trans == EBNFTransform:  # either an EBNF- or no compiler suite given
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER
         f = None
