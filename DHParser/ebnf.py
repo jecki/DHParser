@@ -25,7 +25,7 @@ except ImportError:
     import re
 
 from .toolkit import load_if_file, escape_re, md5, sane_parser_name
-from .parsers import GrammarBase, mixin_comment, Forward, RE, NegativeLookahead, \
+from .parsers import GrammarBase, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
     Capture, Retrieve
 from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
@@ -39,6 +39,26 @@ __all__ = ['EBNFGrammar',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed']
+
+
+
+
+########################################################################
+#
+# EBNF scanning
+#
+########################################################################
+
+
+def get_ebnf_scanner():
+    return nil_scanner
+
+
+########################################################################
+#
+# EBNF parsing
+#
+########################################################################
 
 
 class EBNFGrammar(GrammarBase):
@@ -116,6 +136,54 @@ class EBNFGrammar(GrammarBase):
     root__ = syntax
 
 
+def grammar_changed(grammar_class, grammar_source):
+    """Returns ``True`` if ``grammar_class`` does not reflect the latest
+    changes of ``grammar_source``
+
+    Parameters:
+        grammar_class:  the parser class representing the grammar
+            or the file name of a compiler suite containing the grammar
+        grammar_source:  File name or string representation of the
+            EBNF code of the grammar
+
+    Returns (bool):
+        True, if the source text of the grammar is different from the
+        source from which the grammar class was generated
+    """
+    grammar = load_if_file(grammar_source)
+    chksum = md5(grammar, __version__)
+    if isinstance(grammar_class, str):
+        # grammar_class = load_compiler_suite(grammar_class)[1]
+        with open(grammar_class, 'r', encoding='utf8') as f:
+            pycode = f.read()
+        m = re.search('class \w*\(GrammarBase\)', pycode)
+        if m:
+            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
+                          pycode[m.span()[1]:])
+            return not (m and m.groups() and m.groups()[-1] == chksum)
+        else:
+            return True
+    else:
+        return chksum != grammar_class.source_hash__
+
+
+def get_ebnf_grammar():
+    global thread_local_ebnf_grammar_singleton
+    try:
+        grammar = thread_local_ebnf_grammar_singleton
+        return grammar
+    except NameError:
+        thread_local_ebnf_grammar_singleton = EBNFGrammar()
+        return thread_local_ebnf_grammar_singleton
+
+
+########################################################################
+#
+# EBNF concrete to abstract syntax tree transformation and validation
+#
+########################################################################
+
+
 #TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!?
 
 EBNF_transformation_table = {
@@ -159,6 +227,17 @@ def EBNFTransform(syntax_tree):
         traverse(syntax_tree, processing_table)
 
 
+def get_ebnf_transformer():
+    return EBNFTransform
+
+
+########################################################################
+#
+# EBNF abstract syntax tree to Python parser compilation
+#
+########################################################################
+
+
 class EBNFCompilerError(Exception):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
     in the strict sense, see `CompilationError` below)"""
@@ -182,8 +261,7 @@ class EBNFCompiler(CompilerBase):
                   'vertical': r'\s*'}
 
     def __init__(self, grammar_name="", grammar_source=""):
-        super(EBNFCompiler, self).__init__()
-        self.set_grammar_name(grammar_name, grammar_source)
+        super(EBNFCompiler, self).__init__(grammar_name, grammar_source)
         self._reset()
 
     def _reset(self):
@@ -198,13 +276,6 @@ class EBNFCompiler(CompilerBase):
                            'literalws': ['right'],
                            'tokens': set(),     # alt. 'scanner_tokens'
                            'counterpart': set()}     # alt. 'retrieve_counterpart'
-
-    def set_grammar_name(self, grammar_name, grammar_source):
-        assert grammar_name == "" or re.match('\w+\Z', grammar_name)
-        if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
-            grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
-        self.grammar_name = grammar_name
-        self.grammar_source = load_if_file(grammar_source)
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
@@ -234,9 +305,9 @@ class EBNFCompiler(CompilerBase):
                     self.grammar_name + ' source file.',
                     '    """', '',
                     '    def __init__(self, grammar_name="' +
-                    self.grammar_name + '"):',
+                    self.grammar_name + '", grammar_source=""):',
                     '        super(' + self.grammar_name +
-                    'Compiler, self).__init__()',
+                    'Compiler, self).__init__(grammar_name, grammar_source)',
                     "        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.definition_names:
             method_name = CompilerBase.derive_method_name(name)
@@ -523,32 +594,12 @@ class EBNFCompiler(CompilerBase):
         return set(item.result.strip() for item in node.result)
 
 
-def grammar_changed(grammar_class, grammar_source):
-    """Returns ``True`` if ``grammar_class`` does not reflect the latest
-    changes of ``grammar_source``
-
-    Parameters:
-        grammar_class:  the parser class representing the grammar
-            or the file name of a compiler suite containing the grammar
-        grammar_source:  File name or string representation of the
-            EBNF code of the grammar
-            
-    Returns (bool):
-        True, if the source text of the grammar is different from the
-        source from which the grammar class was generated
-    """
-    grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
-    if isinstance(grammar_class, str):
-        # grammar_class = load_compiler_suite(grammar_class)[1]
-        with open(grammar_class, 'r', encoding='utf8') as f:
-            pycode = f.read()
-        m = re.search('class \w*\(GrammarBase\)', pycode)
-        if m:
-            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
-                          pycode[m.span()[1]:])
-            return not (m and m.groups() and m.groups()[-1] == chksum)
-        else:
-            return True
-    else:
-        return chksum != grammar_class.source_hash__
+def get_ebnf_compiler(grammar_name="", grammar_source=""):
+    global thread_local_ebnf_compiler_singleton
+    try:
+        compiler = thread_local_ebnf_compiler_singleton
+        compiler.set_grammar_name(grammar_name, grammar_source)
+        return compiler
+    except NameError:
+        thread_local_ebnf_compiler_singleton = EBNFCompiler(grammar_name, grammar_source)
+        return thread_local_ebnf_compiler_singleton

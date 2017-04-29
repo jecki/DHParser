@@ -20,9 +20,9 @@ limitations under the License.
 """
 
 import copy
-import os
 import sys
-sys.path.append(os.path.abspath('../../'))
+sys.path.extend(['../', './'])
+
 from DHParser.toolkit import compact_sexpr
 from DHParser.syntaxtree import traverse, mock_syntax_tree
 

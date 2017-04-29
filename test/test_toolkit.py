@@ -20,10 +20,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import os
 import concurrent.futures
+import os
+import sys
+sys.path.extend(['../', './'])
 
 from DHParser.toolkit import load_if_file, logging, log_dir, is_logging
+
 
 class TestToolkit:
     filename = "tmp/test.py" if os.path.isdir('tmp') else "test/tmp/test.py"

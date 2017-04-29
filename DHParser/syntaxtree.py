@@ -338,11 +338,10 @@ class Node:
                     errors.extend(child.collect_errors(clear_errors))
         return errors
 
-    def log(self, log_file_name, ext):
-        if is_logging():
-            st_file_name = log_file_name + ext
-            with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
-                f.write(self.as_sexpr())
+    def log(self, log_file_name):
+        st_file_name = log_file_name
+        with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
+            f.write(self.as_sexpr())
 
     def find(self, match_function):
         """Finds nodes in the tree that match a specific criterion.

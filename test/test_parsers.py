@@ -19,16 +19,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import os
 import sys
+sys.path.extend(['../', './'])
 
-sys.path.append(os.path.abspath('../../'))
-from DHParser.toolkit import compile_python_object
+from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.parsers import compile_source
-from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import compileEBNF, DHPARSER_IMPORTS
-
-WRITE_LOGS = True
 
 
 class TestInfiLoopsAndRecursion:
@@ -47,8 +44,8 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert not syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
-        if WRITE_LOGS:
-            syntax_tree.log("test_LeftRecursion_direct", '.cst')
+        if is_logging():
+            syntax_tree.log("test_LeftRecursion_direct.cst")
             # self.minilang_parser1.log_parsing_history("test_LeftRecursion_direct")
 
     def test_indirect_left_recursion(self):
@@ -70,8 +67,8 @@ class TestRegex:
                   [+]    # followed by a plus sign
                   \w*    # possibly followed by more alpha chracters/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None,
-            EBNFGrammar(), EBNFTransform, EBNFCompiler('MultilineRegexTest'))
+        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
@@ -92,8 +89,8 @@ class TestRegex:
             test
             \end{document}
             """
-        result, messages, syntax_tree = compile_source(tokenlang, None, EBNFGrammar(),
-                                                       EBNFTransform, EBNFCompiler("TokenTest"))
+        result, messages, syntax_tree = compile_source(tokenlang, None, get_ebnf_grammar(),
+                                    get_ebnf_transformer(), get_ebnf_compiler("TokenTest"))
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
@@ -104,4 +101,4 @@ class TestRegex:
 
 if __name__ == "__main__":
     from run import runner
-    runner("TestInfiLoopsAndRecursion", globals())
+    runner("", globals())

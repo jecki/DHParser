@@ -22,6 +22,7 @@ limitations under the License.
 
 import os
 import sys
+sys.path.extend(['../', './'])
 
 from DHParser.dsl import compile_on_disk, run_compiler
 
@@ -48,6 +49,7 @@ class TestCompilerGeneration:
         for name in (self.grammar_name, self.compiler_name, self.text_name, self.result_name):
             if os.path.exists(name):
                 os.remove(name)
+        pass
 
     def test_compiling_functions(self):
         # test if cutting and reassembling of compiler suite works:

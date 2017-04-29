@@ -103,6 +103,7 @@ def logging(dirname="LOGS"):
             turn logging of
     """
     global LOGGING
+    if dirname == True:  dirname = "LOGS"  # be fail tolerant here...
     try:
         save = LOGGING
     except NameError:

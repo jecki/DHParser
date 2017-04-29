@@ -337,7 +337,7 @@ class GrammarBase:
         Returns:
             Node: The root node ot the parse tree.
         """
-        assert isinstance(document, str)
+        assert isinstance(document, str), type(document)
         if self.root__ is None:
             raise NotImplementedError()
         if self.dirty_flag:
@@ -391,21 +391,20 @@ class GrammarBase:
             elif os.path.exists(path):
                 os.remove(path)
 
-        if is_logging():
-            if not log_file_name:
-                name = self.__class__.__name__
-                log_file_name = name[:-7] if name.lower().endswith('grammar') else name
-            full_history, match_history, errors_only = [], [], []
-            for record in self.history:
-                line = ";  ".join(prepare_line(record))
-                full_history.append(line)
-                if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
-                    match_history.append(line)
-                    if record.node.errors:
-                        errors_only.append(line)
-            write_log(full_history, log_file_name + '_full')
-            write_log(match_history, log_file_name + '_match')
-            write_log(errors_only, log_file_name + '_errors')
+        if not log_file_name:
+            name = self.__class__.__name__
+            log_file_name = name[:-7] if name.lower().endswith('grammar') else name
+        full_history, match_history, errors_only = [], [], []
+        for record in self.history:
+            line = ";  ".join(prepare_line(record))
+            full_history.append(line)
+            if record.node and record.node.parser.name != WHITESPACE_KEYWORD:
+                match_history.append(line)
+                if record.node.errors:
+                    errors_only.append(line)
+        write_log(full_history, log_file_name + '_full')
+        write_log(match_history, log_file_name + '_match')
+        write_log(errors_only, log_file_name + '_errors')
 
 
 def dsl_error_msg(parser, error_str):
@@ -959,8 +958,9 @@ class Forward(Parser):
 
 
 class CompilerBase:
-    def __init__(self):
+    def __init__(self, grammar_name="", grammar_source=""):
         self.dirty_flag = False
+        self.set_grammar_name(grammar_name, grammar_source)
 
     def _reset(self):
         pass
@@ -977,6 +977,13 @@ class CompilerBase:
         else:
             self.dirty_flag = True
         return self._compile(node)
+
+    def set_grammar_name(self, grammar_name, grammar_source):
+        assert grammar_name == "" or re.match('\w+\Z', grammar_name)
+        if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
+            grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
+        self.grammar_name = grammar_name
+        self.grammar_source = load_if_file(grammar_source)
 
     @staticmethod
     def derive_method_name(node_name):
@@ -1012,7 +1019,7 @@ class CompilerBase:
             return result
 
 
-def compile_source(source, scan, parse, transform, compile_ast):
+def compile_source(source, scanner, parser, transformer, compiler):
     """Compiles a source in four stages:
         1. Scanning (if needed)
         2. Parsing
@@ -1024,13 +1031,13 @@ def compile_source(source, scan, parse, transform, compile_ast):
     Args:
         source (str): The input text for compilation or a the name of a
             file containing the input text.
-        scan (function):  text -> text. A scanner function or None,
+        scanner (function):  text -> text. A scanner function or None,
             if no scanner is needed.
-        parse (function):  A parsing function or grammar class 
-        transform (function):  A transformation function that takes
+        parser (function):  A parsing function or grammar class 
+        transformer (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
-        compile_ast (function): A compiler function or compiler class
+        compiler (function): A compiler function or compiler class
             instance 
 
     Returns (tuple):
@@ -1042,16 +1049,16 @@ def compile_source(source, scan, parse, transform, compile_ast):
         3. The root-node of the abstract syntax treelow
     """
     source_text = load_if_file(source)
-    log_file_name = logfile_basename(source, compile_ast)
-    if scan is not None:
-        source_text = scan(source_text)
-    syntax_tree = parse(source_text)
+    log_file_name = logfile_basename(source, compiler)
+    if scanner is not None:
+        source_text = scanner(source_text)
+    syntax_tree = parser(source_text)
     if is_logging():
-        syntax_tree.log(log_file_name, ext='.cst')
+        syntax_tree.log(log_file_name + '.cst')
         try:
-            parse.log_parsing_history(log_file_name)
+            parser.log_parsing_history(log_file_name)
         except AttributeError:
-            # this is a hack in case a parse function or method was
+            # this is a hack in case a parser function or method was
             # passed instead of a grammar class instance
             for nd in syntax_tree.find(lambda nd: bool(nd.parser)):
                 nd.parser.grammar.log_parsing_history(log_file_name)
@@ -1064,11 +1071,11 @@ def compile_source(source, scan, parse, transform, compile_ast):
         result = None
         errors = syntax_tree.collect_errors()
     else:
-        transform(syntax_tree)
-        if is_logging():  syntax_tree.log(log_file_name, ext='.ast')
+        transformer(syntax_tree)
+        if is_logging():  syntax_tree.log(log_file_name + '.ast')
         errors = syntax_tree.collect_errors()
         if not errors:
-            result = compile_ast(syntax_tree)
+            result = compiler(syntax_tree)
             errors = syntax_tree.collect_errors()
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree

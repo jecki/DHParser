@@ -24,8 +24,9 @@ import os
 import sys
 from functools import partial
 
+from DHParser.toolkit import logging
 from DHParser.dsl import compileDSL, compile_on_disk
-from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.parsers import compile_source, nil_scanner
 
 
@@ -34,10 +35,11 @@ def selftest(file_name):
     with open('examples/' + file_name, encoding="utf-8") as f:
         grammar = f.read()
     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
-    compiler = EBNFCompiler(compiler_name, grammar)
-    parser = EBNFGrammar()
+    parser = get_ebnf_grammar()
+    transformer = get_ebnf_transformer()
+    compiler = get_ebnf_compiler(compiler_name, grammar)
     result, errors, syntax_tree = compile_source(grammar, None, parser,
-                                                 EBNFTransform, compiler)
+                                                 transformer, compiler)
     print(result)
     if errors:
         print('\n\n'.join(errors))
@@ -46,7 +48,7 @@ def selftest(file_name):
         # compile the grammar again using the result of the previous
         # compilation as parser
         print(type(result))
-        result = compileDSL(grammar, nil_scanner, result, EBNFTransform, compiler)
+        result = compileDSL(grammar, nil_scanner, result, transformer, compiler)
         print(result)
     return result
 
@@ -80,4 +82,5 @@ if __name__ == "__main__":
     else:
         # run self test
         # selftest('EBNF/EBNF.ebnf')
-        profile(partial(selftest, file_name='EBNF/EBNF.ebnf'))
+        with logging(False):
+            profile(partial(selftest, file_name='EBNF/EBNF.ebnf'))

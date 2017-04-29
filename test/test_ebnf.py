@@ -21,15 +21,14 @@ limitations under the License.
 """
 
 from functools import partial
-import os
+from multiprocessing import Pool
 import sys
-sys.path.append(os.path.abspath('../../'))
+sys.path.extend(['../', './'])
+
+from DHParser.toolkit import is_logging
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_KEYWORD, nil_scanner
-from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import compileEBNF, compileDSL
-
-
-WRITE_LOGS = True
 
 
 class TestDirectives:
@@ -98,7 +97,7 @@ class TestEBNFParser:
 
 
     def setup(self):
-        self.EBNF = EBNFGrammar()
+        self.EBNF = get_ebnf_grammar()
 
     def test_literal(self):
         snippet = '"literal" '
@@ -154,8 +153,8 @@ class TestPopRetrieve:
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert delim == pop
-        if WRITE_LOGS:
-            syntax_tree.log("test_PopRetrieve_single_line", '.cst')
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_single_line.cst")
 
     def test_multi_line(self):
         teststr = """
@@ -171,8 +170,8 @@ class TestPopRetrieve:
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert delim == pop
-        if WRITE_LOGS:
-            syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_multi_line.cst")
 
     def test_single_line_complement(self):
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
@@ -181,8 +180,8 @@ class TestPopRetrieve:
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
-        if WRITE_LOGS:
-            syntax_tree.log("test_PopRetrieve_single_line", '.cst')
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_single_line.cst")
 
     def test_multi_line_complement(self):
         teststr = """
@@ -198,13 +197,13 @@ class TestPopRetrieve:
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
-        if WRITE_LOGS:
-            syntax_tree.log("test_PopRetrieve_multi_line", '.cst')
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_multi_line.cst")
 
 
 class TestSemanticValidation:
     def check(self, minilang, bool_filter=lambda x: x):
-        grammar = EBNFGrammar()
+        grammar = get_ebnf_grammar()
         st = grammar(minilang)
         assert not st.collect_errors()
         EBNFTransform(st)
@@ -226,67 +225,82 @@ class TestSemanticValidation:
 class TestCompilerErrors:
     def test_error_propagation(self):
         ebnf = "@ literalws = wrongvalue  # testing error propagation\n"
-        result, messages, st = compile_source(ebnf, None, EBNFGrammar(),
-            EBNFTransform, EBNFCompiler('ErrorPropagationTest'))
+        result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
+            get_ebnf_transformer(), get_ebnf_compiler('ErrorPropagationTest'))
         assert messages
 
 
 class TestSelfHosting:
+    grammar = r"""
+        # EBNF-Grammar in EBNF
+
+        @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+        @ whitespace =  /\s*/                            # whitespace includes linefeed
+        @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
+
+        syntax     =  [~//] { definition | directive } §EOF
+        definition =  symbol §"=" expression
+        directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
+
+        expression =  term { "|" term }
+        term       =  { factor }+
+        factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+                    | [flowmarker] literal
+                    | [flowmarker] regexp
+                    | [flowmarker] group
+                    | [flowmarker] regexchain
+                    | [flowmarker] oneormore
+                    | repetition
+                    | option
+
+        flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
+                      "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+        retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
+
+        group      =  "(" expression §")"
+        regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
+        oneormore  =  "{" expression "}+"
+        repetition =  "{" expression §"}"
+        option     =  "[" expression §"]"
+
+        link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
+
+        symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+        literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+                    | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+        regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                         # '~' is a whitespace-marker, if present leading or trailing
+                                                         # whitespace of a regular expression will be ignored tacitly.
+        list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                         # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+        EOF =  !/./        
+        """
+
     def test_self(self):
-        grammar = r"""
-            # EBNF-Grammar in EBNF
-            
-            @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-            @ whitespace =  /\s*/                            # whitespace includes linefeed
-            @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
-            
-            syntax     =  [~//] { definition | directive } §EOF
-            definition =  symbol §"=" expression
-            directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
-            
-            expression =  term { "|" term }
-            term       =  { factor }+
-            factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-                        | [flowmarker] literal
-                        | [flowmarker] regexp
-                        | [flowmarker] group
-                        | [flowmarker] regexchain
-                        | [flowmarker] oneormore
-                        | repetition
-                        | option
-            
-            flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
-                          "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-            retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
-            
-            group      =  "(" expression §")"
-            regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
-            oneormore  =  "{" expression "}+"
-            repetition =  "{" expression §"}"
-            option     =  "[" expression §"]"
-            
-            link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
-            
-            symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-            literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                        | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-            regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                             # '~' is a whitespace-marker, if present leading or trailing
-                                                             # whitespace of a regular expression will be ignored tacitly.
-            list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                             # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-            EOF =  !/./        
-            """
         compiler_name = "EBNF"
-        compiler = EBNFCompiler(compiler_name, grammar)
-        parser = EBNFGrammar()
-        result, errors, syntax_tree = compile_source(grammar, None, parser,
-                                                     EBNFTransform, compiler)
+        compiler = get_ebnf_compiler(compiler_name, self.grammar)
+        parser = get_ebnf_grammar()
+        result, errors, syntax_tree = compile_source(self.grammar, None, parser,
+                                            get_ebnf_transformer(), compiler)
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
-        compileDSL(grammar, nil_scanner, result, EBNFTransform, compiler)
+        compileDSL(self.grammar, nil_scanner, result, get_ebnf_transformer(), compiler)
 
+    def multiprocessing_task(self):
+        compiler_name = "EBNF"
+        compiler = get_ebnf_compiler(compiler_name, self.grammar)
+        parser = get_ebnf_grammar()
+        result, errors, syntax_tree = compile_source(self.grammar, None, parser,
+                                            get_ebnf_transformer(), compiler)
+        return errors
+
+    def test_multiprocessing(self):
+        with Pool(processes=2) as pool:
+            res = [pool.apply_async(self.multiprocessing_task, ()) for i in range(4)]
+            errors = [r.get(timeout=5) for r in res]
+        for i, e in enumerate(errors):
+            assert not e, ("%i: " % i) + str(e)
 
 
 if __name__ == "__main__":

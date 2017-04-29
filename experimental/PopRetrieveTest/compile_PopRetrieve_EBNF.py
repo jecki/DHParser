@@ -23,10 +23,10 @@ limitations under the License.
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.dsl import compile_on_disk, suite_outdated
+from DHParser.dsl import compile_on_disk, is_outdated
 
 if (not os.path.exists('PopRetrieve_compiler.py') or
-    suite_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
+    is_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
     print("recompiling PopRetrieve parser")
     errors = compile_on_disk("PopRetrieve.ebnf")
     if errors:
@@ -68,7 +68,7 @@ if errors:
 
 
 if (not os.path.exists('PopRetrieveComplement_compiler.py') or
-        suite_outdated('PopRetrieveComplement_compiler.py', 'PopRetrieveComplement.ebnf')):
+        is_outdated('PopRetrieveComplement_compiler.py', 'PopRetrieveComplement.ebnf')):
     print("recompiling PopRetrieveComplement parser")
     errors = compile_on_disk("PopRetrieveComplement.ebnf")
     if errors:
