@@ -1404,7 +1404,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     """
     assert isinstance(compiler, CompilerBase)
 
-    syntax_tree = grammar_base.parse(source)
+    syntax_tree = grammar_base(source)
     syntax_tree.log(grammar_base.log_file_name, ext='.cst')
     grammar_base.log_parsing_history()
 

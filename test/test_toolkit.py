@@ -21,9 +21,9 @@ limitations under the License.
 """
 
 import os
-import sys
+import concurrent.futures
 
-from DHParser.toolkit import load_if_file
+from DHParser.toolkit import load_if_file, logging, log_dir, is_logging
 
 class TestToolkit:
     filename = "tmp/test.py" if os.path.isdir('tmp') else "test/tmp/test.py"
@@ -36,6 +36,9 @@ class TestToolkit:
 
     def teardown(self):
         os.remove(self.filename)
+        if os.path.exists("TESTLOGS"):
+            os.remove("TESTLOGS/info.txt")
+            os.rmdir("TESTLOGS")
 
     def test_load_if_file(self):
         # an error should be raised if file expected but not found
@@ -61,6 +64,49 @@ class TestToolkit:
 
         # file correctly loaded
         assert self.code2 == load_if_file(self.filename)
+
+    def test_logging(self):
+        try:
+            log_dir()
+            assert False, "Name error should be raised when log_dir() is called outside " \
+                          "a logging context."
+        except NameError:
+            pass
+        with logging("TESTLOGS"):
+            assert not os.path.exists("TESTSLOGS"), \
+                "Log dir should not be created before first use!"
+            dirname = log_dir()
+            assert dirname == "TESTLOGS"
+            assert is_logging(), "is_logging() should return True, if logging is on"
+            with logging(False):
+                assert not is_logging(), \
+                    "is_logging() should return False, if innermost logging context " \
+                    "has logging turned off."
+            assert is_logging(), "is_logging() should return True after logging off " \
+                                 "context has been left"
+            assert os.path.exists("TESTLOGS/info.txt"), "an 'info.txt' file should be " \
+                "created within a newly created log dir"
+        # cleanup
+        os.remove("TESTLOGS/info.txt")
+        os.rmdir("TESTLOGS")
+
+    def logging_task(self):
+        with logging("TESTLOGS"):
+            log_dir()
+            assert is_logging(), "Logging should be on inside logging context"
+        assert not is_logging(), "Logging should be off outside logging context"
+        return os.path.exists("TESTLOGS/info.txt")
+
+    def test_logging_multiprocessing(self):
+        with concurrent.futures.ProcessPoolExecutor() as ex:
+            f1 = ex.submit(self.logging_task)
+            f2 = ex.submit(self.logging_task)
+            f3 = ex.submit(self.logging_task)
+            f4 = ex.submit(self.logging_task)
+        assert f1.result()
+        assert f2.result()
+        assert f3.result()
+        assert f4.result()
 
 
 if __name__ == "__main__":

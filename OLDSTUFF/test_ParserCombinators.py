@@ -150,7 +150,7 @@ class TestEBNFCompiler:
                                                          EBNFTransTable, EBNFCompiler('RegExTest'))
         assert messages == "", messages
         ebnf_line = r"""regexbad =  ~/\/(?:[^\/]|(?<=\\)*\//~""" + '\n'  # missing ")" should be detected
-        result = EBNFGrammar().parse(ebnf_line)
+        result = EBNFGrammar()(ebnf_line)
         result, messages, syntax_tree = full_compilation(ebnf_line, EBNFGrammar(),
                                                          EBNFTransTable, EBNFCompiler('RegExTest'))
         assert messages != ""

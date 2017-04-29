@@ -31,6 +31,7 @@ already exists.
 """
 
 import collections
+import contextlib
 import hashlib
 import os
 try:
@@ -39,13 +40,13 @@ except ImportError:
     import re
 
 
-__all__ = ['logging_on',
-           'logging_off',
-           'IS_LOGGING',
-           'LOGS_DIR',
+__all__ = ['logging',
+           'is_logging',
+           'log_dir',
            'line_col',
            'error_messages',
            'escape_re',
+           'is_filename',
            'load_if_file',
            'is_python_code',
            'md5',
@@ -54,51 +55,35 @@ __all__ = ['logging_on',
            'sane_parser_name']
 
 
-LOGGING: str = ""  # "LOGS"  # LOGGING = "" turns logging off!
+def log_dir() -> str:
+    """Creates a directory for log files (if it does not exist) and
+    returns its path.
 
+    WARNING: Any files in the log dir will eventually be overwritten.
+    Don't use a directory name that could be the name of a directory
+    for other purposes than logging.
 
-def logging_on(log_subdir="LOGS"):
-    "Turns logging of syntax trees and parser history on."
-    global LOGGING
-    LOGGING = log_subdir
-
-
-def logging_off():
-    "Turns logging of syntax trees and parser history off."
-    global LOGGING
-    LOGGING = ""
-
-
-def IS_LOGGING():
-    """-> True, if logging is turned on."""
-    return bool(LOGGING)
-
-
-def LOGS_DIR() -> str:
-    """Returns a path of a directory where log files will be stored.
-    
-    The default name of the logging directory is taken from the LOGGING
-    variabe (default value 'LOGS'). The directory will be created if it
-    does not exist. If the directory name does not contain a leading
-    slash '/' it will be created as a subdirectory of the current
-    directory Any files in the logging directory can be overwritten!
-    
-    Raises:
-        AssertionError if logging has been turned off 
     Returns:
         name of the logging directory
     """
+    # the try-except clauses in the following are precautions for multiprocessing
     global LOGGING
-    if not LOGGING:
-        raise AssertionError("Cannot use LOGS_DIR() if logging is turned off!")
-    dirname = LOGGING
-    if os.path.exists(LOGGING):
-        if not os.path.isdir(LOGGING):
-            raise IOError('"' + LOGGING + '" cannot be used as log directory, '
-                                          'because it is not a directory!')
+    try:
+        dirname = LOGGING    # raises a name error if LOGGING is not defined
+        if not dirname:
+            raise NameError  # raise a name error if LOGGING evaluates to False
+    except NameError:
+        raise NameError("No access to log directory before logging has been turned "
+                        "on within the same thread/process.")
+    if os.path.exists(dirname) and not os.path.isdir(dirname):
+        raise IOError('"' + dirname + '" cannot be used as log directory, '
+                                      'because it is not a directory!')
     else:
-        os.mkdir(LOGGING)
-    info_file_name = os.path.join(LOGGING, 'info.txt')
+        try:
+            os.mkdir(dirname)
+        except FileExistsError:
+            pass
+    info_file_name = os.path.join(dirname, 'info.txt')
     if not os.path.exists(info_file_name):
         with open(info_file_name, 'w') as f:
             f.write("This directory has been created by DHParser to store log files from\n"
@@ -106,6 +91,34 @@ def LOGS_DIR() -> str:
                     "do not place any files here and do not bother editing files in this\n"
                     "directory as any changes will get lost.\n")
     return dirname
+
+
+@contextlib.contextmanager
+def logging(dirname="LOGS"):
+    """Context manager. Log files within this context will be stored in
+    directory ``dirname``. Logging is turned off if name is empty.
+    
+    Args:
+        dirname: the name for the log directory or the empty string to
+            turn logging of
+    """
+    global LOGGING
+    try:
+        save = LOGGING
+    except NameError:
+        save = ""
+    LOGGING = dirname
+    yield
+    LOGGING = save
+
+
+def is_logging():
+    """-> True, if logging is turned on."""
+    global LOGGING
+    try:
+        return bool(LOGGING)
+    except NameError:
+        return False
 
 
 def line_col(text, pos):
@@ -155,12 +168,33 @@ def escape_re(s):
     return s
 
 
+def is_filename(s):
+    """Tries to guess whether string ``s`` is a file name."""
+    return s.find('\n') < 0 and s[:1] != " " and s[-1:] != " " \
+           and s.find('*') < 0 and s.find('?') < 0
+
+
+def logfile_basename(filename_or_text, function_or_class_or_instance):
+    """Generates a reasonable logfile-name (without extension) based on
+    the given information.
+    """
+    if is_filename(filename_or_text):
+        return os.path.basename(os.path.splitext(filename_or_text)[0])
+    else:
+        try:
+            s = function_or_class_or_instance.__qualname.__
+        except AttributeError:
+            s = function_or_class_or_instance.__class__.__name__
+        i = s.find('.')
+        return s[:i] + '_out' if i >= 0 else s
+
+
 def load_if_file(text_or_file):
     """Reads and returns content of a file if parameter `text_or_file` is a
     file name (i.e. a single line string), otherwise (i.e. if `text_or_file` is
     a multiline string) `text_or_file` is returned.
     """
-    if text_or_file.find('\n') < 0:
+    if is_filename(text_or_file):
         try:
             with open(text_or_file, encoding="utf-8") as f:
                 content = f.read()
@@ -179,7 +213,7 @@ def is_python_code(text_or_file):
     """Checks whether 'text_or_file' is python code or the name of a file that
     contains python code.
     """
-    if text_or_file.find('\n') < 0:
+    if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
         compile(text_or_file, '<string>', 'exec')

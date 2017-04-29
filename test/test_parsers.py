@@ -24,7 +24,7 @@ import sys
 
 sys.path.append(os.path.abspath('../../'))
 from DHParser.toolkit import compile_python_object
-from DHParser.parsers import full_compilation
+from DHParser.parsers import compile_source
 from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
 from DHParser.dsl import compileEBNF, DHPARSER_IMPORTS
 
@@ -44,7 +44,7 @@ class TestInfiLoopsAndRecursion:
         snippet = "5 + 3 * 4"
         parser = compileEBNF(minilang)()
         assert parser
-        syntax_tree = parser.parse(snippet)
+        syntax_tree = parser(snippet)
         assert not syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
         if WRITE_LOGS:
@@ -58,7 +58,7 @@ class TestInfiLoopsAndRecursion:
         minilang = """not_forever = { // } \n"""
         snippet = " "
         parser = compileEBNF(minilang)()
-        syntax_tree = parser.parse(snippet)
+        syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.collect_errors())
 
@@ -70,9 +70,8 @@ class TestRegex:
                   [+]    # followed by a plus sign
                   \w*    # possibly followed by more alpha chracters/
         """
-        result, messages, syntax_tree = full_compilation(mlregex, None,
-                                                         EBNFGrammar(), EBNFTransform,
-                                                         EBNFCompiler('MultilineRegexTest'))
+        result, messages, syntax_tree = compile_source(mlregex, None,
+            EBNFGrammar(), EBNFTransform, EBNFCompiler('MultilineRegexTest'))
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
@@ -93,12 +92,12 @@ class TestRegex:
             test
             \end{document}
             """
-        result, messages, syntax_tree = full_compilation(tokenlang, None,
-                                                         EBNFGrammar(), EBNFTransform, EBNFCompiler("TokenTest"))
+        result, messages, syntax_tree = compile_source(tokenlang, None, EBNFGrammar(),
+                                                       EBNFTransform, EBNFCompiler("TokenTest"))
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
-        result = parser.parse(testdoc)
+        result = parser(testdoc)
         # parser.log_parsing_history("test.log")
         assert not result.error_flag
 

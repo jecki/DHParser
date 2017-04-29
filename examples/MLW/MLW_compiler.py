@@ -17,7 +17,7 @@ from DHParser.toolkit import load_if_file
 from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
@@ -444,8 +444,8 @@ class MLWCompiler(CompilerBase):
 def compile_MLW(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    return full_compilation(source, MLWScanner,
-        MLWGrammar(), MLWTransform, MLWCompiler())
+    return compile_source(source, MLWScanner,
+                          MLWGrammar(), MLWTransform, MLWCompiler())
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

@@ -41,9 +41,8 @@ if (not os.path.exists(MLW_compiler) or
         print('\n'.join(errors))
         sys.exit(1)
 
-toolkit.logging_on()
-
-errors = compile_on_disk("fascitergula.mlw", MLW_compiler, ".xml")
+with toolkit.logging():
+    errors = compile_on_disk("fascitergula.mlw", MLW_compiler, ".xml")
 if errors:
     print('\n'.join(errors))
     sys.exit(1)

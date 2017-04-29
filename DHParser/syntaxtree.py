@@ -27,7 +27,7 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from .toolkit import IS_LOGGING, LOGS_DIR, expand_table, line_col, smart_list
+from .toolkit import is_logging, log_dir, expand_table, line_col, smart_list
 
 
 __all__ = ['WHITESPACE_KEYWORD',
@@ -339,9 +339,9 @@ class Node:
         return errors
 
     def log(self, log_file_name, ext):
-        if IS_LOGGING():
+        if is_logging():
             st_file_name = log_file_name + ext
-            with open(os.path.join(LOGS_DIR(), st_file_name), "w", encoding="utf-8") as f:
+            with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
                 f.write(self.as_sexpr())
 
     def find(self, match_function):

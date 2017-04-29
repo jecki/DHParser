@@ -24,7 +24,7 @@ from functools import partial
 import os
 import sys
 sys.path.append(os.path.abspath('../../'))
-from DHParser.parsers import full_compilation, Retrieve, WHITESPACE_KEYWORD, nil_scanner
+from DHParser.parsers import compile_source, Retrieve, WHITESPACE_KEYWORD, nil_scanner
 from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
 from DHParser.dsl import compileEBNF, compileDSL
 
@@ -46,42 +46,42 @@ class TestDirectives:
         MinilangParser = compileEBNF(lang)
         parser = MinilangParser()
         assert parser
-        syntax_tree = parser.parse("3 + 4 * 12")
+        syntax_tree = parser("3 + 4 * 12")
         # parser.log_parsing_history("WSP")
         assert not syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n * 12")
+        syntax_tree = parser("3 + 4 \n * 12")
         # parser.log_parsing_history("WSPLF")
         assert not syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n \n * 12")
+        syntax_tree = parser("3 + 4 \n \n * 12")
         assert syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n\n * 12")
+        syntax_tree = parser("3 + 4 \n\n * 12")
         assert syntax_tree.collect_errors()
 
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language
         parser = compileEBNF(lang)()
         assert parser
-        syntax_tree = parser.parse("3 + 4 * 12")
+        syntax_tree = parser("3 + 4 * 12")
         assert not syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n * 12")
+        syntax_tree = parser("3 + 4 \n * 12")
         assert not syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n \n * 12")
+        syntax_tree = parser("3 + 4 \n \n * 12")
         assert not syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n\n * 12")
+        syntax_tree = parser("3 + 4 \n\n * 12")
         assert not syntax_tree.collect_errors()
 
     def test_whitespace_horizontal(self):
         lang = "@ whitespace = horizontal\n" + self.mini_language
         parser = compileEBNF(lang)()
         assert parser
-        syntax_tree = parser.parse("3 + 4 * 12")
+        syntax_tree = parser("3 + 4 * 12")
         assert not syntax_tree.collect_errors()
-        syntax_tree = parser.parse("3 + 4 \n * 12")
+        syntax_tree = parser("3 + 4 \n * 12")
         assert syntax_tree.collect_errors()
 
 
 class TestEBNFParser:
-    test_json = {
+    cases = {
         "list_": {
             "match": {
                 1: "hund",
@@ -102,12 +102,12 @@ class TestEBNFParser:
 
     def test_literal(self):
         snippet = '"literal" '
-        result = self.EBNF.parse(snippet, 'literal')
+        result = self.EBNF(snippet, 'literal')
         assert not result.error_flag
         assert str(result) == snippet
         assert result.find(lambda node: str(node) == WHITESPACE_KEYWORD)
 
-        result = self.EBNF.parse(' "literal"', 'literal')
+        result = self.EBNF(' "literal"', 'literal')
         assert result.error_flag  # literals catch following, but not leading whitespace
 
 
@@ -149,7 +149,7 @@ class TestPopRetrieve:
 
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
-        syntax_tree = self.minilang_parser.parse(teststr)
+        syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.collect_errors()
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
@@ -166,7 +166,7 @@ class TestPopRetrieve:
 
             Mehrzeliger ```code block
             """
-        syntax_tree = self.minilang_parser.parse(teststr)
+        syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.collect_errors()
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
@@ -176,7 +176,7 @@ class TestPopRetrieve:
 
     def test_single_line_complement(self):
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
-        syntax_tree = self.minilang_parser2.parse(teststr)
+        syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.collect_errors()
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
@@ -193,7 +193,7 @@ class TestPopRetrieve:
 
             Mehrzeliger }}}code block
             """
-        syntax_tree = self.minilang_parser2.parse(teststr)
+        syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.collect_errors()
         delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
@@ -205,7 +205,7 @@ class TestPopRetrieve:
 class TestSemanticValidation:
     def check(self, minilang, bool_filter=lambda x: x):
         grammar = EBNFGrammar()
-        st = grammar.parse(minilang)
+        st = grammar(minilang)
         assert not st.collect_errors()
         EBNFTransform(st)
         assert bool_filter(st.collect_errors())
@@ -226,8 +226,8 @@ class TestSemanticValidation:
 class TestCompilerErrors:
     def test_error_propagation(self):
         ebnf = "@ literalws = wrongvalue  # testing error propagation\n"
-        result, messages, st = full_compilation(ebnf, None, EBNFGrammar(), EBNFTransform,
-                                                EBNFCompiler('ErrorPropagationTest'))
+        result, messages, st = compile_source(ebnf, None, EBNFGrammar(),
+            EBNFTransform, EBNFCompiler('ErrorPropagationTest'))
         assert messages
 
 
@@ -280,8 +280,8 @@ class TestSelfHosting:
         compiler_name = "EBNF"
         compiler = EBNFCompiler(compiler_name, grammar)
         parser = EBNFGrammar()
-        result, errors, syntax_tree = full_compilation(grammar, None, parser,
-                                                       EBNFTransform, compiler)
+        result, errors, syntax_tree = compile_source(grammar, None, parser,
+                                                     EBNFTransform, compiler)
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser

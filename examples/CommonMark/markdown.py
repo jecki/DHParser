@@ -203,7 +203,7 @@ MDTransTable = {
 
 markdown_text = markdown_scanner(markdown_text)
 print(markdown_text)
-syntax_tree = parser.parse(markdown_text)
+syntax_tree = parser(markdown_text)
 ASTTransform(syntax_tree, MDTransTable)
 
 print(syntax_tree.as_sexpr())

@@ -28,8 +28,8 @@ except ImportError:
     import re
 
 from .ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler, grammar_changed
-from .toolkit import load_if_file, is_python_code, compile_python_object
-from .parsers import GrammarBase, CompilerBase, full_compilation, nil_scanner
+from .toolkit import logging, load_if_file, is_python_code, compile_python_object
+from .parsers import GrammarBase, CompilerBase, compile_source, nil_scanner
 from .syntaxtree import Node
 
 
@@ -86,16 +86,17 @@ class CompilationError(Exception):
 
 DHPARSER_IMPORTS = '''
 from functools import partial
+import os
 import sys
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import load_if_file    
+from DHParser.toolkit import logging, is_filename, load_if_file    
 from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, full_compilation
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
@@ -107,8 +108,17 @@ DHPARSER_COMPILER = '''
 def compile_{NAME}(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    return full_compilation(source, {NAME}Scanner,
-        {NAME}Grammar(), {NAME}Transform, {NAME}Compiler())
+    with logging("LOGS"):
+        grammar = {NAME}Grammar()
+        compiler = {NAME}Compiler()
+        cname = compiler.__class__.__name__
+        log_file_name = os.path.basename(os.path.splitext(source)[0]) \\
+            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
+        result = compile_source(source, {NAME}Scanner, grammar.parse,
+                                {NAME}Transform, compiler.compile_ast)
+        grammar.log_parsing_history(log_file_name)
+    return result
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -136,8 +146,9 @@ def grammar_instance(grammar_representation):
         if is_python_code(grammar_representation):
             parser_py, errors, AST = grammar_src, '', None
         else:
-            parser_py, errors, AST = full_compilation(grammar_src, None,
-                                                      EBNFGrammar(), EBNFTransform, EBNFCompiler())
+            with logging(False):
+                parser_py, errors, AST = compile_source(grammar_src, None,
+                    EBNFGrammar(), EBNFTransform, EBNFCompiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
@@ -147,7 +158,8 @@ def grammar_instance(grammar_representation):
         if isinstance(grammar_representation, GrammarBase):
             parser_root = grammar_representation
         else:
-            # assume `grammar` is a grammar class and get the root object
+            # assume ``grammar_representation`` is a grammar class and get the root object
+            # TODO: further case: grammar_representation is a method
             parser_root = grammar_representation()
     return parser_root, grammar_src
 
@@ -162,11 +174,13 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
     """
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
+
     parser_root, grammar_src = grammar_instance(dsl_grammar)
-    src = load_if_file(text_or_file)
-    result, errors, AST = full_compilation(src, scanner, parser_root,
-                                           ast_transformation, compiler)
-    if errors:  raise CompilationError(errors, src, grammar_src, AST)
+    result, errors, AST = compile_source(text_or_file, scanner, parser_root,
+                                         ast_transformation, compiler)
+    if errors:
+        src = load_if_file(text_or_file)
+        raise CompilationError(errors, src, grammar_src, AST)
     return result
 
 
@@ -217,8 +231,8 @@ def load_compiler_suite(compiler_suite):
         compiler = compile_python_object(imports + compiler_py, '\w*Compiler$')
     else:
         # assume source is an ebnf grammar
-        parser_py, errors, AST = full_compilation(
-            source, None, EBNFGrammar(), EBNFTransform, EBNFCompiler())
+        parser_py, errors, AST = compile_source(source, None, EBNFGrammar(),
+                                                EBNFTransform, EBNFCompiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), source)
         scanner = nil_scanner
@@ -322,7 +336,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
         parser = EBNFGrammar()
         trans = EBNFTransform
         compiler1 = EBNFCompiler(compiler_name, source_file)
-    result, errors, ast = full_compilation(source_file, scanner, parser, trans, compiler1)
+    result, errors, ast = compile_source(source_file, scanner, parser, trans, compiler1)
     if errors:
         return errors
 

@@ -56,7 +56,7 @@ try:
 except ImportError:
     import re
 
-from .toolkit import IS_LOGGING, LOGS_DIR, escape_re, sane_parser_name
+from .toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from .syntaxtree import WHITESPACE_KEYWORD, TOKEN_KEYWORD, ZOMBIE_PARSER, Node, \
     mock_syntax_tree
 from DHParser.toolkit import load_if_file, error_messages
@@ -92,7 +92,7 @@ __all__ = ['HistoryRecord',
            'Pop',
            'Forward',
            'CompilerBase',
-           'full_compilation']
+           'compile_source']
 
 
 LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
@@ -288,7 +288,7 @@ class GrammarBase:
     def __init__(self):
         self.all_parsers = set()
         self.dirty_flag = False
-        self.history_tracking = IS_LOGGING()
+        self.history_tracking = is_logging()
         self._reset()
         self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
@@ -326,7 +326,7 @@ class GrammarBase:
         self.all_parsers.add(parser)
         parser.grammar = self
 
-    def parse(self, document, start_parser="root__"):
+    def __call__(self, document, start_parser="root__"):
         """Parses a document with with parser-combinators.
 
         Args:
@@ -384,14 +384,14 @@ class GrammarBase:
             return record.stack, record.status, excerpt
 
         def write_log(history, log_name):
-            path = os.path.join(LOGS_DIR(), log_name + "_parser.log")
+            path = os.path.join(log_dir(), log_name + "_parser.log")
             if history:
                 with open(path, "w", encoding="utf-8") as f:
                     f.write("\n".join(history))
             elif os.path.exists(path):
                 os.remove(path)
 
-        if IS_LOGGING():
+        if is_logging():
             if not log_file_name:
                 name = self.__class__.__name__
                 log_file_name = name[:-7] if name.lower().endswith('grammar') else name
@@ -965,10 +965,10 @@ class CompilerBase:
     def _reset(self):
         pass
 
-    def compile_all(self, node):
+    def __call__(self, node):
         """Compiles the abstract syntax tree with the root ``node``.
         
-        It's called `compile_all`` to avoid confusion with the 
+        It's called `compile_ast`` to avoid confusion with the 
         ``_compile`` that is called from within the local node 
         compiler methods.
         """
@@ -1012,7 +1012,7 @@ class CompilerBase:
             return result
 
 
-def full_compilation(source, scanner, parser, transform, compiler):
+def compile_source(source, scan, parse, transform, compile_ast):
     """Compiles a source in four stages:
         1. Scanning (if needed)
         2. Parsing
@@ -1024,15 +1024,14 @@ def full_compilation(source, scanner, parser, transform, compiler):
     Args:
         source (str): The input text for compilation or a the name of a
             file containing the input text.
-        scanner (function):  text -> text. A scanner function or None,
+        scan (function):  text -> text. A scanner function or None,
             if no scanner is needed.
-        parser (GrammarBase):  The GrammarBase object
+        parse (function):  A parsing function or grammar class 
         transform (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
-        compiler (object):  An instance of a class derived from
-            ``CompilerBase`` with a suitable method for every parser
-            name or class.
+        compile_ast (function): A compiler function or compiler class
+            instance 
 
     Returns (tuple):
         The result of the compilation as a 3-tuple
@@ -1042,16 +1041,21 @@ def full_compilation(source, scanner, parser, transform, compiler):
         2. A list of error messages
         3. The root-node of the abstract syntax treelow
     """
-    assert isinstance(compiler, CompilerBase)
-
     source_text = load_if_file(source)
-    log_file_name = os.path.basename(os.path.splitext(source)[0]) if source != source_text \
-        else compiler.__class__.__name__ + '_out'
-    if scanner is not None:
-        source_text = scanner(source_text)
-    syntax_tree = parser.parse(source_text)
-    syntax_tree.log(log_file_name, ext='.cst')
-    parser.log_parsing_history(log_file_name)
+    log_file_name = logfile_basename(source, compile_ast)
+    if scan is not None:
+        source_text = scan(source_text)
+    syntax_tree = parse(source_text)
+    if is_logging():
+        syntax_tree.log(log_file_name, ext='.cst')
+        try:
+            parse.log_parsing_history(log_file_name)
+        except AttributeError:
+            # this is a hack in case a parse function or method was
+            # passed instead of a grammar class instance
+            for nd in syntax_tree.find(lambda nd: bool(nd.parser)):
+                nd.parser.grammar.log_parsing_history(log_file_name)
+                break
 
     assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
@@ -1061,10 +1065,10 @@ def full_compilation(source, scanner, parser, transform, compiler):
         errors = syntax_tree.collect_errors()
     else:
         transform(syntax_tree)
-        syntax_tree.log(log_file_name, ext='.ast')
+        if is_logging():  syntax_tree.log(log_file_name, ext='.ast')
         errors = syntax_tree.collect_errors()
         if not errors:
-            result = compiler.compile_all(syntax_tree)
+            result = compile_ast(syntax_tree)
             errors = syntax_tree.collect_errors()
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree

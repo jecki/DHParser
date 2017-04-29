@@ -26,7 +26,7 @@ from functools import partial
 
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler
-from DHParser.parsers import full_compilation, nil_scanner
+from DHParser.parsers import compile_source, nil_scanner
 
 
 def selftest(file_name):
@@ -36,8 +36,8 @@ def selftest(file_name):
     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
     compiler = EBNFCompiler(compiler_name, grammar)
     parser = EBNFGrammar()
-    result, errors, syntax_tree = full_compilation(grammar, None, parser,
-                                                   EBNFTransform, compiler)
+    result, errors, syntax_tree = compile_source(grammar, None, parser,
+                                                 EBNFTransform, compiler)
     print(result)
     if errors:
         print('\n\n'.join(errors))
