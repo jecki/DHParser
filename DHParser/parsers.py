@@ -288,7 +288,6 @@ class GrammarBase:
     def __init__(self):
         self.all_parsers = set()
         self.dirty_flag = False
-        self.history_tracking = is_logging()
         self._reset()
         self._assign_parser_names()
         self.root__ = copy.deepcopy(self.__class__.root__)
@@ -315,6 +314,7 @@ class GrammarBase:
         self.last_node = None
         self.call_stack = []  # support for call stack tracing
         self.history = []  # snapshots of call stacks
+        self.history_tracking = is_logging()
         self.moving_forward = True  # also needed for call stack tracing
 
     def _add_parser(self, parser):
@@ -1081,13 +1081,31 @@ def compile_source(source, scanner, parser, transformer, compiler):
     return result, messages, syntax_tree
 
 
-def test_grammar(test_suite, parse_function, transform):
+def test_grammar(test_suite, parser, transform):
+    errata = []
     for parser_name, tests in test_suite.items():
-        assert set(tests.keys()).issubset({'match', 'fail', 'ast', 'cst'})
+        assert set(tests.keys()).issubset({'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'})
+
         for test_name, test_code in tests['match'].items():
-            cst = parse_function(test_code, parser_name)
+            cst = parser(test_code, parser_name)
+            tests['__cst__'][test_name] = cst
+            if cst.error_flag:
+                errata.append("Test %s for parser %s : didn't match: \n%s" %
+                              (test_name, parser_name,
+                               error_messages(test_code, cst.collect_errors())))
+            elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
+                    errata.append("Test %s for parser %s : wrong CST: \n%s" %
+                                  (test_name, parser_name, cst.as_sexpr()))
+            elif "ast" in tests:
+                ast = transform(cst)
+                tests['__ast__'][test_name] = ast
+                if mock_syntax_tree(tests["ast"][test_name]) != ast:
+                    errata.append("Test %s for parser %s : wrong AST: \n%s" %
+                                  (test_name, parser_name, ast.as_sexpr()))
+
+        for test_name, test_code in tests['fail'].items():
+            cst = parser(test_code, parser_name)
             if not cst.error_flag:
-                yield "Test %s for parser %s did not match" % (test_name, parser_name)
-            if "cst" in tests:
-                if tests["cst"][test_name] != mock_syntax_tree(cst):
-                    pass # TO BE CONTINUED
+                errata.append("Test %s for parser %s : shouldn't have matched!" %
+                              (test_name, parser_name))
+    return errata

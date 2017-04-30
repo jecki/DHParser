@@ -27,7 +27,7 @@ sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_KEYWORD, nil_scanner
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
 from DHParser.dsl import compileEBNF, compileDSL
 
 
@@ -206,7 +206,7 @@ class TestSemanticValidation:
         grammar = get_ebnf_grammar()
         st = grammar(minilang)
         assert not st.collect_errors()
-        EBNFTransform(st)
+        EBNFTransformer(st)
         assert bool_filter(st.collect_errors())
 
     def test_illegal_nesting(self):

@@ -46,9 +46,9 @@ class TestCompilerGeneration:
             f.write(self.trivial_text)
 
     def teardown(self):
-        # for name in (self.grammar_name, self.compiler_name, self.text_name, self.result_name):
-        #     if os.path.exists(name):
-        #         os.remove(name)
+        for name in (self.grammar_name, self.compiler_name, self.text_name, self.result_name):
+            if os.path.exists(name):
+                os.remove(name)
         pass
 
     def test_compiling_functions(self):

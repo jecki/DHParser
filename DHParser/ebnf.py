@@ -35,7 +35,7 @@ from .versionnumber import __version__
 
 
 __all__ = ['EBNFGrammar',
-           'EBNFTransform',
+           'EBNFTransformer',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed']
@@ -222,13 +222,13 @@ EBNF_validation_table = {
 }
 
 
-def EBNFTransform(syntax_tree):
+def EBNFTransformer(syntax_tree):
     for processing_table in [EBNF_transformation_table, EBNF_validation_table]:
         traverse(syntax_tree, processing_table)
 
 
 def get_ebnf_transformer():
-    return EBNFTransform
+    return EBNFTransformer
 
 
 ########################################################################
@@ -236,6 +236,48 @@ def get_ebnf_transformer():
 # EBNF abstract syntax tree to Python parser compilation
 #
 ########################################################################
+
+SCANNER_FACTORY = '''
+
+def get_{NAME}_scanner():
+    return {NAME}Scanner
+'''
+
+
+GRAMMAR_FACTORY = '''
+
+def get_{NAME}_grammar():
+    global thread_local_{NAME}_grammar_singleton
+    try:
+        grammar = thread_local_{NAME}_grammar_singleton
+        return grammar
+    except NameError:
+        thread_local_{NAME}_grammar_singleton = {NAME}Grammar()
+        return thread_local_{NAME}_grammar_singleton
+'''
+
+
+TRANSFORMER_FACTORY = '''
+
+def get_{NAME}_transformer():
+    return {NAME}Transform
+'''
+
+
+COMPILER_FACTORY = '''
+
+def get_{NAME}_compiler(grammar_name="{NAME}", 
+                        grammar_source=""):
+    global thread_local_{NAME}_compiler_singleton
+    try:
+        compiler = thread_local_{NAME}_compiler_singleton
+        compiler.set_grammar_name(grammar_name, grammar_source)
+        return compiler
+    except NameError:
+        thread_local_{NAME}_compiler_singleton = \\
+            {NAME}Compiler(grammar_name, grammar_source)
+        return thread_local_{NAME}_compiler_singleton 
+'''
 
 
 class EBNFCompilerError(Exception):
@@ -279,9 +321,10 @@ class EBNFCompiler(CompilerBase):
 
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
-        return "def %s(text):\n    return text\n" % name
+        return "def %s(text):\n    return text\n" % name \
+               + SCANNER_FACTORY.format(NAME=self.grammar_name)
 
-    def gen_AST_skeleton(self):
+    def gen_transformer_skeleton(self):
         if not self.definition_names:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_AST_Skeleton()"!')
@@ -294,6 +337,7 @@ class EBNFCompiler(CompilerBase):
             transtable.append('    "' + name + '": no_operation,')
         transtable += ['    "": no_operation', '}', '',  tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
+        transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
 
     def gen_compiler_skeleton(self):
@@ -317,6 +361,7 @@ class EBNFCompiler(CompilerBase):
             else:
                 compiler += ['    def ' + method_name + '(self, node):',
                              '        pass', '']
+        compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
     def gen_parser(self, definitions):
@@ -379,7 +424,8 @@ class EBNFCompiler(CompilerBase):
         if self.root and 'root__' not in self.rules:
             declarations.append('root__ = ' + self.root)
         declarations.append('')
-        return '\n    '.join(declarations)
+        return '\n    '.join(declarations) \
+               + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
 
     def on_syntax(self, node):
         self._reset()

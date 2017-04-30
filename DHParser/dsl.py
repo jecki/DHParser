@@ -27,7 +27,7 @@ try:
 except ImportError:
     import re
 
-from .ebnf import EBNFGrammar, EBNFTransform, EBNFCompiler, grammar_changed, \
+from .ebnf import EBNFGrammar, EBNFTransformer, EBNFCompiler, grammar_changed, \
     get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from .toolkit import logging, load_if_file, is_python_code, compile_python_object
 from .parsers import GrammarBase, CompilerBase, compile_source, nil_scanner
@@ -102,43 +102,6 @@ from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
     WHITESPACE_KEYWORD, TOKEN_KEYWORD
-'''
-
-
-DHPARSER_SCANNER = '''
-def get_{NAME}_scanner():
-    return {NAME}Scanner
-'''
-
-
-DHPARSER_GRAMMAR = '''
-def get_{NAME}_grammar():
-    global thread_local_{NAME}_grammar_singleton
-    try:
-        grammar = thread_local_{NAME}_grammar_singleton
-        return grammar
-    except NameError:
-        thread_local_{NAME}_grammar_singleton = {NAME}Grammar()
-        return thread_local_{NAME}_grammar_singleton
-'''
-
-
-DHPARSER_TRANSFORMER = '''
-def get_{NAME}_transformer():
-    return {NAME}Transform
-'''
-
-
-DHPARSER_COMPILER = '''
-def get_{NAME}_compiler(grammar_name="{NAME}", grammar_source=""):
-    global thread_local_{NAME}_compiler_singleton
-    try:
-        compiler = thread_local_{NAME}_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
-        return compiler
-    except NameError:
-        thread_local_{NAME}_compiler_singleton = {NAME}Compiler(grammar_name, grammar_source)
-        return thread_local_{NAME}_compiler_singleton 
 '''
 
 
@@ -243,8 +206,8 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
         A Grammar class that can be instantiated for parsing a text
         which conforms to the language defined by ``ebnf_src``.
     """
-    grammar = ebnf_grammar_obj or EBNFGrammar()
-    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransform, EBNFCompiler())
+    grammar = ebnf_grammar_obj or get_ebnf_grammar()
+    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, get_ebnf_compiler())
     return grammar_src if source_only else \
         compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
 
@@ -380,7 +343,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
     if errors:
         return errors
 
-    elif trans == get_ebnf_transformer or trans == EBNFTransform:  # either an EBNF- or no compiler suite given
+    elif trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER
         f = None
@@ -406,14 +369,11 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHPARSER_IMPORTS
         if RX_WHITESPACE.fullmatch(scanner):
-            scanner = compiler1.gen_scanner_skeleton() + \
-                      DHPARSER_SCANNER.format(NAME=compiler_name)
+            scanner = compiler1.gen_scanner_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
-            ast = compiler1.gen_AST_skeleton() + \
-                  DHPARSER_TRANSFORMER.format(NAME=compiler_name)
+            ast = compiler1.gen_transformer_skeleton()
         if RX_WHITESPACE.fullmatch(compiler):
-            compiler = compiler1.gen_compiler_skeleton() + \
-                       DHPARSER_COMPILER.format(NAME=compiler_name)
+            compiler = compiler1.gen_compiler_skeleton()
 
         try:
             f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
@@ -423,7 +383,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
             f.write(SECTION_MARKER.format(marker=SCANNER_SECTION))
             f.write(scanner)
             f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
-            f.write(result);  f.write(DHPARSER_GRAMMAR.format(NAME=compiler_name))
+            f.write(result)
             f.write(SECTION_MARKER.format(marker=AST_SECTION))
             f.write(ast)
             f.write(SECTION_MARKER.format(marker=COMPILER_SECTION))
