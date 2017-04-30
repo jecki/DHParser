@@ -39,7 +39,19 @@ ARITHMETIC_EBNF = """
 class TestCompileFunctions:
     def test_compileEBNF(self):
         parser_src = compileEBNF(ARITHMETIC_EBNF, source_only=True)
-        print(parser_src)
+        assert isinstance(parser_src, str), str(type(parser_src))
+        assert parser_src.find('get_DSL') >= 0
+        parser_src = compileEBNF(ARITHMETIC_EBNF, source_only="CustomDSL")
+        assert isinstance(parser_src, str), str(type(parser_src))
+        assert parser_src.find('get_CustomDSL') >= 0
+        parser_factory = compileEBNF(ARITHMETIC_EBNF, source_only=False)
+        assert callable(parser_factory)
+        parser = parser_factory()
+        result = parser("5 + 3 * 4")
+        assert not result.error_flag
+        result = parser("5A + 4B ** 4C")
+        assert result.error_flag
+
 
 class TestCompilerGeneration:
     trivial_lang = """
@@ -96,4 +108,4 @@ class TestCompilerGeneration:
 
 if __name__ == "__main__":
     from run import runner
-    runner("TestCompileFunctions", globals())
+    runner("", globals())

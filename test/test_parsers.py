@@ -24,7 +24,8 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, compile_python_object
-from DHParser.syntaxtree import no_operation, traverse
+from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
+    replace_by_single_child, reduce_single_child, flatten
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import compileEBNF, DHPARSER_IMPORTS
@@ -39,16 +40,32 @@ ARITHMETIC_EBNF = """
     # example:  "5 + 3 * 4"
     """
 
+
 ARITHMETIC_EBNF_transformation_table = {
     # AST Transformations for the DSL-grammar
-    "formula": no_operation,
-    "expr": no_operation,
-    "term": no_operation,
-    "factor": no_operation,
-    "": no_operation
+    "formula": [remove_expendables],
+    "term, expr": [replace_by_single_child, flatten],
+    "factor": [remove_expendables, reduce_single_child],
+    "": [remove_expendables, replace_by_single_child]
 }
 
+
 ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
+
+
+class TestGrammarTest:
+    cases = {
+        "factor": {
+            "match": {
+                1: "0",
+                2: "314",
+            },
+            "fail": {
+                1: "21F",
+                2: "G123"
+            }
+        }
+    }
 
 
 class TestInfiLoopsAndRecursion:
@@ -74,21 +91,6 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.collect_errors())
-
-
-class TestTestGrammar:
-    cases = {
-        "factor": {
-            "match": {
-                1: "0",
-                2: "314",
-            },
-            "fail": {
-                1: "21F",
-                2: "G123"
-            }
-        }
-    }
 
 
 class TestRegex:
@@ -132,4 +134,4 @@ class TestRegex:
 
 if __name__ == "__main__":
     from run import runner
-    runner("", globals())
+    runner("TestGrammarTest", globals())

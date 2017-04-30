@@ -185,13 +185,9 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
 
 
 def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
-    """Compiles an EBNF source file into a Grammar class.
-
-    Please note: This functions returns a class which must be 
-    instantiated before calling its parse()-method! Calling the method
-    directly from the class (which is technically possible in python
-    yields an error message complaining about a missing parameter,
-    the cause of which may not be obvious at first sight. 
+    """Compiles an EBNF source file. Either returns a factory function
+    for the grammar-paraser or the source code of a compiler suite with
+    skeletons for scanner, transformer and compiler.
 
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
@@ -200,21 +196,24 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
             DHParser.EBNFcompiler.EBNFGrammar object. This can speed
             up compilation, because no new EBNFGrammar object needs to
             be instantiated.
-        source_only (bool):  If True, the source code of the Grammar
-            class is returned instead of the class itself.
+        source_only (str or bool):  Branding name for the compiler
+            suite source code. If ``True`` the default branding "DSL"
+            will be used. If False (default), no source but a factory
+            function for grammar-parser callables will be returned.
+        
     Returns:
-        A Grammar class that can be instantiated for parsing a text
-        which conforms to the language defined by ``ebnf_src``.
+        A factory function for a grammar-parser for texts in the
+        language defined by ``ebnf_src``. With the ``source_only``
+        a complete compiler suite skeleton will be returned instead.
     """
     grammar = ebnf_grammar_obj or get_ebnf_grammar()
-    compiler = get_ebnf_compiler("DSL")
+    if source_only == True:  source_only = "DSL"
+    compiler = get_ebnf_compiler(source_only or "DSL")
     grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
     if source_only:
-        src = [SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_IMPORTS,
-               SECTION_MARKER.format(marker=SCANNER_SECTION), compiler.gen_scanner_skeleton(),
-               SECTION_MARKER.format(marker=PARSER_SECTION), grammar_src,
-               SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
-               SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton()]
+        src = [DHPARSER_IMPORTS, compiler.gen_scanner_skeleton(), grammar_src,
+               compiler.gen_transformer_skeleton(), compiler.gen_compiler_skeleton(),
+               DHPARSER_MAIN.format(NAME=source_only)]
         return '\n'.join(src)
     else:
         return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_\w*_grammar$')
