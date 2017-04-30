@@ -1081,8 +1081,10 @@ def compile_source(source, scanner, parser, transformer, compiler):
     return result, messages, syntax_tree
 
 
-def test_grammar(test_suite, parser, transform):
+def test_grammar(test_suite, parser_factory, transformer_factory):
     errata = []
+    parser = parser_factory()
+    transform = transformer_factory()
     for parser_name, tests in test_suite.items():
         assert set(tests.keys()).issubset({'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'})
 

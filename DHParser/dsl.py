@@ -207,9 +207,17 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
         which conforms to the language defined by ``ebnf_src``.
     """
     grammar = ebnf_grammar_obj or get_ebnf_grammar()
-    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, get_ebnf_compiler())
-    return grammar_src if source_only else \
-        compile_python_object(DHPARSER_IMPORTS + grammar_src, '\w*Grammar$')
+    compiler = get_ebnf_compiler("DSL")
+    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
+    if source_only:
+        src = [SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_IMPORTS,
+               SECTION_MARKER.format(marker=SCANNER_SECTION), compiler.gen_scanner_skeleton(),
+               SECTION_MARKER.format(marker=PARSER_SECTION), grammar_src,
+               SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
+               SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton()]
+        return '\n'.join(src)
+    else:
+        return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_\w*_grammar$')
 
 
 def load_compiler_suite(compiler_suite):
@@ -345,7 +353,8 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
 
     elif trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
-            AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER
+            AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
+            DHPARSER_MAIN, DHPARSER_IMPORTS
         f = None
         try:
             f = open(rootname + '_compiler.py', 'r', encoding="utf-8")

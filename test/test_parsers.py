@@ -19,25 +19,41 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from functools import partial
 import sys
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, compile_python_object
+from DHParser.syntaxtree import no_operation, traverse
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import compileEBNF, DHPARSER_IMPORTS
 
 
+ARITHMETIC_EBNF = """
+    @ whitespace = linefeed
+    formula = [ //~ ] expr
+    expr = expr ("+"|"-") term | term
+    term = term ("*"|"/") factor | factor
+    factor = /[0-9]+/~
+    # example:  "5 + 3 * 4"
+    """
+
+ARITHMETIC_EBNF_transformation_table = {
+    # AST Transformations for the DSL-grammar
+    "formula": no_operation,
+    "expr": no_operation,
+    "term": no_operation,
+    "factor": no_operation,
+    "": no_operation
+}
+
+ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
+
+
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion(self):
-        minilang = """
-            @ whitespace = linefeed
-            formula = [ //~ ] expr
-            expr = expr ("+"|"-") term | term
-            term = term ("*"|"/") factor | factor
-            factor = /[0-9]+/~
-            # example:  "5 + 3 * 4"
-            """
+        minilang = ARITHMETIC_EBNF
         snippet = "5 + 3 * 4"
         parser = compileEBNF(minilang)()
         assert parser
@@ -58,6 +74,21 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.collect_errors())
+
+
+class TestTestGrammar:
+    cases = {
+        "factor": {
+            "match": {
+                1: "0",
+                2: "314",
+            },
+            "fail": {
+                1: "21F",
+                2: "G123"
+            }
+        }
+    }
 
 
 class TestRegex:

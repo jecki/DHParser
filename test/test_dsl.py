@@ -24,7 +24,22 @@ import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.dsl import compile_on_disk, run_compiler
+from DHParser.dsl import compile_on_disk, run_compiler, compileDSL, compileEBNF
+
+
+ARITHMETIC_EBNF = """
+    @ whitespace = linefeed
+    formula = [ //~ ] expr
+    expr = expr ("+"|"-") term | term
+    term = term ("*"|"/") factor | factor
+    factor = /[0-9]+/~
+    # example:  "5 + 3 * 4"
+    """
+
+class TestCompileFunctions:
+    def test_compileEBNF(self):
+        parser_src = compileEBNF(ARITHMETIC_EBNF, source_only=True)
+        print(parser_src)
 
 class TestCompilerGeneration:
     trivial_lang = """
@@ -81,4 +96,4 @@ class TestCompilerGeneration:
 
 if __name__ == "__main__":
     from run import runner
-    runner("", globals())
+    runner("TestCompileFunctions", globals())

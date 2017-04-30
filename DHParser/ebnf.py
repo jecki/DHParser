@@ -192,9 +192,9 @@ EBNF_transformation_table = {
         remove_expendables,
     "directive, definition":
         partial(remove_tokens, tokens={'@', '='}),
-    "expression, chain":
+    "expression":
         [replace_by_single_child, flatten,
-         partial(remove_tokens, tokens={'|', '--'})],
+         partial(remove_tokens, tokens={'|'})],
     "term":
         [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
