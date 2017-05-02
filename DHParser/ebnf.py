@@ -90,7 +90,7 @@ class EBNFGrammar(GrammarBase):
     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
     group      =  "(" expression §")"
-    regexchain =  "<" expression §">"                # compiles "expression" into a singular regular expression
+    regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
     oneormore  =  "{" expression "}+"
     repetition =  "{" expression §"}"
     option     =  "[" expression §"]"
@@ -238,14 +238,12 @@ def get_ebnf_transformer():
 ########################################################################
 
 SCANNER_FACTORY = '''
-
 def get_{NAME}_scanner():
     return {NAME}Scanner
 '''
 
 
 GRAMMAR_FACTORY = '''
-
 def get_{NAME}_grammar():
     global thread_local_{NAME}_grammar_singleton
     try:
@@ -258,14 +256,12 @@ def get_{NAME}_grammar():
 
 
 TRANSFORMER_FACTORY = '''
-
 def get_{NAME}_transformer():
     return {NAME}Transform
 '''
 
 
 COMPILER_FACTORY = '''
-
 def get_{NAME}_compiler(grammar_name="{NAME}", 
                         grammar_source=""):
     global thread_local_{NAME}_compiler_singleton
@@ -366,6 +362,7 @@ class EBNFCompiler(CompilerBase):
 
     def gen_parser(self, definitions):
         # fix capture of variables that have been defined before usage [sic!]
+
         if self.variables:
             for i in range(len(definitions)):
                 if definitions[i][0] in self.variables:
@@ -384,6 +381,7 @@ class EBNFCompiler(CompilerBase):
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
+
         article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '  # what about 'hour', 'universe' etc.?
         declarations = ['class ' + self.grammar_name +
                         'Grammar(GrammarBase):',
@@ -401,6 +399,7 @@ class EBNFCompiler(CompilerBase):
         declarations.append('"""')
 
         # add default functions for counterpart filters of pop or retrieve operators
+
         for symbol in self.directives['counterpart']:
             # declarations.append('def %s_counterpart(value): \n' % symbol +
             #                     '        return value.replace("(", ")").replace("[", "]")'
@@ -409,6 +408,7 @@ class EBNFCompiler(CompilerBase):
                                 '.replace("[", "]").replace("{", "}").replace(">", "<")')
 
         # turn definitions into declarations in reverse order
+
         self.root = definitions[0][0] if definitions else ""
         definitions.reverse()
         declarations += [symbol + ' = Forward()'

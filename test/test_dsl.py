@@ -60,7 +60,7 @@ class TestCompilerGeneration:
         WSPC = /\s+/
         """
     tmp = 'tmp/' if os.path.isdir('tmp') else ('test/tmp/')
-    trivial_text = """Es war ein König in Thule."""
+    trivial_text = u"""Es war ein Koenig in Thule."""
     grammar_name = tmp + "TestCompilerGeneration.ebnf"
     compiler_name = tmp + "TestCompilerGeneration_compiler.py"
     text_name = tmp + "TestCompilerGeneration_text.txt"

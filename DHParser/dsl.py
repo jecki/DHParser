@@ -248,6 +248,7 @@ def load_compiler_suite(compiler_suite):
         except ValueError as error:
             raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
+        # TODO: Compile in one step and pick parts from namespace later ?
         scanner = compile_python_object(imports + scanner_py, 'get_\w*_scanner$')
         ast = compile_python_object(imports + ast_py, 'get_\w*_transformer$')
         compiler = compile_python_object(imports + compiler_py, 'get_\w*_compiler$')
