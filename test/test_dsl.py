@@ -24,7 +24,7 @@ import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.dsl import compile_on_disk, run_compiler, compileDSL, compileEBNF
+from DHParser.dsl import compile_on_disk, run_compiler, compileDSL, compileEBNF, compile_parser
 
 
 ARITHMETIC_EBNF = """
@@ -38,13 +38,13 @@ ARITHMETIC_EBNF = """
 
 class TestCompileFunctions:
     def test_compileEBNF(self):
-        parser_src = compileEBNF(ARITHMETIC_EBNF, source_only=True)
+        parser_src = compileEBNF(ARITHMETIC_EBNF)
         assert isinstance(parser_src, str), str(type(parser_src))
         assert parser_src.find('get_DSL') >= 0
-        parser_src = compileEBNF(ARITHMETIC_EBNF, source_only="CustomDSL")
+        parser_src = compileEBNF(ARITHMETIC_EBNF, branding="CustomDSL")
         assert isinstance(parser_src, str), str(type(parser_src))
         assert parser_src.find('get_CustomDSL') >= 0
-        parser_factory = compileEBNF(ARITHMETIC_EBNF, source_only=False)
+        parser_factory = compile_parser(ARITHMETIC_EBNF, branding="TestDSL")
         assert callable(parser_factory)
         parser = parser_factory()
         result = parser("5 + 3 * 4")

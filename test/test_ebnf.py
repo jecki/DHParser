@@ -28,7 +28,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import is_logging
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_KEYWORD, nil_scanner
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
-from DHParser.dsl import compileEBNF, compileDSL
+from DHParser.dsl import compileEBNF, compileDSL, compile_parser
 
 
 class TestDirectives:
@@ -42,7 +42,7 @@ class TestDirectives:
 
     def test_whitespace_linefeed(self):
         lang = "@ whitespace = linefeed\n" + self.mini_language
-        MinilangParser = compileEBNF(lang)
+        MinilangParser = compile_parser(lang)
         parser = MinilangParser()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
@@ -58,7 +58,7 @@ class TestDirectives:
 
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language
-        parser = compileEBNF(lang)()
+        parser = compile_parser(lang)()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
         assert not syntax_tree.collect_errors()
@@ -71,7 +71,7 @@ class TestDirectives:
 
     def test_whitespace_horizontal(self):
         lang = "@ whitespace = horizontal\n" + self.mini_language
-        parser = compileEBNF(lang)()
+        parser = compile_parser(lang)()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
         assert not syntax_tree.collect_errors()
@@ -131,8 +131,8 @@ class TestPopRetrieve:
         """
 
     def setup(self):
-        self.minilang_parser = compileEBNF(self.mini_language)()
-        self.minilang_parser2 = compileEBNF(self.mini_lang2)()
+        self.minilang_parser = compile_parser(self.mini_language)()
+        self.minilang_parser2 = compile_parser(self.mini_lang2)()
 
     @staticmethod
     def opening_delimiter(node, name):

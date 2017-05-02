@@ -38,6 +38,8 @@ __all__ = ['GrammarError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
+           'compileEBNF',
+           'compile_parser',
            'compile_on_disk']
 
 
@@ -58,31 +60,6 @@ PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
 END_SECTIONS_MARKER = "END OF DHPARSER-SECTIONS"
-
-
-class GrammarError(Exception):
-    """Raised when (already) the grammar of a domain specific language (DSL)
-    contains errors.
-    """
-
-    def __init__(self, error_messages, grammar_src):
-        self.error_messages = error_messages
-        self.grammar_src = grammar_src
-
-
-class CompilationError(Exception):
-    """Raised when a string or file in a domain specific language (DSL)
-    contains errors.
-    """
-
-    def __init__(self, error_messages, dsl_text, dsl_grammar, AST):
-        self.error_messages = error_messages
-        self.dsl_text = dsl_text
-        self.dsl_grammar = dsl_grammar
-        self.AST = AST
-
-    def __str__(self):
-        return '\n'.join(self.error_messages)
 
 
 DHPARSER_IMPORTS = '''
@@ -132,6 +109,31 @@ if __name__ == "__main__":
     else:
         print("Usage: {NAME}_compiler.py [FILENAME]")
 '''
+
+
+class GrammarError(Exception):
+    """Raised when (already) the grammar of a domain specific language (DSL)
+    contains errors.
+    """
+
+    def __init__(self, error_messages, grammar_src):
+        self.error_messages = error_messages
+        self.grammar_src = grammar_src
+
+
+class CompilationError(Exception):
+    """Raised when a string or file in a domain specific language (DSL)
+    contains errors.
+    """
+
+    def __init__(self, error_messages, dsl_text, dsl_grammar, AST):
+        self.error_messages = error_messages
+        self.dsl_text = dsl_text
+        self.dsl_grammar = dsl_grammar
+        self.AST = AST
+
+    def __str__(self):
+        return '\n'.join(self.error_messages)
 
 
 def grammar_instance(grammar_representation):
@@ -184,7 +186,7 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
     return result
 
 
-def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
+def compileEBNF(ebnf_src, branding = "DSL"):
     """Compiles an EBNF source file. Either returns a factory function
     for the grammar-paraser or the source code of a compiler suite with
     skeletons for scanner, transformer and compiler.
@@ -192,31 +194,41 @@ def compileEBNF(ebnf_src, ebnf_grammar_obj=None, source_only=False):
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
             the EBNF grammar itself as a string.
-        ebnf_grammar_obj:  An existing instance of the 
-            DHParser.EBNFcompiler.EBNFGrammar object. This can speed
-            up compilation, because no new EBNFGrammar object needs to
-            be instantiated.
-        source_only (str or bool):  Branding name for the compiler
-            suite source code. If ``True`` the default branding "DSL"
-            will be used. If False (default), no source but a factory
-            function for grammar-parser callables will be returned.
-        
+        branding (str or bool):  Branding name for the compiler
+            suite source code. 
+    Returns:
+        The complete compiler suite skeleton as Python source code.
+    """
+    grammar = get_ebnf_grammar()
+    if branding == True:  branding = "DSL"
+    compiler = get_ebnf_compiler(branding or "DSL", ebnf_src)
+    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
+    src = [DHPARSER_IMPORTS,
+           compiler.gen_scanner_skeleton(),
+           grammar_src,
+           compiler.gen_transformer_skeleton(),
+           compiler.gen_compiler_skeleton(),
+           DHPARSER_MAIN.format(NAME=branding)]
+    return '\n'.join(src)
+
+
+def compile_parser(ebnf_src, branding="DSL"):
+    """Compiles an EBNF grammar and returns a grammar-parser factory
+    function for that grammar.
+
+    Args:
+        ebnf_src(str):  Either the file name of an EBNF grammar or
+            the EBNF grammar itself as a string.
+        branding (str or bool):  Branding name for the compiler
+            suite source code. 
+    
     Returns:
         A factory function for a grammar-parser for texts in the
-        language defined by ``ebnf_src``. With the ``source_only``
-        a complete compiler suite skeleton will be returned instead.
+        language defined by ``ebnf_src``.
     """
-    grammar = ebnf_grammar_obj or get_ebnf_grammar()
-    if source_only == True:  source_only = "DSL"
-    compiler = get_ebnf_compiler(source_only or "DSL")
-    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
-    if source_only:
-        src = [DHPARSER_IMPORTS, compiler.gen_scanner_skeleton(), grammar_src,
-               compiler.gen_transformer_skeleton(), compiler.gen_compiler_skeleton(),
-               DHPARSER_MAIN.format(NAME=source_only)]
-        return '\n'.join(src)
-    else:
-        return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_\w*_grammar$')
+    grammar_src = compileDSL(ebnf_src, nil_scanner, get_ebnf_grammar(),
+                             get_ebnf_transformer(), get_ebnf_compiler(branding))
+    return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_\w*_grammar$')
 
 
 def load_compiler_suite(compiler_suite):
@@ -350,7 +362,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
     if errors:
         return errors
 
-    elif trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
+    elif cfactory == get_ebnf_compiler:  # trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
             DHPARSER_MAIN, DHPARSER_IMPORTS

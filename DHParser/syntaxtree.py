@@ -105,9 +105,11 @@ class ZombieParser(MockParser):
 ZOMBIE_PARSER = ZombieParser()
 
 
-class Error(NamedTuple):
-    pos: int
-    msg: str
+# # Python 3.6:
+# class Error(NamedTuple):
+#     pos: int
+#     msg: str
+Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
 
 class Node:

@@ -28,7 +28,7 @@ from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.dsl import compileEBNF, DHPARSER_IMPORTS
+from DHParser.dsl import compile_parser, DHPARSER_IMPORTS
 
 
 ARITHMETIC_EBNF = """
@@ -72,7 +72,7 @@ class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion(self):
         minilang = ARITHMETIC_EBNF
         snippet = "5 + 3 * 4"
-        parser = compileEBNF(minilang)()
+        parser = compile_parser(minilang)()
         assert parser
         syntax_tree = parser(snippet)
         assert not syntax_tree.collect_errors()
@@ -87,7 +87,7 @@ class TestInfiLoopsAndRecursion:
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""
         snippet = " "
-        parser = compileEBNF(minilang)()
+        parser = compile_parser(minilang)()
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.collect_errors())

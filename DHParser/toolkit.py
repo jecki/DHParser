@@ -267,7 +267,7 @@ def smart_list(arg):
             if len(lst) > 1:
                 return (s.strip() for s in lst)
         return (s.strip() for s in arg.strip().split(' '))
-    elif isinstance(arg, collections.abc.Collection):
+    elif isinstance(arg, collections.abc.Sequence):  # python 3.6: collections.abc.Collection
         return arg
     elif isinstance(arg, collections.abc.Iterable):
         return list(arg)
@@ -301,20 +301,24 @@ def sane_parser_name(name):
     return name and name[:2] != '__' and name[-2:] != '__'
 
 
-def compile_python_object(python_src, catch_obj_regex):
-    """Compiles the python source code and returns the object the name of which
-    ends is matched by ``catch_obj_regex``.
+def compile_python_object(python_src, catch_obj_regex=""):
+    """Compiles the python source code and returns the (first) object 
+    the name of which is matched by ``catch_obj_regex``. If catch_obj
+    is the empty string, the namespace dictionary will be returned.
     """
     if isinstance(catch_obj_regex, str):
         catch_obj_regex = re.compile(catch_obj_regex)
     code = compile(python_src, '<string>', 'exec')
     namespace = {}
     exec(code, namespace)  # safety risk?
-    matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
-    if len(matches) == 0:
-        raise ValueError("No object matching /%s/ defined in source code." %
-                         catch_obj_regex.pattern)
-    elif len(matches) > 1:
-        raise ValueError("Ambigous matches for %s : %s" %
-                         (str(catch_obj_regex), str(matches)))
-    return namespace[matches[0]] if matches else None
+    if catch_obj_regex:
+        matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
+        if len(matches) == 0:
+            raise ValueError("No object matching /%s/ defined in source code." %
+                             catch_obj_regex.pattern)
+        elif len(matches) > 1:
+            raise ValueError("Ambigous matches for %s : %s" %
+                             (str(catch_obj_regex), str(matches)))
+        return namespace[matches[0]] if matches else None
+    else:
+        return namespace
