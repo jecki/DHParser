@@ -39,7 +39,7 @@ __all__ = ['GrammarError',
            'load_compiler_suite',
            'compileDSL',
            'compileEBNF',
-           'compile_parser',
+           'parser_factory',
            'compile_on_disk']
 
 
@@ -172,7 +172,7 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
     compilation error.
     
     Raises:
-        CompilationError if any errors occured during compilation
+        CompilationError if any errors occurred during compilation
     """
     assert isinstance(text_or_file, str)
     assert isinstance(compiler, CompilerBase)
@@ -194,25 +194,27 @@ def compileEBNF(ebnf_src, branding = "DSL"):
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
             the EBNF grammar itself as a string.
-        branding (str or bool):  Branding name for the compiler
-            suite source code. 
+        branding (str):  Branding name for the compiler suite source
+            code. 
     Returns:
         The complete compiler suite skeleton as Python source code.
+    Raises:
+        CompilationError if any errors occurred during compilation        
     """
     grammar = get_ebnf_grammar()
-    if branding == True:  branding = "DSL"
-    compiler = get_ebnf_compiler(branding or "DSL", ebnf_src)
+    compiler = get_ebnf_compiler(branding , ebnf_src)
     grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
-    src = [DHPARSER_IMPORTS,
-           compiler.gen_scanner_skeleton(),
-           grammar_src,
-           compiler.gen_transformer_skeleton(),
-           compiler.gen_compiler_skeleton(),
-           DHPARSER_MAIN.format(NAME=branding)]
+    src = ["#/usr/bin/python\n",
+           SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_IMPORTS,
+           SECTION_MARKER.format(marker=SCANNER_SECTION), compiler.gen_scanner_skeleton(),
+           SECTION_MARKER.format(marker=PARSER_SECTION), grammar_src,
+           SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
+           SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
+           SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_MAIN.format(NAME=branding)]
     return '\n'.join(src)
 
 
-def compile_parser(ebnf_src, branding="DSL"):
+def parser_factory(ebnf_src, branding="DSL"):
     """Compiles an EBNF grammar and returns a grammar-parser factory
     function for that grammar.
 
@@ -250,19 +252,18 @@ def load_compiler_suite(compiler_suite):
                                  'Please delete or repair file manually.')
         # TODO: Compile in one step and pick parts from namespace later ?
         scanner = compile_python_object(imports + scanner_py, 'get_\w*_scanner$')
+        parser = compile_python_object(imports + parser_py, 'get_\w*_grammar$')
         ast = compile_python_object(imports + ast_py, 'get_\w*_transformer$')
-        compiler = compile_python_object(imports + compiler_py, 'get_\w*_compiler$')
     else:
-        # assume source is an ebnf grammar
+        # assume source is an ebnf grammar. Is there really any reasonable application case for this?
         with logging(False):
-            parser_py, errors, AST = compile_source(source, None,
+            compile_py, errors, AST = compile_source(source, None,
                 get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), source)
         scanner = get_ebnf_scanner
         ast = get_ebnf_transformer
-        compiler = get_ebnf_compiler
-    parser = compile_python_object(DHPARSER_IMPORTS + parser_py, 'get_\w*_grammar$')
+    compiler = compile_python_object(imports + compiler_py, 'get_\w*_compiler$')
 
     return scanner, parser, ast, compiler
 

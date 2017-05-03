@@ -20,11 +20,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import inspect
 import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.dsl import compile_on_disk, run_compiler, compileDSL, compileEBNF, compile_parser
+from DHParser.parsers import GrammarBase, CompilerBase
+from DHParser.ebnf import get_ebnf_compiler, get_ebnf_scanner, get_ebnf_transformer
+from DHParser.dsl import compile_on_disk, run_compiler, compileDSL, compileEBNF, parser_factory, \
+    load_compiler_suite
 
 
 ARITHMETIC_EBNF = """
@@ -44,9 +48,9 @@ class TestCompileFunctions:
         parser_src = compileEBNF(ARITHMETIC_EBNF, branding="CustomDSL")
         assert isinstance(parser_src, str), str(type(parser_src))
         assert parser_src.find('get_CustomDSL') >= 0
-        parser_factory = compile_parser(ARITHMETIC_EBNF, branding="TestDSL")
-        assert callable(parser_factory)
-        parser = parser_factory()
+        factory = parser_factory(ARITHMETIC_EBNF, branding="TestDSL")
+        assert callable(factory)
+        parser = factory()
         result = parser("5 + 3 * 4")
         assert not result.error_flag
         result = parser("5A + 4B ** 4C")
@@ -77,6 +81,18 @@ class TestCompilerGeneration:
             if os.path.exists(name):
                 os.remove(name)
         pass
+
+    def test_load_compiler_suite(self):
+        src = compileEBNF(self.trivial_lang, "Trivial")
+        scanner, parser, transformer, compiler = load_compiler_suite(src)
+        scanner = scanner()
+        parser = parser()
+        transformer = transformer()
+        compiler = compiler()
+        assert callable(scanner)
+        assert isinstance(parser, GrammarBase)
+        assert callable(transformer)
+        assert isinstance(compiler, CompilerBase)
 
     def test_compiling_functions(self):
         # test if cutting and reassembling of compiler suite works:
