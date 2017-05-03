@@ -25,7 +25,7 @@ sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
-    replace_by_single_child, reduce_single_child, flatten
+    replace_by_single_child, reduce_single_child, flatten, TOKEN_KEYWORD
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
@@ -46,6 +46,7 @@ ARITHMETIC_EBNF_transformation_table = {
     "formula": [remove_expendables],
     "term, expr": [replace_by_single_child, flatten],
     "factor": [remove_expendables, reduce_single_child],
+    (TOKEN_KEYWORD): [remove_expendables, reduce_single_child],
     "": [remove_expendables, replace_by_single_child]
 }
 

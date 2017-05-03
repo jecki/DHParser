@@ -38,6 +38,7 @@ __all__ = ['GrammarError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
+           'raw_compileEBNF',
            'compileEBNF',
            'parser_factory',
            'compile_on_disk']
@@ -186,10 +187,31 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
     return result
 
 
-def compileEBNF(ebnf_src, branding = "DSL"):
-    """Compiles an EBNF source file. Either returns a factory function
-    for the grammar-paraser or the source code of a compiler suite with
-    skeletons for scanner, transformer and compiler.
+def raw_compileEBNF(ebnf_src, branding="DSL"):
+    """Compiles an EBNF grammar file and returns the compiler object
+    that was used and which can now be queried for the result as well
+    as skeleton code for scanner, transformer and compiler objects.
+    
+    Args:
+        ebnf_src(str):  Either the file name of an EBNF grammar or
+            the EBNF grammar itself as a string.
+        branding (str):  Branding name for the compiler suite source
+            code. 
+    Returns:
+        An instance of class ``ebnf.EBNFCompiler``
+    Raises:
+        CompilationError if any errors occurred during compilation      
+    """
+    grammar = get_ebnf_grammar()
+    compiler = get_ebnf_compiler(branding , ebnf_src)
+    compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
+    return compiler
+
+
+def compileEBNF(ebnf_src, branding="DSL"):
+    """Compiles an EBNF source file and returns the source code of a
+    compiler suite with skeletons for scanner, transformer and 
+    compiler.
 
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
@@ -201,13 +223,11 @@ def compileEBNF(ebnf_src, branding = "DSL"):
     Raises:
         CompilationError if any errors occurred during compilation        
     """
-    grammar = get_ebnf_grammar()
-    compiler = get_ebnf_compiler(branding , ebnf_src)
-    grammar_src = compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
+    compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_IMPORTS,
            SECTION_MARKER.format(marker=SCANNER_SECTION), compiler.gen_scanner_skeleton(),
-           SECTION_MARKER.format(marker=PARSER_SECTION), grammar_src,
+           SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
            SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
            SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_MAIN.format(NAME=branding)]

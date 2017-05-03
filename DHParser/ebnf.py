@@ -303,6 +303,7 @@ class EBNFCompiler(CompilerBase):
         self._reset()
 
     def _reset(self):
+        self._result = None
         self.rules = set()
         self.variables = set()
         self.symbol_nodes = []
@@ -315,6 +316,10 @@ class EBNFCompiler(CompilerBase):
                            'tokens': set(),     # alt. 'scanner_tokens'
                            'counterpart': set()}     # alt. 'retrieve_counterpart'
 
+    @property
+    def result(self):
+        return self._result
+
     def gen_scanner_skeleton(self):
         name = self.grammar_name + "Scanner"
         return "def %s(text):\n    return text\n" % name \
@@ -322,8 +327,8 @@ class EBNFCompiler(CompilerBase):
 
     def gen_transformer_skeleton(self):
         if not self.definition_names:
-            raise EBNFCompilerError('Compiler has not been run before calling '
-                                    '"gen_AST_Skeleton()"!')
+            raise EBNFCompilerError('Compiler must be run before calling '
+                                    '"gen_transformer_Skeleton()"!')
         tt_name = self.grammar_name + '_AST_transformation_table'
         tf_name = self.grammar_name + 'Transform'
         transtable = [tt_name + ' = {',
@@ -360,7 +365,7 @@ class EBNFCompiler(CompilerBase):
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    def gen_parser(self, definitions):
+    def assemble_parser(self, definitions):
         # fix capture of variables that have been defined before usage [sic!]
 
         if self.variables:
@@ -424,8 +429,9 @@ class EBNFCompiler(CompilerBase):
         if self.root and 'root__' not in self.rules:
             declarations.append('root__ = ' + self.root)
         declarations.append('')
-        return '\n    '.join(declarations) \
-               + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
+        self._result = '\n    '.join(declarations) \
+                       + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
+        return self._result
 
     def on_syntax(self, node):
         self._reset()
@@ -444,7 +450,7 @@ class EBNFCompiler(CompilerBase):
                 assert nd.parser.name == "directive", nd.as_sexpr()
                 self._compile(nd)
 
-        return self.gen_parser(definitions)
+        return self.assemble_parser(definitions)
 
     def on_definition(self, node):
         rule = node.result[0].result
