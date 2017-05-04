@@ -34,7 +34,11 @@ from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_sing
 from .versionnumber import __version__
 
 
-__all__ = ['EBNFGrammar',
+__all__ = ['get_ebnf_scanner',
+           'get_ebnf_grammar',
+           'get_ebnf_transformer',
+           'get_ebnf_compiler',
+           'EBNFGrammar',
            'EBNFTransformer',
            'EBNFCompilerError',
            'EBNFCompiler',

@@ -167,7 +167,8 @@ class Node:
         return str(self.result)
 
     def __eq__(self, other):
-        return str(self.parser) == str(other.parser) and self.result == other.result
+        # return str(self.parser) == str(other.parser) and self.result == other.result
+        return self.tag_name == other.tag_name and self.result == other.result
 
     def __hash__(self):
         return hash((str(self.parser), ))
@@ -421,7 +422,8 @@ def mock_syntax_tree(sexpr):
     def next_block(s):
         s = s.strip()
         while s[0] != ')':
-            assert s[0] == '(', s
+            if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
+            # assert s[0] == '(', s
             level = 1;
             i = 1
             while level > 0:
@@ -434,7 +436,8 @@ def mock_syntax_tree(sexpr):
             s = s[i:].strip()
 
     sexpr = sexpr.strip()
-    assert sexpr[0] == '(', sexpr
+    if sexpr[0] != '(': raise ValueError('"(" expected, not ' + sexpr[:10])
+    # assert sexpr[0] == '(', sexpr
     sexpr = sexpr[1:].strip()
     m = re.match('\w+', sexpr)
     name = sexpr[:m.end()]

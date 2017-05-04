@@ -24,7 +24,9 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compact_sexpr
-from DHParser.syntaxtree import traverse, mock_syntax_tree
+from DHParser.syntaxtree import traverse, mock_syntax_tree, reduce_single_child, \
+    replace_by_single_child, flatten, remove_expendables, TOKEN_KEYWORD
+from DHParser.dsl import parser_factory
 
 
 class MockParser:
@@ -86,10 +88,23 @@ class TestNode:
         assert len(found) == 2
         assert found[0].result == 'x' and found[1].result == 'y'
 
-    def test_equality(self):
+    def test_equality1(self):
         assert self.unique_tree == self.unique_tree
         assert self.recurr_tree != self.unique_tree
         assert mock_syntax_tree('(a (b c))') != mock_syntax_tree('(a (b d))')
+        assert mock_syntax_tree('(a (b c))') == mock_syntax_tree('(a (b c))')
+
+    def test_equality2(self):
+        ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
+        att  = {"term": [replace_by_single_child, flatten],
+                "factor": [remove_expendables, reduce_single_child],
+                (TOKEN_KEYWORD): [remove_expendables, reduce_single_child],
+                "": [remove_expendables, replace_by_single_child]}
+        parser = parser_factory(ebnf)()
+        tree = parser("20 / 4 * 3")
+        traverse(tree, att)
+        compare_tree = mock_syntax_tree("(term (term (factor 20) (TOKEN__ /) (factor 4)) (TOKEN__ *) (factor 3))")
+        assert tree == compare_tree
 
     def test_copy(self):
         cpy = copy.deepcopy(self.unique_tree)

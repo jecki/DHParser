@@ -26,7 +26,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten, TOKEN_KEYWORD
-from DHParser.parsers import compile_source
+from DHParser.parsers import compile_source, test_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
 
@@ -62,12 +62,56 @@ class TestGrammarTest:
                 2: "314",
             },
             "fail": {
-                1: "21F",
-                2: "G123"
+                3: "21F",
+                4: "G123"
+            }
+        },
+        "term": {
+            "match": {
+                1: "4 * 5",
+                2: "20 / 4",
+                3: "20 / 4 * 3"
+            },
+            "ast": {
+                1: "(term (factor 4) (TOKEN__ *) (factor 5))",
+                2: "(term (factor 20) (TOKEN__ /) (factor 4))",
+                3: "(term (term (factor 20) (TOKEN__ /) (factor 4)) (TOKEN__ *) (factor 3))"
+            },
+            "fail": {
+                4: "4 + 5",
+                5: "20 / 4 - 3"
             }
         }
     }
 
+    failure_cases = {
+        "term": {
+            "match": {
+                1: "4 + 5",     # error: this should fail
+                2: "20 / 4",
+                3: "20 / 4 * 3"
+            },
+            "ast": {
+                1: "(term (factor 4) (TOKEN__ *) (factor 5))",
+                2: "(term (factor 20) (TOKEN__ /) (factor 4))",
+                3: "(term (term (factor 19) (TOKEN__ /) (factor 4)) (TOKEN__ *) (factor 3))"  # error 19 != 20
+            },
+            "fail": {
+                4: "4 * 5",     # error: this should match
+                5: "20 / 4 - 3"
+            }
+        }
+    }
+
+    def test_test_grammar(self):
+        parser_fac = parser_factory(ARITHMETIC_EBNF)
+        trans_fac = lambda : ARITHMETIC_EBNFTransform
+        errata = test_grammar(self.cases, parser_fac, trans_fac)
+        assert not errata
+        errata = test_grammar(self.failure_cases, parser_fac, trans_fac)
+        # for e in errata:
+        #     print(e)
+        assert len(errata) == 3
 
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion(self):
