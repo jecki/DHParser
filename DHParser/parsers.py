@@ -351,7 +351,8 @@ class GrammarBase:
         parser = self[start_parser]
         stitches = []
         rest = document
-        result = Node(None, '')
+        if not rest:
+            result, ignore = parser(rest)
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
             if rest:
@@ -586,11 +587,11 @@ class RE(Parser):
             return Node(self, result), t
         return None, text
 
-    def __str__(self):
-        if self.name == TOKEN_KEYWORD:
-            return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
-        return self.name or ('RE ' + ('~' if self.wL else '')
-                             + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
+    # def __str__(self):
+    #     if self.name == TOKEN_KEYWORD:
+    #         return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
+    #     return self.name or ('RE ' + ('~' if self.wL else '')
+    #                          + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
 
     def _grammar_assigned_notifier(self):
         if self.grammar:
@@ -917,7 +918,7 @@ class Forward(Parser):
         Parser.__init__(self)
         self.parser = None
         self.name = ''
-        self.cycle_reached = False
+#        self.cycle_reached = False
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -929,16 +930,16 @@ class Forward(Parser):
     def __call__(self, text):
         return self.parser(text)
 
-    def __str__(self):
-        if self.cycle_reached:
-            if self.parser and self.parser.name:
-                return str(self.parser.name)
-            return "..."
-        else:
-            self.cycle_reached = True
-            s = str(self.parser)
-            self.cycle_reached = False
-            return s
+    # def __str__(self):
+    #     if self.cycle_reached:
+    #         if self.parser and self.parser.name:
+    #             return str(self.parser.name)
+    #         return "..."
+    #     else:
+    #         self.cycle_reached = True
+    #         s = str(self.parser)
+    #         self.cycle_reached = False
+    #         return s
 
     def set(self, parser):
         assert isinstance(parser, Parser)
@@ -1006,7 +1007,7 @@ class CompilerBase:
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
         """
-        elem = node.parser.name or node.parser.__class__.__name__
+        elem = str(node.parser)
         if not sane_parser_name(elem):
             node.add_error("Reserved name '%s' not allowed as parser "
                            "name! " % elem + "(Any name starting with "

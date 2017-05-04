@@ -67,11 +67,12 @@ class MockParser:
     syntax tree (re-)construction. In all other cases where a parser
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
-    def __init__(self, name=''):
+    def __init__(self, name='', class_name=''):
         self.name = name
+        self.class_name = class_name or self.__class__.__name__
 
     def __str__(self):
-        return self.name or self.__class__.__name__
+        return self.name or self.class_name
 
 
 class ZombieParser(MockParser):
@@ -172,7 +173,7 @@ class Node:
         return self.tag_name == other.tag_name and self.result == other.result
 
     def __hash__(self):
-        return hash((str(self.parser), ))
+        return hash(str(self.parser))
 
     def __deepcopy__(self, memodict={}):
         result = copy.deepcopy(self.result)
@@ -182,7 +183,7 @@ class Node:
 
     @property
     def tag_name(self):
-        return self.parser.name or self.parser.__class__.__name__
+        return str(self.parser)
         # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.__class__.__name__
 
     @property
@@ -440,8 +441,8 @@ def mock_syntax_tree(sexpr):
     if sexpr[0] != '(': raise ValueError('"(" expected, not ' + sexpr[:10])
     # assert sexpr[0] == '(', sexpr
     sexpr = sexpr[1:].strip()
-    m = re.match('\w+', sexpr)
-    name = sexpr[:m.end()]
+    m = re.match('[\w:]+', sexpr)
+    name, class_name = (sexpr[:m.end()].split(':') + [''])[:2]
     sexpr = sexpr[m.end():].strip()
     if sexpr[0] == '(':
         result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
@@ -460,7 +461,7 @@ def mock_syntax_tree(sexpr):
                 lines.append(sexpr[:m.end()])
                 sexpr = sexpr[m.end():]
         result = "\n".join(lines)
-    return Node(MockParser(name), result)
+    return Node(MockParser(name, class_name), result)
 
 
 ########################################################################
@@ -577,16 +578,12 @@ def is_whitespace(node):
     return node.parser.name == WHITESPACE_KEYWORD
 
 
-# def is_scanner_token(node):
-#     return isinstance(node.parser, ScannerToken)
-
-
 def is_empty(node):
     return not node.result
 
 
 def is_expendable(node):
-    return is_empty(node) or is_whitespace(node)  # or is_scanner_token(node)
+    return is_empty(node) or is_whitespace(node)
 
 
 def is_token(node, token_set=frozenset()):

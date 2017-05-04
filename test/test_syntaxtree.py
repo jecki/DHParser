@@ -26,6 +26,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compact_sexpr
 from DHParser.syntaxtree import traverse, mock_syntax_tree, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables, TOKEN_KEYWORD
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory
 
 
@@ -65,6 +66,13 @@ class TestSExpr:
         tree = mock_syntax_tree(sexpr_stripped)
         assert compact_sexpr(tree.as_sexpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
 
+    def test_mock_syntax_tree_with_classes(self):
+        sexpr = '(a:class1 (b:class2 x) (:class3 y) (c z))'
+        tree = mock_syntax_tree(sexpr)
+        assert tree.tag_name == 'a'
+        assert tree.result[0].tag_name == 'b'
+        assert tree.result[1].tag_name == 'class3'
+        assert tree.result[2].tag_name == 'c'
 
 class TestNode:
     """
@@ -112,6 +120,28 @@ class TestNode:
         assert cpy.result[0].result != "epsilon" # just to make sure...
         cpy.result[0].result = "epsilon"
         assert cpy != self.unique_tree
+
+    def test_copy2(self):
+        # test if Node.__deepcopy__ goes sufficiently deep for ast-
+        # transformation and compiling to perform correctly after copy
+        ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
+        parser = get_ebnf_grammar()
+        transform = get_ebnf_transformer()
+        compiler = get_ebnf_compiler()
+        tree = parser(ebnf)
+        tree_copy = copy.deepcopy(tree)
+        transform(tree_copy)
+        res1 = compiler(tree_copy)
+        t2 = copy.deepcopy(tree_copy)
+        res2 = compiler(t2)
+        assert res1 == res2
+        tree_copy = copy.deepcopy(tree)
+        transform(tree_copy)
+        res3 = compiler(tree_copy)
+        assert res3 == res2
+        transform(tree)
+        res4 = compiler(tree)
+        assert res4 == res3
 
 
 class TestErrorHandling:

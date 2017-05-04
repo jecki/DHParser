@@ -303,6 +303,31 @@ class TestSelfHosting:
             assert not e, ("%i: " % i) + str(e)
 
 
+class TestBoundaryCases:
+    def setup(self):
+        self.gr = get_ebnf_grammar()
+        self.tr = get_ebnf_transformer()
+        self.cp = get_ebnf_compiler()
+
+    def test_empty_grammar(self):
+        t = self.gr("")
+        self.tr(t)
+        r = self.cp(t)
+        assert r
+
+    def test_single_statement_grammar(self):
+        t = self.gr("i = /i/")
+        self.tr(t)
+        r = self.cp(t)
+        assert r
+
+    def test_two_statement_grammar(self):
+        t = self.gr("i = k {k}\nk = /k/")
+        self.tr(t)
+        r = self.cp(t)
+        assert r
+
+
 if __name__ == "__main__":
     from run import runner
-    runner("", globals())
+    runner("TestBoundaryCases", globals())

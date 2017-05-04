@@ -442,8 +442,7 @@ class EBNFCompiler(CompilerBase):
         definitions = []
 
         # drop the wrapping sequence node
-        if isinstance(node.parser, Sequence) and \
-                isinstance(node.result[0].parser, ZeroOrMore):
+        if len(node.children) == 1 and not node.result[0].parser.name:
             node = node.result[0]
 
         # compile definitions and directives and collect definitions
