@@ -23,10 +23,11 @@ from functools import partial
 import sys
 sys.path.extend(['../', './'])
 
+from DHParser import parsers
 from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten, TOKEN_KEYWORD
-from DHParser.parsers import compile_source, test_grammar
+from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
 
@@ -103,12 +104,12 @@ class TestGrammarTest:
         }
     }
 
-    def test_test_grammar(self):
+    def test_testing_grammar(self):
         parser_fac = parser_factory(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
-        errata = test_grammar(self.cases, parser_fac, trans_fac)
+        errata = parsers.test_grammar(self.cases, parser_fac, trans_fac)
         assert not errata
-        errata = test_grammar(self.failure_cases, parser_fac, trans_fac)
+        errata = parsers.test_grammar(self.failure_cases, parser_fac, trans_fac)
         # for e in errata:
         #     print(e)
         assert len(errata) == 3
@@ -179,4 +180,4 @@ class TestRegex:
 
 if __name__ == "__main__":
     from run import runner
-    runner("TestGrammarTest", globals())
+    runner("", globals())

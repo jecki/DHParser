@@ -8,12 +8,13 @@
 
 
 from functools import partial
+import os
 import sys
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import load_if_file    
+from DHParser.toolkit import logging, is_filename, load_if_file    
 from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
@@ -21,7 +22,8 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    WHITESPACE_KEYWORD, TOKEN_KEYWORD
+    WHITESPACE_KEYWORD, TOKEN_KEYWORD, change_parser
+
 
 
 #######################################################################
@@ -32,6 +34,9 @@ from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
 
 def MLWScanner(text):
     return text
+
+def get_MLW_scanner():
+    return MLWScanner
 
 
 #######################################################################
@@ -143,7 +148,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "9fce888d1b21b2d11a6228e0b97f9291"
+    source_hash__ = "ce9155e0248ac27756283d067342182e"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -195,6 +200,15 @@ class MLWGrammar(GrammarBase):
     Artikel = Sequence(Optional(LEER), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LEER), DATEI_ENDE)
     root__ = Artikel
     
+def get_MLW_grammar():
+    global thread_local_MLW_grammar_singleton
+    try:
+        grammar = thread_local_MLW_grammar_singleton
+        return grammar
+    except NameError:
+        thread_local_MLW_grammar_singleton = MLWGrammar()
+        return thread_local_MLW_grammar_singleton
+
 
 #######################################################################
 #
@@ -219,7 +233,6 @@ def join_strings(node, delimiter='\n'):
             n += 1
         new_result.append(nd)
     node.result = tuple(new_result)
-
 
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
@@ -269,9 +282,8 @@ MLW_AST_transformation_table = {
     "Autorinfo":
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
-    # test,
         [remove_expendables, reduce_single_child],
-    "LEER": no_operation,
+    "LEER, TRENNER, ZSPRUNG": partial(change_parser, new_parser_name=WHITESPACE_KEYWORD),
     "DATEI_ENDE": no_operation,
     "NIEMALS": no_operation,
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
@@ -284,7 +296,12 @@ MLW_AST_transformation_table = {
         [remove_expendables, replace_by_single_child]
 }
 
+
 MLWTransform = partial(traverse, processing_table=MLW_AST_transformation_table)
+
+
+def get_MLW_transformer():
+    return MLWTransform
 
 
 #######################################################################
@@ -297,8 +314,8 @@ class MLWCompiler(CompilerBase):
     """Compiler for the abstract-syntax-tree of a MLW source file.
     """
 
-    def __init__(self, grammar_name="MLW"):
-        super(MLWCompiler, self).__init__()
+    def __init__(self, grammar_name="MLW", grammar_source=""):
+        super(MLWCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
 
     def on_Artikel(self, node):
@@ -434,6 +451,19 @@ class MLWCompiler(CompilerBase):
         pass
 
 
+def get_MLW_compiler(grammar_name="MLW", 
+                        grammar_source=""):
+    global thread_local_MLW_compiler_singleton
+    try:
+        compiler = thread_local_MLW_compiler_singleton
+        compiler.set_grammar_name(grammar_name, grammar_source)
+        return compiler
+    except NameError:
+        thread_local_MLW_compiler_singleton = \
+            MLWCompiler(grammar_name, grammar_source)
+        return thread_local_MLW_compiler_singleton 
+
+
 #######################################################################
 #
 # END OF DHPARSER-SECTIONS
@@ -444,8 +474,16 @@ class MLWCompiler(CompilerBase):
 def compile_MLW(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    return compile_source(source, MLWScanner,
-                          MLWGrammar(), MLWTransform, MLWCompiler())
+    with logging("LOGS"):
+        compiler = get_MLW_compiler()
+        cname = compiler.__class__.__name__
+        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
+        result = compile_source(source, get_MLW_scanner(), 
+                                get_MLW_grammar(),
+                                get_MLW_transformer(), compiler)
+    return result
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

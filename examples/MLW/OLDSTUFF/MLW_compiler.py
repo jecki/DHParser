@@ -1,4 +1,4 @@
-
+#!/usr/bin/python
 
 #######################################################################
 #
@@ -7,17 +7,21 @@
 #######################################################################
 
 
-from PyDSL import Pop, NegativeLookbehind, Capture, no_transformation, \
-    Token, Alternative, mixin_comment, RE, \
-    Sequence, remove_comments, Retrieve, is_scanner_token, \
-    Lookbehind, replace_by_single_child, remove_scanner_tokens, remove_whitespace, \
-    is_whitespace, ZeroOrMore, remove_enclosing_delimiters, CompilerBase, \
-    RegExp, NegativeLookahead, WHITESPACE_KEYWORD, GrammarBase, \
-    reduce_single_child, Optional, remove_children_if, remove_expendables, \
-    remove_tokens, is_comment, partial, OneOrMore, \
-    Forward, TOKEN_KEYWORD, Required, flatten, \
-    is_expendable, Lookahead
-
+from functools import partial
+import sys
+try:
+    import regex as re
+except ImportError:
+    import re
+from DHParser.toolkit import load_if_file    
+from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source
+from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
+    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
+    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
+    WHITESPACE_KEYWORD, TOKEN_KEYWORD
 
 
 #######################################################################
@@ -44,7 +48,6 @@ class MLWGrammar(GrammarBase):
     @ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
     @ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
     @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
-    
     
     Artikel         = [LEER]
                       §LemmaPosition  [ArtikelKopf]  §BedeutungsPosition  §Autorinfo
@@ -74,7 +77,6 @@ class MLWGrammar(GrammarBase):
                       "verb"   | "v." |
                       "adverb" | "adv." |
                       "adjektiv" | "adj."
-    
     
     GrammatikVarianten = TRENNER GVariante
     GVariante       = Flexionen  [_genus]  ":"  Beleg
@@ -112,33 +114,36 @@ class MLWGrammar(GrammarBase):
     LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     Belege          = "BELEGE" [LEER] { "*" EinBeleg }
-    EinBeleg        = { !(/\s*/ ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ")) /\s*.*\s*/ }+
+    EinBeleg        = { !([LEER] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
+                        /\s*.*\s*/ }+
                       [Zusatz]
-    Zusatz          = "ZUSATZ" /\s*.*/
+    Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
     
     
     #### AUTOR/AUTORIN ###########################################################
     
     Autorinfo       = ("AUTORIN" | "AUTOR") Name
-    Name            = WORT { WORT | /[A-ZÄÖÜÁÀ]\./ }
+    Name            = WORT { WORT | NAMENS_ABKÜRZUNG }
     
     
-    #### MISZELLANEEN ############################################################
+    #### ATOMARE AUSDRÜCKE #######################################################
     
-    WORT            = /[A-ZÄÖÜ]?[a-zäöüß]+/~
-    WORT_GROSS      = /[A-ZÄÖÜ][a-zäöüß]+/~
-    WORT_KLEIN      = /[a-zäöüß]+/~
-    LAT_WORT        = /[a-z]+/~
-    GROSSSCHRIFT    = /[A-ZÄÖÜ]+/~
+    NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀ]\./
     
-    TRENNER         = /\s*;\s*/ | { ZSPRUNG }+
-    ZSPRUNG         = /\n/~
+    WORT             = /[A-ZÄÖÜ]?[a-zäöüß]+/~
+    WORT_GROSS       = /[A-ZÄÖÜ][a-zäöüß]+/~
+    WORT_KLEIN       = /[a-zäöüß]+/~
+    LAT_WORT         = /[a-z]+/~
+    GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
     
-    LEER            = /\s+/                     # horizontaler und(!) vertikaler Leerraum
-    DATEI_ENDE      = !/./
-    NIEMALS         = /(?!.)/
+    TRENNER          = /\s*;\s*/ | { ZSPRUNG }+
+    ZSPRUNG          = /\n/~
+    
+    LEER             = /\s+/        # horizontaler und(!) vertikaler Leerraum
+    DATEI_ENDE       = !/./
+    NIEMALS          = /(?!.)/
     """
-    source_hash__ = "f373a397a48cc57bcca18b90dd7028bf"
+    source_hash__ = "9fce888d1b21b2d11a6228e0b97f9291"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -154,10 +159,11 @@ class MLWGrammar(GrammarBase):
     WORT_KLEIN = RE('[a-zäöüß]+', wL='')
     WORT_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+', wL='')
     WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wL='')
-    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL=''))))
+    NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL='')
+    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, NAMENS_ABKÜRZUNG)))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''))
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(RE('\\s*', wR='', wL=''), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''), TRENNER)
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(Optional(LEER), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
     Belege = Sequence(Token("BELEGE"), Optional(LEER), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
@@ -196,10 +202,6 @@ class MLWGrammar(GrammarBase):
 #
 #######################################################################
 
-# def test(node):
-#     print(node.as_sexpr())
-
-
 def join_strings(node, delimiter='\n'):
     new_result = []
     n = 0
@@ -211,18 +213,20 @@ def join_strings(node, delimiter='\n'):
             while n < len(node.result) and not node.result[n].children:
                 n += 1
             nd.result = delimiter.join((r.result for r in node.result[a:n]))
+        elif nd.parser.name != "Zusatz":
+            raise AssertionError(nd.as_sexpr())
         else:
-            raise AssertionError(node.as_sexpr())
+            n += 1
         new_result.append(nd)
     node.result = tuple(new_result)
 
 
-MLWTransTable = {
+MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "Artikel": no_transformation,
+    "Artikel": no_operation,
     "LemmaPosition":
         [partial(remove_tokens, tokens={'LEMMA'})],
-    "Lemma": no_transformation,
+    "Lemma": no_operation,
     "_tll, _wortart, _genus":
         [remove_expendables, reduce_single_child],
     "LemmaVarianten":
@@ -244,32 +248,32 @@ MLWTransTable = {
         [remove_expendables, reduce_single_child],
     "Zusatz":
         [remove_expendables, remove_tokens, reduce_single_child],
-    "ArtikelKopf": no_transformation,
+    "ArtikelKopf": no_operation,
     "SchreibweisenPosition":
         [partial(remove_tokens, tokens={'SCHREIBWEISE', ':'}),
          flatten, partial(remove_tokens, tokens={','})],
-    "SWTyp": no_transformation,
+    "SWTyp": no_operation,
     "BedeutungsPosition":
         [flatten, partial(remove_tokens, tokens={'BEDEUTUNG'})],
-    "Bedeutung": no_transformation,
-    "Bedeutungskategorie": no_transformation,
-    "Interpretamente": no_transformation,
+    "Bedeutung": no_operation,
+    "Bedeutungskategorie": no_operation,
+    "Interpretamente": no_operation,
     "LateinischeBedeutung, DeutscheBedeutung":
         [remove_expendables, remove_tokens, reduce_single_child],
     "Belege":
         [flatten, remove_tokens],
     "EinBeleg":
         [flatten, remove_expendables, join_strings, reduce_single_child],
-    "Beleg": no_transformation,
-    "VerweisZiel": no_transformation,
+    "Beleg": no_operation,
+    "VerweisZiel": no_operation,
     "Autorinfo":
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
-        # test,
+    # test,
         [remove_expendables, reduce_single_child],
-    "LEER": no_transformation,
-    "DATEI_ENDE": no_transformation,
-    "NIEMALS": no_transformation,
+    "LEER": no_operation,
+    "DATEI_ENDE": no_operation,
+    "NIEMALS": no_operation,
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
     "*":
@@ -279,6 +283,8 @@ MLWTransTable = {
     "":
         [remove_expendables, replace_by_single_child]
 }
+
+MLWTransform = partial(traverse, processing_table=MLW_AST_transformation_table)
 
 
 #######################################################################
@@ -295,134 +301,160 @@ class MLWCompiler(CompilerBase):
         super(MLWCompiler, self).__init__()
         assert re.match('\w+\Z', grammar_name)
 
-    def Artikel(self, node):
+    def on_Artikel(self, node):
         return node
 
-    def LemmaPosition(self, node):
+    def on_LemmaPosition(self, node):
         pass
 
-    def Lemma(self, node):
+    def on_Lemma(self, node):
         pass
 
-    def _tll(self, node):
+    def on__tll(self, node):
         pass
 
-    def LemmaVarianten(self, node):
+    def on_LemmaVarianten(self, node):
         pass
 
-    def LVariante(self, node):
+    def on_LVariante(self, node):
         pass
 
-    def LVZusatz(self, node):
+    def on_LVZusatz(self, node):
         pass
 
-    def GrammatikPosition(self, node):
+    def on_GrammatikPosition(self, node):
         pass
 
-    def _wortart(self, node):
+    def on__wortart(self, node):
         pass
 
-    def GrammatikVarianten(self, node):
+    def on_GrammatikVarianten(self, node):
         pass
 
-    def GVariante(self, node):
+    def on_GVariante(self, node):
         pass
 
-    def Flexionen(self, node):
+    def on_Flexionen(self, node):
         pass
 
-    def Flexion(self, node):
+    def on_Flexion(self, node):
         pass
 
-    def _genus(self, node):
+    def on__genus(self, node):
         pass
 
-    def ArtikelKopf(self, node):
+    def on_ArtikelKopf(self, node):
         pass
 
-    def SchreibweisenPosition(self, node):
+    def on_SchreibweisenPosition(self, node):
         pass
 
-    def SWTyp(self, node):
+    def on_SWTyp(self, node):
         pass
 
-    def SWVariante(self, node):
+    def on_SWVariante(self, node):
         pass
 
-    def Schreibweise(self, node):
+    def on_Schreibweise(self, node):
         pass
 
-    def Beleg(self, node):
+    def on_Beleg(self, node):
         pass
 
-    def Verweis(self, node):
+    def on_Verweis(self, node):
         pass
 
-    def VerweisZiel(self, node):
+    def on_VerweisZiel(self, node):
         pass
 
-    def BedeutungsPosition(self, node):
+    def on_BedeutungsPosition(self, node):
         pass
 
-    def Bedeutung(self, node):
+    def on_Bedeutung(self, node):
         pass
 
-    def Bedeutungskategorie(self, node):
+    def on_Bedeutungskategorie(self, node):
         pass
 
-    def Interpretamente(self, node):
+    def on_Interpretamente(self, node):
         pass
 
-    def LateinischeBedeutung(self, node):
+    def on_LateinischeBedeutung(self, node):
         pass
 
-    def DeutscheBedeutung(self, node):
+    def on_DeutscheBedeutung(self, node):
         pass
 
-    def Belege(self, node):
+    def on_Belege(self, node):
         pass
 
-    def EinBeleg(self, node):
+    def on_EinBeleg(self, node):
         pass
 
-    def Zusatz(self, node):
+    def on_Zusatz(self, node):
         pass
 
-    def Autorinfo(self, node):
+    def on_Autorinfo(self, node):
         pass
 
-    def Name(self, node):
+    def on_Name(self, node):
         pass
 
-    def WORT(self, node):
+    def on_NAMENS_ABKÜRZUNG(self, node):
         pass
 
-    def WORT_GROSS(self, node):
+    def on_WORT(self, node):
         pass
 
-    def WORT_KLEIN(self, node):
+    def on_WORT_GROSS(self, node):
         pass
 
-    def LAT_WORT(self, node):
+    def on_WORT_KLEIN(self, node):
         pass
 
-    def GROSSSCHRIFT(self, node):
+    def on_LAT_WORT(self, node):
         pass
 
-    def LEER(self, node):
+    def on_GROSSSCHRIFT(self, node):
         pass
 
-    def DATEI_ENDE(self, node):
+    def on_TRENNER(self, node):
         pass
 
-    def NIEMALS(self, node):
+    def on_ZSPRUNG(self, node):
         pass
 
+    def on_LEER(self, node):
+        pass
+
+    def on_DATEI_ENDE(self, node):
+        pass
+
+    def on_NIEMALS(self, node):
+        pass
 
 
 #######################################################################
 #
-# END OF PYDSL-SECTIONS
+# END OF DHPARSER-SECTIONS
 #
 #######################################################################
 
+
+def compile_MLW(source):
+    """Compiles ``source`` and returns (result, errors, ast).
+    """
+    return compile_source(source, MLWScanner,
+                          MLWGrammar(), MLWTransform, MLWCompiler())
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        result, errors, ast = compile_MLW(sys.argv[1])
+        if errors:
+            for error in errors:
+                print(error)
+                sys.exit(1)
+        else:
+            print(result)
+    else:
+        print("Usage: MLW_compiler.py [FILENAME]")

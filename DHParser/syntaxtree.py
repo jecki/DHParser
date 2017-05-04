@@ -40,6 +40,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'no_operation',
            'replace_by_single_child',
            'reduce_single_child',
+           'change_parser',
            'is_whitespace',
            'is_empty',
            'is_expendable',
@@ -522,7 +523,8 @@ def no_operation(node):
 # ------------------------------------------------
 #
 # rearranging transformations:
-#     - tree may be rearranged (flattened)
+#     - tree may be rearranged (e.g.flattened)
+#     - nodes that are not leaves may be dropped
 #     - order is preserved
 #     - all leaves are kept
 #
@@ -549,6 +551,13 @@ def reduce_single_child(node):
     if node.children and len(node.result) == 1:
         node._errors.extend(node.result[0].errors)
         node.result = node.result[0].result
+
+
+def change_parser(node, new_parser_name):
+    """Changes the parser of a Node to a mock parser with the given 
+    name.
+    """
+    node.parser = MockParser(new_parser_name)
 
 
 # ------------------------------------------------
@@ -641,6 +650,7 @@ def remove_enclosing_delimiters(node):
 ########################################################################
 #
 # syntax tree validation functions
+# EXPERIMENTAL!
 #
 ########################################################################
 
