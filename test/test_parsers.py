@@ -48,7 +48,7 @@ ARITHMETIC_EBNF_transformation_table = {
     "term, expr": [replace_by_single_child, flatten],
     "factor": [remove_expendables, reduce_single_child],
     (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-    "": [remove_expendables, replace_by_single_child]
+    "*": [remove_expendables, replace_by_single_child]
 }
 
 

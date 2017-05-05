@@ -22,7 +22,7 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    WHITESPACE_KEYWORD, TOKEN_KEYWORD, replace_parser
+    WHITESPACE_PTYPE, TOKEN_PTYPE, replace_parser
 
 
 
@@ -286,13 +286,13 @@ MLW_AST_transformation_table = {
     "LEER, TRENNER, ZSPRUNG": partial(replace_parser, parser_name=WHITESPACE_KEYWORD),
     "DATEI_ENDE": no_operation,
     "NIEMALS": no_operation,
-    (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
+    (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [remove_expendables, reduce_single_child],
-    "*":
+    "+":
         remove_expendables,
     "~":
         partial(remove_tokens, tokens={',', ';'}),
-    "":
+    "*":
         [remove_expendables, replace_by_single_child]
 }
 

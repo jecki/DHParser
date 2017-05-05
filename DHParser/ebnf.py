@@ -211,7 +211,7 @@ EBNF_transformation_table = {
         [remove_expendables, reduce_single_child],
     "list_":
         [flatten, partial(remove_tokens, tokens={','})],
-    "":
+    "*":
         [remove_expendables, replace_by_single_child]
 }
 

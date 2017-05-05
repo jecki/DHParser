@@ -524,11 +524,11 @@ def traverse(root_node, processing_table, key_func=key_tag_name):
             for child in node.result:
                 traverse_recursive(child)
                 node.error_flag |= child.error_flag  # propagate error flag
-        sequence = table.get('*', []) + \
-                   table.get(key_func(node), table.get('', [])) + \
+        sequence = table.get('+', []) + \
+                   table.get(key_func(node), table.get('*', [])) + \
                    table.get('~', [])
-        # '*' always called (before any other processing function)
-        # '?' called for those nodes for which no (other) processing functions is in the table
+        # '+' always called (before any other processing function)
+        # '*' called for those nodes for which no (other) processing functions is in the table
         # '~' always called (after any other processing function)
         for call in sequence:
             call(node)

@@ -205,21 +205,17 @@ class ParserMetaClass(type):
 
 
 class Parser(metaclass=ParserMetaClass):
-    def __init__(self, name=''):
+    def __init__(self, name='', ptype=''):
         assert isinstance(name, str), str(name)
-        i = name.find(':')
-        if i >= 0:
-            self.name = name[:i]
-            self.ptype = name[i:]
-        else:
-            self.name = name
-            self.ptype = ':' + self.__class__.__name__
+        assert not ptype or ptype[0] == ':'
+        self.name = name
+        self.ptype = ptype or ':' + self.__class__.__name__
         # self.pbases = {cls.__name__ for cls in inspect.getmro(self.__class__)}
         self._grammar = None  # center for global variables etc.
         self.reset()
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.name + self.ptype)
+        return self.__class__(self.name, self.ptype)
 
     def reset(self):
         self.visited = dict()
@@ -478,11 +474,11 @@ class ScannerToken(Parser):
     indented block. Otherwise indented block are difficult to handle 
     with parsing expression grammars.
     """
-    def __init__(self, scanner_token):
+    def __init__(self, scanner_token, ptype=''):
         assert isinstance(scanner_token, str) and scanner_token and \
                scanner_token.isupper()
         assert RX_SCANNER_TOKEN.match(scanner_token)
-        super(ScannerToken, self).__init__(scanner_token)
+        super(ScannerToken, self).__init__(scanner_token, ptype)
 
     def __call__(self, text):
         if text[0:1] == BEGIN_SCANNER_TOKEN:
@@ -519,8 +515,8 @@ class RegExp(Parser):
     other parsers delegate part of the parsing job to other parsers,
     but do not match text directly.
     """
-    def __init__(self, regexp, name=''):
-        super(RegExp, self).__init__(name)
+    def __init__(self, regexp, name='', ptype=''):
+        super(RegExp, self).__init__(name, ptype)
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -529,7 +525,7 @@ class RegExp(Parser):
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        return RegExp(regexp, self.name + self.ptype)
+        return RegExp(regexp, self.name, self.ptype)
 
     def __call__(self, text):
         match = text[0:1] != BEGIN_SCANNER_TOKEN and self.regexp.match(text)  # ESC starts a scanner token.
@@ -561,7 +557,7 @@ class RE(Parser):
     respective parameters in the constructor are set to ``None`` the
     default whitespace expression from the Grammar object will be used.
     """
-    def __init__(self, regexp, wL=None, wR=None, name=''):
+    def __init__(self, regexp, wL=None, wR=None, name='', ptype=''):
         """Constructor for class RE.
                 
         Args:
@@ -577,7 +573,7 @@ class RE(Parser):
                 See above.
             name:  The optional name of the parser.
         """
-        super(RE, self).__init__(name)
+        super(RE, self).__init__(name, ptype)
         self.wL = wL
         self.wR = wR
         self.wspLeft = Whitespace(wL) if wL else ZOMBIE_PARSER
@@ -589,7 +585,7 @@ class RE(Parser):
             regexp = copy.deepcopy(self.main.regexp, memo)
         except TypeError:
             regexp = self.main.regexp.pattern
-        return self.__class__(regexp, self.wL, self.wR, self.name + self.ptype)
+        return self.__class__(regexp, self.wL, self.wR, self.name, self.ptype)
 
     def __call__(self, text):
         # assert self.main.regexp.pattern != "@"
@@ -634,9 +630,7 @@ def Token(token, wL=None, wR=None, name=''):
     identify tokens in the abstract syntax tree transformation and 
     compilation stage.
     """
-    parser = RE(escape_re(token), wL, wR, name)
-    parser.ptype = TOKEN_PTYPE
-    return parser
+    return RE(escape_re(token), wL, wR, name, TOKEN_PTYPE)
 
 
 def mixin_comment(whitespace, comment):
@@ -660,14 +654,14 @@ def mixin_comment(whitespace, comment):
 
 
 class UnaryOperator(Parser):
-    def __init__(self, parser, name=''):
-        super(UnaryOperator, self).__init__(name)
+    def __init__(self, parser, name='', ptype=''):
+        super(UnaryOperator, self).__init__(name, ptype)
         assert isinstance(parser, Parser)
         self.parser = parser
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        return self.__class__(parser, self.name + self.ptype)
+        return self.__class__(parser, self.name, self.ptype)
 
     def apply(self, func):
         if super(UnaryOperator, self).apply(func):
@@ -675,14 +669,14 @@ class UnaryOperator(Parser):
 
 
 class NaryOperator(Parser):
-    def __init__(self, *parsers, name=''):
-        super(NaryOperator, self).__init__(name)
+    def __init__(self, *parsers, name='', ptype=''):
+        super(NaryOperator, self).__init__(name, ptype)
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        return self.__class__(*parsers, name=self.name + self.ptype)
+        return self.__class__(*parsers, name=self.name, ptype=self.ptype)
 
     def apply(self, func):
         if super(NaryOperator, self).apply(func):
@@ -691,8 +685,8 @@ class NaryOperator(Parser):
 
 
 class Optional(UnaryOperator):
-    def __init__(self, parser, name=''):
-        super(Optional, self).__init__(parser, name)
+    def __init__(self, parser, name='', ptype=''):
+        super(Optional, self).__init__(parser, name, ptype)
         assert isinstance(parser, Parser)
         assert not isinstance(parser, Optional), \
             "Nesting options would be redundant: %s(%s)" % \
@@ -724,8 +718,8 @@ class ZeroOrMore(Optional):
 
 
 class OneOrMore(UnaryOperator):
-    def __init__(self, parser, name=''):
-        super(OneOrMore, self).__init__(parser, name)
+    def __init__(self, parser, name='', ptype=''):
+        super(OneOrMore, self).__init__(parser, name, ptype)
         assert not isinstance(parser, Optional), \
             "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
             "%s(%s)" % (str(name), str(parser.name))
@@ -748,8 +742,8 @@ class OneOrMore(UnaryOperator):
 
 
 class Sequence(NaryOperator):
-    def __init__(self, *parsers, name=''):
-        super(Sequence, self).__init__(*parsers, name=name)
+    def __init__(self, *parsers, name='', ptype=''):
+        super(Sequence, self).__init__(*parsers, name=name, ptype=ptype)
         assert len(self.parsers) >= 1
 
     def __call__(self, text):
@@ -768,8 +762,8 @@ class Sequence(NaryOperator):
 
 
 class Alternative(NaryOperator):
-    def __init__(self, *parsers, name=''):
-        super(Alternative, self).__init__(*parsers, name=name)
+    def __init__(self, *parsers, name='', ptype=''):
+        super(Alternative, self).__init__(*parsers, name=name, ptype=ptype)
         assert len(self.parsers) >= 1
         assert all(not isinstance(p, Optional) for p in self.parsers)
 
@@ -789,8 +783,8 @@ class Alternative(NaryOperator):
 
 
 class FlowOperator(UnaryOperator):
-    def __init__(self, parser, name=''):
-        super(FlowOperator, self).__init__(parser, name)
+    def __init__(self, parser, name='', ptype=''):
+        super(FlowOperator, self).__init__(parser, name, ptype)
 
 
 class Required(FlowOperator):
@@ -809,8 +803,8 @@ class Required(FlowOperator):
 
 
 class Lookahead(FlowOperator):
-    def __init__(self, parser, name=''):
-        super(Lookahead, self).__init__(parser, name)
+    def __init__(self, parser, name='', ptype=''):
+        super(Lookahead, self).__init__(parser, name, ptype)
 
     def __call__(self, text):
         node, text_ = self.parser(text)
@@ -841,8 +835,8 @@ def iter_right_branch(node):
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, parser, name=''):
-        super(Lookbehind, self).__init__(parser, name)
+    def __init__(self, parser, name='', ptype=''):
+        super(Lookbehind, self).__init__(parser, name, ptype)
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text):
@@ -881,8 +875,8 @@ class NegativeLookbehind(Lookbehind):
 
 
 class Capture(UnaryOperator):
-    def __init__(self, parser, name=''):
-        super(Capture, self).__init__(parser, name)
+    def __init__(self, parser, name='', ptype=''):
+        super(Capture, self).__init__(parser, name, ptype)
         print("WARNING: Capture operator is experimental")
 
     def __call__(self, text):
@@ -896,16 +890,16 @@ class Capture(UnaryOperator):
 
 
 class Retrieve(Parser):
-    def __init__(self, symbol, counterpart=None, name=''):
+    def __init__(self, symbol, counterpart=None, name='', ptype=''):
         if not name:
             name = symbol.name
-        super(Retrieve, self).__init__(name)
+        super(Retrieve, self).__init__(name, ptype)
         self.symbol = symbol
         self.counterpart = counterpart if counterpart else lambda value: value
         print("WARNING: Retrieve operator is experimental")
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.counterpart, self.name + self.ptype)
+        return self.__class__(self.symbol, self.counterpart, self.name, self.ptype)
 
     def __call__(self, text):
         stack = self.grammar.variables[self.symbol.name]
@@ -935,7 +929,6 @@ class Forward(Parser):
     def __init__(self):
         Parser.__init__(self)
         self.parser = None
-        self.name = ''
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
