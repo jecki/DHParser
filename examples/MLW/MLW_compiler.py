@@ -22,7 +22,7 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    WHITESPACE_KEYWORD, TOKEN_KEYWORD, change_parser
+    WHITESPACE_KEYWORD, TOKEN_KEYWORD, replace_parser
 
 
 
@@ -148,7 +148,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "ce9155e0248ac27756283d067342182e"
+    source_hash__ = "5e5f53f5ef36706df8dc1ec0ecd73859"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -283,7 +283,7 @@ MLW_AST_transformation_table = {
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
         [remove_expendables, reduce_single_child],
-    "LEER, TRENNER, ZSPRUNG": partial(change_parser, new_parser_name=WHITESPACE_KEYWORD),
+    "LEER, TRENNER, ZSPRUNG": partial(replace_parser, parser_name=WHITESPACE_KEYWORD),
     "DATEI_ENDE": no_operation,
     "NIEMALS": no_operation,
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):

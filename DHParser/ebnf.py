@@ -221,14 +221,15 @@ EBNF_transformation_table = {
 EBNF_validation_table = {
     # Semantic validation on the AST
     "repetition, option, oneormore":
-        [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
+        [partial(forbid, child_names=['repetition', 'option', 'oneormore']),
          partial(assert_content, regex=r'(?!§)')],
 }
 
 
 def EBNFTransformer(syntax_tree):
-    for processing_table in [EBNF_transformation_table, EBNF_validation_table]:
-        traverse(syntax_tree, processing_table)
+    for processing_table, key_func in [(EBNF_transformation_table, lambda node: node.parser.name),
+                                       (EBNF_validation_table, lambda node: node.tag_name)]:
+        traverse(syntax_tree, processing_table, key_func)
 
 
 def get_ebnf_transformer():
@@ -560,7 +561,6 @@ class EBNFCompiler(CompilerBase):
         return self.non_terminal(node, 'Sequence')
 
     def on_factor(self, node):
-        assert isinstance(node.parser, Sequence), node.as_sexpr()  # these assert statements can be removed
         assert node.children
         assert len(node.result) >= 2, node.as_sexpr()
         prefix = node.result[0].result

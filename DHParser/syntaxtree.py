@@ -40,7 +40,7 @@ __all__ = ['WHITESPACE_KEYWORD',
            'no_operation',
            'replace_by_single_child',
            'reduce_single_child',
-           'change_parser',
+           'replace_parser',
            'is_whitespace',
            'is_empty',
            'is_expendable',
@@ -67,12 +67,13 @@ class MockParser:
     syntax tree (re-)construction. In all other cases where a parser
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
-    def __init__(self, name='', class_name=''):
+    def __init__(self, name='', ptype='', pbases=frozenset()):
         self.name = name
-        self.class_name = class_name or self.__class__.__name__
+        self.ptype = ptype or self.__class__.__name__
+        # self.pbases = pbases or {cls.__name__ for cls in inspect.getmro(self.__class__)}
 
     def __str__(self):
-        return self.name or self.class_name
+        return self.name or self.ptype
 
 
 class ZombieParser(MockParser):
@@ -88,7 +89,7 @@ class ZombieParser(MockParser):
     alive = False
 
     def __init__(self):
-        super(ZombieParser, self).__init__("ZOMBIE")
+        super(ZombieParser, self).__init__("__ZOMBIE__")
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
         self.__class__.alive = True
@@ -126,7 +127,12 @@ class Node:
             tuple of child nodes.
         children (tuple):  The tuple of child nodes or an empty tuple
             if there are no child nodes. READ ONLY!
-        parser (Parser):  The parser which generated this node.
+        parser (Parser):  The parser which generated this node. 
+            WARNING: In case you use mock syntax trees for testing or
+            parser replacement during the AST-transformation: DO NOT
+            rely on this being a real parser object in any phase after 
+            parsing (i.e. AST-transformation and compiling), for 
+            example by calling ``isinstance(node.parer, ...)``.
         errors (list):  A list of parser- or compiler-errors:
             tuple(position, string) attached to this node
         len (int):  The full length of the node's string result if the
@@ -173,7 +179,7 @@ class Node:
         return self.tag_name == other.tag_name and self.result == other.result
 
     def __hash__(self):
-        return hash(str(self.parser))
+        return hash(self.tag_name)
 
     def __deepcopy__(self, memodict={}):
         result = copy.deepcopy(self.result)
@@ -183,8 +189,8 @@ class Node:
 
     @property
     def tag_name(self):
-        return str(self.parser)
-        # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.__class__.__name__
+        return self.parser.name or self.parser.ptype
+        # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.ptype
 
     @property
     def result(self):
@@ -204,7 +210,7 @@ class Node:
 
     @property
     def len(self):
-        # DEBUGGING:  print(str(self.parser), str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
+        # DEBUGGING:  print(self.tag_name, str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
         return self._len
 
     @property
@@ -475,7 +481,7 @@ WHITESPACE_KEYWORD = 'WSP__'
 TOKEN_KEYWORD = 'TOKEN__'
 
 
-def traverse(root_node, processing_table):
+def traverse(root_node, processing_table, key_func=lambda node: node.parser.name):
     """Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback functions registered
     in the ``calltable``-dictionary.
@@ -485,10 +491,12 @@ def traverse(root_node, processing_table):
     
     Args:
         root_node (Node): The root-node of the syntax tree to be traversed 
-        processing_table (dict): parser.name -> sequence of functions that
+        processing_table (dict): node key -> sequence of functions that
             will be applied to matching nodes in order. This dictionary
             is interpreted as a ``compact_table``. See 
             ``toolkit.expand_table`` or ``EBNFCompiler.EBNFTransTable``
+        key_func (function): A mapping key_func(node) -> keystr. The default
+            key_func yields node.parser.name.
             
     Example:
         table = { "term": [replace_by_single_child, flatten], 
@@ -506,7 +514,7 @@ def traverse(root_node, processing_table):
                 traverse_recursive(child)
                 node.error_flag |= child.error_flag  # propagate error flag
         sequence = table.get('*', []) + \
-                   table.get(node.parser.name, table.get('?', [])) + \
+                   table.get(key_func(node), table.get('?', [])) + \
                    table.get('~', [])
         # '*' always called (before any other processing function)
         # '?' called for those nodes for which no (other) processing functions is in the table
@@ -554,11 +562,11 @@ def reduce_single_child(node):
         node.result = node.result[0].result
 
 
-def change_parser(node, new_parser_name):
-    """Changes the parser of a Node to a mock parser with the given 
-    name.
+def replace_parser(node, parser_name, parser_type=''):
+    """Replaces the parser of a Node to a mock parser with the given 
+    name and pseudo-type.
     """
-    node.parser = MockParser(new_parser_name)
+    node.parser = MockParser(parser_name, parser_type)
 
 
 # ------------------------------------------------
@@ -652,22 +660,22 @@ def remove_enclosing_delimiters(node):
 ########################################################################
 
 
-def require(node, child_tags):
+def require(node, child_names):
     for child in node.children:
-        if child.tag_name not in child_tags:
+        if child.parser.name not in child_names:
             node.add_error('Element "%s" is not allowed inside "%s".' %
-                           (child.tag_name, node.tag_name))
+                           (child.parser.name, node.parser.name))
 
 
-def forbid(node, child_tags):
+def forbid(node, child_names):
     for child in node.children:
-        if child.tag_name in child_tags:
+        if child.parser.name in child_names:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
-                           (child.tag_name, node.tag_name))
+                           (child.parser.name, node.parser.name))
 
 
 def assert_content(node, regex):
     content = str(node)
     if not re.match(regex, content):
         node.add_error('Element "%s" violates %s on %s' %
-                       (node.tag_name, str(regex), content))
+                       (node.parser.name, str(regex), content))
