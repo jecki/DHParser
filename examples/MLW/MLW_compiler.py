@@ -283,7 +283,7 @@ MLW_AST_transformation_table = {
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
         [remove_expendables, reduce_single_child],
-    "LEER, TRENNER, ZSPRUNG": partial(replace_parser, parser_name=WHITESPACE_KEYWORD),
+    "LEER, TRENNER, ZSPRUNG": partial(replace_parser, name='', ptype=WHITESPACE_PTYPE),
     "DATEI_ENDE": no_operation,
     "NIEMALS": no_operation,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):

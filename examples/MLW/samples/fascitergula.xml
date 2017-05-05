@@ -22,12 +22,12 @@
                 fa-rcu-tergula
             </LVariante>
             <LVZusatz>
-                <TOKEN__>
+                <:Token>
                     ZUSATZ
-                </TOKEN__>
-                <TOKEN__>
+                </:Token>
+                <:Token>
                     sim.
-                </TOKEN__>
+                </:Token>
             </LVZusatz>
         </LemmaVarianten>
         <GrammatikPosition>
@@ -78,9 +78,9 @@
     </LemmaPosition>
     <SchreibweisenPosition>
         <SWTyp>
-            <TOKEN__>
+            <:Token>
                 script.
-            </TOKEN__>
+            </:Token>
         </SWTyp>
         <SWVariante>
             <Schreibweise>

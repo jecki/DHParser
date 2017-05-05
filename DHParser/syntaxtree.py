@@ -573,11 +573,11 @@ def reduce_single_child(node):
         node.result = node.result[0].result
 
 
-def replace_parser(node, parser_name, parser_type=''):
+def replace_parser(node, name, ptype=''):
     """Replaces the parser of a Node to a mock parser with the given 
     name and pseudo-type.
     """
-    node.parser = MockParser(parser_name, parser_type)
+    node.parser = MockParser(name, ptype)
 
 
 # ------------------------------------------------
