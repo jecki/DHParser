@@ -30,7 +30,7 @@ from .parsers import GrammarBase, mixin_comment, nil_scanner, Forward, RE, Negat
     Capture, Retrieve
 from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
-    forbid, assert_content, WHITESPACE_KEYWORD
+    forbid, assert_content, WHITESPACE_KEYWORD, key_parser_name, key_tag_name
 from .versionnumber import __version__
 
 
@@ -43,8 +43,6 @@ __all__ = ['get_ebnf_scanner',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed']
-
-
 
 
 ########################################################################
@@ -221,14 +219,14 @@ EBNF_transformation_table = {
 EBNF_validation_table = {
     # Semantic validation on the AST
     "repetition, option, oneormore":
-        [partial(forbid, child_names=['repetition', 'option', 'oneormore']),
+        [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
          partial(assert_content, regex=r'(?!§)')],
 }
 
 
 def EBNFTransformer(syntax_tree):
-    for processing_table, key_func in [(EBNF_transformation_table, lambda node: node.parser.name),
-                                       (EBNF_validation_table, lambda node: node.tag_name)]:
+    for processing_table, key_func in [(EBNF_transformation_table, key_parser_name),
+                                       (EBNF_validation_table, key_tag_name)]:
         traverse(syntax_tree, processing_table, key_func)
 
 

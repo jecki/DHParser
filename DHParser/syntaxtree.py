@@ -36,6 +36,8 @@ __all__ = ['WHITESPACE_KEYWORD',
            'Error',
            'Node',
            'mock_syntax_tree',
+           'key_parser_name',
+           'key_tag_name',
            'traverse',
            'no_operation',
            'replace_by_single_child',
@@ -481,7 +483,15 @@ WHITESPACE_KEYWORD = 'WSP__'
 TOKEN_KEYWORD = 'TOKEN__'
 
 
-def traverse(root_node, processing_table, key_func=lambda node: node.parser.name):
+def key_parser_name(node):
+    return node.parser.name
+
+
+def key_tag_name(node):
+    return node.tag_name
+
+
+def traverse(root_node, processing_table, key_func=key_parser_name):
     """Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback functions registered
     in the ``calltable``-dictionary.
@@ -660,16 +670,16 @@ def remove_enclosing_delimiters(node):
 ########################################################################
 
 
-def require(node, child_names):
+def require(node, child_tag):
     for child in node.children:
-        if child.parser.name not in child_names:
+        if child.tag_name not in child_tag:
             node.add_error('Element "%s" is not allowed inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def forbid(node, child_names):
+def forbid(node, child_tags):
     for child in node.children:
-        if child.parser.name in child_names:
+        if child.tag_name in child_tags:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
                            (child.parser.name, node.parser.name))
 
