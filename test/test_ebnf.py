@@ -330,4 +330,4 @@ class TestBoundaryCases:
 
 if __name__ == "__main__":
     from run import runner
-    runner("TestBoundaryCases", globals())
+    runner("", globals())
