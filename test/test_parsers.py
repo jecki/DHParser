@@ -26,7 +26,7 @@ sys.path.extend(['../', './'])
 from DHParser import parsers
 from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
-    replace_by_single_child, reduce_single_child, flatten, TOKEN_KEYWORD
+    replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
@@ -47,7 +47,7 @@ ARITHMETIC_EBNF_transformation_table = {
     "formula": [remove_expendables],
     "term, expr": [replace_by_single_child, flatten],
     "factor": [remove_expendables, reduce_single_child],
-    (TOKEN_KEYWORD): [remove_expendables, reduce_single_child],
+    (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
     "": [remove_expendables, replace_by_single_child]
 }
 
@@ -74,9 +74,9 @@ class TestGrammarTest:
                 3: "20 / 4 * 3"
             },
             "ast": {
-                1: "(term (factor 4) (TOKEN__ *) (factor 5))",
-                2: "(term (factor 20) (TOKEN__ /) (factor 4))",
-                3: "(term (term (factor 20) (TOKEN__ /) (factor 4)) (TOKEN__ *) (factor 3))"
+                1: "(term (factor 4) (:Token *) (factor 5))",
+                2: "(term (factor 20) (:Token /) (factor 4))",
+                3: "(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))"
             },
             "fail": {
                 4: "4 + 5",
@@ -93,9 +93,9 @@ class TestGrammarTest:
                 3: "20 / 4 * 3"
             },
             "ast": {
-                1: "(term (factor 4) (TOKEN__ *) (factor 5))",
-                2: "(term (factor 20) (TOKEN__ /) (factor 4))",
-                3: "(term (term (factor 19) (TOKEN__ /) (factor 4)) (TOKEN__ *) (factor 3))"  # error 19 != 20
+                1: "(term (factor 4) (:Token *) (factor 5))",
+                2: "(term (factor 20) (:Token /) (factor 4))",
+                3: "(term (term (factor 19) (:Token /) (factor 4)) (:Token *) (factor 3))"  # error 19 != 20
             },
             "fail": {
                 4: "4 * 5",     # error: this should match
@@ -108,7 +108,7 @@ class TestGrammarTest:
         parser_fac = parser_factory(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
         errata = parsers.test_grammar(self.cases, parser_fac, trans_fac)
-        assert not errata
+        assert not errata, str(errata)
         errata = parsers.test_grammar(self.failure_cases, parser_fac, trans_fac)
         # for e in errata:
         #     print(e)

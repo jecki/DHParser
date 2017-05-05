@@ -30,8 +30,8 @@ from typing import NamedTuple
 from .toolkit import is_logging, log_dir, expand_table, line_col, smart_list
 
 
-__all__ = ['WHITESPACE_KEYWORD',
-           'TOKEN_KEYWORD',
+__all__ = ['WHITESPACE_PTYPE',
+           'TOKEN_PTYPE',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
@@ -70,8 +70,9 @@ class MockParser:
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
     def __init__(self, name='', ptype='', pbases=frozenset()):
+        assert not ptype or ptype[0] == ':'
         self.name = name
-        self.ptype = ptype or self.__class__.__name__
+        self.ptype = ptype or ':' + self.__class__.__name__
         # self.pbases = pbases or {cls.__name__ for cls in inspect.getmro(self.__class__)}
 
     def __str__(self):
@@ -469,7 +470,7 @@ def mock_syntax_tree(sexpr):
                 lines.append(sexpr[:m.end()])
                 sexpr = sexpr[m.end():]
         result = "\n".join(lines)
-    return Node(MockParser(name, class_name), result)
+    return Node(MockParser(name, ':' + class_name), result)
 
 
 ########################################################################
@@ -479,8 +480,8 @@ def mock_syntax_tree(sexpr):
 ########################################################################
 
 
-WHITESPACE_KEYWORD = 'WSP__'
-TOKEN_KEYWORD = 'TOKEN__'
+WHITESPACE_PTYPE = ':Whitespace'
+TOKEN_PTYPE = ':Token'
 
 
 def key_parser_name(node):
@@ -491,7 +492,7 @@ def key_tag_name(node):
     return node.tag_name
 
 
-def traverse(root_node, processing_table, key_func=key_parser_name):
+def traverse(root_node, processing_table, key_func=key_tag_name):
     """Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback functions registered
     in the ``calltable``-dictionary.
@@ -524,7 +525,7 @@ def traverse(root_node, processing_table, key_func=key_parser_name):
                 traverse_recursive(child)
                 node.error_flag |= child.error_flag  # propagate error flag
         sequence = table.get('*', []) + \
-                   table.get(key_func(node), table.get('?', [])) + \
+                   table.get(key_func(node), table.get('', [])) + \
                    table.get('~', [])
         # '*' always called (before any other processing function)
         # '?' called for those nodes for which no (other) processing functions is in the table
@@ -593,7 +594,7 @@ def replace_parser(node, parser_name, parser_type=''):
 def is_whitespace(node):
     """Removes whitespace and comments defined with the
     ``@comment``-directive."""
-    return node.parser.name == WHITESPACE_KEYWORD
+    return node.parser.ptype == WHITESPACE_PTYPE
 
 
 def is_empty(node):
@@ -605,7 +606,7 @@ def is_expendable(node):
 
 
 def is_token(node, token_set=frozenset()):
-    return node.parser.name == TOKEN_KEYWORD and (not token_set or node.result in token_set)
+    return node.parser.ptype == TOKEN_PTYPE and (not token_set or node.result in token_set)
 
 
 def remove_children_if(node, condition):

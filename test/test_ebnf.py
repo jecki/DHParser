@@ -26,7 +26,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging
-from DHParser.parsers import compile_source, Retrieve, WHITESPACE_KEYWORD, nil_scanner
+from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_scanner
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
 from DHParser.dsl import compileEBNF, compileDSL, parser_factory
 
@@ -104,7 +104,7 @@ class TestEBNFParser:
         result = self.EBNF(snippet, 'literal')
         assert not result.error_flag
         assert str(result) == snippet
-        assert result.find(lambda node: str(node) == WHITESPACE_KEYWORD)
+        assert result.find(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
 
         result = self.EBNF(' "literal"', 'literal')
         assert result.error_flag  # literals catch following, but not leading whitespace

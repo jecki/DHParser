@@ -43,6 +43,7 @@ except ImportError:
 __all__ = ['logging',
            'is_logging',
            'log_dir',
+           'logfile_basename',
            'line_col',
            'error_messages',
            'escape_re',

@@ -29,8 +29,8 @@ from .parsers import GrammarBase, mixin_comment, nil_scanner, Forward, RE, Negat
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
     Capture, Retrieve
 from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
-    replace_by_single_child, TOKEN_KEYWORD, remove_expendables, remove_tokens, flatten, \
-    forbid, assert_content, WHITESPACE_KEYWORD, key_parser_name, key_tag_name
+    replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
+    forbid, assert_content, WHITESPACE_PTYPE, key_parser_name, key_tag_name
 from .versionnumber import __version__
 
 
@@ -207,7 +207,7 @@ EBNF_transformation_table = {
         [reduce_single_child, remove_enclosing_delimiters],
     "symbol, literal, regexp":
         [remove_expendables, reduce_single_child],
-    (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
+    (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [remove_expendables, reduce_single_child],
     "list_":
         [flatten, partial(remove_tokens, tokens={','})],
@@ -225,7 +225,7 @@ EBNF_validation_table = {
 
 
 def EBNFTransformer(syntax_tree):
-    for processing_table, key_func in [(EBNF_transformation_table, key_parser_name),
+    for processing_table, key_func in [(EBNF_transformation_table, key_tag_name),
                                        (EBNF_validation_table, key_tag_name)]:
         traverse(syntax_tree, processing_table, key_func)
 
@@ -290,7 +290,8 @@ class EBNFCompiler(CompilerBase):
     in EBNF-Notation.
     """
     COMMENT_KEYWORD = "COMMENT__"
-    RESERVED_SYMBOLS = {TOKEN_KEYWORD, WHITESPACE_KEYWORD, COMMENT_KEYWORD}
+    WHITESPACE_KEYWORD = "WSP__"
+    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneuos AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -377,11 +378,11 @@ class EBNFCompiler(CompilerBase):
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[1])
 
         self.definition_names = [defn[0] for defn in definitions]
-        definitions.append(('wspR__', WHITESPACE_KEYWORD
+        definitions.append(('wspR__', self.WHITESPACE_KEYWORD
                             if 'right' in self.directives['literalws'] else "''"))
-        definitions.append(('wspL__', WHITESPACE_KEYWORD
+        definitions.append(('wspL__', self.WHITESPACE_KEYWORD
                             if 'left' in self.directives['literalws'] else "''"))
-        definitions.append((WHITESPACE_KEYWORD,
+        definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace="
                              "r'{whitespace}', comment=r'{comment}')").
                             format(**self.directives)))
@@ -623,13 +624,13 @@ class EBNFCompiler(CompilerBase):
         name = []
         if rx[:2] == '~/':
             if not 'left' in self.directives['literalws']:
-                name = ['wL=' + WHITESPACE_KEYWORD] + name
+                name = ['wL=' + self.WHITESPACE_KEYWORD] + name
             rx = rx[1:]
         elif 'left' in self.directives['literalws']:
             name = ["wL=''"] + name
         if rx[-2:] == '/~':
             if 'right' not in self.directives['literalws']:
-                name = ['wR=' + WHITESPACE_KEYWORD] + name
+                name = ['wR=' + self.WHITESPACE_KEYWORD] + name
             rx = rx[:-1]
         elif 'right' in self.directives['literalws']:
             name = ["wR=''"] + name

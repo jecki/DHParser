@@ -23,9 +23,9 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import compact_sexpr
+from DHParser.toolkit import compact_sexpr, logging
 from DHParser.syntaxtree import traverse, mock_syntax_tree, reduce_single_child, \
-    replace_by_single_child, flatten, remove_expendables, TOKEN_KEYWORD
+    replace_by_single_child, flatten, remove_expendables, TOKEN_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory
 
@@ -71,7 +71,7 @@ class TestSExpr:
         tree = mock_syntax_tree(sexpr)
         assert tree.tag_name == 'a'
         assert tree.result[0].tag_name == 'b'
-        assert tree.result[1].tag_name == 'class3'
+        assert tree.result[1].tag_name == ':class3'
         assert tree.result[2].tag_name == 'c'
 
 class TestNode:
@@ -106,12 +106,12 @@ class TestNode:
         ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
         att  = {"term": [replace_by_single_child, flatten],
                 "factor": [remove_expendables, reduce_single_child],
-                (TOKEN_KEYWORD): [remove_expendables, reduce_single_child],
-                "": [remove_expendables, replace_by_single_child]}
+                (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
+                "?": [remove_expendables, replace_by_single_child]}
         parser = parser_factory(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
-        compare_tree = mock_syntax_tree("(term (term (factor 20) (TOKEN__ /) (factor 4)) (TOKEN__ *) (factor 3))")
+        compare_tree = mock_syntax_tree("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
         assert tree == compare_tree
 
     def test_copy(self):
@@ -128,7 +128,9 @@ class TestNode:
         parser = get_ebnf_grammar()
         transform = get_ebnf_transformer()
         compiler = get_ebnf_compiler()
-        tree = parser(ebnf)
+        with logging():
+            tree = parser(ebnf)
+            parser.log_parsing_history()
         tree_copy = copy.deepcopy(tree)
         transform(tree_copy)
         res1 = compiler(tree_copy)
