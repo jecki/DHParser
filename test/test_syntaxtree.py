@@ -128,9 +128,7 @@ class TestNode:
         parser = get_ebnf_grammar()
         transform = get_ebnf_transformer()
         compiler = get_ebnf_compiler()
-        with logging():
-            tree = parser(ebnf)
-            parser.log_parsing_history()
+        tree = parser(ebnf)
         tree_copy = copy.deepcopy(tree)
         transform(tree_copy)
         res1 = compiler(tree_copy)
