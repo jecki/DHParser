@@ -272,8 +272,12 @@ class Node:
                 content.append('\n'.join((tab + s) for s in subtree))
             return head + '\n'.join(content) + tail
 
-        return head + '\n'.join([tab + dataF(s)
-                                 for s in str(self.result).split('\n')]) + tail
+        if head[0] == "<" and self.result.find('\n') < 0:
+            # for XML: place tags for leaf-nodes on one line if possible
+            return head[:-1] + self.result + tail[1:]
+        else:
+            return head + '\n'.join([tab + dataF(s)
+                                     for s in self.result.split('\n')]) + tail
 
     def as_sexpr(self, src=None):
         """

@@ -4,8 +4,13 @@
 @ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
 @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
 
+
+##############################################################################
+
 Artikel         = [LEER]
-                  §LemmaPosition  [ArtikelKopf]  §BedeutungsPosition  §Autorinfo
+                  §LemmaPosition [ArtikelKopf]
+                  §BedeutungsPosition
+                  §Autorinfo
                   [LEER]  DATEI_ENDE
 
 
@@ -16,7 +21,8 @@ LemmaPosition   = "LEMMA"  §Lemma  [LemmaVarianten]  §GrammatikPosition
 Lemma           = [_tll]  WORT_KLEIN [LEER]
 _tll            = "*"
 
-LemmaVarianten  = "VARIANTEN" [LEER] §LVariante  { TRENNER LVariante }
+LemmaVarianten  = "VARIANTEN" [LEER]
+                  §LVariante  { TRENNER LVariante }
                   [TRENNER LVZusatz] [TRENNER]
 LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
 LVZusatz        = "ZUSATZ" "sim."

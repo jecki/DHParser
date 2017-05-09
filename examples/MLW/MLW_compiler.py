@@ -148,7 +148,7 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "5e5f53f5ef36706df8dc1ec0ecd73859"
+    source_hash__ = "1597e817991aba09e6a51b432d741f09"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')

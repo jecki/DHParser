@@ -1,65 +1,121 @@
 <Artikel>
     <LemmaPosition>
         <Lemma>
-            <_tll>*</_tll>
-            <WORT_KLEIN>facitergula</WORT_KLEIN>
+            <_tll>
+                *
+            </_tll>
+            <WORT_KLEIN>
+                facitergula
+            </WORT_KLEIN>
         </Lemma>
         <LemmaVarianten>
-            <LVariante>fasc-itergula</LVariante>
-            <LVariante>fac-iet-ergula</LVariante>
-            <LVariante>fac-ist-ergula</LVariante>
-            <LVariante>fa-rcu-tergula</LVariante>
+            <LVariante>
+                fasc-itergula
+            </LVariante>
+            <LVariante>
+                fac-iet-ergula
+            </LVariante>
+            <LVariante>
+                fac-ist-ergula
+            </LVariante>
+            <LVariante>
+                fa-rcu-tergula
+            </LVariante>
             <LVZusatz>
-                <:Token>ZUSATZ</:Token>
-                <:Token>sim.</:Token>
+                <:Token>
+                    ZUSATZ
+                </:Token>
+                <:Token>
+                    sim.
+                </:Token>
             </LVZusatz>
         </LemmaVarianten>
         <GrammatikPosition>
-            <_wortart>nomen</_wortart>
+            <_wortart>
+                nomen
+            </_wortart>
             <Flexionen>
-                <Flexion>-ar</Flexion>
+                <Flexion>
+                    -ar
+                </Flexion>
             </Flexionen>
-            <_genus>f.</_genus>
+            <_genus>
+                f.
+            </_genus>
             <GVariante>
                 <Flexionen>
-                    <Flexion>-us</Flexion>
-                    <Flexion>-i</Flexion>
+                    <Flexion>
+                        -us
+                    </Flexion>
+                    <Flexion>
+                        -i
+                    </Flexion>
                 </Flexionen>
-                <_genus>m.</_genus>
-                <Verweis>beleg_id_1</Verweis>
+                <_genus>
+                    m.
+                </_genus>
+                <Verweis>
+                    beleg_id_1
+                </Verweis>
             </GVariante>
             <GVariante>
                 <Flexionen>
-                    <Flexion>-um</Flexion>
-                    <Flexion>-i</Flexion>
+                    <Flexion>
+                        -um
+                    </Flexion>
+                    <Flexion>
+                        -i
+                    </Flexion>
                 </Flexionen>
-                <_genus>n.</_genus>
-                <Verweis>beleg_id_2</Verweis>
+                <_genus>
+                    n.
+                </_genus>
+                <Verweis>
+                    beleg_id_2
+                </Verweis>
             </GVariante>
         </GrammatikPosition>
     </LemmaPosition>
     <SchreibweisenPosition>
         <SWTyp>
-            <:Token>script.</:Token>
+            <:Token>
+                script.
+            </:Token>
         </SWTyp>
         <SWVariante>
-            <Schreibweise>vizreg-</Schreibweise>
-            <Verweis>beleg_id_3</Verweis>
+            <Schreibweise>
+                vizreg-
+            </Schreibweise>
+            <Verweis>
+                beleg_id_3
+            </Verweis>
         </SWVariante>
         <SWVariante>
-            <Schreibweise>festregel(a)</Schreibweise>
-            <Verweis>beleg_id_4</Verweis>
+            <Schreibweise>
+                festregel(a)
+            </Schreibweise>
+            <Verweis>
+                beleg_id_4
+            </Verweis>
         </SWVariante>
         <SWVariante>
-            <Schreibweise>fezdregl(a)</Schreibweise>
-            <Verweis>beleg_id_5</Verweis>
+            <Schreibweise>
+                fezdregl(a)
+            </Schreibweise>
+            <Verweis>
+                beleg_id_5
+            </Verweis>
         </SWVariante>
     </SchreibweisenPosition>
     <BedeutungsPosition>
         <Bedeutung>
             <Interpretamente>
-                <LateinischeBedeutung>pannus, faciale, sudarium</LateinischeBedeutung>
-                <DeutscheBedeutung>Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]</DeutscheBedeutung>
+                <LateinischeBedeutung>
+                    pannus, faciale, sudarium
+                </LateinischeBedeutung>
+                <DeutscheBedeutung>
+                    Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]
+                </DeutscheBedeutung>
             </Interpretamente>
             <Belege>
                 <EinBeleg>
@@ -95,8 +151,12 @@
         </Bedeutung>
         <Bedeutung>
             <Interpretamente>
-                <LateinischeBedeutung>capital, rica</LateinischeBedeutung>
-                <DeutscheBedeutung>Kopftuch</DeutscheBedeutung>
+                <LateinischeBedeutung>
+                    capital, rica
+                </LateinischeBedeutung>
+                <DeutscheBedeutung>
+                    Kopftuch
+                </DeutscheBedeutung>
             </Interpretamente>
             <Belege>
                 <EinBeleg>
@@ -114,6 +174,8 @@
         </Bedeutung>
     </BedeutungsPosition>
     <Autorinfo>
-        <Name>Weber</Name>
+        <Name>
+            Weber
+        </Name>
     </Autorinfo>
 </Artikel>

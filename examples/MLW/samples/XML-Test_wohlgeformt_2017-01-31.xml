@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLW-test>
+    <artikel type="einLemma">
+        <lemma-position>
+            <lemma klassisch="nein" gesichert="nein">facitergula</lemma>
+            <lemma-varianten>
+                <lemma kurz="fasc-">fascitergula</lemma>
+                <lemma kurz="-iet-">facietergula</lemma>
+                <lemma kurz="-ist-">facistergula</lemma>
+                <lemma kurz="-rcu-">facitercula</lemma>
+                <sim></sim><!--oder: --><zusatz typ="sim"></zusatz>
+            </lemma-varianten>
+            <grammatik-position>
+                <grammatik wortart="n" genus="f" klasse="a-ae">-ae</grammatik>
+                <grammatik-varianten>
+                    <variante>
+                        <grammatik wortart="n" genus="m" klasse="us-i">-us, -i</grammatik>
+                        <beleg><verweis typ="intern/Zeile" ziel="facitergula_003"><!-- l. 8 --></verweis></beleg>
+                    </variante>
+                    <variante>
+                        <grammatik wortart="n" genus="n" klasse="um-i">-um, -i</grammatik>
+                        <beleg>
+                            <verweis typ="intern/Zeile" ziel="facitergula_002"><!-- l. 6.11 = Mehrfachverweis --></verweis>
+                            <verweis typ="intern/Zeile" ziel="facitergula_008"><!-- l. 6.11 = Mehrfachverweis --></verweis>
+                        </beleg>
+                    </variante>
+                </grammatik-varianten>
+            </grammatik-position>
+        </lemma-position>
+        <artikelkopf>
+            <schreibweisen-position>
+                <schreibweisen-variante>
+                    <schreibweise typ="script">vizreg-</schreibweise>
+                    <beleg><verweis typ="intern/Zeile" ziel="facitergula_013"></verweis></beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise typ="script">festregel(a)</schreibweise>
+                    <beleg><verweis typ="intern/Zeile" ziel="facitergula_010"></verweis></beleg>
+                    </schreibweisen-variante>
+                    <schreibweisen-variante>
+                        <schreibweise typ="script">fezdregl(a)</schreibweise>
+                        <beleg><verweis typ="intern/Zeile" ziel="facitergula_008"></verweis></beleg>
+                </schreibweisen-variante>
+            </schreibweisen-position>
+        </artikelkopf>
+        
+        <bedeutung-position>
+            <bedeutung nr="1">
+                <interpretament-latein>pannus, faciale, sudarium</interpretament-latein>                			                <interpretament-deutsch>(Gesichts-, Schweiß-)Tuch</interpretament-deutsch>
+                <zusatz-interpretament>usu liturg.</zusatz-interpretament>
+		<zusatz-interpretament> de re v. <verweis>p. 32,63</verweis></zusatz-interpretament>
+                <verwendung-position><!-- besser: beleg-position??-->
+                    <verwendung name="facitergula-facitergulum" id="facitergula_001"><!-- besser: beleg???-->
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>28,11</stelle>
+                        <datierung>Post 851</datierung>
+                        <belegtext><lemma kurz="-um">facitergulum</lemma> Ill.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-facitergulas" id="facitergula_002">
+                        <autor>Form.</autor>
+                        <werk>Sangall.</werk>
+                        <stelle>39 p. 421,16</stelle>
+                        <belegtext>munuscula ... direximus, hoc est palliolum ..., <lemma kurz="-as">facitergulas</lemma> duas.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-faciterculi" id="facitergula_003">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>18,7</stelle>
+                        <belegtext><lemma kurz="-eterculi">faciterculi</lemma> viginti quatuor.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-facitergula" id="facitergula_004">
+                        <autor>Libri</autor>
+                        <werk>confrat. I</werk>
+                        <stelle>app. A 6 p. 137,30</stelle>
+                        <belegtext>pulpitum ... <lemma kurz="-a">facitergula</lemma> cocco imaginata circumdari iussit <redaktion-ergaenzung>pontifex</redaktion-ergaenzung>.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-faciterulae" id="facitergula_005">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>76,15</stelle>
+                        <belegtext><lemma kurz="-rulae">faciterulae</lemma> Il.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-vizregule" id="facitergula_013">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>40,5 VI</stelle>
+                        <belegtext><lemma>vizregule</lemma>.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-facisterculas" id="facitergula_006">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>129<hoch>a</hoch>,5</stelle>
+                        <belegtext><lemma kurz="-sterculas">facisterculas</lemma> Il.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-facitella" id="facitergula_007">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>24,8</stelle>
+                        <belegtext><lemma kurz="-itella">facitella</lemma> X.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-fezdregle" id="facitergula_008">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>114,8</stelle>
+                        <belegtext>VIII <lemma>fezdregle</lemma>.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-fasciutercule" id="facitergula_014">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>6,24</stelle>
+                        <belegtext><lemma>fasciutercule</lemma> VII.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-fascercule" id="facitergula_009">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>92,6</stelle>
+                        <belegtext><lemma>fascercule</lemma> tres.</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-festregele" id="facitergula_010">
+                        <autor>Catal.</autor>
+                        <werk>thes. Germ.</werk>
+                        <stelle>21,20</stelle>
+                        <belegtext>IIII <lemma>festregele</lemma>.</belegtext>
+                    </verwendung>
+                    <saepe></saepe> <!--oder: --><zusatz typ="saepe"></zusatz>
+                </verwendung-position>
+           <bedeutung-position><bedeutung></bedeutung></bedeutung-position> 
+</bedeutung>
+ 
+            <bedeutung nr="2">
+                <interpretament-latein>capital, rica</interpretament-latein>
+                <interpretament-deutsch>Kopftuch</interpretament-deutsch>                <verwendung-position>
+                    <verwendung name="facitergula-facitergulis" id="facitergula_011">
+                        <autor>Transl.</autor>
+                        <werk>Libor. I</werk>
+                        <stelle>32</stelle>
+                        <belegtext>raptis feminarum <lemma kurz="-is">facitergulis</lemma> (<lemma>fa[s]citergiis</lemma> <redaktion-ergaenzung>var. l.</redaktion-ergaenzung>).</belegtext>
+                    </verwendung>
+                    <verwendung name="facitergula-facitercula" id="facitergula_012">
+                        <autor>Transl.</autor>
+                        <werk>Libor. II</werk>
+                        <stelle>20</stelle>
+                        <belegtext>nuditatem membrorum illius <redaktion-ergaenzung>(puellae)</redaktion-ergaenzung> tegere festinarunt fideles clerici et laici inprimis cum eorum <lemma kurz="-cula">facitercula</lemma>, dein vestibus solitis.</belegtext>
+                    </verwendung>
+                </verwendung-position>
+            </bedeutung>
+        </bedeutung-position>
+        <artikel-verfasser>Johannes Staub</artikel-verfasser>
+    </artikel>
+    
+</MLW-test>
+
