@@ -18,34 +18,37 @@ Artikel         = [LEER]
 
 LemmaPosition   = "LEMMA"  §Lemma  [LemmaVarianten]  §GrammatikPosition
 
-Lemma           = [_tll]  WORT_KLEIN [LEER]
-_tll            = "*"
+Lemma           = [klassisch] [gesichert] WORT_KLEIN [LEER]
+  klassisch     = "*"
+  gesichert     = "$"
 
 LemmaVarianten  = "VARIANTEN" [LEER]
                   §LVariante  { TRENNER LVariante }
                   [TRENNER LVZusatz] [TRENNER]
+
 LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
-LVZusatz        = "ZUSATZ" "sim."
+LVZusatz        = "ZUSATZ" zs_typ
+  zs_typ        = "sim."
 
 
 
 #### GRAMMATIK-POSITION ######################################################
 
-GrammatikPosition = "GRAMMATIK" [LEER] §_wortart §TRENNER §Flexionen [_genus]
-                    {GrammatikVarianten} [TRENNER]
+GrammatikPosition = "GRAMMATIK" [LEER] §wortart §TRENNER §Flexion [genus]
+                    {GrammatikVariante} [TRENNER]
 
-_wortart        = "nomen"  | "n." |
+wortart         = "nomen"  | "n." |
                   "verb"   | "v." |
                   "adverb" | "adv." |
                   "adjektiv" | "adj."
 
-GrammatikVarianten = TRENNER GVariante
-GVariante       = Flexionen  [_genus]  ":"  Beleg
+GrammatikVariante = TRENNER GVariante
+GVariante       = Flexionen  [genus]  ":"  Beleg
 
-Flexionen       = Flexion { "," §Flexion }
+Flexion         = Flexion { "," §Flexion }
 Flexion         = /-?[a-z]+/~
 
-_genus          = "maskulinum" | "m." |
+genus           = "maskulinum" | "m." |
                   "femininum" | "f." |
                   "neutrum" | "n."
 
