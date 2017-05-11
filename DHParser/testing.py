@@ -16,7 +16,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 import copy
-
+import inspect
 import regex as re
 
 from DHParser import Node, error_messages
@@ -140,7 +140,7 @@ def runner(tests, namespace):
                 pass
                 
         if __name__ == "__main__":
-            from run import runner
+            from DHParser.testing import runner
             runner("", globals())        
     """
     def instantiate(cls_name):

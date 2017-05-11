@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_MLW_grammar.py - test code for the MLW grammar 
+"""test_MLW_grammar.py - unit tests for the MLW grammar 
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -18,7 +18,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import DHParser.testing
+from DHParser import testing
 from DHParser import parsers
 # from DHParser.dsl import load_compiler_suite
 from MLW_compiler import get_MLW_grammar, get_MLW_transformer
@@ -33,7 +33,7 @@ MLW_TEST_CASES_LEMMA_POSITION = {
         3: "fasc|itergula"
     },
     "fail": {
-        9: "duo vocabula"
+        99: "duo vocabula"
     }
 },
 
@@ -57,19 +57,20 @@ MLW_TEST_CASES_LEMMA_POSITION = {
         3: " fasc-itergula fac-iet-ergula ZUSATZ sim.",
     },
     "fail": {
-        9: "* fascitergula"
+        99: "* fascitergula"
     }
 }
 
 }
 
 
-
-
 class TestMLWGrammar:
     def test_lemma_position(self):
-        errata = DHParser.testing.test_grammar(MLW_TEST_CASES_LEMMA_POSITION,
-                                               get_MLW_grammar,
-                                               get_MLW_transformer)
+        errata = testing.test_grammar(MLW_TEST_CASES_LEMMA_POSITION,
+                                      get_MLW_grammar,
+                                      get_MLW_transformer)
         assert not errata, str(errata)
 
+
+if __name__ == "__main__":
+    testing.runner("", globals())
