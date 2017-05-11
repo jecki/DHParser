@@ -24,8 +24,9 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compact_sexpr, logging
-from DHParser.syntaxtree import traverse, mock_syntax_tree, reduce_single_child, \
+from DHParser.syntaxtree import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables, TOKEN_PTYPE
+from DHParser.testing import mock_syntax_tree
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory
 

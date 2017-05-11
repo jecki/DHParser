@@ -22,8 +22,7 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    WHITESPACE_PTYPE, TOKEN_PTYPE, replace_parser
-
+    WHITESPACE_PTYPE, TOKEN_PTYPE
 
 
 #######################################################################
@@ -50,46 +49,55 @@ class MLWGrammar(GrammarBase):
     
     # EBNF-Syntax für MLW-Artikel
     
-    @ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
-    @ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
-    @ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
+    @ comment         =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+    @ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
+    @ literalws       =  right            # Leerraum vor und nach Literalen wird automatisch entfernt
     
-    Artikel         = [LEER]
-                      §LemmaPosition  [ArtikelKopf]  §BedeutungsPosition  §Autorinfo
-                      [LEER]  DATEI_ENDE
+    
+    ##############################################################################
+    
+    Artikel           = [LZ]
+                        §LemmaPosition
+                        [ArtikelKopf]
+                        §BedeutungsPosition
+                        §Autorinfo
+                        [LZ]  DATEI_ENDE
     
     
     #### LEMMA-POSITION ##########################################################
     
-    LemmaPosition   = "LEMMA"  §Lemma  [LemmaVarianten]  §GrammatikPosition
+    LemmaPosition     = "LEMMA" [LZ]  §HauptLemma [LemmaVarianten] §GrammatikPosition
     
-    Lemma           = [_tll]  WORT_KLEIN [LEER]
-    _tll            = "*"
+    HauptLemma        = [klassisch] [gesichert] lemma
+      klassisch       = "*"
+      gesichert       = "$"
     
-    LemmaVarianten  = "VARIANTEN" [LEER] §LVariante  { TRENNER LVariante }
-                      [TRENNER LVZusatz] [TRENNER]
-    LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
-    LVZusatz        = "ZUSATZ" "sim."
+    LemmaVarianten   = { (LZ|TR) lemma }+
+                       [ (LZ|TR) LemmaZusatz] [LZ]
+    
+    lemma           = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
+    
+    LemmaZusatz     = "ZUSATZ" lzs_typ
+      lzs_typ       = "sim."
     
     
+    ## GRAMMATIK-POSITION ##
     
-    #### GRAMMATIK-POSITION ######################################################
+    GrammatikPosition = "GRAMMATIK" [LZ] §wortart §TR §Flexion [genus]
+                        {GrammatikVariante} [TR]
     
-    GrammatikPosition = "GRAMMATIK" [LEER] §_wortart §TRENNER §Flexionen [_genus]
-                        {GrammatikVarianten} [TRENNER]
-    
-    _wortart        = "nomen"  | "n." |
+    wortart         = "nomen"  | "n." |
                       "verb"   | "v." |
                       "adverb" | "adv." |
                       "adjektiv" | "adj."
     
-    GrammatikVarianten = TRENNER GVariante
-    GVariante       = Flexionen  [_genus]  ":"  Beleg
+    GrammatikVariante = TR GVariante
+    GVariante       = Flexionen  [genus]  ":"  Beleg
     
     Flexionen       = Flexion { "," §Flexion }
     Flexion         = /-?[a-z]+/~
     
-    _genus          = "maskulinum" | "m." |
+    genus           = "maskulinum" | "m." |
                       "femininum" | "f." |
                       "neutrum" | "n."
     
@@ -98,8 +106,8 @@ class MLWGrammar(GrammarBase):
     #### ARTIKEL-KOPF ############################################################
     
     ArtikelKopf     = SchreibweisenPosition
-    SchreibweisenPosition =  "SCHREIBWEISE" [LEER] §SWTyp ":" [LEER]
-                             §SWVariante { TRENNER SWVariante} [LEER]
+    SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
+                             §SWVariante { TR SWVariante} [LZ]
     SWTyp           = "script." | "script. fat-"
     SWVariante      = Schreibweise ":" Beleg
     Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
@@ -111,93 +119,99 @@ class MLWGrammar(GrammarBase):
     
     #### BEDEUTUNGS-POSITION #####################################################
     
-    BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung }+
+    BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
     
     Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
-    Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LEER]
-    Interpretamente = LateinischeBedeutung [LEER] §DeutscheBedeutung [LEER]
+    Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
+    Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
     LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-    Belege          = "BELEGE" [LEER] { "*" EinBeleg }
-    EinBeleg        = { !([LEER] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
+    Belege          = "BELEGE" [LZ] { "*" EinBeleg }
+    EinBeleg        = { !([LZ] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
                         /\s*.*\s*/ }+
                       [Zusatz]
-    Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
+    Zusatz          = "ZUSATZ" /\s*.*/ TR
     
     
     #### AUTOR/AUTORIN ###########################################################
     
     Autorinfo       = ("AUTORIN" | "AUTOR") Name
-    Name            = WORT { WORT | NAMENS_ABKÜRZUNG }
+    Name            = { NAME | NAMENS_ABKÜRZUNG }+
     
     
     #### ATOMARE AUSDRÜCKE #######################################################
     
-    NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀ]\./
+    NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
+    NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
     
-    WORT             = /[A-ZÄÖÜ]?[a-zäöüß]+/~
-    WORT_GROSS       = /[A-ZÄÖÜ][a-zäöüß]+/~
-    WORT_KLEIN       = /[a-zäöüß]+/~
+    DEU_WORT         = /[A-ZÄÖÜ]?[a-zäöüß]+/~
+    DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüß]+/~
+    DEU_KLEIN        = /[a-zäöüß]+/~
     LAT_WORT         = /[a-z]+/~
+    LAT_WORT_TEIL    = /[a-z]+/
     GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
     
-    TRENNER          = /\s*;\s*/ | { ZSPRUNG }+
-    ZSPRUNG          = /\n/~
+    TR               = /\s*;\s*/ | { NEUE_ZEILE }+  # Trenner
+    NEUE_ZEILE       = /\n/~
     
-    LEER             = /\s+/        # horizontaler und(!) vertikaler Leerraum
+    LZ               = /\s+/                        # Leerzeichen oder -zeilen
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "1597e817991aba09e6a51b432d741f09"
+    source_hash__ = "9b040cad48585464610e2e7869e7af41"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
-    wspL__ = WSP__
+    wspL__ = ''
     wspR__ = WSP__
-    NIEMALS = RE('(?!.)', wR='', wL='')
-    DATEI_ENDE = NegativeLookahead(RE('.', wR='', wL=''))
-    LEER = RE('\\s+', wR='', wL='')
-    ZSPRUNG = RE('\\n', wL='')
-    TRENNER = Alternative(RE('\\s*;\\s*', wR='', wL=''), OneOrMore(ZSPRUNG))
-    GROSSSCHRIFT = RE('[A-ZÄÖÜ]+', wL='')
-    LAT_WORT = RE('[a-z]+', wL='')
-    WORT_KLEIN = RE('[a-zäöüß]+', wL='')
-    WORT_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+', wL='')
-    WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+', wL='')
-    NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀ]\\.', wR='', wL='')
-    Name = Sequence(WORT, ZeroOrMore(Alternative(WORT, NAMENS_ABKÜRZUNG)))
+    NIEMALS = RE('(?!.)', wR='')
+    DATEI_ENDE = NegativeLookahead(RE('.', wR=''))
+    LZ = RE('\\s+', wR='')
+    NEUE_ZEILE = RE('\\n')
+    TR = Alternative(RE('\\s*;\\s*', wR=''), OneOrMore(NEUE_ZEILE))
+    GROSSSCHRIFT = RE('[A-ZÄÖÜ]+')
+    LAT_WORT_TEIL = RE('[a-z]+', wR='')
+    LAT_WORT = RE('[a-z]+')
+    DEU_KLEIN = RE('[a-zäöüß]+')
+    DEU_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+')
+    DEU_WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+')
+    NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
+    NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
+    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''), TRENNER)
-    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(Optional(LEER), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
-    Belege = Sequence(Token("BELEGE"), Optional(LEER), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
-    DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
-    LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
-    Interpretamente = Sequence(LateinischeBedeutung, Optional(LEER), Required(DeutscheBedeutung), Optional(LEER))
-    Bedeutungskategorie = Sequence(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''), Optional(LEER))
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR=''), TR)
+    EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(Optional(LZ), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR=''))), Optional(Zusatz))
+    Belege = Sequence(Token("BELEGE"), Optional(LZ), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
+    DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
+    LateinischeBedeutung = Sequence(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
+    Interpretamente = Sequence(LateinischeBedeutung, Optional(LZ), Required(DeutscheBedeutung), Optional(LZ))
+    Bedeutungskategorie = Sequence(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'), Optional(LZ))
     Bedeutung = Sequence(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
-    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Optional(LEER), Required(Bedeutung)))
-    VerweisZiel = RE('<\\w+>')
-    Verweis = RE('\\w+')
+    BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Optional(LZ), Required(Bedeutung)))
+    VerweisZiel = RE('<\\w+>', wL=WSP__)
+    Verweis = RE('\\w+', wL=WSP__)
     Beleg = Verweis
     Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
     SWVariante = Sequence(Schreibweise, Token(":"), Beleg)
     SWTyp = Alternative(Token("script."), Token("script. fat-"))
-    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Optional(LEER), Required(SWTyp), Token(":"), Optional(LEER), Required(SWVariante), ZeroOrMore(Sequence(TRENNER, SWVariante)), Optional(LEER))
+    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Optional(LZ), Required(SWTyp), Token(":"), Optional(LZ), Required(SWVariante), ZeroOrMore(Sequence(TR, SWVariante)), Optional(LZ))
     ArtikelKopf = SchreibweisenPosition
-    _genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
-    Flexion = RE('-?[a-z]+', wL='')
+    genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
+    Flexion = RE('-?[a-z]+')
     Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(","), Required(Flexion))))
-    GVariante = Sequence(Flexionen, Optional(_genus), Token(":"), Beleg)
-    GrammatikVarianten = Sequence(TRENNER, GVariante)
-    _wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
-    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LEER), Required(_wortart), Required(TRENNER), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(TRENNER))
-    LVZusatz = Sequence(Token("ZUSATZ"), Token("sim."))
-    LVariante = RE('(?:[a-z]|-)+')
-    LemmaVarianten = Sequence(Token("VARIANTEN"), Optional(LEER), Required(LVariante), ZeroOrMore(Sequence(TRENNER, LVariante)), Optional(Sequence(TRENNER, LVZusatz)), Optional(TRENNER))
-    _tll = Token("*")
-    Lemma = Sequence(Optional(_tll), WORT_KLEIN, Optional(LEER))
-    LemmaPosition = Sequence(Token("LEMMA"), Required(Lemma), Optional(LemmaVarianten), Required(GrammatikPosition))
-    Artikel = Sequence(Optional(LEER), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LEER), DATEI_ENDE)
+    GVariante = Sequence(Flexionen, Optional(genus), Token(":"), Beleg)
+    GrammatikVariante = Sequence(TR, GVariante)
+    wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
+    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LZ), Required(wortart), Required(TR), Required(Flexion), Optional(genus), ZeroOrMore(GrammatikVariante), Optional(TR))
+    lzs_typ = Token("sim.")
+    LemmaZusatz = Sequence(Token("ZUSATZ"), lzs_typ)
+    lemma = Sequence(LAT_WORT_TEIL, ZeroOrMore(Sequence(Alternative(Token("|"), Token("-")), LAT_WORT_TEIL)))
+    LemmaVarianten = Sequence(OneOrMore(Sequence(Alternative(LZ, TR), lemma)), Optional(Sequence(Alternative(LZ, TR), LemmaZusatz)), Optional(LZ))
+    gesichert = Token("$")
+    klassisch = Token("*")
+    HauptLemma = Sequence(Optional(klassisch), Optional(gesichert), lemma)
+    LemmaPosition = Sequence(Token("LEMMA"), Optional(LZ), Required(HauptLemma), Optional(LemmaVarianten), Required(GrammatikPosition))
+    Artikel = Sequence(Optional(LZ), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LZ), DATEI_ENDE)
     root__ = Artikel
     
 def get_MLW_grammar():
@@ -216,86 +230,58 @@ def get_MLW_grammar():
 #
 #######################################################################
 
-def join_strings(node, delimiter='\n'):
-    new_result = []
-    n = 0
-    while n < len(node.result):
-        nd = node.result[n]
-        if not nd.children:
-            a = n
-            n += 1
-            while n < len(node.result) and not node.result[n].children:
-                n += 1
-            nd.result = delimiter.join((r.result for r in node.result[a:n]))
-        elif nd.parser.name != "Zusatz":
-            raise AssertionError(nd.as_sexpr())
-        else:
-            n += 1
-        new_result.append(nd)
-    node.result = tuple(new_result)
-
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
     "Artikel": no_operation,
-    "LemmaPosition":
-        [partial(remove_tokens, tokens={'LEMMA'})],
-    "Lemma": no_operation,
-    "_tll, _wortart, _genus":
-        [remove_expendables, reduce_single_child],
-    "LemmaVarianten":
-        [partial(remove_tokens, tokens={'VARIANTEN'}), flatten,
-         partial(remove_tokens, tokens={',', ';'})],
-    "LVariante, LVZusatz, Schreibweise, Name":
-        [remove_expendables, reduce_single_child],
-    "SWVariante":
-        [remove_expendables, partial(remove_tokens, tokens={':'})],
-    "GrammatikPosition":
-        [partial(remove_tokens, tokens={'GRAMMATIK', ';'}), flatten],
-    "GrammatikVarianten":
-        [partial(remove_tokens, tokens={';'}), replace_by_single_child],
-    "GVariante":
-        [partial(remove_tokens, tokens={':'})],
-    "Flexionen":
-        [flatten, partial(remove_tokens, tokens={',', ';'})],
-    "Flexion, Verweis":
-        [remove_expendables, reduce_single_child],
-    "Zusatz":
-        [remove_expendables, remove_tokens, reduce_single_child],
+    "LemmaPosition": no_operation,
+    "HauptLemma": no_operation,
+    "klassisch": no_operation,
+    "gesichert": no_operation,
+    "LemmaVarianten": no_operation,
+    "lemma": no_operation,
+    "LemmaZusatz": no_operation,
+    "lzs_typ": no_operation,
+    "GrammatikPosition": no_operation,
+    "wortart": no_operation,
+    "GrammatikVariante": no_operation,
+    "GVariante": no_operation,
+    "Flexionen": no_operation,
+    "Flexion": no_operation,
+    "genus": no_operation,
     "ArtikelKopf": no_operation,
-    "SchreibweisenPosition":
-        [partial(remove_tokens, tokens={'SCHREIBWEISE', ':'}),
-         flatten, partial(remove_tokens, tokens={','})],
+    "SchreibweisenPosition": no_operation,
     "SWTyp": no_operation,
-    "BedeutungsPosition":
-        [flatten, partial(remove_tokens, tokens={'BEDEUTUNG'})],
+    "SWVariante": no_operation,
+    "Schreibweise": no_operation,
+    "Beleg": no_operation,
+    "Verweis": no_operation,
+    "VerweisZiel": no_operation,
+    "BedeutungsPosition": no_operation,
     "Bedeutung": no_operation,
     "Bedeutungskategorie": no_operation,
     "Interpretamente": no_operation,
-    "LateinischeBedeutung, DeutscheBedeutung":
-        [remove_expendables, remove_tokens, reduce_single_child],
-    "Belege":
-        [flatten, remove_tokens],
-    "EinBeleg":
-        [flatten, remove_expendables, join_strings, reduce_single_child],
-    "Beleg": no_operation,
-    "VerweisZiel": no_operation,
-    "Autorinfo":
-        [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
-    "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
-        [remove_expendables, reduce_single_child],
-    "LEER, TRENNER, ZSPRUNG": partial(replace_parser, name='', ptype=WHITESPACE_PTYPE),
+    "LateinischeBedeutung": no_operation,
+    "DeutscheBedeutung": no_operation,
+    "Belege": no_operation,
+    "EinBeleg": no_operation,
+    "Zusatz": no_operation,
+    "Autorinfo": no_operation,
+    "Name": no_operation,
+    "NAMENS_ABKÜRZUNG": no_operation,
+    "NAME": no_operation,
+    "DEU_WORT": no_operation,
+    "DEU_GROSS": no_operation,
+    "DEU_KLEIN": no_operation,
+    "LAT_WORT": no_operation,
+    "LAT_WORT_TEIL": no_operation,
+    "GROSSSCHRIFT": no_operation,
+    "TR": no_operation,
+    "NEUE_ZEILE": no_operation,
+    "LZ": no_operation,
     "DATEI_ENDE": no_operation,
     "NIEMALS": no_operation,
-    (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        [remove_expendables, reduce_single_child],
-    "+":
-        remove_expendables,
-    "~":
-        partial(remove_tokens, tokens={',', ';'}),
-    "*":
-        [remove_expendables, replace_by_single_child]
+    "": no_operation
 }
-
 
 MLWTransform = partial(traverse, processing_table=MLW_AST_transformation_table)
 
@@ -324,28 +310,34 @@ class MLWCompiler(CompilerBase):
     def on_LemmaPosition(self, node):
         pass
 
-    def on_Lemma(self, node):
+    def on_HauptLemma(self, node):
         pass
 
-    def on__tll(self, node):
+    def on_klassisch(self, node):
+        pass
+
+    def on_gesichert(self, node):
         pass
 
     def on_LemmaVarianten(self, node):
         pass
 
-    def on_LVariante(self, node):
+    def on_lemma(self, node):
         pass
 
-    def on_LVZusatz(self, node):
+    def on_LemmaZusatz(self, node):
+        pass
+
+    def on_lzs_typ(self, node):
         pass
 
     def on_GrammatikPosition(self, node):
         pass
 
-    def on__wortart(self, node):
+    def on_wortart(self, node):
         pass
 
-    def on_GrammatikVarianten(self, node):
+    def on_GrammatikVariante(self, node):
         pass
 
     def on_GVariante(self, node):
@@ -357,7 +349,7 @@ class MLWCompiler(CompilerBase):
     def on_Flexion(self, node):
         pass
 
-    def on__genus(self, node):
+    def on_genus(self, node):
         pass
 
     def on_ArtikelKopf(self, node):
@@ -420,28 +412,34 @@ class MLWCompiler(CompilerBase):
     def on_NAMENS_ABKÜRZUNG(self, node):
         pass
 
-    def on_WORT(self, node):
+    def on_NAME(self, node):
         pass
 
-    def on_WORT_GROSS(self, node):
+    def on_DEU_WORT(self, node):
         pass
 
-    def on_WORT_KLEIN(self, node):
+    def on_DEU_GROSS(self, node):
+        pass
+
+    def on_DEU_KLEIN(self, node):
         pass
 
     def on_LAT_WORT(self, node):
         pass
 
+    def on_LAT_WORT_TEIL(self, node):
+        pass
+
     def on_GROSSSCHRIFT(self, node):
         pass
 
-    def on_TRENNER(self, node):
+    def on_TR(self, node):
         pass
 
-    def on_ZSPRUNG(self, node):
+    def on_NEUE_ZEILE(self, node):
         pass
 
-    def on_LEER(self, node):
+    def on_LZ(self, node):
         pass
 
     def on_DATEI_ENDE(self, node):

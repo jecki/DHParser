@@ -369,7 +369,7 @@ class EBNFCompiler(CompilerBase):
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    def assemble_parser(self, definitions):
+    def assemble_parser(self, definitions, root_node):
         # fix capture of variables that have been defined before usage [sic!]
 
         if self.variables:
@@ -427,9 +427,11 @@ class EBNFCompiler(CompilerBase):
                 declarations += [symbol + '.set(' + statement + ')']
             else:
                 declarations += [symbol + ' = ' + statement]
+        known_symbols = self.rules | self.RESERVED_SYMBOLS
         for nd in self.symbol_nodes:
-            if nd.result not in self.rules:
+            if nd.result not in known_symbols:
                 nd.add_error("Missing production for symbol '%s'" % nd.result)
+                root_node.error_flag = True
         if self.root and 'root__' not in self.rules:
             declarations.append('root__ = ' + self.root)
         declarations.append('')
@@ -452,8 +454,9 @@ class EBNFCompiler(CompilerBase):
             else:
                 assert nd.parser.name == "directive", nd.as_sexpr()
                 self._compile(nd)
+                node.error_flag |= nd.error_flag
 
-        return self.assemble_parser(definitions)
+        return self.assemble_parser(definitions, node)
 
     def on_definition(self, node):
         rule = node.result[0].result

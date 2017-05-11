@@ -1,51 +1,51 @@
 # EBNF-Syntax für MLW-Artikel
 
-@ comment       =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
-@ whitespace    =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
-@ literalws     =  both             # Leerraum vor und nach Literalen wird automatisch entfernt
+@ comment         =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+@ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
+@ literalws       =  right            # Leerraum vor und nach Literalen wird automatisch entfernt
 
 
 ##############################################################################
 
-Artikel         = [LEER]
-                  §LemmaPosition [ArtikelKopf]
-                  §BedeutungsPosition
-                  §Autorinfo
-                  [LEER]  DATEI_ENDE
+Artikel           = [LZ]
+                    §LemmaPosition
+                    [ArtikelKopf]
+                    §BedeutungsPosition
+                    §Autorinfo
+                    [LZ]  DATEI_ENDE
 
 
 #### LEMMA-POSITION ##########################################################
 
-LemmaPosition   = "LEMMA"  §Lemma  [LemmaVarianten]  §GrammatikPosition
+LemmaPosition     = "LEMMA" [LZ]  §HauptLemma [LemmaVarianten] §GrammatikPosition
 
-Lemma           = [klassisch] [gesichert] WORT_KLEIN [LEER]
-  klassisch     = "*"
-  gesichert     = "$"
+HauptLemma        = [klassisch] [gesichert] lemma
+  klassisch       = "*"
+  gesichert       = "$"
 
-LemmaVarianten  = "VARIANTEN" [LEER]
-                  §LVariante  { TRENNER LVariante }
-                  [TRENNER LVZusatz] [TRENNER]
+LemmaVarianten   = { (LZ|TR) lemma }+
+                   [ (LZ|TR) LemmaZusatz] [LZ]
 
-LVariante       = ~/(?:[a-z]|-)+/~      # Buchstabenfolge mit Trennzeichen "-"
-LVZusatz        = "ZUSATZ" zs_typ
-  zs_typ        = "sim."
+lemma           = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
+
+LemmaZusatz     = "ZUSATZ" lzs_typ
+  lzs_typ       = "sim."
 
 
+## GRAMMATIK-POSITION ##
 
-#### GRAMMATIK-POSITION ######################################################
-
-GrammatikPosition = "GRAMMATIK" [LEER] §wortart §TRENNER §Flexion [genus]
-                    {GrammatikVariante} [TRENNER]
+GrammatikPosition = "GRAMMATIK" [LZ] §wortart §TR §Flexion [genus]
+                    {GrammatikVariante} [TR]
 
 wortart         = "nomen"  | "n." |
                   "verb"   | "v." |
                   "adverb" | "adv." |
                   "adjektiv" | "adj."
 
-GrammatikVariante = TRENNER GVariante
+GrammatikVariante = TR GVariante
 GVariante       = Flexionen  [genus]  ":"  Beleg
 
-Flexion         = Flexion { "," §Flexion }
+Flexionen       = Flexion { "," §Flexion }
 Flexion         = /-?[a-z]+/~
 
 genus           = "maskulinum" | "m." |
@@ -57,8 +57,8 @@ genus           = "maskulinum" | "m." |
 #### ARTIKEL-KOPF ############################################################
 
 ArtikelKopf     = SchreibweisenPosition
-SchreibweisenPosition =  "SCHREIBWEISE" [LEER] §SWTyp ":" [LEER]
-                         §SWVariante { TRENNER SWVariante} [LEER]
+SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
+                         §SWVariante { TR SWVariante} [LZ]
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
@@ -70,40 +70,42 @@ VerweisZiel     = ~/<\w+>/~
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition = { "BEDEUTUNG" [LEER] §Bedeutung }+
+BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
 
 Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
-Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LEER]
-Interpretamente = LateinischeBedeutung [LEER] §DeutscheBedeutung [LEER]
+Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
+Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
 LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-Belege          = "BELEGE" [LEER] { "*" EinBeleg }
-EinBeleg        = { !([LEER] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
+Belege          = "BELEGE" [LZ] { "*" EinBeleg }
+EinBeleg        = { !([LZ] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
                     /\s*.*\s*/ }+
                   [Zusatz]
-Zusatz          = "ZUSATZ" /\s*.*/ TRENNER
+Zusatz          = "ZUSATZ" /\s*.*/ TR
 
 
 #### AUTOR/AUTORIN ###########################################################
 
 Autorinfo       = ("AUTORIN" | "AUTOR") Name
-Name            = WORT { WORT | NAMENS_ABKÜRZUNG }
+Name            = { NAME | NAMENS_ABKÜRZUNG }+
 
 
 #### ATOMARE AUSDRÜCKE #######################################################
 
-NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀ]\./
+NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
+NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
-WORT             = /[A-ZÄÖÜ]?[a-zäöüß]+/~
-WORT_GROSS       = /[A-ZÄÖÜ][a-zäöüß]+/~
-WORT_KLEIN       = /[a-zäöüß]+/~
+DEU_WORT         = /[A-ZÄÖÜ]?[a-zäöüß]+/~
+DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüß]+/~
+DEU_KLEIN        = /[a-zäöüß]+/~
 LAT_WORT         = /[a-z]+/~
+LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 
-TRENNER          = /\s*;\s*/ | { ZSPRUNG }+
-ZSPRUNG          = /\n/~
+TR               = /\s*;\s*/ | { NEUE_ZEILE }+  # Trenner
+NEUE_ZEILE       = /\n/~
 
-LEER             = /\s+/        # horizontaler und(!) vertikaler Leerraum
+LZ               = /\s+/                        # Leerzeichen oder -zeilen
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/
 

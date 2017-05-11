@@ -229,6 +229,24 @@ class TestCompilerErrors:
             get_ebnf_transformer(), get_ebnf_compiler('ErrorPropagationTest'))
         assert messages
 
+    def test_undefined_symbols(self):
+        """Use of undefined symbols should be reported.
+        """
+        ebnf = """syntax = { intermediary }
+                  intermediary = "This symbol is " [ badly_spelled ] "!"
+                  bedly_spilled = "wrong" """
+        result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
+            get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
+        assert messages
+
+    def test_no_error(self):
+        """But reserved symbols should not be repoted as undefined.
+        """
+        ebnf = """nothing =  WSP__ | COMMENT__\n"""
+        result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
+            get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
+        assert not bool(messages), messages
+
 
 class TestSelfHosting:
     grammar = r"""
@@ -330,4 +348,4 @@ class TestBoundaryCases:
 
 if __name__ == "__main__":
     from run import runner
-    runner("", globals())
+    runner("TestCompilerErrors", globals())

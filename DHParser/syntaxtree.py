@@ -27,7 +27,7 @@ except ImportError:
     import re
 from typing import NamedTuple
 
-from .toolkit import is_logging, log_dir, expand_table, line_col, smart_list
+from .toolkit import log_dir, expand_table, line_col, smart_list
 
 
 __all__ = ['WHITESPACE_PTYPE',
@@ -35,7 +35,6 @@ __all__ = ['WHITESPACE_PTYPE',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
-           'mock_syntax_tree',
            'key_parser_name',
            'key_tag_name',
            'traverse',
@@ -339,21 +338,28 @@ class Node:
         self.error_flag = True
         return self
 
+    def propagate_error_flags(self):
+        """ Recursively propagates error flags set on child nodes to its
+        parents. This can be used if errors are added to descendant 
+        nodes after syntaxtree construction, i.e. in the compile phase.
+        """
+        for child in self.children:
+            child.propagate_error_flags()
+            self.error_flag |= child.error_flag
+
     def collect_errors(self, clear_errors=False):
         """
         Returns all errors of this node or any child node in the form
         of a set of tuples (position, error_message), where position
         is always relative to this node.
         """
-        errors = []
-        if self.error_flag:
-            errors = self.errors
-            if clear_errors:
-                self._errors = []
-                self.error_flag = False
-            if self.children:
-                for child in self.result:
-                    errors.extend(child.collect_errors(clear_errors))
+        errors = self.errors
+        if clear_errors:
+            self._errors = []
+            self.error_flag = False
+        if self.children:
+            for child in self.result:
+                errors.extend(child.collect_errors(clear_errors))
         return errors
 
     def log(self, log_file_name):
@@ -421,60 +427,6 @@ class Node:
             else:
                 return self.result,
         return nav(path.split('/'))
-
-
-def mock_syntax_tree(sexpr):
-    """Generates a tree of nodes from an S-expression.
-
-    Example: 
-    >>> mock_syntax_tree("(a (b c))").as_sexpr()
-    (a 
-        (b 
-            "c" 
-        )
-    )
-    """
-    def next_block(s):
-        s = s.strip()
-        while s[0] != ')':
-            if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
-            # assert s[0] == '(', s
-            level = 1;
-            i = 1
-            while level > 0:
-                if s[i] == '(':
-                    level += 1
-                elif s[i] == ')':
-                    level -= 1
-                i += 1
-            yield s[:i]
-            s = s[i:].strip()
-
-    sexpr = sexpr.strip()
-    if sexpr[0] != '(': raise ValueError('"(" expected, not ' + sexpr[:10])
-    # assert sexpr[0] == '(', sexpr
-    sexpr = sexpr[1:].strip()
-    m = re.match('[\w:]+', sexpr)
-    name, class_name = (sexpr[:m.end()].split(':') + [''])[:2]
-    sexpr = sexpr[m.end():].strip()
-    if sexpr[0] == '(':
-        result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
-    else:
-        lines = []
-        while sexpr and sexpr[0] != ')':
-            for qm in ['"""', "'''", '"', "'"]:
-                m = re.match(qm + r'.*?' + qm, sexpr)
-                if m:
-                    i = len(qm)
-                    lines.append(sexpr[i:m.end() - i])
-                    sexpr = sexpr[m.end():].strip()
-                    break
-            else:
-                m = re.match(r'(?:(?!\)).)*', sexpr)
-                lines.append(sexpr[:m.end()])
-                sexpr = sexpr[m.end():]
-        result = "\n".join(lines)
-    return Node(MockParser(name, ':' + class_name), result)
 
 
 ########################################################################

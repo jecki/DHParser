@@ -24,8 +24,9 @@ from .syntaxtree import *
 from .parsers import *
 from .ebnf import *
 from .dsl import *
+# from .testing import *
 from .versionnumber import __version__
 
 __author__ = "Eckhart Arnold <arnold@badw.de>"
 __copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
-# __all__ = ['toolkit', 'syntaxtree', 'parsers', 'ebnf', 'dsl']  # flat namespace
+# __all__ = ['toolkit', 'syntaxtree', 'parsers', 'ebnf', 'dsl', 'testing', 'versionnumber']  # flat namespace

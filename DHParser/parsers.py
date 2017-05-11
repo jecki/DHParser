@@ -56,10 +56,8 @@ try:
 except ImportError:
     import re
 
-from .toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
-    compact_sexpr
-from .syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Node, \
-    mock_syntax_tree
+from .toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
+from .syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Node
 from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['HistoryRecord',
@@ -1087,43 +1085,8 @@ def compile_source(source, scanner, parser, transformer, compiler):
         errors = syntax_tree.collect_errors()
         if not errors:
             result = compiler(syntax_tree)
-            errors = syntax_tree.collect_errors()
+            errors = syntax_tree.collect_errors() if syntax_tree.error_flag else []
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
 
 
-def test_grammar(test_suite, parser_factory, transformer_factory):
-    errata = []
-    parser = parser_factory()
-    transform = transformer_factory()
-    for parser_name, tests in test_suite.items():
-        assert set(tests.keys()).issubset({'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'})
-
-        for test_name, test_code in tests['match'].items():
-            cst = parser(test_code, parser_name)
-            tests.setdefault('__cst__', {})[test_name] = cst
-            if cst.error_flag:
-                errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\t%s' %
-                              (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                               '\n\t'.join(error_messages(test_code, cst.collect_errors()))))
-            elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
-                    errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                  (test_name, parser_name, cst.as_sexpr()))
-            elif "ast" in tests:
-                ast = copy.deepcopy(cst)
-                transform(ast)
-                tests.setdefault('__ast__', {})[test_name] = ast
-                compare = mock_syntax_tree(tests["ast"][test_name])
-                if compare != ast:
-                    errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
-                                  '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
-                                  % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                     compact_sexpr(compare.as_sexpr()),
-                                     compact_sexpr(ast.as_sexpr())))
-
-        for test_name, test_code in tests['fail'].items():
-            cst = parser(test_code, parser_name)
-            if not cst.error_flag:
-                errata.append('Fail test "%s" for parser "%s" yields match instead of '
-                              'expected failure!' % (test_name, parser_name))
-    return errata

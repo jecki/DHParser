@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-"""compile_MLW.py - simple utility script for compiling MLW.ebnf
+"""compile_MLW-entry.py - simple utility script for compiling a sample 
+                          MLW entry
 
 Author: Eckhart Arnold <arnold@badw.de>
 

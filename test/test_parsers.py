@@ -21,6 +21,9 @@ limitations under the License.
 
 from functools import partial
 import sys
+
+import DHParser.testing
+
 sys.path.extend(['../', './'])
 
 from DHParser import parsers
@@ -107,9 +110,9 @@ class TestGrammarTest:
     def test_testing_grammar(self):
         parser_fac = parser_factory(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
-        errata = parsers.test_grammar(self.cases, parser_fac, trans_fac)
+        errata = DHParser.testing.test_grammar(self.cases, parser_fac, trans_fac)
         assert not errata, str(errata)
-        errata = parsers.test_grammar(self.failure_cases, parser_fac, trans_fac)
+        errata = DHParser.testing.test_grammar(self.failure_cases, parser_fac, trans_fac)
         # for e in errata:
         #     print(e)
         assert len(errata) == 3
