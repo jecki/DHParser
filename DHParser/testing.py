@@ -15,9 +15,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
+import configparser
 import copy
 import inspect
-import regex as re
+try:
+    import regex as re
+except ImportError:
+    import re
 
 from DHParser import Node, error_messages
 from DHParser.syntaxtree import MockParser
@@ -78,14 +82,38 @@ def mock_syntax_tree(sexpr):
     return Node(MockParser(name, ':' + class_name), result)
 
 
-def test_grammar(test_suite, parser_factory, transformer_factory):
+
+SUITE_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
+
+
+def suite_from_configfile(config_filename):
+    """Reads a grammar test suite from a config file.
+    """
+    cfg = configparser.ConfigParser
+    cfg.read(config_filename)
+    suite = {}
+    for section in cfg.sections():
+        symbol, stage = section.split(':')
+        if stage not in SUITE_STAGES:
+            if symbol in SUITE_STAGES:
+                symbol, stage = stage, symbol
+            else:
+                raise ValueError('Stage %s not in: ' % (stage, str(SUITE_STAGES)))
+        for testkey, testcode in cfg[section].items():
+            suite.setdefault(symbol, {}).setdefault(stage, {})[testkey] = testcode
+    return suite
+
+
+def unit_grammar(test_suite, parser_factory, transformer_factory):
     """Unit tests for a grammar-parser and ast transformations.
     """
+    if isinstance(test_suite, str):
+        test_suite = suite_from_configfile(test_suite)
     errata = []
     parser = parser_factory()
     transform = transformer_factory()
     for parser_name, tests in test_suite.items():
-        assert set(tests.keys()).issubset({'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'})
+        assert set(tests.keys()).issubset(SUITE_STAGES)
 
         for test_name, test_code in tests.get('match', dict()).items():
             cst = parser(test_code, parser_name)

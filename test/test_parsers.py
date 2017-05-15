@@ -22,8 +22,6 @@ limitations under the License.
 from functools import partial
 import sys
 
-import DHParser.testing
-
 sys.path.extend(['../', './'])
 
 from DHParser import parsers
@@ -57,65 +55,6 @@ ARITHMETIC_EBNF_transformation_table = {
 
 ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
 
-
-class TestGrammarTest:
-    cases = {
-        "factor": {
-            "match": {
-                1: "0",
-                2: "314",
-            },
-            "fail": {
-                3: "21F",
-                4: "G123"
-            }
-        },
-        "term": {
-            "match": {
-                1: "4 * 5",
-                2: "20 / 4",
-                3: "20 / 4 * 3"
-            },
-            "ast": {
-                1: "(term (factor 4) (:Token *) (factor 5))",
-                2: "(term (factor 20) (:Token /) (factor 4))",
-                3: "(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))"
-            },
-            "fail": {
-                4: "4 + 5",
-                5: "20 / 4 - 3"
-            }
-        }
-    }
-
-    failure_cases = {
-        "term": {
-            "match": {
-                1: "4 + 5",     # error: this should fail
-                2: "20 / 4",
-                3: "20 / 4 * 3"
-            },
-            "ast": {
-                1: "(term (factor 4) (:Token *) (factor 5))",
-                2: "(term (factor 20) (:Token /) (factor 4))",
-                3: "(term (term (factor 19) (:Token /) (factor 4)) (:Token *) (factor 3))"  # error 19 != 20
-            },
-            "fail": {
-                4: "4 * 5",     # error: this should match
-                5: "20 / 4 - 3"
-            }
-        }
-    }
-
-    def test_testing_grammar(self):
-        parser_fac = parser_factory(ARITHMETIC_EBNF)
-        trans_fac = lambda : ARITHMETIC_EBNFTransform
-        errata = DHParser.testing.test_grammar(self.cases, parser_fac, trans_fac)
-        assert not errata, str(errata)
-        errata = DHParser.testing.test_grammar(self.failure_cases, parser_fac, trans_fac)
-        # for e in errata:
-        #     print(e)
-        assert len(errata) == 3
 
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion(self):
@@ -182,5 +121,5 @@ class TestRegex:
 
 
 if __name__ == "__main__":
-    from run import runner
+    from DHParser.testing import runner
     runner("", globals())

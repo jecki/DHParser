@@ -123,5 +123,5 @@ class TestCompilerGeneration:
 
 
 if __name__ == "__main__":
-    from run import runner
+    from DHParser.testing import runner
     runner("", globals())

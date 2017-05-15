@@ -66,7 +66,7 @@ MLW_TEST_CASES_LEMMA_POSITION = {
 
 class TestMLWGrammar:
     def test_lemma_position(self):
-        errata = testing.test_grammar(MLW_TEST_CASES_LEMMA_POSITION,
+        errata = testing.unit_grammar(MLW_TEST_CASES_LEMMA_POSITION,
                                       get_MLW_grammar,
                                       get_MLW_transformer)
         assert not errata, str(errata)

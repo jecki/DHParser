@@ -23,57 +23,12 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import compact_sexpr, logging
 from DHParser.syntaxtree import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables, TOKEN_PTYPE
 from DHParser.testing import mock_syntax_tree
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory
 
-
-class MockParser:
-    def __init__(self, name=''):
-        self.name = name
-
-    def __str__(self):
-        return self.name or self.__class__.__name__
-
-    def __call__(self, text):
-        return None, text
-
-
-class TestSExpr:
-    """
-    Tests for S-expression handling.
-    """
-    def test_compact_sexpr(self):
-        assert compact_sexpr("(a\n    (b\n        c\n    )\n)\n") == "(a (b c))"
-
-    def test_mock_syntax_tree(self):
-        sexpr = '(a (b c) (d e) (f (g h)))'
-        tree = mock_syntax_tree(sexpr)
-        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr
-
-        # test different quotation marks
-        sexpr = '''(a (b """c""" 'k' "l") (d e) (f (g h)))'''
-        sexpr_stripped = '(a (b c k l) (d e) (f (g h)))'
-        tree = mock_syntax_tree(sexpr)
-        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr_stripped
-
-        sexpr_clean = '(a (b "c" "k" "l") (d "e") (f (g "h")))'
-        tree = mock_syntax_tree(sexpr_clean)
-        assert compact_sexpr(tree.as_sexpr()) == sexpr_clean
-
-        tree = mock_syntax_tree(sexpr_stripped)
-        assert compact_sexpr(tree.as_sexpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
-
-    def test_mock_syntax_tree_with_classes(self):
-        sexpr = '(a:class1 (b:class2 x) (:class3 y) (c z))'
-        tree = mock_syntax_tree(sexpr)
-        assert tree.tag_name == 'a'
-        assert tree.result[0].tag_name == 'b'
-        assert tree.result[1].tag_name == ':class3'
-        assert tree.result[2].tag_name == 'c'
 
 class TestNode:
     """
@@ -159,5 +114,5 @@ class TestErrorHandling:
 
 
 if __name__ == "__main__":
-    from run import runner
+    from DHParser.testing import runner
     runner("", globals())

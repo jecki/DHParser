@@ -347,5 +347,5 @@ class TestBoundaryCases:
 
 
 if __name__ == "__main__":
-    from run import runner
-    runner("TestCompilerErrors", globals())
+    from DHParser.testing import runner
+    runner("", globals())
