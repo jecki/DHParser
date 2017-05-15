@@ -102,7 +102,7 @@ def suite_from_configfile(config_filename):
         for testkey, testcode in cfg[section].items():
             suite.setdefault(symbol, {}).setdefault(stage, {})[testkey] = testcode
     return suite
-
+# TODO: support for json, yaml, cson, toml
 
 def unit_grammar(test_suite, parser_factory, transformer_factory):
     """Unit tests for a grammar-parser and ast transformations.
