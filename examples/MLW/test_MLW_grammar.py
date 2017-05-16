@@ -18,59 +18,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+
 from DHParser import testing
-from DHParser import parsers
-# from DHParser.dsl import load_compiler_suite
 from MLW_compiler import get_MLW_grammar, get_MLW_transformer
 
+error_report = testing.grammar_suite('grammar_tests', get_MLW_grammar, get_MLW_transformer)
+assert not error_report, error_report
 
-MLW_TEST_CASES_LEMMA_POSITION = {
-
-"lemma": {
-    "match": {
-        1: "facitergula",
-        2: "facitergul|a",
-        3: "fasc|itergula"
-    },
-    "fail": {
-        99: "duo vocabula"
-    }
-},
-
-"HauptLemma" : {
-    "match": {
-        1: "facitergula",
-        2: "*fascitergula",
-        3: "* fasciterugl|a"
-    }
-},
-
-"LemmaVarianten": {
-    "match": {
-        1: """
-           fasc-itergula
-           fac-iet-ergula
-           fac-ist-ergula
-           fa-rcu-tergula
-           """,
-        2: " fasc-itergula",
-        3: " fasc-itergula fac-iet-ergula ZUSATZ sim.",
-    },
-    "fail": {
-        99: "* fascitergula"
-    }
-}
-
-}
-
-
-class TestMLWGrammar:
-    def test_lemma_position(self):
-        errata = testing.unit_grammar(MLW_TEST_CASES_LEMMA_POSITION,
-                                      get_MLW_grammar,
-                                      get_MLW_transformer)
-        assert not errata, str(errata)
-
-
-if __name__ == "__main__":
-    testing.runner("", globals())
+# class TestMLWGrammar:
+#     def test_lemma_position(self):
+#         errata = testing.grammar_unit('grammar_tests/test_lemmaposition.ini',  # MLW_TEST_CASES_LEMMA_POSITION,
+#                                       get_MLW_grammar,
+#                                       get_MLW_transformer)
+#         assert not errata, str(errata)
+#
+#
+# if __name__ == "__main__":
+#     testing.runner("", globals())

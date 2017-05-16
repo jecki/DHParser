@@ -31,7 +31,7 @@ from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
-from DHParser.testing import unit_grammar, mock_syntax_tree
+from DHParser.testing import grammar_unit, mock_syntax_tree
 
 ARITHMETIC_EBNF = """
     @ whitespace = linefeed
@@ -108,9 +108,9 @@ class TestGrammarTest:
     def test_testing_grammar(self):
         parser_fac = parser_factory(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
-        errata = unit_grammar(self.cases, parser_fac, trans_fac)
+        errata = grammar_unit(self.cases, parser_fac, trans_fac)
         assert not errata, str(errata)
-        errata = unit_grammar(self.failure_cases, parser_fac, trans_fac)
+        errata = grammar_unit(self.failure_cases, parser_fac, trans_fac)
         # for e in errata:
         #     print(e)
         assert len(errata) == 3

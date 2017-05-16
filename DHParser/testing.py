@@ -15,9 +15,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
+import collections
 import configparser
 import copy
 import inspect
+import json
+import os
 try:
     import regex as re
 except ImportError:
@@ -83,37 +86,69 @@ def mock_syntax_tree(sexpr):
 
 
 
-SUITE_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
+UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 
 
-def suite_from_configfile(config_filename):
-    """Reads a grammar test suite from a config file.
+def unit_from_configfile(config_filename):
+    """Reads a grammar unit test from a config file.
     """
-    cfg = configparser.ConfigParser
+    cfg = configparser.ConfigParser()
     cfg.read(config_filename)
-    suite = {}
+    unit = {}
     for section in cfg.sections():
         symbol, stage = section.split(':')
-        if stage not in SUITE_STAGES:
-            if symbol in SUITE_STAGES:
+        if stage not in UNIT_STAGES:
+            if symbol in UNIT_STAGES:
                 symbol, stage = stage, symbol
             else:
-                raise ValueError('Stage %s not in: ' % (stage, str(SUITE_STAGES)))
+                raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
         for testkey, testcode in cfg[section].items():
-            suite.setdefault(symbol, {}).setdefault(stage, {})[testkey] = testcode
-    return suite
-# TODO: support for json, yaml, cson, toml
+            if testcode[:3] + testcode[-3:] in {"''''''", '""""""'}:
+                testcode = testcode[3:-3]
+            elif testcode[:1] + testcode[-1:] in {"''", '""'}:
+                testcode = testcode[1:-1]
+            unit.setdefault(symbol, {}).setdefault(stage, {})[testkey] = testcode
+    # print(json.dumps(unit, sort_keys=True, indent=4))
+    return unit
 
-def unit_grammar(test_suite, parser_factory, transformer_factory):
+
+def unit_from_json(config_filename):
+    """Reads a grammar unit test from a json file.
+    """
+    with open(config_filename, 'r') as f:
+        unit = json.load(f)
+    for symbol in unit:
+        for stage in unit[symbol]:
+            if stage not in UNIT_STAGES:
+                raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
+    return unit
+
+# TODO: add support for json, yaml, cson, toml
+
+
+def unit_from_file(config_filename):
+    """Reads a grammar unit test from a file. The format of the file is
+    determined by the ending of its name.
+    """
+    fname = config_filename
+    if fname.endswith(".json"):
+        return unit_from_json(fname)
+    elif fname.endswith(".ini"):
+        return unit_from_configfile(fname)
+    else:
+        raise ValueError("Unknown unit test file type: " + fname[fname.rfind('.'):])
+
+
+def grammar_unit(test_unit, parser_factory, transformer_factory):
     """Unit tests for a grammar-parser and ast transformations.
     """
-    if isinstance(test_suite, str):
-        test_suite = suite_from_configfile(test_suite)
+    if isinstance(test_unit, str):
+        test_unit = unit_from_file(test_unit)
     errata = []
     parser = parser_factory()
     transform = transformer_factory()
-    for parser_name, tests in test_suite.items():
-        assert set(tests.keys()).issubset(SUITE_STAGES)
+    for parser_name, tests in test_unit.items():
+        assert set(tests.keys()).issubset(UNIT_STAGES)
 
         for test_name, test_code in tests.get('match', dict()).items():
             cst = parser(test_code, parser_name)
@@ -145,10 +180,38 @@ def unit_grammar(test_suite, parser_factory, transformer_factory):
     return errata
 
 
+def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown_filetypes=False):
+    """Runs all grammar unit tests in a directory. A file is considered a test
+    unit, if it has the word "test" in its name.
+    """
+    all_errors = collections.OrderedDict()
+    for filename in sorted(os.listdir(directory)):
+        if filename.lower().find("test") >= 0:
+            try:
+                print("Running grammar tests in: " + filename)
+                errata = grammar_unit(os.path.join(directory, filename),
+                                      parser_factory, transformer_factory)
+                if errata:
+                    all_errors[filename] = errata
+            except ValueError as e:
+                if (not ignore_unknown_filetypes or
+                    str(e).find("Unknown") < 0):
+                    raise e
+    error_report = []
+    if all_errors:
+        for filename in all_errors:
+            error_report.append('Errors found by unit test "%s":' % filename)
+            for error in all_errors[filename]:
+                error_report.append('\t' + '\n\t'.join(error.split('\n')))
+    if error_report:
+        return ('Test suite "%s" revealed some errors:\n' %directory) + '\n'.join(error_report)
+    return ''
+
+
 def runner(tests, namespace):
-    """ Runs all or some selected tests from a test suite. To run all
-    tests in a module, call ``runner("", globals())`` from within
-    that module.
+    """ Runs all or some selected Python unit tests found in the 
+    namespace. To run all tests in a module, call 
+    ``runner("", globals())`` from within that module.
 
     Args:
         tests: Either a string or a list of strings that contains the

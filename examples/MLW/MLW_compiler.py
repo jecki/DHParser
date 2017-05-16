@@ -66,32 +66,33 @@ class MLWGrammar(GrammarBase):
     
     #### LEMMA-POSITION ##########################################################
     
-    LemmaPosition     = "LEMMA" [LZ]  §HauptLemma [LemmaVarianten] §GrammatikPosition
+    LemmaPosition     = "LEMMA" [LZ] §HauptLemma §TR [LemmaVarianten] §GrammatikPosition
     
     HauptLemma        = [klassisch] [gesichert] lemma
       klassisch       = "*"
       gesichert       = "$"
     
-    LemmaVarianten   = { (LZ|TR) lemma }+
-                       [ (LZ|TR) LemmaZusatz] [LZ]
+    LemmaVarianten   = "VARIANTEN" [LZ]
+                       { lemma §TR }+
+                       [LemmaZusatz §ABS]
     
-    lemma           = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
+    lemma            = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
     
-    LemmaZusatz     = "ZUSATZ" lzs_typ
-      lzs_typ       = "sim."
+    LemmaZusatz      = "ZUSATZ" §lzs_typ
+      lzs_typ        = /sim\./
     
     
     ## GRAMMATIK-POSITION ##
     
-    GrammatikPosition = "GRAMMATIK" [LZ] §wortart §TR §Flexion [genus]
-                        {GrammatikVariante} [TR]
+    GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §Flexion [genus]
+                        {GrammatikVariante} [ABS]
     
     wortart         = "nomen"  | "n." |
                       "verb"   | "v." |
                       "adverb" | "adv." |
                       "adjektiv" | "adj."
     
-    GrammatikVariante = TR GVariante
+    GrammatikVariante = ABS GVariante
     GVariante       = Flexionen  [genus]  ":"  Beleg
     
     Flexionen       = Flexion { "," §Flexion }
@@ -107,7 +108,7 @@ class MLWGrammar(GrammarBase):
     
     ArtikelKopf     = SchreibweisenPosition
     SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
-                             §SWVariante { TR SWVariante} [LZ]
+                             §SWVariante { ABS SWVariante} [LZ]
     SWTyp           = "script." | "script. fat-"
     SWVariante      = Schreibweise ":" Beleg
     Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
@@ -130,7 +131,7 @@ class MLWGrammar(GrammarBase):
     EinBeleg        = { !([LZ] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
                         /\s*.*\s*/ }+
                       [Zusatz]
-    Zusatz          = "ZUSATZ" /\s*.*/ TR
+    Zusatz          = "ZUSATZ" /\s*.*/ ABS
     
     
     #### AUTOR/AUTORIN ###########################################################
@@ -151,14 +152,15 @@ class MLWGrammar(GrammarBase):
     LAT_WORT_TEIL    = /[a-z]+/
     GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
     
-    TR               = /\s*;\s*/ | { NEUE_ZEILE }+  # Trenner
-    NEUE_ZEILE       = /\n/~
+    TR               = ABS | LZ             # (beliebiger) Trenner
+    ABS              = /\s*;\s*/ | { ZW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
+    ZW               = /\n/~                # Zeilenwechsel
+    LZ               = /\s+/                # Leerzeichen oder -zeilen
     
-    LZ               = /\s+/                        # Leerzeichen oder -zeilen
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "9b040cad48585464610e2e7869e7af41"
+    source_hash__ = "2d6f71148926868bfeba2e2a30b07fec"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -167,8 +169,9 @@ class MLWGrammar(GrammarBase):
     NIEMALS = RE('(?!.)', wR='')
     DATEI_ENDE = NegativeLookahead(RE('.', wR=''))
     LZ = RE('\\s+', wR='')
-    NEUE_ZEILE = RE('\\n')
-    TR = Alternative(RE('\\s*;\\s*', wR=''), OneOrMore(NEUE_ZEILE))
+    ZW = RE('\\n')
+    ABS = Alternative(RE('\\s*;\\s*', wR=''), OneOrMore(ZW))
+    TR = Alternative(ABS, LZ)
     GROSSSCHRIFT = RE('[A-ZÄÖÜ]+')
     LAT_WORT_TEIL = RE('[a-z]+', wR='')
     LAT_WORT = RE('[a-z]+')
@@ -179,7 +182,7 @@ class MLWGrammar(GrammarBase):
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
     Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR=''), TR)
+    Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR=''), ABS)
     EinBeleg = Sequence(OneOrMore(Sequence(NegativeLookahead(Sequence(Optional(LZ), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR=''))), Optional(Zusatz))
     Belege = Sequence(Token("BELEGE"), Optional(LZ), ZeroOrMore(Sequence(Token("*"), EinBeleg)))
     DeutscheBedeutung = Sequence(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
@@ -194,23 +197,23 @@ class MLWGrammar(GrammarBase):
     Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
     SWVariante = Sequence(Schreibweise, Token(":"), Beleg)
     SWTyp = Alternative(Token("script."), Token("script. fat-"))
-    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Optional(LZ), Required(SWTyp), Token(":"), Optional(LZ), Required(SWVariante), ZeroOrMore(Sequence(TR, SWVariante)), Optional(LZ))
+    SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Optional(LZ), Required(SWTyp), Token(":"), Optional(LZ), Required(SWVariante), ZeroOrMore(Sequence(ABS, SWVariante)), Optional(LZ))
     ArtikelKopf = SchreibweisenPosition
     genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
     Flexion = RE('-?[a-z]+')
     Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(","), Required(Flexion))))
     GVariante = Sequence(Flexionen, Optional(genus), Token(":"), Beleg)
-    GrammatikVariante = Sequence(TR, GVariante)
+    GrammatikVariante = Sequence(ABS, GVariante)
     wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
-    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LZ), Required(wortart), Required(TR), Required(Flexion), Optional(genus), ZeroOrMore(GrammatikVariante), Optional(TR))
-    lzs_typ = Token("sim.")
-    LemmaZusatz = Sequence(Token("ZUSATZ"), lzs_typ)
+    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LZ), Required(wortart), Required(ABS), Required(Flexion), Optional(genus), ZeroOrMore(GrammatikVariante), Optional(ABS))
+    lzs_typ = RE('sim\\.', wR='')
+    LemmaZusatz = Sequence(Token("ZUSATZ"), Required(lzs_typ))
     lemma = Sequence(LAT_WORT_TEIL, ZeroOrMore(Sequence(Alternative(Token("|"), Token("-")), LAT_WORT_TEIL)))
-    LemmaVarianten = Sequence(OneOrMore(Sequence(Alternative(LZ, TR), lemma)), Optional(Sequence(Alternative(LZ, TR), LemmaZusatz)), Optional(LZ))
+    LemmaVarianten = Sequence(Token("VARIANTEN"), Optional(LZ), OneOrMore(Sequence(lemma, Required(TR))), Optional(Sequence(LemmaZusatz, Required(ABS))))
     gesichert = Token("$")
     klassisch = Token("*")
     HauptLemma = Sequence(Optional(klassisch), Optional(gesichert), lemma)
-    LemmaPosition = Sequence(Token("LEMMA"), Optional(LZ), Required(HauptLemma), Optional(LemmaVarianten), Required(GrammatikPosition))
+    LemmaPosition = Sequence(Token("LEMMA"), Optional(LZ), Required(HauptLemma), Required(TR), Optional(LemmaVarianten), Required(GrammatikPosition))
     Artikel = Sequence(Optional(LZ), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LZ), DATEI_ENDE)
     root__ = Artikel
     

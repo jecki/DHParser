@@ -17,40 +17,41 @@ Artikel           = [LZ]
 
 #### LEMMA-POSITION ##########################################################
 
-LemmaPosition     = "LEMMA" [LZ]  §HauptLemma [LemmaVarianten] §GrammatikPosition
+LemmaPosition     = "LEMMA" [LZ] §HauptLemma §TR [LemmaVarianten] §GrammatikPosition
 
 HauptLemma        = [klassisch] [gesichert] lemma
   klassisch       = "*"
   gesichert       = "$"
 
-LemmaVarianten   = { (LZ|TR) lemma }+
-                   [ (LZ|TR) LemmaZusatz] [LZ]
+LemmaVarianten    = "VARIANTEN" [LZ]
+                    { lemma §TR }+
+                    [LemmaZusatz §ABS]
 
-lemma           = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
+lemma             = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
 
-LemmaZusatz     = "ZUSATZ" lzs_typ
-  lzs_typ       = "sim."
+LemmaZusatz       = "ZUSATZ" §lzs_typ
+  lzs_typ         = /sim\./
 
 
 ## GRAMMATIK-POSITION ##
 
-GrammatikPosition = "GRAMMATIK" [LZ] §wortart §TR §Flexion [genus]
-                    {GrammatikVariante} [TR]
+GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §Flexion [genus]
+                    {GrammatikVariante} [ABS]
 
-wortart         = "nomen"  | "n." |
-                  "verb"   | "v." |
-                  "adverb" | "adv." |
-                  "adjektiv" | "adj."
+wortart          = "nomen"  | "n." |
+                   "verb"   | "v." |
+                   "adverb" | "adv." |
+                   "adjektiv" | "adj."
 
-GrammatikVariante = TR GVariante
-GVariante       = Flexionen  [genus]  ":"  Beleg
+GrammatikVariante = ABS GVariante
+GVariante        = Flexionen  [genus]  ":"  Beleg
 
-Flexionen       = Flexion { "," §Flexion }
-Flexion         = /-?[a-z]+/~
+Flexionen        = Flexion { "," §Flexion }
+Flexion          = /-?[a-z]+/~
 
-genus           = "maskulinum" | "m." |
-                  "femininum" | "f." |
-                  "neutrum" | "n."
+genus            = "maskulinum" | "m." |
+                   "femininum" | "f." |
+                   "neutrum" | "n."
 
 
 
@@ -58,7 +59,7 @@ genus           = "maskulinum" | "m." |
 
 ArtikelKopf     = SchreibweisenPosition
 SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
-                         §SWVariante { TR SWVariante} [LZ]
+                         §SWVariante { ABS SWVariante} [LZ]
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
@@ -81,7 +82,7 @@ Belege          = "BELEGE" [LZ] { "*" EinBeleg }
 EinBeleg        = { !([LZ] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
                     /\s*.*\s*/ }+
                   [Zusatz]
-Zusatz          = "ZUSATZ" /\s*.*/ TR
+Zusatz          = "ZUSATZ" /\s*.*/ ABS
 
 
 #### AUTOR/AUTORIN ###########################################################
@@ -102,10 +103,11 @@ LAT_WORT         = /[a-z]+/~
 LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 
-TR               = /\s*;\s*/ | { NEUE_ZEILE }+  # Trenner
-NEUE_ZEILE       = /\n/~
+TR               = ABS | LZ             # (beliebiger) Trenner
+ABS              = /\s*;\s*/ | { ZW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
+ZW               = /\n/~                # Zeilenwechsel
+LZ               = /\s+/                # Leerzeichen oder -zeilen
 
-LZ               = /\s+/                        # Leerzeichen oder -zeilen
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/
 
