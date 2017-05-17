@@ -23,7 +23,7 @@ HauptLemma        = [klassisch] [gesichert] lemma
   klassisch       = "*"
   gesichert       = "$"
 
-LemmaVarianten    = "VARIANTEN" [LZ]
+LemmaVarianten    = [LZ]
                     { lemma §TR }+
                     [LemmaZusatz §ABS]
 
@@ -35,24 +35,22 @@ LemmaZusatz       = "ZUSATZ" §lzs_typ
 
 ## GRAMMATIK-POSITION ##
 
-GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §Flexion [genus]
-                    {GrammatikVariante} [ABS]
+GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §flexion [genus] §ABS
+                    [GrammatikVarianten]
 
 wortart          = "nomen"  | "n." |
                    "verb"   | "v." |
                    "adverb" | "adv." |
                    "adjektiv" | "adj."
 
-GrammatikVariante = ABS GVariante
-GVariante        = Flexionen  [genus]  ":"  Beleg
+GrammatikVarianten = { [wortart ABS] flexion [genus]  ":"  Beleg §ABS }+
 
-Flexionen        = Flexion { "," §Flexion }
-Flexion          = /-?[a-z]+/~
+Flexion          = FLEX { "," §FLEX }
+FLEX             = /-?[a-z]+/~
 
 genus            = "maskulinum" | "m." |
                    "femininum" | "f." |
                    "neutrum" | "n."
-
 
 
 #### ARTIKEL-KOPF ############################################################
@@ -63,10 +61,6 @@ SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
-
-Beleg           = Verweis
-Verweis         = ~/\w+/~
-VerweisZiel     = ~/<\w+>/~
 
 
 #### BEDEUTUNGS-POSITION #####################################################
@@ -91,7 +85,13 @@ Autorinfo       = ("AUTORIN" | "AUTOR") Name
 Name            = { NAME | NAMENS_ABKÜRZUNG }+
 
 
-#### ATOMARE AUSDRÜCKE #######################################################
+#### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
+
+Beleg            = Verweis
+
+Verweis          = ZielName
+VerweisZiel      = "[" ZielName "]"
+ZielName         = ZEICHENFOLGE
 
 NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
@@ -102,6 +102,8 @@ DEU_KLEIN        = /[a-zäöüß]+/~
 LAT_WORT         = /[a-z]+/~
 LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
+
+ZEICHENFOLGE     = /\w+/~
 
 TR               = ABS | LZ             # (beliebiger) Trenner
 ABS              = /\s*;\s*/ | { ZW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)

@@ -1,6 +1,5 @@
 LEMMA facitergul|a
 
-VARIANTEN
     fasc-itergula
     fac-iet-ergula
     fac-ist-ergula
@@ -12,15 +11,15 @@ VARIANTEN
 GRAMMATIK
     nomen; -ae f.;
 
-    -us, -i m.: beleg_id_1
-    -um, -i n.: beleg_id_2
+    -us, -i m.: verweis_ziel_001
+    -um, -i n.: verweis_ziel_002
 
 
 SCHREIBWEISE
     script.:
-        vizreg-:      beleg_id_3
-        festregel(a): beleg_id_4
-        fezdregl(a):  beleg_id_5
+        vizreg-:      verweis_ziel_003
+        festregel(a): verweis_ziel_004
+        fezdregl(a):  verweis_ziel_005
 
 BEDEUTUNG
 
