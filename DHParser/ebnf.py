@@ -318,7 +318,7 @@ class EBNFCompiler(CompilerBase):
                            'comment': '',
                            'literalws': ['right'],
                            'tokens': set(),     # alt. 'scanner_tokens'
-                           'counterpart': set()}     # alt. 'retrieve_counterpart'
+                           'filter': dict()}     # alt. 'retrieve_filter'
 
     @property
     def result(self):
@@ -407,14 +407,11 @@ class EBNFCompiler(CompilerBase):
                 declarations = declarations[:-1]
         declarations.append('"""')
 
-        # add default functions for counterpart filters of pop or retrieve operators
+        # add default functions for retrieve_filter filters of pop or retrieve operators
 
-        for symbol in self.directives['counterpart']:
-            # declarations.append('def %s_counterpart(value): \n' % symbol +
-            #                     '        return value.replace("(", ")").replace("[", "]")'
-            #                     '.replace("{", "}").replace(">", "<")\n')
-            declarations.append(symbol + '_counterpart = lambda value: value.replace("(", ")")'
-                                '.replace("[", "]").replace("{", "}").replace(">", "<")')
+        # for symbol, fun in self.directives['filter']:
+        #     declarations.append(symbol + '_filter = lambda value: value.replace("(", ")")'
+        #                         '.replace("[", "]").replace("{", "}").replace(">", "<")')
 
         # turn definitions into declarations in reverse order
 
@@ -540,8 +537,12 @@ class EBNFCompiler(CompilerBase):
         elif key in {'tokens', 'scanner_tokens'}:
             self.directives['tokens'] |= self._compile(node.result[1])
 
-        elif key in {'counterpart', 'retrieve_counterpart'}:
-            self.directives['counterpart'] |= self._compile(node.result[1])
+        elif key.endswith('_filter'):
+            filter_set = self._compile(node.result[1])
+            if not isinstance(filter_set, set) or len(filter_set) != 1:
+                node.add_error('Directive "%s" accepts exactly on symbol, not %s'
+                               % (key, str(filter_set)))
+            self.directives['filter'][key[:-7]] = filter_set.pop()
 
         else:
             node.add_error('Unknown directive %s ! (Known ones are %s .)' %
@@ -575,8 +576,8 @@ class EBNFCompiler(CompilerBase):
                 node.add_error(('Retrieve Operator "%s" requires a symbol, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
-            if str(arg) in self.directives['counterpart']:
-                custom_args = ['counterpart=%s_counterpart' % str(arg)]
+            if str(arg) in self.directives['filter']:
+                custom_args = ['retrieve_filter=%s' % self.directives['filter'][str(arg)]]
             self.variables.add(arg.result)
 
         elif len(node.result) > 2:

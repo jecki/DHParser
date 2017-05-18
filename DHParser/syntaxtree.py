@@ -168,7 +168,7 @@ class Node:
         self.error_flag = any(r.error_flag for r in self.result) if self.children else False
         self._len = len(self.result) if not self.children else \
             sum(child._len for child in self.children)
-        # self.pos = 0  # coninuous updating of pos values
+        # self.pos = 0  # continuous updating of pos values
         self._pos = -1
 
     def __str__(self):

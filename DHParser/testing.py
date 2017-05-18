@@ -47,7 +47,7 @@ def mock_syntax_tree(sexpr):
         while s[0] != ')':
             if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
             # assert s[0] == '(', s
-            level = 1;
+            level = 1
             i = 1
             while level > 0:
                 if s[i] == '(':

@@ -875,7 +875,6 @@ class NegativeLookbehind(Lookbehind):
 class Capture(UnaryOperator):
     def __init__(self, parser, name=''):
         super(Capture, self).__init__(parser, name)
-        print("WARNING: Capture operator is experimental")
 
     def __call__(self, text):
         node, text = self.parser(text)
@@ -887,21 +886,38 @@ class Capture(UnaryOperator):
             return None, text
 
 
+def nop_filter(stack):
+    return stack[-1]
+
+
+def counterpart_filter(stack):
+    value = stack[-1]
+    return value.replace("(", ")").replace("[", "]").replace("{", "}").replace(">", "<")
+
+
+def accumulating_filter(stack):
+    return "".join(stack)
+
+
 class Retrieve(Parser):
-    def __init__(self, symbol, counterpart=None, name=''):
+    def __init__(self, symbol, retrieve_filter=None, name=''):
         if not name:
             name = symbol.name
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
-        self.counterpart = counterpart if counterpart else lambda value: value
-        print("WARNING: Retrieve operator is experimental")
+        self.retrieve_filter = retrieve_filter if retrieve_filter else nop_filter
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.counterpart, self.name)
+        return self.__class__(self.symbol, self.retrieve_filter, self.name)
 
     def __call__(self, text):
-        stack = self.grammar.variables[self.symbol.name]
-        value = self.counterpart(self.pick_value(stack))
+        try:
+            stack = self.grammar.variables[self.symbol.name]
+            value = self.retrieve_filter(stack)
+            self.pick_value(stack)
+        except (KeyError, IndexError):
+            return Node(self, '').add_error(dsl_error_msg(self,
+                "%s undefined or exhausted" % self.symbol.name)), text
         if text.startswith(value):
             return Node(self, value), text[len(value):]
         else:

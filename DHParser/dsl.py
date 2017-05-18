@@ -75,7 +75,8 @@ from DHParser.toolkit import logging, is_filename, load_if_file
 from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
+    nop_filter, counterpart_filter, accumulating_filter
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
