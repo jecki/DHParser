@@ -27,8 +27,10 @@ except ImportError:
     import re
 
 from DHParser import Node, error_messages
-from DHParser.syntaxtree import MockParser
 from DHParser.toolkit import compact_sexpr
+from DHParser.syntaxtree import MockParser
+from DHParser.ebnf import grammar_changed
+from DHParser.dsl import compile_on_disk
 
 
 def mock_syntax_tree(sexpr):
@@ -85,6 +87,45 @@ def mock_syntax_tree(sexpr):
     return Node(MockParser(name, ':' + class_name), result)
 
 
+def recompile_grammar(ebnf_filename, query_remove_error_files=True):
+    """Recompiles an ebnf-grammar if necessary, that is if either no
+    corresponding 'XXXX_compiler.py'-file exists or if that file is
+    outdated.
+    
+    Parameters:
+        ebnf_filename(str):  The filename of the ebnf-source of the 
+            grammar. In case this is a directory and not a file all
+            files within this directory ending with .ebnf will be 
+            compiled.
+    """
+    if os.path.isdir(ebnf_filename):
+        for entry in os.listdir(ebnf_filename):
+            if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
+                recompile_grammar(entry)
+        return
+
+    base, ext = os.path.splitext(ebnf_filename)
+    compiler_name = base + '_compiler.py'
+    errors = []
+    if (not os.path.exists(compiler_name) or
+        grammar_changed(compiler_name, ebnf_filename)):
+        # print("recompiling parser for: " + ebnf_filename)
+        errors = compile_on_disk(ebnf_filename)
+        if errors:
+            # print("Errors while compiling: " + ebnf_filename + '!')
+            with open(base + '_errors.txt', 'w') as f:
+                for e in errors:
+                    f.write(e)
+                    f.write('\n')
+
+    if not errors:
+        if os.path.exists(base + '_errors.txt'):
+            if query_remove_error_files:
+                answer = input('Remove obsolete file ' + base + '_errors.txt (y/n)? ').lower()
+                if answer not in {'y', 'yes'}:
+                    return
+            os.remove(base + '_errors.txt')
+
 
 UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 
@@ -123,7 +164,7 @@ def unit_from_json(config_filename):
                 raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
     return unit
 
-# TODO: add support for json, yaml, cson, toml
+# TODO: add support for yaml, cson, toml
 
 
 def unit_from_file(config_filename):

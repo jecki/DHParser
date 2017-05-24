@@ -20,26 +20,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import os
+from DHParser.testing import recompile_grammar
+recompile_grammar('.')
 
-from DHParser.ebnf import grammar_changed
-from DHParser.dsl import compile_on_disk
-
-
-def compile(name):
-    base, ext = os.path.splitext(name)
-    compiler_name = base + '_compiler.py'
-    if (not os.path.exists(compiler_name) or
-        grammar_changed(compiler_name, name)):
-        print("recompiling parser for: " + name)
-        errors = compile_on_disk(name)
-        if errors:
-            print("Errors while compiling: " + name + '!')
-            with open(base + '_errors.txt', 'w') as f:
-                for e in errors:
-                    f.write(e)
-                    f.write('\n')
-
-for entry in os.listdir():
-    if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
-        compile(entry)
+# import os
+#
+# from DHParser.ebnf import grammar_changed
+# from DHParser.dsl import compile_on_disk
+#
+#
+# def compile(name):
+#     base, ext = os.path.splitext(name)
+#     compiler_name = base + '_compiler.py'
+#     if (not os.path.exists(compiler_name) or
+#         grammar_changed(compiler_name, name)):
+#         print("recompiling parser for: " + name)
+#         errors = compile_on_disk(name)
+#         if errors:
+#             print("Errors while compiling: " + name + '!')
+#             with open(base + '_errors.txt', 'w') as f:
+#                 for e in errors:
+#                     f.write(e)
+#                     f.write('\n')
+#
+# for entry in os.listdir():
+#     if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
+#         compile(entry)

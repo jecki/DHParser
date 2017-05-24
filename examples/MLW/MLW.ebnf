@@ -45,7 +45,7 @@ wortart          = "nomen"  | "n." |
 
 GrammatikVarianten = { [wortart ABS] flexion [genus]  ":"  Beleg §ABS }+
 
-Flexion          = FLEX { "," §FLEX }
+flexion          = FLEX { "," §FLEX }
 FLEX             = /-?[a-z]+/~
 
 genus            = "maskulinum" | "m." |

@@ -72,36 +72,34 @@ class MLWGrammar(GrammarBase):
       klassisch       = "*"
       gesichert       = "$"
     
-    LemmaVarianten   = "VARIANTEN" [LZ]
-                       { lemma §TR }+
-                       [LemmaZusatz §ABS]
+    LemmaVarianten    = [LZ]
+                        { lemma §TR }+
+                        [LemmaZusatz §ABS]
     
-    lemma            = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
+    lemma             = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
     
-    LemmaZusatz      = "ZUSATZ" §lzs_typ
-      lzs_typ        = /sim\./
+    LemmaZusatz       = "ZUSATZ" §lzs_typ
+      lzs_typ         = /sim\./
     
     
     ## GRAMMATIK-POSITION ##
     
-    GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §Flexion [genus]
-                        {GrammatikVariante} [ABS]
+    GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §flexion [genus] §ABS
+                        [GrammatikVarianten]
     
-    wortart         = "nomen"  | "n." |
-                      "verb"   | "v." |
-                      "adverb" | "adv." |
-                      "adjektiv" | "adj."
+    wortart          = "nomen"  | "n." |
+                       "verb"   | "v." |
+                       "adverb" | "adv." |
+                       "adjektiv" | "adj."
     
-    GrammatikVariante = ABS GVariante
-    GVariante       = Flexionen  [genus]  ":"  Beleg
+    GrammatikVarianten = { [wortart ABS] flexion [genus]  ":"  Beleg §ABS }+
     
-    Flexionen       = Flexion { "," §Flexion }
-    Flexion         = /-?[a-z]+/~
+    flexion          = FLEX { "," §FLEX }
+    FLEX             = /-?[a-z]+/~
     
-    genus           = "maskulinum" | "m." |
-                      "femininum" | "f." |
-                      "neutrum" | "n."
-    
+    genus            = "maskulinum" | "m." |
+                       "femininum" | "f." |
+                       "neutrum" | "n."
     
     
     #### ARTIKEL-KOPF ############################################################
@@ -112,10 +110,6 @@ class MLWGrammar(GrammarBase):
     SWTyp           = "script." | "script. fat-"
     SWVariante      = Schreibweise ":" Beleg
     Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
-    
-    Beleg           = Verweis
-    Verweis         = ~/\w+/~
-    VerweisZiel     = ~/<\w+>/~
     
     
     #### BEDEUTUNGS-POSITION #####################################################
@@ -140,7 +134,13 @@ class MLWGrammar(GrammarBase):
     Name            = { NAME | NAMENS_ABKÜRZUNG }+
     
     
-    #### ATOMARE AUSDRÜCKE #######################################################
+    #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
+    
+    Beleg            = Verweis
+    
+    Verweis          = ZielName
+    VerweisZiel      = "[" ZielName "]"
+    ZielName         = ZEICHENFOLGE
     
     NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
     NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
@@ -152,6 +152,8 @@ class MLWGrammar(GrammarBase):
     LAT_WORT_TEIL    = /[a-z]+/
     GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
     
+    ZEICHENFOLGE     = /\w+/~
+    
     TR               = ABS | LZ             # (beliebiger) Trenner
     ABS              = /\s*;\s*/ | { ZW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
     ZW               = /\n/~                # Zeilenwechsel
@@ -160,7 +162,8 @@ class MLWGrammar(GrammarBase):
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
     """
-    source_hash__ = "2d6f71148926868bfeba2e2a30b07fec"
+    wortart = Forward()
+    source_hash__ = "d953e1f653ac37c660274f1c1dbbd7e2"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'#.*(?:\n|$)')
@@ -172,6 +175,7 @@ class MLWGrammar(GrammarBase):
     ZW = RE('\\n')
     ABS = Alternative(RE('\\s*;\\s*', wR=''), OneOrMore(ZW))
     TR = Alternative(ABS, LZ)
+    ZEICHENFOLGE = RE('\\w+')
     GROSSSCHRIFT = RE('[A-ZÄÖÜ]+')
     LAT_WORT_TEIL = RE('[a-z]+', wR='')
     LAT_WORT = RE('[a-z]+')
@@ -180,6 +184,10 @@ class MLWGrammar(GrammarBase):
     DEU_WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+')
     NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
+    ZielName = ZEICHENFOLGE
+    VerweisZiel = Sequence(Token("["), ZielName, Token("]"))
+    Verweis = ZielName
+    Beleg = Verweis
     Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG))
     Autorinfo = Sequence(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
     Zusatz = Sequence(Token("ZUSATZ"), RE('\\s*.*', wR=''), ABS)
@@ -191,25 +199,21 @@ class MLWGrammar(GrammarBase):
     Bedeutungskategorie = Sequence(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'), Optional(LZ))
     Bedeutung = Sequence(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
     BedeutungsPosition = OneOrMore(Sequence(Token("BEDEUTUNG"), Optional(LZ), Required(Bedeutung)))
-    VerweisZiel = RE('<\\w+>', wL=WSP__)
-    Verweis = RE('\\w+', wL=WSP__)
-    Beleg = Verweis
     Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
     SWVariante = Sequence(Schreibweise, Token(":"), Beleg)
     SWTyp = Alternative(Token("script."), Token("script. fat-"))
     SchreibweisenPosition = Sequence(Token("SCHREIBWEISE"), Optional(LZ), Required(SWTyp), Token(":"), Optional(LZ), Required(SWVariante), ZeroOrMore(Sequence(ABS, SWVariante)), Optional(LZ))
     ArtikelKopf = SchreibweisenPosition
     genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
-    Flexion = RE('-?[a-z]+')
-    Flexionen = Sequence(Flexion, ZeroOrMore(Sequence(Token(","), Required(Flexion))))
-    GVariante = Sequence(Flexionen, Optional(genus), Token(":"), Beleg)
-    GrammatikVariante = Sequence(ABS, GVariante)
-    wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
-    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LZ), Required(wortart), Required(ABS), Required(Flexion), Optional(genus), ZeroOrMore(GrammatikVariante), Optional(ABS))
+    FLEX = RE('-?[a-z]+')
+    flexion = Sequence(FLEX, ZeroOrMore(Sequence(Token(","), Required(FLEX))))
+    GrammatikVarianten = OneOrMore(Sequence(Optional(Sequence(wortart, ABS)), flexion, Optional(genus), Token(":"), Beleg, Required(ABS)))
+    wortart.set(Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj.")))
+    GrammatikPosition = Sequence(Token("GRAMMATIK"), Optional(LZ), Required(wortart), Required(ABS), Required(flexion), Optional(genus), Required(ABS), Optional(GrammatikVarianten))
     lzs_typ = RE('sim\\.', wR='')
     LemmaZusatz = Sequence(Token("ZUSATZ"), Required(lzs_typ))
     lemma = Sequence(LAT_WORT_TEIL, ZeroOrMore(Sequence(Alternative(Token("|"), Token("-")), LAT_WORT_TEIL)))
-    LemmaVarianten = Sequence(Token("VARIANTEN"), Optional(LZ), OneOrMore(Sequence(lemma, Required(TR))), Optional(Sequence(LemmaZusatz, Required(ABS))))
+    LemmaVarianten = Sequence(Optional(LZ), OneOrMore(Sequence(lemma, Required(TR))), Optional(Sequence(LemmaZusatz, Required(ABS))))
     gesichert = Token("$")
     klassisch = Token("*")
     HauptLemma = Sequence(Optional(klassisch), Optional(gesichert), lemma)
