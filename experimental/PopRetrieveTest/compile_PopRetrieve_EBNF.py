@@ -25,8 +25,8 @@ import sys
 sys.path.append(os.path.abspath('../../'))
 from DHParser.dsl import compile_on_disk, is_outdated
 
-if (not os.path.exists('PopRetrieve_compiler.py') or
-    is_outdated('PopRetrieve_compiler.py', 'PopRetrieve.ebnf')):
+if (not os.path.exists('PopRetrieveCompiler.py') or
+    is_outdated('PopRetrieveCompiler.py', 'PopRetrieve.ebnf')):
     print("recompiling PopRetrieve parser")
     errors = compile_on_disk("PopRetrieve.ebnf")
     if errors:
@@ -54,21 +54,21 @@ if (not os.path.exists('PopRetrieve_compiler.py') or
 
 
 print("PopRetrieveTest 1")
-errors = compile_on_disk("PopRetrieveTest.txt", 'PopRetrieve_compiler.py')
+errors = compile_on_disk("PopRetrieveTest.txt", 'PopRetrieveCompiler.py')
 if errors:
     print(errors)
     sys.exit(1)
 
 print("PopRetrieveTest 2")
-errors = compile_on_disk("PopRetrieveTest2.txt", 'PopRetrieve_compiler.py')
+errors = compile_on_disk("PopRetrieveTest2.txt", 'PopRetrieveCompiler.py')
 if errors:
     print(errors)
     sys.exit(1)
 
 
 
-if (not os.path.exists('PopRetrieveComplement_compiler.py') or
-        is_outdated('PopRetrieveComplement_compiler.py', 'PopRetrieveComplement.ebnf')):
+if (not os.path.exists('PopRetrieveComplementCompiler.py') or
+        is_outdated('PopRetrieveComplementCompiler.py', 'PopRetrieveComplement.ebnf')):
     print("recompiling PopRetrieveComplement parser")
     errors = compile_on_disk("PopRetrieveComplement.ebnf")
     if errors:
@@ -76,10 +76,10 @@ if (not os.path.exists('PopRetrieveComplement_compiler.py') or
         sys.exit(1)
 
 
-from PopRetrieveComplement_compiler import compile_PopRetrieveComplement
+from PopRetrieveComplementCompiler import compile_src
 
 print("PopRetrieveComplement Test 1")
-result, errors, ast = compile_PopRetrieveComplement("PopRetrieveComplementTest.txt")
+result, errors, ast = compile_src("PopRetrieveComplementTest.txt")
 if errors:
     print(errors)
     sys.exit(1)
@@ -87,7 +87,7 @@ else:
     print(result)
 
 print("PopRetrieveComplement Test 2")
-result, errors, ast = compile_PopRetrieveComplement("PopRetrieveComplementTest2.txt")
+result, errors, ast = compile_src("PopRetrieveComplementTest2.txt")
 if errors:
     print(errors)
     sys.exit(1)

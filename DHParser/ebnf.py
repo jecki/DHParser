@@ -241,13 +241,13 @@ def get_ebnf_transformer():
 ########################################################################
 
 SCANNER_FACTORY = '''
-def get_{NAME}_scanner():
+def get_scanner():
     return {NAME}Scanner
 '''
 
 
 GRAMMAR_FACTORY = '''
-def get_{NAME}_grammar():
+def get_grammar():
     global thread_local_{NAME}_grammar_singleton
     try:
         grammar = thread_local_{NAME}_grammar_singleton
@@ -259,14 +259,13 @@ def get_{NAME}_grammar():
 
 
 TRANSFORMER_FACTORY = '''
-def get_{NAME}_transformer():
+def get_transformer():
     return {NAME}Transform
 '''
 
 
 COMPILER_FACTORY = '''
-def get_{NAME}_compiler(grammar_name="{NAME}", 
-                        grammar_source=""):
+def get_compiler(grammar_name="{NAME}", grammar_source=""):
     global thread_local_{NAME}_compiler_singleton
     try:
         compiler = thread_local_{NAME}_compiler_singleton

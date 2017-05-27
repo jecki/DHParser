@@ -89,7 +89,7 @@ def mock_syntax_tree(sexpr):
 
 def recompile_grammar(ebnf_filename, query_remove_error_files=True):
     """Recompiles an ebnf-grammar if necessary, that is if either no
-    corresponding 'XXXX_compiler.py'-file exists or if that file is
+    corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
     
     Parameters:
@@ -105,7 +105,7 @@ def recompile_grammar(ebnf_filename, query_remove_error_files=True):
         return
 
     base, ext = os.path.splitext(ebnf_filename)
-    compiler_name = base + '_compiler.py'
+    compiler_name = base + 'Compiler.py'
     errors = []
     if (not os.path.exists(compiler_name) or
         grammar_changed(compiler_name, ebnf_filename)):
@@ -235,8 +235,7 @@ def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown
                 if errata:
                     all_errors[filename] = errata
             except ValueError as e:
-                if (not ignore_unknown_filetypes or
-                    str(e).find("Unknown") < 0):
+                if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                     raise e
     error_report = []
     if all_errors:

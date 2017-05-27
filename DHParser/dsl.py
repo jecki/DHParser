@@ -85,17 +85,17 @@ from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
 
 
 DHPARSER_MAIN = '''
-def compile_{NAME}(source):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     with logging("LOGS"):
-        compiler = get_{NAME}_compiler()
+        compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \\
             if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_{NAME}_scanner(), 
-                                get_{NAME}_grammar(),
-                                get_{NAME}_transformer(), compiler)
+        result = compile_source(source, get_scanner(), 
+                                get_grammar(),
+                                get_transformer(), compiler)
     return result
 
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         else:
             print(result)
     else:
-        print("Usage: {NAME}_compiler.py [FILENAME]")
+        print("Usage: {NAME}Compiler.py [FILENAME]")
 '''
 
 
@@ -251,7 +251,7 @@ def parser_factory(ebnf_src, branding="DSL"):
     """
     grammar_src = compileDSL(ebnf_src, nil_scanner, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding))
-    return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_\w*_grammar$')
+    return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_(?:\w+_)?grammar$')
 
 
 def load_compiler_suite(compiler_suite):
@@ -272,9 +272,9 @@ def load_compiler_suite(compiler_suite):
             raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
         # TODO: Compile in one step and pick parts from namespace later ?
-        scanner = compile_python_object(imports + scanner_py, 'get_\w*_scanner$')
-        parser = compile_python_object(imports + parser_py, 'get_\w*_grammar$')
-        ast = compile_python_object(imports + ast_py, 'get_\w*_transformer$')
+        scanner = compile_python_object(imports + scanner_py, 'get_(?:\w+_)?scanner$')
+        parser = compile_python_object(imports + parser_py, 'get_(?:\w+_)?grammar$')
+        ast = compile_python_object(imports + ast_py, 'get_(?:\w+_)?transformer$')
     else:
         # assume source is an ebnf grammar. Is there really any reasonable application case for this?
         with logging(False):
@@ -284,7 +284,7 @@ def load_compiler_suite(compiler_suite):
             raise GrammarError('\n\n'.join(errors), source)
         scanner = get_ebnf_scanner
         ast = get_ebnf_transformer
-    compiler = compile_python_object(imports + compiler_py, 'get_\w*_compiler$')
+    compiler = compile_python_object(imports + compiler_py, 'get_(?:\w+_)?compiler$')
 
     return scanner, parser, ast, compiler
 
@@ -355,7 +355,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
         source_file(str):  The file name of the source text to be
             compiled.
         compiler_suite(str):  The file name of the compiler suite
-            (usually ending with '_compiler.py'), with which the source
+            (usually ending with 'Compiler.py'), with which the source
             file shall be compiled. If this is left empty, the source
             file is assumed to be an EBNF-Grammar that will be compiled
             with the internal EBNF-Compiler.
@@ -391,14 +391,14 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
             DHPARSER_MAIN, DHPARSER_IMPORTS
         f = None
         try:
-            f = open(rootname + '_compiler.py', 'r', encoding="utf-8")
+            f = open(rootname + 'Compiler.py', 'r', encoding="utf-8")
             source = f.read()
             sections = RX_SECTION_MARKER.split(source)
             intro, imports, scanner, parser, ast, compiler, outro = sections
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, imports, scanner, parser, ast, compiler, outro = '', '', '', '', '', '', ''
         except ValueError as error:
-            raise ValueError('File "' + rootname + '_compiler.py" seems to be corrupted. '
+            raise ValueError('File "' + rootname + 'Compiler.py" seems to be corrupted. '
                                                    'Please delete or repair file manually!')
         finally:
             if f:
@@ -419,7 +419,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
             compiler = compiler1.gen_compiler_skeleton()
 
         try:
-            f = open(rootname + '_compiler.py', 'w', encoding="utf-8")
+            f = open(rootname + 'Compiler.py', 'w', encoding="utf-8")
             f.write(intro)
             f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
             f.write(imports)
@@ -434,7 +434,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
             f.write(SECTION_MARKER.format(marker=END_SECTIONS_MARKER))
             f.write(outro)
         except (PermissionError, FileNotFoundError, IOError) as error:
-            print('# Could not write file "' + rootname + '_compiler.py" because of: '
+            print('# Could not write file "' + rootname + 'Compiler.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))
             print(result)
         finally:

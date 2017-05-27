@@ -7,8 +7,20 @@
         <HauptLemma>
             <lemma>
                 <LAT_WORT_TEIL>
-                    <:RegExp>facitergula</:RegExp>
+                    <:RegExp>facitergul</:RegExp>
                 </LAT_WORT_TEIL>
+                <:ZeroOrMore>
+                    <:Sequence>
+                        <:Alternative>
+                            <:Token>
+                                <:RegExp>|</:RegExp>
+                            </:Token>
+                        </:Alternative>
+                        <LAT_WORT_TEIL>
+                            <:RegExp>a</:RegExp>
+                        </LAT_WORT_TEIL>
+                    </:Sequence>
+                </:ZeroOrMore>
             </lemma>
         </HauptLemma>
         <TR>
@@ -25,23 +37,13 @@
                             
                             
                         </:RegExp>
+                        <:Whitespace>    </:Whitespace>
                     </ZW>
                 </:OneOrMore>
             </ABS>
         </TR>
         <:Optional>
             <LemmaVarianten>
-                <:Token>
-                    <:RegExp>VARIANTEN</:RegExp>
-                </:Token>
-                <:Optional>
-                    <LZ>
-                        <:RegExp>
-                            
-                                
-                        </:RegExp>
-                    </LZ>
-                </:Optional>
                 <:OneOrMore>
                     <:Sequence>
                         <lemma>
@@ -162,7 +164,7 @@
                     <:Sequence>
                         <lemma>
                             <LAT_WORT_TEIL>
-                                <:RegExp>fa</:RegExp>
+                                <:RegExp>fascite</:RegExp>
                             </LAT_WORT_TEIL>
                             <:ZeroOrMore>
                                 <:Sequence>
@@ -182,7 +184,7 @@
                                         </:Token>
                                     </:Alternative>
                                     <LAT_WORT_TEIL>
-                                        <:RegExp>tergula</:RegExp>
+                                        <:RegExp>la</:RegExp>
                                     </LAT_WORT_TEIL>
                                 </:Sequence>
                             </:ZeroOrMore>
@@ -267,10 +269,12 @@
                     <:RegExp>; </:RegExp>
                 </:RE>
             </ABS>
-            <Flexion>
-                <:RegExp>-ae</:RegExp>
-                <:Whitespace> </:Whitespace>
-            </Flexion>
+            <flexion>
+                <FLEX>
+                    <:RegExp>-ae</:RegExp>
+                    <:Whitespace> </:Whitespace>
+                </FLEX>
+            </flexion>
             <:Optional>
                 <genus>
                     <:Token>
@@ -278,35 +282,35 @@
                     </:Token>
                 </genus>
             </:Optional>
-            <:ZeroOrMore>
-                <GrammatikVariante>
-                    <ABS>
-                        <:RE>
-                            <:RegExp>
-                                ;
-                                
-                                    
-                            </:RegExp>
-                        </:RE>
-                    </ABS>
-                    <GVariante>
-                        <Flexionen>
-                            <Flexion>
+            <ABS>
+                <:RE>
+                    <:RegExp>
+                        ;
+                        
+                            
+                    </:RegExp>
+                </:RE>
+            </ABS>
+            <:Optional>
+                <GrammatikVarianten>
+                    <:Sequence>
+                        <flexion>
+                            <FLEX>
                                 <:RegExp>-us</:RegExp>
-                            </Flexion>
+                            </FLEX>
                             <:ZeroOrMore>
                                 <:Sequence>
                                     <:Token>
                                         <:RegExp>,</:RegExp>
                                         <:Whitespace> </:Whitespace>
                                     </:Token>
-                                    <Flexion>
+                                    <FLEX>
                                         <:RegExp>-i</:RegExp>
                                         <:Whitespace> </:Whitespace>
-                                    </Flexion>
+                                    </FLEX>
                                 </:Sequence>
                             </:ZeroOrMore>
-                        </Flexionen>
+                        </flexion>
                         <:Optional>
                             <genus>
                                 <:Token>
@@ -318,41 +322,39 @@
                             <:RegExp>:</:RegExp>
                             <:Whitespace> </:Whitespace>
                         </:Token>
-                        <Verweis>
-                            <:RegExp>beleg_id_1</:RegExp>
-                        </Verweis>
-                    </GVariante>
-                </GrammatikVariante>
-                <GrammatikVariante>
-                    <ABS>
-                        <:OneOrMore>
-                            <ZW>
-                                <:RegExp>
-                                    
-                                    
-                                </:RegExp>
-                                <:Whitespace>    </:Whitespace>
-                            </ZW>
-                        </:OneOrMore>
-                    </ABS>
-                    <GVariante>
-                        <Flexionen>
-                            <Flexion>
+                        <ZEICHENFOLGE>
+                            <:RegExp>verweis_ziel_001</:RegExp>
+                        </ZEICHENFOLGE>
+                        <ABS>
+                            <:OneOrMore>
+                                <ZW>
+                                    <:RegExp>
+                                        
+                                        
+                                    </:RegExp>
+                                    <:Whitespace>    </:Whitespace>
+                                </ZW>
+                            </:OneOrMore>
+                        </ABS>
+                    </:Sequence>
+                    <:Sequence>
+                        <flexion>
+                            <FLEX>
                                 <:RegExp>-um</:RegExp>
-                            </Flexion>
+                            </FLEX>
                             <:ZeroOrMore>
                                 <:Sequence>
                                     <:Token>
                                         <:RegExp>,</:RegExp>
                                         <:Whitespace> </:Whitespace>
                                     </:Token>
-                                    <Flexion>
+                                    <FLEX>
                                         <:RegExp>-i</:RegExp>
                                         <:Whitespace> </:Whitespace>
-                                    </Flexion>
+                                    </FLEX>
                                 </:Sequence>
                             </:ZeroOrMore>
-                        </Flexionen>
+                        </flexion>
                         <:Optional>
                             <genus>
                                 <:Token>
@@ -364,35 +366,33 @@
                             <:RegExp>:</:RegExp>
                             <:Whitespace> </:Whitespace>
                         </:Token>
-                        <Verweis>
-                            <:RegExp>beleg_id_2</:RegExp>
-                        </Verweis>
-                    </GVariante>
-                </GrammatikVariante>
-            </:ZeroOrMore>
-            <:Optional>
-                <ABS>
-                    <:OneOrMore>
-                        <ZW>
-                            <:RegExp>
-                                
-                                
-                            </:RegExp>
-                        </ZW>
-                        <ZW>
-                            <:RegExp>
-                                
-                                
-                            </:RegExp>
-                        </ZW>
-                        <ZW>
-                            <:RegExp>
-                                
-                                
-                            </:RegExp>
-                        </ZW>
-                    </:OneOrMore>
-                </ABS>
+                        <ZEICHENFOLGE>
+                            <:RegExp>verweis_ziel_002</:RegExp>
+                        </ZEICHENFOLGE>
+                        <ABS>
+                            <:OneOrMore>
+                                <ZW>
+                                    <:RegExp>
+                                        
+                                        
+                                    </:RegExp>
+                                </ZW>
+                                <ZW>
+                                    <:RegExp>
+                                        
+                                        
+                                    </:RegExp>
+                                </ZW>
+                                <ZW>
+                                    <:RegExp>
+                                        
+                                        
+                                    </:RegExp>
+                                </ZW>
+                            </:OneOrMore>
+                        </ABS>
+                    </:Sequence>
+                </GrammatikVarianten>
             </:Optional>
         </GrammatikPosition>
     </LemmaPosition>
@@ -435,9 +435,9 @@
                     <:RegExp>:</:RegExp>
                     <:Whitespace>      </:Whitespace>
                 </:Token>
-                <Verweis>
-                    <:RegExp>beleg_id_3</:RegExp>
-                </Verweis>
+                <ZEICHENFOLGE>
+                    <:RegExp>verweis_ziel_003</:RegExp>
+                </ZEICHENFOLGE>
             </SWVariante>
             <:ZeroOrMore>
                 <:Sequence>
@@ -462,9 +462,9 @@
                             <:RegExp>:</:RegExp>
                             <:Whitespace> </:Whitespace>
                         </:Token>
-                        <Verweis>
-                            <:RegExp>beleg_id_4</:RegExp>
-                        </Verweis>
+                        <ZEICHENFOLGE>
+                            <:RegExp>verweis_ziel_004</:RegExp>
+                        </ZEICHENFOLGE>
                     </SWVariante>
                 </:Sequence>
                 <:Sequence>
@@ -489,9 +489,9 @@
                             <:RegExp>:</:RegExp>
                             <:Whitespace>  </:Whitespace>
                         </:Token>
-                        <Verweis>
-                            <:RegExp>beleg_id_5</:RegExp>
-                        </Verweis>
+                        <ZEICHENFOLGE>
+                            <:RegExp>verweis_ziel_005</:RegExp>
+                        </ZEICHENFOLGE>
                     </SWVariante>
                 </:Sequence>
             </:ZeroOrMore>

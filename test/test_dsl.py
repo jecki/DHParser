@@ -44,10 +44,10 @@ class TestCompileFunctions:
     def test_compileEBNF(self):
         parser_src = compileEBNF(ARITHMETIC_EBNF)
         assert isinstance(parser_src, str), str(type(parser_src))
-        assert parser_src.find('get_DSL') >= 0
+        assert parser_src.find('DSLGrammar') >= 0
         parser_src = compileEBNF(ARITHMETIC_EBNF, branding="CustomDSL")
         assert isinstance(parser_src, str), str(type(parser_src))
-        assert parser_src.find('get_CustomDSL') >= 0
+        assert parser_src.find('CustomDSLGrammar') >= 0
         factory = parser_factory(ARITHMETIC_EBNF, branding="TestDSL")
         assert callable(factory)
         parser = factory()
@@ -66,7 +66,7 @@ class TestCompilerGeneration:
     tmp = 'tmp/' if os.path.isdir('tmp') else ('test/tmp/')
     trivial_text = u"""Es war ein Koenig in Thule."""
     grammar_name = tmp + "TestCompilerGeneration.ebnf"
-    compiler_name = tmp + "TestCompilerGeneration_compiler.py"
+    compiler_name = tmp + "TestCompilerGenerationCompiler.py"
     text_name = tmp + "TestCompilerGeneration_text.txt"
     result_name = tmp + "TestCompilerGeneration_text.xml"
 
@@ -118,8 +118,8 @@ class TestCompilerGeneration:
         assert output == result.as_xml(), str(result)
 
         sys.path.append(self.tmp)
-        from TestCompilerGeneration_compiler import compile_TestCompilerGeneration
-        result, errors, ast = compile_TestCompilerGeneration(self.trivial_text)
+        from TestCompilerGenerationCompiler import compile_src
+        result, errors, ast = compile_src(self.trivial_text)
 
 
 if __name__ == "__main__":

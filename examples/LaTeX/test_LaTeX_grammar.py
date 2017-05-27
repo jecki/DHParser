@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_MLW_grammar.py - unit tests for the MLW grammar 
+"""test_LaTeX_grammar.py - runs the unit tests for the LaTeX grammar
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -21,18 +21,9 @@ limitations under the License.
 
 
 from DHParser import testing
-from MLWCompiler import get_grammar, get_transformer
+from MLW_compiler import get_MLW_grammar, get_MLW_transformer
 
-error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer)
+error_report = testing.grammar_suite('grammar_tests', get_LaTeX_grammar, get_LaTeX_transformer)
 assert not error_report, error_report
 
-# class TestMLWGrammar:
-#     def test_lemma_position(self):
-#         errata = testing.grammar_unit('grammar_tests/test_lemmaposition.ini',  # MLW_TEST_CASES_LEMMA_POSITION,
-#                                       get_MLW_grammar,
-#                                       get_MLW_transformer)
-#         assert not errata, str(errata)
-#
-#
-# if __name__ == "__main__":
-#     testing.runner("", globals())
+

@@ -28,7 +28,7 @@ from DHParser.ebnf import grammar_changed
 from DHParser.dsl import compile_on_disk
 
 MLW_ebnf = os.path.join('..', 'MLW.ebnf')
-MLW_compiler = os.path.join('..', 'MLW_compiler.py')
+MLW_compiler = os.path.join('..', 'MLWCompiler.py')
 
 # print(grammar_changed(MLW_ebnf, MLW_compiler))
 
