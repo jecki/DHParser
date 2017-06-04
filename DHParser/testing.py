@@ -27,7 +27,7 @@ except ImportError:
     import re
 
 from DHParser import Node, error_messages
-from DHParser.toolkit import compact_sexpr
+from DHParser.toolkit import compact_sexpr, is_logging, log_dir
 from DHParser.syntaxtree import MockParser
 from DHParser.ebnf import grammar_changed
 from DHParser.dsl import compile_on_disk
@@ -135,7 +135,8 @@ def unit_from_configfile(config_filename):
     """
     cfg = configparser.ConfigParser()
     cfg.read(config_filename)
-    unit = {}
+    OD = collections.OrderedDict
+    unit = OD()
     for section in cfg.sections():
         symbol, stage = section.split(':')
         if stage not in UNIT_STAGES:
@@ -148,7 +149,7 @@ def unit_from_configfile(config_filename):
                 testcode = testcode[3:-3]
             elif testcode[:1] + testcode[-1:] in {"''", '""'}:
                 testcode = testcode[1:-1]
-            unit.setdefault(symbol, {}).setdefault(stage, {})[testkey] = testcode
+            unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
     # print(json.dumps(unit, sort_keys=True, indent=4))
     return unit
 
@@ -180,11 +181,37 @@ def unit_from_file(config_filename):
         raise ValueError("Unknown unit test file type: " + fname[fname.rfind('.'):])
 
 
+def report(test_unit):
+    """Returns a text-report of the results of a grammar unit test.
+    """
+    report = []
+    for parser_name, tests in test_unit.items():
+        heading = 'Test of parser: "%s"' % parser_name
+        report.append('\n\n%s\n%s\n' % (heading, '=' * len(heading)))
+        for test_name, test_code in tests.get('match', dict()).items():
+            heading = 'Match-test "%s"' % test_name
+            report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
+            report.append('### Test-code:')
+            report.append(test_code)
+            error = tests.get('__err__', {}).get(test_name, "")
+            if error:
+                report.append('\n### Error:')
+                report.append(error)
+            ast = tests.get('__ast__', {}).get(test_name, None)
+            if ast:
+                report.append('\n### AST')
+                report.append(ast.as_sexpr())
+    return '\n'.join(report)
+
+
 def grammar_unit(test_unit, parser_factory, transformer_factory):
     """Unit tests for a grammar-parser and ast transformations.
     """
     if isinstance(test_unit, str):
+        unit_name = os.path.basename(os.path.splitext(test_unit)[0])
         test_unit = unit_from_file(test_unit)
+    else:
+        unit_name = str(id(test_unit))
     errata = []
     parser = parser_factory()
     transform = transformer_factory()
@@ -194,17 +221,19 @@ def grammar_unit(test_unit, parser_factory, transformer_factory):
         for test_name, test_code in tests.get('match', dict()).items():
             cst = parser(test_code, parser_name)
             tests.setdefault('__cst__', {})[test_name] = cst
+            if "ast" in tests or is_logging():
+                ast = copy.deepcopy(cst)
+                transform(ast)
+                tests.setdefault('__ast__', {})[test_name] = ast
             if cst.error_flag:
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\t%s' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(error_messages(test_code, cst.collect_errors()))))
+                tests.setdefault('__err__', {})[test_name] = errata[-1]
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                     errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                                   (test_name, parser_name, cst.as_sexpr()))
             elif "ast" in tests:
-                ast = copy.deepcopy(cst)
-                transform(ast)
-                tests.setdefault('__ast__', {})[test_name] = ast
                 compare = mock_syntax_tree(tests["ast"][test_name])
                 if compare != ast:
                     errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
@@ -212,12 +241,19 @@ def grammar_unit(test_unit, parser_factory, transformer_factory):
                                   % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                      compact_sexpr(compare.as_sexpr()),
                                      compact_sexpr(ast.as_sexpr())))
+                    tests.setdefault('__err__', {})[test_name] = errata[-1]
 
         for test_name, test_code in tests.get('fail', dict()).items():
             cst = parser(test_code, parser_name)
             if not cst.error_flag:
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
+                tests.setdefault('__err__', {})[test_name] = errata[-1]
+
+    if is_logging():
+        with open(os.path.join(log_dir(), unit_name + '.report'), 'w') as f:
+            f.write(report(test_unit))
+
     return errata
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_LaTeX_grammar.py - runs the unit tests for the LaTeX grammar
+"""test_grammar.py - runs the unit tests for the LaTeX grammar
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -19,11 +19,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import sys
+sys.path.extend(['../../', '../', './'])
 
 from DHParser import testing
-from MLW_compiler import get_MLW_grammar, get_MLW_transformer
+from DHParser import toolkit
+from LaTeXCompiler import get_grammar, get_transformer
 
-error_report = testing.grammar_suite('grammar_tests', get_LaTeX_grammar, get_LaTeX_transformer)
+with toolkit.logging():
+    error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer)
 assert not error_report, error_report
 
 

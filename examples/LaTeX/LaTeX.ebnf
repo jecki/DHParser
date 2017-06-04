@@ -6,6 +6,8 @@
 latexdoc   = preamble document
 preamble   = { command }+
 
+document   = { [PARSEP] paragraph } [PARSEP] §EOF
+
 genericenv = beginenv sequence §endenv
 beginenv   = "\begin" §( "{" NAME "}" )
 endenv     = "\end" §( "{" ::NAME "}" )
@@ -13,20 +15,20 @@ endenv     = "\end" §( "{" ::NAME "}" )
 command    = CMDNAME [ config ] block
 config     = "[" cfgtext §"]"
 
-blockcmd   = "\section" | "\subsection"
-plaincmd   = !blockcmd
-
 sequence   = { partext | parblock }
 
-parblock   = "{" { partext | parblock } §"}"
+parblock   = "{" paragraph §"}"
 block      = "{" { text | block } §"}"
 
-partext    = text | PARSEP
+paragraph  = { partext | parblock }
+
+partext    = !blockcmd (text | PARSEP)
 text       = cfgtext | BRACKETS
 cfgtext    = TEXTCHUNK | ESCAPED | WSPC
 
 blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
-             | "\paragraph" | "\subparagraph" | "\begin{enumerate}" | "\begin{itemize}"
+             | "\paragraph" | "\subparagraph" | "\begin{enumerate}"
+             | "\begin{itemize}" | "\begin{figure}"
 
 CMDNAME    = /\\\w+/~
 NAME       = /\w+/~
@@ -39,4 +41,4 @@ WSPC       = /[ \t]*\n?(?!\s*\n)[ \t]*/ # whitespace, including at most one line
 LF         = /[ \t]*\n(?!\s*\n)/        # a linefeed, but not an empty line (i.e. par)
 PARSEP     = /\s*\n\s*\n/               # at least one empty line, i.e.
                                         # [whitespace] linefeed [whitespace] linefeed
-
+EOF        = !/./
