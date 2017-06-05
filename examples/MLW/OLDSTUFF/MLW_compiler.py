@@ -7,20 +7,17 @@
 #######################################################################
 
 
-from functools import partial
 import sys
+from functools import partial
+
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import load_if_file    
-from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source
-from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
-    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
-    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
+from DHParser.parsers import Grammar, CompilerBase, Alternative, Required, Token, \
+    Optional, OneOrMore, Sequence, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source
+from DHParser.syntaxtree import traverse, reduce_single_child, replace_by_single_child, no_operation, \
+    remove_expendables, remove_tokens, flatten, \
     WHITESPACE_KEYWORD, TOKEN_KEYWORD
 
 
@@ -40,7 +37,7 @@ def MLWScanner(text):
 #
 #######################################################################
 
-class MLWGrammar(GrammarBase):
+class MLWGrammar(Grammar):
     r"""Parser for a MLW source file, with this grammar:
     
     # EBNF-Syntax für MLW-Artikel

@@ -16,21 +16,20 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-from functools import partial
 import keyword
-import os
+from functools import partial
+
 try:
     import regex as re
 except ImportError:
     import re
 
 from .toolkit import load_if_file, escape_re, md5, sane_parser_name
-from .parsers import GrammarBase, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
-    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase, \
-    Capture, Retrieve
+from .parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
+    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
 from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
-    forbid, assert_content, WHITESPACE_PTYPE, key_parser_name, key_tag_name
+    forbid, assert_content, WHITESPACE_PTYPE, key_tag_name
 from .versionnumber import __version__
 
 
@@ -63,7 +62,7 @@ def get_ebnf_scanner():
 ########################################################################
 
 
-class EBNFGrammar(GrammarBase):
+class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file, with this grammar:
 
     # EBNF-Grammar in EBNF
@@ -109,7 +108,7 @@ class EBNFGrammar(GrammarBase):
     """
     expression = Forward()
     source_hash__ = "a410e1727fb7575e98ff8451dbf8f3bd"
-    parser_initialization__ = "upon instatiation"
+    parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
     wspL__ = ''
@@ -158,7 +157,7 @@ def grammar_changed(grammar_class, grammar_source):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
             pycode = f.read()
-        m = re.search('class \w*\(GrammarBase\)', pycode)
+        m = re.search('class \w*\(Grammar\)', pycode)
         if m:
             m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
                           pycode[m.span()[1]:])
@@ -339,7 +338,7 @@ class EBNFCompiler(CompilerBase):
                       self.grammar_name + '-grammar']
         for name in self.definition_names:
             transtable.append('    "' + name + '": no_operation,')
-        transtable += ['    "": no_operation', '}', '',  tf_name +
+        transtable += ['    "*": no_operation', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
@@ -392,7 +391,7 @@ class EBNFCompiler(CompilerBase):
 
         article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '  # what about 'hour', 'universe' etc.?
         declarations = ['class ' + self.grammar_name +
-                        'Grammar(GrammarBase):',
+                        'Grammar(Grammar):',
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
                         (', with this grammar:' if self.grammar_source else '.')]

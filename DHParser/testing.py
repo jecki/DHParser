@@ -198,7 +198,11 @@ def report(test_unit):
                 report.append('\n### Error:')
                 report.append(error)
             ast = tests.get('__ast__', {}).get(test_name, None)
-            if ast:
+            cst = tests.get('__cst__', {}).get(test_name, None)
+            if cst and (not ast or cst == ast):
+                report.append('\n### CST')
+                report.append(ast.as_sexpr())
+            elif ast:
                 report.append('\n### AST')
                 report.append(ast.as_sexpr())
     return '\n'.join(report)

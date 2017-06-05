@@ -450,12 +450,22 @@ def key_tag_name(node):
 
 def traverse(root_node, processing_table, key_func=key_tag_name):
     """Traverses the snytax tree starting with the given ``node`` depth
-    first and applies the sequences of callback functions registered
+    first and applies the sequences of callback-functions registered
     in the ``calltable``-dictionary.
     
-    Possible use cases are the transformation of a concrete syntax tree
-    into an abstract tree (AST) or the semantic analysis of the AST.
-    
+    The most important use case is the transformation of a concrete
+    syntax tree into an abstract tree (AST). But it is also imaginable
+    to emloy tree-traversal for the semantic analysis of the AST.
+
+    In order to assign sequences of callback-functions to nodes, a
+    dictionary ("processing table") is used. The keys usually represent
+    tag names, but any other key function is possible. There exist
+    three special keys:
+        '+': always called (before any other processing function)
+        '*': called for those nodes for which no (other) processing
+             function appears in the table
+        '~': always called (after any other processing function)
+
     Args:
         root_node (Node): The root-node of the syntax tree to be traversed 
         processing_table (dict): node key -> sequence of functions that
@@ -484,7 +494,7 @@ def traverse(root_node, processing_table, key_func=key_tag_name):
                    table.get(key_func(node), table.get('*', [])) + \
                    table.get('~', [])
         # '+' always called (before any other processing function)
-        # '*' called for those nodes for which no (other) processing functions is in the table
+        # '*' called for those nodes for which no (other) processing function appears in the table
         # '~' always called (after any other processing function)
         for call in sequence:
             call(node)
@@ -530,10 +540,42 @@ def reduce_single_child(node):
 
 
 def replace_parser(node, name, ptype=''):
-    """Replaces the parser of a Node to a mock parser with the given 
+    """Replaces the parser of a Node with a mock parser with the given
     name and pseudo-type.
     """
     node.parser = MockParser(name, ptype)
+
+
+def flatten(node):
+    """Recursively flattens all unnamed sub-nodes, in case there is more
+    than one sub-node present. Flattening means that
+    wherever a node has child nodes, the child nodes are inserted in place
+    of the node. In other words, all leaves of this node and its child nodes
+    are collected in-order as direct children of this node.
+    This is meant to achieve these kinds of structural transformation:
+        (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
+        (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
+
+    Warning: Use with care. Du tue its recursive nature, flattening can
+    have unexpected side-effects.
+    """
+    if node.children:
+        new_result = []
+        for child in node.children:
+            if not child.parser.name and child.children:
+                assert child.children, node.as_sexpr()
+                flatten(child)
+                new_result.extend(child.result)
+            else:
+                new_result.append(child)
+        node.result = tuple(new_result)
+
+
+def collapse(node):
+    """Collapses all sub-nodes by replacing the node's result with it's
+    string representation.
+    """
+    node.result = str(node)
 
 
 # ------------------------------------------------
@@ -585,31 +627,6 @@ def remove_tokens(node, tokens=frozenset()):
     remove_children_if(node, partial(is_token, token_set=tokens))
 
 
-def flatten(node):
-    """Recursively flattens all unnamed sub-nodes, in case there is more
-    than one sub-node present. Flattening means that
-    wherever a node has child nodes, the child nodes are inserted in place
-    of the node. In other words, all leaves of this node and its child nodes
-    are collected in-order as direct children of this node.
-    This is meant to achieve these kinds of structural transformation:
-        (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
-        (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
-
-    Warning: Use with care. Du tue its recursive nature, flattening can
-    have unexpected side-effects.
-    """
-    if node.children:
-        new_result = []
-        for child in node.children:
-            if not child.parser.name and child.children:
-                assert child.children, node.as_sexpr()
-                flatten(child)
-                new_result.extend(child.result)
-            else:
-                new_result.append(child)
-        node.result = tuple(new_result)
-
-
 def remove_enclosing_delimiters(node):
     """Removes any enclosing delimiters from a structure (e.g. quotation marks
     from a literal or braces from a group).
@@ -617,6 +634,13 @@ def remove_enclosing_delimiters(node):
     if len(node.children) >= 3:
         assert not node.children[0].children and not node.children[-1].children, node.as_sexpr()
         node.result = node.result[1:-1]
+
+
+def map_content(node, func):
+    """Replaces the content of the node. ``func`` takes the node
+    as an argument an returns the mapped result.
+    """
+    node.result = func(node.result)
 
 
 ########################################################################

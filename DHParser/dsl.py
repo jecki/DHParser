@@ -19,7 +19,6 @@ Module ``DSLsupport`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
-import collections
 import os
 
 try:
@@ -27,10 +26,10 @@ try:
 except ImportError:
     import re
 
-from .ebnf import EBNFGrammar, EBNFTransformer, EBNFCompiler, grammar_changed, \
+from .ebnf import EBNFTransformer, grammar_changed, \
     get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from .toolkit import logging, load_if_file, is_python_code, compile_python_object
-from .parsers import GrammarBase, CompilerBase, compile_source, nil_scanner
+from .parsers import Grammar, CompilerBase, compile_source, nil_scanner
 from .syntaxtree import Node
 
 
@@ -72,7 +71,7 @@ try:
 except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \\
+from DHParser.parsers import Grammar, CompilerBase, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
@@ -80,7 +79,7 @@ from DHParser.parsers import GrammarBase, CompilerBase, nil_scanner, \\
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
-    WHITESPACE_PTYPE, TOKEN_PTYPE
+    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE
 '''
 
 
@@ -141,7 +140,7 @@ class CompilationError(Exception):
 def grammar_instance(grammar_representation):
     """Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
-    python-code, a GrammarBase-derived grammar class or an instance of
+    python-code, a Grammar-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
     """
     if isinstance(grammar_representation, str):
@@ -155,11 +154,11 @@ def grammar_instance(grammar_representation):
                     get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), grammar_src)
-        parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w*Grammar$')()
+        parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w+Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
-        if isinstance(grammar_representation, GrammarBase):
+        if isinstance(grammar_representation, Grammar):
             parser_root = grammar_representation
         else:
             # assume ``grammar_representation`` is a grammar class and get the root object

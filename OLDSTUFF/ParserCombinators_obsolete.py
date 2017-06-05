@@ -51,7 +51,7 @@ https://bitbucket.org/apalala/grako
 
 """
 
-# TODO: Replace copy.deepcopy() call in GrammarBase class by custom copy()-methods in the Parser classes. Is that really better?
+# TODO: Replace copy.deepcopy() call in Grammar class by custom copy()-methods in the Parser classes. Is that really better?
 
 
 import collections
@@ -759,7 +759,7 @@ class GrammarBase:
         """Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.
-            class Grammar(GrammarBase):
+            class Grammar(Grammar):
                 ...
                 symbol = RE('(?!\\d)\\w+')
         After the call of this method symbol.name == "symbol"
@@ -809,7 +809,7 @@ class GrammarBase:
 
     def _add_parser(self, parser):
         """Adds the copy of the classes parser object to this
-        particular instance of GrammarBase.
+        particular instance of Grammar.
         """
         setattr(self, parser.name, parser)
         self.all_parsers.add(parser)
@@ -1330,7 +1330,7 @@ class Forward(Parser):
 
     def set(self, parser):
         assert isinstance(parser, Parser)
-        self.name = parser.name  # redundant, because of constructor of GrammarBase
+        self.name = parser.name  # redundant, because of constructor of Grammar
         self.parser = parser
 
     def apply(self, func):
@@ -1343,7 +1343,7 @@ PARSER_SYMBOLS = {'RegExp', 'mixin_comment', 'RE', 'Token', 'Required',
                   'Lookahead', 'NegativeLookahead', 'Optional',
                   'Lookbehind', 'NegativeLookbehind',
                   'ZeroOrMore', 'Sequence', 'Alternative', 'Forward',
-                  'OneOrMore', 'GrammarBase', 'Capture', 'Retrieve',
+                  'OneOrMore', 'Grammar', 'Capture', 'Retrieve',
                   'Pop'}
 
 
@@ -1385,7 +1385,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
 
     Paraemters:
         source (str): The input text for compilation
-        grammar_base (GrammarBase):  The GrammarBase object
+        grammar_base (Grammar):  The Grammar object
         AST_transformations (dict):  The transformation-table that
             assigns AST transformation functions to parser names (see
             function traverse)
@@ -1658,7 +1658,7 @@ class EBNFCompiler(CompilerBase):
         article = 'an ' if self.grammar_name[0:1].upper() \
                 in EBNFCompiler.VOWELS else 'a '
         declarations = ['class ' + self.grammar_name +
-                        'Grammar(GrammarBase):',
+                        'Grammar(Grammar):',
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
                         (', with this grammar:' if self.source_text else '.')]
@@ -1966,7 +1966,7 @@ def compile_python_object(python_src, obj_name_ending="Grammar"):
 def get_grammar_instance(grammar):
     """Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
-    python-code, a GrammarBase-derived grammar class or an instance of
+    python-code, a Grammar-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
     """
     if isinstance(grammar, str):
@@ -2157,7 +2157,7 @@ def source_changed(grammar_source, grammar_class):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
             pycode = f.read()
-        m = re.search('class \w*\(GrammarBase\)', pycode)
+        m = re.search('class \w*\(Grammar\)', pycode)
         if m:
             m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
                           pycode[m.span()[1]:])

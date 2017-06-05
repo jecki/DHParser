@@ -193,7 +193,7 @@ code = compile(parser_py, '<string>', 'exec')
 module_vars = globals()
 name_space = {k: module_vars[k] for k in {'RegExp', 'RE', 'Token', 'Required', 'Optional', 'mixin_comment',
                                           'ZeroOrMore', 'OneOrMore', 'Sequence', 'Alternative', 'Forward',
-                                          'NegativeLookahead', 'PositiveLookahead', 'ScannerToken', 'GrammarBase'}}
+                                          'NegativeLookahead', 'PositiveLookahead', 'ScannerToken', 'Grammar'}}
 exec(code, name_space)
 parser = name_space['Grammar']()
 

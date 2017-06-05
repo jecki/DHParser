@@ -62,7 +62,7 @@ from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['HistoryRecord',
            'Parser',
-           'GrammarBase',
+           'Grammar',
            'RX_SCANNER_TOKEN',
            'BEGIN_SCANNER_TOKEN',
            'END_SCANNER_TOKEN',
@@ -229,6 +229,12 @@ class Parser(metaclass=ParserMetaClass):
     def __str__(self):
         return self.name or self.ptype
 
+    def __add__(self, other):
+        return Sequence(self, other)
+
+    def __or__(self, other):
+        return Alternative(self, other)
+
     @property
     def grammar(self):
         return self._grammar
@@ -254,7 +260,7 @@ class Parser(metaclass=ParserMetaClass):
             return True
 
 
-class GrammarBase:
+class Grammar:
     root__ = None  # should be overwritten by grammar subclass
 
     @classmethod
@@ -262,7 +268,7 @@ class GrammarBase:
         """Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.
-            class Grammar(GrammarBase):
+            class Grammar(Grammar):
                 ...
                 symbol = RE('(?!\\d)\\w+')
         After the call of this method symbol.name == "symbol"
@@ -288,13 +294,19 @@ class GrammarBase:
                     parser.parser.name = entry
         cls.parser_initialization__ = "done"
 
-    def __init__(self):
+    def __init__(self, root=None):
+        if not hasattr(self.__class__, 'parser_initialization__'):
+            self.__class__.parser_initialization__ = "pending"
+        if not hasattr(self.__class__, 'wspL__'):
+            self.wspL__ = ''
+        if not hasattr(self.__class__, 'wspR__'):
+            self.wspR__ = ''
         self.all_parsers = set()
         self.dirty_flag = False
         self.history_tracking = False
         self._reset()
         self._assign_parser_names()
-        self.root__ = copy.deepcopy(self.__class__.root__)
+        self.root__ = root if root else copy.deepcopy(self.__class__.root__)
         if self.wspL__:
             self.wsp_left_parser__ = Whitespace(self.wspL__)
             self.wsp_left_parser__.grammar = self
@@ -322,7 +334,7 @@ class GrammarBase:
 
     def _add_parser(self, parser):
         """Adds the copy of the classes parser object to this
-        particular instance of GrammarBase.
+        particular instance of Grammar.
         """
         if parser.name:
             setattr(self, parser.name, parser)
@@ -382,7 +394,6 @@ class GrammarBase:
         """Writes a log of the parsing history of the most recently parsed
         document. 
         """
-
         def prepare_line(record):
             excerpt = self.document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
             excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
@@ -758,8 +769,33 @@ class Sequence(NaryOperator):
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
 
+    def __add__(self, other):
+        return Sequence(*self.parsers, other)
+
+    def __radd__(self, other):
+        return Sequence(other, *self.parsers)
+
+        # def __iadd__(self, other):
+        #     if isinstance(other, Sequence):
+        #         self.parsers = self.parsers + other.parsers
+        #     else:
+        #         self.parsers = self.parsers + (other,)
+        #     return self
+
 
 class Alternative(NaryOperator):
+    """Matches if at least one of several alternatives matches. Returns
+    the first match.
+
+    This parser represents the EBNF-operator "|" with the qualification
+    that both the symmetry and the ambiguity of the EBNF-or-operator
+    are broken by selecting the first match.
+
+    # the order of the sub-expression matters:
+
+    # the most selective expression should be put first:
+
+    """
     def __init__(self, *parsers, name=''):
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
@@ -771,6 +807,19 @@ class Alternative(NaryOperator):
             if node:
                 return Node(self, node), text_
         return None, text
+
+    def __or__(self, other):
+        return Alternative(*self.parsers, other)
+
+    def __ror__(self, other):
+        return Alternative(other, *self.parsers)
+
+        # def __ior__(self, other):
+        #     if isinstance(other, Sequence):
+        #         self.parsers = self.parsers + other.parsers
+        #     else:
+        #         self.parsers = self.parsers + (other,)
+        #     return self
 
 
 ########################################################################
@@ -966,7 +1015,7 @@ class Forward(Parser):
 
     def set(self, parser):
         assert isinstance(parser, Parser)
-        self.name = parser.name  # redundant, see GrammarBase-constructor
+        self.name = parser.name  # redundant, see Grammar-constructor
         self.parser = parser
 
     def apply(self, func):

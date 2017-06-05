@@ -20,14 +20,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import inspect
 import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.parsers import GrammarBase, CompilerBase
-from DHParser.ebnf import get_ebnf_compiler, get_ebnf_scanner, get_ebnf_transformer
-from DHParser.dsl import compile_on_disk, run_compiler, compileDSL, compileEBNF, parser_factory, \
+from DHParser.parsers import Grammar, CompilerBase
+from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, parser_factory, \
     load_compiler_suite
 
 
@@ -90,7 +88,7 @@ class TestCompilerGeneration:
         transformer = transformer()
         compiler = compiler()
         assert callable(scanner)
-        assert isinstance(parser, GrammarBase)
+        assert isinstance(parser, Grammar)
         assert callable(transformer)
         assert isinstance(compiler, CompilerBase)
 

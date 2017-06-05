@@ -24,7 +24,8 @@ paragraph  = { partext | parblock }
 
 partext    = !blockcmd (text | PARSEP)
 text       = cfgtext | BRACKETS
-cfgtext    = TEXTCHUNK | ESCAPED | WSPC
+cfgtext    = word_sequence | ESCAPED | WSPC
+word_sequence = { TEXTCHUNK WSPC }+
 
 blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
              | "\paragraph" | "\subparagraph" | "\begin{enumerate}"
