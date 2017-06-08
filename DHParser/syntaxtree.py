@@ -645,7 +645,7 @@ def map_content(node, func):
 
 ########################################################################
 #
-# syntax tree validation functions
+# AST semantic validation functions
 # EXPERIMENTAL!
 #
 ########################################################################

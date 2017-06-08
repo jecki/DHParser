@@ -87,7 +87,7 @@ def mock_syntax_tree(sexpr):
     return Node(MockParser(name, ':' + class_name), result)
 
 
-def recompile_grammar(ebnf_filename, query_remove_error_files=True):
+def recompile_grammar(ebnf_filename):
     """Recompiles an ebnf-grammar if necessary, that is if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
@@ -120,10 +120,10 @@ def recompile_grammar(ebnf_filename, query_remove_error_files=True):
 
     if not errors:
         if os.path.exists(base + '_errors.txt'):
-            if query_remove_error_files:
-                answer = input('Remove obsolete file ' + base + '_errors.txt (y/n)? ').lower()
-                if answer not in {'y', 'yes'}:
-                    return
+            # if query_remove_error_files:
+            #     answer = input('Remove obsolete file ' + base + '_errors.txt (y/n)? ').lower()
+            #     if answer not in {'y', 'yes'}:
+            #         return
             os.remove(base + '_errors.txt')
 
 

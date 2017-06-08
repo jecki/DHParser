@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<gedicht>
+    <bibliographisches>
+        <autor gnd="118548018">Heinrich Heine</autor>
+        <werk href="http://www.deutschestextarchiv.de/book/show/heine_lieder_1827"
+              urn="nbn:de:kobv:b4-200905192211">
+            Buch der Lieder
+        </werk>
+        <ort gnd="4023118-5">Hamburg</ort>
+        <jahr>1927</jahr>
+        <serie>Lyrisches Intermezzo</serie>
+        <titel>IV.</titel>
+    </bibliographisches>
+    <text>
+        <strophe>
+            <vers>Wenn ich in deine Augen seh',</vers>
+            <vers>so schwindet all' mein Leid und Weh!</vers>
+            <vers>Doch wenn ich küsse deinen Mund,</vers>
+            <vers>so werd' ich ganz und gar gesund.</vers>
+        </strophe>
+        <strophe>
+            <vers>Wenn ich mich lehn' an deine Brust,</vers>
+            <vers>kommt's über mich wie Himmelslust,</vers>
+            <vers>doch wenn du sprichst: Ich liebe dich!</vers>
+            <vers>so muß ich weinen bitterlich.</vers>
+        </strophe>
+    </text>
+</gedicht>

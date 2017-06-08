@@ -1,0 +1,30 @@
+gedicht           = bibliographisches {LZ}+ [serie] §titel §text
+
+bibliographisches = autor §"," [ZSP] werk §"," [ZSP] ort §"," [ZSP] jahr §"."
+autor             = namenfolge [verknüpfung]
+werk              = wortfolge ["." §untertitel] [verknüpfung]
+untertitel        = wortfolge [verknüpfung]
+ort               = wortfolge [verknüpfung]
+jahr              = JAHRESZAHL
+
+serie             = !(titel vers ZSP vers) { [ZSP] zeile }+ {LZ}+
+titel             = zeile
+zeile             = [LEER] { ZEICHENFOLGE }+
+
+text              = { strophe }+
+strophe           = {LZ+} { [ZSP] vers }+
+vers              = [LEER] { ZEICHENFOLGE }+
+
+wortfolge         = { WORT }+
+namenfolge        = { NAME }+
+verknüpfung       = "<" ziel ">"
+ziel              = ZEICHENFOLGE
+
+WORT              = /\w+/~
+NAME              = /\w+\.?/~
+ZEICHENFOLGE      = /[^ \n<>]+/~
+LEER              = /[ \t]+/
+ZSP               = /\n/~
+LZ                = /\n[ \t]*\n/~
+JAHRESZAHL        = /\d\d\d\d/~
+ENDE              = !/./

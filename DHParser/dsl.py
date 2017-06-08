@@ -100,11 +100,11 @@ def compile_src(source):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        result, errors, ast = compile_{NAME}(sys.argv[1])
+        result, errors, ast = compile_src(sys.argv[1])
         if errors:
             for error in errors:
                 print(error)
-                sys.exit(1)
+            sys.exit(1)
         else:
             print(result)
     else:
