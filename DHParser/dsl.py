@@ -397,8 +397,9 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, imports, scanner, parser, ast, compiler, outro = '', '', '', '', '', '', ''
         except ValueError as error:
-            raise ValueError('File "' + rootname + 'Compiler.py" seems to be corrupted. '
-                                                   'Please delete or repair file manually!')
+            name = '"' + rootname + 'Compiler.py"'
+            raise ValueError('Could not identify all required sections in ' + name +
+                             '. Please delete or repair ' + name + ' manually!')
         finally:
             if f:
                 f.close()

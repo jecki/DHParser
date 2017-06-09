@@ -1,4 +1,4 @@
-gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text §ENDE
+gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text /\s*/ §ENDE
 
 bibliographisches = autor §"," [NZ] werk §"," [NZ] ort §"," [NZ] jahr §"."
 autor             = namenfolge [verknüpfung]
@@ -11,7 +11,7 @@ serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
 titel             = NZ zeile { LEERZEILE }+
 zeile             = { ZEICHENFOLGE }+
 
-text              = { strophe {LEERZEILE}+ }+
+text              = { strophe {LEERZEILE} }+
 strophe           = { NZ vers }+
 vers              = { ZEICHENFOLGE }+
 

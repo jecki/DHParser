@@ -164,7 +164,8 @@ def add_parser_guard(parser_func):
             node, rest = parser_func(parser, text)
 
             if grammar.history_tracking:
-                if grammar.moving_forward or (node and node._errors):  # and result[0] == None
+                # don't track returning parsers except in case an error has occurred
+                if grammar.moving_forward or (node and node._errors):
                     grammar.moving_forward = False
                     record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
                     grammar.history.append(record)

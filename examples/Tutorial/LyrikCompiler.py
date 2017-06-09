@@ -17,7 +17,8 @@ except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename
 from DHParser.parsers import Grammar, CompilerBase, Required, Token, \
-    Optional, OneOrMore, Sequence, RE, NegativeLookahead, mixin_comment, compile_source
+    Optional, OneOrMore, ZeroOrMore, Sequence, RE, NegativeLookahead, \
+    mixin_comment, compile_source
 from DHParser.syntaxtree import traverse, no_operation
 
 
@@ -44,7 +45,7 @@ def get_scanner():
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file, with this grammar:
     
-    gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text
+    gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text /\s*/ §ENDE
     
     bibliographisches = autor §"," [NZ] werk §"," [NZ] ort §"," [NZ] jahr §"."
     autor             = namenfolge [verknüpfung]
@@ -54,10 +55,10 @@ class LyrikGrammar(Grammar):
     jahr              = JAHRESZAHL
     
     serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
-    titel             = NZ zeile
+    titel             = NZ zeile { LEERZEILE }+
     zeile             = { ZEICHENFOLGE }+
     
-    text              = { strophe {LEERZEILE}+ }+
+    text              = { strophe {LEERZEILE} }+
     strophe           = { NZ vers }+
     vers              = { ZEICHENFOLGE }+
     
@@ -75,7 +76,7 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "6718329094e23c5285d3bed5b2861c10"
+    source_hash__ = "28d8514ebe2ab4ebc985f22b7fa968d4"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'')
@@ -95,22 +96,19 @@ class LyrikGrammar(Grammar):
     wortfolge = OneOrMore(WORT)
     vers = OneOrMore(ZEICHENFOLGE)
     strophe = OneOrMore(Sequence(NZ, vers))
-    text = OneOrMore(Sequence(strophe, OneOrMore(LEERZEILE)))
+    text = OneOrMore(Sequence(strophe, ZeroOrMore(LEERZEILE)))
     zeile = OneOrMore(ZEICHENFOLGE)
-    titel = Sequence(NZ, zeile)
-    serie = Sequence(NegativeLookahead(Sequence(titel, vers, NZ, vers)), OneOrMore(Sequence(NZ, zeile)),
-                     OneOrMore(LEERZEILE))
+    titel = Sequence(NZ, zeile, OneOrMore(LEERZEILE))
+    serie = Sequence(NegativeLookahead(Sequence(titel, vers, NZ, vers)), OneOrMore(Sequence(NZ, zeile)), OneOrMore(LEERZEILE))
     jahr = JAHRESZAHL
     ort = Sequence(wortfolge, Optional(verknüpfung))
     untertitel = Sequence(wortfolge, Optional(verknüpfung))
     werk = Sequence(wortfolge, Optional(Sequence(Token("."), Required(untertitel))), Optional(verknüpfung))
     autor = Sequence(namenfolge, Optional(verknüpfung))
-    bibliographisches = Sequence(autor, Required(Token(",")), Optional(NZ), werk, Required(Token(",")), Optional(NZ),
-                                 ort, Required(Token(",")), Optional(NZ), jahr, Required(Token(".")))
-    gedicht = Sequence(bibliographisches, OneOrMore(LEERZEILE), Optional(serie), Required(titel), Required(text))
+    bibliographisches = Sequence(autor, Required(Token(",")), Optional(NZ), werk, Required(Token(",")), Optional(NZ), ort, Required(Token(",")), Optional(NZ), jahr, Required(Token(".")))
+    gedicht = Sequence(bibliographisches, OneOrMore(LEERZEILE), Optional(serie), Required(titel), Required(text), RE('\\s*', wR=''), Required(ENDE))
     root__ = gedicht
-
-
+    
 def get_grammar():
     global thread_local_Lyrik_grammar_singleton
     try:
@@ -265,10 +263,7 @@ def get_compiler(grammar_name="Lyrik", grammar_source=""):
             LyrikCompiler(grammar_name, grammar_source)
         return thread_local_Lyrik_compiler_singleton
 
-
-    #######################################################################
-
-
+#######################################################################
 #
 # END OF DHPARSER-SECTIONS
 #
