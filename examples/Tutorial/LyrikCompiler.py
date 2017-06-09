@@ -54,29 +54,29 @@ class LyrikGrammar(Grammar):
     ort               = wortfolge [verknüpfung]
     jahr              = JAHRESZAHL
     
+    wortfolge         = { WORT }+
+    namenfolge        = { NAME }+
+    verknüpfung       = "<" ziel ">"
+    ziel              = ZEICHENFOLGE
+    
     serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
-    titel             = NZ zeile { LEERZEILE }+
+    
+    titel             = { NZ zeile}+ { LEERZEILE }+
     zeile             = { ZEICHENFOLGE }+
     
     text              = { strophe {LEERZEILE} }+
     strophe           = { NZ vers }+
     vers              = { ZEICHENFOLGE }+
     
-    wortfolge         = { WORT }+
-    namenfolge        = { NAME }+
-    verknüpfung       = "<" ziel ">"
-    ziel              = ZEICHENFOLGE
-    
     WORT              = /\w+/~
     NAME              = /\w+\.?/~
     ZEICHENFOLGE      = /[^ \n<>]+/~
-    LEER              = /[ \t]+/
     NZ                = /\n/~
     LEERZEILE         = /\n[ \t]*(?=\n)/~
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "28d8514ebe2ab4ebc985f22b7fa968d4"
+    source_hash__ = "7a99fa77a7d2b81976293d54696eb4f3"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'')
@@ -86,20 +86,19 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL = RE('\\d\\d\\d\\d')
     LEERZEILE = RE('\\n[ \\t]*(?=\\n)')
     NZ = RE('\\n')
-    LEER = RE('[ \\t]+', wR='')
     ZEICHENFOLGE = RE('[^ \\n<>]+')
     NAME = RE('\\w+\\.?')
     WORT = RE('\\w+')
-    ziel = ZEICHENFOLGE
-    verknüpfung = Sequence(Token("<"), ziel, Token(">"))
-    namenfolge = OneOrMore(NAME)
-    wortfolge = OneOrMore(WORT)
     vers = OneOrMore(ZEICHENFOLGE)
     strophe = OneOrMore(Sequence(NZ, vers))
     text = OneOrMore(Sequence(strophe, ZeroOrMore(LEERZEILE)))
     zeile = OneOrMore(ZEICHENFOLGE)
-    titel = Sequence(NZ, zeile, OneOrMore(LEERZEILE))
+    titel = Sequence(OneOrMore(Sequence(NZ, zeile)), OneOrMore(LEERZEILE))
     serie = Sequence(NegativeLookahead(Sequence(titel, vers, NZ, vers)), OneOrMore(Sequence(NZ, zeile)), OneOrMore(LEERZEILE))
+    ziel = ZEICHENFOLGE
+    verknüpfung = Sequence(Token("<"), ziel, Token(">"))
+    namenfolge = OneOrMore(NAME)
+    wortfolge = OneOrMore(WORT)
     jahr = JAHRESZAHL
     ort = Sequence(wortfolge, Optional(verknüpfung))
     untertitel = Sequence(wortfolge, Optional(verknüpfung))

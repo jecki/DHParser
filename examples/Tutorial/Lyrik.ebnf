@@ -7,23 +7,23 @@ untertitel        = wortfolge [verknüpfung]
 ort               = wortfolge [verknüpfung]
 jahr              = JAHRESZAHL
 
+wortfolge         = { WORT }+
+namenfolge        = { NAME }+
+verknüpfung       = "<" ziel ">"
+ziel              = ZEICHENFOLGE
+
 serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
-titel             = NZ zeile { LEERZEILE }+
+
+titel             = { NZ zeile}+ { LEERZEILE }+
 zeile             = { ZEICHENFOLGE }+
 
 text              = { strophe {LEERZEILE} }+
 strophe           = { NZ vers }+
 vers              = { ZEICHENFOLGE }+
 
-wortfolge         = { WORT }+
-namenfolge        = { NAME }+
-verknüpfung       = "<" ziel ">"
-ziel              = ZEICHENFOLGE
-
 WORT              = /\w+/~
 NAME              = /\w+\.?/~
 ZEICHENFOLGE      = /[^ \n<>]+/~
-LEER              = /[ \t]+/
 NZ                = /\n/~
 LEERZEILE         = /\n[ \t]*(?=\n)/~
 JAHRESZAHL        = /\d\d\d\d/~

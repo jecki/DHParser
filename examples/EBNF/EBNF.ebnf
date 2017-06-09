@@ -14,7 +14,6 @@ factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be
             | [flowmarker] literal
             | [flowmarker] regexp
             | [flowmarker] group
-            | [flowmarker] regexchain
             | [flowmarker] oneormore
             | repetition
             | option
@@ -24,7 +23,6 @@ flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' 
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" expression §")"
-regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
 oneormore  =  "{" expression "}+"
 repetition =  "{" expression §"}"
 option     =  "[" expression §"]"
