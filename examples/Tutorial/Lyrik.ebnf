@@ -1,19 +1,19 @@
-gedicht           = bibliographisches {LZ}+ [serie] §titel §text
+gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text §ENDE
 
-bibliographisches = autor §"," [ZSP] werk §"," [ZSP] ort §"," [ZSP] jahr §"."
+bibliographisches = autor §"," [NZ] werk §"," [NZ] ort §"," [NZ] jahr §"."
 autor             = namenfolge [verknüpfung]
 werk              = wortfolge ["." §untertitel] [verknüpfung]
 untertitel        = wortfolge [verknüpfung]
 ort               = wortfolge [verknüpfung]
 jahr              = JAHRESZAHL
 
-serie             = !(titel vers ZSP vers) { [ZSP] zeile }+ {LZ}+
-titel             = zeile
-zeile             = [LEER] { ZEICHENFOLGE }+
+serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
+titel             = NZ zeile { LEERZEILE }+
+zeile             = { ZEICHENFOLGE }+
 
-text              = { strophe }+
-strophe           = {LZ+} { [ZSP] vers }+
-vers              = [LEER] { ZEICHENFOLGE }+
+text              = { strophe {LEERZEILE}+ }+
+strophe           = { NZ vers }+
+vers              = { ZEICHENFOLGE }+
 
 wortfolge         = { WORT }+
 namenfolge        = { NAME }+
@@ -24,7 +24,7 @@ WORT              = /\w+/~
 NAME              = /\w+\.?/~
 ZEICHENFOLGE      = /[^ \n<>]+/~
 LEER              = /[ \t]+/
-ZSP               = /\n/~
-LZ                = /\n[ \t]*\n/~
+NZ                = /\n/~
+LEERZEILE         = /\n[ \t]*(?=\n)/~
 JAHRESZAHL        = /\d\d\d\d/~
 ENDE              = !/./

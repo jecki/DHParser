@@ -123,13 +123,17 @@ class HistoryRecord:
         self.node = node
         self.remaining = remaining
 
+    def err_msg(self):
+        return self.ERROR + ": " + "; ".join(self.node._errors).replace('\n', '\\')
+
     @property
     def stack(self):
         return "->".join(str(parser) for parser in self.call_stack)
 
     @property
     def status(self):
-        return self.FAIL if self.node is None else self.ERROR if self.node._errors else self.MATCH
+        return self.FAIL if self.node is None else \
+            self.err_msg() if self.node._errors else self.MATCH
 
     @property
     def extent(self):
@@ -160,7 +164,7 @@ def add_parser_guard(parser_func):
             node, rest = parser_func(parser, text)
 
             if grammar.history_tracking:
-                if grammar.moving_forward:  # and result[0] == None
+                if grammar.moving_forward or (node and node._errors):  # and result[0] == None
                     grammar.moving_forward = False
                     record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
                     grammar.history.append(record)
@@ -378,11 +382,17 @@ class Grammar:
                 else:
                     stitches.append(result)
                     error_msg = "Parser stopped before end" + \
-                                ("! trying to recover..."
+                                (("! trying to recover" +
+                                  (" but stopping history recording at this point."
+                                   if self.history_tracking else "..."))
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
                 stitches.append(Node(None, skip))
                 stitches[-1].add_error(error_msg)
+                if self.history_tracking:
+                    record = HistoryRecord(self.call_stack.copy(), stitches[-1], len(rest))
+                    self.history.append(record)
+                    self.history_tracking = False
         if stitches:
             if rest:
                 stitches.append(Node(None, rest))
