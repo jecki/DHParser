@@ -18,19 +18,20 @@ permissions and limitations under the License.
 
 import keyword
 from functools import partial
-
 try:
     import regex as re
 except ImportError:
     import re
+from typing import Callable, cast, List, Set, Tuple
 
-from .toolkit import load_if_file, escape_re, md5, sane_parser_name
-from .parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
-    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, CompilerBase
-from .syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
+from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
+    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
+    ScannerFunc
+from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
-    forbid, assert_content, WHITESPACE_PTYPE, key_tag_name
-from .versionnumber import __version__
+    forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, TransformerFunc
+from DHParser.versionnumber import __version__
 
 
 __all__ = ['get_ebnf_scanner',
@@ -41,7 +42,11 @@ __all__ = ['get_ebnf_scanner',
            'EBNFTransformer',
            'EBNFCompilerError',
            'EBNFCompiler',
-           'grammar_changed']
+           'grammar_changed',
+           'ScannerFactoryFunc',
+           'ParserFactoryFunc',
+           'TransformerFactoryFunc',
+           'CompilerFactoryFunc']
 
 
 ########################################################################
@@ -51,7 +56,7 @@ __all__ = ['get_ebnf_scanner',
 ########################################################################
 
 
-def get_ebnf_scanner():
+def get_ebnf_scanner() -> ScannerFunc:
     return nil_scanner
 
 
@@ -137,7 +142,7 @@ class EBNFGrammar(Grammar):
     root__ = syntax
 
 
-def grammar_changed(grammar_class, grammar_source):
+def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """Returns ``True`` if ``grammar_class`` does not reflect the latest
     changes of ``grammar_source``
 
@@ -168,7 +173,7 @@ def grammar_changed(grammar_class, grammar_source):
         return chksum != grammar_class.source_hash__
 
 
-def get_ebnf_grammar():
+def get_ebnf_grammar() -> EBNFGrammar:
     global thread_local_ebnf_grammar_singleton
     try:
         grammar = thread_local_ebnf_grammar_singleton
@@ -223,13 +228,13 @@ EBNF_validation_table = {
 }
 
 
-def EBNFTransformer(syntax_tree):
+def EBNFTransformer(syntax_tree: Node):
     for processing_table, key_func in [(EBNF_transformation_table, key_tag_name),
                                        (EBNF_validation_table, key_tag_name)]:
         traverse(syntax_tree, processing_table, key_func)
 
 
-def get_ebnf_transformer():
+def get_ebnf_transformer() -> TransformerFunc:
     return EBNFTransformer
 
 
@@ -238,6 +243,13 @@ def get_ebnf_transformer():
 # EBNF abstract syntax tree to Python parser compilation
 #
 ########################################################################
+
+
+ScannerFactoryFunc = Callable[[], ScannerFunc]
+ParserFactoryFunc = Callable[[], Grammar]
+TransformerFactoryFunc = Callable[[], TransformerFunc]
+CompilerFactoryFunc = Callable[[], Compiler]
+
 
 SCANNER_FACTORY = '''
 def get_scanner():
@@ -283,7 +295,7 @@ class EBNFCompilerError(Exception):
     pass
 
 
-class EBNFCompiler(CompilerBase):
+class EBNFCompiler(Compiler):
     """Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
     """
@@ -305,13 +317,13 @@ class EBNFCompiler(CompilerBase):
         self._reset()
 
     def _reset(self):
-        self._result = None
-        self.rules = set()
-        self.variables = set()
-        self.symbol_nodes = []
-        self.definition_names = []
-        self.recursive = set()
-        self.root = ""
+        self._result = ''           # type: str
+        self.rules = set()          # type: Set[str]
+        self.variables = set()      # type: Set[str]
+        self.symbol_nodes = []      # type: List[Node]
+        self.definition_names = []  # type: List[str]
+        self.recursive = set()      # type: Set[str]
+        self.root = ""              # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
                            'literalws': ['right'],
@@ -319,15 +331,15 @@ class EBNFCompiler(CompilerBase):
                            'filter': dict()}     # alt. 'retrieve_filter'
 
     @property
-    def result(self):
+    def result(self) -> str:
         return self._result
 
-    def gen_scanner_skeleton(self):
+    def gen_scanner_skeleton(self) -> str:
         name = self.grammar_name + "Scanner"
         return "def %s(text):\n    return text\n" % name \
                + SCANNER_FACTORY.format(NAME=self.grammar_name)
 
-    def gen_transformer_skeleton(self):
+    def gen_transformer_skeleton(self) -> str:
         if not self.definition_names:
             raise EBNFCompilerError('Compiler must be run before calling '
                                     '"gen_transformer_Skeleton()"!')
@@ -343,11 +355,11 @@ class EBNFCompiler(CompilerBase):
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
 
-    def gen_compiler_skeleton(self):
+    def gen_compiler_skeleton(self) -> str:
         if not self.definition_names:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
-        compiler = ['class ' + self.grammar_name + 'Compiler(CompilerBase):',
+        compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
                     '    """Compiler for the abstract-syntax-tree of a ' +
                     self.grammar_name + ' source file.',
                     '    """', '',
@@ -357,23 +369,23 @@ class EBNFCompiler(CompilerBase):
                     'Compiler, self).__init__(grammar_name, grammar_source)',
                     "        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.definition_names:
-            method_name = CompilerBase.derive_method_name(name)
+            method_name = Compiler.derive_method_name(name)
             if name == self.root:
-                compiler += ['    def ' + method_name + '(self, node):',
+                compiler += ['    def ' + method_name + '(self, node: Node) -> str:',
                              '        return node', '']
             else:
-                compiler += ['    def ' + method_name + '(self, node):',
+                compiler += ['    def ' + method_name + '(self, node: Node) -> str:',
                              '        pass', '']
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    def assemble_parser(self, definitions, root_node):
+    def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:
         # fix capture of variables that have been defined before usage [sic!]
 
         if self.variables:
             for i in range(len(definitions)):
                 if definitions[i][0] in self.variables:
-                    definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[1])
+                    definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
 
         self.definition_names = [defn[0] for defn in definitions]
         definitions.append(('wspR__', self.WHITESPACE_KEYWORD
@@ -434,27 +446,27 @@ class EBNFCompiler(CompilerBase):
                        + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
         return self._result
 
-    def on_syntax(self, node):
+    def on_syntax(self, node: Node) -> str:
         self._reset()
         definitions = []
 
         # drop the wrapping sequence node
-        if len(node.children) == 1 and not node.result[0].parser.name:
-            node = node.result[0]
+        if len(node.children) == 1 and not node.children[0].parser.name:
+            node = node.children[0]
 
         # compile definitions and directives and collect definitions
-        for nd in node.result:
+        for nd in node.children:
             if nd.parser.name == "definition":
                 definitions.append(self._compile(nd))
             else:
                 assert nd.parser.name == "directive", nd.as_sexpr()
                 self._compile(nd)
-                node.error_flag |= nd.error_flag
+                node.error_flag = node.error_flag or nd.error_flag
 
         return self.assemble_parser(definitions, node)
 
-    def on_definition(self, node):
-        rule = node.result[0].result
+    def on_definition(self, node: Node) -> Tuple[str, str]:
+        rule = cast(str, node.children[0].result)
         if rule in self.rules:
             node.add_error('A rule with name "%s" has already been defined.' % rule)
         elif rule in EBNFCompiler.RESERVED_SYMBOLS:
@@ -470,7 +482,7 @@ class EBNFCompiler(CompilerBase):
                            % rule + '(This may change in the furute.)')
         try:
             self.rules.add(rule)
-            defn = self._compile(node.result[1])
+            defn = self._compile(node.children[1])
             if rule in self.variables:
                 defn = 'Capture(%s)' % defn
                 self.variables.remove(rule)
@@ -481,7 +493,7 @@ class EBNFCompiler(CompilerBase):
         return rule, defn
 
     @staticmethod
-    def _check_rx(node, rx):
+    def _check_rx(node: Node, rx: str) -> str:
         """Checks whether the string `rx` represents a valid regular
         expression. Makes sure that multiline regular expressions are
         prepended by the multiline-flag. Returns the regular expression string.
@@ -494,22 +506,22 @@ class EBNFCompiler(CompilerBase):
                            (repr(rx), str(re_error)))
         return rx
 
-    def on_directive(self, node):
-        key = node.result[0].result.lower()
+    def on_directive(self, node: Node) -> str:
+        key = cast(str, node.children[0].result).lower()
         assert key not in self.directives['tokens']
         if key in {'comment', 'whitespace'}:
-            if node.result[1].parser.name == "list_":
-                if len(node.result[1].result) != 1:
+            if node.children[1].parser.name == "list_":
+                if len(node.children[1].result) != 1:
                     node.add_error('Directive "%s" must have one, but not %i values.' %
-                                   (key, len(node.result[1])))
-                value = self._compile(node.result[1]).pop()
+                                   (key, len(node.children[1].result)))
+                value = self._compile(node.children[1]).pop()
                 if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
                     value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
                 else:
                     node.add_error('Value "%s" not allowed for directive "%s".' % (value, key))
             else:
-                value = node.result[1].result.strip("~")
-                if value != node.result[1].result:
+                value = cast(str, node.children[1].result).strip("~")
+                if value != cast(str, node.children[1].result):
                     node.add_error("Whitespace marker '~' not allowed in definition of "
                                    "%s regular expression." % key)
                 if value[0] + value[-1] in {'""', "''"}:
@@ -522,7 +534,7 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = value
 
         elif key == 'literalws':
-            value = {item.lower() for item in self._compile(node.result[1])}
+            value = {item.lower() for item in self._compile(node.children[1])}
             if (len(value - {'left', 'right', 'both', 'none'}) > 0
                     or ('none' in value and len(value) > 1)):
                 node.add_error('Directive "literalws" allows the values '
@@ -533,10 +545,10 @@ class EBNFCompiler(CompilerBase):
             self.directives[key] = list(ws)
 
         elif key in {'tokens', 'scanner_tokens'}:
-            self.directives['tokens'] |= self._compile(node.result[1])
+            self.directives['tokens'] |= self._compile(node.children[1])
 
         elif key.endswith('_filter'):
-            filter_set = self._compile(node.result[1])
+            filter_set = self._compile(node.children[1])
             if not isinstance(filter_set, set) or len(filter_set) != 1:
                 node.add_error('Directive "%s" accepts exactly on symbol, not %s'
                                % (key, str(filter_set)))
@@ -548,82 +560,84 @@ class EBNFCompiler(CompilerBase):
                             ', '.join(list(self.directives.keys()))))
         return ""
 
-    def non_terminal(self, node, parser_class, custom_args=[]):
+    def non_terminal(self, node: Node, parser_class: str, custom_args: List[str]=[]) -> str:
         """Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        arguments = [self._compile(r) for r in node.result] + custom_args
+        arguments = [self._compile(r) for r in node.children] + custom_args
         return parser_class + '(' + ', '.join(arguments) + ')'
 
-    def on_expression(self, node):
+    def on_expression(self, node) -> str:
         return self.non_terminal(node, 'Alternative')
 
-    def on_term(self, node):
+    def on_term(self, node) -> str:
         return self.non_terminal(node, 'Sequence')
 
-    def on_factor(self, node):
+    def on_factor(self, node: Node) -> str:
         assert node.children
-        assert len(node.result) >= 2, node.as_sexpr()
-        prefix = node.result[0].result
-        custom_args = []
+        assert len(node.children) >= 2, node.as_sexpr()
+        prefix = cast(str, node.children[0].result)
+        custom_args = []  # type: List[str]
 
         if prefix in {'::', ':'}:
-            assert len(node.result) == 2
-            arg = node.result[-1]
+            assert len(node.children) == 2
+            arg = node.children[-1]
             if arg.parser.name != 'symbol':
                 node.add_error(('Retrieve Operator "%s" requires a symbol, '
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
             if str(arg) in self.directives['filter']:
                 custom_args = ['retrieve_filter=%s' % self.directives['filter'][str(arg)]]
-            self.variables.add(arg.result)
+            self.variables.add(cast(str, arg.result))
 
-        elif len(node.result) > 2:
+        elif len(node.children) > 2:
             # shift = (Node(node.parser, node.result[1].result),)
             # node.result[1].result = shift + node.result[2:]
-            node.result[1].result = (Node(node.result[1].parser, node.result[1].result),) \
-                                    + node.result[2:]
-            node.result[1].parser = node.parser
-            node.result = (node.result[0], node.result[1])
+            node.children[1].result = (Node(node.children[1].parser, node.children[1].result),) \
+                                    + node.children[2:]
+            node.children[1].parser = node.parser
+            node.result = (node.children[0], node.children[1])
 
-        node.result = node.result[1:]
+        node.result = node.children[1:]
         try:
             parser_class = self.PREFIX_TABLE[prefix]
             return self.non_terminal(node, parser_class, custom_args)
         except KeyError:
             node.add_error('Unknown prefix "%s".' % prefix)
+        return ""
 
-    def on_option(self, node):
+    def on_option(self, node) -> str:
         return self.non_terminal(node, 'Optional')
 
-    def on_repetition(self, node):
+    def on_repetition(self, node) -> str:
         return self.non_terminal(node, 'ZeroOrMore')
 
-    def on_oneormore(self, node):
+    def on_oneormore(self, node) -> str:
         return self.non_terminal(node, 'OneOrMore')
 
-    def on_regexchain(self, node):
+    def on_regexchain(self, node) -> str:
         raise EBNFCompilerError("Not yet implemented!")
 
-    def on_group(self, node):
+    def on_group(self, node) -> str:
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
-    def on_symbol(self, node):
-        if node.result in self.directives['tokens']:
-            return 'ScannerToken("' + node.result + '")'
+    def on_symbol(self, node: Node) -> str:
+        result = cast(str, node.result)
+        if result in self.directives['tokens']:
+            return 'ScannerToken("' + result + '")'
         else:
             self.symbol_nodes.append(node)
-            if node.result in self.rules:
-                self.recursive.add(node.result)
-            return node.result
+            if result in self.rules:
+                self.recursive.add(result)
+            return result
 
-    def on_literal(self, node):
-        return 'Token(' + node.result.replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
+    def on_literal(self, node) -> str:
+        return 'Token(' + cast(str, node.result).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
 
-    def on_regexp(self, node):
-        rx = node.result
-        name = []
+    def on_regexp(self, node: Node) -> str:
+        rx = cast(str, node.result)
+        name = []   # type: List[str]
         if rx[:2] == '~/':
             if not 'left' in self.directives['literalws']:
                 name = ['wL=' + self.WHITESPACE_KEYWORD] + name
@@ -645,12 +659,12 @@ class EBNFCompiler(CompilerBase):
             return '"' + errmsg + '"'
         return 'RE(' + ', '.join([arg] + name) + ')'
 
-    def on_list_(self, node):
+    def on_list_(self, node) -> Set[str]:
         assert node.children
-        return set(item.result.strip() for item in node.result)
+        return set(item.result.strip() for item in node.children)
 
 
-def get_ebnf_compiler(grammar_name="", grammar_source=""):
+def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     global thread_local_ebnf_compiler_singleton
     try:
         compiler = thread_local_ebnf_compiler_singleton

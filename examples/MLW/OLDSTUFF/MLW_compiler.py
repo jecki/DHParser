@@ -14,7 +14,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.parsers import Grammar, CompilerBase, Alternative, Required, Token, \
+from DHParser.parsers import Grammar, Compiler, Alternative, Required, Token, \
     Optional, OneOrMore, Sequence, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source
 from DHParser.syntaxtree import traverse, reduce_single_child, replace_by_single_child, no_operation, \
     remove_expendables, remove_tokens, flatten, \
@@ -290,7 +290,7 @@ MLWTransform = partial(traverse, processing_table=MLW_AST_transformation_table)
 #
 #######################################################################
 
-class MLWCompiler(CompilerBase):
+class MLWCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a MLW source file.
     """
 

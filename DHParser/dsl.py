@@ -20,17 +20,18 @@ compilation of domain specific languages based on an EBNF-grammar.
 """
 
 import os
-
 try:
     import regex as re
 except ImportError:
     import re
+from typing import Any, Tuple, cast
 
-from .ebnf import EBNFTransformer, grammar_changed, \
-    get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from .toolkit import logging, load_if_file, is_python_code, compile_python_object
-from .parsers import Grammar, CompilerBase, compile_source, nil_scanner
-from .syntaxtree import Node
+from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
+    get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
+    ScannerFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
+from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
+from DHParser.parsers import Grammar, Compiler, compile_source, nil_scanner, ScannerFunc
+from DHParser.syntaxtree import Node, TransformerFunc
 
 
 __all__ = ['GrammarError',
@@ -71,7 +72,7 @@ try:
 except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import Grammar, CompilerBase, nil_scanner, \\
+from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
@@ -137,7 +138,7 @@ class CompilationError(Exception):
         return '\n'.join(self.error_messages)
 
 
-def grammar_instance(grammar_representation):
+def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
     """Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
     python-code, a Grammar-derived grammar class or an instance of
@@ -167,7 +168,11 @@ def grammar_instance(grammar_representation):
     return parser_root, grammar_src
 
 
-def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler):
+def compileDSL(text_or_file: str,
+               scanner: ScannerFunc,
+               dsl_grammar: Grammar,
+               ast_transformation: TransformerFunc,
+               compiler: Compiler) -> Any:
     """Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
     compilation error.
@@ -176,10 +181,10 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
         CompilationError if any errors occurred during compilation
     """
     assert isinstance(text_or_file, str)
-    assert isinstance(compiler, CompilerBase)
+    assert isinstance(compiler, Compiler)
 
-    parser_root, grammar_src = grammar_instance(dsl_grammar)
-    result, errors, AST = compile_source(text_or_file, scanner, parser_root,
+    parser, grammar_src = grammar_instance(dsl_grammar)
+    result, errors, AST = compile_source(text_or_file, scanner, parser,
                                          ast_transformation, compiler)
     if errors:
         src = load_if_file(text_or_file)
@@ -187,7 +192,7 @@ def compileDSL(text_or_file, scanner, dsl_grammar, ast_transformation, compiler)
     return result
 
 
-def raw_compileEBNF(ebnf_src, branding="DSL"):
+def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
     """Compiles an EBNF grammar file and returns the compiler object
     that was used and which can now be queried for the result as well
     as skeleton code for scanner, transformer and compiler objects.
@@ -208,7 +213,7 @@ def raw_compileEBNF(ebnf_src, branding="DSL"):
     return compiler
 
 
-def compileEBNF(ebnf_src, branding="DSL"):
+def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     """Compiles an EBNF source file and returns the source code of a
     compiler suite with skeletons for scanner, transformer and 
     compiler.
@@ -234,7 +239,7 @@ def compileEBNF(ebnf_src, branding="DSL"):
     return '\n'.join(src)
 
 
-def parser_factory(ebnf_src, branding="DSL"):
+def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
     """Compiles an EBNF grammar and returns a grammar-parser factory
     function for that grammar.
 
@@ -253,7 +258,8 @@ def parser_factory(ebnf_src, branding="DSL"):
     return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_(?:\w+_)?grammar$')
 
 
-def load_compiler_suite(compiler_suite):
+def load_compiler_suite(compiler_suite: str) -> \
+        Tuple[ScannerFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
     """Extracts a compiler suite from file or string ``compiler suite``
     and returns it as a tuple (scanner, parser, ast, compiler).
     
@@ -282,13 +288,14 @@ def load_compiler_suite(compiler_suite):
         if errors:
             raise GrammarError('\n\n'.join(errors), source)
         scanner = get_ebnf_scanner
+        parser = get_ebnf_grammar
         ast = get_ebnf_transformer
     compiler = compile_python_object(imports + compiler_py, 'get_(?:\w+_)?compiler$')
 
     return scanner, parser, ast, compiler
 
 
-def is_outdated(compiler_suite, grammar_source):
+def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
     """Returns ``True``  if the ``compile_suite`` needs to be updated.
      
     An update is needed, if either the grammar in the compieler suite 
@@ -313,7 +320,7 @@ def is_outdated(compiler_suite, grammar_source):
         return True
 
 
-def run_compiler(text_or_file, compiler_suite):
+def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
     """Compiles a source with a given compiler suite.
 
     Args:
@@ -336,7 +343,7 @@ def run_compiler(text_or_file, compiler_suite):
     return compileDSL(text_or_file, scanner(), parser(), ast(), compiler())
 
 
-def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
+def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
     """Compiles the a source file with a given compiler and writes the
     result to a file.
 
@@ -373,18 +380,20 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
     rootname = os.path.splitext(filepath)[0]
     compiler_name = os.path.basename(rootname)
     if compiler_suite:
-        scanner, parser, trans, cfactory = load_compiler_suite(compiler_suite)
+        sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
     else:
-        scanner = get_ebnf_scanner
-        parser = get_ebnf_grammar
-        trans = get_ebnf_transformer
+        sfactory = get_ebnf_scanner
+        pfactory = get_ebnf_grammar
+        tfactory = get_ebnf_transformer
         cfactory = get_ebnf_compiler
-    compiler1 = cfactory(compiler_name, source_file)
-    result, errors, ast = compile_source(source_file, scanner(), parser(), trans(), compiler1)
+    compiler1 = cfactory()
+    compiler1.set_grammar_name(compiler_name, source_file)
+    result, errors, ast = compile_source(source_file, sfactory(), pfactory(), tfactory(), compiler1)
     if errors:
         return errors
 
     elif cfactory == get_ebnf_compiler:  # trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
+        ebnf_compiler = cast(EBNFCompiler, compiler1)
         global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
             DHPARSER_MAIN, DHPARSER_IMPORTS
@@ -412,11 +421,11 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHPARSER_IMPORTS
         if RX_WHITESPACE.fullmatch(scanner):
-            scanner = compiler1.gen_scanner_skeleton()
+            scanner = ebnf_compiler.gen_scanner_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
-            ast = compiler1.gen_transformer_skeleton()
+            ast = ebnf_compiler.gen_transformer_skeleton()
         if RX_WHITESPACE.fullmatch(compiler):
-            compiler = compiler1.gen_compiler_skeleton()
+            compiler = ebnf_compiler.gen_compiler_skeleton()
 
         try:
             f = open(rootname + 'Compiler.py', 'w', encoding="utf-8")
@@ -441,6 +450,7 @@ def compile_on_disk(source_file, compiler_suite="", extension=".xml"):
             if f:  f.close()
 
     else:
+        f = None
         try:
             f = open(rootname + extension, 'w', encoding="utf-8")
             if isinstance(result, Node):

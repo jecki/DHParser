@@ -38,6 +38,7 @@ try:
     import regex as re
 except ImportError:
     import re
+from typing import List, Tuple
 
 
 __all__ = ['logging',
@@ -123,7 +124,7 @@ def is_logging():
         return False
 
 
-def line_col(text, pos):
+def line_col(text: str, pos: int) -> Tuple[int, int]:
     """Returns the position within a text as (line, column)-tuple.
     """
     assert pos < len(text), str(pos) + " >= " + str(len(text))
@@ -132,7 +133,7 @@ def line_col(text, pos):
     return line, column
 
 
-def error_messages(source_text, errors):
+def error_messages(source_text, errors) -> List[str]:
     """Returns the sequence or iterator of error objects as an intertor
     of error messages with line and column numbers at the beginning.
     
@@ -149,7 +150,7 @@ def error_messages(source_text, errors):
             for err in sorted(list(errors))]
 
 
-def compact_sexpr(s):
+def compact_sexpr(s) -> str:
     """Returns S-expression ``s`` as a one liner without unnecessary
     whitespace.
 
@@ -160,7 +161,7 @@ def compact_sexpr(s):
     return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
 
 
-def escape_re(s):
+def escape_re(s) -> str:
     """Returns `s` with all regular expression special characters escaped.
     """
     assert isinstance(s, str)
@@ -170,13 +171,13 @@ def escape_re(s):
     return s
 
 
-def is_filename(s):
+def is_filename(s) -> bool:
     """Tries to guess whether string ``s`` is a file name."""
     return s.find('\n') < 0 and s[:1] != " " and s[-1:] != " " \
            and s.find('*') < 0 and s.find('?') < 0
 
 
-def logfile_basename(filename_or_text, function_or_class_or_instance):
+def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
     """Generates a reasonable logfile-name (without extension) based on
     the given information.
     """
@@ -191,10 +192,11 @@ def logfile_basename(filename_or_text, function_or_class_or_instance):
         return s[:i] + '_out' if i >= 0 else s
 
 
-def load_if_file(text_or_file):
-    """Reads and returns content of a file if parameter `text_or_file` is a
-    file name (i.e. a single line string), otherwise (i.e. if `text_or_file` is
-    a multiline string) `text_or_file` is returned.
+def load_if_file(text_or_file) -> str:
+    """Reads and returns content of a text-file if parameter
+    `text_or_file` is a file name (i.e. a single line string),
+    otherwise (i.e. if `text_or_file` is a multiline string)
+    `text_or_file` is returned.
     """
     if is_filename(text_or_file):
         try:
@@ -211,7 +213,7 @@ def load_if_file(text_or_file):
         return text_or_file
 
 
-def is_python_code(text_or_file):
+def is_python_code(text_or_file) -> bool:
     """Checks whether 'text_or_file' is python code or the name of a file that
     contains python code.
     """
@@ -295,7 +297,7 @@ def expand_table(compact_table):
     return expanded_table
 
 
-def sane_parser_name(name):
+def sane_parser_name(name) -> bool:
     """Checks whether given name is an acceptable parser name. Parser names
     must not be preceeded or succeeded by a double underscore '__'!
     """

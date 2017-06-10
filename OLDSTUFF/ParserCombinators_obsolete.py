@@ -1390,7 +1390,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
             assigns AST transformation functions to parser names (see
             function traverse)
         compiler (object):  An instance of a class derived from
-            ``CompilerBase`` with a suitable method for every parser
+            ``Compiler`` with a suitable method for every parser
             name or class.
 
     Returns (tuple):
@@ -1422,7 +1422,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
     return result, messages, syntax_tree
 
 
-COMPILER_SYMBOLS = {'CompilerBase', 'Node', 're'}
+COMPILER_SYMBOLS = {'Compiler', 'Node', 're'}
 
 
 ########################################################################
@@ -1616,7 +1616,7 @@ class EBNFCompiler(CompilerBase):
         if not self.definition_names:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
-        compiler = ['class ' + self.grammar_name + 'Compiler(CompilerBase):',
+        compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
                     '    """Compiler for the abstract-syntax-tree of a ' +
                     self.grammar_name + ' source file.',
                     '    """', '',
@@ -2086,7 +2086,7 @@ def run_compiler(source_file, compiler_suite="", extension=".xml"):
             intro, syms, scanner, parser, ast, compiler, outro = RX_SECTION_MARKER.split(source)
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, outro = '', ''
-            syms = import_block("PyDSL", PARSER_SYMBOLS | AST_SYMBOLS | {'CompilerBase'})
+            syms = import_block("PyDSL", PARSER_SYMBOLS | AST_SYMBOLS | {'Compiler'})
             scanner = compiler.gen_scanner_skeleton()
             ast = compiler.gen_AST_skeleton()
             compiler = compiler.gen_compiler_skeleton()

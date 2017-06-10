@@ -7,19 +7,23 @@
 #######################################################################
 
 
+from functools import partial
 import os
 import sys
-from functools import partial
-
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename
-from DHParser.parsers import Grammar, CompilerBase, Required, Token, \
-    Optional, OneOrMore, ZeroOrMore, Sequence, RE, NegativeLookahead, \
-    mixin_comment, compile_source
-from DHParser.syntaxtree import traverse, no_operation
+from DHParser.toolkit import logging, is_filename, load_if_file    
+from DHParser.parsers import Grammar, Compiler, nil_scanner, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
+    nop_filter, counterpart_filter, accumulating_filter
+from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
+    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
+    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
+    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE
 
 
 #######################################################################
@@ -30,7 +34,6 @@ from DHParser.syntaxtree import traverse, no_operation
 
 def LyrikScanner(text):
     return text
-
 
 def get_scanner():
     return LyrikScanner
@@ -76,7 +79,7 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "7a99fa77a7d2b81976293d54696eb4f3"
+    source_hash__ = "3e9ec28cf58667fc259569326f76cf90"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'')
@@ -133,20 +136,19 @@ Lyrik_AST_transformation_table = {
     "untertitel": no_operation,
     "ort": no_operation,
     "jahr": no_operation,
+    "wortfolge": no_operation,
+    "namenfolge": no_operation,
+    "verknüpfung": no_operation,
+    "ziel": no_operation,
     "serie": no_operation,
     "titel": no_operation,
     "zeile": no_operation,
     "text": no_operation,
     "strophe": no_operation,
     "vers": no_operation,
-    "wortfolge": no_operation,
-    "namenfolge": no_operation,
-    "verknüpfung": no_operation,
-    "ziel": no_operation,
     "WORT": no_operation,
     "NAME": no_operation,
     "ZEICHENFOLGE": no_operation,
-    "LEER": no_operation,
     "NZ": no_operation,
     "LEERZEILE": no_operation,
     "JAHRESZAHL": no_operation,
@@ -167,7 +169,7 @@ def get_transformer():
 #
 #######################################################################
 
-class LyrikCompiler(CompilerBase):
+class LyrikCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a Lyrik source file.
     """
 
@@ -175,79 +177,76 @@ class LyrikCompiler(CompilerBase):
         super(LyrikCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
 
-    def on_gedicht(self, node):
+    def on_gedicht(self, node: Node) -> str:
         return node
 
-    def on_bibliographisches(self, node):
+    def on_bibliographisches(self, node: Node) -> str:
         pass
 
-    def on_autor(self, node):
+    def on_autor(self, node: Node) -> str:
         pass
 
-    def on_werk(self, node):
+    def on_werk(self, node: Node) -> str:
         pass
 
-    def on_untertitel(self, node):
+    def on_untertitel(self, node: Node) -> str:
         pass
 
-    def on_ort(self, node):
+    def on_ort(self, node: Node) -> str:
         pass
 
-    def on_jahr(self, node):
+    def on_jahr(self, node: Node) -> str:
         pass
 
-    def on_serie(self, node):
+    def on_wortfolge(self, node: Node) -> str:
         pass
 
-    def on_titel(self, node):
+    def on_namenfolge(self, node: Node) -> str:
         pass
 
-    def on_zeile(self, node):
+    def on_verknüpfung(self, node: Node) -> str:
         pass
 
-    def on_text(self, node):
+    def on_ziel(self, node: Node) -> str:
         pass
 
-    def on_strophe(self, node):
+    def on_serie(self, node: Node) -> str:
         pass
 
-    def on_vers(self, node):
+    def on_titel(self, node: Node) -> str:
         pass
 
-    def on_wortfolge(self, node):
+    def on_zeile(self, node: Node) -> str:
         pass
 
-    def on_namenfolge(self, node):
+    def on_text(self, node: Node) -> str:
         pass
 
-    def on_verknüpfung(self, node):
+    def on_strophe(self, node: Node) -> str:
         pass
 
-    def on_ziel(self, node):
+    def on_vers(self, node: Node) -> str:
         pass
 
-    def on_WORT(self, node):
+    def on_WORT(self, node: Node) -> str:
         pass
 
-    def on_NAME(self, node):
+    def on_NAME(self, node: Node) -> str:
         pass
 
-    def on_ZEICHENFOLGE(self, node):
+    def on_ZEICHENFOLGE(self, node: Node) -> str:
         pass
 
-    def on_LEER(self, node):
+    def on_NZ(self, node: Node) -> str:
         pass
 
-    def on_NZ(self, node):
+    def on_LEERZEILE(self, node: Node) -> str:
         pass
 
-    def on_LEERZEILE(self, node):
+    def on_JAHRESZAHL(self, node: Node) -> str:
         pass
 
-    def on_JAHRESZAHL(self, node):
-        pass
-
-    def on_ENDE(self, node):
+    def on_ENDE(self, node: Node) -> str:
         pass
 
 
@@ -260,7 +259,8 @@ def get_compiler(grammar_name="Lyrik", grammar_source=""):
     except NameError:
         thread_local_Lyrik_compiler_singleton = \
             LyrikCompiler(grammar_name, grammar_source)
-        return thread_local_Lyrik_compiler_singleton
+        return thread_local_Lyrik_compiler_singleton 
+
 
 #######################################################################
 #
@@ -276,16 +276,14 @@ def compile_src(source):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
-        result = compile_source(source, get_scanner(),
+            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
+        result = compile_source(source, get_scanner(), 
                                 get_grammar(),
                                 get_transformer(), compiler)
     return result
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        sys.argv.append("Lyrisches_Intermezzo_IV.txt")
     if len(sys.argv) > 1:
         result, errors, ast = compile_src(sys.argv[1])
         if errors:

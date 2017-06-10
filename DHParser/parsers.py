@@ -50,17 +50,21 @@ https://bitbucket.org/apalala/grako
 
 
 import copy
+from functools import partial
 import os
 try:
     import regex as re
 except ImportError:
     import re
+from typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
 
-from .toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
-from .syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Node
+from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
+from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Node, \
+    TransformerFunc
 from DHParser.toolkit import load_if_file, error_messages
 
-__all__ = ['HistoryRecord',
+__all__ = ['ScannerFunc',
+           'HistoryRecord',
            'Parser',
            'Grammar',
            'RX_SCANNER_TOKEN',
@@ -90,8 +94,18 @@ __all__ = ['HistoryRecord',
            'Retrieve',
            'Pop',
            'Forward',
-           'CompilerBase',
+           'Compiler',
            'compile_source']
+
+
+########################################################################
+#
+# Grammar and parsing infrastructure
+#
+########################################################################
+
+
+ScannerFunc = Union[Callable[[str], str], partial]
 
 
 LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
@@ -123,26 +137,26 @@ class HistoryRecord:
         self.node = node
         self.remaining = remaining
 
-    def err_msg(self):
+    def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(self.node._errors).replace('\n', '\\')
 
     @property
-    def stack(self):
+    def stack(self) -> str:
         return "->".join(str(parser) for parser in self.call_stack)
 
     @property
-    def status(self):
+    def status(self) -> str:
         return self.FAIL if self.node is None else \
             self.err_msg() if self.node._errors else self.MATCH
 
     @property
-    def extent(self):
+    def extent(self) -> Tuple[int, int]:
         return ((-self.remaining - self.node.len, -self.remaining) if self.node
                 else (-self.remaining, None))
 
 
 def add_parser_guard(parser_func):
-    def guarded_call(parser, text):
+    def guarded_call(parser: 'Parser', text: str) -> Tuple[Node, str]:
         try:
             location = len(text)
             # if location has already been visited by the current parser,
@@ -176,7 +190,7 @@ def add_parser_guard(parser_func):
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 parser.visited[location] = (node, rest)
-                grammar.last_node = node
+                grammar.last_node = node   # store last node for Lookbehind operator
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -208,27 +222,28 @@ class ParserMetaClass(type):
 
 
 class Parser(metaclass=ParserMetaClass):
+    ApplyFunc = Callable[['Parser'], None]
+
     def __init__(self, name=''):
         assert isinstance(name, str), str(name)
-        self.name = name
-        # self.pbases = {cls.__name__ for cls in inspect.getmro(self.__class__)}
-        self._grammar = None  # center for global variables etc.
+        self.name = name  # type: str
+        self._grammar = None  # type: 'Grammar'
         self.reset()
 
     def __deepcopy__(self, memo):
         return self.__class__(self.name)
 
     @property
-    def ptype(self):
+    def ptype(self) -> str:
         return ':' + self.__class__.__name__
 
     def reset(self):
-        self.visited = dict()
-        self.recursion_counter = dict()
-        self.cycle_detection = set()
+        self.visited = dict()  # type: Dict[int, Tuple[Node, str]]
+        self.recursion_counter = dict()  # type: Dict[int, int]
+        self.cycle_detection = set()  # type: Set[Callable]
         return self
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         return None, text  # default behaviour: don't match
 
     def __str__(self):
@@ -241,18 +256,18 @@ class Parser(metaclass=ParserMetaClass):
         return Alternative(self, other)
 
     @property
-    def grammar(self):
+    def grammar(self) -> 'Grammar':
         return self._grammar
 
     @grammar.setter
-    def grammar(self, grammar_base):
-        self._grammar = grammar_base
+    def grammar(self, grammar: 'Grammar'):
+        self._grammar = grammar
         self._grammar_assigned_notifier()
 
     def _grammar_assigned_notifier(self):
         pass
 
-    def apply(self, func):
+    def apply(self, func: ApplyFunc):
         """Applies function `func(parser)` recursively to this parser and all
         descendants of the tree of parsers. The same function can never
         be applied twice between calls of the ``reset()``-method!
@@ -266,7 +281,8 @@ class Parser(metaclass=ParserMetaClass):
 
 
 class Grammar:
-    root__ = None  # should be overwritten by grammar subclass
+    root__ = None  # type: Union[Parser, None]
+    # root__ must be overwritten with the root-parser by grammar subclass
 
     @classmethod
     def _assign_parser_names(cls):
@@ -330,14 +346,19 @@ class Grammar:
         return self.__dict__[key]
 
     def _reset(self):
-        self.variables = dict()  # support for Pop and Retrieve operators
-        self.document = ""  # source document
-        self.last_node = None
-        self.call_stack = []  # support for call stack tracing
-        self.history = []  # snapshots of call stacks
-        self.moving_forward = True  # also needed for call stack tracing
+        # variables stored and recalled by Capture and Retrieve parsers
+        self.variables = dict()  # type: Dict[str, List[str]]
+        self.document = ""  # type: str
+        # previously parsed node, needed by Lookbehind parser
+        self.last_node = None  # type: Node
+        # support for call stack tracing
+        self.call_stack = []  # type: List[Parser]
+        # snapshots of call stacks
+        self.history = []  # type: List[HistoryRecord]
+        # also needed for call stack tracing
+        self.moving_forward = True
 
-    def _add_parser(self, parser):
+    def _add_parser(self, parser: Parser):
         """Adds the copy of the classes parser object to this
         particular instance of Grammar.
         """
@@ -434,7 +455,7 @@ class Grammar:
         write_log(errors_only, log_file_name + '_errors')
 
 
-def dsl_error_msg(parser, error_str):
+def dsl_error_msg(parser, error_str) -> str:
     """Returns an error messsage for errors in the parser configuration,
     e.g. errors that result in infinite loops.
 
@@ -467,7 +488,7 @@ BEGIN_SCANNER_TOKEN = '\x1b'
 END_SCANNER_TOKEN = '\x1c'
 
 
-def make_token(token, argument=''):
+def make_token(token, argument='') -> str:
     """Turns the ``token`` and ``argument`` into a special token that
     will be caught by the `ScannerToken`-parser.
 
@@ -481,7 +502,7 @@ def make_token(token, argument=''):
     return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
 
 
-def nil_scanner(text):
+def nil_scanner(text) -> str:
     return text
 
 
@@ -502,7 +523,7 @@ class ScannerToken(Parser):
         assert RX_SCANNER_TOKEN.match(scanner_token)
         super(ScannerToken, self).__init__(scanner_token)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         if text[0:1] == BEGIN_SCANNER_TOKEN:
             end = text.find(END_SCANNER_TOKEN, 1)
             if end < 0:
@@ -549,7 +570,7 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         return RegExp(regexp, self.name)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         match = text[0:1] != BEGIN_SCANNER_TOKEN and self.regexp.match(text)  # ESC starts a scanner token.
         if match:
             end = match.end()
@@ -607,7 +628,7 @@ class RE(Parser):
             regexp = self.main.regexp.pattern
         return self.__class__(regexp, self.wL, self.wR, self.name)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         # assert self.main.regexp.pattern != "@"
         t = text
         wL, t = self.wspLeft(t)
@@ -633,7 +654,7 @@ class RE(Parser):
             if self.wR is None:
                 self.wspRight = self.grammar.wsp_right_parser__
 
-    def apply(self, func):
+    def apply(self, func: Parser.ApplyFunc):
         if super(RE, self).apply(func):
             if self.wL:
                 self.wspLeft.apply(func)
@@ -677,13 +698,13 @@ class UnaryOperator(Parser):
     def __init__(self, parser, name=''):
         super(UnaryOperator, self).__init__(name)
         assert isinstance(parser, Parser)
-        self.parser = parser
+        self.parser = parser  # type: Parser
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         return self.__class__(parser, self.name)
 
-    def apply(self, func):
+    def apply(self, func: Parser.ApplyFunc):
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
 
@@ -692,13 +713,13 @@ class NaryOperator(Parser):
     def __init__(self, *parsers, name=''):
         super(NaryOperator, self).__init__(name)
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
-        self.parsers = parsers
+        self.parsers = parsers  # type: List[Parser]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         return self.__class__(*parsers, name=self.name)
 
-    def apply(self, func):
+    def apply(self, func: Parser.ApplyFunc):
         if super(NaryOperator, self).apply(func):
             for parser in self.parsers:
                 parser.apply(func)
@@ -715,7 +736,7 @@ class Optional(UnaryOperator):
             "Nesting options with required elements is contradictory: " \
             "%s(%s)" % (str(name), str(parser.name))
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -723,8 +744,8 @@ class Optional(UnaryOperator):
 
 
 class ZeroOrMore(Optional):
-    def __call__(self, text):
-        results = ()
+    def __call__(self, text: str) -> Tuple[Node, str]:
+        results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1
         while text and len(text) < n:
             n = len(text)
@@ -744,9 +765,9 @@ class OneOrMore(UnaryOperator):
             "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
             "%s(%s)" % (str(name), str(parser.name))
 
-    def __call__(self, text):
-        results = ()
-        text_ = text
+    def __call__(self, text: str) -> Tuple[Node, str]:
+        results = ()  # type: Tuple[Node, ...]
+        text_ = text  # type: str
         n = len(text) + 1
         while text_ and len(text_) < n:
             n = len(text_)
@@ -766,9 +787,9 @@ class Sequence(NaryOperator):
         super(Sequence, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
 
-    def __call__(self, text):
-        results = ()
-        text_ = text
+    def __call__(self, text: str) -> Tuple[Node, str]:
+        results = ()  # type: Tuple[Node, ...]
+        text_ = text  # type: str
         for parser in self.parsers:
             node, text_ = parser(text_)
             if not node:
@@ -812,7 +833,7 @@ class Alternative(NaryOperator):
         assert len(self.parsers) >= 1
         assert all(not isinstance(p, Optional) for p in self.parsers)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
@@ -847,7 +868,7 @@ class FlowOperator(UnaryOperator):
 
 class Required(FlowOperator):
     # Add constructor that checks for logical errors, like `Required(Optional(...))` constructs ?
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         node, text_ = self.parser(text)
         if not node:
             m = re.search(r'\s(\S)', text)
@@ -864,23 +885,23 @@ class Lookahead(FlowOperator):
     def __init__(self, parser, name=''):
         super(Lookahead, self).__init__(parser, name)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         node, text_ = self.parser(text)
         if self.sign(node is not None):
             return Node(self, ''), text
         else:
             return None, text
 
-    def sign(self, bool_value):
+    def sign(self, bool_value) -> bool:
         return bool_value
 
 
 class NegativeLookahead(Lookahead):
-    def sign(self, bool_value):
+    def sign(self, bool_value) -> bool:
         return not bool_value
 
 
-def iter_right_branch(node):
+def iter_right_branch(node) -> Iterator[Node]:
     """Iterates over the right branch of `node` starting with node itself.
     Iteration is stopped if either there are no child nodes any more or
     if the parser of a node is a Lookahead parser. (Reason is: Since
@@ -897,7 +918,7 @@ class Lookbehind(FlowOperator):
         super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         if isinstance(self.grammar.last_node, Lookahead):
             return Node(self, '').add_error('Lookbehind right after Lookahead '
                                             'does not make sense!'), text
@@ -906,7 +927,7 @@ class Lookbehind(FlowOperator):
         else:
             return None, text
 
-    def sign(self, bool_value):
+    def sign(self, bool_value) -> bool:
         return bool_value
 
     def condition(self):
@@ -921,7 +942,7 @@ class Lookbehind(FlowOperator):
 
 
 class NegativeLookbehind(Lookbehind):
-    def sign(self, bool_value):
+    def sign(self, bool_value) -> bool:
         return not bool_value
 
 
@@ -936,7 +957,7 @@ class Capture(UnaryOperator):
     def __init__(self, parser, name=''):
         super(Capture, self).__init__(parser, name)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         node, text = self.parser(text)
         if node:
             stack = self.grammar.variables.setdefault(self.name, [])
@@ -970,7 +991,7 @@ class Retrieve(Parser):
     def __deepcopy__(self, memo):
         return self.__class__(self.symbol, self.retrieve_filter, self.name)
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         try:
             stack = self.grammar.variables[self.symbol.name]
             value = self.retrieve_filter(stack)
@@ -983,12 +1004,12 @@ class Retrieve(Parser):
         else:
             return None, text
 
-    def pick_value(self, stack):
+    def pick_value(self, stack: List[str]) -> str:
         return stack[-1]
 
 
 class Pop(Retrieve):
-    def pick_value(self, stack):
+    def pick_value(self, stack: List[str]) -> str:
         return stack.pop()
 
 
@@ -1012,7 +1033,7 @@ class Forward(Parser):
         duplicate.set(parser)
         return duplicate
 
-    def __call__(self, text):
+    def __call__(self, text: str) -> Tuple[Node, str]:
         return self.parser(text)
 
     def __str__(self):
@@ -1024,12 +1045,12 @@ class Forward(Parser):
             self.cycle_reached = False
             return s
 
-    def set(self, parser):
-        assert isinstance(parser, Parser)
+    def set(self, parser: Parser):
+        # assert isinstance(parser, Parser)
         self.name = parser.name  # redundant, see Grammar-constructor
         self.parser = parser
 
-    def apply(self, func):
+    def apply(self, func: Parser.ApplyFunc):
         if super(Forward, self).apply(func):
             assert not self.visited
             self.parser.apply(func)
@@ -1042,7 +1063,7 @@ class Forward(Parser):
 #######################################################################
 
 
-class CompilerBase:
+class Compiler:
     def __init__(self, grammar_name="", grammar_source=""):
         self.dirty_flag = False
         self.set_grammar_name(grammar_name, grammar_source)
@@ -1050,7 +1071,7 @@ class CompilerBase:
     def _reset(self):
         pass
 
-    def __call__(self, node):
+    def __call__(self, node: Node) -> Any:
         """Compiles the abstract syntax tree with the root ``node``.
         
         It's called `compile_ast`` to avoid confusion with the 
@@ -1071,14 +1092,14 @@ class CompilerBase:
         self.grammar_source = load_if_file(grammar_source)
 
     @staticmethod
-    def derive_method_name(node_name):
+    def derive_method_name(node_name: str) -> str:
         """Returns the method name for ``node_name``, e.g.
-        >>> CompilerBase.method_name('expression')
+        >>> Compiler.method_name('expression')
         'on_expression'
         """
         return 'on_' + node_name
 
-    def _compile(self, node):
+    def _compile(self, node: Node) -> Any:
         """Calls the compilation method for the given node and returns
          the result of the compilation.
         
@@ -1100,11 +1121,15 @@ class CompilerBase:
             compiler = self.__getattribute__(self.derive_method_name(elem))
             result = compiler(node)
             for child in node.children:
-                node.error_flag |= child.error_flag
+                node.error_flag = node.error_flag or child.error_flag
             return result
 
 
-def compile_source(source, scanner, parser, transformer, compiler):
+def compile_source(source: str,
+                   scanner: ScannerFunc,  # str -> str
+                   parser: Grammar,  # str -> Node (concrete syntax tree (CST))
+                   transformer: TransformerFunc,  # Node -> Node (abstract syntax tree (AST))
+                   compiler: Compiler):         # Node (AST) -> Any
     """Compiles a source in four stages:
         1. Scanning (if needed)
         2. Parsing
@@ -1140,14 +1165,7 @@ def compile_source(source, scanner, parser, transformer, compiler):
     syntax_tree = parser(source_text)
     if is_logging():
         syntax_tree.log(log_file_name + '.cst')
-        try:
-            parser.log_parsing_history(log_file_name)
-        except AttributeError:
-            # this is a hack in case a parser function or method was
-            # passed instead of a grammar class instance
-            for nd in syntax_tree.find(lambda nd: bool(nd.parser)):
-                nd.parser.grammar.log_parsing_history(log_file_name)
-                break
+        parser.log_parsing_history(log_file_name)
 
     assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is

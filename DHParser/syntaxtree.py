@@ -25,9 +25,9 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import NamedTuple
+from typing import Any, Callable, cast, Iterator, NamedTuple, Union, Tuple, List
 
-from .toolkit import log_dir, expand_table, line_col, smart_list
+from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
 
 
 __all__ = ['WHITESPACE_PTYPE',
@@ -35,6 +35,7 @@ __all__ = ['WHITESPACE_PTYPE',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
+           'TransformerFunc',
            'key_parser_name',
            'key_tag_name',
            'traverse',
@@ -117,6 +118,11 @@ ZOMBIE_PARSER = ZombieParser()
 Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
 
+ChildrenType = Tuple['Node', ...]
+ResultType = Union[ChildrenType, str]
+SloppyResultT = Union[ChildrenType, 'Node', str, None]
+
+
 class Node:
     """
     Represents a node in the concrete or abstract syntax tree.
@@ -157,19 +163,21 @@ class Node:
             parsing stage and never during or after the
             AST-transformation.
     """
-
-    def __init__(self, parser, result):
+    def __init__(self, parser, result: SloppyResultT) -> None:
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
+        self._result = ''  # type: ResultType
+        self._errors = []  # type: List[str]
+        self._children = ()  # type: ChildrenType
+        self._len = len(self.result) if not self.children else \
+            sum(child._len for child in self.children)  # type: int
+        # self.pos: int  = 0  # continuous updating of pos values
+        self._pos = -1  # type: int
         self.result = result
         self.parser = parser or ZOMBIE_PARSER
-        self._errors = []
-        self.error_flag = any(r.error_flag for r in self.result) if self.children else False
-        self._len = len(self.result) if not self.children else \
-            sum(child._len for child in self.children)
-        # self.pos = 0  # continuous updating of pos values
-        self._pos = -1
+        self.error_flag = any(r.error_flag for r in self.children) \
+            if self.children else False  # type: bool
 
     def __str__(self):
         if self.children:
@@ -190,39 +198,41 @@ class Node:
         return other
 
     @property
-    def tag_name(self):
+    def tag_name(self) -> str:
         return self.parser.name or self.parser.ptype
         # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.ptype
 
     @property
-    def result(self):
+    def result(self) -> ResultType:
         return self._result
 
     @result.setter
-    def result(self, result):
-        assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
-                or isinstance(result, Node)
-                or isinstance(result, str)), str(result)
+    def result(self, result: SloppyResultT):
+        # # made obsolete by static type checking with mypy is done
+        # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
+        #         or isinstance(result, Node)
+        #         or isinstance(result, str)), str(result)
         self._result = (result,) if isinstance(result, Node) else result or ''
-        self._children = self._result if isinstance(self._result, tuple) else ()
+        self._children = cast(ChildrenType, self._result) \
+            if isinstance(self._result, tuple) else cast(ChildrenType, ())
 
     @property
-    def children(self):
+    def children(self) -> ChildrenType:
         return self._children
 
     @property
-    def len(self):
+    def len(self) -> int:
         # DEBUGGING:  print(self.tag_name, str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
         return self._len
 
     @property
-    def pos(self):
+    def pos(self) -> int:
         assert self._pos >= 0, "position value not initialized!"
         return self._pos
 
     @pos.setter
-    def pos(self, pos):
-        assert isinstance(pos, int)
+    def pos(self, pos: int):
+        # assert isinstance(pos, int)
         self._pos = pos
         offset = 0
         for child in self.children:
@@ -230,10 +240,10 @@ class Node:
             offset += child.len
 
     @property
-    def errors(self):
+    def errors(self) -> List[Error]:
         return [Error(self.pos, err) for err in self._errors]
 
-    def _tree_repr(self, tab, openF, closeF, dataF=lambda s: s):
+    def _tree_repr(self, tab, openF, closeF, dataF=lambda s: s) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -266,19 +276,19 @@ class Node:
 
         if self.children:
             content = []
-            for child in self.result:
+            for child in self.children:
                 subtree = child._tree_repr(tab, openF, closeF, dataF).split('\n')
                 content.append('\n'.join((tab + s) for s in subtree))
             return head + '\n'.join(content) + tail
 
-        if head[0] == "<" and self.result.find('\n') < 0:
+        res = cast(str, self.result)  # safe, because if there are no children, result is a string
+        if head[0] == "<" and res.find('\n') < 0:
             # for XML: place tags for leaf-nodes on one line if possible
             return head[:-1] + self.result + tail[1:]
         else:
-            return head + '\n'.join([tab + dataF(s)
-                                     for s in self.result.split('\n')]) + tail
+            return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail
 
-    def as_sexpr(self, src=None):
+    def as_sexpr(self, src=None) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -290,7 +300,7 @@ class Node:
                 of leaf nodes shall be applied for better readability.
         """
 
-        def opening(node):
+        def opening(node) -> str:
             s = '(' + node.tag_name
             # s += " '(pos %i)" % node.pos
             if src:
@@ -307,7 +317,7 @@ class Node:
 
         return self._tree_repr('    ', opening, lambda node: ')', pretty)  # pretty if prettyprint else lambda s: s)
 
-    def as_xml(self, src=None):
+    def as_xml(self, src=None) -> str:
         """
         Returns content as XML-tree.
 
@@ -317,7 +327,7 @@ class Node:
                 column.
         """
 
-        def opening(node):
+        def opening(node) -> str:
             s = '<' + node.tag_name
             # s += ' pos="%i"' % node.pos
             if src:
@@ -333,7 +343,7 @@ class Node:
 
         return self._tree_repr('    ', opening, closing)
 
-    def add_error(self, error_str):
+    def add_error(self, error_str) -> 'Node':
         self._errors.append(error_str)
         self.error_flag = True
         return self
@@ -347,7 +357,7 @@ class Node:
             child.propagate_error_flags()
             self.error_flag |= child.error_flag
 
-    def collect_errors(self, clear_errors=False):
+    def collect_errors(self, clear_errors=False) -> List[Error]:
         """
         Returns all errors of this node or any child node in the form
         of a set of tuples (position, error_message), where position
@@ -358,7 +368,7 @@ class Node:
             self._errors = []
             self.error_flag = False
         if self.children:
-            for child in self.result:
+            for child in self.children:
                 errors.extend(child.collect_errors(clear_errors))
         return errors
 
@@ -367,7 +377,7 @@ class Node:
         with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
             f.write(self.as_sexpr())
 
-    def find(self, match_function):
+    def find(self, match_function) -> Iterator['Node']:
         """Finds nodes in the tree that match a specific criterion.
         
         ``find`` is a generator that yields all nodes for which the
@@ -436,15 +446,18 @@ class Node:
 ########################################################################
 
 
+TransformerFunc = Union[Callable[[Node], Any], partial]
+
+
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
 
 
-def key_parser_name(node):
+def key_parser_name(node) -> str:
     return node.parser.name
 
 
-def key_tag_name(node):
+def key_tag_name(node) -> str:
     return node.tag_name
 
 

@@ -24,7 +24,7 @@ import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.parsers import Grammar, CompilerBase
+from DHParser.parsers import Grammar, Compiler
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, parser_factory, \
     load_compiler_suite
 
@@ -90,7 +90,7 @@ class TestCompilerGeneration:
         assert callable(scanner)
         assert isinstance(parser, Grammar)
         assert callable(transformer)
-        assert isinstance(compiler, CompilerBase)
+        assert isinstance(compiler, Compiler)
 
     def test_compiling_functions(self):
         # test if cutting and reassembling of compiler suite works:
