@@ -22,7 +22,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import Callable, cast, List, Set, Tuple
+from typing import Callable, List, Set, Tuple
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
@@ -197,10 +197,10 @@ EBNF_transformation_table = {
     "syntax":
         remove_expendables,
     "directive, definition":
-        partial(remove_tokens, tokens={'@', '='}),
+        partial(remove_tokens, {'@', '='}),
     "expression":
         [replace_by_single_child, flatten,
-         partial(remove_tokens, tokens={'|'})],
+         partial(remove_tokens, {'|'})],
     "term":
         [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
@@ -214,7 +214,7 @@ EBNF_transformation_table = {
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [remove_expendables, reduce_single_child],
     "list_":
-        [flatten, partial(remove_tokens, tokens={','})],
+        [flatten, partial(remove_tokens, {','})],
     "*":
         [remove_expendables, replace_by_single_child]
 }
@@ -223,8 +223,8 @@ EBNF_transformation_table = {
 EBNF_validation_table = {
     # Semantic validation on the AST
     "repetition, option, oneormore":
-        [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
-         partial(assert_content, regex=r'(?!§)')],
+        [partial(forbid, ['repetition', 'option', 'oneormore']),
+         partial(assert_content, r'(?!§)')],
 }
 
 
@@ -466,7 +466,7 @@ class EBNFCompiler(Compiler):
         return self.assemble_parser(definitions, node)
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
-        rule = cast(str, node.children[0].result)
+        rule = str(node.children[0])  # cast(str, node.children[0].result)
         if rule in self.rules:
             node.add_error('A rule with name "%s" has already been defined.' % rule)
         elif rule in EBNFCompiler.RESERVED_SYMBOLS:
@@ -507,7 +507,7 @@ class EBNFCompiler(Compiler):
         return rx
 
     def on_directive(self, node: Node) -> str:
-        key = cast(str, node.children[0].result).lower()
+        key = str(node.children[0]).lower()  # cast(str, node.children[0].result).lower()
         assert key not in self.directives['tokens']
         if key in {'comment', 'whitespace'}:
             if node.children[1].parser.name == "list_":
@@ -520,8 +520,8 @@ class EBNFCompiler(Compiler):
                 else:
                     node.add_error('Value "%s" not allowed for directive "%s".' % (value, key))
             else:
-                value = cast(str, node.children[1].result).strip("~")
-                if value != cast(str, node.children[1].result):
+                value = str(node.children[1]).strip("~")  # cast(str, node.children[1].result).strip("~")
+                if value != str(node.children[1]):  # cast(str, node.children[1].result):
                     node.add_error("Whitespace marker '~' not allowed in definition of "
                                    "%s regular expression." % key)
                 if value[0] + value[-1] in {'""', "''"}:
@@ -576,7 +576,7 @@ class EBNFCompiler(Compiler):
     def on_factor(self, node: Node) -> str:
         assert node.children
         assert len(node.children) >= 2, node.as_sexpr()
-        prefix = cast(str, node.children[0].result)
+        prefix = str(node.children[0])  # cast(str, node.children[0].result)
         custom_args = []  # type: List[str]
 
         if prefix in {'::', ':'}:
@@ -588,7 +588,7 @@ class EBNFCompiler(Compiler):
                 return str(arg.result)
             if str(arg) in self.directives['filter']:
                 custom_args = ['retrieve_filter=%s' % self.directives['filter'][str(arg)]]
-            self.variables.add(cast(str, arg.result))
+            self.variables.add(str(arg))  # cast(str, arg.result)
 
         elif len(node.children) > 2:
             # shift = (Node(node.parser, node.result[1].result),)
@@ -623,7 +623,7 @@ class EBNFCompiler(Compiler):
                                 "AST transformation!")
 
     def on_symbol(self, node: Node) -> str:
-        result = cast(str, node.result)
+        result = str(node)  # ; assert result == cast(str, node.result)
         if result in self.directives['tokens']:
             return 'ScannerToken("' + result + '")'
         else:
@@ -633,10 +633,10 @@ class EBNFCompiler(Compiler):
             return result
 
     def on_literal(self, node) -> str:
-        return 'Token(' + cast(str, node.result).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
+        return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
 
     def on_regexp(self, node: Node) -> str:
-        rx = cast(str, node.result)
+        rx = str(node)  # ; assert rx == cast(str, node.result)
         name = []   # type: List[str]
         if rx[:2] == '~/':
             if not 'left' in self.directives['literalws']:

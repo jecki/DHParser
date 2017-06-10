@@ -117,10 +117,8 @@ ZOMBIE_PARSER = ZombieParser()
 #     msg: str
 Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
-
-ChildrenType = Tuple['Node', ...]
-ResultType = Union[ChildrenType, str]
-SloppyResultT = Union[ChildrenType, 'Node', str, None]
+ResultType = Union[Tuple['Node', ...], str]
+SloppyResultType = Union[Tuple['Node', ...], 'Node', str, None]
 
 
 class Node:
@@ -163,13 +161,14 @@ class Node:
             parsing stage and never during or after the
             AST-transformation.
     """
-    def __init__(self, parser, result: SloppyResultT) -> None:
+
+    def __init__(self, parser, result: SloppyResultType) -> None:
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
         self._result = ''  # type: ResultType
         self._errors = []  # type: List[str]
-        self._children = ()  # type: ChildrenType
+        self._children = ()  # type: Tuple['Node', ...]
         self._len = len(self.result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
         # self.pos: int  = 0  # continuous updating of pos values
@@ -181,7 +180,7 @@ class Node:
 
     def __str__(self):
         if self.children:
-            return "".join(str(child) for child in self.result)
+            return "".join(str(child) for child in self.children)
         return str(self.result)
 
     def __eq__(self, other):
@@ -207,17 +206,17 @@ class Node:
         return self._result
 
     @result.setter
-    def result(self, result: SloppyResultT):
+    def result(self, result: SloppyResultType):
         # # made obsolete by static type checking with mypy is done
         # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
         self._result = (result,) if isinstance(result, Node) else result or ''
-        self._children = cast(ChildrenType, self._result) \
-            if isinstance(self._result, tuple) else cast(ChildrenType, ())
+        self._children = cast(Tuple['Node', ...], self._result) \
+            if isinstance(self._result, tuple) else cast(Tuple['Node', ...], ())
 
     @property
-    def children(self) -> ChildrenType:
+    def children(self) -> Tuple['Node', ...]:
         return self._children
 
     @property
@@ -515,6 +514,14 @@ def traverse(root_node, processing_table, key_func=key_tag_name):
     traverse_recursive(root_node)
 
 
+# Note on processing functions: If processing functions receive more
+# than one parameter, the ``node``-parameter should always be the
+# last parameter to ease partial function application, e.g.:
+# def replace_parser(name, node):
+#    ...
+# processing_func = partial(replace_parser, "special")
+
+
 def no_operation(node):
     pass
 
@@ -552,10 +559,15 @@ def reduce_single_child(node):
         node.result = node.result[0].result
 
 
-def replace_parser(node, name, ptype=''):
+def replace_parser(name, node):
     """Replaces the parser of a Node with a mock parser with the given
-    name and pseudo-type.
+    name.
+
+    Parameters:
+        name(str): "NAME:PTYPE" of the surogate. The ptype is optional
+        node(Node): The node where the parser shall be replaced
     """
+    name, ptype = (name.split(':') + [''])[:2]
     node.parser = MockParser(name, ptype)
 
 
@@ -616,28 +628,28 @@ def is_expendable(node):
     return is_empty(node) or is_whitespace(node)
 
 
-def is_token(node, token_set=frozenset()):
+def is_token(token_set, node):
     return node.parser.ptype == TOKEN_PTYPE and (not token_set or node.result in token_set)
 
 
-def remove_children_if(node, condition):
+def remove_children_if(condition, node):
     """Removes all nodes from the result field if the function 
     ``condition(child_node)`` evaluates to ``True``."""
     if node.children:
         node.result = tuple(c for c in node.children if not condition(c))
 
 
-remove_whitespace = partial(remove_children_if, condition=is_whitespace)
+remove_whitespace = partial(remove_children_if, is_whitespace)
 # remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
-remove_expendables = partial(remove_children_if, condition=is_expendable)
+remove_expendables = partial(remove_children_if, is_expendable)
 
 
-def remove_tokens(node, tokens=frozenset()):
+def remove_tokens(tokens, node):
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed.
     """
-    remove_children_if(node, partial(is_token, token_set=tokens))
+    remove_children_if(partial(is_token, tokens), node)
 
 
 def remove_enclosing_delimiters(node):
@@ -649,7 +661,7 @@ def remove_enclosing_delimiters(node):
         node.result = node.result[1:-1]
 
 
-def map_content(node, func):
+def map_content(func, node):
     """Replaces the content of the node. ``func`` takes the node
     as an argument an returns the mapped result.
     """
@@ -664,21 +676,21 @@ def map_content(node, func):
 ########################################################################
 
 
-def require(node, child_tag):
+def require(child_tag, node):
     for child in node.children:
         if child.tag_name not in child_tag:
             node.add_error('Element "%s" is not allowed inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def forbid(node, child_tags):
+def forbid(child_tags, node):
     for child in node.children:
         if child.tag_name in child_tags:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def assert_content(node, regex):
+def assert_content(regex, node):
     content = str(node)
     if not re.match(regex, content):
         node.add_error('Element "%s" violates %s on %s' %

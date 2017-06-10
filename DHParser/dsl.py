@@ -24,7 +24,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import Any, Tuple, cast
+from typing import Any, cast, Tuple, Union
 
 from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
     get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -147,7 +147,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
     if isinstance(grammar_representation, str):
         # read grammar
         grammar_src = load_if_file(grammar_representation)
-        if is_python_code(grammar_representation):
+        if is_python_code(grammar_src):
             parser_py, errors, AST = grammar_src, '', None
         else:
             with logging(False):
@@ -170,7 +170,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 
 def compileDSL(text_or_file: str,
                scanner: ScannerFunc,
-               dsl_grammar: Grammar,
+               dsl_grammar: Union[str, Grammar],
                ast_transformation: TransformerFunc,
                compiler: Compiler) -> Any:
     """Compiles a text in a domain specific language (DSL) with an

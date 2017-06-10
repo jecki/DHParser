@@ -24,10 +24,10 @@ import os
 import sys
 from functools import partial
 
-from DHParser.toolkit import logging
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.parsers import compile_source, nil_scanner
+from DHParser.toolkit import logging
 
 
 def selftest(file_name):
@@ -47,7 +47,6 @@ def selftest(file_name):
     else:
         # compile the grammar again using the result of the previous
         # compilation as parser
-        print(type(result))
         result = compileDSL(grammar, nil_scanner, result, transformer, compiler)
         print(result)
     return result
