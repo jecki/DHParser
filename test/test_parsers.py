@@ -25,7 +25,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser import parsers
-from DHParser.toolkit import is_logging, compile_python_object
+from DHParser.toolkit import is_logging, logging, compile_python_object
 from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
 from DHParser.parsers import compile_source
@@ -118,6 +118,27 @@ class TestRegex:
         result = parser(testdoc)
         # parser.log_parsing_history("test.log")
         assert not result.error_flag
+
+
+class TestGrammar:
+    def test_pos_values_initialized(self):
+        # checks whether pos values in the parsing result and in the
+        # history record have been initialized
+        grammar = r"""@whitespace = horizontal
+        haupt        = textzeile LEERZEILE
+        textzeile    = { WORT }+
+        WORT         = /[^ \t]+/~
+        LEERZEILE    = /\n[ \t]*(?=\n)/~
+        """
+        result, messages, syntax_tree = compile_source(grammar, None, get_ebnf_grammar(),
+                                        get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
+        assert result
+        assert not messages
+        with logging("LOGS"):
+            parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+            result = parser("no_file_name*")
+        for record in parser.history:
+            assert not record.node or record.node.pos >= 0
 
 
 if __name__ == "__main__":

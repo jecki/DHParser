@@ -56,7 +56,7 @@ class TestToolkit:
         assert load_if_file('this_is_code_and_not_a_file\n')
 
         # neither will text that does not look like a file name
-        s = "this is code and not a file"
+        s = "this is code * and not a file"
         assert s == load_if_file(s)
 
         # not a file and not mistaken for a file

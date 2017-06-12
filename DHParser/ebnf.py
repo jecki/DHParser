@@ -252,13 +252,13 @@ CompilerFactoryFunc = Callable[[], Compiler]
 
 
 SCANNER_FACTORY = '''
-def get_scanner():
+def get_scanner() -> ScannerFunc:
     return {NAME}Scanner
 '''
 
 
 GRAMMAR_FACTORY = '''
-def get_grammar():
+def get_grammar() -> {NAME}Grammar:
     global thread_local_{NAME}_grammar_singleton
     try:
         grammar = thread_local_{NAME}_grammar_singleton
@@ -270,13 +270,13 @@ def get_grammar():
 
 
 TRANSFORMER_FACTORY = '''
-def get_transformer():
+def get_transformer() -> TransformerFunc:
     return {NAME}Transform
 '''
 
 
 COMPILER_FACTORY = '''
-def get_compiler(grammar_name="{NAME}", grammar_source=""):
+def get_compiler(grammar_name="{NAME}", grammar_source="") -> {NAME}Compiler:
     global thread_local_{NAME}_compiler_singleton
     try:
         compiler = thread_local_{NAME}_compiler_singleton

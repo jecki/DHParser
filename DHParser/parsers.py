@@ -412,6 +412,13 @@ class Grammar:
                 stitches.append(Node(None, skip))
                 stitches[-1].add_error(error_msg)
                 if self.history_tracking:
+                    # some parsers may have matched and left history records with nodes != None.
+                    # Because these are not connected to the stiched root node, their pos
+                    # properties will not be initialized by setting the root node's pos property
+                    # to zero. Therefore, their pos properties need to be initialized here
+                    for record in self.history:
+                        if record.node and record.node._pos < 0:
+                            record.node.pos = 0
                     record = HistoryRecord(self.call_stack.copy(), stitches[-1], len(rest))
                     self.history.append(record)
                     self.history_tracking = False

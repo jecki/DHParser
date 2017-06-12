@@ -27,6 +27,7 @@ sys.path.extend(['../', './'])
 from DHParser.parsers import Grammar, Compiler
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, parser_factory, \
     load_compiler_suite
+from DHParser.toolkit import is_filename
 
 
 ARITHMETIC_EBNF = """
@@ -57,12 +58,12 @@ class TestCompileFunctions:
 
 class TestCompilerGeneration:
     trivial_lang = """
-        text = { word | WSPC } "."
+        text = { word | WSPC } "." [/\s/]
         word = /\w+/
         WSPC = /\s+/
         """
     tmp = 'tmp/' if os.path.isdir('tmp') else ('test/tmp/')
-    trivial_text = u"""Es war ein Koenig in Thule."""
+    trivial_text = u"""Es war ein Koenig in Thule.\n"""
     grammar_name = tmp + "TestCompilerGeneration.ebnf"
     compiler_name = tmp + "TestCompilerGenerationCompiler.py"
     text_name = tmp + "TestCompilerGeneration_text.txt"
@@ -105,6 +106,7 @@ class TestCompilerGeneration:
         assert compiler_suite == compiler_suite_2nd_run
 
         # test compiling with a generated compiler suite
+        # assert is_filename(self.text_name)
         errors = compile_on_disk(self.text_name, self.compiler_name)
         assert not errors, str(errors)
         assert os.path.exists(self.result_name)

@@ -204,7 +204,7 @@ def load_if_file(text_or_file) -> str:
                 content = f.read()
             return content
         except FileNotFoundError as error:
-            if re.fullmatch(r'[\w/:\\]+', text_or_file):
+            if re.fullmatch(r'[\w/:. \\]+', text_or_file):
                 raise FileNotFoundError('Not a valid file: ' + text_or_file + '\nAdd "\\n" '
                                         'to distinguish source data from a file name!')
             else:

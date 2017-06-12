@@ -19,11 +19,11 @@ from DHParser.parsers import Grammar, Compiler, nil_scanner, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    nop_filter, counterpart_filter, accumulating_filter
+    nop_filter, counterpart_filter, accumulating_filter, ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE
+    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformerFunc
 
 
 #######################################################################
@@ -35,7 +35,7 @@ from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
 def LyrikScanner(text):
     return text
 
-def get_scanner():
+def get_scanner() -> ScannerFunc:
     return LyrikScanner
 
 
@@ -111,7 +111,7 @@ class LyrikGrammar(Grammar):
     gedicht = Sequence(bibliographisches, OneOrMore(LEERZEILE), Optional(serie), Required(titel), Required(text), RE('\\s*', wR=''), Required(ENDE))
     root__ = gedicht
     
-def get_grammar():
+def get_grammar() -> LyrikGrammar:
     global thread_local_Lyrik_grammar_singleton
     try:
         grammar = thread_local_Lyrik_grammar_singleton
@@ -159,7 +159,7 @@ Lyrik_AST_transformation_table = {
 LyrikTransform = partial(traverse, processing_table=Lyrik_AST_transformation_table)
 
 
-def get_transformer():
+def get_transformer() -> TransformerFunc:
     return LyrikTransform
 
 
@@ -250,7 +250,7 @@ class LyrikCompiler(Compiler):
         pass
 
 
-def get_compiler(grammar_name="Lyrik", grammar_source=""):
+def get_compiler(grammar_name="Lyrik", grammar_source="") -> LyrikCompiler:
     global thread_local_Lyrik_compiler_singleton
     try:
         compiler = thread_local_Lyrik_compiler_singleton
@@ -285,7 +285,7 @@ def compile_src(source):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        sys.argv.append('Lyrisches_Intermezzo_iV.txt')
+        sys.argv.append("Lyrisches_Intermezzo_IV.txt")
     if len(sys.argv) > 1:
         result, errors, ast = compile_src(sys.argv[1])
         if errors:
