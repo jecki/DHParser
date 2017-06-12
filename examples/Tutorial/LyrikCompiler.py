@@ -79,7 +79,7 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "3e9ec28cf58667fc259569326f76cf90"
+    source_hash__ = "7a99fa77a7d2b81976293d54696eb4f3"
     parser_initialization__ = "upon instatiation"
     COMMENT__ = r''
     WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'')
@@ -177,76 +177,76 @@ class LyrikCompiler(Compiler):
         super(LyrikCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
 
-    def on_gedicht(self, node: Node) -> str:
+    def on_gedicht(self, node):
         return node
 
-    def on_bibliographisches(self, node: Node) -> str:
+    def on_bibliographisches(self, node):
         pass
 
-    def on_autor(self, node: Node) -> str:
+    def on_autor(self, node):
         pass
 
-    def on_werk(self, node: Node) -> str:
+    def on_werk(self, node):
         pass
 
-    def on_untertitel(self, node: Node) -> str:
+    def on_untertitel(self, node):
         pass
 
-    def on_ort(self, node: Node) -> str:
+    def on_ort(self, node):
         pass
 
-    def on_jahr(self, node: Node) -> str:
+    def on_jahr(self, node):
         pass
 
-    def on_wortfolge(self, node: Node) -> str:
+    def on_wortfolge(self, node):
         pass
 
-    def on_namenfolge(self, node: Node) -> str:
+    def on_namenfolge(self, node):
         pass
 
-    def on_verknüpfung(self, node: Node) -> str:
+    def on_verknüpfung(self, node):
         pass
 
-    def on_ziel(self, node: Node) -> str:
+    def on_ziel(self, node):
         pass
 
-    def on_serie(self, node: Node) -> str:
+    def on_serie(self, node):
         pass
 
-    def on_titel(self, node: Node) -> str:
+    def on_titel(self, node):
         pass
 
-    def on_zeile(self, node: Node) -> str:
+    def on_zeile(self, node):
         pass
 
-    def on_text(self, node: Node) -> str:
+    def on_text(self, node):
         pass
 
-    def on_strophe(self, node: Node) -> str:
+    def on_strophe(self, node):
         pass
 
-    def on_vers(self, node: Node) -> str:
+    def on_vers(self, node):
         pass
 
-    def on_WORT(self, node: Node) -> str:
+    def on_WORT(self, node):
         pass
 
-    def on_NAME(self, node: Node) -> str:
+    def on_NAME(self, node):
         pass
 
-    def on_ZEICHENFOLGE(self, node: Node) -> str:
+    def on_ZEICHENFOLGE(self, node):
         pass
 
-    def on_NZ(self, node: Node) -> str:
+    def on_NZ(self, node):
         pass
 
-    def on_LEERZEILE(self, node: Node) -> str:
+    def on_LEERZEILE(self, node):
         pass
 
-    def on_JAHRESZAHL(self, node: Node) -> str:
+    def on_JAHRESZAHL(self, node):
         pass
 
-    def on_ENDE(self, node: Node) -> str:
+    def on_ENDE(self, node):
         pass
 
 
@@ -284,6 +284,8 @@ def compile_src(source):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        sys.argv.append('Lyrisches_Intermezzo_iV.txt')
     if len(sys.argv) > 1:
         result, errors, ast = compile_src(sys.argv[1])
         if errors:

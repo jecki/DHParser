@@ -371,10 +371,10 @@ class EBNFCompiler(Compiler):
         for name in self.definition_names:
             method_name = Compiler.derive_method_name(name)
             if name == self.root:
-                compiler += ['    def ' + method_name + '(self, node: Node) -> str:',
+                compiler += ['    def ' + method_name + '(self, node):',
                              '        return node', '']
             else:
-                compiler += ['    def ' + method_name + '(self, node: Node) -> str:',
+                compiler += ['    def ' + method_name + '(self, node):',
                              '        pass', '']
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
