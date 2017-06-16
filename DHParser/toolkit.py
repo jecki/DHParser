@@ -238,7 +238,7 @@ def md5(*txt):
 
 
 def smart_list(arg):
-    """Returns the argument as list, depending on its type and content.
+    """Returns the argument an iterable, depending on its type and content.
     
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
@@ -270,10 +270,10 @@ def smart_list(arg):
             if len(lst) > 1:
                 return (s.strip() for s in lst)
         return (s.strip() for s in arg.strip().split(' '))
-    elif isinstance(arg, collections.abc.Sequence):  # python 3.6: collections.abc.Collection
-        return arg
+    # elif isinstance(arg, collections.abc.Sequence):  # python 3.6: collections.abc.Collection
+    #     return arg
     elif isinstance(arg, collections.abc.Iterable):
-        return list(arg)
+        return arg
     else:
         return [arg]
 
