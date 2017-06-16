@@ -32,6 +32,7 @@ already exists.
 
 import collections
 import contextlib
+import functools
 import hashlib
 import os
 try:
@@ -237,8 +238,8 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
-def smart_list(arg):
-    """Returns the argument an iterable, depending on its type and content.
+def smart_list(arg) -> list:
+    """Returns the argument as list, depending on its type and content.
     
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
@@ -268,12 +269,12 @@ def smart_list(arg):
         for delimiter in (';', ','):
             lst = arg.split(delimiter)
             if len(lst) > 1:
-                return (s.strip() for s in lst)
-        return (s.strip() for s in arg.strip().split(' '))
+                return [s.strip() for s in lst]
+        return [s.strip() for s in arg.strip().split(' ')]
     # elif isinstance(arg, collections.abc.Sequence):  # python 3.6: collections.abc.Collection
     #     return arg
     elif isinstance(arg, collections.abc.Iterable):
-        return arg
+        return list(arg)
     else:
         return [arg]
 
@@ -295,6 +296,24 @@ def expand_table(compact_table):
                 raise KeyError("Key %s used more than once in compact table!" % key)
             expanded_table[k] = value
     return expanded_table
+
+# # commented, because this approach is too error-prone in connection with smart_list
+# def as_partial(partial_ellipsis) -> functools.partial:
+#     """Transforms ``partial_ellipsis`` into a partial function
+#     application, i.e. string "remove_tokens({'(', ')'})" will be
+#     transformed into the partial "partial(remove_tokens, {'(', ')'})".
+#     Partial ellipsises can be considered as a short hand notation for
+#     partials, which look like function, calls but aren't. Plain
+#     function names are returned as is. Also, if ``partial_ellipsis``
+#     already is a callable, it will be returned as is.
+#     """
+#     if callable(partial_ellipsis):
+#         return partial_ellipsis
+#     m = re.match('\s*(\w+)(?:\(([^)]*)\))?\s*$', partial_ellipsis)
+#     if m:
+#         fname, fargs = m.groups()
+#         return eval("functools.partial(%s, %s)" % (fname, fargs)) if fargs else eval(fname)
+#     raise SyntaxError(partial_ellipsis + " does not resemble a partial function ellipsis!")
 
 
 def sane_parser_name(name) -> bool:

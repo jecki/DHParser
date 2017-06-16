@@ -42,4 +42,5 @@ WSPC       = /[ \t]*\n?(?!\s*\n)[ \t]*/ # whitespace, including at most one line
 LF         = /[ \t]*\n(?!\s*\n)/        # a linefeed, but not an empty line (i.e. par)
 PARSEP     = /\s*\n\s*\n/               # at least one empty line, i.e.
                                         # [whitespace] linefeed [whitespace] linefeed
+
 EOF        = !/./

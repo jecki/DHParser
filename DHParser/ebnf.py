@@ -197,10 +197,10 @@ EBNF_transformation_table = {
     "syntax":
         remove_expendables,
     "directive, definition":
-        partial(remove_tokens, {'@', '='}),
+        partial(remove_tokens, tokens={'@', '='}),
     "expression":
         [replace_by_single_child, flatten,
-         partial(remove_tokens, {'|'})],
+         partial(remove_tokens, tokens={'|'})],
     "term":
         [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
@@ -214,7 +214,7 @@ EBNF_transformation_table = {
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [remove_expendables, reduce_single_child],
     "list_":
-        [flatten, partial(remove_tokens, {','})],
+        [flatten, partial(remove_tokens, tokens={','})],
     "*":
         [remove_expendables, replace_by_single_child]
 }
@@ -223,8 +223,8 @@ EBNF_transformation_table = {
 EBNF_validation_table = {
     # Semantic validation on the AST
     "repetition, option, oneormore":
-        [partial(forbid, ['repetition', 'option', 'oneormore']),
-         partial(assert_content, r'(?!§)')],
+        [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
+         partial(assert_content, regex=r'(?!§)')],
 }
 
 

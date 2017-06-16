@@ -460,14 +460,14 @@ def key_tag_name(node) -> str:
     return node.tag_name
 
 
-def traverse(root_node, processing_table, key_func=key_tag_name):
+def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     """Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
     in the ``calltable``-dictionary.
     
     The most important use case is the transformation of a concrete
     syntax tree into an abstract tree (AST). But it is also imaginable
-    to emloy tree-traversal for the semantic analysis of the AST.
+    to employ tree-traversal for the semantic analysis of the AST.
 
     In order to assign sequences of callback-functions to nodes, a
     dictionary ("processing table") is used. The keys usually represent
@@ -492,6 +492,10 @@ def traverse(root_node, processing_table, key_func=key_tag_name):
             "factor, flowmarker, retrieveop": replace_by_single_child }
         traverse(node, table)
     """
+    # commented, because this approach is too error prone!
+    # def funclist(call):
+    #     return [as_partial(func) for func in smart_list(call)]
+
     # normalize processing_table entries by turning single values into lists
     # with a single value
     table = {name: smart_list(call) for name, call in list(processing_table.items())}
@@ -559,7 +563,7 @@ def reduce_single_child(node):
         node.result = node.result[0].result
 
 
-def replace_parser(name, node):
+def replace_parser(node, name):
     """Replaces the parser of a Node with a mock parser with the given
     name.
 
@@ -628,28 +632,28 @@ def is_expendable(node):
     return is_empty(node) or is_whitespace(node)
 
 
-def is_token(token_set, node):
-    return node.parser.ptype == TOKEN_PTYPE and (not token_set or node.result in token_set)
+def is_token(node, tokens):
+    return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
 
 
-def remove_children_if(condition, node):
+def remove_children_if(node, condition):
     """Removes all nodes from the result field if the function 
     ``condition(child_node)`` evaluates to ``True``."""
     if node.children:
         node.result = tuple(c for c in node.children if not condition(c))
 
 
-remove_whitespace = partial(remove_children_if, is_whitespace)
+remove_whitespace = partial(remove_children_if, condition=is_whitespace)
 # remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
-remove_expendables = partial(remove_children_if, is_expendable)
+remove_expendables = partial(remove_children_if, condition=is_expendable)
 
 
-def remove_tokens(tokens, node):
+def remove_tokens(node, tokens):
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed.
     """
-    remove_children_if(partial(is_token, tokens), node)
+    remove_children_if(node, partial(is_token, tokens=tokens))
 
 
 def remove_enclosing_delimiters(node):
@@ -661,7 +665,7 @@ def remove_enclosing_delimiters(node):
         node.result = node.result[1:-1]
 
 
-def map_content(func, node):
+def map_content(node, func):
     """Replaces the content of the node. ``func`` takes the node
     as an argument an returns the mapped result.
     """
@@ -676,21 +680,21 @@ def map_content(func, node):
 ########################################################################
 
 
-def require(child_tag, node):
+def require(node, child_tags):
     for child in node.children:
-        if child.tag_name not in child_tag:
+        if child.tag_name not in child_tags:
             node.add_error('Element "%s" is not allowed inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def forbid(child_tags, node):
+def forbid(node, child_tags):
     for child in node.children:
         if child.tag_name in child_tags:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def assert_content(regex, node):
+def assert_content(node, regex):
     content = str(node)
     if not re.match(regex, content):
         node.add_error('Element "%s" violates %s on %s' %
