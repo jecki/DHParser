@@ -5,13 +5,13 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='DHParser',
-    version='0.6.0',
+    version='0.7.0',
     packages=['DHParser'],
     url='https://gitlab.lrz.de/badw-it/DHParser',
     license='APACHE 2.0 (http://www.apache.org/licenses/LICENSE-2.0)',
     author='Eckhart Arnold',
     author_email='arnold@badw.de',
-    description='DHParser - Domain specific language support for the Digital Humanities',
+    description='DHParser - Domain specific languages for the Digital Humanities',
     long_description = read_me,
     keywords='Digital Humanities, domain specific languages, parser combinators, EBNF',
     classifiers = [
@@ -21,7 +21,6 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',

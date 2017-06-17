@@ -49,6 +49,7 @@ https://bitbucket.org/apalala/grako
 """
 
 
+import abc
 import copy
 import os
 from functools import partial
@@ -57,11 +58,11 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
+from typing import Any, Callable, Collection, Dict, Iterator, List, Set, Tuple, Union
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
-from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Node, \
-    TransformationFunc
+from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
+    Node, TransformationFunc
 from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['ScannerFunc',
@@ -169,16 +170,16 @@ def add_parser_guard(parser_func):
                 return None, text
 
             parser.recursion_counter[location] += 1
-            grammar = parser.grammar
+            grammar = parser.grammar    # grammar may be 'None' for unconnected parsers!
 
-            if grammar.history_tracking:
+            if grammar and grammar.history_tracking:
                 grammar.call_stack.append(parser)
                 grammar.moving_forward = True
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
 
-            if grammar.history_tracking:
+            if grammar and grammar.history_tracking:
                 # don't track returning parsers except in case an error has occurred
                 if grammar.moving_forward or (node and node._errors):
                     grammar.moving_forward = False
@@ -191,7 +192,8 @@ def add_parser_guard(parser_func):
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 parser.visited[location] = (node, rest)
-                grammar.last_node = node   # store last node for Lookbehind operator
+                if grammar:
+                    grammar.last_node = node   # store last node for Lookbehind operator
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -211,7 +213,7 @@ def add_parser_guard(parser_func):
     return guarded_call
 
 
-class ParserMetaClass(type):
+class ParserMetaClass(abc.ABCMeta):
     def __init__(cls, name, bases, attrs):
         # The following condition is necessary for classes that don't override
         # the __call__() method, because in these cases the non-overridden
@@ -222,21 +224,17 @@ class ParserMetaClass(type):
         super(ParserMetaClass, cls).__init__(name, bases, attrs)
 
 
-class Parser(metaclass=ParserMetaClass):
+class Parser(ParserBase, metaclass=ParserMetaClass):
     ApplyFunc = Callable[['Parser'], None]
 
     def __init__(self, name: str = '') -> None:
         # assert isinstance(name, str), str(name)
-        self.name = name  # type: str
+        super(Parser, self).__init__(name)
         self._grammar = None  # type: 'Grammar'
         self.reset()
 
     def __deepcopy__(self, memo):
         return self.__class__(self.name)
-
-    @property
-    def ptype(self) -> str:
-        return ':' + self.__class__.__name__
 
     def reset(self):
         self.visited = dict()  # type: Dict[int, Tuple[Node, str]]
@@ -284,6 +282,7 @@ class Parser(metaclass=ParserMetaClass):
 class Grammar:
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
+    parser_initialization__ = "pending"  # type: str
 
     @classmethod
     def _assign_parser_names(cls):
@@ -316,27 +315,27 @@ class Grammar:
                     parser.parser.name = entry
         cls.parser_initialization__ = "done"
 
-    def __init__(self, root=None):
-        if not hasattr(self.__class__, 'parser_initialization__'):
-            self.__class__.parser_initialization__ = "pending"
+    def __init__(self, root: Parser=None) -> None:
+        # if not hasattr(self.__class__, 'parser_initialization__'):
+        #     self.__class__.parser_initialization__ = "pending"
         if not hasattr(self.__class__, 'wspL__'):
             self.wspL__ = ''
         if not hasattr(self.__class__, 'wspR__'):
             self.wspR__ = ''
-        self.all_parsers = set()
+        self.all_parsers = set()  # type: Set[Parser]
         self.dirty_flag = False
         self.history_tracking = False
         self._reset()
         self._assign_parser_names()
         self.root__ = root if root else copy.deepcopy(self.__class__.root__)
         if self.wspL__:
-            self.wsp_left_parser__ = Whitespace(self.wspL__)
+            self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
             self.wsp_left_parser__.grammar = self
             self.all_parsers.add(self.wsp_left_parser__)  # don't you forget about me...
         else:
             self.wsp_left_parser__ = ZOMBIE_PARSER
         if self.wspR__:
-            self.wsp_right_parser__ = Whitespace(self.wspR__)
+            self.wsp_right_parser__ = Whitespace(self.wspR__)  # type: ParserBase
             self.wsp_right_parser__.grammar = self
             self.all_parsers.add(self.wsp_right_parser__)  # don't you forget about me...
         else:
@@ -359,7 +358,7 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward = True
 
-    def _add_parser(self, parser: Parser):
+    def _add_parser(self, parser: Parser) -> None:
         """Adds the copy of the classes parser object to this
         particular instance of Grammar.
         """
@@ -368,7 +367,7 @@ class Grammar:
         self.all_parsers.add(parser)
         parser.grammar = self
 
-    def __call__(self, document: str, start_parser="root__"):
+    def __call__(self, document: str, start_parser="root__") -> Node:
         """Parses a document with with parser-combinators.
 
         Args:
@@ -390,7 +389,8 @@ class Grammar:
             self.dirty_flag = True
         self.history_tracking = is_logging()
         self.document = document
-        parser = self[start_parser]
+        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
+        assert parser.grammar == self, "Cannot run parsers from a differen grammar object!"
         stitches = []  # type: List[Node]
         rest = document
         if not rest:
@@ -430,7 +430,7 @@ class Grammar:
         result.pos = 0  # calculate all positions
         return result
 
-    def log_parsing_history(self, log_file_name=''):
+    def log_parsing_history(self, log_file_name: str='') -> None:
         """Writes a log of the parsing history of the most recently parsed
         document. 
         """
@@ -463,14 +463,14 @@ class Grammar:
         write_log(errors_only, log_file_name + '_errors')
 
 
-def dsl_error_msg(parser, error_str) -> str:
-    """Returns an error messsage for errors in the parser configuration,
+def dsl_error_msg(parser: Parser, error_str: str) -> str:
+    """Returns an error message for errors in the parser configuration,
     e.g. errors that result in infinite loops.
 
     Args:
-        parser (Parser:  The parser where the error was noticed. Note
+        parser (Parser):  The parser where the error was noticed. Note
             that this is not necessarily the parser that caused the
-            error but only where the error became apparaent.
+            error but only where the error became aparent.
         error_str (str):  A short string describing the error.
     Returns:  
         str: An error message including the call stack if history 
@@ -832,10 +832,15 @@ class Alternative(NaryOperator):
     that both the symmetry and the ambiguity of the EBNF-or-operator
     are broken by selecting the first match.
 
-    # the order of the sub-expression matters:
+    # the order of the sub-expression matters!
+    >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+    >>> str(Grammar(number)('3.1416'))
+    '3'
 
     # the most selective expression should be put first:
-
+    >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+    >>> str(Grammar(number)('3.1416'))
+    '3.1416'
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
@@ -1195,5 +1200,4 @@ def compile_source(source: str,
             errors = syntax_tree.collect_errors() if syntax_tree.error_flag else []
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
-
 

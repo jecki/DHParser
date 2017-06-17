@@ -32,7 +32,6 @@ already exists.
 
 import collections
 import contextlib
-import functools
 import hashlib
 import os
 try:
@@ -48,6 +47,8 @@ __all__ = ['logging',
            'logfile_basename',
            'line_col',
            'error_messages',
+           'compact_sexpr',
+           'quick_report',
            'escape_re',
            'is_filename',
            'load_if_file',
@@ -160,6 +161,18 @@ def compact_sexpr(s) -> str:
         (a (b c))
     """
     return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
+
+
+# def quick_report(parsing_result) -> str:
+#     """Returns short report (compact s-expression + errors messages)
+#     of the parsing results by either a call to a grammar or to a parser
+#     directly."""
+#     err = ''
+#     if isinstance(parsing_result, collections.Collection):
+#         result = parsing_result[0]
+#         err = ('\nUnmatched sequence: ' + parsing_result[1]) if parsing_result[1] else ''
+#     sexpr = compact_sexpr(result.as_sexpr())
+#     return sexpr + err
 
 
 def escape_re(s) -> str:

@@ -283,13 +283,21 @@
                 </genus>
             </:Optional>
             <ABS>
-                <:RE>
-                    <:RegExp>
-                        ;
-                        
+                <:OneOrMore>
+                    <ZW>
+                        <:RegExp>
                             
-                    </:RegExp>
-                </:RE>
+                            
+                        </:RegExp>
+                    </ZW>
+                    <ZW>
+                        <:RegExp>
+                            
+                            
+                        </:RegExp>
+                        <:Whitespace>    </:Whitespace>
+                    </ZW>
+                </:OneOrMore>
             </ABS>
             <:Optional>
                 <GrammatikVarianten>
@@ -584,7 +592,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    Catal. thes. Germ. 28,11 (post 851) -um III.
+                                                    Catal.: thes. Germ.; 28,11 (post 851) "-um III."
                                                     
                                                 </:RegExp>
                                             </:RE>
@@ -602,7 +610,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    Form. Sangall. 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+                                                    Form.: Sangall.; 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
                                                       
                                                 </:RegExp>
                                             </:RE>
@@ -628,7 +636,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    Catal.  thes. Germ. 18,7 "-eterculi  viginti  quatuor".
+                                                    Catal.:  thes. Germ.; 18,7 "-eterculi  viginti  quatuor".
                                                     
                                                 </:RegExp>
                                             </:RE>
@@ -646,7 +654,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    Libri  confrat.  I  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+                                                    Libri:  confrat.  I;  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
                                                       
                                                 </:RegExp>
                                             </:RE>
@@ -672,7 +680,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    Catal. thes. Germ. 76,15 -rulae II. 40,5 VI vizregule. 129a,5 -sterculas
+                                                    Catal.: thes. Germ.; 76,15 "-rulae II."; 40,5 VI "vizregule."; 129a,5 "-sterculas
                                                       
                                                 </:RegExp>
                                             </:RE>
@@ -680,7 +688,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    II. 24,8  -itella X. 114,8 VIII  fezdregle.  6,24  fasciutercule
+                                                    II."; 24,8  "-itella X."; 114,8 VIII  "fezdregle.";  6,24  "fasciutercule
                                                       
                                                 </:RegExp>
                                             </:RE>
@@ -688,7 +696,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    VII. 92,6 fascercule tres. 21,20 IIII festregele.
+                                                    VII."; 92,6 "fascercule tres." 21,20 IIII "festregele."
                                                       
                                                 </:RegExp>
                                             </:RE>
@@ -805,7 +813,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    Transl. Libor.  I 32  raptis  feminarum -is  (fa[s]citergiis  var.  l.).
+                                                    Transl.: Libor.  I; 32  "raptis  feminarum -is  (fa[s]citergiis  var.  l.)."
                                                     
                                                 </:RegExp>
                                             </:RE>
@@ -823,7 +831,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    II  20  nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
+                                                    Transl.: Libor. II; 20  "nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
                                                       
                                                 </:RegExp>
                                             </:RE>
@@ -831,7 +839,7 @@
                                         <:Sequence>
                                             <:RE>
                                                 <:RegExp>
-                                                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis.
+                                                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis."
                                                     
                                                     
                                                 </:RegExp>

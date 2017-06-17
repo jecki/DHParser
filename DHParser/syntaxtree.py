@@ -17,6 +17,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+import abc
 import copy
 import inspect
 import itertools
@@ -35,9 +36,11 @@ from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
 __all__ = ['WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
            'ZOMBIE_PARSER',
+           'ParserBase',
            'Error',
            'Node',
            'TransformationFunc',
+           'transformation_factory',
            'key_parser_name',
            'key_tag_name',
            'traverse',
@@ -60,22 +63,39 @@ __all__ = ['WHITESPACE_PTYPE',
            'assert_content']
 
 
-class MockParser:
+class ParserBase:
+    """
+    ParserBase is the base class for all real and mock parser classes.
+    It is defined here, because Node objects require a parser object
+    for instantiation.
+    """
+    def __init__(self, name=''):  # , pbases=frozenset()):
+        self.name = name  # type: str
+        self._ptype = ':' + self.__class__.__name__  # type: str
+
+    def __str__(self):
+        return self.name or self.ptype
+
+    @property
+    def ptype(self) -> str:
+        return self._ptype
+
+
+class MockParser(ParserBase):
     """
     MockParser objects can be used to reconstruct syntax trees from a
-    serialized form like S-expressions or XML. Mock objects are needed,
-    because Node objects require a parser object for instantiation.
-    Mock objects have just enough properties to serve that purpose. 
+    serialized form like S-expressions or XML. Mock objects can mimic
+    different parser types by assigning them a ptype on initialization.
     
     Mock objects should not be used for anything other than 
     syntax tree (re-)construction. In all other cases where a parser
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
-    def __init__(self, name='', ptype='', pbases=frozenset()):
+    def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
         assert not ptype or ptype[0] == ':'
+        super(MockParser, self).__init__(name)
         self.name = name
-        self.ptype = ptype or ':' + self.__class__.__name__
-        # self.pbases = pbases or {cls.__name__ for cls in inspect.getmro(self.__class__)}
+        self._ptype = ptype or ':' + self.__class__.__name__
 
     def __str__(self):
         return self.name or self.ptype
@@ -119,8 +139,8 @@ ZOMBIE_PARSER = ZombieParser()
 #     msg: str
 Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
-ResultType = Union[Tuple['Node', ...], str]
-SloppyResultType = Union[Tuple['Node', ...], 'Node', str, None]
+StrictResultType = Union[Tuple['Node', ...], str]
+ResultType = Union[Tuple['Node', ...], 'Node', str, None]
 
 
 class Node:
@@ -164,11 +184,11 @@ class Node:
             AST-transformation.
     """
 
-    def __init__(self, parser, result: SloppyResultType) -> None:
+    def __init__(self, parser, result: ResultType) -> None:
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self._result = ''  # type: ResultType
+        self._result = ''  # type: StrictResultType
         self._errors = []  # type: List[str]
         self._children = ()  # type: Tuple['Node', ...]
         self._len = len(self.result) if not self.children else \
@@ -183,7 +203,7 @@ class Node:
     def __str__(self):
         if self.children:
             return "".join(str(child) for child in self.children)
-        return str(self.result)
+        return str(self.result) if self.parser.name != "__ZOMBIE__" else ''
 
     def __eq__(self, other):
         # return str(self.parser) == str(other.parser) and self.result == other.result
@@ -204,11 +224,11 @@ class Node:
         # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.ptype
 
     @property
-    def result(self) -> ResultType:
+    def result(self) -> StrictResultType:
         return self._result
 
     @result.setter
-    def result(self, result: SloppyResultType):
+    def result(self, result: ResultType):
         # # made obsolete by static type checking with mypy is done
         # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
         #         or isinstance(result, Node)
@@ -451,33 +471,35 @@ TransformationFunc = Union[Callable[[Node], Any], partial]
 
 
 def transformation_factory(t=None):
-    """Creates factory functions transformer-functions with more than
-    one parameter like ``remove_tokens(node, tokens)``. Decorating this
-    function with ``transformation_factory`` creates a function factory with
-    the same name, but without the ``node`` paramter, e.g.
-    ``remove_tokens(tokens)`` which returns a transformerfunction with
-    only one parameter (i.e. ``node``), which can be used in processing
-    dictionaries, thus avoiding explicit lamba- or partial-functions
-    in the table.
+    """Creates factory functions from transformation-functions that
+    dispatch on the first parameter after the node parameter.
 
-    Additionally it converts a list of parameters into a
-    collection, if the decorated function has exaclty two arguments and
-    the second argument is of type Collection.
+    Decorating a transformation-function that has more than merely the
+    ``node``-parameter with ``transformation_factory`` creates a
+    function with the same name, which returns a partial-function that
+    takes just the node-parameter.
 
-    Main benefit is reability of processing tables.
-    Example:
-        trans_table = { 'expression': remove_tokens('+', '-') }
-    rather than:
-        trans_table = { 'expression': partial(remove_tokens, tokens={'+', '-'}) }
+    Additionally, there is some some syntactic sugar for
+    transformation-functions that receive a collection as their second
+    parameter and do not have any further parameters. In this case a
+    list of parameters passed to the factory function will be converted
+    into a collection.
+
+    Main benefit is readability of processing tables.
 
     Usage:
         @transformation_factory(AbtractSet[str])
         def remove_tokens(node, tokens):
             ...
-    or, alternatively:
+      or, alternatively:
         @transformation_factory
         def remove_tokens(node, tokens: AbstractSet[str]):
             ...
+
+    Example:
+        trans_table = { 'expression': remove_tokens('+', '-') }
+      instead of:
+        trans_table = { 'expression': partial(remove_tokens, tokens={'+', '-'}) }
     """
 
     def decorator(f):
@@ -509,9 +531,10 @@ def transformation_factory(t=None):
         return f
 
     if isinstance(t, type(lambda: 1)):
-        # assume transformation_factory has been used as decorator w/o parameters
-        func = t;
-        t = None
+        # Provide for the case that transformation_factory has been
+        # written as plain decorator and not as a function call that
+        # returns the decorator proper.
+        func = t;  t = None
         return decorator(func)
     else:
         return decorator
@@ -731,7 +754,7 @@ def remove_enclosing_delimiters(node):
         node.result = node.result[1:-1]
 
 
-def map_content(node, func):
+def map_content(node, func: Callable[[Node], ResultType]):
     """Replaces the content of the node. ``func`` takes the node
     as an argument an returns the mapped result.
     """
