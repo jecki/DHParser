@@ -31,7 +31,7 @@ from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
     ScannerFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
 from DHParser.parsers import Grammar, Compiler, compile_source, nil_scanner, ScannerFunc
-from DHParser.syntaxtree import Node, TransformerFunc
+from DHParser.syntaxtree import Node, TransformationFunc
 
 
 __all__ = ['GrammarError',
@@ -79,8 +79,8 @@ from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
     nop_filter, counterpart_filter, accumulating_filter, ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
-    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
-    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformerFunc
+    no_transformation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
+    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc
 '''
 
 
@@ -171,7 +171,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 def compileDSL(text_or_file: str,
                scanner: ScannerFunc,
                dsl_grammar: Union[str, Grammar],
-               ast_transformation: TransformerFunc,
+               ast_transformation: TransformationFunc,
                compiler: Compiler) -> Any:
     """Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a

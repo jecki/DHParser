@@ -16,7 +16,7 @@ except ImportError:
     import re
 from DHParser.parsers import Grammar, Compiler, Alternative, Required, Token, \
     Optional, OneOrMore, Sequence, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source
-from DHParser.syntaxtree import traverse, reduce_single_child, replace_by_single_child, no_operation, \
+from DHParser.syntaxtree import traverse, reduce_single_child, replace_by_single_child, no_transformation, \
     remove_expendables, remove_tokens, flatten, \
     WHITESPACE_KEYWORD, TOKEN_KEYWORD
 
@@ -220,10 +220,10 @@ def join_strings(node, delimiter='\n'):
 
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "Artikel": no_operation,
+    "Artikel": no_transformation,
     "LemmaPosition":
         [partial(remove_tokens, tokens={'LEMMA'})],
-    "Lemma": no_operation,
+    "Lemma": no_transformation,
     "_tll, _wortart, _genus":
         [remove_expendables, reduce_single_child],
     "LemmaVarianten":
@@ -245,32 +245,32 @@ MLW_AST_transformation_table = {
         [remove_expendables, reduce_single_child],
     "Zusatz":
         [remove_expendables, remove_tokens, reduce_single_child],
-    "ArtikelKopf": no_operation,
+    "ArtikelKopf": no_transformation,
     "SchreibweisenPosition":
         [partial(remove_tokens, tokens={'SCHREIBWEISE', ':'}),
          flatten, partial(remove_tokens, tokens={','})],
-    "SWTyp": no_operation,
+    "SWTyp": no_transformation,
     "BedeutungsPosition":
         [flatten, partial(remove_tokens, tokens={'BEDEUTUNG'})],
-    "Bedeutung": no_operation,
-    "Bedeutungskategorie": no_operation,
-    "Interpretamente": no_operation,
+    "Bedeutung": no_transformation,
+    "Bedeutungskategorie": no_transformation,
+    "Interpretamente": no_transformation,
     "LateinischeBedeutung, DeutscheBedeutung":
         [remove_expendables, remove_tokens, reduce_single_child],
     "Belege":
         [flatten, remove_tokens],
     "EinBeleg":
         [flatten, remove_expendables, join_strings, reduce_single_child],
-    "Beleg": no_operation,
-    "VerweisZiel": no_operation,
+    "Beleg": no_transformation,
+    "VerweisZiel": no_transformation,
     "Autorinfo":
         [partial(remove_tokens, tokens={'AUTORIN', 'AUTOR'})],
     "WORT, WORT_KLEIN, WORT_GROSS, GROSSSCHRIFT":
     # test,
         [remove_expendables, reduce_single_child],
-    "LEER": no_operation,
-    "DATEI_ENDE": no_operation,
-    "NIEMALS": no_operation,
+    "LEER": no_transformation,
+    "DATEI_ENDE": no_transformation,
+    "NIEMALS": no_transformation,
     (TOKEN_KEYWORD, WHITESPACE_KEYWORD):
         [remove_expendables, reduce_single_child],
     "*":

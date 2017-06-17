@@ -50,8 +50,9 @@ https://bitbucket.org/apalala/grako
 
 
 import copy
-from functools import partial
 import os
+from functools import partial
+
 try:
     import regex as re
 except ImportError:
@@ -60,7 +61,7 @@ from typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Node, \
-    TransformerFunc
+    TransformationFunc
 from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['ScannerFunc',
@@ -224,8 +225,8 @@ class ParserMetaClass(type):
 class Parser(metaclass=ParserMetaClass):
     ApplyFunc = Callable[['Parser'], None]
 
-    def __init__(self, name=''):
-        assert isinstance(name, str), str(name)
+    def __init__(self, name: str = '') -> None:
+        # assert isinstance(name, str), str(name)
         self.name = name  # type: str
         self._grammar = None  # type: 'Grammar'
         self.reset()
@@ -367,7 +368,7 @@ class Grammar:
         self.all_parsers.add(parser)
         parser.grammar = self
 
-    def __call__(self, document, start_parser="root__"):
+    def __call__(self, document: str, start_parser="root__"):
         """Parses a document with with parser-combinators.
 
         Args:
@@ -378,7 +379,7 @@ class Grammar:
         Returns:
             Node: The root node ot the parse tree.
         """
-        assert isinstance(document, str), type(document)
+        # assert isinstance(document, str), type(document)
         if self.root__ is None:
             raise NotImplementedError()
         if self.dirty_flag:
@@ -390,7 +391,7 @@ class Grammar:
         self.history_tracking = is_logging()
         self.document = document
         parser = self[start_parser]
-        stitches = []
+        stitches = []  # type: List[Node]
         rest = document
         if not rest:
             result, ignore = parser(rest)
@@ -495,7 +496,7 @@ BEGIN_SCANNER_TOKEN = '\x1b'
 END_SCANNER_TOKEN = '\x1c'
 
 
-def make_token(token, argument='') -> str:
+def make_token(token: str, argument: str = '') -> str:
     """Turns the ``token`` and ``argument`` into a special token that
     will be caught by the `ScannerToken`-parser.
 
@@ -509,7 +510,7 @@ def make_token(token, argument='') -> str:
     return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
 
 
-def nil_scanner(text) -> str:
+def nil_scanner(text: str) -> str:
     return text
 
 
@@ -524,9 +525,9 @@ class ScannerToken(Parser):
     indented block. Otherwise indented block are difficult to handle 
     with parsing expression grammars.
     """
-    def __init__(self, scanner_token):
-        assert isinstance(scanner_token, str) and scanner_token and \
-               scanner_token.isupper()
+
+    def __init__(self, scanner_token: str) -> None:
+        assert scanner_token and scanner_token.isupper()
         assert RX_SCANNER_TOKEN.match(scanner_token)
         super(ScannerToken, self).__init__(scanner_token)
 
@@ -565,7 +566,8 @@ class RegExp(Parser):
     other parsers delegate part of the parsing job to other parsers,
     but do not match text directly.
     """
-    def __init__(self, regexp, name=''):
+
+    def __init__(self, regexp, name: str = '') -> None:
         super(RegExp, self).__init__(name)
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
@@ -673,7 +675,7 @@ class RE(Parser):
 class Token(RE):
     assert TOKEN_PTYPE == ":Token"
 
-    def __init__(self, token, wL=None, wR=None, name=''):
+    def __init__(self, token: str, wL=None, wR=None, name: str = '') -> None:
         self.token = token
         super(Token, self).__init__(escape_re(token), wL, wR, name)
 
@@ -681,7 +683,7 @@ class Token(RE):
         return self.__class__(self.token, self.wL, self.wR, self.name)
 
 
-def mixin_comment(whitespace, comment):
+def mixin_comment(whitespace: str, comment: str) -> str:
     """Returns a regular expression that merges comment and whitespace
     regexps. Thus comments cann occur whereever whitespace is allowed
     and will be skipped just as implicit whitespace.
@@ -702,9 +704,9 @@ def mixin_comment(whitespace, comment):
 
 
 class UnaryOperator(Parser):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(UnaryOperator, self).__init__(name)
-        assert isinstance(parser, Parser)
+        # assert isinstance(parser, Parser)
         self.parser = parser  # type: Parser
 
     def __deepcopy__(self, memo):
@@ -717,10 +719,10 @@ class UnaryOperator(Parser):
 
 
 class NaryOperator(Parser):
-    def __init__(self, *parsers, name=''):
+    def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
-        assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
-        self.parsers = parsers  # type: List[Parser]
+        # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        self.parsers = parsers  # type: Collection  ## [Parser]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
@@ -733,9 +735,9 @@ class NaryOperator(Parser):
 
 
 class Optional(UnaryOperator):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(Optional, self).__init__(parser, name)
-        assert isinstance(parser, Parser)
+        # assert isinstance(parser, Parser)
         assert not isinstance(parser, Optional), \
             "Nesting options would be redundant: %s(%s)" % \
             (str(name), str(parser.name))
@@ -766,7 +768,7 @@ class ZeroOrMore(Optional):
 
 
 class OneOrMore(UnaryOperator):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(OneOrMore, self).__init__(parser, name)
         assert not isinstance(parser, Optional), \
             "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
@@ -790,7 +792,7 @@ class OneOrMore(UnaryOperator):
 
 
 class Sequence(NaryOperator):
-    def __init__(self, *parsers, name=''):
+    def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(Sequence, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
 
@@ -808,10 +810,10 @@ class Sequence(NaryOperator):
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
 
-    def __add__(self, other):
+    def __add__(self, other: 'Sequence') -> 'Sequence':
         return Sequence(*self.parsers, other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: 'Sequence') -> 'Sequence':
         return Sequence(other, *self.parsers)
 
         # def __iadd__(self, other):
@@ -835,7 +837,8 @@ class Alternative(NaryOperator):
     # the most selective expression should be put first:
 
     """
-    def __init__(self, *parsers, name=''):
+
+    def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         assert all(not isinstance(p, Optional) for p in self.parsers)
@@ -869,7 +872,7 @@ class Alternative(NaryOperator):
 
 
 class FlowOperator(UnaryOperator):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(FlowOperator, self).__init__(parser, name)
 
 
@@ -889,7 +892,7 @@ class Required(FlowOperator):
 
 
 class Lookahead(FlowOperator):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(Lookahead, self).__init__(parser, name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -921,7 +924,7 @@ def iter_right_branch(node) -> Iterator[Node]:
 
 
 class Lookbehind(FlowOperator):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
 
@@ -961,7 +964,7 @@ class NegativeLookbehind(Lookbehind):
 
 
 class Capture(UnaryOperator):
-    def __init__(self, parser, name=''):
+    def __init__(self, parser: Parser, name: str = '') -> None:
         super(Capture, self).__init__(parser, name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -987,8 +990,11 @@ def accumulating_filter(stack):
     return "".join(stack)
 
 
+RetrFilter = Callable[[List[str]], str]
+
+
 class Retrieve(Parser):
-    def __init__(self, symbol, retrieve_filter=None, name=''):
+    def __init__(self, symbol: Parser, retrieve_filter: RetrFilter = None, name: str = '') -> None:
         if not name:
             name = symbol.name
         super(Retrieve, self).__init__(name)
@@ -1135,7 +1141,7 @@ class Compiler:
 def compile_source(source: str,
                    scanner: ScannerFunc,  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
-                   transformer: TransformerFunc,  # Node -> Node (abstract syntax tree (AST))
+                   transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
                    compiler: Compiler):         # Node (AST) -> Any
     """Compiles a source in four stages:
         1. Scanning (if needed)

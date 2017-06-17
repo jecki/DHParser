@@ -17,7 +17,7 @@ permissions and limitations under the License.
 """
 
 import keyword
-from functools import partial
+
 try:
     import regex as re
 except ImportError:
@@ -30,7 +30,7 @@ from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, N
     ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
-    forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, TransformerFunc
+    forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, TransformationFunc
 from DHParser.versionnumber import __version__
 
 
@@ -197,10 +197,9 @@ EBNF_transformation_table = {
     "syntax":
         remove_expendables,
     "directive, definition":
-        partial(remove_tokens, tokens={'@', '='}),
+        remove_tokens('@', '='),
     "expression":
-        [replace_by_single_child, flatten,
-         partial(remove_tokens, tokens={'|'})],
+        [replace_by_single_child, flatten, remove_tokens('|')],
     "term":
         [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
@@ -214,17 +213,17 @@ EBNF_transformation_table = {
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [remove_expendables, reduce_single_child],
     "list_":
-        [flatten, partial(remove_tokens, tokens={','})],
+        [flatten, remove_tokens(',')],
     "*":
         [remove_expendables, replace_by_single_child]
 }
 
 
 EBNF_validation_table = {
-    # Semantic validation on the AST
+    # Semantic validation on the AST. EXPERIMENTAL!
     "repetition, option, oneormore":
-        [partial(forbid, child_tags=['repetition', 'option', 'oneormore']),
-         partial(assert_content, regex=r'(?!§)')],
+        [forbid('repetition', 'option', 'oneormore'),
+         assert_content(r'(?!§)')]
 }
 
 
@@ -234,7 +233,7 @@ def EBNFTransformer(syntax_tree: Node):
         traverse(syntax_tree, processing_table, key_func)
 
 
-def get_ebnf_transformer() -> TransformerFunc:
+def get_ebnf_transformer() -> TransformationFunc:
     return EBNFTransformer
 
 
@@ -247,7 +246,7 @@ def get_ebnf_transformer() -> TransformerFunc:
 
 ScannerFactoryFunc = Callable[[], ScannerFunc]
 ParserFactoryFunc = Callable[[], Grammar]
-TransformerFactoryFunc = Callable[[], TransformerFunc]
+TransformerFactoryFunc = Callable[[], TransformationFunc]
 CompilerFactoryFunc = Callable[[], Compiler]
 
 
@@ -270,7 +269,7 @@ def get_grammar() -> {NAME}Grammar:
 
 
 TRANSFORMER_FACTORY = '''
-def get_transformer() -> TransformerFunc:
+def get_transformer() -> TransformationFunc:
     return {NAME}Transform
 '''
 
@@ -349,8 +348,8 @@ class EBNFCompiler(Compiler):
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
         for name in self.definition_names:
-            transtable.append('    "' + name + '": no_operation,')
-        transtable += ['    "*": no_operation', '}', '', tf_name +
+            transtable.append('    "' + name + '": no_transformation,')
+        transtable += ['    "*": no_transformation', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)

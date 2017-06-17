@@ -7,23 +7,19 @@
 #######################################################################
 
 
-from functools import partial
 import os
 import sys
+from functools import partial
+
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import Grammar, Compiler, nil_scanner, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    nop_filter, counterpart_filter, accumulating_filter, ScannerFunc
-from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \
-    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
-    no_operation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformerFunc
+from DHParser.toolkit import logging, is_filename
+from DHParser.parsers import Grammar, Compiler, Required, Token, \
+    Optional, OneOrMore, Sequence, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source, \
+    ScannerFunc
+from DHParser.syntaxtree import traverse, no_transformation, TransformationFunc
 
 
 #######################################################################
@@ -129,37 +125,37 @@ def get_grammar() -> LyrikGrammar:
 
 Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
-    "gedicht": no_operation,
-    "bibliographisches": no_operation,
-    "autor": no_operation,
-    "werk": no_operation,
-    "untertitel": no_operation,
-    "ort": no_operation,
-    "jahr": no_operation,
-    "wortfolge": no_operation,
-    "namenfolge": no_operation,
-    "verknüpfung": no_operation,
-    "ziel": no_operation,
-    "serie": no_operation,
-    "titel": no_operation,
-    "zeile": no_operation,
-    "text": no_operation,
-    "strophe": no_operation,
-    "vers": no_operation,
-    "WORT": no_operation,
-    "NAME": no_operation,
-    "ZEICHENFOLGE": no_operation,
-    "NZ": no_operation,
-    "LEERZEILE": no_operation,
-    "JAHRESZAHL": no_operation,
-    "ENDE": no_operation,
-    "*": no_operation
+    "gedicht": no_transformation,
+    "bibliographisches": no_transformation,
+    "autor": no_transformation,
+    "werk": no_transformation,
+    "untertitel": no_transformation,
+    "ort": no_transformation,
+    "jahr": no_transformation,
+    "wortfolge": no_transformation,
+    "namenfolge": no_transformation,
+    "verknüpfung": no_transformation,
+    "ziel": no_transformation,
+    "serie": no_transformation,
+    "titel": no_transformation,
+    "zeile": no_transformation,
+    "text": no_transformation,
+    "strophe": no_transformation,
+    "vers": no_transformation,
+    "WORT": no_transformation,
+    "NAME": no_transformation,
+    "ZEICHENFOLGE": no_transformation,
+    "NZ": no_transformation,
+    "LEERZEILE": no_transformation,
+    "JAHRESZAHL": no_transformation,
+    "ENDE": no_transformation,
+    "*": no_transformation
 }
 
 LyrikTransform = partial(traverse, processing_table=Lyrik_AST_transformation_table)
 
 
-def get_transformer() -> TransformerFunc:
+def get_transformer() -> TransformationFunc:
     return LyrikTransform
 
 

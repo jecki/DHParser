@@ -18,14 +18,16 @@ permissions and limitations under the License.
 """
 
 import copy
+import inspect
 import itertools
 import os
-from functools import partial
+from functools import partial, singledispatch
 try:
     import regex as re
 except ImportError:
     import re
-from typing import Any, Callable, cast, Iterator, NamedTuple, Union, Tuple, List
+from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Iterator, List, \
+    NamedTuple, Sequence, Union, Text, Tuple
 
 from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
 
@@ -35,11 +37,11 @@ __all__ = ['WHITESPACE_PTYPE',
            'ZOMBIE_PARSER',
            'Error',
            'Node',
-           'TransformerFunc',
+           'TransformationFunc',
            'key_parser_name',
            'key_tag_name',
            'traverse',
-           'no_operation',
+           'no_transformation',
            'replace_by_single_child',
            'reduce_single_child',
            'replace_parser',
@@ -445,7 +447,74 @@ class Node:
 ########################################################################
 
 
-TransformerFunc = Union[Callable[[Node], Any], partial]
+TransformationFunc = Union[Callable[[Node], Any], partial]
+
+
+def transformation_factory(t=None):
+    """Creates factory functions transformer-functions with more than
+    one parameter like ``remove_tokens(node, tokens)``. Decorating this
+    function with ``transformation_factory`` creates a function factory with
+    the same name, but without the ``node`` paramter, e.g.
+    ``remove_tokens(tokens)`` which returns a transformerfunction with
+    only one parameter (i.e. ``node``), which can be used in processing
+    dictionaries, thus avoiding explicit lamba- or partial-functions
+    in the table.
+
+    Additionally it converts a list of parameters into a
+    collection, if the decorated function has exaclty two arguments and
+    the second argument is of type Collection.
+
+    Main benefit is reability of processing tables.
+    Example:
+        trans_table = { 'expression': remove_tokens('+', '-') }
+    rather than:
+        trans_table = { 'expression': partial(remove_tokens, tokens={'+', '-'}) }
+
+    Usage:
+        @transformation_factory(AbtractSet[str])
+        def remove_tokens(node, tokens):
+            ...
+    or, alternatively:
+        @transformation_factory
+        def remove_tokens(node, tokens: AbstractSet[str]):
+            ...
+    """
+
+    def decorator(f):
+        sig = inspect.signature(f)
+        params = list(sig.parameters.values())[1:]
+        if len(params) == 0:
+            return f  # '@transformer' not needed w/o free parameters
+        assert t or params[0].annotation != params[0].empty, \
+            "No type information on second parameter found! Please, use type " \
+            "annotation or provide the type information via transfomer-decorator."
+        p1type = t or params[0].annotation
+        f = singledispatch(f)
+        if len(params) == 1 and issubclass(p1type, Container) and not issubclass(p1type, Text) \
+                and not issubclass(p1type, ByteString):
+            def gen_special(*args):
+                c = set(args) if issubclass(p1type, AbstractSet) else \
+                    list(args) if issubclass(p1type, Sequence) else args
+                d = {params[0].name: c}
+                return partial(f, **d)
+
+            f.register(p1type.__args__[0], gen_special)
+
+        def gen_partial(*args, **kwargs):
+            d = {p.name: arg for p, arg in zip(params, args)}
+            d.update(kwargs)
+            return partial(f, **d)
+
+        f.register(p1type, gen_partial)
+        return f
+
+    if isinstance(t, type(lambda: 1)):
+        # assume transformation_factory has been used as decorator w/o parameters
+        func = t;
+        t = None
+        return decorator(func)
+    else:
+        return decorator
 
 
 WHITESPACE_PTYPE = ':Whitespace'
@@ -518,15 +587,7 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     traverse_recursive(root_node)
 
 
-# Note on processing functions: If processing functions receive more
-# than one parameter, the ``node``-parameter should always be the
-# last parameter to ease partial function application, e.g.:
-# def replace_parser(name, node):
-#    ...
-# processing_func = partial(replace_parser, "special")
-
-
-def no_operation(node):
+def no_transformation(node):
     pass
 
 
@@ -563,7 +624,8 @@ def reduce_single_child(node):
         node.result = node.result[0].result
 
 
-def replace_parser(node, name):
+@transformation_factory
+def replace_parser(node, name: str):
     """Replaces the parser of a Node with a mock parser with the given
     name.
 
@@ -632,10 +694,11 @@ def is_expendable(node):
     return is_empty(node) or is_whitespace(node)
 
 
-def is_token(node, tokens):
+def is_token(node, tokens: AbstractSet[str] = frozenset()) -> bool:
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
 
 
+@transformation_factory(Callable)  # @singledispatch
 def remove_children_if(node, condition):
     """Removes all nodes from the result field if the function 
     ``condition(child_node)`` evaluates to ``True``."""
@@ -644,11 +707,14 @@ def remove_children_if(node, condition):
 
 
 remove_whitespace = partial(remove_children_if, condition=is_whitespace)
-# remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
 remove_expendables = partial(remove_children_if, condition=is_expendable)
 
 
-def remove_tokens(node, tokens):
+# remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
+
+
+@transformation_factory
+def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed.
@@ -680,22 +746,26 @@ def map_content(node, func):
 ########################################################################
 
 
-def require(node, child_tags):
+@transformation_factory
+def require(node, child_tags: AbstractSet[str]):
     for child in node.children:
         if child.tag_name not in child_tags:
             node.add_error('Element "%s" is not allowed inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def forbid(node, child_tags):
+@transformation_factory
+def forbid(node, child_tags: AbstractSet[str]):
     for child in node.children:
         if child.tag_name in child_tags:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
                            (child.parser.name, node.parser.name))
 
 
-def assert_content(node, regex):
+@transformation_factory
+def assert_content(node, regex: str):
     content = str(node)
     if not re.match(regex, content):
         node.add_error('Element "%s" violates %s on %s' %
                        (node.parser.name, str(regex), content))
+

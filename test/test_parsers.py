@@ -19,14 +19,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from functools import partial
 import sys
+from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser import parsers
 from DHParser.toolkit import is_logging, logging, compile_python_object
-from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
+from DHParser.syntaxtree import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
 from DHParser.parsers import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler

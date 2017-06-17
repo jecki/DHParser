@@ -19,18 +19,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from functools import partial
 import sys
+from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser import parsers
-from DHParser.toolkit import is_logging, compile_python_object, compact_sexpr
-from DHParser.syntaxtree import no_operation, traverse, remove_expendables, \
+from DHParser.toolkit import compact_sexpr
+from DHParser.syntaxtree import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
-from DHParser.parsers import compile_source
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
+from DHParser.dsl import parser_factory
 from DHParser.testing import grammar_unit, mock_syntax_tree
 
 ARITHMETIC_EBNF = """
