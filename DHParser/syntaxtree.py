@@ -225,7 +225,7 @@ class Node:
         other._pos = self._pos
         return other
 
-    @property
+    @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
     def tag_name(self) -> str:
         return self.parser.name or self.parser.ptype
         # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.ptype
@@ -605,18 +605,26 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     # with a single value
     table = {name: smart_list(call) for name, call in list(processing_table.items())}
     table = expand_table(table)
+    cache = {}
 
     def traverse_recursive(node):
         if node.children:
             for child in node.result:
                 traverse_recursive(child)            # depth first
                 node.error_flag |= child.error_flag  # propagate error flag
-        sequence = table.get('+', []) + \
-                   table.get(key_func(node), table.get('*', [])) + \
-                   table.get('~', [])
-        # '+' always called (before any other processing function)
-        # '*' called for those nodes for which no (other) processing function appears in the table
-        # '~' always called (after any other processing function)
+
+        key = key_func(node)
+        sequence = cache.get(key, None)
+        if sequence is None:
+            sequence = table.get('+', []) + \
+                       table.get(key, table.get('*', [])) + \
+                       table.get('~', [])
+            # '+' always called (before any other processing function)
+            # '*' called for those nodes for which no (other) processing function
+            #     appears in the table
+            # '~' always called (after any other processing function)
+            cache[key] = sequence
+
         for call in sequence:
             call(node)
 
