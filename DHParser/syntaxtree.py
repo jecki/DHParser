@@ -203,7 +203,14 @@ class Node:
     def __str__(self):
         if self.children:
             return "".join(str(child) for child in self.children)
-        return str(self.result) if self.parser.name != "__ZOMBIE__" else ''
+        return str(self.result)
+
+    def __repr__(self):
+        mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
+        parg = "MockParser({name}, {ptype})".format(**mpargs)
+        rarg = str(self) if not self.children else \
+               "(" + ", ".join(repr(child) for child in self.children) + ")"
+        return "Node(%s, %s)" % (parg, rarg)
 
     def __eq__(self, other):
         # return str(self.parser) == str(other.parser) and self.result == other.result
@@ -264,6 +271,14 @@ class Node:
     def errors(self) -> List[Error]:
         return [Error(self.pos, err) for err in self._errors]
 
+    def show(self) -> str:
+        """Returns content as string, inserting error messages where
+        errors ocurred.
+        """
+        s = "".join(child.show_errors() for child in self.children) if self.children \
+            else str(self.result)
+        return (' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
+
     def _tree_repr(self, tab, openF, closeF, dataF=lambda s: s) -> str:
         """
         Generates a tree representation of this node and its children
@@ -309,7 +324,7 @@ class Node:
         else:
             return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail
 
-    def as_sexpr(self, src=None) -> str:
+    def as_sexpr(self, src: str=None) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -317,8 +332,6 @@ class Node:
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
-            prettyprint(bool):  True (default), if pretty printing 
-                of leaf nodes shall be applied for better readability.
         """
 
         def opening(node) -> str:
@@ -336,9 +349,9 @@ class Node:
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, lambda node: ')', pretty)  # pretty if prettyprint else lambda s: s)
+        return self._tree_repr('    ', opening, lambda node: ')', pretty)
 
-    def as_xml(self, src=None) -> str:
+    def as_xml(self, src: str=None) -> str:
         """
         Returns content as XML-tree.
 
@@ -369,8 +382,8 @@ class Node:
         self.error_flag = True
         return self
 
-    def propagate_error_flags(self):
-        """ Recursively propagates error flags set on child nodes to its
+    def propagate_error_flags(self) -> None:
+        """Recursively propagates error flags set on child nodes to its
         parents. This can be used if errors are added to descendant 
         nodes after syntaxtree construction, i.e. in the compile phase.
         """
@@ -436,28 +449,28 @@ class Node:
     #     """
 
 
-    def navigate(self, path):
-        """Yields the results of all descendant elements matched by
-        ``path``, e.g.
-        'd/s' yields 'l' from (d (s l)(e (r x1) (r x2))
-        'e/r' yields 'x1', then 'x2'
-        'e'   yields (r x1)(r x2)
-
-        Args:
-            path (str):  The path of the object, e.g. 'a/b/c'. The
-                components of ``path`` can be regular expressions
-
-        Returns:
-            The object at the path, either a string or a Node or
-            ``None``, if the path did not match.
-        """
-        def nav(node, pl):
-            if pl:
-                return itertools.chain(nav(child, pl[1:]) for child in node.children
-                                       if re.match(pl[0], child.tag_name))
-            else:
-                return self.result,
-        return nav(path.split('/'))
+    # def navigate(self, path):
+    #     """Yields the results of all descendant elements matched by
+    #     ``path``, e.g.
+    #     'd/s' yields 'l' from (d (s l)(e (r x1) (r x2))
+    #     'e/r' yields 'x1', then 'x2'
+    #     'e'   yields (r x1)(r x2)
+    #
+    #     Args:
+    #         path (str):  The path of the object, e.g. 'a/b/c'. The
+    #             components of ``path`` can be regular expressions
+    #
+    #     Returns:
+    #         The object at the path, either a string or a Node or
+    #         ``None``, if the path did not match.
+    #     """
+    #     def nav(node, pl):
+    #         if pl:
+    #             return itertools.chain(nav(child, pl[1:]) for child in node.children
+    #                                    if re.match(pl[0], child.tag_name))
+    #         else:
+    #             return self.result,
+    #     return nav(path.split('/'))
 
 
 ########################################################################
@@ -596,7 +609,7 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     def traverse_recursive(node):
         if node.children:
             for child in node.result:
-                traverse_recursive(child)
+                traverse_recursive(child)            # depth first
                 node.error_flag |= child.error_flag  # propagate error flag
         sequence = table.get('+', []) + \
                    table.get(key_func(node), table.get('*', [])) + \
@@ -729,11 +742,9 @@ def remove_children_if(node, condition):
         node.result = tuple(c for c in node.children if not condition(c))
 
 
-remove_whitespace = partial(remove_children_if, condition=is_whitespace)
-remove_expendables = partial(remove_children_if, condition=is_expendable)
-
-
-# remove_scanner_tokens = partial(remove_children_if, condition=is_scanner_token)
+remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
+remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
+# remove_scanner_tokens = remove_children_if(is_scanner_token)  # partial(remove_children_if, condition=is_scanner_token)
 
 
 @transformation_factory

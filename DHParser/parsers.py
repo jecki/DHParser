@@ -172,14 +172,14 @@ def add_parser_guard(parser_func):
             parser.recursion_counter[location] += 1
             grammar = parser.grammar    # grammar may be 'None' for unconnected parsers!
 
-            if grammar and grammar.history_tracking:
+            if grammar.history_tracking:
                 grammar.call_stack.append(parser)
                 grammar.moving_forward = True
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
 
-            if grammar and grammar.history_tracking:
+            if grammar.history_tracking:
                 # don't track returning parsers except in case an error has occurred
                 if grammar.moving_forward or (node and node._errors):
                     grammar.moving_forward = False
@@ -192,8 +192,7 @@ def add_parser_guard(parser_func):
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 parser.visited[location] = (node, rest)
-                if grammar:
-                    grammar.last_node = node   # store last node for Lookbehind operator
+                grammar.last_node = node   # store last node for Lookbehind operator
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -834,12 +833,12 @@ class Alternative(NaryOperator):
 
     # the order of the sub-expression matters!
     >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
-    >>> str(Grammar(number)('3.1416'))
-    '3'
+    >>> Grammar(number)("3.1416").show()
+    '3 <<< Error on ".1416" | Parser stopped before end! trying to recover... >>> '
 
     # the most selective expression should be put first:
     >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
-    >>> str(Grammar(number)('3.1416'))
+    >>> Grammar(number)("3.1416").show()
     '3.1416'
     """
 
