@@ -66,7 +66,8 @@ def get_ebnf_scanner() -> ScannerFunc:
 #
 ########################################################################
 
-
+# TODO: Introduce dummy/rename-parser, for simple assignments (e.g. jahr = JAHRESZAHL) or substition!
+# TODO: Raise Error for unconnected parsers!
 class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file, with this grammar:
 

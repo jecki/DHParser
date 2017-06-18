@@ -295,7 +295,10 @@ class Grammar:
         constructor will not be overwritten. Parser names starting or
         ending with a double underscore like ``root__`` will be
         ignored. See ``toolkit.sane_parser_name()``
-        
+
+        This is done only once, upon the first instantiation of the
+        grammar class!
+
         Attention: If there exists more than one reference to the same
         parser, only the first one will be chosen for python versions 
         greater or equal 3.6.  For python version <= 3.5 an arbitrarily
@@ -324,7 +327,7 @@ class Grammar:
         self.dirty_flag = False
         self.history_tracking = False
         self._reset()
-        self._assign_parser_names()
+        self._assign_parser_names()  # prepare class first
         self.root__ = root if root else copy.deepcopy(self.__class__.root__)
         if self.wspL__:
             self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
