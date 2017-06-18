@@ -53,12 +53,11 @@ import abc
 import copy
 import os
 from functools import partial
-
 try:
     import regex as re
 except ImportError:
     import re
-from typing import Any, Callable, Collection, Dict, Iterator, List, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
@@ -342,7 +341,7 @@ class Grammar:
         self.root__.apply(self._add_parser)
 
     def __getitem__(self, key):
-        return self.__dict__[key]
+        return getattr(self, key)
 
     def _reset(self):
         # variables stored and recalled by Capture and Retrieve parsers
@@ -357,6 +356,7 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward = True
 
+    # TODO: Either make sure not to miss out unconnected parsers or raise an error! Actually, the EBNF-Compiler should keep track of this!
     def _add_parser(self, parser: Parser) -> None:
         """Adds the copy of the classes parser object to this
         particular instance of Grammar.
@@ -389,7 +389,8 @@ class Grammar:
         self.history_tracking = is_logging()
         self.document = document
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
-        assert parser.grammar == self, "Cannot run parsers from a differen grammar object!"
+        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
+                                       " %s vs. %s" % (str(self), str(parser.grammar))
         stitches = []  # type: List[Node]
         rest = document
         if not rest:
@@ -721,7 +722,7 @@ class NaryOperator(Parser):
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
-        self.parsers = parsers  # type: Collection  ## [Parser]
+        self.parsers = parsers  # type: Container  ## [Parser]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
@@ -981,37 +982,37 @@ class Capture(UnaryOperator):
             return None, text
 
 
-def nop_filter(stack):
+RetrieveFilter = Callable[[List[str]], str]
+
+
+def nop_filter(stack: List[str]) -> str:
     return stack[-1]
 
 
-def counterpart_filter(stack):
+def counterpart_filter(stack: List[str]) -> str:
     value = stack[-1]
     return value.replace("(", ")").replace("[", "]").replace("{", "}").replace(">", "<")
 
 
-def accumulating_filter(stack):
+def accumulating_filter(stack: List[str]) -> str:
     return "".join(stack)
 
 
-RetrFilter = Callable[[List[str]], str]
-
-
 class Retrieve(Parser):
-    def __init__(self, symbol: Parser, retrieve_filter: RetrFilter = None, name: str = '') -> None:
+    def __init__(self, symbol: Parser, filter: RetrieveFilter = None, name: str = '') -> None:
         if not name:
             name = symbol.name
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
-        self.retrieve_filter = retrieve_filter if retrieve_filter else nop_filter
+        self.filter = filter if filter else nop_filter
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.retrieve_filter, self.name)
+        return self.__class__(self.symbol, self.filter, self.name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
         try:
             stack = self.grammar.variables[self.symbol.name]
-            value = self.retrieve_filter(stack)
+            value = self.filter(stack)
             self.pick_value(stack)
         except (KeyError, IndexError):
             return Node(self, '').add_error(dsl_error_msg(self,

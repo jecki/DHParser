@@ -120,24 +120,33 @@ class TestRegex:
 
 
 class TestGrammar:
-    def test_pos_values_initialized(self):
-        # checks whether pos values in the parsing result and in the
-        # history record have been initialized
+    def setup(self):
         grammar = r"""@whitespace = horizontal
         haupt        = textzeile LEERZEILE
         textzeile    = { WORT }+
         WORT         = /[^ \t]+/~
         LEERZEILE    = /\n[ \t]*(?=\n)/~
         """
-        result, messages, syntax_tree = compile_source(grammar, None, get_ebnf_grammar(),
-                                        get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
-        assert result
+        self.pyparser, messages, syntax_tree = compile_source(grammar, None, get_ebnf_grammar(),
+                                                              get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
+        assert self.pyparser
         assert not messages
+
+    def test_pos_values_initialized(self):
+        # checks whether pos values in the parsing result and in the
+        # history record have been initialized
         with logging("LOGS"):
-            parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
-            result = parser("no_file_name*")
+            parser = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
+            parser("no_file_name*")
         for record in parser.history:
             assert not record.node or record.node.pos >= 0
+
+    def test_select_parsing(self):
+        parser = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
+        parser("wort", "WORT")
+        parser("eine Zeile", "textzeile")
+        parser("kein Haupt", "haupt")
+        parser("so ist es richtig", "haupt")
 
 
 if __name__ == "__main__":

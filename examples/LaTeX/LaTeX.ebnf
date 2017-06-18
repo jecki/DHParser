@@ -29,7 +29,7 @@ word_sequence = { TEXTCHUNK WSPC }+
 
 blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
              | "\paragraph" | "\subparagraph" | "\begin{enumerate}"
-             | "\begin{itemize}" | "\begin{figure}"
+             | "\begin{itemize}" | "\item" | "\begin{figure}"
 
 CMDNAME    = /\\\w+/~
 NAME       = /\w+/~

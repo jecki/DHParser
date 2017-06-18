@@ -326,8 +326,8 @@ class EBNFCompiler(Compiler):
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
                            'literalws': ['right'],
-                           'tokens': set(),     # alt. 'scanner_tokens'
-                           'filter': dict()}     # alt. 'retrieve_filter'
+                           'tokens': set(),  # alt. 'scanner_tokens'
+                           'filter': dict()}  # alt. 'filter'
 
     @property
     def result(self) -> str:
@@ -416,7 +416,7 @@ class EBNFCompiler(Compiler):
                 declarations = declarations[:-1]
         declarations.append('"""')
 
-        # add default functions for retrieve_filter filters of pop or retrieve operators
+        # add default functions for filter filters of pop or retrieve operators
 
         # for symbol, fun in self.directives['filter']:
         #     declarations.append(symbol + '_filter = lambda value: value.replace("(", ")")'
@@ -586,7 +586,7 @@ class EBNFCompiler(Compiler):
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
             if str(arg) in self.directives['filter']:
-                custom_args = ['retrieve_filter=%s' % self.directives['filter'][str(arg)]]
+                custom_args = ['filter=%s' % self.directives['filter'][str(arg)]]
             self.variables.add(str(arg))  # cast(str, arg.result)
 
         elif len(node.children) > 2:

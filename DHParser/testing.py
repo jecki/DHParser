@@ -27,7 +27,7 @@ except ImportError:
     import re
 
 from DHParser import Node, error_messages
-from DHParser.toolkit import compact_sexpr, is_logging, log_dir
+from DHParser.toolkit import compact_sexpr, is_logging
 from DHParser.syntaxtree import MockParser
 from DHParser.ebnf import grammar_changed
 from DHParser.dsl import compile_on_disk
@@ -154,10 +154,10 @@ def unit_from_configfile(config_filename):
     return unit
 
 
-def unit_from_json(config_filename):
+def unit_from_json(json_filename):
     """Reads a grammar unit test from a json file.
     """
-    with open(config_filename, 'r') as f:
+    with open(json_filename, 'r') as f:
         unit = json.load(f)
     for symbol in unit:
         for stage in unit[symbol]:
@@ -168,17 +168,16 @@ def unit_from_json(config_filename):
 # TODO: add support for yaml, cson, toml
 
 
-def unit_from_file(config_filename):
+def unit_from_file(filename):
     """Reads a grammar unit test from a file. The format of the file is
     determined by the ending of its name.
     """
-    fname = config_filename
-    if fname.endswith(".json"):
-        return unit_from_json(fname)
-    elif fname.endswith(".ini"):
-        return unit_from_configfile(fname)
+    if filename.endswith(".json"):
+        return unit_from_json(filename)
+    elif filename.endswith(".ini"):
+        return unit_from_configfile(filename)
     else:
-        raise ValueError("Unknown unit test file type: " + fname[fname.rfind('.'):])
+        raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
 
 
 def report(test_unit):
@@ -208,21 +207,27 @@ def report(test_unit):
     return '\n'.join(report)
 
 
-def grammar_unit(test_unit, parser_factory, transformer_factory):
+def grammar_unit(test_unit, parser_factory, transformer_factory, verbose=False):
     """Unit tests for a grammar-parser and ast transformations.
     """
     if isinstance(test_unit, str):
-        unit_name = os.path.basename(os.path.splitext(test_unit)[0])
+        unit_dir, unit_name = os.path.split(os.path.splitext(test_unit)[0])
         test_unit = unit_from_file(test_unit)
     else:
         unit_name = str(id(test_unit))
+    if verbose:
+        print("\nUnit: " + unit_name)
     errata = []
     parser = parser_factory()
     transform = transformer_factory()
     for parser_name, tests in test_unit.items():
         assert set(tests.keys()).issubset(UNIT_STAGES)
-
+        if verbose:
+            print('  Match-Tests for parser "' + parser_name + '"')
         for test_name, test_code in tests.get('match', dict()).items():
+            if verbose:
+                infostr = '    match-test "' + test_name + '" ... '
+                errflag = len(errata)
             cst = parser(test_code, parser_name)
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or is_logging():
@@ -246,32 +251,48 @@ def grammar_unit(test_unit, parser_factory, transformer_factory):
                                      compact_sexpr(compare.as_sexpr()),
                                      compact_sexpr(ast.as_sexpr())))
                     tests.setdefault('__err__', {})[test_name] = errata[-1]
+            if verbose:
+                print(infostr + "OK" if len(errata) == errflag else "FAIL")
 
+        if verbose:
+            print('  Fail-Tests for parser "' + parser_name + '"')
         for test_name, test_code in tests.get('fail', dict()).items():
+            if verbose:
+                infostr = '    fail-test  "' + test_name + '" ... '
+                errflag = len(errata)
             cst = parser(test_code, parser_name)
             if not cst.error_flag:
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+            if verbose:
+                print(infostr + "OK" if len(errata) == errflag else "FAIL")
 
     if is_logging():
-        with open(os.path.join(log_dir(), unit_name + '.report'), 'w') as f:
+        report_dir = os.path.join(unit_dir, "REPORT")
+        if not os.path.exists(report_dir):
+            os.mkdir(report_dir)
+        with open(os.path.join(report_dir, unit_name + '.report'), 'w') as f:
             f.write(report(test_unit))
 
     return errata
 
 
-def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown_filetypes=False):
+def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown_filetypes=False,
+                  verbose=False):
     """Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
     all_errors = collections.OrderedDict()
+    if verbose:
+        print("\nScanning test-directory: " + directory)
     for filename in sorted(os.listdir(directory)):
         if filename.lower().find("test") >= 0:
             try:
-                print("Running grammar tests in: " + filename)
+                if verbose:
+                    print("\nRunning grammar tests from: " + filename)
                 errata = grammar_unit(os.path.join(directory, filename),
-                                      parser_factory, transformer_factory)
+                                      parser_factory, transformer_factory, verbose)
                 if errata:
                     all_errors[filename] = errata
             except ValueError as e:
@@ -284,7 +305,7 @@ def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown
             for error in all_errors[filename]:
                 error_report.append('\t' + '\n\t'.join(error.split('\n')))
     if error_report:
-        return ('Test suite "%s" revealed some errors:\n' %directory) + '\n'.join(error_report)
+        return ('Test suite "%s" revealed some errors:\n' % directory) + '\n'.join(error_report)
     return ''
 
 
