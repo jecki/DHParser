@@ -78,8 +78,9 @@ __all__ = ['ScannerFunc',
            'RE',
            'Token',
            'mixin_comment',
-           'UnaryOperator',
-           'NaryOperator',
+           # 'UnaryOperator',
+           # 'NaryOperator',
+           'Synonym',
            'Optional',
            'ZeroOrMore',
            'OneOrMore',
@@ -737,6 +738,24 @@ class NaryOperator(Parser):
                 parser.apply(func)
 
 
+class Synonym(UnaryOperator):
+    """Simply calls another parser and encapsulates the result in
+    another node if that parser matches.
+
+    This parser is needed to support synonyms in EBNF, e.g.
+        jahr       = JAHRESZAHL
+        JAHRESZAHL = /\d\d\d\d/
+    Otherwise the first line could not be represented by any parser
+    class, in which case it would be unclear whether the parser
+    RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'
+    """
+    def __call__(self, text: str) -> Tuple[Node, str]:
+        node, text = self.parser(text)
+        if node:
+            return Node(self, node), text
+        return None, text
+
+
 class Optional(UnaryOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Optional, self).__init__(parser, name)
@@ -1141,8 +1160,7 @@ class Compiler:
         else:
             compiler = self.__getattribute__(self.derive_method_name(elem))
             result = compiler(node)
-            for child in node.children:
-                node.error_flag = node.error_flag or child.error_flag
+            node.propagate_error_flags()
             return result
 
 

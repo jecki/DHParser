@@ -28,7 +28,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import is_logging
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_scanner
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
-from DHParser.dsl import compileEBNF, compileDSL, parser_factory
+from DHParser.dsl import CompilationError, compileDSL, parser_factory
 
 
 class TestDirectives:
@@ -344,6 +344,29 @@ class TestBoundaryCases:
         self.tr(t)
         r = self.cp(t)
         assert r
+
+    def test_unconnected_symbols(self):
+        ebnf = """root = /.*/
+                  unconnected = /.*/
+        """
+        try:
+            grammar = parser_factory(ebnf)()
+            assert False, "EBNF compiler should complain about unconnected rules."
+        except CompilationError as err:
+            grammar = err.result
+        assert grammar.__dict__['root']
+        assert grammar.__dict__['unconnected']
+
+
+class TestSynonymDetection:
+    def test_synonym_detection(self):
+        ebnf = """a = b
+                  b = /b/
+        """
+        grammar = parser_factory(ebnf)()
+        assert grammar['a'].name == 'a', grammar['a'].name
+        assert grammar['b'].name == 'b', grammar['b'].name
+        assert grammar('b').as_sexpr().count('b') == 2
 
 
 if __name__ == "__main__":

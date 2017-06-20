@@ -16,13 +16,13 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+from collections import OrderedDict
 import keyword
-
 try:
     import regex as re
 except ImportError:
     import re
-from typing import Callable, List, Set, Tuple
+from typing import Callable, Dict, List, Set, Tuple
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
@@ -291,7 +291,7 @@ def get_compiler(grammar_name="{NAME}", grammar_source="") -> {NAME}Compiler:
 
 class EBNFCompilerError(Exception):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
-    in the strict sense, see `CompilationError` below)"""
+    in the strict sense, see `CompilationError` in module ``dsl.py``)"""
     pass
 
 
@@ -318,10 +318,11 @@ class EBNFCompiler(Compiler):
 
     def _reset(self):
         self._result = ''           # type: str
-        self.rules = set()          # type: Set[str]
+        self.rules = OrderedDict()  # type: OrderedDict[str, List[Node]]
+        self.current_symbols = []   # type: List[Node]
+        self.symbols = {}           # type: Dict[str, Node]
         self.variables = set()      # type: Set[str]
-        self.symbol_nodes = []      # type: List[Node]
-        self.definition_names = []  # type: List[str]
+        # self.definition_names = []  # type: List[str]
         self.recursive = set()      # type: Set[str]
         self.root = ""              # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
@@ -340,7 +341,7 @@ class EBNFCompiler(Compiler):
                + SCANNER_FACTORY.format(NAME=self.grammar_name)
 
     def gen_transformer_skeleton(self) -> str:
-        if not self.definition_names:
+        if not self.rules:
             raise EBNFCompilerError('Compiler must be run before calling '
                                     '"gen_transformer_Skeleton()"!')
         tt_name = self.grammar_name + '_AST_transformation_table'
@@ -348,7 +349,7 @@ class EBNFCompiler(Compiler):
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
-        for name in self.definition_names:
+        for name in self.rules:
             transtable.append('    "' + name + '": no_transformation,')
         transtable += ['    "*": no_transformation', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
@@ -356,7 +357,7 @@ class EBNFCompiler(Compiler):
         return '\n'.join(transtable)
 
     def gen_compiler_skeleton(self) -> str:
-        if not self.definition_names:
+        if not self.rules:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
         compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
@@ -368,7 +369,7 @@ class EBNFCompiler(Compiler):
                     '        super(' + self.grammar_name +
                     'Compiler, self).__init__(grammar_name, grammar_source)',
                     "        assert re.match('\w+\Z', grammar_name)", '']
-        for name in self.definition_names:
+        for name in self.rules:
             method_name = Compiler.derive_method_name(name)
             if name == self.root:
                 compiler += ['    def ' + method_name + '(self, node):',
@@ -387,7 +388,6 @@ class EBNFCompiler(Compiler):
                 if definitions[i][0] in self.variables:
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
 
-        self.definition_names = [defn[0] for defn in definitions]
         definitions.append(('wspR__', self.WHITESPACE_KEYWORD
                             if 'right' in self.directives['literalws'] else "''"))
         definitions.append(('wspL__', self.WHITESPACE_KEYWORD
@@ -417,12 +417,6 @@ class EBNFCompiler(Compiler):
                 declarations = declarations[:-1]
         declarations.append('"""')
 
-        # add default functions for filter filters of pop or retrieve operators
-
-        # for symbol, fun in self.directives['filter']:
-        #     declarations.append(symbol + '_filter = lambda value: value.replace("(", ")")'
-        #                         '.replace("[", "]").replace("{", "}").replace(">", "<")')
-
         # turn definitions into declarations in reverse order
 
         self.root = definitions[0][0] if definitions else ""
@@ -434,11 +428,31 @@ class EBNFCompiler(Compiler):
                 declarations += [symbol + '.set(' + statement + ')']
             else:
                 declarations += [symbol + ' = ' + statement]
-        known_symbols = self.rules | self.RESERVED_SYMBOLS
-        for nd in self.symbol_nodes:
-            if nd.result not in known_symbols:
-                nd.add_error("Missing production for symbol '%s'" % nd.result)
+
+        # check for symbols used but never defined
+
+        defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
+        for symbol in self.symbols:
+            if symbol not in defined_symbols:
+                self.symbols[symbol].add_error("Missing definition for symbol '%s'" % symbol)
                 root_node.error_flag = True
+
+        # check for unconnected rules
+
+        defined_symbols.difference_update(self.RESERVED_SYMBOLS)
+
+        def remove_connections(symbol):
+            if symbol in defined_symbols:
+                defined_symbols.remove(symbol)
+                for related in self.rules[symbol][1:]:
+                    remove_connections(str(related))
+        remove_connections(self.root)
+        for leftover in defined_symbols:
+            self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
+                                               'root "%s"') % (leftover, self.root))
+
+        # set root parser and assemble python grammar definition
+
         if self.root and 'root__' not in self.rules:
             declarations.append('root__ = ' + self.root)
         declarations.append('')
@@ -466,7 +480,7 @@ class EBNFCompiler(Compiler):
         return self.assemble_parser(definitions, node)
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
-        rule = str(node.children[0])  # cast(str, node.children[0].result)
+        rule = str(node.children[0])
         if rule in self.rules:
             node.add_error('A rule with name "%s" has already been defined.' % rule)
         elif rule in EBNFCompiler.RESERVED_SYMBOLS:
@@ -479,13 +493,17 @@ class EBNFCompiler(Compiler):
                            'a scanner token.' % rule)
         elif keyword.iskeyword(rule):
             node.add_error('Python keyword "%s" may not be used as a symbol. '
-                           % rule + '(This may change in the furute.)')
+                           % rule + '(This may change in the future.)')
         try:
-            self.rules.add(rule)
+            self.current_symbols = [node]
+            self.rules[rule] = self.current_symbols
             defn = self._compile(node.children[1])
             if rule in self.variables:
                 defn = 'Capture(%s)' % defn
                 self.variables.remove(rule)
+            elif defn.find("(") < 0:
+                # assume it's a synonym, like 'page = REGEX_PAGE_NR'
+                defn = 'Synonym(%s)' % defn
         except TypeError as error:
             errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
             node.add_error(errmsg)
@@ -622,21 +640,23 @@ class EBNFCompiler(Compiler):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
-    def on_symbol(self, node: Node) -> str:
-        result = str(node)  # ; assert result == cast(str, node.result)
-        if result in self.directives['tokens']:
-            return 'ScannerToken("' + result + '")'
+    def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
+        symbol = str(node)  # ; assert result == cast(str, node.result)
+        if symbol in self.directives['tokens']:
+            return 'ScannerToken("' + symbol + '")'
         else:
-            self.symbol_nodes.append(node)
-            if result in self.rules:
-                self.recursive.add(result)
-            return result
+            self.current_symbols.append(node)
+            if symbol not in self.symbols:
+                self.symbols[symbol] = node
+            if symbol in self.rules:
+                self.recursive.add(symbol)
+            return symbol
 
     def on_literal(self, node) -> str:
         return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
 
     def on_regexp(self, node: Node) -> str:
-        rx = str(node)  # ; assert rx == cast(str, node.result)
+        rx = str(node)
         name = []   # type: List[str]
         if rx[:2] == '~/':
             if not 'left' in self.directives['literalws']:

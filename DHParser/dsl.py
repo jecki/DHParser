@@ -73,7 +73,7 @@ except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename, load_if_file    
 from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \\
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     nop_filter, counterpart_filter, accumulating_filter, ScannerFunc
@@ -128,11 +128,12 @@ class CompilationError(Exception):
     contains errors.
     """
 
-    def __init__(self, error_messages, dsl_text, dsl_grammar, AST):
+    def __init__(self, error_messages, dsl_text, dsl_grammar, AST, result):
         self.error_messages = error_messages
         self.dsl_text = dsl_text
         self.dsl_grammar = dsl_grammar
         self.AST = AST
+        self.result = result
 
     def __str__(self):
         return '\n'.join(self.error_messages)
@@ -163,7 +164,6 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             parser_root = grammar_representation
         else:
             # assume ``grammar_representation`` is a grammar class and get the root object
-            # TODO: further case: grammar_representation is a method
             parser_root = grammar_representation()
     return parser_root, grammar_src
 
@@ -188,7 +188,7 @@ def compileDSL(text_or_file: str,
                                          ast_transformation, compiler)
     if errors:
         src = load_if_file(text_or_file)
-        raise CompilationError(errors, src, grammar_src, AST)
+        raise CompilationError(errors, src, grammar_src, AST, result)
     return result
 
 
