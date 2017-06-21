@@ -87,7 +87,7 @@ def mock_syntax_tree(sexpr):
     return Node(MockParser(name, ':' + class_name), result)
 
 
-def recompile_grammar(ebnf_filename):
+def recompile_grammar(ebnf_filename, force=False):
     """Recompiles an ebnf-grammar if necessary, that is if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
@@ -97,17 +97,19 @@ def recompile_grammar(ebnf_filename):
             grammar. In case this is a directory and not a file all
             files within this directory ending with .ebnf will be 
             compiled.
+        force(bool):  If False (default), the grammar will only be
+            recompiled if it has been changed.
     """
     if os.path.isdir(ebnf_filename):
         for entry in os.listdir(ebnf_filename):
             if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
-                recompile_grammar(entry)
+                recompile_grammar(entry, force)
         return
 
     base, ext = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
     errors = []
-    if (not os.path.exists(compiler_name) or
+    if (not os.path.exists(compiler_name) or force or
         grammar_changed(compiler_name, ebnf_filename)):
         # print("recompiling parser for: " + ebnf_filename)
         errors = compile_on_disk(ebnf_filename)

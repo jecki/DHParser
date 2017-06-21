@@ -25,10 +25,10 @@ from multiprocessing import Pool
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging
+from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_scanner
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
-from DHParser.dsl import CompilationError, compileDSL, parser_factory
+from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, parser_factory
 
 
 class TestDirectives:
@@ -281,8 +281,6 @@ class TestSelfHosting:
         repetition =  "{" expression §"}"
         option     =  "[" expression §"]"
 
-        link       = regexp | symbol | literal           # semantic restriction: symbol must evaluate to a regexp or chain
-
         symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
         literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                     | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
@@ -353,9 +351,22 @@ class TestBoundaryCases:
             grammar = parser_factory(ebnf)()
             assert False, "EBNF compiler should complain about unconnected rules."
         except CompilationError as err:
-            grammar = err.result
-        assert grammar.__dict__['root']
-        assert grammar.__dict__['unconnected']
+            grammar_src = err.result
+            grammar = compile_python_object(DHPARSER_IMPORTS + grammar_src,
+                                            'get_(?:\w+_)?grammar$')()
+        assert grammar['root'], "Grammar objects should be subscriptable by parser names!"
+        try:
+            unconnected = grammar['unconnected']
+            assert False, "Grammar objects should raise a KeyError if subscripted by " \
+                          "names of parsers that are unconnected to the root parser!"
+        except KeyError:
+            pass
+        try:
+            nonexistant = grammar['nonexistant']
+            assert False, "Grammar object shoul raise a KeyError if subscripted by " \
+                          "a non-existant parser name!"
+        except KeyError:
+            pass
 
 
 class TestSynonymDetection:

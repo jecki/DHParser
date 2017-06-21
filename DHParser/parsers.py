@@ -345,7 +345,14 @@ class Grammar:
         self.root__.apply(self._add_parser)
 
     def __getitem__(self, key):
-        return getattr(self, key)
+        try:
+            return self.__dict__[key]
+        except KeyError:
+            parser = getattr(self, key, None)
+            if parser:
+                raise KeyError(('Parser "%s" inaccesible, because it is not connected '
+                                'to the root parser "%s" !') % (key,  self.root__.name))
+            raise KeyError('Unknown parser "%s" !' % key)
 
     def _reset(self):
         # variables stored and recalled by Capture and Retrieve parsers

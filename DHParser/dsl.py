@@ -127,7 +127,6 @@ class CompilationError(Exception):
     """Raised when a string or file in a domain specific language (DSL)
     contains errors.
     """
-
     def __init__(self, error_messages, dsl_text, dsl_grammar, AST, result):
         self.error_messages = error_messages
         self.dsl_text = dsl_text
