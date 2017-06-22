@@ -25,7 +25,7 @@ except ImportError:
     import re
 from typing import Callable, Dict, List, Set, Tuple
 
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, warnings
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     ScannerFunc
@@ -329,8 +329,9 @@ class EBNFCompiler(Compiler):
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
                            'literalws': ['right'],
-                           'tokens': set(),  # alt. 'scanner_tokens'
-                           'filter': dict()}  # alt. 'filter'
+                           'tokens': set(),     # alt. 'scanner_tokens'
+                           'filter': dict(),    # alt. 'filter'
+                           'testing': False }
 
     @property
     def result(self) -> str:
@@ -408,7 +409,7 @@ class EBNFCompiler(Compiler):
                         'r"""Parser for ' + article + self.grammar_name +
                         ' source file' +
                         (', with this grammar:' if self.grammar_source else '.')]
-        definitions.append(('parser_initialization__', '"upon instatiation"'))
+        definitions.append(('parser_initialization__', '"upon instantiation"'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -440,7 +441,7 @@ class EBNFCompiler(Compiler):
 
         # check for unconnected rules
 
-        if warnings():
+        if not self.directives['testing']:
             defined_symbols.difference_update(self.RESERVED_SYMBOLS)
 
             def remove_connections(symbol):
@@ -452,7 +453,8 @@ class EBNFCompiler(Compiler):
             remove_connections(self.root)
             for leftover in defined_symbols:
                 self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
-                                                   'root "%s"') % (leftover, self.root))
+                    'root "%s" !') % (leftover, self.root) + ' (Use directive "@testing=True" '
+                    'to supress this error message.)')
 
         # set root parser and assemble python grammar definition
 
@@ -528,8 +530,9 @@ class EBNFCompiler(Compiler):
         return rx
 
     def on_directive(self, node: Node) -> str:
-        key = str(node.children[0]).lower()  # cast(str, node.children[0].result).lower()
+        key = str(node.children[0]).lower()
         assert key not in self.directives['tokens']
+
         if key in {'comment', 'whitespace'}:
             if node.children[1].parser.name == "list_":
                 if len(node.children[1].result) != 1:
@@ -553,6 +556,10 @@ class EBNFCompiler(Compiler):
                     node.add_error("Implicit whitespace should always match the empty string, "
                                    "/%s/ does not." % value)
             self.directives[key] = value
+
+        elif key == 'testing':
+            value = str(node.children[1])
+            self.directives['testing'] = value.lower() not in {"off", "false", "no"}
 
         elif key == 'literalws':
             value = {item.lower() for item in self._compile(node.children[1])}

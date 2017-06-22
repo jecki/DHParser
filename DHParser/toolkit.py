@@ -45,8 +45,8 @@ __all__ = ['logging',
            'is_logging',
            'log_dir',
            'logfile_basename',
-           'supress_warnings',
-           'warnings',
+           # 'supress_warnings',
+           # 'warnings',
            'line_col',
            'error_messages',
            'compact_sexpr',
@@ -127,24 +127,24 @@ def is_logging() -> bool:
         return False
 
 
-@contextlib.contextmanager
-def supress_warnings(supress: bool = True):
-    global SUPRESS_WARNINGS
-    try:
-        save = SUPRESS_WARNINGS
-    except NameError:
-        save = False  # global default for warning supression is False
-    SUPRESS_WARNINGS = supress
-    yield
-    SUPRESS_WARNINGS = save
-
-
-def warnings() -> bool:
-    global SUPRESS_WARNINGS
-    try:
-        return not SUPRESS_WARNINGS
-    except NameError:
-        return True
+# @contextlib.contextmanager
+# def supress_warnings(supress: bool = True):
+#     global SUPRESS_WARNINGS
+#     try:
+#         save = SUPRESS_WARNINGS
+#     except NameError:
+#         save = False  # global default for warning supression is False
+#     SUPRESS_WARNINGS = supress
+#     yield
+#     SUPRESS_WARNINGS = save
+#
+#
+# def warnings() -> bool:
+#     global SUPRESS_WARNINGS
+#     try:
+#         return not SUPRESS_WARNINGS
+#     except NameError:
+#         return True
 
 
 def line_col(text: str, pos: int) -> Tuple[int, int]:

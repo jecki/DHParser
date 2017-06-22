@@ -26,7 +26,7 @@ from multiprocessing import Pool
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging, compile_python_object, supress_warnings
+from DHParser.toolkit import is_logging, compile_python_object
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_scanner
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, parser_factory
@@ -349,8 +349,7 @@ class TestBoundaryCases:
                   unconnected = /.*/
         """
         try:
-            with supress_warnings(False):
-                grammar = parser_factory(ebnf)()
+            grammar = parser_factory(ebnf)()
             assert False, "EBNF compiler should complain about unconnected rules."
         except CompilationError as err:
             grammar_src = err.result
@@ -367,6 +366,12 @@ class TestBoundaryCases:
                           "a non-existant parser name!"
         except KeyError:
             pass
+        ebnf_testing = "@testing = True\n" + ebnf
+        try:
+            grammar = parser_factory(ebnf_testing)()
+        except CompilationError:
+            assert False, "EBNF compiler should not complain about unconnected " \
+                          "rules when directive @testing is set."
 
 
 class TestSynonymDetection:

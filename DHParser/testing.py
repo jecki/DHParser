@@ -30,7 +30,7 @@ from DHParser import Node, error_messages
 from DHParser.toolkit import compact_sexpr, is_logging
 from DHParser.syntaxtree import MockParser
 from DHParser.ebnf import grammar_changed
-from DHParser.dsl import compile_on_disk
+from DHParser.dsl import CompilationError, compile_on_disk
 
 
 def mock_syntax_tree(sexpr):
@@ -87,7 +87,7 @@ def mock_syntax_tree(sexpr):
     return Node(MockParser(name, ':' + class_name), result)
 
 
-def recompile_grammar(ebnf_filename, force=False):
+def recompile_grammar(ebnf_filename, force=False) -> bool:
     """Recompiles an ebnf-grammar if necessary, that is if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
@@ -101,10 +101,11 @@ def recompile_grammar(ebnf_filename, force=False):
             recompiled if it has been changed.
     """
     if os.path.isdir(ebnf_filename):
+        success = True
         for entry in os.listdir(ebnf_filename):
             if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
-                recompile_grammar(entry, force)
-        return
+                success = success and recompile_grammar(entry, force)
+        return success
 
     base, ext = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
@@ -119,14 +120,11 @@ def recompile_grammar(ebnf_filename, force=False):
                 for e in errors:
                     f.write(e)
                     f.write('\n')
+            return False
 
-    if not errors:
-        if os.path.exists(base + '_errors.txt'):
-            # if query_remove_error_files:
-            #     answer = input('Remove obsolete file ' + base + '_errors.txt (y/n)? ').lower()
-            #     if answer not in {'y', 'yes'}:
-            #         return
-            os.remove(base + '_errors.txt')
+    if not errors and os.path.exists(base + '_errors.txt'):
+        os.remove(base + '_errors.txt')
+    return True
 
 
 UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}

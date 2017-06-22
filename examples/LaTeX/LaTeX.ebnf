@@ -1,5 +1,6 @@
 # latex Grammar
 
+@ testing    = True
 @ whitespace = /[ \t]*\n?(?!\s*\n)[ \t]*/  # whitespace, including at most one linefeed
 @ comment    = /%.*(?:\n|$)/
 
