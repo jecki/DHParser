@@ -328,7 +328,12 @@ class Grammar:
         self.dirty_flag = False
         self.history_tracking = False
         self._reset()
-        self._assign_parser_names()  # prepare class first
+        # prepare parsers in the class, first
+        self._assign_parser_names()
+        # then deep-copy the parser tree from class to instance;
+        # parsers not connected to the root object will be copied later
+        # on demand (see Grammar.__getitem__()). Usually, the need to
+        # do so only arises during testing.
         self.root__ = root if root else copy.deepcopy(self.__class__.root__)
         if self.wspL__:
             self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
@@ -350,8 +355,14 @@ class Grammar:
         except KeyError:
             parser = getattr(self, key, None)
             if parser:
-                raise KeyError(('Parser "%s" inaccesible, because it is not connected '
-                                'to the root parser "%s" !') % (key,  self.root__.name))
+                # if toolkit.warnings():
+                #     raise KeyError(('Parser "%s" inaccesible, because it is not connected '
+                #                     'to the root parser "%s" !') % (key,  self.root__.name))
+                print('Parser "%s" not connected to root parser.' % key)
+                # add parser to grammar object on the fly...
+                setattr(self, key, copy.deepcopy(parser))
+                self[key].apply(self._add_parser)  # might become a problem with all_parsers
+                return self[key]
             raise KeyError('Unknown parser "%s" !' % key)
 
     def _reset(self):
@@ -369,7 +380,7 @@ class Grammar:
 
     # TODO: Either make sure not to miss out unconnected parsers or raise an error! Actually, the EBNF-Compiler should keep track of this!
     def _add_parser(self, parser: Parser) -> None:
-        """Adds the copy of the classes parser object to this
+        """Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
         if parser.name:

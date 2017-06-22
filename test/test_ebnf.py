@@ -20,12 +20,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import sys
 from functools import partial
 from multiprocessing import Pool
-import sys
+
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging, compile_python_object
+from DHParser.toolkit import is_logging, compile_python_object, supress_warnings
 from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_scanner
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, parser_factory
@@ -348,7 +349,8 @@ class TestBoundaryCases:
                   unconnected = /.*/
         """
         try:
-            grammar = parser_factory(ebnf)()
+            with supress_warnings(False):
+                grammar = parser_factory(ebnf)()
             assert False, "EBNF compiler should complain about unconnected rules."
         except CompilationError as err:
             grammar_src = err.result
@@ -357,10 +359,8 @@ class TestBoundaryCases:
         assert grammar['root'], "Grammar objects should be subscriptable by parser names!"
         try:
             unconnected = grammar['unconnected']
-            assert False, "Grammar objects should raise a KeyError if subscripted by " \
-                          "names of parsers that are unconnected to the root parser!"
         except KeyError:
-            pass
+            assert False, "Grammar objects should be able to cope with unconnected parsers!"
         try:
             nonexistant = grammar['nonexistant']
             assert False, "Grammar object shoul raise a KeyError if subscripted by " \

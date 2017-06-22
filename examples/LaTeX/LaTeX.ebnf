@@ -6,7 +6,7 @@
 latexdoc   = preamble document
 preamble   = { command }+
 
-document   = [PARSEP] sequence [PARSEP] §EOF
+document   = [PARSEP] { [PARSEP] paragraph } §EOF
 
 genericenv = beginenv sequence §endenv
 beginenv   = "\begin" §( "{" NAME "}" )
