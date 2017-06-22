@@ -237,9 +237,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, verbose=False):
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
             if cst.error_flag:
-                errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\t%s' %
+                errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                               '\n\t'.join(error_messages(test_code, cst.collect_errors()))))
+                               '\n\t'.join(m.replace('\n', '\n\t\t') for m in
+                                           error_messages(test_code, cst.collect_errors()))))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                     errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %

@@ -487,7 +487,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
         str: An error message including the call stack if history 
         tacking has been turned in the grammar object.
     """
-    msg = ["DSL parser specification error:", error_str, "caught by parser", str(parser)]
+    msg = ["DSL parser specification error:", error_str, 'Caught by parser "%s".' % str(parser)]
     if parser.grammar.history:
         msg.extend(["\nCall stack:", parser.grammar.history[-1].stack])
     else:
@@ -768,7 +768,7 @@ class Optional(UnaryOperator):
         super(Optional, self).__init__(parser, name)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Optional), \
-            "Nesting options would be redundant: %s(%s)" % \
+            "Redundant nesting of options: %s(%s)" % \
             (str(name), str(parser.name))
         assert not isinstance(parser, Required), \
             "Nesting options with required elements is contradictory: " \

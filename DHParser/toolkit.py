@@ -45,6 +45,8 @@ __all__ = ['logging',
            'is_logging',
            'log_dir',
            'logfile_basename',
+           'supress_warnings',
+           'warnings',
            'line_col',
            'error_messages',
            'compact_sexpr',
@@ -97,7 +99,7 @@ def log_dir() -> str:
 
 
 @contextlib.contextmanager
-def logging(dirname="LOGS"):
+def logging(dirname: str = "LOGS"):
     """Context manager. Log files within this context will be stored in
     directory ``dirname``. Logging is turned off if name is empty.
     
@@ -116,13 +118,33 @@ def logging(dirname="LOGS"):
     LOGGING = save
 
 
-def is_logging():
+def is_logging() -> bool:
     """-> True, if logging is turned on."""
     global LOGGING
     try:
         return bool(LOGGING)
     except NameError:
         return False
+
+
+@contextlib.contextmanager
+def supress_warnings(supress: bool = True):
+    global SUPRESS_WARNINGS
+    try:
+        save = SUPRESS_WARNINGS
+    except NameError:
+        save = False  # global default for warning supression is False
+    SUPRESS_WARNINGS = supress
+    yield
+    SUPRESS_WARNINGS = save
+
+
+def warnings() -> bool:
+    global SUPRESS_WARNINGS
+    try:
+        return not SUPRESS_WARNINGS
+    except NameError:
+        return True
 
 
 def line_col(text: str, pos: int) -> Tuple[int, int]:

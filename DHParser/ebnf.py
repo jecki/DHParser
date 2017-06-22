@@ -16,15 +16,16 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-from collections import OrderedDict
 import keyword
+from collections import OrderedDict
+
 try:
     import regex as re
 except ImportError:
     import re
 from typing import Callable, Dict, List, Set, Tuple
 
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, warnings
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
     Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     ScannerFunc
@@ -439,17 +440,19 @@ class EBNFCompiler(Compiler):
 
         # check for unconnected rules
 
-        defined_symbols.difference_update(self.RESERVED_SYMBOLS)
+        if warnings():
+            defined_symbols.difference_update(self.RESERVED_SYMBOLS)
 
-        def remove_connections(symbol):
-            if symbol in defined_symbols:
-                defined_symbols.remove(symbol)
-                for related in self.rules[symbol][1:]:
-                    remove_connections(str(related))
-        remove_connections(self.root)
-        for leftover in defined_symbols:
-            self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
-                                               'root "%s"') % (leftover, self.root))
+            def remove_connections(symbol):
+                if symbol in defined_symbols:
+                    defined_symbols.remove(symbol)
+                    for related in self.rules[symbol][1:]:
+                        remove_connections(str(related))
+
+            remove_connections(self.root)
+            for leftover in defined_symbols:
+                self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
+                                                   'root "%s"') % (leftover, self.root))
 
         # set root parser and assemble python grammar definition
 

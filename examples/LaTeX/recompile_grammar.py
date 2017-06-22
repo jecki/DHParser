@@ -25,4 +25,7 @@ import sys
 sys.path.extend(['../../', '../', './'])
 
 from DHParser.testing import recompile_grammar
-recompile_grammar('.', True)
+from DHParser.toolkit import supress_warnings
+
+with supress_warnings(True):
+    recompile_grammar('.', True)
