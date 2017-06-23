@@ -358,10 +358,10 @@ class Grammar:
                 # if toolkit.warnings():
                 #     raise KeyError(('Parser "%s" inaccesible, because it is not connected '
                 #                     'to the root parser "%s" !') % (key,  self.root__.name))
-                print('Parser "%s" not connected to root parser.' % key)
+                # print('Parser "%s" not connected to root parser.' % key)
                 # add parser to grammar object on the fly...
                 setattr(self, key, copy.deepcopy(parser))
-                self[key].apply(self._add_parser)  # might become a problem with all_parsers
+                self[key].apply(self._add_parser)
                 return self[key]
             raise KeyError('Unknown parser "%s" !' % key)
 
@@ -1204,7 +1204,7 @@ def compile_source(source: str,
         transformer (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
-        compiler (function): A compiler function or compiler class
+compiler (function): A compiler function or compiler class
             instance 
 
     Returns (tuple):
