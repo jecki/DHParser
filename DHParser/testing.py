@@ -214,6 +214,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         unit_dir, unit_name = os.path.split(os.path.splitext(test_unit)[0])
         test_unit = unit_from_file(test_unit)
     else:
+        unit_dir = ""
         unit_name = str(id(test_unit))
     if verbose:
         print("\nUnit: " + unit_name)

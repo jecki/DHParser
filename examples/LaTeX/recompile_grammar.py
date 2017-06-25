@@ -24,7 +24,9 @@ import sys
 
 sys.path.extend(['../../', '../', './'])
 
+from DHParser.toolkit import logging
 from DHParser.testing import recompile_grammar
 
-if not recompile_grammar('.', True):
-    sys.exit(1)
+with logging():
+    if not recompile_grammar('.', True):
+        sys.exit(1)

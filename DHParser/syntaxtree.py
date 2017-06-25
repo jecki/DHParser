@@ -191,11 +191,11 @@ class Node:
         self._result = ''  # type: StrictResultType
         self._errors = []  # type: List[str]
         self._children = ()  # type: Tuple['Node', ...]
+        self.result = result
         self._len = len(self.result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
         # self.pos: int  = 0  # continuous updating of pos values
         self._pos = -1  # type: int
-        self.result = result
         self.parser = parser or ZOMBIE_PARSER
         self.error_flag = any(r.error_flag for r in self.children) \
             if self.children else False  # type: bool

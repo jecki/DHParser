@@ -23,7 +23,7 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import traverse, reduce_single_child, \
+from DHParser.syntaxtree import Node, traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables, TOKEN_PTYPE
 from DHParser.testing import mock_syntax_tree
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -98,6 +98,19 @@ class TestNode:
         transform(tree)
         res4 = compiler(tree)
         assert res4 == res3
+
+    def test_len_and_pos(self):
+        """Test len-property of Node."""
+        nd1 = Node(None, "123")
+        assert nd1.len == 3, "Expected Node.len == 3, got %i" % nd1.len
+        nd2 = Node(None, "456")
+        assert nd2.len == 3, "Expected Node.len == 3, got %i" % nd1.len
+        nd = Node(None, (nd1, nd2))
+        assert nd.len == 6, "Expected Node.len == 6, got %i" % nd.len
+        nd.pos = 0
+        assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
+        assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
+        assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
 
 
 class TestErrorHandling:
