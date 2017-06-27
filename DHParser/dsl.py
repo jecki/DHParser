@@ -24,7 +24,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import Any, cast, Tuple, Union
+from .typing import Any, cast, Tuple, Union
 
 from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
     get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \

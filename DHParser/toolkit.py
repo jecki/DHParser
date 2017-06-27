@@ -38,7 +38,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import List, Tuple
+from .typing import List, Tuple
 
 
 __all__ = ['logging',
@@ -169,7 +169,7 @@ def error_messages(source_text, errors) -> List[str]:
         a list that contains all error messages in string form. Each
         string starts with "line: [Line-No], column: [Column-No]
     """
-    return ["line: %i, column: %i, error: %s" % (*line_col(source_text, err.pos), err.msg)
+    return ["line: %i, column: %i" % line_col(source_text, err.pos) + ", error: %s" % err.msg
             for err in sorted(list(errors))]
 
 

@@ -13,6 +13,19 @@ License
 
 DHParser is open source software under the [MIT License](https://opensource.org/licenses/MIT)
 
+**Exception**: The module ``DHParser/typing.py`` was directly taken from the
+Python 3.5 source code in order for DHParser to be backwards compatible
+with Python 3.4. The module ``DHParser/typing.py`` is licensed under the
+[Python Software Foundation License Version 2](https://docs.python.org/3.5/license.html)
+
+
+Sources
+-------
+
+Find the sources on [gitlab.lrz.de/badw-it/DHParser](https://gitlab.lrz.de/badw-it/) . 
+Get them with:
+    
+    git clone https://gitlab.lrz.de/badw-it/DHParser
 
 
 Purpose

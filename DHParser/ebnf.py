@@ -23,7 +23,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import Callable, Dict, List, Set, Tuple
+from .typing import Callable, Dict, List, Set, Tuple
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \

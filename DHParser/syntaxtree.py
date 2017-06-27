@@ -27,7 +27,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Iterator, List, \
+from .typing import AbstractSet, Any, ByteString, Callable, cast, Container, Iterator, List, \
     NamedTuple, Sequence, Union, Text, Tuple
 
 from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
@@ -338,7 +338,7 @@ class Node:
             s = '(' + node.tag_name
             # s += " '(pos %i)" % node.pos
             if src:
-                s += " '(pos %i  %i %i)" % (node.pos, *line_col(src, node.pos))
+                s += " '(pos %i " % node.pos + " %i %i)" % line_col(src, node.pos)
             if node.errors:
                 s += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
                                                 for err in node.errors)

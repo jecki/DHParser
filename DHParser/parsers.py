@@ -57,7 +57,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
+from .typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
@@ -851,7 +851,7 @@ class Sequence(NaryOperator):
         return Node(self, results), text_
 
     def __add__(self, other: 'Sequence') -> 'Sequence':
-        return Sequence(*self.parsers, other)
+        return Sequence(*(self.parsers + (other,)))
 
     def __radd__(self, other: 'Sequence') -> 'Sequence':
         return Sequence(other, *self.parsers)
@@ -896,7 +896,7 @@ class Alternative(NaryOperator):
         return None, text
 
     def __or__(self, other):
-        return Alternative(*self.parsers, other)
+        return Alternative(*(self.parsers + (other,)))
 
     def __ror__(self, other):
         return Alternative(other, *self.parsers)
