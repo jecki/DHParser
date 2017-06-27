@@ -1,4 +1,4 @@
-DHParser Version 0.7.1 (27.6.2017)
+DHParser Version 0.7.3 (27.6.2017)
 ..................................
 
 - bug fixes for setuptools packaging
