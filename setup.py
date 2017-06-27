@@ -5,10 +5,10 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
     name='DHParser',
-    version='0.7.0',
+    version='0.7.1',
     packages=['DHParser'],
     url='https://gitlab.lrz.de/badw-it/DHParser',
-    license='APACHE 2.0 (http://www.apache.org/licenses/LICENSE-2.0)',
+    license='MIT License (https://opensource.org/licenses/MIT)',
     author='Eckhart Arnold',
     author_email='arnold@badw.de',
     description='DHParser - Domain specific languages for the Digital Humanities',
@@ -21,13 +21,14 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
-        'Programming Language :: Python :: Implementation :: Stackless',
         'Topic :: Text Processing :: Markup',
         'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Compilers'
     ]
 )
+

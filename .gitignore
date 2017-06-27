@@ -20,3 +20,4 @@ tmp/*
 test/tmp*
 build/
 dist/
+MANIFEST
