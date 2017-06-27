@@ -1,11 +1,14 @@
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup
+from DHParser.versionnumber import __version__
+
 
 with open('README.md', encoding='utf-8') as f:
     read_me = f.read()
 
 setup(
     name='DHParser',
-    version='0.7.1',
+    version=__version__,
     packages=['DHParser'],
     url='https://gitlab.lrz.de/badw-it/DHParser',
     license='MIT License (https://opensource.org/licenses/MIT)',

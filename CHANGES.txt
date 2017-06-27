@@ -1,3 +1,17 @@
+DHParser Version 0.7.1 (27.6.2017)
+..................................
+
+- bug fixes for setuptools packaging
+
+
+DHParser Version 0.7.1 (27.6.2017)
+..................................
+
+- first PyPI release
+- added type annotations for static type checking with mypy
+- many changes, some incompatible with prior versions
+
+
 DHParser Version 0.6.0 (23.4.2017)
 ..................................
 
