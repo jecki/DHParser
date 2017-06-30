@@ -1,0 +1,8 @@
+document       = { text | env }
+env            = (openenv | altopen) { text } [closeenv | altclose]
+openenv        = "\begin{" name "}"
+altopen        = "\begin{" name "*}"
+closeenv       = "\end{" ::name "}"
+altclose       = "\end{" ::name "*}"
+text           = /[^\\]+/
+name           = /\w+/

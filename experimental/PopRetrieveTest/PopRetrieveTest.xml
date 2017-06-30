@@ -19,6 +19,7 @@
                 </:Alternative>
                 <:Alternative>
                     <:Sequence>
+                        <:NegativeLookahead></:NegativeLookahead>
                         <delimiter_sign>
                             <:RegExp>``</:RegExp>
                         </delimiter_sign>

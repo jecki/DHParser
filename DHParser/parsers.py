@@ -204,7 +204,6 @@ def add_parser_guard(parser_func):
             node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
             node.add_error("maximum recursion depth of parser reached; "
                            "potentially due to too many errors!")
-            node.error_flag = True
             rest = ''
 
         return node, rest
@@ -355,10 +354,6 @@ class Grammar:
         except KeyError:
             parser = getattr(self, key, None)
             if parser:
-                # if toolkit.warnings():
-                #     raise KeyError(('Parser "%s" inaccesible, because it is not connected '
-                #                     'to the root parser "%s" !') % (key,  self.root__.name))
-                # print('Parser "%s" not connected to root parser.' % key)
                 # add parser to grammar object on the fly...
                 setattr(self, key, copy.deepcopy(parser))
                 self[key].apply(self._add_parser)
@@ -449,6 +444,9 @@ class Grammar:
             if rest:
                 stitches.append(Node(None, rest))
             result = Node(None, tuple(stitches))
+        if any(self.variables.values()):
+            result.add_error("Capture-retrieve-stack not empty after end of parsing: "
+                             + str(self.variables))
         result.pos = 0  # calculate all positions
         return result
 
@@ -478,7 +476,7 @@ class Grammar:
             full_history.append(line)
             if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
                 match_history.append(line)
-                if record.node.errors:
+                if record.node.error_flag:
                     errors_only.append(line)
         write_log(full_history, log_file_name + '_full')
         write_log(match_history, log_file_name + '_match')
@@ -842,9 +840,8 @@ class Sequence(NaryOperator):
         for parser in self.parsers:
             node, text_ = parser(text_)
             if not node:
-                return node, text
-            if node.result:  # Nodes with zero-length result are silently omitted
-                results += (node,)
+                return None, text
+            results += (node,)
             if node.error_flag:
                 break
         assert len(results) <= len(self.parsers)
@@ -1009,6 +1006,8 @@ class NegativeLookbehind(Lookbehind):
 
 
 class Capture(UnaryOperator):
+    """STILL EXPERIMENTAL!"""
+
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Capture, self).__init__(parser, name)
 
@@ -1025,50 +1024,54 @@ class Capture(UnaryOperator):
 RetrieveFilter = Callable[[List[str]], str]
 
 
-def nop_filter(stack: List[str]) -> str:
+def last_value(stack: List[str]) -> str:
     return stack[-1]
 
 
-def counterpart_filter(stack: List[str]) -> str:
+def counterpart(stack: List[str]) -> str:
     value = stack[-1]
     return value.replace("(", ")").replace("[", "]").replace("{", "}").replace(">", "<")
 
 
-def accumulating_filter(stack: List[str]) -> str:
-    return "".join(stack)
+def accumulate(stack: List[str]) -> str:
+    return "".join(stack) if len(stack) > 1 else stack[-1]  # provoke IndexError if stack empty
 
 
 class Retrieve(Parser):
+    """STILL EXPERIMENTAL!"""
     def __init__(self, symbol: Parser, filter: RetrieveFilter = None, name: str = '') -> None:
-        if not name:
-            name = symbol.name
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
-        self.filter = filter if filter else nop_filter
+        self.filter = filter if filter else last_value
 
     def __deepcopy__(self, memo):
         return self.__class__(self.symbol, self.filter, self.name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
+        return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
+
+    def call(self, text: str) -> Tuple[Node, str]:
         try:
             stack = self.grammar.variables[self.symbol.name]
             value = self.filter(stack)
-            self.pick_value(stack)
         except (KeyError, IndexError):
             return Node(self, '').add_error(dsl_error_msg(self,
-                "%s undefined or exhausted" % self.symbol.name)), text
+                                                          "'%s' undefined or exhausted." % self.symbol.name)), text
         if text.startswith(value):
             return Node(self, value), text[len(value):]
         else:
             return None, text
 
-    def pick_value(self, stack: List[str]) -> str:
-        return stack[-1]
-
 
 class Pop(Retrieve):
-    def pick_value(self, stack: List[str]) -> str:
-        return stack.pop()
+    """STILL EXPERIMENTAL!!!"""
+
+    def __call__(self, text: str) -> Tuple[Node, str]:
+        nd, txt = super(Pop, self).call(text)  # call() instead of __call__() to avoid parser guard
+        if nd and not nd.error_flag:
+            stack = self.grammar.variables[self.symbol.name]
+            stack.pop()
+        return nd, txt
 
 
 ########################################################################
@@ -1105,7 +1108,7 @@ class Forward(Parser):
 
     def set(self, parser: Parser):
         # assert isinstance(parser, Parser)
-        self.name = parser.name  # redundant, see Grammar-constructor
+        # self.name = parser.name  # redundant, see Grammar-constructor
         self.parser = parser
 
     def apply(self, func: Parser.ApplyFunc):

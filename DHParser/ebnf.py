@@ -196,8 +196,10 @@ def get_ebnf_grammar() -> EBNFGrammar:
 
 EBNF_transformation_table = {
     # AST Transformations for EBNF-grammar
-    "syntax":
+    "+":
         remove_expendables,
+    "syntax":
+        [],
     "directive, definition":
         remove_tokens('@', '='),
     "expression":
@@ -211,13 +213,13 @@ EBNF_transformation_table = {
     "oneormore, repetition, option, regexchain":
         [reduce_single_child, remove_enclosing_delimiters],
     "symbol, literal, regexp":
-        [remove_expendables, reduce_single_child],
+        [reduce_single_child],
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        [remove_expendables, reduce_single_child],
+        [reduce_single_child],
     "list_":
         [flatten, remove_tokens(',')],
     "*":
-        [remove_expendables, replace_by_single_child]
+        [replace_by_single_child]
 }
 
 

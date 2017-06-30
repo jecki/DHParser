@@ -1,0 +1,2 @@
+Environment \begin{env} inside \end{env*} should not fail
+Environment \begin{env*} inside should not leave any symbols on the stack

@@ -122,7 +122,7 @@ class TestPopRetrieve:
         text           = /[^`]+/ 
         """
     mini_lang2 = """
-        @braces_filter=counterpart_filter
+        @braces_filter=counterpart
         document       = { text | codeblock }
         codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
         braces         = opening_braces

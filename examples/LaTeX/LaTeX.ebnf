@@ -9,14 +9,16 @@ preamble   = { command }+
 
 document   = [PARSEP] { [PARSEP] paragraph } §EOF
 
-genericenv = beginenv sequence §endenv
-beginenv   = "\begin" §( "{" NAME "}" )
-endenv     = "\end" §( "{" ::NAME "}" )
+blockenv   = beginenv sequence §endenv
 
 parblock   = "{" sequence §"}"
 
 sequence   = { paragraph [PARSEP] }+
 paragraph  = { !blockcmd (command | block | text) }+
+
+inlineenv  = beginenv { command | block | text }+ endenv
+beginenv   = "\begin{" §NAME §"}"
+endenv     = "\end{" §::NAME §"}"
 
 command    = CMDNAME [ config ] block
 config     = "[" cfgtext §"]"
