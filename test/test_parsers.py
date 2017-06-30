@@ -27,7 +27,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import is_logging, logging, compile_python_object
 from DHParser.syntaxtree import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
-from DHParser.parsers import compile_source
+from DHParser.parsers import compile_source, Retrieve
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
 
@@ -147,6 +147,131 @@ class TestGrammar:
         parser("eine Zeile", "textzeile")
         parser("kein Haupt", "haupt")
         parser("so ist es richtig", "haupt")
+
+
+class TestPopRetrieve:
+    mini_language = """
+        document       = { text | codeblock }
+        codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
+        delimiter      = delimiter_sign  # never use delimiter between capture and retrieve!!!
+        delimiter_sign = /`+/
+        text           = /[^`]+/ 
+        """
+    mini_lang2 = """
+        @braces_filter=counterpart
+        document       = { text | codeblock }
+        codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
+        braces         = opening_braces
+        opening_braces = /\{+/
+        closing_braces = /\}+/
+        text           = /[^{}]+/
+        """
+    mini_lang3 = """
+        document       = { text | env }
+        env            = (specialtag | opentag) text [closespecial | closetag]
+        opentag        = "<" name ">"
+        specialtag     = "<" /ABC/ !name ">"
+        closetag       = close_slash | close_star 
+        close_slash    = "<" ::name "/>"
+        close_star     = "<" ::name "*>"
+        closespecial   = "<" /ABC/~ ">"
+        name           = /\w+/~
+        text           = /[^<>]+/
+        """
+
+    def setup(self):
+        self.minilang_parser = parser_factory(self.mini_language)()
+        self.minilang_parser2 = parser_factory(self.mini_lang2)()
+        self.minilang_parser3 = parser_factory(self.mini_lang3)()
+
+    @staticmethod
+    def opening_delimiter(node, name):
+        return node.tag_name == name and not isinstance(node.parser, Retrieve)
+
+    @staticmethod
+    def closing_delimiter(node):
+        return isinstance(node.parser, Retrieve)
+
+    def test_compile_mini_language(self):
+        assert self.minilang_parser
+        assert self.minilang_parser2
+        assert self.minilang_parser3
+
+    def test_stackhandling(self):
+        ambigous_opening = "<ABCnormal> normal tag <ABCnormal*>"
+        syntax_tree = self.minilang_parser3(ambigous_opening)
+        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+
+        ambigous_opening = "<ABCnormal> normal tag <ABCnormal/>"
+        syntax_tree = self.minilang_parser3(ambigous_opening)
+        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+
+        forgot_closing_tag = "<em> where is the closing tag?"
+        syntax_tree = self.minilang_parser3(forgot_closing_tag)
+        assert syntax_tree.error_flag, str(syntax_tree.collect_errors())
+
+        proper = "<em> has closing tag <em/>"
+        syntax_tree = self.minilang_parser3(proper)
+        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+
+        proper = "<em> has closing tag <em*>"
+        syntax_tree = self.minilang_parser3(proper)
+        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+
+
+    def test_single_line(self):
+        teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
+        syntax_tree = self.minilang_parser(teststr)
+        assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
+        assert delim == pop
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_single_line.cst")
+
+    def test_multi_line(self):
+        teststr = """
+            Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ebde
+
+            Absatz ohne ``` codeblock, aber
+            das stellt sich erst am Ende herause...
+
+            Mehrzeliger ```code block
+            """
+        syntax_tree = self.minilang_parser(teststr)
+        assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="delimiter"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
+        assert delim == pop
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_multi_line.cst")
+
+    def test_single_line_complement(self):
+        teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
+        syntax_tree = self.minilang_parser2(teststr)
+        assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
+        assert len(delim) == len(pop) and delim != pop
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_single_line.cst")
+
+    def test_multi_line_complement(self):
+        teststr = """
+            Anfang {{{code block {{ <- keine Ende-Zeichen ! }}} Ende
+
+            Absatz ohne {{{ codeblock, aber
+            das stellt sich erst am Ende heraus...
+
+            Mehrzeliger }}}code block
+            """
+        syntax_tree = self.minilang_parser2(teststr)
+        assert not syntax_tree.collect_errors()
+        delim = str(next(syntax_tree.find(partial(self.opening_delimiter, name="braces"))))
+        pop = str(next(syntax_tree.find(self.closing_delimiter)))
+        assert len(delim) == len(pop) and delim != pop
+        if is_logging():
+            syntax_tree.log("test_PopRetrieve_multi_line.cst")
 
 
 if __name__ == "__main__":

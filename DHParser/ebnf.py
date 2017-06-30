@@ -199,7 +199,7 @@ EBNF_transformation_table = {
     "+":
         remove_expendables,
     "syntax":
-        [],
+        [],  # otherwise '"*": replace_by_single_child' would be applied
     "directive, definition":
         remove_tokens('@', '='),
     "expression":
@@ -213,13 +213,13 @@ EBNF_transformation_table = {
     "oneormore, repetition, option, regexchain":
         [reduce_single_child, remove_enclosing_delimiters],
     "symbol, literal, regexp":
-        [reduce_single_child],
+        reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        [reduce_single_child],
+        reduce_single_child,
     "list_":
         [flatten, remove_tokens(',')],
     "*":
-        [replace_by_single_child]
+        replace_by_single_child
 }
 
 
