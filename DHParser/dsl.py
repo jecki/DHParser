@@ -257,6 +257,7 @@ def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
     """
     grammar_src = compileDSL(ebnf_src, nil_scanner, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding))
+    print(grammar_src)
     return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_(?:\w+_)?grammar$')
 
 

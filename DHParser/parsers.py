@@ -707,6 +707,15 @@ class RE(Parser):
 
 
 class Token(RE):
+    """Class Token parses simple strings. Any regular regular
+    expression commands will be interpreted as simple sequence of
+    characters.
+
+    Other than that class Token is essentially a renamed version of
+    class RE. Because tokens often have a particular semantic different
+    from other REs, parsing them with a separate parser class allows to
+    distinguish them by their parser type.
+    """
     assert TOKEN_PTYPE == ":Token"
 
     def __init__(self, token: str, wL=None, wR=None, name: str = '') -> None:

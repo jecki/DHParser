@@ -274,6 +274,32 @@ class TestPopRetrieve:
             syntax_tree.log("test_PopRetrieve_multi_line.cst")
 
 
+class TestWhitespaceHandling:
+    minilang = """@testing = True
+        doc = A B
+        A = "A"
+        B = "B"
+        Rdoc = ar br
+        ar = /A/
+        br = /B/
+        """
+
+    def setup(self):
+        self.gr = parser_factory(self.minilang)()
+
+    def test_token_whitespace(self):
+        st = self.gr("AB", 'doc')
+        assert not st.error_flag
+        st = self.gr("A B", 'doc')
+        assert not st.error_flag
+
+    def test_regexp_whitespace(self):
+        st = self.gr("AB", 'Rdoc')
+        assert not st.error_flag
+        st = self.gr("A B", 'Rdoc')
+        assert st.error_flag
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
