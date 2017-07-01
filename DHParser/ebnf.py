@@ -32,7 +32,7 @@ from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
     Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     ScannerFunc
-from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
+from DHParser.syntaxtree import Node, traverse, remove_first, remove_last, reduce_single_child, \
     replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
     forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, TransformationFunc
 from DHParser.versionnumber import __version__
@@ -212,9 +212,9 @@ EBNF_transformation_table = {
     "factor, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
-        [remove_enclosing_delimiters, replace_by_single_child],
-    "oneormore, repetition, option, regexchain":
-        [reduce_single_child, remove_enclosing_delimiters],
+        [remove_tokens('(', ')'), replace_by_single_child],
+    "oneormore, repetition, option":
+        [reduce_single_child, remove_first, remove_last],
     "symbol, literal, regexp":
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
@@ -358,7 +358,8 @@ class EBNFCompiler(Compiler):
                       self.grammar_name + '-grammar']
         transtable.append('    "+": remove_empty,')
         for name in self.rules:
-            transtable.append('    "' + name + '": no_transformation,')
+            transtable.append('    "' + name + '": [],')
+        transtable.append('    ":Token, :RE": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]

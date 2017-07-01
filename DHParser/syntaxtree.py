@@ -17,10 +17,8 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-import abc
 import copy
 import inspect
-import itertools
 import os
 from functools import partial, singledispatch
 try:
@@ -48,21 +46,26 @@ __all__ = ['WHITESPACE_PTYPE',
            'key_parser_name',
            'key_tag_name',
            'traverse',
-           'no_transformation',
            'replace_by_single_child',
            'reduce_single_child',
+           'reduce_children',
            'replace_parser',
            'is_whitespace',
            'is_empty',
            'is_expendable',
            'is_token',
+           'has_name',
+           'has_content',
            'remove_children_if',
+           'remove_children',
+           'remove_content',
+           'remove_first',
+           'remove_last',
            'remove_whitespace',
            'remove_empty',
            'remove_expendables',
            'remove_tokens',
            'flatten',
-           'remove_enclosing_delimiters',
            'forbid',
            'require',
            'assert_content']
@@ -636,10 +639,6 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     traverse_recursive(root_node)
 
 
-def no_transformation(node):
-    pass
-
-
 # ------------------------------------------------
 #
 # rearranging transformations:
@@ -649,6 +648,19 @@ def no_transformation(node):
 #     - all leaves are kept
 #
 # ------------------------------------------------
+
+
+@transformation_factory
+def replace_parser(node, name: str):
+    """Replaces the parser of a Node with a mock parser with the given
+    name.
+
+    Parameters:
+        name(str): "NAME:PTYPE" of the surogate. The ptype is optional
+        node(Node): The node where the parser shall be replaced
+    """
+    name, ptype = (name.split(':') + [''])[:2]
+    node.parser = MockParser(name, ptype)
 
 
 def replace_by_single_child(node):
@@ -673,17 +685,21 @@ def reduce_single_child(node):
         node.result = node.result[0].result
 
 
-@transformation_factory
-def replace_parser(node, name: str):
-    """Replaces the parser of a Node with a mock parser with the given
-    name.
-
-    Parameters:
-        name(str): "NAME:PTYPE" of the surogate. The ptype is optional
-        node(Node): The node where the parser shall be replaced
+@transformation_factory(Callable)
+def reduce_children(node, condition=lambda node: not node.name):
+    """Replaces those children of node that have children themselves
+    ans fulfil the given condition (default unnamed nodes).
+    In contrast to ``flatten`` (see below) this transformation does not
+    operate recursively.
     """
-    name, ptype = (name.split(':') + [''])[:2]
-    node.parser = MockParser(name, ptype)
+    if node.children:
+        new_result = []
+        for child in node.children:
+            if child.children and condition(child):
+                new_result.extend(child.children)
+            else:
+                new_result.append(child)
+        node.result = tuple(new_result)
 
 
 def flatten(node):
@@ -703,9 +719,8 @@ def flatten(node):
         new_result = []
         for child in node.children:
             if not child.parser.name and child.children:
-                assert child.children, node.as_sexpr()
                 flatten(child)
-                new_result.extend(child.result)
+                new_result.extend(child.children)
             else:
                 new_result.append(child)
         node.result = tuple(new_result)
@@ -734,17 +749,22 @@ def is_whitespace(node):
     ``@comment``-directive."""
     return node.parser.ptype == WHITESPACE_PTYPE
 
-
 def is_empty(node):
     return not node.result
-
 
 def is_expendable(node):
     return is_empty(node) or is_whitespace(node)
 
-
 def is_token(node, tokens: AbstractSet[str] = frozenset()) -> bool:
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
+
+
+def has_name(node, tag_names: AbstractSet[str]) -> bool:
+    return node.tag_name in tag_names
+
+
+def has_content(node, contents: AbstractSet[str]) -> bool:
+    return str(node) in contents
 
 
 @transformation_factory(Callable)  # @singledispatch
@@ -760,22 +780,42 @@ remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
 
 
+@transformation_factory(Callable)
+def remove_first(node, condition=lambda node: True):
+    """Removes the first child if the condition is met.
+    Otherwise does nothing."""
+    if node.children:
+        if condition(node.children[0]):
+            node.result = node.result[1:]
+
+
+@transformation_factory(Callable)
+def remove_last(node, condition=lambda node: True):
+    """Removes the last child if the condition is met.
+    Otherwise does nothing."""
+    if node.children:
+        if condition(node.children[-1]):
+            node.result = node.result[:-1]
+
+
 @transformation_factory
 def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
     """Reomoves any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
-    are removed.
-    """
+    are removed."""
     remove_children_if(node, partial(is_token, tokens=tokens))
 
 
-def remove_enclosing_delimiters(node):
-    """Removes any enclosing delimiters from a structure (e.g. quotation marks
-    from a literal or braces from a group).
-    """
-    if len(node.children) >= 3:
-        assert not node.children[0].children and not node.children[-1].children, node.as_sexpr()
-        node.result = node.result[1:-1]
+@transformation_factory
+def remove_children(node, tag_names: AbstractSet[str]) -> bool:
+    """Removes children by 'tag name'."""
+    remove_children_if(node, partial(has_name, tag_names=tag_names))
+
+
+@transformation_factory
+def remove_content(node, contents: AbstractSet[str]):
+    """Removes children depending on their string value."""
+    remove_children_if(node, partial(has_content, contents=contents))
 
 
 @transformation_factory

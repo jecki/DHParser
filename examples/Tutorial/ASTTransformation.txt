@@ -1,0 +1,49 @@
+#######################################################################
+#
+# AST SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+Lyrik_AST_transformation_table = {
+    # AST Transformations for the Lyrik-grammar
+    "+": remove_empty,
+    "bibliographisches":
+        [remove_children('NZ'), remove_tokens],
+    "autor": [],
+    "werk": [],
+    "untertitel": [],
+    "ort": [],
+    "jahr":
+        [reduce_single_child],
+    "wortfolge":
+        [reduce_children(partial(has_name, tag_names='WORT')), remove_last(is_whitespace), collapse],
+    "namenfolge":
+        [reduce_children(partial(has_name, tag_names='NAME')), remove_last(is_whitespace),
+         collapse],
+    "verknüpfung":
+        [remove_tokens('<', '>'), reduce_single_child],
+    "ziel":
+        reduce_single_child,
+    "gedicht, strophe, text":
+        [flatten, remove_children('LEERZEILE'), remove_children('NZ')],
+    "titel, serie":
+        [flatten, remove_children('LEERZEILE'), remove_children('NZ'), collapse],
+    "zeile": [],
+    "vers":
+        collapse,
+    "WORT": [],
+    "NAME": [],
+    "ZEICHENFOLGE":
+        reduce_single_child,
+    "NZ":
+        reduce_single_child,
+    "LEERZEILE": [],
+    "JAHRESZAHL":
+        [reduce_single_child],
+    "ENDE": [],
+    ":Whitespace":
+        map_content(lambda node : " "),
+    ":Token, :RE":
+        reduce_single_child,
+    "*": replace_by_single_child
+}
