@@ -161,6 +161,12 @@ def add_parser_guard(parser_func):
     def guarded_call(parser: 'Parser', text: str) -> Tuple[Node, str]:
         try:
             location = len(text)
+            grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
+
+            if grammar.history_tracking:
+                grammar.call_stack.append(parser)
+                grammar.moving_forward = True
+
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
@@ -170,23 +176,9 @@ def add_parser_guard(parser_func):
                 return None, text
 
             parser.recursion_counter[location] += 1
-            grammar = parser.grammar    # grammar may be 'None' for unconnected parsers!
-
-            if grammar.history_tracking:
-                grammar.call_stack.append(parser)
-                grammar.moving_forward = True
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
-
-            if grammar.history_tracking:
-                # don't track returning parsers except in case an error has occurred
-                if grammar.moving_forward or (node and node._errors):
-                    grammar.moving_forward = False
-                    record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
-                    grammar.history.append(record)
-                    # print(record.stack, record.status, rest[:20].replace('\n', '|'))
-                grammar.call_stack.pop()
 
             if node is not None:
                 # in case of a recursive call saves the result of the first
@@ -199,6 +191,15 @@ def add_parser_guard(parser_func):
                 node, rest = parser.visited[location]
 
             parser.recursion_counter[location] -= 1
+
+            if grammar.history_tracking:
+                # don't track returning parsers except in case an error has occurred
+                if grammar.moving_forward or (node and node._errors):
+                    grammar.moving_forward = False
+                    record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
+                    grammar.history.append(record)
+                    # print(record.stack, record.status, rest[:20].replace('\n', '|'))
+                grammar.call_stack.pop()
 
         except RecursionError:
             node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
