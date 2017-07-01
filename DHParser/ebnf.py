@@ -356,9 +356,10 @@ class EBNFCompiler(Compiler):
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
+        transtable.append('    "+": remove_empty,')
         for name in self.rules:
             transtable.append('    "' + name + '": no_transformation,')
-        transtable += ['    "*": no_transformation', '}', '', tf_name +
+        transtable += ['    "*": replace_by_single_child', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)

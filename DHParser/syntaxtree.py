@@ -58,6 +58,7 @@ __all__ = ['WHITESPACE_PTYPE',
            'is_token',
            'remove_children_if',
            'remove_whitespace',
+           'remove_empty',
            'remove_expendables',
            'remove_tokens',
            'flatten',
@@ -755,8 +756,8 @@ def remove_children_if(node, condition):
 
 
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
+remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
-# remove_scanner_tokens = remove_children_if(is_scanner_token)  # partial(remove_children_if, condition=is_scanner_token)
 
 
 @transformation_factory
@@ -777,7 +778,8 @@ def remove_enclosing_delimiters(node):
         node.result = node.result[1:-1]
 
 
-def map_content(node, func: Callable[[Node], ResultType]):
+@transformation_factory
+def map_content(node, func: Callable):      # Callable[[Node], ResultType]
     """Replaces the content of the node. ``func`` takes the node
     as an argument an returns the mapped result.
     """

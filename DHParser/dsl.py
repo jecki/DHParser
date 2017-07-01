@@ -82,8 +82,9 @@ from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
     last_value, counterpart, accumulate, ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \\
-    no_transformation, remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \\
-    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc
+    no_transformation, remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
+    is_empty, is_expendable, collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
+    TransformationFunc
 '''
 
 
@@ -257,7 +258,6 @@ def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
     """
     grammar_src = compileDSL(ebnf_src, nil_scanner, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding))
-    print(grammar_src)
     return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_(?:\w+_)?grammar$')
 
 

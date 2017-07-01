@@ -390,7 +390,9 @@ class Grammar:
         particular instance of Grammar.
         """
         if parser.name:
-            assert parser.name not in self.__dict__, \
+            # prevent overwriting instance variables or parsers of a different class
+            assert parser.name not in self.__dict__ or \
+                   isinstance(self.__dict__[parser.name], parser.__class__), \
                 ('Cannot add parser "%s" because a field with the same name '
                  'already exists in grammar object!' % parser.name)
             setattr(self, parser.name, parser)
