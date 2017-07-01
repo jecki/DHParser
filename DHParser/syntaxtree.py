@@ -759,10 +759,12 @@ def is_token(node, tokens: AbstractSet[str] = frozenset()) -> bool:
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
 
 
+@transformation_factory
 def has_name(node, tag_names: AbstractSet[str]) -> bool:
     return node.tag_name in tag_names
 
 
+@transformation_factory
 def has_content(node, contents: AbstractSet[str]) -> bool:
     return str(node) in contents
 
