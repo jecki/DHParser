@@ -136,17 +136,17 @@ class TestGrammar:
         # checks whether pos values in the parsing result and in the
         # history record have been initialized
         with logging("LOGS"):
-            parser = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
-            parser("no_file_name*")
-        for record in parser.history:
+            grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
+            grammar("no_file_name*")
+        for record in grammar.history__:
             assert not record.node or record.node.pos >= 0
 
     def test_select_parsing(self):
-        parser = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
-        parser("wort", "WORT")
-        parser("eine Zeile", "textzeile")
-        parser("kein Haupt", "haupt")
-        parser("so ist es richtig", "haupt")
+        grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
+        grammar("wort", "WORT")
+        grammar("eine Zeile", "textzeile")
+        grammar("kein Haupt", "haupt")
+        grammar("so ist es richtig", "haupt")
 
 
 class TestPopRetrieve:

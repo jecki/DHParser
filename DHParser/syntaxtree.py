@@ -27,8 +27,12 @@ try:
     import regex as re
 except ImportError:
     import re
-from .typing import AbstractSet, Any, ByteString, Callable, cast, Container, Iterator, List, \
-    NamedTuple, Sequence, Union, Text, Tuple
+try:
+    from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+except ImportError:
+    from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
 from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
 
@@ -273,9 +277,9 @@ class Node:
 
     def show(self) -> str:
         """Returns content as string, inserting error messages where
-        errors ocurred.
+        errors occurred.
         """
-        s = "".join(child.show_errors() for child in self.children) if self.children \
+        s = "".join(child.show() for child in self.children) if self.children \
             else str(self.result)
         return (' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
 
@@ -389,7 +393,7 @@ class Node:
         """
         for child in self.children:
             child.propagate_error_flags()
-            self.error_flag |= child.error_flag
+            self.error_flag = self.error_flag or child.error_flag
 
     def collect_errors(self, clear_errors=False) -> List[Error]:
         """
@@ -605,7 +609,7 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     # with a single value
     table = {name: smart_list(call) for name, call in list(processing_table.items())}
     table = expand_table(table)
-    cache = {}
+    cache = {}  # type: Dict[str, List[Callable]]
 
     def traverse_recursive(node):
         if node.children:

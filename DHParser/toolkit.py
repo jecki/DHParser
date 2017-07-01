@@ -38,7 +38,10 @@ try:
     import regex as re
 except ImportError:
     import re
-from .typing import List, Tuple
+try:
+    from typing import List, Tuple
+except ImportError:
+    from .typing34 import List, Tuple
 
 
 __all__ = ['logging',

@@ -50,8 +50,8 @@ class ArithmeticGrammar(ParserRoot):
     constant.set(Sequence("constant", digit, ZeroOrMore(None, digit)))
     variable.set(Alternative("variable", Token("x", wspcR=wspc__), Token("y", wspcR=wspc__), Token("z", wspcR=wspc__)))
     factor = Alternative("factor", constant, variable, Sequence(None, Token("(", wspcR=wspc__), expression, Token(")", wspcR=wspc__)))
-    term = Sequence("term", factor, ZeroOrMore(None, Sequence(None, Alternative(None, Token("*", wspcR=wspc__), Token("/", wspcR=wspc__)), factor)))
-    expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Alternative(None, Token("+", wspcR=wspc__), Token("-", wspcR=wspc__)), term))))
+    term = Sequence("term", factor, ZeroOrMore(None, Series(None, Alternative(None, Token("*", wspcR=wspc__), Token("/", wspcR=wspc__)), factor)))
+    expression.set(Sequence("expression", term, ZeroOrMore(None, Series(None, Alternative(None, Token("+", wspcR=wspc__), Token("-", wspcR=wspc__)), term))))
     root__ = expression
 """
 
@@ -96,7 +96,7 @@ class EBNFGrammar(ParserRoot):
     option = Sequence("option", Token("[", wspcR=wspc__), expression, Token("]", wspcR=wspc__))
     factor = Alternative("factor", symbol, literal, regexp, option, repetition, group)
     term = Sequence("term", factor, ZeroOrMore(None, factor))
-    expression.set(Sequence("expression", term, ZeroOrMore(None, Sequence(None, Token("|", wspcR=wspc__), term))))
+    expression.set(Sequence("expression", term, ZeroOrMore(None, Series(None, Token("|", wspcR=wspc__), term))))
     production = Sequence("production", symbol, Token("=", wspcR=wspc__), expression, Token(".", wspcR=wspc__))
     syntax = ZeroOrMore("syntax", production)
     root__ = syntax

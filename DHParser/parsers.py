@@ -57,7 +57,10 @@ try:
     import regex as re
 except ImportError:
     import re
-from .typing import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
+try:
+    from typing import Any, Callable, Collection, Dict, Iterator, List, Set, Tuple, Union
+except ImportError:
+    from .typing34 import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
@@ -84,7 +87,7 @@ __all__ = ['ScannerFunc',
            'Optional',
            'ZeroOrMore',
            'OneOrMore',
-           'Sequence',
+           'Series',
            'Alternative',
            'FlowOperator',
            'Required',
@@ -163,9 +166,15 @@ def add_parser_guard(parser_func):
             location = len(text)
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
 
-            if grammar.history_tracking:
-                grammar.call_stack.append(parser)
-                grammar.moving_forward = True
+            if not grammar.moving_forward__:
+                # rollback variable changes for discarded branch of parsing tree
+                while grammar.rollback__ and grammar.rollback__[-1][0] <= location:
+                    grammar.rollback__[-1][1]()
+                    grammar.rollback__.pop()
+            grammar.moving_forward__ = True
+
+            if grammar.history_tracking__:
+                grammar.call_stack__.append(parser)
 
             # if location has already been visited by the current parser,
             # return saved result
@@ -184,7 +193,7 @@ def add_parser_guard(parser_func):
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 parser.visited[location] = (node, rest)
-                grammar.last_node = node   # store last node for Lookbehind operator
+                grammar.last_node__ = node   # store last node for Lookbehind operator
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -192,14 +201,14 @@ def add_parser_guard(parser_func):
 
             parser.recursion_counter[location] -= 1
 
-            if grammar.history_tracking:
+            if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
-                if grammar.moving_forward or (node and node._errors):
-                    grammar.moving_forward = False
-                    record = HistoryRecord(grammar.call_stack.copy(), node, len(rest))
-                    grammar.history.append(record)
+                if grammar.moving_forward__ or (node and node._errors):
+                    record = HistoryRecord(grammar.call_stack__.copy(), node, len(rest))
+                    grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
-                grammar.call_stack.pop()
+                grammar.call_stack__.pop()
+            grammar.moving_forward__ = False
 
         except RecursionError:
             node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
@@ -248,7 +257,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         return self.name or self.ptype
 
     def __add__(self, other):
-        return Sequence(self, other)
+        return Series(self, other)
 
     def __or__(self, other):
         return Alternative(self, other)
@@ -324,9 +333,9 @@ class Grammar:
             self.wspL__ = ''
         if not hasattr(self.__class__, 'wspR__'):
             self.wspR__ = ''
-        self.all_parsers = set()  # type: Set[Parser]
-        self.dirty_flag = False
-        self.history_tracking = False
+        self.all_parsers__ = set()  # type: Set[Parser]
+        self.dirty_flag__ = False
+        self.history_tracking__ = False
         self._reset()
         # prepare parsers in the class, first
         self._assign_parser_names()
@@ -338,13 +347,13 @@ class Grammar:
         if self.wspL__:
             self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
             self.wsp_left_parser__.grammar = self
-            self.all_parsers.add(self.wsp_left_parser__)  # don't you forget about me...
+            self.all_parsers__.add(self.wsp_left_parser__)  # don't you forget about me...
         else:
             self.wsp_left_parser__ = ZOMBIE_PARSER
         if self.wspR__:
             self.wsp_right_parser__ = Whitespace(self.wspR__)  # type: ParserBase
             self.wsp_right_parser__.grammar = self
-            self.all_parsers.add(self.wsp_right_parser__)  # don't you forget about me...
+            self.all_parsers__.add(self.wsp_right_parser__)  # don't you forget about me...
         else:
             self.wsp_right_parser__ = ZOMBIE_PARSER
         self.root__.apply(self._add_parser)
@@ -353,35 +362,39 @@ class Grammar:
         try:
             return self.__dict__[key]
         except KeyError:
-            parser = getattr(self, key, None)
-            if parser:
+            parser_template = getattr(self, key, None)
+            if parser_template:
                 # add parser to grammar object on the fly...
-                setattr(self, key, copy.deepcopy(parser))
-                self[key].apply(self._add_parser)
+                parser = copy.deepcopy(parser_template)
+                parser.apply(self._add_parser)
+                # assert self[key] == parser
                 return self[key]
             raise KeyError('Unknown parser "%s" !' % key)
 
     def _reset(self):
+        self.document__ = ""       # type: str
         # variables stored and recalled by Capture and Retrieve parsers
-        self.variables = dict()  # type: Dict[str, List[str]]
-        self.document = ""  # type: str
+        self.variables__ = dict()  # type: Dict[str, List[str]]
+        self.rollback__ = []       # type: List[Tuple[int, Callable]]
         # previously parsed node, needed by Lookbehind parser
-        self.last_node = None  # type: Node
+        self.last_node__ = None    # type: Node
         # support for call stack tracing
-        self.call_stack = []  # type: List[Parser]
+        self.call_stack__ = []     # type: List[Parser]
         # snapshots of call stacks
-        self.history = []  # type: List[HistoryRecord]
+        self.history__ = []        # type: List[HistoryRecord]
         # also needed for call stack tracing
-        self.moving_forward = True
+        self.moving_forward__ = True  # type: bool
 
-    # TODO: Either make sure not to miss out unconnected parsers or raise an error! Actually, the EBNF-Compiler should keep track of this!
     def _add_parser(self, parser: Parser) -> None:
         """Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
         if parser.name:
+            assert parser.name not in self.__dict__, \
+                ('Cannot add parser "%s" because a field with the same name '
+                 'already exists in grammar object!' % parser.name)
             setattr(self, parser.name, parser)
-        self.all_parsers.add(parser)
+        self.all_parsers__.add(parser)
         parser.grammar = self
 
     def __call__(self, document: str, start_parser="root__") -> Node:
@@ -398,14 +411,14 @@ class Grammar:
         # assert isinstance(document, str), type(document)
         if self.root__ is None:
             raise NotImplementedError()
-        if self.dirty_flag:
+        if self.dirty_flag__:
             self._reset()
-            for parser in self.all_parsers:
+            for parser in self.all_parsers__:
                 parser.reset()
         else:
-            self.dirty_flag = True
-        self.history_tracking = is_logging()
-        self.document = document
+            self.dirty_flag__ = True
+        self.history_tracking__ = is_logging()
+        self.document__ = document
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
@@ -425,29 +438,29 @@ class Grammar:
                     error_msg = "Parser stopped before end" + \
                                 (("! trying to recover" +
                                   (" but stopping history recording at this point."
-                                   if self.history_tracking else "..."))
+                                   if self.history_tracking__ else "..."))
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
                 stitches.append(Node(None, skip))
                 stitches[-1].add_error(error_msg)
-                if self.history_tracking:
+                if self.history_tracking__:
                     # some parsers may have matched and left history records with nodes != None.
                     # Because these are not connected to the stiched root node, their pos
                     # properties will not be initialized by setting the root node's pos property
                     # to zero. Therefore, their pos properties need to be initialized here
-                    for record in self.history:
+                    for record in self.history__:
                         if record.node and record.node._pos < 0:
                             record.node.pos = 0
-                    record = HistoryRecord(self.call_stack.copy(), stitches[-1], len(rest))
-                    self.history.append(record)
-                    self.history_tracking = False
+                    record = HistoryRecord(self.call_stack__.copy(), stitches[-1], len(rest))
+                    self.history__.append(record)
+                    self.history_tracking__ = False
         if stitches:
             if rest:
                 stitches.append(Node(None, rest))
             result = Node(None, tuple(stitches))
-        if any(self.variables.values()):
+        if any(self.variables__.values()):
             result.add_error("Capture-retrieve-stack not empty after end of parsing: "
-                             + str(self.variables))
+                             + str(self.variables__))
         result.pos = 0  # calculate all positions
         return result
 
@@ -456,7 +469,7 @@ class Grammar:
         document. 
         """
         def prepare_line(record):
-            excerpt = self.document.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
+            excerpt = self.document__.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
             excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
             return record.stack, record.status, excerpt
 
@@ -472,7 +485,7 @@ class Grammar:
             name = self.__class__.__name__
             log_file_name = name[:-7] if name.lower().endswith('grammar') else name
         full_history, match_history, errors_only = [], [], []
-        for record in self.history:
+        for record in self.history__:
             line = ";  ".join(prepare_line(record))
             full_history.append(line)
             if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
@@ -498,8 +511,8 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
         tacking has been turned in the grammar object.
     """
     msg = ["DSL parser specification error:", error_str, 'Caught by parser "%s".' % str(parser)]
-    if parser.grammar.history:
-        msg.extend(["\nCall stack:", parser.grammar.history[-1].stack])
+    if parser.grammar.history__:
+        msg.extend(["\nCall stack:", parser.grammar.history__[-1].stack])
     else:
         msg.extend(["\nEnable history tracking in Grammar object to display call stack."])
     return " ".join(msg)
@@ -743,7 +756,7 @@ class NaryOperator(Parser):
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
-        self.parsers = parsers  # type: Container  ## [Parser]
+        self.parsers = parsers  # type: Collection
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
@@ -830,9 +843,9 @@ class OneOrMore(UnaryOperator):
         return Node(self, results), text_
 
 
-class Sequence(NaryOperator):
+class Series(NaryOperator):
     def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super(Sequence, self).__init__(*parsers, name=name)
+        super(Series, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
 
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -848,14 +861,14 @@ class Sequence(NaryOperator):
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
 
-    def __add__(self, other: 'Sequence') -> 'Sequence':
-        return Sequence(*(self.parsers + (other,)))
+    def __add__(self, other: 'Series') -> 'Series':
+        return Series(*(tuple(self.parsers) + (other,)))
 
-    def __radd__(self, other: 'Sequence') -> 'Sequence':
-        return Sequence(other, *self.parsers)
+    def __radd__(self, other: 'Series') -> 'Series':
+        return Series(other, *self.parsers)
 
         # def __iadd__(self, other):
-        #     if isinstance(other, Sequence):
+        #     if isinstance(other, Series):
         #         self.parsers = self.parsers + other.parsers
         #     else:
         #         self.parsers = self.parsers + (other,)
@@ -900,7 +913,7 @@ class Alternative(NaryOperator):
         return Alternative(other, *self.parsers)
 
         # def __ior__(self, other):
-        #     if isinstance(other, Sequence):
+        #     if isinstance(other, Series):
         #         self.parsers = self.parsers + other.parsers
         #     else:
         #         self.parsers = self.parsers + (other,)
@@ -972,7 +985,7 @@ class Lookbehind(FlowOperator):
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        if isinstance(self.grammar.last_node, Lookahead):
+        if isinstance(self.grammar.last_node__, Lookahead):
             return Node(self, '').add_error('Lookbehind right after Lookahead '
                                             'does not make sense!'), text
         if self.sign(self.condition()):
@@ -985,7 +998,7 @@ class Lookbehind(FlowOperator):
 
     def condition(self):
         node = None
-        for node in iter_right_branch(self.grammar.last_node):
+        for node in iter_right_branch(self.grammar.last_node__):
             if node.parser.name == self.parser.name:
                 return True
         if node and isinstance(self.parser, RegExp) and \
@@ -1013,11 +1026,12 @@ class Capture(UnaryOperator):
         super(Capture, self).__init__(parser, name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        node, text = self.parser(text)
+        node, text_ = self.parser(text)
         if node:
-            stack = self.grammar.variables.setdefault(self.name, [])
+            stack = self.grammar.variables__.setdefault(self.name, [])
             stack.append(str(node))
-            return Node(self, node), text
+            self.grammar.rollback__.append((len(text), lambda : stack.pop()))
+            return Node(self, node), text_
         else:
             return None, text
 
@@ -1053,7 +1067,7 @@ class Retrieve(Parser):
 
     def call(self, text: str) -> Tuple[Node, str]:
         try:
-            stack = self.grammar.variables[self.symbol.name]
+            stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
         except (KeyError, IndexError):
             return Node(self, '').add_error(dsl_error_msg(self,
@@ -1070,8 +1084,9 @@ class Pop(Retrieve):
     def __call__(self, text: str) -> Tuple[Node, str]:
         nd, txt = super(Pop, self).call(text)  # call() instead of __call__() to avoid parser guard
         if nd and not nd.error_flag:
-            stack = self.grammar.variables[self.symbol.name]
-            stack.pop()
+            stack = self.grammar.variables__[self.symbol.name]
+            value = stack.pop()
+            self.grammar.rollback__.append((len(text), lambda : stack.append(value)))
         return nd, txt
 
 

@@ -23,11 +23,14 @@ try:
     import regex as re
 except ImportError:
     import re
-from .typing import Callable, Dict, List, Set, Tuple
+try:
+    from typing import Callable, Dict, List, Set, Tuple
+except ImportError:
+    from .typing34 import Callable, Dict, List, Set, Tuple
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
-    Alternative, Sequence, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
+    Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, reduce_single_child, \
     replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
@@ -121,26 +124,26 @@ class EBNFGrammar(Grammar):
     wspL__ = ''
     wspR__ = WSP__
     EOF = NegativeLookahead(RE('.', wR=''))
-    list_ = Sequence(RE('\\w+'), ZeroOrMore(Sequence(Token(","), RE('\\w+'))))
+    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
     regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
-    option = Sequence(Token("["), expression, Required(Token("]")))
-    repetition = Sequence(Token("{"), expression, Required(Token("}")))
-    oneormore = Sequence(Token("{"), expression, Token("}+"))
-    regexchain = Sequence(Token("<"), expression, Required(Token(">")))
-    group = Sequence(Token("("), expression, Required(Token(")")))
+    option = Series(Token("["), expression, Required(Token("]")))
+    repetition = Series(Token("{"), expression, Required(Token("}")))
+    oneormore = Series(Token("{"), expression, Token("}+"))
+    regexchain = Series(Token("<"), expression, Required(Token(">")))
+    group = Series(Token("("), expression, Required(Token(")")))
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
-    factor = Alternative(Sequence(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("="))),
-                         Sequence(Optional(flowmarker), literal), Sequence(Optional(flowmarker), regexp),
-                         Sequence(Optional(flowmarker), group), Sequence(Optional(flowmarker), regexchain),
-                         Sequence(Optional(flowmarker), oneormore), repetition, option)
+    factor = Alternative(Series(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("="))),
+                         Series(Optional(flowmarker), literal), Series(Optional(flowmarker), regexp),
+                         Series(Optional(flowmarker), group), Series(Optional(flowmarker), regexchain),
+                         Series(Optional(flowmarker), oneormore), repetition, option)
     term = OneOrMore(factor)
-    expression.set(Sequence(term, ZeroOrMore(Sequence(Token("|"), term))))
-    directive = Sequence(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
-    definition = Sequence(symbol, Required(Token("=")), expression)
-    syntax = Sequence(Optional(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
+    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
+    directive = Series(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
+    definition = Series(symbol, Required(Token("=")), expression)
+    syntax = Series(Optional(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
     root__ = syntax
 
 
@@ -601,7 +604,7 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(node, 'Alternative')
 
     def on_term(self, node) -> str:
-        return self.non_terminal(node, 'Sequence')
+        return self.non_terminal(node, 'Series')
 
     def on_factor(self, node: Node) -> str:
         assert node.children

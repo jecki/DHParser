@@ -24,7 +24,10 @@ try:
     import regex as re
 except ImportError:
     import re
-from .typing import Any, cast, Tuple, Union
+try:
+    from typing import Any, cast, Tuple, Union
+except ImportError:
+    from .typing34 import Any, cast, Tuple, Union
 
 from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
     get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -74,7 +77,7 @@ except ImportError:
 from DHParser.toolkit import logging, is_filename, load_if_file    
 from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \\
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Sequence, RE, Capture, \\
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     last_value, counterpart, accumulate, ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_enclosing_delimiters, \\
