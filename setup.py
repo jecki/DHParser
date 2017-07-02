@@ -32,6 +32,11 @@ setup(
         'Topic :: Text Processing :: Markup',
         'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Compilers'
-    ]
+    ],
+    entry_points={
+        'console_scripts': [
+            'dhparser = dhparser'
+        ]
+    }
 )
 

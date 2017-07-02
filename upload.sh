@@ -1,3 +1,4 @@
 #!/usr/bin/sh
 
-twine upload dist/*
+twine upload dist/* # -r testpypi
+

@@ -236,7 +236,6 @@ class Node:
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
     def tag_name(self) -> str:
         return self.parser.name or self.parser.ptype
-        # ONLY FOR DEBUGGING: return self.parser.name + ':' + self.parser.ptype
 
     @property
     def result(self) -> StrictResultType:
@@ -761,11 +760,15 @@ def is_token(node, tokens: AbstractSet[str] = frozenset()) -> bool:
 
 @transformation_factory
 def has_name(node, tag_names: AbstractSet[str]) -> bool:
+    """Checks if node has any of a given set of `tag names`.
+    See property `Node.tagname`."""
     return node.tag_name in tag_names
 
 
 @transformation_factory
 def has_content(node, contents: AbstractSet[str]) -> bool:
+    """Checks if the node's content (i.e. `str(node)`) matches any of
+    a given set of strings."""
     return str(node) in contents
 
 
@@ -809,7 +812,7 @@ def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory
-def remove_children(node, tag_names: AbstractSet[str]) -> bool:
+def remove_children(node, tag_names: AbstractSet[str]):
     """Removes children by 'tag name'."""
     remove_children_if(node, partial(has_name, tag_names=tag_names))
 

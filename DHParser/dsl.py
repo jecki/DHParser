@@ -112,7 +112,7 @@ if __name__ == "__main__":
                 print(error)
             sys.exit(1)
         else:
-            print(result)
+            print(result.as_xml() if isinstance(result, Node) else result)
     else:
         print("Usage: {NAME}Compiler.py [FILENAME]")
 '''

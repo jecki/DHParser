@@ -36,12 +36,12 @@ CMDNAME    = /\\\w+/~
 NAME       = /\w+/~
 
 ESCAPED    = /\\[%$&]/
-BRACKETS   = /[\[\]]/                   # left or right square bracket: [ ]
-TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/    # some piece of text excluding whitespace,
-                                        # linefeed and special characters
-WSPC       = /[ \t]+/                   # (horizontal) whitespace
-LF         = !PARSEP /[ \t]*\n[ \t]*/   # LF but not an empty line
-PARSEP     = /[ \t]*\n[ \t]*\n[ \t]*/   # at least one empty line, i.e.
-                                        # [whitespace] linefeed [whitespace] linefeed
+BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
+TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
+                                            # linefeed and special characters
+WSPC       = /[ \t]+/                       # (horizontal) whitespace
+LF         = !PARSEP /[ \t]*\n[ \t]*/       # LF but not an empty line
+PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
+                                            # [whitespace] linefeed [whitespace] linefeed
 
 EOF        = !/./
