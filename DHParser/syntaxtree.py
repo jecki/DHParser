@@ -83,13 +83,19 @@ class ParserBase:
         self.name = name  # type: str
         self._ptype = ':' + self.__class__.__name__  # type: str
 
+    def __repr__(self):
+        self.name + self.ptype
+
     def __str__(self):
-        return self.name or self.ptype
+        return self.name or repr(self)
 
     @property
     def ptype(self) -> str:
         return self._ptype
 
+    @property
+    def repr(self) -> str:
+        return self.name if self.name else repr(self)
 
 class MockParser(ParserBase):
     """
@@ -107,8 +113,8 @@ class MockParser(ParserBase):
         self.name = name
         self._ptype = ptype or ':' + self.__class__.__name__
 
-    def __repr__(self):
-        return repr_call(self.__init__, (self.name, self.ptype))
+    # def __repr__(self):
+    #     return repr_call(self.__init__, (self.name, self.ptype))
 
 
 class ZombieParser(MockParser):
@@ -128,9 +134,6 @@ class ZombieParser(MockParser):
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
         self.__class__.alive = True
-
-    def __repr__(self):
-        return "ZOMBIE_PARSER"
 
     def __copy__(self):
         return self

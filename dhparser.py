@@ -36,6 +36,11 @@ def selftest(file_name):
         grammar = f.read()
     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
     parser = get_ebnf_grammar()
+    print("\nAlphabetical List of Parsers:\n")
+    parser_list = sorted([p for p in parser.all_parsers__ if p.name], key=lambda p: p.name)
+    for p in parser_list:
+        print("%s = %s" % (p.name, repr(p)))
+    print('\n\n')
     transformer = get_ebnf_transformer()
     compiler = get_ebnf_compiler(compiler_name, grammar)
     result, errors, syntax_tree = compile_source(grammar, None, parser,

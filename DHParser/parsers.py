@@ -805,7 +805,7 @@ class Synonym(UnaryOperator):
         return None, text
 
     def __repr__(self):
-        return self.name + '=' + self.parser.name
+        return self.name or self.parser.repr
 
 
 class Optional(UnaryOperator):
@@ -826,7 +826,8 @@ class Optional(UnaryOperator):
         return Node(self, ()), text
 
     def __repr__(self):
-        return '[' + repr(self.parser) + ']'
+        return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
+                      and not self.parser.name else self.parser.repr) + ']'
 
 class ZeroOrMore(Optional):
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -843,7 +844,8 @@ class ZeroOrMore(Optional):
         return Node(self, results), text
 
     def __repr__(self):
-        return '{' + repr(self.parser) + '}'
+        return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
+                      and not self.parser.name else self.parser.repr) + '}'
 
 
 class OneOrMore(UnaryOperator):
@@ -870,7 +872,8 @@ class OneOrMore(UnaryOperator):
         return Node(self, results), text_
 
     def __repr__(self):
-        return '{' + repr(self.parser) + '}+'
+        return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
+                      and not self.parser.name else self.parser.repr) + '}+'
 
 
 class Series(NaryOperator):
@@ -891,6 +894,9 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
 
+    def __repr__(self):
+        return " ".join(parser.repr for parser in self.parsers)
+
     def __add__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
         return Series(*(self.parsers + other_parsers))
@@ -903,9 +909,6 @@ class Series(NaryOperator):
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
         self.parsers += other_parsers
         return self
-
-    def __repr__(self):
-        return '(' + " ".join(repr(parser) for parser in self.parsers) + ')'
 
 
 class Alternative(NaryOperator):
@@ -940,7 +943,7 @@ class Alternative(NaryOperator):
         return None, text
 
     def __repr__(self):
-        return " | ".join(repr(parser) for parser in self.parsers)
+        return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
     def __or__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers \
@@ -986,7 +989,7 @@ class Required(FlowOperator):
         return node, text_
 
     def __repr__(self):
-        return '§' + repr(self.parser)
+        return '§' + self.parser.repr
 
 
 class Lookahead(FlowOperator):
@@ -1001,7 +1004,7 @@ class Lookahead(FlowOperator):
             return None, text
 
     def __repr__(self):
-        return '&' + repr(self.parser)
+        return '&' + self.parser.repr
 
     def sign(self, bool_value) -> bool:
         return bool_value
@@ -1009,7 +1012,7 @@ class Lookahead(FlowOperator):
 
 class NegativeLookahead(Lookahead):
     def __repr__(self):
-        return '!' + repr(self.parser)
+        return '!' + self.parser.repr
 
     def sign(self, bool_value) -> bool:
         return not bool_value
@@ -1043,7 +1046,7 @@ class Lookbehind(FlowOperator):
             return None, text
 
     def __repr__(self):
-        return '-&' + repr(self.parser)
+        return '-&' + self.parser.repr
 
     def sign(self, bool_value) -> bool:
         return bool_value
@@ -1061,7 +1064,7 @@ class Lookbehind(FlowOperator):
 
 class NegativeLookbehind(Lookbehind):
     def __repr__(self):
-        return '-!' + repr(self.parser)
+        return '-!' + self.parser.repr
 
     def sign(self, bool_value) -> bool:
         return not bool_value
@@ -1091,7 +1094,7 @@ class Capture(UnaryOperator):
             return None, text
 
     def __repr__(self):
-        return repr(self.parser)
+        return self.parser.repr
 
 
 RetrieveFilter = Callable[[List[str]], str]
@@ -1124,7 +1127,7 @@ class Retrieve(Parser):
         return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
 
     def __repr__(self):
-        return ':' + repr(self.symbol)
+        return ':' + self.symbol.repr
 
     def call(self, text: str) -> Tuple[Node, str]:
         try:
@@ -1151,7 +1154,7 @@ class Pop(Retrieve):
         return nd, txt
 
     def __repr__(self):
-        return '::' + repr(self.symbol)
+        return '::' + self.symbol.repr
 
 
 ########################################################################
@@ -1185,9 +1188,6 @@ class Forward(Parser):
             s = repr(self.parser)
             self.cycle_reached = False
             return s
-
-    def __str__(self):
-        return "Forward->" + str(self.parser)
 
     def set(self, parser: Parser):
         # assert isinstance(parser, Parser)
