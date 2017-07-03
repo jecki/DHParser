@@ -58,14 +58,14 @@ try:
 except ImportError:
     import re
 try:
-    from typing import Any, Callable, Collection, Dict, Iterator, List, Set, Tuple, Union
+    from typing import Any, Callable, Collection, cast, Dict, Iterator, List, Set, Tuple, Union
 except ImportError:
-    from .typing34 import Any, Callable, Dict, Iterator, List, Set, Tuple, Union
+    from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
     Node, TransformationFunc
-from DHParser.toolkit import load_if_file, error_messages
+from DHParser.toolkit import repr_call, load_if_file, error_messages
 
 __all__ = ['ScannerFunc',
            'HistoryRecord',
@@ -95,6 +95,9 @@ __all__ = ['ScannerFunc',
            'NegativeLookahead',
            'Lookbehind',
            'NegativeLookbehind',
+           'last_value',
+           'counterpart',
+           'accumulate',
            'Capture',
            'Retrieve',
            'Pop',
@@ -252,9 +255,6 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
 
     def __call__(self, text: str) -> Tuple[Node, str]:
         return None, text  # default behaviour: don't match
-
-    def __str__(self):
-        return self.name or self.ptype
 
     def __add__(self, other):
         return Series(self, other)
@@ -622,6 +622,9 @@ class RegExp(Parser):
             return Node(self, text[:end]), text[end:]
         return None, text
 
+    def __repr__(self):
+        return repr_call(self.__init__, (self.regexp, self.name))
+
     def __str__(self):
         return self.name or self.ptype + ' /%s/' % self.regexp.pattern
 
@@ -685,6 +688,9 @@ class RE(Parser):
             return Node(self, result), t
         return None, text
 
+    def __repr__(self):
+        return repr_call(self.__init__, (self.regexp, self.wL, self.wR, self.name))
+
     def __str__(self):
         if self.ptype == TOKEN_PTYPE:
             return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
@@ -727,6 +733,9 @@ class Token(RE):
     def __deepcopy__(self, memo={}):
         return self.__class__(self.token, self.wL, self.wR, self.name)
 
+    def __repr__(self):
+        return repr_call(self.__init__, (self.token, self.wL, self.wR, self.name))
+
 
 def mixin_comment(whitespace: str, comment: str) -> str:
     """Returns a regular expression that merges comment and whitespace
@@ -758,6 +767,9 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         return self.__class__(parser, self.name)
 
+    def __repr__(self):
+        return repr_call(self.__init__, (self.parser, self.name))
+
     def apply(self, func: Parser.ApplyFunc):
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
@@ -767,11 +779,14 @@ class NaryOperator(Parser):
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
-        self.parsers = parsers  # type: Collection
+        self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         return self.__class__(*parsers, name=self.name)
+
+    def __repr__(self):
+        return repr_call(self.__init__, (*self.parsers, self.name))
 
     def apply(self, func: Parser.ApplyFunc):
         if super(NaryOperator, self).apply(func):
@@ -872,18 +887,18 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
 
-    def __add__(self, other: 'Series') -> 'Series':
-        return Series(*(tuple(self.parsers) + (other,)))
+    def __add__(self, other: Parser) -> 'Series':
+        other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
+        return Series(*(self.parsers + other_parsers))
 
-    def __radd__(self, other: 'Series') -> 'Series':
-        return Series(other, *self.parsers)
+    def __radd__(self, other: Parser) -> 'Series':
+        other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
+        return Series(*(other_parsers + self.parsers))
 
-        # def __iadd__(self, other):
-        #     if isinstance(other, Series):
-        #         self.parsers = self.parsers + other.parsers
-        #     else:
-        #         self.parsers = self.parsers + (other,)
-        #     return self
+    def __iadd__(self, other):
+        other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
+        self.parsers += other_parsers
+        return self
 
 
 class Alternative(NaryOperator):
@@ -917,18 +932,21 @@ class Alternative(NaryOperator):
                 return Node(self, node), text_
         return None, text
 
-    def __or__(self, other):
-        return Alternative(*(self.parsers + (other,)))
+    def __or__(self, other: Parser) -> 'Alternative':
+        other_parsers = cast('Alternative', other).parsers \
+                        if isinstance(other, Alternative) else (other,)
+        return Alternative(*(self.parsers + other_parsers))
 
-    def __ror__(self, other):
-        return Alternative(other, *self.parsers)
+    def __ror__(self, other: Parser) -> 'Alternative':
+        other_parsers = cast('Alternative', other).parsers \
+                        if isinstance(other, Alternative) else (other,)
+        return Alternative(*(other_parsers + self.parsers))
 
-        # def __ior__(self, other):
-        #     if isinstance(other, Series):
-        #         self.parsers = self.parsers + other.parsers
-        #     else:
-        #         self.parsers = self.parsers + (other,)
-        #     return self
+    def __ior__(self, other):
+        other_parsers = cast('Alternative', other.parsers) \
+                        if isinstance(other, Alternative) else (other,)
+        self.parsers += other_parsers
+        return self
 
 
 ########################################################################
@@ -979,7 +997,8 @@ class NegativeLookahead(Lookahead):
 
 
 def iter_right_branch(node) -> Iterator[Node]:
-    """Iterates over the right branch of `node` starting with node itself.
+    """
+    Iterates over the right branch of `node` starting with node itself.
     Iteration is stopped if either there are no child nodes any more or
     if the parser of a node is a Lookahead parser. (Reason is: Since
     lookahead nodes do not advance the parser, it does not make sense
@@ -1076,6 +1095,10 @@ class Retrieve(Parser):
     def __call__(self, text: str) -> Tuple[Node, str]:
         return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
 
+    def __repr__(self):
+        filter = None if self.filter == last_value else self.filter
+        return repr_call(self.__init__, (self.symbol, filter, self.name))
+
     def call(self, text: str) -> Tuple[Node, str]:
         try:
             stack = self.grammar.variables__[self.symbol.name]
@@ -1124,14 +1147,17 @@ class Forward(Parser):
     def __call__(self, text: str) -> Tuple[Node, str]:
         return self.parser(text)
 
-    def __str__(self):
+    def __repr__(self):
         if self.cycle_reached:
             return "..."
         else:
             self.cycle_reached = True
-            s = str(self.parser)
+            s = repr(self.parser)
             self.cycle_reached = False
             return s
+
+    def __str__(self):
+        return "Forward->" + str(self.parser)
 
     def set(self, parser: Parser):
         # assert isinstance(parser, Parser)

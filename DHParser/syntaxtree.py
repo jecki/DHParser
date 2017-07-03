@@ -32,7 +32,7 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
-from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
+from DHParser.toolkit import log_dir, repr_call, expand_table, line_col, smart_list
 
 
 __all__ = ['WHITESPACE_PTYPE',
@@ -50,6 +50,8 @@ __all__ = ['WHITESPACE_PTYPE',
            'reduce_single_child',
            'reduce_children',
            'replace_parser',
+           'collapse',
+           'map_content',
            'is_whitespace',
            'is_empty',
            'is_expendable',
@@ -81,6 +83,9 @@ class ParserBase:
         self.name = name  # type: str
         self._ptype = ':' + self.__class__.__name__  # type: str
 
+    def __repr__(self):
+        return repr_call(self.__init__, (self.name, ))
+
     def __str__(self):
         return self.name or self.ptype
 
@@ -105,8 +110,8 @@ class MockParser(ParserBase):
         self.name = name
         self._ptype = ptype or ':' + self.__class__.__name__
 
-    def __str__(self):
-        return self.name or self.ptype
+    def __repr__(self):
+        return repr_call(self.__init__, (self.name, self.ptype))
 
 
 class ZombieParser(MockParser):
@@ -126,6 +131,9 @@ class ZombieParser(MockParser):
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
         self.__class__.alive = True
+
+    def __repr__(self):
+        return "ZOMBIE_PARSER"
 
     def __copy__(self):
         return self

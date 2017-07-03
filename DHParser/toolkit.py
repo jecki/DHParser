@@ -39,9 +39,9 @@ try:
 except ImportError:
     import re
 try:
-    from typing import List, Tuple
+    from typing import Any, List, Tuple
 except ImportError:
-    from .typing34 import List, Tuple
+    from .typing34 import Any, List, Tuple
 
 
 __all__ = ['logging',
@@ -50,6 +50,7 @@ __all__ = ['logging',
            'logfile_basename',
            # 'supress_warnings',
            # 'warnings',
+           'repr_call',
            'line_col',
            'error_messages',
            'compact_sexpr',
@@ -148,6 +149,30 @@ def is_logging() -> bool:
 #         return not SUPRESS_WARNINGS
 #     except NameError:
 #         return True
+
+
+def repr_call(f, parameter_list) -> str:
+    """Turns a list of items into a string resembling the parameter
+    list of a function call by omitting default values at the end:
+    >>> def(a, b=1):
+            print(a, b)
+
+    >>> repr_call(f, (5,1))
+    'f(5)'
+    >>> repr_call(f, (5,2))
+    'f(5, 2)'
+    """
+    i = 0
+    defaults = f.__defaults__ if f.__defaults__ is not None else []
+    for parameter, default in zip(reversed(parameter_list), reversed(defaults)):
+        if parameter != default:
+            break
+        i -= 1
+    if i < 0:
+        parameter_list = parameter_list[:i]
+    name = f.__self__.__class__.__name__ if f.__name__ == '__init__' else f.__name__
+    return "%s(%s)" % (name, ", ".join(repr(item) for item in parameter_list))
+
 
 
 def line_col(text: str, pos: int) -> Tuple[int, int]:
