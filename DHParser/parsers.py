@@ -137,10 +137,10 @@ class HistoryRecord:
     ERROR = "ERROR"
     FAIL = "FAIL"
 
-    def __init__(self, call_stack, node, remaining):
-        self.call_stack = call_stack
-        self.node = node
-        self.remaining = remaining
+    def __init__(self, call_stack: List['Parser'], node: Node, remaining: int) -> None:
+        self.call_stack = call_stack    # type: List['Parser']
+        self.node = node                # type: Node
+        self.remaining = remaining      # type: int
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(self.node._errors).replace('\n', '\\')
@@ -155,9 +155,9 @@ class HistoryRecord:
             self.err_msg() if self.node._errors else self.MATCH
 
     @property
-    def extent(self) -> Tuple[int, int]:
-        return ((-self.remaining - self.node.len, -self.remaining) if self.node
-                else (-self.remaining, None))
+    def extent(self) -> slice:
+        return (slice(-self.remaining - self.node.len, -self.remaining) if self.node
+                else slice(-self.remaining, None))
 
 
 def add_parser_guard(parser_func):
@@ -471,7 +471,7 @@ class Grammar:
         document. 
         """
         def prepare_line(record):
-            excerpt = self.document__.__getitem__(slice(*record.extent))[:25].replace('\n', '\\n')
+            excerpt = self.document__.__getitem__(record.extent)[:25].replace('\n', '\\n')
             excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
             return record.stack, record.status, excerpt
 
@@ -573,19 +573,19 @@ class ScannerToken(Parser):
             if end < 0:
                 node = Node(self, '').add_error(
                     'END_SCANNER_TOKEN delimiter missing from scanner token. '
-                    '(Most likely due to a scanner bug!)')
+                    '(Most likely due to a scanner bug!)')  # type: Node
                 return node, text[1:]
             elif end == 0:
                 node = Node(self, '').add_error(
                     'Scanner token cannot have zero length. '
-                    '(Most likely due to a scanner bug!)')
+                    '(Most likely due to a scanner bug!)')  # type: Node
                 return node, text[2:]
             elif text.find(BEGIN_SCANNER_TOKEN, 1, end) >= 0:
                 node = Node(self, text[len(self.name) + 1:end])
                 node.add_error(
                     'Scanner tokens must not be nested or contain '
                     'BEGIN_SCANNER_TOKEN delimiter as part of their argument. '
-                    '(Most likely due to a scanner bug!)')
+                    '(Most likely due to a scanner bug!)')  # type: Node
                 return node, text[end:]
             if text[1:len(self.name) + 1] == self.name:
                 return Node(self, text[len(self.name) + 1:end]), \
@@ -675,7 +675,7 @@ class RE(Parser):
 
     def __call__(self, text: str) -> Tuple[Node, str]:
         # assert self.main.regexp.pattern != "@"
-        t = text
+        t = text    # type: str
         wL, t = self.wspLeft(t)
         main, t = self.main(t)
         if main:
@@ -1257,8 +1257,8 @@ compiler (function): A compiler function or compiler class
     assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
+    result = None
     if syntax_tree.error_flag:
-        result = None
         errors = syntax_tree.collect_errors()
     else:
         transformer(syntax_tree)
