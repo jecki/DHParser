@@ -65,7 +65,7 @@ except ImportError:
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
     Node, TransformationFunc
-from DHParser.toolkit import repr_call, load_if_file, error_messages
+from DHParser.toolkit import load_if_file, error_messages
 
 __all__ = ['ScannerFunc',
            'HistoryRecord',
@@ -623,10 +623,7 @@ class RegExp(Parser):
         return None, text
 
     def __repr__(self):
-        return repr_call(self.__init__, (self.regexp, self.name))
-
-    def __str__(self):
-        return self.name or self.ptype + ' /%s/' % self.regexp.pattern
+        return '/%s/' % self.regexp.pattern
 
 
 class Whitespace(RegExp):
@@ -689,13 +686,15 @@ class RE(Parser):
         return None, text
 
     def __repr__(self):
-        return repr_call(self.__init__, (self.regexp, self.wL, self.wR, self.name))
+        wL = '~' if self.wL else ''
+        wR = '~' if self.wR else ''
+        return wL + '/%s/' % self.main.regexp.pattern + wR
 
-    def __str__(self):
-        if self.ptype == TOKEN_PTYPE:
-            return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
-        return self.name or ('RE ' + ('~' if self.wL else '')
-                             + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
+    # def __str__(self):
+    #     if self.ptype == TOKEN_PTYPE:
+    #         return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
+    #     return self.name or ('RE ' + ('~' if self.wL else '')
+    #                          + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
 
     def _grammar_assigned_notifier(self):
         if self.grammar:
@@ -734,7 +733,7 @@ class Token(RE):
         return self.__class__(self.token, self.wL, self.wR, self.name)
 
     def __repr__(self):
-        return repr_call(self.__init__, (self.token, self.wL, self.wR, self.name))
+        return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
 
 
 def mixin_comment(whitespace: str, comment: str) -> str:
@@ -767,9 +766,6 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         return self.__class__(parser, self.name)
 
-    def __repr__(self):
-        return repr_call(self.__init__, (self.parser, self.name))
-
     def apply(self, func: Parser.ApplyFunc):
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
@@ -784,9 +780,6 @@ class NaryOperator(Parser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         return self.__class__(*parsers, name=self.name)
-
-    def __repr__(self):
-        return repr_call(self.__init__, (*self.parsers, self.name))
 
     def apply(self, func: Parser.ApplyFunc):
         if super(NaryOperator, self).apply(func):
@@ -811,6 +804,9 @@ class Synonym(UnaryOperator):
             return Node(self, node), text
         return None, text
 
+    def __repr__(self):
+        return self.name + '=' + self.parser.name
+
 
 class Optional(UnaryOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
@@ -829,6 +825,8 @@ class Optional(UnaryOperator):
             return Node(self, node), text
         return Node(self, ()), text
 
+    def __repr__(self):
+        return '[' + repr(self.parser) + ']'
 
 class ZeroOrMore(Optional):
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -843,6 +841,9 @@ class ZeroOrMore(Optional):
                 node.add_error(dsl_error_msg(self, 'Infinite Loop detected.'))
             results += (node,)
         return Node(self, results), text
+
+    def __repr__(self):
+        return '{' + repr(self.parser) + '}'
 
 
 class OneOrMore(UnaryOperator):
@@ -867,6 +868,9 @@ class OneOrMore(UnaryOperator):
         if results == ():
             return None, text
         return Node(self, results), text_
+
+    def __repr__(self):
+        return '{' + repr(self.parser) + '}+'
 
 
 class Series(NaryOperator):
@@ -900,6 +904,9 @@ class Series(NaryOperator):
         self.parsers += other_parsers
         return self
 
+    def __repr__(self):
+        return '(' + " ".join(repr(parser) for parser in self.parsers) + ')'
+
 
 class Alternative(NaryOperator):
     """Matches if at least one of several alternatives matches. Returns
@@ -931,6 +938,9 @@ class Alternative(NaryOperator):
             if node:
                 return Node(self, node), text_
         return None, text
+
+    def __repr__(self):
+        return " | ".join(repr(parser) for parser in self.parsers)
 
     def __or__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers \
@@ -975,6 +985,9 @@ class Required(FlowOperator):
                            (str(self.parser), text[:10]))
         return node, text_
 
+    def __repr__(self):
+        return '§' + repr(self.parser)
+
 
 class Lookahead(FlowOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
@@ -987,11 +1000,17 @@ class Lookahead(FlowOperator):
         else:
             return None, text
 
+    def __repr__(self):
+        return '&' + repr(self.parser)
+
     def sign(self, bool_value) -> bool:
         return bool_value
 
 
 class NegativeLookahead(Lookahead):
+    def __repr__(self):
+        return '!' + repr(self.parser)
+
     def sign(self, bool_value) -> bool:
         return not bool_value
 
@@ -1023,6 +1042,9 @@ class Lookbehind(FlowOperator):
         else:
             return None, text
 
+    def __repr__(self):
+        return '-&' + repr(self.parser)
+
     def sign(self, bool_value) -> bool:
         return bool_value
 
@@ -1038,6 +1060,9 @@ class Lookbehind(FlowOperator):
 
 
 class NegativeLookbehind(Lookbehind):
+    def __repr__(self):
+        return '-!' + repr(self.parser)
+
     def sign(self, bool_value) -> bool:
         return not bool_value
 
@@ -1064,6 +1089,9 @@ class Capture(UnaryOperator):
             return Node(self, node), text_
         else:
             return None, text
+
+    def __repr__(self):
+        return repr(self.parser)
 
 
 RetrieveFilter = Callable[[List[str]], str]
@@ -1096,8 +1124,7 @@ class Retrieve(Parser):
         return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
 
     def __repr__(self):
-        filter = None if self.filter == last_value else self.filter
-        return repr_call(self.__init__, (self.symbol, filter, self.name))
+        return ':' + repr(self.symbol)
 
     def call(self, text: str) -> Tuple[Node, str]:
         try:
@@ -1122,6 +1149,9 @@ class Pop(Retrieve):
             value = stack.pop()
             self.grammar.rollback__.append((len(text), lambda : stack.append(value)))
         return nd, txt
+
+    def __repr__(self):
+        return '::' + repr(self.symbol)
 
 
 ########################################################################
