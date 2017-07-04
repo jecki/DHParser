@@ -194,8 +194,10 @@ def add_parser_guard(parser_func):
 
             if node is not None:
                 # in case of a recursive call saves the result of the first
-                # (or left-most) call that matches
-                parser.visited[location] = (node, rest)
+                # (or left-most) call that matches; but not for variable manipulating parsers,
+                # because caching would interfere with changes of variable state
+                if not (grammar.rollback__ and grammar.rollback__[-1][0] <= location):
+                    parser.visited[location] = (node, rest)
                 grammar.last_node__ = node   # store last node for Lookbehind operator
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
@@ -248,9 +250,9 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         return self.__class__(self.name)
 
     def reset(self):
-        self.visited = dict()  # type: Dict[int, Tuple[Node, str]]
+        self.visited = dict()            # type: Dict[int, Tuple[Node, str]]
         self.recursion_counter = dict()  # type: Dict[int, int]
-        self.cycle_detection = set()  # type: Set[Callable]
+        self.cycle_detection = set()     # type: Set[Callable]
         return self
 
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -372,16 +374,16 @@ class Grammar:
             raise KeyError('Unknown parser "%s" !' % key)
 
     def _reset(self):
-        self.document__ = ""       # type: str
+        self.document__ = ""          # type: str
         # variables stored and recalled by Capture and Retrieve parsers
-        self.variables__ = dict()  # type: Dict[str, List[str]]
-        self.rollback__ = []       # type: List[Tuple[int, Callable]]
+        self.variables__ = dict()     # type: Dict[str, List[str]]
+        self.rollback__ = []          # type: List[Tuple[int, Callable]]
         # previously parsed node, needed by Lookbehind parser
-        self.last_node__ = None    # type: Node
+        self.last_node__ = None       # type: Node
         # support for call stack tracing
-        self.call_stack__ = []     # type: List[Parser]
+        self.call_stack__ = []        # type: List[Parser]
         # snapshots of call stacks
-        self.history__ = []        # type: List[HistoryRecord]
+        self.history__ = []           # type: List[HistoryRecord]
         # also needed for call stack tracing
         self.moving_forward__ = True  # type: bool
 
@@ -1089,6 +1091,7 @@ class Capture(UnaryOperator):
             stack = self.grammar.variables__.setdefault(self.name, [])
             stack.append(str(node))
             self.grammar.rollback__.append((len(text), lambda : stack.pop()))
+            # block caching, because it would prevent recapturing of rolled back captures
             return Node(self, node), text_
         else:
             return None, text

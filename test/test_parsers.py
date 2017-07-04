@@ -41,18 +41,39 @@ ARITHMETIC_EBNF = """
     # example:  "5 + 3 * 4"
     """
 
+ARITHMETIC2_EBNF = """
+    @ whitespace = linefeed
+    formula = [ //~ ] expr
+    expr = ex
+    ex   = expr ("+"|"-") term | term
+    term = term ("*"|"/") factor | factor
+    factor = /[0-9]+/~
+    # example:  "5 + 3 * 4"
+    """
 
-ARITHMETIC_EBNF_transformation_table = {
-    # AST Transformations for the DSL-grammar
-    "formula": [remove_expendables],
-    "term, expr": [replace_by_single_child, flatten],
-    "factor": [remove_expendables, reduce_single_child],
-    (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-    "*": [remove_expendables, replace_by_single_child]
-}
 
-
-ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
+# ARITHMETIC_EBNF_transformation_table = {
+#     # AST Transformations for the DSL-grammar
+#     "formula": [remove_expendables],
+#     "term, expr": [replace_by_single_child, flatten],
+#     "factor": [remove_expendables, reduce_single_child],
+#     (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
+#     "*": [remove_expendables, replace_by_single_child]
+# }
+#
+#
+# ARITHMETIC2_EBNF_transformation_table = {
+#     # AST Transformations for the DSL-grammar
+#     "formula": [remove_expendables],
+#     "term, ex": [replace_by_single_child, flatten],
+#     "factor": [remove_expendables, reduce_single_child],
+#     (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
+#     "*": [remove_expendables, replace_by_single_child]
+# }
+#
+#
+# ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
+# ARITHMETIC2_EBNFTransform = partial(traverse, processing_table=ARITHMETIC2_EBNF_transformation_table)
 
 
 class TestInfiLoopsAndRecursion:
@@ -69,7 +90,15 @@ class TestInfiLoopsAndRecursion:
             # self.minilang_parser1.log_parsing_history("test_LeftRecursion_direct")
 
     def test_indirect_left_recursion(self):
-        pass
+        minilang = ARITHMETIC2_EBNF
+        snippet = "5 + 3 * 4"
+        parser = parser_factory(minilang)()
+        assert parser
+        syntax_tree = parser(snippet)
+        assert not syntax_tree.collect_errors()
+        assert snippet == str(syntax_tree)
+        if is_logging():
+            syntax_tree.log("test_LeftRecursion_indirect.cst")
 
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""
@@ -218,6 +247,22 @@ class TestPopRetrieve:
         syntax_tree = self.minilang_parser3(proper)
         assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
 
+    def test_cache_neutrality(self):
+        """Test that packrat-caching does not interfere with
+        Capture-Retrieve-Stack."""
+        lang = """
+            text = opening closing
+            opening = (unmarked_package | marked_package)
+            closing = ::variable
+            unmarked_package = package "."
+            marked_package = package "*" "."
+            package = "(" variable ")"
+            variable = /\w+/~
+            """
+        case = "(secret)*. secret"
+        gr = parser_factory(lang)()
+        st = gr(case)
+        assert not st.error_flag, str(st.collect_errors())
 
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
