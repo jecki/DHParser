@@ -1,4 +1,3 @@
-
 DHParser
 ========
 
@@ -193,8 +192,8 @@ above can be simply encoded like this:
 
 Yes, that's right. It is as simple as that. Observe, how much 
 more effacious a verse like "Wenn ich mich lehn' an deine Brust, / 
-kommt's über mich wie Himmelslust," can be if it is not uglified by
-enclosing XML tags ;-) 
+kommt's über mich wie Himmelslust," can be if it is not cluttered with
+XML tags ;-) 
 
 You might now wonder 
 whether the second version really does encode the same information
