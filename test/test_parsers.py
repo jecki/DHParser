@@ -73,7 +73,6 @@ ARITHMETIC2_EBNF = """
 #
 #
 # ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
-# ARITHMETIC2_EBNFTransform = partial(traverse, processing_table=ARITHMETIC2_EBNF_transformation_table)
 
 
 class TestInfiLoopsAndRecursion:
@@ -248,8 +247,8 @@ class TestPopRetrieve:
         assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
 
     def test_cache_neutrality(self):
-        """Test that packrat-caching does not interfere with
-        Capture-Retrieve-Stack."""
+        """Test that packrat-caching does not interfere with the variable-
+        changing parsers: Capture and Retrieve."""
         lang = """
             text = opening closing
             opening = (unmarked_package | marked_package)

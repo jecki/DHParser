@@ -83,11 +83,8 @@ class ParserBase:
         self.name = name  # type: str
         self._ptype = ':' + self.__class__.__name__  # type: str
 
-    def __repr__(self):
-        self.name + self.ptype
-
     def __str__(self):
-        return self.name or repr(self)
+        return self.name or self.ptype
 
     @property
     def ptype(self) -> str:
@@ -112,9 +109,6 @@ class MockParser(ParserBase):
         super(MockParser, self).__init__(name)
         self.name = name
         self._ptype = ptype or ':' + self.__class__.__name__
-
-    # def __repr__(self):
-    #     return repr_call(self.__init__, (self.name, self.ptype))
 
 
 class ZombieParser(MockParser):

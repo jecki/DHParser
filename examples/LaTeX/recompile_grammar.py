@@ -20,6 +20,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import cProfile
+import functools
 import sys
 
 sys.path.extend(['../../', '../', './'])
@@ -27,6 +29,18 @@ sys.path.extend(['../../', '../', './'])
 from DHParser.toolkit import logging
 from DHParser.testing import recompile_grammar
 
-with logging():
-    if not recompile_grammar('.', True):
+
+def profile(func):
+    import cProfile
+    pr = cProfile.Profile()
+    pr.enable()
+    ret = func()
+    pr.disable()
+    # after your program ends
+    pr.print_stats(sort="tottime")
+    return ret
+
+
+with logging(False):
+    if not profile(functools.partial(recompile_grammar, ebnf_filename='.', force=True)):
         sys.exit(1)

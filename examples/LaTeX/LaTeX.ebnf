@@ -20,7 +20,7 @@ inlineenv  = beginenv { command | block | text }+ endenv
 beginenv   = "\begin{" §NAME §"}"
 endenv     = "\end{" §::NAME §"}"
 
-command    = CMDNAME [ config ] block
+command    = CMDNAME [[ config ] block]
 config     = "[" cfgtext §"]"
 block      = "{" { text | block } §"}"
 

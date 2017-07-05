@@ -150,6 +150,8 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
+        def ptos(p):
+            return
         return "->".join(str(parser) for parser in self.call_stack)
 
     @property
@@ -627,6 +629,9 @@ class RegExp(Parser):
     def __repr__(self):
         return '/%s/' % self.regexp.pattern
 
+    def __str__(self):
+        return repr(self)
+
 
 class Whitespace(RegExp):
     assert WHITESPACE_PTYPE == ":Whitespace"
@@ -692,11 +697,8 @@ class RE(Parser):
         wR = '~' if self.wR else ''
         return wL + '/%s/' % self.main.regexp.pattern + wR
 
-    # def __str__(self):
-    #     if self.ptype == TOKEN_PTYPE:
-    #         return 'Token "%s"' % self.main.regexp.pattern.replace('\\', '')
-    #     return self.name or ('RE ' + ('~' if self.wL else '')
-    #                          + '/%s/' % self.main.regexp.pattern + ('~' if self.wR else ''))
+    def __str__(self):
+        return self.name or repr(self)
 
     def _grammar_assigned_notifier(self):
         if self.grammar:
