@@ -150,9 +150,8 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        def ptos(p):
-            return
-        return "->".join(str(parser) for parser in self.call_stack)
+        return "->".join((repr(p) if p.ptype == ':RegExp' else p.name or p.ptype)
+                         for p in self.call_stack)
 
     @property
     def status(self) -> str:
@@ -629,9 +628,6 @@ class RegExp(Parser):
     def __repr__(self):
         return '/%s/' % self.regexp.pattern
 
-    def __str__(self):
-        return repr(self)
-
 
 class Whitespace(RegExp):
     assert WHITESPACE_PTYPE == ":Whitespace"
@@ -696,9 +692,6 @@ class RE(Parser):
         wL = '~' if self.wL else ''
         wR = '~' if self.wR else ''
         return wL + '/%s/' % self.main.regexp.pattern + wR
-
-    def __str__(self):
-        return self.name or repr(self)
 
     def _grammar_assigned_notifier(self):
         if self.grammar:

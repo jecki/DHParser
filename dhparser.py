@@ -39,7 +39,7 @@ def selftest(file_name):
     print("\nAlphabetical List of Parsers:\n")
     parser_list = sorted([p for p in parser.all_parsers__ if p.name], key=lambda p: p.name)
     for p in parser_list:
-        print("%s = %s" % (p.name, repr(p)))
+        print(p)
     print('\n\n')
     transformer = get_ebnf_transformer()
     compiler = get_ebnf_compiler(compiler_name, grammar)
@@ -86,5 +86,5 @@ if __name__ == "__main__":
     else:
         # run self test
         # selftest('EBNF/EBNF.ebnf')
-        with logging(False):
+        with logging(True):
             profile(partial(selftest, file_name='EBNF/EBNF.ebnf'))

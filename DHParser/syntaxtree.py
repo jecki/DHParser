@@ -83,8 +83,11 @@ class ParserBase:
         self.name = name  # type: str
         self._ptype = ':' + self.__class__.__name__  # type: str
 
+    def __repr__(self):
+        return self.name + self.ptype
+
     def __str__(self):
-        return self.name or self.ptype
+        return self.name + (' = ' if self.name else '') + repr(self)
 
     @property
     def ptype(self) -> str:
