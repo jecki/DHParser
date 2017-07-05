@@ -198,7 +198,7 @@ def add_parser_guard(parser_func):
                 # because caching would interfere with changes of variable state
                 if not (grammar.rollback__ and grammar.rollback__[-1][0] <= location):
                     parser.visited[location] = (node, rest)
-                grammar.last_node__ = node   # store last node for Lookbehind operator
+                grammar.last_node__ = node   # store last node for Lookbehind parser
             elif location in parser.visited:
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
@@ -1293,7 +1293,7 @@ def compile_source(source: str,
         transformer (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
-compiler (function): A compiler function or compiler class
+        compiler (function): A compiler function or compiler class
             instance 
 
     Returns (tuple):

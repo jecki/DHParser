@@ -79,11 +79,11 @@ ARITHMETIC2_EBNF = """
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion(self):
         minilang = ARITHMETIC_EBNF
-        snippet = "5 + 3 * 4"
+        snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = parser_factory(minilang)()
         assert parser
         syntax_tree = parser(snippet)
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
         assert snippet == str(syntax_tree)
         if is_logging():
             syntax_tree.log("test_LeftRecursion_direct.cst")
@@ -91,7 +91,7 @@ class TestInfiLoopsAndRecursion:
 
     def test_indirect_left_recursion(self):
         minilang = ARITHMETIC2_EBNF
-        snippet = "5 + 3 * 4"
+        snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = parser_factory(minilang)()
         assert parser
         syntax_tree = parser(snippet)
