@@ -86,5 +86,5 @@ if __name__ == "__main__":
     else:
         # run self test
         # selftest('EBNF/EBNF.ebnf')
-        with logging(True):
+        with logging(False):
             profile(partial(selftest, file_name='EBNF/EBNF.ebnf'))

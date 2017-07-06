@@ -1406,7 +1406,7 @@ def full_compilation(source, grammar_base, AST_transformations, compiler):
 
     syntax_tree = grammar_base(source)
     syntax_tree.log(grammar_base.log_file_name, ext='.cst')
-    grammar_base.log_parsing_history()
+    grammar_base.log_parsing_history__()
 
     assert syntax_tree.error_flag or str(syntax_tree) == source, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is

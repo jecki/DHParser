@@ -232,7 +232,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             cst = parser(test_code, parser_name)
             if is_logging():
                 cst.log("match_%s_%s.cst" % (parser_name, test_name))
-                parser.log_parsing_history("match_%s_%s.log" % (parser_name, test_name))
+                parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
@@ -270,7 +270,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             cst = parser(test_code, parser_name)
             if is_logging():
                 cst.log("fail_%s_%s.cst" % (parser_name, test_name))
-                parser.log_parsing_history("fail_%s_%s.log" % (parser_name, test_name))
+                parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
             if not cst.error_flag:
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))

@@ -25,8 +25,6 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, logging, compile_python_object
-from DHParser.syntaxtree import traverse, remove_expendables, \
-    replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
 from DHParser.parsers import compile_source, Retrieve
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
@@ -86,7 +84,7 @@ class TestInfiLoopsAndRecursion:
         assert snippet == str(syntax_tree)
         if is_logging():
             syntax_tree.log("test_LeftRecursion_direct.cst")
-            # self.minilang_parser1.log_parsing_history("test_LeftRecursion_direct")
+            # self.minilang_parser1.log_parsing_history__("test_LeftRecursion_direct")
 
     def test_indirect_left_recursion(self):
         minilang = ARITHMETIC2_EBNF
@@ -143,7 +141,7 @@ class TestRegex:
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         result = parser(testdoc)
-        # parser.log_parsing_history("test.log")
+        # parser.log_parsing_history__("test.log")
         assert not result.error_flag
 
 

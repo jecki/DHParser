@@ -172,10 +172,9 @@ def add_parser_guard(parser_func):
 
             if not grammar.moving_forward__:
                 # rollback variable changes for discarded branch of parsing tree
-                while grammar.rollback__ and grammar.rollback__[-1][0] <= location:
-                    grammar.rollback__[-1][1]()
-                    grammar.rollback__.pop()
-            grammar.moving_forward__ = True
+                if grammar.last_rb__loc__ <= location:
+                    grammar.rollback_to__(location)
+                grammar.moving_forward__ = True
 
             if grammar.history_tracking__:
                 grammar.call_stack__.append(parser)
@@ -197,7 +196,7 @@ def add_parser_guard(parser_func):
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches; but not for variable manipulating parsers,
                 # because caching would interfere with changes of variable state
-                if not (grammar.rollback__ and grammar.rollback__[-1][0] <= location):
+                if grammar.last_rb__loc__ > location:
                     parser.visited[location] = (node, rest)
                 grammar.last_node__ = node   # store last node for Lookbehind parser
             elif location in parser.visited:
@@ -339,7 +338,7 @@ class Grammar:
         self.all_parsers__ = set()  # type: Set[Parser]
         self.dirty_flag__ = False
         self.history_tracking__ = False
-        self._reset()
+        self._reset__()
         # prepare parsers in the class, first
         self._assign_parser_names()
         # then deep-copy the parser tree from class to instance;
@@ -359,7 +358,7 @@ class Grammar:
             self.all_parsers__.add(self.wsp_right_parser__)  # don't you forget about me...
         else:
             self.wsp_right_parser__ = ZOMBIE_PARSER
-        self.root__.apply(self._add_parser)
+        self.root__.apply(self._add_parser__)
 
     def __getitem__(self, key):
         try:
@@ -369,16 +368,17 @@ class Grammar:
             if parser_template:
                 # add parser to grammar object on the fly...
                 parser = copy.deepcopy(parser_template)
-                parser.apply(self._add_parser)
+                parser.apply(self._add_parser__)
                 # assert self[key] == parser
                 return self[key]
             raise KeyError('Unknown parser "%s" !' % key)
 
-    def _reset(self):
+    def _reset__(self):
         self.document__ = ""          # type: str
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = dict()     # type: Dict[str, List[str]]
         self.rollback__ = []          # type: List[Tuple[int, Callable]]
+        self.last_rb__loc__ = -1  # type: int
         # previously parsed node, needed by Lookbehind parser
         self.last_node__ = None       # type: Node
         # support for call stack tracing
@@ -388,7 +388,7 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = True  # type: bool
 
-    def _add_parser(self, parser: Parser) -> None:
+    def _add_parser__(self, parser: Parser) -> None:
         """Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
@@ -417,13 +417,14 @@ class Grammar:
         if self.root__ is None:
             raise NotImplementedError()
         if self.dirty_flag__:
-            self._reset()
+            self._reset__()
             for parser in self.all_parsers__:
                 parser.reset()
         else:
             self.dirty_flag__ = True
         self.history_tracking__ = is_logging()
         self.document__ = document
+        self.last_rb__loc__ = len(document) + 1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
@@ -469,7 +470,19 @@ class Grammar:
         result.pos = 0  # calculate all positions
         return result
 
-    def log_parsing_history(self, log_file_name: str='') -> None:
+    def push_rollback__(self, location, func):
+        self.rollback__.append((location, func))
+        self.last_rb__loc__ = location
+
+    def rollback_to__(self, location):
+        while self.rollback__ and self.rollback__[-1][0] <= location:
+            loc, rollback_func = self.rollback__.pop()
+            assert not loc > self.last_rb__loc__
+            rollback_func()
+        self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
+            else (len(self.document__) + 1)
+
+    def log_parsing_history__(self, log_file_name: str = '') -> None:
         """Writes a log of the parsing history of the most recently parsed
         document. 
         """
@@ -1085,7 +1098,8 @@ class Capture(UnaryOperator):
         if node:
             stack = self.grammar.variables__.setdefault(self.name, [])
             stack.append(str(node))
-            self.grammar.rollback__.append((len(text), lambda : stack.pop()))
+            self.grammar.push_rollback__(len(text), lambda: stack.pop())
+            # self.grammar.rollback__.append((len(text), lambda : stack.pop()))
             # block caching, because it would prevent recapturing of rolled back captures
             return Node(self, node), text_
         else:
@@ -1148,7 +1162,8 @@ class Pop(Retrieve):
         if nd and not nd.error_flag:
             stack = self.grammar.variables__[self.symbol.name]
             value = stack.pop()
-            self.grammar.rollback__.append((len(text), lambda : stack.append(value)))
+            self.grammar.push_rollback__(len(text), lambda: stack.append(value))
+            # self.grammar.rollback__.append((len(text), lambda : stack.append(value)))
         return nd, txt
 
     def __repr__(self):
@@ -1306,7 +1321,7 @@ def compile_source(source: str,
     syntax_tree = parser(source_text)
     if is_logging():
         syntax_tree.log(log_file_name + '.cst')
-        parser.log_parsing_history(log_file_name)
+        parser.log_parsing_history__(log_file_name)
 
     assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
