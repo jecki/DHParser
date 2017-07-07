@@ -81,5 +81,5 @@ if __name__ == "__main__":
     result = test('testdata/testdoc1.tex')
     # result = test('testdata/testdoc2.tex')
     # result = test('testdata/testerror.tex')
-    print(result.as_sexpr())
+    print(result.as_sxpr())
     print(result.collect_errors())

@@ -123,20 +123,20 @@ class TestSExpr:
     def test_mock_syntax_tree(self):
         sexpr = '(a (b c) (d e) (f (g h)))'
         tree = mock_syntax_tree(sexpr)
-        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr
+        assert compact_sexpr(tree.as_sxpr().replace('"', '')) == sexpr
 
         # test different quotation marks
         sexpr = '''(a (b """c""" 'k' "l") (d e) (f (g h)))'''
         sexpr_stripped = '(a (b c k l) (d e) (f (g h)))'
         tree = mock_syntax_tree(sexpr)
-        assert compact_sexpr(tree.as_sexpr().replace('"', '')) == sexpr_stripped
+        assert compact_sexpr(tree.as_sxpr().replace('"', '')) == sexpr_stripped
 
         sexpr_clean = '(a (b "c" "k" "l") (d "e") (f (g "h")))'
         tree = mock_syntax_tree(sexpr_clean)
-        assert compact_sexpr(tree.as_sexpr()) == sexpr_clean
+        assert compact_sexpr(tree.as_sxpr()) == sexpr_clean
 
         tree = mock_syntax_tree(sexpr_stripped)
-        assert compact_sexpr(tree.as_sexpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
+        assert compact_sexpr(tree.as_sxpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
 
     def test_mock_syntax_tree_with_classes(self):
         sexpr = '(a:class1 (b:class2 x) (:class3 y) (c z))'

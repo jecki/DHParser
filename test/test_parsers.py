@@ -30,52 +30,16 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
 
 
-ARITHMETIC_EBNF = """
-    @ whitespace = linefeed
-    formula = [ //~ ] expr
-    expr = expr ("+"|"-") term | term
-    term = term ("*"|"/") factor | factor
-    factor = /[0-9]+/~
-    # example:  "5 + 3 * 4"
-    """
-
-ARITHMETIC2_EBNF = """
-    @ whitespace = linefeed
-    formula = [ //~ ] expr
-    expr = ex
-    ex   = expr ("+"|"-") term | term
-    term = term ("*"|"/") factor | factor
-    factor = /[0-9]+/~
-    # example:  "5 + 3 * 4"
-    """
-
-
-# ARITHMETIC_EBNF_transformation_table = {
-#     # AST Transformations for the DSL-grammar
-#     "formula": [remove_expendables],
-#     "term, expr": [replace_by_single_child, flatten],
-#     "factor": [remove_expendables, reduce_single_child],
-#     (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-#     "*": [remove_expendables, replace_by_single_child]
-# }
-#
-#
-# ARITHMETIC2_EBNF_transformation_table = {
-#     # AST Transformations for the DSL-grammar
-#     "formula": [remove_expendables],
-#     "term, ex": [replace_by_single_child, flatten],
-#     "factor": [remove_expendables, reduce_single_child],
-#     (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-#     "*": [remove_expendables, replace_by_single_child]
-# }
-#
-#
-# ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
-
-
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion(self):
-        minilang = ARITHMETIC_EBNF
+        minilang =""" 
+            @ whitespace = linefeed
+            formula = [ //~ ] expr
+            expr = expr ("+"|"-") term | term
+            term = term ("*"|"/") factor | factor
+            factor = /[0-9]+/~
+            # example:  "5 + 3 * 4"
+            """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = parser_factory(minilang)()
         assert parser
@@ -86,8 +50,16 @@ class TestInfiLoopsAndRecursion:
             syntax_tree.log("test_LeftRecursion_direct.cst")
             # self.minilang_parser1.log_parsing_history__("test_LeftRecursion_direct")
 
-    def test_indirect_left_recursion(self):
-        minilang = ARITHMETIC2_EBNF
+    def test_direct_left_recursion2(self):
+        minilang = """
+            @ whitespace = linefeed
+            formula = [ //~ ] expr
+            expr = ex
+            ex   = expr ("+"|"-") term | term
+            term = term ("*"|"/") factor | factor
+            factor = /[0-9]+/~
+            # example:  "5 + 3 * 4"
+            """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = parser_factory(minilang)()
         assert parser
@@ -95,7 +67,30 @@ class TestInfiLoopsAndRecursion:
         assert not syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
         if is_logging():
-            syntax_tree.log("test_LeftRecursion_indirect.cst")
+            syntax_tree.log("test_LeftRecursion_direct2.cst")
+
+    def test_indirect_left_recursion(self):
+        return
+        minilang = """
+            Expr    = //~ (Product | Sum | Value)
+            Product = Expr { ('*' | '/') Expr }
+            Sum     = Expr { ('+' | '-') Expr }
+            Value   = /[0-9.]+/~ | '(' Expr ')'
+            """
+        parser = parser_factory(minilang)()
+        assert parser
+        snippet = "7 * 8"
+        syntax_tree = parser(snippet)
+        print(syntax_tree.as_sxpr())
+        assert not syntax_tree.error_flag
+        snippet = "9 + 8 * (4 + 3)"
+        syntax_tree = parser(snippet)
+        print(syntax_tree.as_sxpr())
+        assert not syntax_tree.error_flag, print(syntax_tree.collect_errors())
+        assert snippet == str(syntax_tree)
+        if is_logging():
+            syntax_tree.log("test_LeftRecursion_indirect2.cst")
+
 
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""

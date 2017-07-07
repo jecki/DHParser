@@ -220,7 +220,7 @@ def compact_sexpr(s) -> str:
 #     if isinstance(parsing_result, collections.Collection):
 #         result = parsing_result[0]
 #         err = ('\nUnmatched sequence: ' + parsing_result[1]) if parsing_result[1] else ''
-#     sexpr = compact_sexpr(result.as_sexpr())
+#     sexpr = compact_sexpr(result.as_sxpr())
 #     return sexpr + err
 
 

@@ -1,5 +1,7 @@
 # EBNF-Syntax für MLW-Artikel
 
+@ testing = True
+
 @ comment         =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
 @ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
 @ literalws       =  right            # Leerraum vor und nach Literalen wird automatisch entfernt
@@ -11,23 +13,22 @@ Artikel           = [LZ]
                     §LemmaPosition
                     [ArtikelKopf]
                     §BedeutungsPosition
-                    §Autorinfo
+                    §ArtikelVerfasser
                     [LZ]  DATEI_ENDE
-
 
 #### LEMMA-POSITION ##########################################################
 
-LemmaPosition     = "LEMMA" [LZ] §HauptLemma §TR [LemmaVarianten] §GrammatikPosition
+LemmaPosition     = "LEMMA" [LZ] §Lemma §TR [LemmaVarianten] §GrammatikPosition [EtymologiePosition]
 
-HauptLemma        = [klassisch] [gesichert] lemma
+Lemma             = [klassisch] [gesichert] LemmaWort
   klassisch       = "*"
   gesichert       = "$"
 
 LemmaVarianten    = [LZ]
-                    { lemma §TR }+
+                    { LemmaWort §TR }+
                     [LemmaZusatz §ABS]
 
-lemma             = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
+LemmaWort         = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
 
 LemmaZusatz       = "ZUSATZ" §lzs_typ
   lzs_typ         = /sim\./
@@ -53,6 +54,11 @@ genus            = "maskulinum" | "m." |
                    "neutrum" | "n."
 
 
+## ETYMOLOGIE-POSITION ##
+
+EtymologiePosition
+
+
 #### ARTIKEL-KOPF ############################################################
 
 ArtikelKopf     = SchreibweisenPosition
@@ -60,7 +66,7 @@ SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
                          §SWVariante { ABS SWVariante} [LZ]
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
-Schreibweise    = "vizreg-" | "festregel(a)" | "fezdregl(a)" | "fat-"
+Schreibweise    = ZEICHENFOLGE
 
 
 #### BEDEUTUNGS-POSITION #####################################################
@@ -81,8 +87,8 @@ Zusatz          = "ZUSATZ" /\s*.*/ ABS
 
 #### AUTOR/AUTORIN ###########################################################
 
-Autorinfo       = ("AUTORIN" | "AUTOR") Name
-Name            = { NAME | NAMENS_ABKÜRZUNG }+
+ArtikelVerfasser = ("AUTORIN" | "AUTOR") Name
+Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
@@ -91,7 +97,7 @@ Beleg            = Verweis
 
 Verweis          = ZielName
 VerweisZiel      = "[" ZielName "]"
-ZielName         = ZEICHENFOLGE
+ZielName         = BUCHSTABENFOLGE
 
 NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
@@ -103,7 +109,8 @@ LAT_WORT         = /[a-z]+/~
 LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 
-ZEICHENFOLGE     = /\w+/~
+BUCHSTABENFOLGE  = /\w+/~
+ZEICHENFOLGE     = /[\w()-]+/~
 
 TR               = ABS | LZ             # (beliebiger) Trenner
 ABS              = /\s*;\s*/ | { ZW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)

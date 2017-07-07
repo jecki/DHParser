@@ -153,7 +153,7 @@ class MLWGrammar(GrammarBase):
 
 
 def test(node):
-    print(node.as_sexpr())
+    print(node.as_sxpr())
 
 
 def join_strings(node, delimiter='\n'):
@@ -169,7 +169,7 @@ def join_strings(node, delimiter='\n'):
             nd.result = delimiter.join((r.result for r in node.result[a:n]))
         new_result.append(nd)
     node.result = tuple(new_result)
-    print(node.as_sexpr())
+    print(node.as_sxpr())
 
 
 MLWTransTable = {

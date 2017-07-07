@@ -171,7 +171,7 @@ def add_parser_guard(parser_func):
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
 
             if not grammar.moving_forward__:
-                # rollback variable changes for discarded branch of parsing tree
+                # rollback variable changes from discarded parser passes
                 if grammar.last_rb__loc__ <= location:
                     grammar.rollback_to__(location)
                 grammar.moving_forward__ = True
@@ -182,7 +182,7 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                return parser.visited[location]
+                return parser.visited[location]     # TODO: might not work with Capture-Retrieve-Pop-Parsers!!!
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
                 return None, text
@@ -289,10 +289,28 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
             return True
 
 
+def mixin_comment(whitespace: str, comment: str) -> str:
+    """Returns a regular expression that merges comment and whitespace
+    regexps. Thus comments cann occur whereever whitespace is allowed
+    and will be skipped just as implicit whitespace.
+
+    Note, that because this works on the level of regular expressions,
+    nesting comments is not possible. It also makes it much harder to
+    use directives inside comments (which isn't recommended, anyway).
+    """
+    wspc = '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
+    return wspc
+
+
 class Grammar:
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
+    # some default values
+    COMMENT__ = r''  # r'#.*(?:\n|$)'
+    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)
+    wspL__ = ''
+    wspR__ = WSP__
 
     @classmethod
     def _assign_parser_names(cls):
@@ -471,10 +489,18 @@ class Grammar:
         return result
 
     def push_rollback__(self, location, func):
+        """Adds a rollback function that either removes or re-adds
+        values on the variable stack (`self.variables`) that have been
+        added (or removed) by Capture or Pop Parsers, the results of
+        which have been dismissed.
+        """
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
 
     def rollback_to__(self, location):
+        """Rolls back the variable stacks (`self.variables`) to its
+        state at an earlier location in the parsed document.
+        """
         while self.rollback__ and self.rollback__[-1][0] <= location:
             loc, rollback_func = self.rollback__.pop()
             assert not loc > self.last_rb__loc__
@@ -522,7 +548,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     Args:
         parser (Parser):  The parser where the error was noticed. Note
             that this is not necessarily the parser that caused the
-            error but only where the error became aparent.
+            error but only where the error became apparent.
         error_str (str):  A short string describing the error.
     Returns:  
         str: An error message including the call stack if history 
@@ -746,19 +772,6 @@ class Token(RE):
         return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
 
 
-def mixin_comment(whitespace: str, comment: str) -> str:
-    """Returns a regular expression that merges comment and whitespace
-    regexps. Thus comments cann occur whereever whitespace is allowed
-    and will be skipped just as implicit whitespace.
-    
-    Note, that because this works on the level of regular expressions,
-    nesting comments is not possible. It also makes it much harder to
-    use directives inside comments (which isn't recommended, anyway).
-    """
-    wspc = '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
-    return wspc
-
-
 ########################################################################
 #
 # Combinator parser classes (i.e. trunk classes of the parser tree)
@@ -944,12 +957,17 @@ class Alternative(NaryOperator):
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         assert all(not isinstance(p, Optional) for p in self.parsers)
+        self.been_here = dict()  # type: Dict[int, int]
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        for parser in self.parsers:
+        location = len(text)
+        pindex = self.been_here.get(location, 0)
+        for parser in self.parsers[pindex:]:
             node, text_ = parser(text)
             if node:
                 return Node(self, node), text_
+            pindex += 1
+        # self.been_here[location] = pindex
         return None, text
 
     def __repr__(self):
@@ -1249,7 +1267,7 @@ class Compiler:
         self.grammar_source = load_if_file(grammar_source)
 
     @staticmethod
-    def derive_method_name(node_name: str) -> str:
+    def method_name(node_name: str) -> str:
         """Returns the method name for ``node_name``, e.g.
         >>> Compiler.method_name('expression')
         'on_expression'
@@ -1275,7 +1293,7 @@ class Compiler:
                            "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
-            compiler = self.__getattribute__(self.derive_method_name(elem))
+            compiler = self.__getattribute__(self.method_name(elem))
             result = compiler(node)
             node.propagate_error_flags()
             return result

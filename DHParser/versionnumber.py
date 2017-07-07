@@ -18,4 +18,4 @@ permissions and limitations under the License.
 
 import os
 
-__version__ = '0.7.5' # + '_dev' + str(os.stat(__file__).st_mtime)
+__version__ = '0.7.5' + '_dev' + str(os.stat(__file__).st_mtime)

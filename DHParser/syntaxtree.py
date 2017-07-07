@@ -48,10 +48,9 @@ __all__ = ['WHITESPACE_PTYPE',
            'traverse',
            'replace_by_single_child',
            'reduce_single_child',
-           'reduce_children',
            'replace_parser',
            'collapse',
-           'map_content',
+           'replace_content',
            'is_whitespace',
            'is_empty',
            'is_expendable',
@@ -336,7 +335,7 @@ class Node:
         else:
             return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail
 
-    def as_sexpr(self, src: str=None) -> str:
+    def as_sxpr(self, src: str=None) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -421,7 +420,7 @@ class Node:
     def log(self, log_file_name):
         st_file_name = log_file_name
         with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
-            f.write(self.as_sexpr())
+            f.write(self.as_sxpr())
 
     def find(self, match_function) -> Iterator['Node']:
         """Finds nodes in the tree that match a specific criterion.
@@ -649,7 +648,7 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
 #     - tree may be rearranged (e.g.flattened)
 #     - nodes that are not leaves may be dropped
 #     - order is preserved
-#     - all leaves are kept
+#     - leave content is preserved (though not necessarily the leaves themselves)
 #
 # ------------------------------------------------
 
@@ -690,40 +689,26 @@ def reduce_single_child(node):
 
 
 @transformation_factory(Callable)
-def reduce_children(node, condition=lambda node: not node.name):
-    """Replaces those children of node that have children themselves
-    ans fulfil the given condition (default unnamed nodes).
-    In contrast to ``flatten`` (see below) this transformation does not
-    operate recursively.
+def flatten(node, condition=lambda node: not node.parser.name, recursive=True):
+    """Flattens all children, that fulfil the given `condition`
+    (default: all unnamed children). Flattening means that wherever a
+    node has child nodes, the child nodes are inserted in place of the
+    node.
+     If the parameter `recursive` is `True` the same will recursively be
+    done with the child-nodes, first. In other words, all leaves of
+    this node and its child nodes are collected in-order as direct
+    children of this node.
+     Applying flatten recursively will result in these kinds of
+    structural transformation:
+        (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
+        (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
     """
     if node.children:
         new_result = []
         for child in node.children:
             if child.children and condition(child):
-                new_result.extend(child.children)
-            else:
-                new_result.append(child)
-        node.result = tuple(new_result)
-
-
-def flatten(node):
-    """Recursively flattens all unnamed sub-nodes, in case there is more
-    than one sub-node present. Flattening means that
-    wherever a node has child nodes, the child nodes are inserted in place
-    of the node. In other words, all leaves of this node and its child nodes
-    are collected in-order as direct children of this node.
-    This is meant to achieve these kinds of structural transformation:
-        (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
-        (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
-
-    Warning: Use with care. Du tue its recursive nature, flattening can
-    have unexpected side-effects.
-    """
-    if node.children:
-        new_result = []
-        for child in node.children:
-            if not child.parser.name and child.children:
-                flatten(child)
+                if recursive:
+                    flatten(child, condition, recursive)
                 new_result.extend(child.children)
             else:
                 new_result.append(child)
@@ -829,7 +814,7 @@ def remove_content(node, contents: AbstractSet[str]):
 
 
 @transformation_factory
-def map_content(node, func: Callable):      # Callable[[Node], ResultType]
+def replace_content(node, func: Callable):      # Callable[[Node], ResultType]
     """Replaces the content of the node. ``func`` takes the node
     as an argument an returns the mapped result.
     """

@@ -101,7 +101,6 @@ class EBNFGrammar(Grammar):
     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
     group      =  "(" expression §")"
-    regexchain =  ">" expression §"<"                # compiles "expression" into a singular regular expression
     oneormore  =  "{" expression "}+"
     repetition =  "{" expression §"}"
     option     =  "[" expression §"]"
@@ -131,14 +130,13 @@ class EBNFGrammar(Grammar):
     option = Series(Token("["), expression, Required(Token("]")))
     repetition = Series(Token("{"), expression, Required(Token("}")))
     oneormore = Series(Token("{"), expression, Token("}+"))
-    regexchain = Series(Token("<"), expression, Required(Token(">")))
     group = Series(Token("("), expression, Required(Token(")")))
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
     factor = Alternative(Series(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("="))),
                          Series(Optional(flowmarker), literal), Series(Optional(flowmarker), regexp),
-                         Series(Optional(flowmarker), group), Series(Optional(flowmarker), regexchain),
-                         Series(Optional(flowmarker), oneormore), repetition, option)
+                         Series(Optional(flowmarker), group), Series(Optional(flowmarker), oneormore),
+                         repetition, option)
     term = OneOrMore(factor)
     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
     directive = Series(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
@@ -379,7 +377,7 @@ class EBNFCompiler(Compiler):
                     'Compiler, self).__init__(grammar_name, grammar_source)',
                     "        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.rules:
-            method_name = Compiler.derive_method_name(name)
+            method_name = Compiler.method_name(name)
             if name == self.root:
                 compiler += ['    def ' + method_name + '(self, node):',
                              '        return node', '']
@@ -485,7 +483,7 @@ class EBNFCompiler(Compiler):
             if nd.parser.name == "definition":
                 definitions.append(self._compile(nd))
             else:
-                assert nd.parser.name == "directive", nd.as_sexpr()
+                assert nd.parser.name == "directive", nd.as_sxpr()
                 self._compile(nd)
                 node.error_flag = node.error_flag or nd.error_flag
 
@@ -517,7 +515,7 @@ class EBNFCompiler(Compiler):
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
         except TypeError as error:
-            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
+            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sxpr()
             node.add_error(errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
         return rule, defn
@@ -610,7 +608,7 @@ class EBNFCompiler(Compiler):
 
     def on_factor(self, node: Node) -> str:
         assert node.children
-        assert len(node.children) >= 2, node.as_sexpr()
+        assert len(node.children) >= 2, node.as_sxpr()
         prefix = str(node.children[0])  # cast(str, node.children[0].result)
         custom_args = []  # type: List[str]
 
@@ -691,7 +689,7 @@ class EBNFCompiler(Compiler):
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
             errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + \
-                     node.as_sexpr()
+                     node.as_sxpr()
             node.add_error(errmsg)
             return '"' + errmsg + '"'
         return 'RE(' + ', '.join([arg] + name) + ')'

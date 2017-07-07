@@ -240,7 +240,7 @@ if __name__ == "__main__":
         result, errors, syntax_tree = full_compilation(text, EBNFGrammar.syntax,
                                                        EBNFTransTable, EBNFCompiler())
         print(errors)
-        print(syntax_tree.as_sexpr())
+        print(syntax_tree.as_sxpr())
         print(result)
         return result
 
@@ -254,6 +254,6 @@ if __name__ == "__main__":
     # code = test('left_recursion.ebnf')
     # exec(code)
     # result = parse("1 + 2 - 3 * 5 .", formula)
-    # print(result.as_sexpr())
+    # print(result.as_sxpr())
     # print(result.collect_errors())
     # print(result)

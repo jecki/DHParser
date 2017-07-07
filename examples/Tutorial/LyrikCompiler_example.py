@@ -26,8 +26,8 @@ from DHParser.parsers import Grammar, Compiler, nil_scanner, \
 from DHParser.syntaxtree import Node, traverse, remove_last, remove_first, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc, \
-    remove_children, remove_empty, reduce_children, has_content, has_name
+    collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc, \
+    remove_children, remove_empty, has_content, has_name
 
 
 #######################################################################
@@ -149,9 +149,9 @@ Lyrik_AST_transformation_table = {
     "jahr":
         [reduce_single_child],
     "wortfolge":
-        [reduce_children(has_name('WORT')), remove_last(is_whitespace), collapse],
+        [flatten(has_name('WORT'), recursive=False), remove_last(is_whitespace), collapse],
     "namenfolge":
-        [reduce_children(has_name('NAME')), remove_last(is_whitespace), collapse],
+        [flatten(has_name('NAME'), recursive=False), remove_last(is_whitespace), collapse],
     "verknüpfung":
         [remove_tokens('<', '>'), reduce_single_child],
     "ziel":
@@ -174,7 +174,7 @@ Lyrik_AST_transformation_table = {
         [reduce_single_child],
     "ENDE": [],
     ":Whitespace":
-        map_content(lambda node : " "),
+        replace_content(lambda node : " "),
     ":Token, :RE":
         reduce_single_child,
     "*": replace_by_single_child

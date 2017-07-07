@@ -291,7 +291,7 @@ class TestSynonymDetection:
         grammar = parser_factory(ebnf)()
         assert grammar['a'].name == 'a', grammar['a'].name
         assert grammar['b'].name == 'b', grammar['b'].name
-        assert grammar('b').as_sexpr().count('b') == 2
+        assert grammar('b').as_sxpr().count('b') == 2
 
 
 if __name__ == "__main__":

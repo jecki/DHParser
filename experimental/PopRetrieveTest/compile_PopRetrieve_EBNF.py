@@ -109,7 +109,7 @@ from PopRetrieveConfusionCompiler import compile_src
 
 print("PopRetrieveConfusion Test 1")
 result, errors, ast = compile_src("PopRetrieveConfusion.txt")
-print(ast.as_sexpr())
+print(ast.as_sxpr())
 if errors:
     for e in errors:
         print(e)

@@ -9,18 +9,12 @@
                 <LAT_WORT_TEIL>
                     <:RegExp>facitergul</:RegExp>
                 </LAT_WORT_TEIL>
-                <:ZeroOrMore>
-                    <:Sequence>
-                        <:Alternative>
-                            <:Token>
-                                <:RegExp>|</:RegExp>
-                            </:Token>
-                        </:Alternative>
-                        <LAT_WORT_TEIL>
-                            <:RegExp>a</:RegExp>
-                        </LAT_WORT_TEIL>
-                    </:Sequence>
-                </:ZeroOrMore>
+                <:Series>
+                    <:Token>|</:Token>
+                    <LAT_WORT_TEIL>
+                        <:RegExp>a</:RegExp>
+                    </LAT_WORT_TEIL>
+                </:Series>
             </lemma>
         </HauptLemma>
         <TR>
@@ -42,185 +36,117 @@
                 </:OneOrMore>
             </ABS>
         </TR>
-        <:Optional>
-            <LemmaVarianten>
-                <:OneOrMore>
-                    <:Sequence>
-                        <lemma>
+        <LemmaVarianten>
+            <:OneOrMore>
+                <:Series>
+                    <lemma>
+                        <LAT_WORT_TEIL>
+                            <:RegExp>fasc</:RegExp>
+                        </LAT_WORT_TEIL>
+                        <:Series>
+                            <:Token>-</:Token>
                             <LAT_WORT_TEIL>
-                                <:RegExp>fasc</:RegExp>
+                                <:RegExp>itergula</:RegExp>
                             </LAT_WORT_TEIL>
-                            <:ZeroOrMore>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>itergula</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                            </:ZeroOrMore>
-                        </lemma>
-                        <TR>
-                            <ABS>
-                                <:OneOrMore>
-                                    <ZW>
-                                        <:RegExp>
-                                            
-                                            
-                                        </:RegExp>
-                                        <:Whitespace>    </:Whitespace>
-                                    </ZW>
-                                </:OneOrMore>
-                            </ABS>
-                        </TR>
-                    </:Sequence>
-                    <:Sequence>
-                        <lemma>
-                            <LAT_WORT_TEIL>
-                                <:RegExp>fac</:RegExp>
-                            </LAT_WORT_TEIL>
-                            <:ZeroOrMore>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>iet</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>ergula</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                            </:ZeroOrMore>
-                        </lemma>
-                        <TR>
-                            <ABS>
-                                <:OneOrMore>
-                                    <ZW>
-                                        <:RegExp>
-                                            
-                                            
-                                        </:RegExp>
-                                        <:Whitespace>    </:Whitespace>
-                                    </ZW>
-                                </:OneOrMore>
-                            </ABS>
-                        </TR>
-                    </:Sequence>
-                    <:Sequence>
-                        <lemma>
-                            <LAT_WORT_TEIL>
-                                <:RegExp>fac</:RegExp>
-                            </LAT_WORT_TEIL>
-                            <:ZeroOrMore>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>ist</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>ergula</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                            </:ZeroOrMore>
-                        </lemma>
-                        <TR>
-                            <ABS>
-                                <:OneOrMore>
-                                    <ZW>
-                                        <:RegExp>
-                                            
-                                            
-                                        </:RegExp>
-                                        <:Whitespace>    </:Whitespace>
-                                    </ZW>
-                                </:OneOrMore>
-                            </ABS>
-                        </TR>
-                    </:Sequence>
-                    <:Sequence>
-                        <lemma>
-                            <LAT_WORT_TEIL>
-                                <:RegExp>fascite</:RegExp>
-                            </LAT_WORT_TEIL>
-                            <:ZeroOrMore>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>rcu</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                                <:Sequence>
-                                    <:Alternative>
-                                        <:Token>
-                                            <:RegExp>-</:RegExp>
-                                        </:Token>
-                                    </:Alternative>
-                                    <LAT_WORT_TEIL>
-                                        <:RegExp>la</:RegExp>
-                                    </LAT_WORT_TEIL>
-                                </:Sequence>
-                            </:ZeroOrMore>
-                        </lemma>
-                        <TR>
-                            <ABS>
-                                <:OneOrMore>
-                                    <ZW>
-                                        <:RegExp>
-                                            
-                                            
-                                        </:RegExp>
-                                    </ZW>
-                                    <ZW>
-                                        <:RegExp>
-                                            
-                                            
-                                        </:RegExp>
-                                        <:Whitespace>    </:Whitespace>
-                                    </ZW>
-                                </:OneOrMore>
-                            </ABS>
-                        </TR>
-                    </:Sequence>
-                </:OneOrMore>
-                <:Optional>
-                    <:Sequence>
-                        <LemmaZusatz>
-                            <:Token>
-                                <:RegExp>ZUSATZ</:RegExp>
-                                <:Whitespace> </:Whitespace>
-                            </:Token>
-                            <lzs_typ>
-                                <:RegExp>sim.</:RegExp>
-                            </lzs_typ>
-                        </LemmaZusatz>
+                        </:Series>
+                    </lemma>
+                    <TR>
+                        <ABS>
+                            <ZW>
+                                <:RegExp>
+                                    
+                                    
+                                </:RegExp>
+                                <:Whitespace>    </:Whitespace>
+                            </ZW>
+                        </ABS>
+                    </TR>
+                </:Series>
+                <:Series>
+                    <lemma>
+                        <LAT_WORT_TEIL>
+                            <:RegExp>fac</:RegExp>
+                        </LAT_WORT_TEIL>
+                        <:ZeroOrMore>
+                            <:Series>
+                                <:Token>-</:Token>
+                                <LAT_WORT_TEIL>
+                                    <:RegExp>iet</:RegExp>
+                                </LAT_WORT_TEIL>
+                            </:Series>
+                            <:Series>
+                                <:Token>-</:Token>
+                                <LAT_WORT_TEIL>
+                                    <:RegExp>ergula</:RegExp>
+                                </LAT_WORT_TEIL>
+                            </:Series>
+                        </:ZeroOrMore>
+                    </lemma>
+                    <TR>
+                        <ABS>
+                            <ZW>
+                                <:RegExp>
+                                    
+                                    
+                                </:RegExp>
+                                <:Whitespace>    </:Whitespace>
+                            </ZW>
+                        </ABS>
+                    </TR>
+                </:Series>
+                <:Series>
+                    <lemma>
+                        <LAT_WORT_TEIL>
+                            <:RegExp>fac</:RegExp>
+                        </LAT_WORT_TEIL>
+                        <:ZeroOrMore>
+                            <:Series>
+                                <:Token>-</:Token>
+                                <LAT_WORT_TEIL>
+                                    <:RegExp>ist</:RegExp>
+                                </LAT_WORT_TEIL>
+                            </:Series>
+                            <:Series>
+                                <:Token>-</:Token>
+                                <LAT_WORT_TEIL>
+                                    <:RegExp>ergula</:RegExp>
+                                </LAT_WORT_TEIL>
+                            </:Series>
+                        </:ZeroOrMore>
+                    </lemma>
+                    <TR>
+                        <ABS>
+                            <ZW>
+                                <:RegExp>
+                                    
+                                    
+                                </:RegExp>
+                                <:Whitespace>    </:Whitespace>
+                            </ZW>
+                        </ABS>
+                    </TR>
+                </:Series>
+                <:Series>
+                    <lemma>
+                        <LAT_WORT_TEIL>
+                            <:RegExp>fascite</:RegExp>
+                        </LAT_WORT_TEIL>
+                        <:ZeroOrMore>
+                            <:Series>
+                                <:Token>-</:Token>
+                                <LAT_WORT_TEIL>
+                                    <:RegExp>rcu</:RegExp>
+                                </LAT_WORT_TEIL>
+                            </:Series>
+                            <:Series>
+                                <:Token>-</:Token>
+                                <LAT_WORT_TEIL>
+                                    <:RegExp>la</:RegExp>
+                                </LAT_WORT_TEIL>
+                            </:Series>
+                        </:ZeroOrMore>
+                    </lemma>
+                    <TR>
                         <ABS>
                             <:OneOrMore>
                                 <ZW>
@@ -234,40 +160,60 @@
                                         
                                         
                                     </:RegExp>
-                                </ZW>
-                                <ZW>
-                                    <:RegExp>
-                                        
-                                        
-                                    </:RegExp>
+                                    <:Whitespace>    </:Whitespace>
                                 </ZW>
                             </:OneOrMore>
                         </ABS>
-                    </:Sequence>
-                </:Optional>
-            </LemmaVarianten>
-        </:Optional>
+                    </TR>
+                </:Series>
+            </:OneOrMore>
+            <:Series>
+                <LemmaZusatz>
+                    <:Token>
+                        <:RegExp>ZUSATZ</:RegExp>
+                        <:Whitespace> </:Whitespace>
+                    </:Token>
+                    <lzs_typ>
+                        <:RegExp>sim.</:RegExp>
+                    </lzs_typ>
+                </LemmaZusatz>
+                <ABS>
+                    <:OneOrMore>
+                        <ZW>
+                            <:RegExp>
+                                
+                                
+                            </:RegExp>
+                        </ZW>
+                        <ZW>
+                            <:RegExp>
+                                
+                                
+                            </:RegExp>
+                        </ZW>
+                        <ZW>
+                            <:RegExp>
+                                
+                                
+                            </:RegExp>
+                        </ZW>
+                    </:OneOrMore>
+                </ABS>
+            </:Series>
+        </LemmaVarianten>
         <GrammatikPosition>
-            <:Token>
-                <:RegExp>GRAMMATIK</:RegExp>
-            </:Token>
-            <:Optional>
-                <LZ>
-                    <:RegExp>
+            <:Token>GRAMMATIK</:Token>
+            <LZ>
+                <:RegExp>
+                    
                         
-                            
-                    </:RegExp>
-                </LZ>
-            </:Optional>
+                </:RegExp>
+            </LZ>
             <wortart>
-                <:Token>
-                    <:RegExp>nomen</:RegExp>
-                </:Token>
+                <:Token>nomen</:Token>
             </wortart>
             <ABS>
-                <:RE>
-                    <:RegExp>; </:RegExp>
-                </:RE>
+                <:RE>; </:RE>
             </ABS>
             <flexion>
                 <FLEX>
@@ -275,13 +221,9 @@
                     <:Whitespace> </:Whitespace>
                 </FLEX>
             </flexion>
-            <:Optional>
-                <genus>
-                    <:Token>
-                        <:RegExp>f.</:RegExp>
-                    </:Token>
-                </genus>
-            </:Optional>
+            <genus>
+                <:Token>f.</:Token>
+            </genus>
             <ABS>
                 <:OneOrMore>
                     <ZW>
@@ -299,582 +241,466 @@
                     </ZW>
                 </:OneOrMore>
             </ABS>
-            <:Optional>
-                <GrammatikVarianten>
-                    <:Sequence>
-                        <flexion>
+            <GrammatikVarianten>
+                <:Series>
+                    <flexion>
+                        <FLEX>
+                            <:RegExp>-us</:RegExp>
+                        </FLEX>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>,</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
                             <FLEX>
-                                <:RegExp>-us</:RegExp>
+                                <:RegExp>-i</:RegExp>
+                                <:Whitespace> </:Whitespace>
                             </FLEX>
-                            <:ZeroOrMore>
-                                <:Sequence>
-                                    <:Token>
-                                        <:RegExp>,</:RegExp>
-                                        <:Whitespace> </:Whitespace>
-                                    </:Token>
-                                    <FLEX>
-                                        <:RegExp>-i</:RegExp>
-                                        <:Whitespace> </:Whitespace>
-                                    </FLEX>
-                                </:Sequence>
-                            </:ZeroOrMore>
-                        </flexion>
-                        <:Optional>
-                            <genus>
-                                <:Token>
-                                    <:RegExp>m.</:RegExp>
-                                </:Token>
-                            </genus>
-                        </:Optional>
-                        <:Token>
-                            <:RegExp>:</:RegExp>
-                            <:Whitespace> </:Whitespace>
-                        </:Token>
-                        <ZEICHENFOLGE>
-                            <:RegExp>verweis_ziel_001</:RegExp>
-                        </ZEICHENFOLGE>
-                        <ABS>
-                            <:OneOrMore>
-                                <ZW>
-                                    <:RegExp>
-                                        
-                                        
-                                    </:RegExp>
-                                    <:Whitespace>    </:Whitespace>
-                                </ZW>
-                            </:OneOrMore>
-                        </ABS>
-                    </:Sequence>
-                    <:Sequence>
-                        <flexion>
+                        </:Series>
+                    </flexion>
+                    <genus>
+                        <:Token>m.</:Token>
+                    </genus>
+                    <:Token>
+                        <:RegExp>:</:RegExp>
+                        <:Whitespace> </:Whitespace>
+                    </:Token>
+                    <Beleg>
+                        <Verweis>
+                            <ZielName>
+                                <BUCHSTABENFOLGE>verweis_ziel_001</BUCHSTABENFOLGE>
+                            </ZielName>
+                        </Verweis>
+                    </Beleg>
+                    <ABS>
+                        <ZW>
+                            <:RegExp>
+                                
+                                
+                            </:RegExp>
+                            <:Whitespace>    </:Whitespace>
+                        </ZW>
+                    </ABS>
+                </:Series>
+                <:Series>
+                    <flexion>
+                        <FLEX>
+                            <:RegExp>-um</:RegExp>
+                        </FLEX>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>,</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
                             <FLEX>
-                                <:RegExp>-um</:RegExp>
+                                <:RegExp>-i</:RegExp>
+                                <:Whitespace> </:Whitespace>
                             </FLEX>
-                            <:ZeroOrMore>
-                                <:Sequence>
-                                    <:Token>
-                                        <:RegExp>,</:RegExp>
-                                        <:Whitespace> </:Whitespace>
-                                    </:Token>
-                                    <FLEX>
-                                        <:RegExp>-i</:RegExp>
-                                        <:Whitespace> </:Whitespace>
-                                    </FLEX>
-                                </:Sequence>
-                            </:ZeroOrMore>
-                        </flexion>
-                        <:Optional>
-                            <genus>
-                                <:Token>
-                                    <:RegExp>n.</:RegExp>
-                                </:Token>
-                            </genus>
-                        </:Optional>
-                        <:Token>
-                            <:RegExp>:</:RegExp>
-                            <:Whitespace> </:Whitespace>
-                        </:Token>
-                        <ZEICHENFOLGE>
-                            <:RegExp>verweis_ziel_002</:RegExp>
-                        </ZEICHENFOLGE>
-                        <ABS>
-                            <:OneOrMore>
-                                <ZW>
-                                    <:RegExp>
-                                        
-                                        
-                                    </:RegExp>
-                                </ZW>
-                                <ZW>
-                                    <:RegExp>
-                                        
-                                        
-                                    </:RegExp>
-                                </ZW>
-                                <ZW>
-                                    <:RegExp>
-                                        
-                                        
-                                    </:RegExp>
-                                </ZW>
-                            </:OneOrMore>
-                        </ABS>
-                    </:Sequence>
-                </GrammatikVarianten>
-            </:Optional>
+                        </:Series>
+                    </flexion>
+                    <genus>
+                        <:Token>n.</:Token>
+                    </genus>
+                    <:Token>
+                        <:RegExp>:</:RegExp>
+                        <:Whitespace> </:Whitespace>
+                    </:Token>
+                    <Beleg>
+                        <Verweis>
+                            <ZielName>
+                                <BUCHSTABENFOLGE>verweis_ziel_002</BUCHSTABENFOLGE>
+                            </ZielName>
+                        </Verweis>
+                    </Beleg>
+                    <ABS>
+                        <:OneOrMore>
+                            <ZW>
+                                <:RegExp>
+                                    
+                                    
+                                </:RegExp>
+                            </ZW>
+                            <ZW>
+                                <:RegExp>
+                                    
+                                    
+                                </:RegExp>
+                            </ZW>
+                            <ZW>
+                                <:RegExp>
+                                    
+                                    
+                                </:RegExp>
+                            </ZW>
+                        </:OneOrMore>
+                    </ABS>
+                </:Series>
+            </GrammatikVarianten>
         </GrammatikPosition>
     </LemmaPosition>
-    <:Optional>
+    <ArtikelKopf>
         <SchreibweisenPosition>
-            <:Token>
-                <:RegExp>SCHREIBWEISE</:RegExp>
-            </:Token>
-            <:Optional>
-                <LZ>
-                    <:RegExp>
+            <:Token>SCHREIBWEISE</:Token>
+            <LZ>
+                <:RegExp>
+                    
                         
-                            
-                    </:RegExp>
-                </LZ>
-            </:Optional>
+                </:RegExp>
+            </LZ>
             <SWTyp>
-                <:Token>
-                    <:RegExp>script.</:RegExp>
-                </:Token>
+                <:Token>script.</:Token>
             </SWTyp>
-            <:Token>
-                <:RegExp>:</:RegExp>
-            </:Token>
-            <:Optional>
-                <LZ>
-                    <:RegExp>
-                        
-                                
-                    </:RegExp>
-                </LZ>
-            </:Optional>
+            <:Token>:</:Token>
+            <LZ>
+                <:RegExp>
+                    
+                            
+                </:RegExp>
+            </LZ>
             <SWVariante>
                 <Schreibweise>
-                    <:Token>
+                    <ZEICHENFOLGE>
                         <:RegExp>vizreg-</:RegExp>
-                    </:Token>
+                    </ZEICHENFOLGE>
                 </Schreibweise>
                 <:Token>
                     <:RegExp>:</:RegExp>
                     <:Whitespace>      </:Whitespace>
                 </:Token>
-                <ZEICHENFOLGE>
-                    <:RegExp>verweis_ziel_003</:RegExp>
-                </ZEICHENFOLGE>
+                <Beleg>
+                    <Verweis>
+                        <ZielName>
+                            <BUCHSTABENFOLGE>verweis_ziel_003</BUCHSTABENFOLGE>
+                        </ZielName>
+                    </Verweis>
+                </Beleg>
             </SWVariante>
             <:ZeroOrMore>
-                <:Sequence>
+                <:Series>
                     <ABS>
-                        <:OneOrMore>
-                            <ZW>
-                                <:RegExp>
-                                    
-                                    
-                                </:RegExp>
-                                <:Whitespace>        </:Whitespace>
-                            </ZW>
-                        </:OneOrMore>
+                        <ZW>
+                            <:RegExp>
+                                
+                                
+                            </:RegExp>
+                            <:Whitespace>        </:Whitespace>
+                        </ZW>
                     </ABS>
                     <SWVariante>
                         <Schreibweise>
-                            <:Token>
+                            <ZEICHENFOLGE>
                                 <:RegExp>festregel(a)</:RegExp>
-                            </:Token>
+                            </ZEICHENFOLGE>
                         </Schreibweise>
                         <:Token>
                             <:RegExp>:</:RegExp>
                             <:Whitespace> </:Whitespace>
                         </:Token>
-                        <ZEICHENFOLGE>
-                            <:RegExp>verweis_ziel_004</:RegExp>
-                        </ZEICHENFOLGE>
+                        <Beleg>
+                            <Verweis>
+                                <ZielName>
+                                    <BUCHSTABENFOLGE>verweis_ziel_004</BUCHSTABENFOLGE>
+                                </ZielName>
+                            </Verweis>
+                        </Beleg>
                     </SWVariante>
-                </:Sequence>
-                <:Sequence>
+                </:Series>
+                <:Series>
                     <ABS>
-                        <:OneOrMore>
-                            <ZW>
-                                <:RegExp>
-                                    
-                                    
-                                </:RegExp>
-                                <:Whitespace>        </:Whitespace>
-                            </ZW>
-                        </:OneOrMore>
+                        <ZW>
+                            <:RegExp>
+                                
+                                
+                            </:RegExp>
+                            <:Whitespace>        </:Whitespace>
+                        </ZW>
                     </ABS>
                     <SWVariante>
                         <Schreibweise>
-                            <:Token>
+                            <ZEICHENFOLGE>
                                 <:RegExp>fezdregl(a)</:RegExp>
-                            </:Token>
+                            </ZEICHENFOLGE>
                         </Schreibweise>
                         <:Token>
                             <:RegExp>:</:RegExp>
                             <:Whitespace>  </:Whitespace>
                         </:Token>
-                        <ZEICHENFOLGE>
-                            <:RegExp>verweis_ziel_005</:RegExp>
-                        </ZEICHENFOLGE>
+                        <Beleg>
+                            <Verweis>
+                                <ZielName>
+                                    <BUCHSTABENFOLGE>verweis_ziel_005</BUCHSTABENFOLGE>
+                                </ZielName>
+                            </Verweis>
+                        </Beleg>
                     </SWVariante>
-                </:Sequence>
+                </:Series>
             </:ZeroOrMore>
-            <:Optional>
-                <LZ>
-                    <:RegExp>
-                        
-                        
-                        
-                    </:RegExp>
-                </LZ>
-            </:Optional>
+            <LZ>
+                <:RegExp>
+                    
+                    
+                    
+                </:RegExp>
+            </LZ>
         </SchreibweisenPosition>
-    </:Optional>
+    </ArtikelKopf>
     <BedeutungsPosition>
-        <:Sequence>
-            <:Token>
-                <:RegExp>BEDEUTUNG</:RegExp>
-            </:Token>
-            <:Optional>
-                <LZ>
-                    <:RegExp>
-                        
-                        
-                        
-                    </:RegExp>
-                </LZ>
-            </:Optional>
+        <:Series>
+            <:Token>BEDEUTUNG</:Token>
+            <LZ>
+                <:RegExp>
+                    
+                    
+                    
+                </:RegExp>
+            </LZ>
             <Bedeutung>
-                <:Alternative>
-                    <Interpretamente>
-                        <LateinischeBedeutung>
-                            <:Token>
-                                <:RegExp>LAT</:RegExp>
-                                <:Whitespace> </:Whitespace>
-                            </:Token>
-                            <:RE>
-                                <:RegExp>pannus, faciale, sudarium</:RegExp>
-                            </:RE>
-                        </LateinischeBedeutung>
-                        <:Optional>
-                            <LZ>
-                                <:RegExp>
-                                    
-                                    
-                                </:RegExp>
-                            </LZ>
-                        </:Optional>
-                        <DeutscheBedeutung>
-                            <:Token>
-                                <:RegExp>DEU</:RegExp>
-                                <:Whitespace> </:Whitespace>
-                            </:Token>
-                            <:RE>
-                                <:RegExp>Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]</:RegExp>
-                            </:RE>
-                        </DeutscheBedeutung>
-                        <:Optional>
-                            <LZ>
-                                <:RegExp>
-                                    
-                                    
-                                    
-                                </:RegExp>
-                            </LZ>
-                        </:Optional>
-                    </Interpretamente>
-                </:Alternative>
-                <:Optional>
-                    <Belege>
+                <Interpretamente>
+                    <LateinischeBedeutung>
                         <:Token>
-                            <:RegExp>BELEGE</:RegExp>
+                            <:RegExp>LAT</:RegExp>
+                            <:Whitespace> </:Whitespace>
                         </:Token>
-                        <:Optional>
-                            <LZ>
-                                <:RegExp>
+                        <:RE>pannus, faciale, sudarium</:RE>
+                    </LateinischeBedeutung>
+                    <LZ>
+                        <:RegExp>
+                            
+                            
+                        </:RegExp>
+                    </LZ>
+                    <DeutscheBedeutung>
+                        <:Token>
+                            <:RegExp>DEU</:RegExp>
+                            <:Whitespace> </:Whitespace>
+                        </:Token>
+                        <:RE>Gesichts-, Schweißtuch [usu liturg.; de re v. p. 32, 63]</:RE>
+                    </DeutscheBedeutung>
+                    <LZ>
+                        <:RegExp>
+                            
+                            
+                            
+                        </:RegExp>
+                    </LZ>
+                </Interpretamente>
+                <Belege>
+                    <:Token>BELEGE</:Token>
+                    <LZ>
+                        <:RegExp>
+                            
+                            
+                        </:RegExp>
+                    </LZ>
+                    <:ZeroOrMore>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:RE>
+                                    Catal.: thes. Germ.; 28,11 (post 851) "-um III."
                                     
+                                </:RE>
+                            </EinBeleg>
+                        </:Series>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:OneOrMore>
+                                    <:RE>
+                                        Form.: Sangall.; 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+                                          
+                                    </:RE>
+                                    <:RE>
+                                        -as duas."
+                                        
+                                    </:RE>
+                                </:OneOrMore>
+                            </EinBeleg>
+                        </:Series>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:RE>
+                                    Catal.:  thes. Germ.; 18,7 "-eterculi  viginti  quatuor".
                                     
-                                </:RegExp>
-                            </LZ>
-                        </:Optional>
-                        <:ZeroOrMore>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
+                                </:RE>
+                            </EinBeleg>
+                        </:Series>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:OneOrMore>
+                                    <:RE>
+                                        Libri:  confrat.  I;  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+                                          
+                                    </:RE>
+                                    <:RE>
+                                        circumdari  iussit  pontifex."
+                                        
+                                    </:RE>
+                                </:OneOrMore>
+                            </EinBeleg>
+                        </:Series>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:OneOrMore>
+                                    <:RE>
+                                        Catal.: thes. Germ.; 76,15 "-rulae II."; 40,5 VI "vizregule."; 129a,5 "-sterculas
+                                          
+                                    </:RE>
+                                    <:RE>
+                                        II."; 24,8  "-itella X."; 114,8 VIII  "fezdregle.";  6,24  "fasciutercule
+                                          
+                                    </:RE>
+                                    <:RE>
+                                        VII."; 92,6 "fascercule tres." 21,20 IIII "festregele."
+                                          
+                                    </:RE>
+                                </:OneOrMore>
+                                <Zusatz>
+                                    <:Token>
+                                        <:RegExp>ZUSATZ</:RegExp>
+                                        <:Whitespace> </:Whitespace>
+                                    </:Token>
+                                    <:RE>saepe.</:RE>
+                                    <ABS>
+                                        <:OneOrMore>
+                                            <ZW>
                                                 <:RegExp>
-                                                    Catal.: thes. Germ.; 28,11 (post 851) "-um III."
+                                                    
                                                     
                                                 </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                </EinBeleg>
-                            </:Sequence>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
+                                            </ZW>
+                                            <ZW>
                                                 <:RegExp>
-                                                    Form.: Sangall.; 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
-                                                      
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    -as duas."
+                                                    
                                                     
                                                 </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                </EinBeleg>
-                            </:Sequence>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    Catal.:  thes. Germ.; 18,7 "-eterculi  viginti  quatuor".
-                                                    
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                </EinBeleg>
-                            </:Sequence>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    Libri:  confrat.  I;  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
-                                                      
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    circumdari  iussit  pontifex."
-                                                    
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                </EinBeleg>
-                            </:Sequence>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    Catal.: thes. Germ.; 76,15 "-rulae II."; 40,5 VI "vizregule."; 129a,5 "-sterculas
-                                                      
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    II."; 24,8  "-itella X."; 114,8 VIII  "fezdregle.";  6,24  "fasciutercule
-                                                      
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    VII."; 92,6 "fascercule tres." 21,20 IIII "festregele."
-                                                      
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                    <:Optional>
-                                        <Zusatz>
-                                            <:Token>
-                                                <:RegExp>ZUSATZ</:RegExp>
-                                                <:Whitespace> </:Whitespace>
-                                            </:Token>
-                                            <:RE>
-                                                <:RegExp>saepe.</:RegExp>
-                                            </:RE>
-                                            <ABS>
-                                                <:OneOrMore>
-                                                    <ZW>
-                                                        <:RegExp>
-                                                            
-                                                            
-                                                        </:RegExp>
-                                                    </ZW>
-                                                    <ZW>
-                                                        <:RegExp>
-                                                            
-                                                            
-                                                        </:RegExp>
-                                                    </ZW>
-                                                </:OneOrMore>
-                                            </ABS>
-                                        </Zusatz>
-                                    </:Optional>
-                                </EinBeleg>
-                            </:Sequence>
-                        </:ZeroOrMore>
-                    </Belege>
-                </:Optional>
+                                            </ZW>
+                                        </:OneOrMore>
+                                    </ABS>
+                                </Zusatz>
+                            </EinBeleg>
+                        </:Series>
+                    </:ZeroOrMore>
+                </Belege>
             </Bedeutung>
-        </:Sequence>
-        <:Sequence>
-            <:Token>
-                <:RegExp>BEDEUTUNG</:RegExp>
-            </:Token>
-            <:Optional>
-                <LZ>
-                    <:RegExp>
-                        
-                        
-                        
-                    </:RegExp>
-                </LZ>
-            </:Optional>
+        </:Series>
+        <:Series>
+            <:Token>BEDEUTUNG</:Token>
+            <LZ>
+                <:RegExp>
+                    
+                    
+                    
+                </:RegExp>
+            </LZ>
             <Bedeutung>
-                <:Alternative>
-                    <Interpretamente>
-                        <LateinischeBedeutung>
-                            <:Token>
-                                <:RegExp>LAT</:RegExp>
-                                <:Whitespace> </:Whitespace>
-                            </:Token>
-                            <:RE>
-                                <:RegExp>capital, rica</:RegExp>
-                            </:RE>
-                        </LateinischeBedeutung>
-                        <:Optional>
-                            <LZ>
-                                <:RegExp>
-                                    
-                                    
-                                </:RegExp>
-                            </LZ>
-                        </:Optional>
-                        <DeutscheBedeutung>
-                            <:Token>
-                                <:RegExp>DEU</:RegExp>
-                                <:Whitespace> </:Whitespace>
-                            </:Token>
-                            <:RE>
-                                <:RegExp>Kopftuch</:RegExp>
-                            </:RE>
-                        </DeutscheBedeutung>
-                        <:Optional>
-                            <LZ>
-                                <:RegExp>
-                                    
-                                    
-                                    
-                                </:RegExp>
-                            </LZ>
-                        </:Optional>
-                    </Interpretamente>
-                </:Alternative>
-                <:Optional>
-                    <Belege>
+                <Interpretamente>
+                    <LateinischeBedeutung>
                         <:Token>
-                            <:RegExp>BELEGE</:RegExp>
+                            <:RegExp>LAT</:RegExp>
+                            <:Whitespace> </:Whitespace>
                         </:Token>
-                        <:Optional>
-                            <LZ>
-                                <:RegExp>
+                        <:RE>capital, rica</:RE>
+                    </LateinischeBedeutung>
+                    <LZ>
+                        <:RegExp>
+                            
+                            
+                        </:RegExp>
+                    </LZ>
+                    <DeutscheBedeutung>
+                        <:Token>
+                            <:RegExp>DEU</:RegExp>
+                            <:Whitespace> </:Whitespace>
+                        </:Token>
+                        <:RE>Kopftuch</:RE>
+                    </DeutscheBedeutung>
+                    <LZ>
+                        <:RegExp>
+                            
+                            
+                            
+                        </:RegExp>
+                    </LZ>
+                </Interpretamente>
+                <Belege>
+                    <:Token>BELEGE</:Token>
+                    <LZ>
+                        <:RegExp>
+                            
+                            
+                        </:RegExp>
+                    </LZ>
+                    <:ZeroOrMore>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:RE>
+                                    Transl.: Libor.  I; 32  "raptis  feminarum -is  (fa[s]citergiis  var.  l.)."
                                     
-                                    
-                                </:RegExp>
-                            </LZ>
-                        </:Optional>
-                        <:ZeroOrMore>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    Transl.: Libor.  I; 32  "raptis  feminarum -is  (fa[s]citergiis  var.  l.)."
-                                                    
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                </EinBeleg>
-                            </:Sequence>
-                            <:Sequence>
-                                <:Token>
-                                    <:RegExp>*</:RegExp>
-                                    <:Whitespace> </:Whitespace>
-                                </:Token>
-                                <EinBeleg>
-                                    <:OneOrMore>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    Transl.: Libor. II; 20  "nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
-                                                      
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                        <:Sequence>
-                                            <:RE>
-                                                <:RegExp>
-                                                    clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis."
-                                                    
-                                                    
-                                                </:RegExp>
-                                            </:RE>
-                                        </:Sequence>
-                                    </:OneOrMore>
-                                </EinBeleg>
-                            </:Sequence>
-                        </:ZeroOrMore>
-                    </Belege>
-                </:Optional>
+                                </:RE>
+                            </EinBeleg>
+                        </:Series>
+                        <:Series>
+                            <:Token>
+                                <:RegExp>*</:RegExp>
+                                <:Whitespace> </:Whitespace>
+                            </:Token>
+                            <EinBeleg>
+                                <:OneOrMore>
+                                    <:RE>
+                                        Transl.: Libor. II; 20  "nuditatem  membrorum  illius (puellae)  tegere  festinarunt  fideles
+                                          
+                                    </:RE>
+                                    <:RE>
+                                        clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis."
+                                        
+                                        
+                                    </:RE>
+                                </:OneOrMore>
+                            </EinBeleg>
+                        </:Series>
+                    </:ZeroOrMore>
+                </Belege>
             </Bedeutung>
-        </:Sequence>
+        </:Series>
     </BedeutungsPosition>
     <Autorinfo>
-        <:Alternative>
-            <:Token>
-                <:RegExp>AUTORIN</:RegExp>
-                <:Whitespace> </:Whitespace>
-            </:Token>
-        </:Alternative>
+        <:Token>
+            <:RegExp>AUTORIN</:RegExp>
+            <:Whitespace> </:Whitespace>
+        </:Token>
         <Name>
-            <:Alternative>
-                <NAME>
-                    <:RegExp>Weber</:RegExp>
-                </NAME>
-            </:Alternative>
+            <NAME>
+                <:RegExp>Weber</:RegExp>
+            </NAME>
         </Name>
     </Autorinfo>
-    <:Optional>
-        <LZ>
-            <:RegExp>
-                
-                
-            </:RegExp>
-        </LZ>
-    </:Optional>
+    <LZ>
+        <:RegExp>
+            
+            
+        </:RegExp>
+    </LZ>
 </Artikel>

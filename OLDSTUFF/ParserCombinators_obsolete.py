@@ -564,7 +564,7 @@ def flatten(node):
         new_result = []
         for child in node.children:
             if not child.parser.name and child.children:
-                assert child.children, node.as_sexpr()
+                assert child.children, node.as_sxpr()
                 flatten(child)
                 new_result.extend(child.result)
             else:
@@ -577,7 +577,7 @@ def remove_brackets(node):
     from a literal or braces from a group).
     """
     if len(node.children) >= 3:
-        assert not node.children[0].children and not node.children[-1].children, node.as_sexpr()
+        assert not node.children[0].children and not node.children[-1].children, node.as_sxpr()
         node.result = node.result[1:-1]
 
 
@@ -1704,7 +1704,7 @@ class EBNFCompiler(CompilerBase):
             if nd.parser.name == "definition":
                 definitions.append(self.compile__(nd))
             else:
-                assert nd.parser.name == "directive", nd.as_sexpr()
+                assert nd.parser.name == "directive", nd.as_sxpr()
                 self.compile__(nd)
 
         return self.gen_parser(definitions)
@@ -1732,7 +1732,7 @@ class EBNFCompiler(CompilerBase):
                 defn = 'Capture(%s, "%s")' % (defn, rule)
                 self.variables.remove(rule)
         except TypeError as error:
-            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sexpr()
+            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sxpr()
             node.add_error(errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
         return (rule, defn)
@@ -1797,9 +1797,9 @@ class EBNFCompiler(CompilerBase):
         return self.non_terminal(node, 'Sequence')
 
     def factor(self, node):
-        assert isinstance(node.parser, Sequence), node.as_sexpr()  # these assert statements can be removed
+        assert isinstance(node.parser, Sequence), node.as_sxpr()  # these assert statements can be removed
         assert node.children
-        assert len(node.result) >= 2, node.as_sexpr()
+        assert len(node.result) >= 2, node.as_sxpr()
         prefix = node.result[0].result
 
         arg = node.result[-1]
@@ -1825,7 +1825,7 @@ class EBNFCompiler(CompilerBase):
             if prefix == match:
                 return self.non_terminal(node, parser_class)
 
-        assert False, ("Unknown prefix %s \n" % prefix) + node.as_sexpr()
+        assert False, ("Unknown prefix %s \n" % prefix) + node.as_sxpr()
 
     def option(self, node):
         return self.non_terminal(node, 'Optional')
@@ -1871,7 +1871,7 @@ class EBNFCompiler(CompilerBase):
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
             errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + \
-                     node.as_sexpr()
+                     node.as_sxpr()
             node.add_error(errmsg)
             return '"' + errmsg + '"'
         return 'RE(' + ', '.join([arg] + name) + ')'

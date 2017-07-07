@@ -282,5 +282,5 @@ markdown_text = load_if_file('../testdata/test_md1.md')
 syntax_tree = parse(markdown_text, parser)
 ASTTransform(syntax_tree, MDTransTable)
 
-print(syntax_tree.as_sexpr())
+print(syntax_tree.as_sxpr())
 print(error_messages(markdown_text, syntax_tree.collect_errors()))

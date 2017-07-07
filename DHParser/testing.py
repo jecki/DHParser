@@ -37,7 +37,7 @@ def mock_syntax_tree(sexpr):
     """Generates a tree of nodes from an S-expression.
 
     Example: 
-    >>> mock_syntax_tree("(a (b c))").as_sexpr()
+    >>> mock_syntax_tree("(a (b c))").as_sxpr()
     (a 
         (b 
             "c" 
@@ -200,10 +200,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or cst == ast):
                 report.append('\n### CST')
-                report.append(cst.as_sexpr())
+                report.append(cst.as_sxpr())
             elif ast:
                 report.append('\n### AST')
-                report.append(ast.as_sexpr())
+                report.append(ast.as_sxpr())
     return '\n'.join(report)
 
 
@@ -248,15 +248,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                     errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                  (test_name, parser_name, cst.as_sexpr()))
+                                  (test_name, parser_name, cst.as_sxpr()))
             elif "ast" in tests:
                 compare = mock_syntax_tree(tests["ast"][test_name])
                 if compare != ast:
                     errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                   '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                   % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                     compact_sexpr(compare.as_sexpr()),
-                                     compact_sexpr(ast.as_sexpr())))
+                                     compact_sexpr(compare.as_sxpr()),
+                                     compact_sexpr(ast.as_sxpr())))
                     tests.setdefault('__err__', {})[test_name] = errata[-1]
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))

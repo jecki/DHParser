@@ -206,5 +206,5 @@ print(markdown_text)
 syntax_tree = parser(markdown_text)
 ASTTransform(syntax_tree, MDTransTable)
 
-print(syntax_tree.as_sexpr())
+print(syntax_tree.as_sxpr())
 print(error_messages(markdown_text, syntax_tree.collect_errors()))

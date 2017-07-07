@@ -81,9 +81,9 @@ from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     last_value, counterpart, accumulate, ScannerFunc
 from DHParser.syntaxtree import Node, traverse, remove_children_if, \\
-    reduce_single_child, reduce_children, replace_by_single_child, remove_whitespace, \\
+    reduce_single_child, replace_by_single_child, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
-    is_empty, is_expendable, collapse, map_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
+    is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     TransformationFunc, remove_children, remove_content, remove_first, remove_last, \\
     has_name, has_content
 '''
@@ -458,7 +458,10 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
         try:
             f = open(rootname + extension, 'w', encoding="utf-8")
             if isinstance(result, Node):
-                f.write(result.as_xml())
+                if extension.lower() == '.xml':
+                    f.write(result.as_xml())
+                else:
+                    f.write(result.as_sxpr())
             else:
                 f.write(result)
         except (PermissionError, FileNotFoundError, IOError) as error:

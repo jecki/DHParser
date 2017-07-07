@@ -211,7 +211,7 @@ def join_strings(node, delimiter='\n'):
                 n += 1
             nd.result = delimiter.join((r.result for r in node.result[a:n]))
         elif nd.parser.name != "Zusatz":
-            raise AssertionError(nd.as_sexpr())
+            raise AssertionError(nd.as_sxpr())
         else:
             n += 1
         new_result.append(nd)
