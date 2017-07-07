@@ -20,7 +20,7 @@ permissions and limitations under the License.
 import copy
 import inspect
 import os
-from functools import partial, singledispatch
+from functools import partial, reduce, singledispatch
 try:
     import regex as re
 except ImportError:
@@ -50,6 +50,7 @@ __all__ = ['WHITESPACE_PTYPE',
            'reduce_single_child',
            'replace_parser',
            'collapse',
+           'join',
            'replace_content',
            'is_whitespace',
            'is_empty',
@@ -57,14 +58,14 @@ __all__ = ['WHITESPACE_PTYPE',
            'is_token',
            'has_name',
            'has_content',
-           'remove_children_if',
-           'remove_children',
+           'remove_parser',
            'remove_content',
-           'remove_first',
-           'remove_last',
+           'keep_children',
+           'remove_children_if',
            'remove_whitespace',
            'remove_empty',
            'remove_expendables',
+           'remove_brackets',
            'remove_tokens',
            'flatten',
            'forbid',
@@ -422,7 +423,7 @@ class Node:
         with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
             f.write(self.as_sxpr())
 
-    def find(self, match_function) -> Iterator['Node']:
+    def find(self, match_function: Callable) -> Iterator['Node']:
         """Finds nodes in the tree that match a specific criterion.
         
         ``find`` is a generator that yields all nodes for which the
@@ -722,6 +723,30 @@ def collapse(node):
     node.result = str(node)
 
 
+@transformation_factory
+def join(node, tag_names: List[str]):
+    """Joins all children next to each other and with particular tag-
+    names into a single child node with mock parser 'parser_name'.
+    """
+    result = []
+    name, ptype = (tag_names[0].split(':') + [''])[:2]
+    if node.children:
+        i = 0;  L = len(node.children)
+        while i < L:
+            while i < L and not node.children[i].tag_name in tag_names:
+                result.append(node.children[i])
+                i += 1
+            k = i + 1
+            while (k < L and node.children[k].tag_name in tag_names
+                   and bool(node.children[i].children) == bool(node.children[k].children)):
+                k += 1
+            if i < L:
+                result.append(Node(MockParser(name, ptype),
+                    reduce(lambda a, b: a + b, (node.result for node in node.children[i:k]))))
+            i = k
+        node.result = tuple(result)
+
+
 # ------------------------------------------------
 #
 # destructive transformations:
@@ -762,9 +787,18 @@ def has_content(node, contents: AbstractSet[str]) -> bool:
     return str(node) in contents
 
 
-@transformation_factory(Callable)  # @singledispatch
+@transformation_factory
+def keep_children(node, section: slice=slice(None, None, None), condition=lambda node: True):
+    """Keeps only the nodes which fall into a slice of the result field
+    and for which the function `condition(child_node)` evaluates to
+    `True`."""
+    if node.children:
+        node.result = tuple(c for c in node.children[section] if condition(c))
+
+
+@transformation_factory(Callable)
 def remove_children_if(node, condition):
-    """Removes all nodes from the result field if the function 
+    """Removes all nodes from a slice of the result field if the function
     ``condition(child_node)`` evaluates to ``True``."""
     if node.children:
         node.result = tuple(c for c in node.children if not condition(c))
@@ -773,24 +807,24 @@ def remove_children_if(node, condition):
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
+remove_brackets = keep_children(slice(1,-1))
 
-
-@transformation_factory(Callable)
-def remove_first(node, condition=lambda node: True):
-    """Removes the first child if the condition is met.
-    Otherwise does nothing."""
-    if node.children:
-        if condition(node.children[0]):
-            node.result = node.result[1:]
-
-
-@transformation_factory(Callable)
-def remove_last(node, condition=lambda node: True):
-    """Removes the last child if the condition is met.
-    Otherwise does nothing."""
-    if node.children:
-        if condition(node.children[-1]):
-            node.result = node.result[:-1]
+# @transformation_factory(Callable)
+# def remove_first(node, condition=lambda node: True):
+#     """Removes the first child if the condition is met.
+#     Otherwise does nothing."""
+#     if node.children:
+#         if condition(node.children[0]):
+#             node.result = node.result[1:]
+#
+#
+# @transformation_factory(Callable)
+# def remove_last(node, condition=lambda node: True):
+#     """Removes the last child if the condition is met.
+#     Otherwise does nothing."""
+#     if node.children:
+#         if condition(node.children[-1]):
+#             node.result = node.result[:-1]
 
 
 @transformation_factory
@@ -802,7 +836,7 @@ def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory
-def remove_children(node, tag_names: AbstractSet[str]):
+def remove_parser(node, tag_names: AbstractSet[str]):
     """Removes children by 'tag name'."""
     remove_children_if(node, partial(has_name, tag_names=tag_names))
 

@@ -31,7 +31,7 @@ from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
 
 
 class TestInfiLoopsAndRecursion:
-    def test_direct_left_recursion(self):
+    def test_direct_left_recursion1(self):
         minilang =""" 
             @ whitespace = linefeed
             formula = [ //~ ] expr
@@ -50,7 +50,7 @@ class TestInfiLoopsAndRecursion:
             syntax_tree.log("test_LeftRecursion_direct.cst")
             # self.minilang_parser1.log_parsing_history__("test_LeftRecursion_direct")
 
-    def test_indirect_left_recursion1(self):
+    def test_direct_left_recursion2(self):
         minilang = """
             @ whitespace = linefeed
             formula = [ //~ ] expr
@@ -64,12 +64,10 @@ class TestInfiLoopsAndRecursion:
         parser = parser_factory(minilang)()
         assert parser
         syntax_tree = parser(snippet)
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
-        if is_logging():
-            syntax_tree.log("test_LeftRecursion_indirect1.cst")
 
-    def test_indirect_left_recursion2(self):
+    def test_indirect_left_recursion1(self):
         minilang = """
             Expr    = //~ (Product | Sum | Value)
             Product = Expr { ('*' | '/') Expr }+
@@ -80,18 +78,40 @@ class TestInfiLoopsAndRecursion:
         assert parser
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag
-
+        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         snippet = "7 + 8 * 4"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag
-
+        print(syntax_tree.as_sxpr())
+        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
-        if is_logging():
-            syntax_tree.log("test_LeftRecursion_indirect2.cst")
+
+    # def test_indirect_left_recursion2(self):
+    #     """This will always fail, because of the precedence rule of the
+    #     "|"-operator. (Note: This is a difference between PEG and
+    #     classical EBNF). DHParser is a PEG-Parser although it uses the
+    #     syntax of classical EBNF."""
+    #     minilang = """
+    #         Expr    = //~ (Product | Sum | Value)
+    #         Product = Expr { ('*' | '/') Expr }
+    #         Sum     = Expr { ('+' | '-') Expr }
+    #         Value   = /[0-9.]+/~ | '(' Expr ')'
+    #         """
+    #     parser = parser_factory(minilang)()
+    #     assert parser
+    #     snippet = "8 * 4"
+    #     syntax_tree = parser(snippet)
+    #     assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+    #     snippet = "7 + 8 * 4"
+    #     syntax_tree = parser(snippet)
+    #     print(syntax_tree.as_sxpr())
+    #     assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+    #     snippet = "9 + 8 * (4 + 3)"
+    #     syntax_tree = parser(snippet)
+    #     assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+    #     assert snippet == str(syntax_tree)
 
 
     def test_inifinite_loops(self):

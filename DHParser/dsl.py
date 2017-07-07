@@ -84,8 +84,8 @@ from DHParser.syntaxtree import Node, traverse, remove_children_if, \\
     reduce_single_child, replace_by_single_child, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
-    TransformationFunc, remove_children, remove_content, remove_first, remove_last, \\
-    has_name, has_content
+    TransformationFunc, remove_parser, remove_content, remove_brackets, \\
+    keep_children, has_name, has_content
 '''
 
 

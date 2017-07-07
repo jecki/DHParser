@@ -209,6 +209,7 @@ def add_parser_guard(parser_func):
                 # if parser did non match but a saved result exits, assume
                 # left recursion and use the saved result
                 node, rest = parser.visited[location]
+                # Note: For this to work None-results must not be cached!
 
             parser.recursion_counter[location] -= 1
 

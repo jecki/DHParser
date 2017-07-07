@@ -14,15 +14,15 @@ blockenv   = beginenv sequence §endenv
 parblock   = "{" sequence §"}"
 
 sequence   = { paragraph [PARSEP] }+
-paragraph  = { !blockcmd (command | block | text) }+
+paragraph  = { !blockcmd (command | block | text) //~ }+
 
 inlineenv  = beginenv { command | block | text }+ endenv
 beginenv   = "\begin{" §NAME §"}"
 endenv     = "\end{" §::NAME §"}"
 
-command    = CMDNAME [[ config ] block]
+command    = CMDNAME [[ //~ config ] //~ block ]
 config     = "[" cfgtext §"]"
-block      = "{" { text | block } §"}"
+block      = /{/ { command | text | block } §/}/
 
 text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
@@ -32,10 +32,10 @@ blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
              | "\paragraph" | "\subparagraph" | "\begin{enumerate}"
              | "\begin{itemize}" | "\item" | "\begin{figure}"
 
-CMDNAME    = /\\\w+/~
+CMDNAME    = /\\(?:(?!_)\w)+/~
 NAME       = /\w+/~
 
-ESCAPED    = /\\[%$&]/
+ESCAPED    = /\\[%$&_\/]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters

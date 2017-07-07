@@ -23,6 +23,8 @@ import sys
 sys.path.extend(['../../', '../', './'])
 
 from DHParser import testing
+testing.recompile_grammar('LaTeX.ebnf')     # recompiles Grammar only if it has changed
+
 from DHParser import toolkit
 from LaTeXCompiler import get_grammar, get_transformer
 

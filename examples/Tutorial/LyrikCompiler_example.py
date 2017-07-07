@@ -27,7 +27,7 @@ from DHParser.syntaxtree import Node, traverse, remove_last, remove_first, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
     collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc, \
-    remove_children, remove_empty, has_content, has_name
+    remove_parser, remove_empty, has_content, has_name
 
 
 #######################################################################
@@ -141,7 +141,7 @@ Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
     "+": remove_empty,
     "bibliographisches":
-        [remove_children('NZ'), remove_tokens],
+        [remove_parser('NZ'), remove_tokens],
     "autor": [],
     "werk": [],
     "untertitel": [],
@@ -157,9 +157,9 @@ Lyrik_AST_transformation_table = {
     "ziel":
         reduce_single_child,
     "gedicht, strophe, text":
-        [flatten, remove_children('LEERZEILE'), remove_children('NZ')],
+        [flatten, remove_parser('LEERZEILE'), remove_parser('NZ')],
     "titel, serie":
-        [flatten, remove_children('LEERZEILE'), remove_children('NZ'), collapse],
+        [flatten, remove_parser('LEERZEILE'), remove_parser('NZ'), collapse],
     "zeile": [],
     "vers":
         collapse,

@@ -32,9 +32,10 @@ from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
     Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     ScannerFunc
-from DHParser.syntaxtree import Node, traverse, remove_first, remove_last, reduce_single_child, \
-    replace_by_single_child, TOKEN_PTYPE, remove_expendables, remove_tokens, flatten, \
-    forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, TransformationFunc
+from DHParser.syntaxtree import Node, traverse, remove_brackets, \
+    reduce_single_child, replace_by_single_child, TOKEN_PTYPE, remove_expendables, \
+    remove_tokens, flatten, forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, \
+    TransformationFunc
 from DHParser.versionnumber import __version__
 
 
@@ -212,7 +213,7 @@ EBNF_transformation_table = {
     "group":
         [remove_tokens('(', ')'), replace_by_single_child],
     "oneormore, repetition, option":
-        [reduce_single_child, remove_first, remove_last],
+        [reduce_single_child, remove_brackets],
     "symbol, literal, regexp":
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
