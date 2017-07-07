@@ -51,14 +51,19 @@ https://bitbucket.org/apalala/grako
 
 import abc
 import copy
-import os
 from functools import partial
+import os
+import platform
 try:
     import regex as re
 except ImportError:
     import re
 try:
-    from typing import Any, Callable, Collection, cast, Dict, Iterator, List, Set, Tuple, Union
+    from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
+    try:
+        from typing import Collection
+    except ImportError:
+        pass
 except ImportError:
     from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
 
@@ -116,10 +121,11 @@ __all__ = ['ScannerFunc',
 ScannerFunc = Union[Callable[[str], str], partial]
 
 
-LEFT_RECURSION_DEPTH = 10  # because of pythons recursion depth limit, this
-                           # value ought not to be set too high
-MAX_DROPOUTS = 25  # stop trying to recover parsing after so many errors
-
+LEFT_RECURSION_DEPTH = 20 if platform.python_implementation() == "PyPy" \
+                          else 8 # type: int
+# because of python's recursion depth limit, this value ought not to be set too high
+MAX_DROPOUTS = 25  # type: int
+# stop trying to recover parsing after so many errors
 
 class HistoryRecord:
     """
@@ -258,10 +264,10 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     def __call__(self, text: str) -> Tuple[Node, str]:
         return None, text  # default behaviour: don't match
 
-    def __add__(self, other):
+    def __add__(self, other: 'Parser') -> 'Series':
         return Series(self, other)
 
-    def __or__(self, other):
+    def __or__(self, other: 'Parser') -> 'Alternative':
         return Alternative(self, other)
 
     @property
@@ -620,14 +626,14 @@ class ScannerToken(Parser):
             elif end == 0:
                 node = Node(self, '').add_error(
                     'Scanner token cannot have zero length. '
-                    '(Most likely due to a scanner bug!)')  # type: Node
+                    '(Most likely due to a scanner bug!)')
                 return node, text[2:]
             elif text.find(BEGIN_SCANNER_TOKEN, 1, end) >= 0:
                 node = Node(self, text[len(self.name) + 1:end])
                 node.add_error(
                     'Scanner tokens must not be nested or contain '
                     'BEGIN_SCANNER_TOKEN delimiter as part of their argument. '
-                    '(Most likely due to a scanner bug!)')  # type: Node
+                    '(Most likely due to a scanner bug!)')
                 return node, text[end:]
             if text[1:len(self.name) + 1] == self.name:
                 return Node(self, text[len(self.name) + 1:end]), \
@@ -921,15 +927,18 @@ class Series(NaryOperator):
         return " ".join(parser.repr for parser in self.parsers)
 
     def __add__(self, other: Parser) -> 'Series':
-        other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
+        other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
+                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(self.parsers + other_parsers))
 
     def __radd__(self, other: Parser) -> 'Series':
-        other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
+        other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
+                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(other_parsers + self.parsers))
 
-    def __iadd__(self, other):
-        other_parsers = cast('Series', other).parsers if isinstance(other, Series) else (other,)
+    def __iadd__(self, other: Parser) -> 'Series':
+        other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
+                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
         return self
 
@@ -961,32 +970,36 @@ class Alternative(NaryOperator):
 
     def __call__(self, text: str) -> Tuple[Node, str]:
         location = len(text)
-        pindex = self.been_here.get(location, 0)
+        pindex = self.been_here.setdefault(location, 0)
         for parser in self.parsers[pindex:]:
             node, text_ = parser(text)
             if node:
                 return Node(self, node), text_
-            pindex += 1
-        # self.been_here[location] = pindex
+            # self.been_here[location] += 1
         return None, text
 
     def __repr__(self):
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
     def __or__(self, other: Parser) -> 'Alternative':
-        other_parsers = cast('Alternative', other).parsers \
-                        if isinstance(other, Alternative) else (other,)
+        other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
+                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(self.parsers + other_parsers))
 
     def __ror__(self, other: Parser) -> 'Alternative':
-        other_parsers = cast('Alternative', other).parsers \
-                        if isinstance(other, Alternative) else (other,)
+        other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
+                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(other_parsers + self.parsers))
 
-    def __ior__(self, other):
-        other_parsers = cast('Alternative', other.parsers) \
-                        if isinstance(other, Alternative) else (other,)
+    def __ior__(self, other: Parser) -> 'Alternative':
+        other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
+                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
+        return self
+
+    def reset(self):
+        super(Alternative, self).reset()
+        self.been_here = {}
         return self
 
 

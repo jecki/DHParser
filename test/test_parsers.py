@@ -50,7 +50,7 @@ class TestInfiLoopsAndRecursion:
             syntax_tree.log("test_LeftRecursion_direct.cst")
             # self.minilang_parser1.log_parsing_history__("test_LeftRecursion_direct")
 
-    def test_direct_left_recursion2(self):
+    def test_indirect_left_recursion1(self):
         minilang = """
             @ whitespace = linefeed
             formula = [ //~ ] expr
@@ -67,26 +67,28 @@ class TestInfiLoopsAndRecursion:
         assert not syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
         if is_logging():
-            syntax_tree.log("test_LeftRecursion_direct2.cst")
+            syntax_tree.log("test_LeftRecursion_indirect1.cst")
 
-    def test_indirect_left_recursion(self):
-        return
+    def test_indirect_left_recursion2(self):
         minilang = """
             Expr    = //~ (Product | Sum | Value)
-            Product = Expr { ('*' | '/') Expr }
-            Sum     = Expr { ('+' | '-') Expr }
+            Product = Expr { ('*' | '/') Expr }+
+            Sum     = Expr { ('+' | '-') Expr }+
             Value   = /[0-9.]+/~ | '(' Expr ')'
             """
         parser = parser_factory(minilang)()
         assert parser
-        snippet = "7 * 8"
+        snippet = "8 * 4"
         syntax_tree = parser(snippet)
-        print(syntax_tree.as_sxpr())
         assert not syntax_tree.error_flag
+
+        snippet = "7 + 8 * 4"
+        syntax_tree = parser(snippet)
+        assert not syntax_tree.error_flag
+
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
-        print(syntax_tree.as_sxpr())
-        assert not syntax_tree.error_flag, print(syntax_tree.collect_errors())
+        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
         if is_logging():
             syntax_tree.log("test_LeftRecursion_indirect2.cst")

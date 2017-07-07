@@ -1,6 +1,7 @@
 if __name__ == "__main__":
     import os
 
-    os.chdir('..')
+    if os.getcwd().endswith('test'):
+        os.chdir('..')
     print("Running nosetests:")
     os.system("nosetests")
