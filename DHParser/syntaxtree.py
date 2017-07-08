@@ -153,8 +153,9 @@ ZOMBIE_PARSER = ZombieParser()
 #     msg: str
 Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
-StrictResultType = Union[Tuple['Node', ...], str]
-ResultType = Union[Tuple['Node', ...], 'Node', str, None]
+ChildrenType = Tuple['Node', ...]
+StrictResultType = Union[ChildrenType, str]
+ResultType = Union[ChildrenType, 'Node', str, None]
 
 
 class Node:
@@ -204,7 +205,7 @@ class Node:
         """
         self._result = ''  # type: StrictResultType
         self._errors = []  # type: List[str]
-        self._children = ()  # type: Tuple['Node', ...]
+        self._children = ()  # type: ChildrenType
         self.result = result
         self._len = len(self.result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
@@ -254,11 +255,11 @@ class Node:
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
         self._result = (result,) if isinstance(result, Node) else result or ''
-        self._children = cast(Tuple['Node', ...], self._result) \
-            if isinstance(self._result, tuple) else cast(Tuple['Node', ...], ())
+        self._children = cast(ChildrenType, self._result) \
+            if isinstance(self._result, tuple) else cast(ChildrenType, ())
 
     @property
-    def children(self) -> Tuple['Node', ...]:
+    def children(self) -> ChildrenType:
         return self._children
 
     @property
