@@ -32,7 +32,7 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
-from DHParser.toolkit import log_dir, repr_call, expand_table, line_col, smart_list
+from DHParser.toolkit import log_dir, expand_table, line_col, smart_list
 
 
 __all__ = ['WHITESPACE_PTYPE',
@@ -203,17 +203,17 @@ class Node:
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self._result = ''  # type: StrictResultType
+        # self._result = ''  # type: StrictResultType
+        # self._children = ()  # type: ChildrenType
         self._errors = []  # type: List[str]
-        self._children = ()  # type: ChildrenType
         self.result = result
-        self._len = len(self.result) if not self.children else \
-            sum(child._len for child in self.children)  # type: int
-        # self.pos: int  = 0  # continuous updating of pos values
+        self._len = len(result) if not self._children else \
+            sum(child._len for child in self._children)  # type: int
+        # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
         self._pos = -1  # type: int
         self.parser = parser or ZOMBIE_PARSER
-        self.error_flag = any(r.error_flag for r in self.children) \
-            if self.children else False  # type: bool
+        self.error_flag = any(r.error_flag for r in self._children) \
+            if self._children else False  # type: bool
 
     def __str__(self):
         if self.children:
@@ -254,9 +254,9 @@ class Node:
         # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
-        self._result = (result,) if isinstance(result, Node) else result or ''
+        self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
         self._children = cast(ChildrenType, self._result) \
-            if isinstance(self._result, tuple) else cast(ChildrenType, ())
+            if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
 
     @property
     def children(self) -> ChildrenType:

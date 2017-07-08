@@ -1,15 +1,20 @@
-# latex Grammar
+# LaTeX-Grammar for DHParser
 
 @ testing    = True
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*(?:\n|$)/
 
-latexdoc   = preamble document
-preamble   = { command }+
 
-document   = [PARSEP] "\begin{document}" [PARSEP] frontpages [PARSEP] (chapters | sections)
-             [bibliography] [index] "\end{document}" §EOF
-frontpages = sequence
+latexdoc       = preamble document
+preamble       = { command }+
+
+document       = [PARSEP] "\begin{document}" [PARSEP]
+                 frontpages [PARSEP]
+                 (chapters | sections) [PARSEP]
+                 [bibliography] [index] [PARSEP]
+                 "\end{document}" [PARSEP] §EOF
+frontpages     = sequence
+
 
 #######################################################################
 #
@@ -17,26 +22,26 @@ frontpages = sequence
 #
 #######################################################################
 
-Chapters   = { Chapter [PARSEP] }+
-Chapter    = "\Chapter" block [PARSEP] { sequence | Sections }
+Chapters       = { Chapter [PARSEP] }+
+Chapter        = "\Chapter" block [PARSEP] { sequence | Sections }
 
-Sections   = { Section [PARSEP] }+
-Section    = "\Section" block [PARSEP] { sequence | SubSections }
+Sections       = { Section [PARSEP] }+
+Section        = "\Section" block [PARSEP] { sequence | SubSections }
 
-SubSections = { SubSection [PARSEP] }+
-SubSection  = "\SubSection" block [PARSEP] { sequence | SubSubSections }
+SubSections    = { SubSection [PARSEP] }+
+SubSection     = "\SubSection" block [PARSEP] { sequence | SubSubSections }
 
 SubSubsections = { SubSubSection [PARSEP] }+
 SubSubSection  = "\SubSubSection" block [PARSEP] { sequence | Paragraphs }
 
-Paragraphs = { Paragraph [PARSEP] }+
-Paragraph  = "\paragraph" block [PARSEP] { sequence | SubParagraphs }
+Paragraphs     = { Paragraph [PARSEP] }+
+Paragraph      = "\paragraph" block [PARSEP] { sequence | SubParagraphs }
 
-SubParagraphs = { SubParagraph [PARSEP] }+
-SubParagraph  = "\subparagpaph" block [PARSEP] { sequence }
+SubParagraphs  = { SubParagraph [PARSEP] }+
+SubParagraph   = "\subparagpaph" block [PARSEP] { sequence }
 
-bibliography = "\bibliography" block [PARSEP]
-index      = "\printindex" [PARSEP
+bibliography   = "\bibliography" block [PARSEP]
+index          = "\printindex" [PARSEP
 
 
 #######################################################################
@@ -45,21 +50,53 @@ index      = "\printindex" [PARSEP
 #
 #######################################################################
 
-blockenv   = beginenv sequence §endenv
-parblock   = /{/ sequence §/}/
 
-sequence   = { (paragraph | itemize | enumeration | figure | table | blockenv ) [PARSEP] }+
+#### block environments ####
 
-paragraph  = { !blockcmd textelements //~ }+
-textelemts = command | text | block | inlinemath | inlineenv
+block_enrivonment   = known_enrivonment | generic_enrivonment
+known_enrivonment   = itemize | enumerate | figure | table
+generic_enrivonment = begin_enrivonment sequence §end_enrivonment
 
-inlineenv  = beginenv { textelements }+ endenv
-beginenv   = "\begin{" §NAME §"}"
-endenv     = "\end{" §::NAME §"}"
+itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
+enumerate           = "\begin{enumerate}" [PARSEP] {item } §"end{enumerate}"
+item                = "\item" [PARSEP] sequence
 
-command    = specialcmd | plaincmd
-specialcmd = "\footnote" parblock
-plaincmd   = CMDNAME [[ //~ config ] //~ block ]
+
+#### paragraphs and sequences of paragraphs ####
+
+block_of_paragraphs = /{/ sequence §/}/
+sequence            = { (paragraph | block_enrivonment ) [PARSEP] }+
+
+paragraph           = { !blockcmd textelements //~ }+
+textelemts          = command | text | block | inline_enrivonment
+
+
+#### inline enivronments ####
+
+inline_enrivonment  = known_inline_env | generic_inline_env
+known_inline_env    = inline_math
+generic_inline_env  = begin_enrivonment { textelements }+ §end_enrivonment
+begin_enrivonment   = "\begin{" §NAME §"}"
+end_enrivonment     = "\end{" §::NAME §"}"
+
+inline_math         = "$" math_Text "$"
+
+
+#### commands ####
+
+command             = knownd_command | generic_command
+known_command       = footnote
+generic_command     = CMDNAME [[ //~ config ] //~ block ]
+
+footnote            = "\footnote" block_of_paragraphs
+
+
+#######################################################################
+#
+# low-level text and character sequences
+#
+#######################################################################
+
 config     = "[" cfgtext §"]"
 block      = /{/ { textelements } §/}/
 
@@ -70,6 +107,13 @@ word_sequence = { TEXTCHUNK //~ }+
 blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
              | "\paragraph" | "\subparagraph" | "\begin{enumerate}"
              | "\begin{itemize}" | "\item" | "\begin{figure}"
+
+
+#######################################################################
+#
+# Primitives
+#
+#######################################################################
 
 CMDNAME    = /\\(?:(?!_)\w)+/~
 NAME       = /\w+/~
@@ -82,5 +126,4 @@ WSPC       = /[ \t]+/                       # (horizontal) whitespace
 LF         = !PARSEP /[ \t]*\n[ \t]*/       # LF but not an empty line
 PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
-
 EOF        = !/./
