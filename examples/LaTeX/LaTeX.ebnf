@@ -7,22 +7,61 @@
 latexdoc   = preamble document
 preamble   = { command }+
 
-document   = [PARSEP] { [PARSEP] paragraph } §EOF
+document   = [PARSEP] "\begin{document}" [PARSEP] frontpages [PARSEP] (chapters | sections)
+             [bibliography] [index] "\end{document}" §EOF
+frontpages = sequence
+
+#######################################################################
+#
+# document structure
+#
+#######################################################################
+
+Chapters   = { Chapter [PARSEP] }+
+Chapter    = "\Chapter" block [PARSEP] { sequence | Sections }
+
+Sections   = { Section [PARSEP] }+
+Section    = "\Section" block [PARSEP] { sequence | SubSections }
+
+SubSections = { SubSection [PARSEP] }+
+SubSection  = "\SubSection" block [PARSEP] { sequence | SubSubSections }
+
+SubSubsections = { SubSubSection [PARSEP] }+
+SubSubSection  = "\SubSubSection" block [PARSEP] { sequence | Paragraphs }
+
+Paragraphs = { Paragraph [PARSEP] }+
+Paragraph  = "\paragraph" block [PARSEP] { sequence | SubParagraphs }
+
+SubParagraphs = { SubParagraph [PARSEP] }+
+SubParagraph  = "\subparagpaph" block [PARSEP] { sequence }
+
+bibliography = "\bibliography" block [PARSEP]
+index      = "\printindex" [PARSEP
+
+
+#######################################################################
+#
+# document content
+#
+#######################################################################
 
 blockenv   = beginenv sequence §endenv
+parblock   = /{/ sequence §/}/
 
-parblock   = "{" sequence §"}"
+sequence   = { (paragraph | itemize | enumeration | figure | table | blockenv ) [PARSEP] }+
 
-sequence   = { paragraph [PARSEP] }+
-paragraph  = { !blockcmd (command | block | text) //~ }+
+paragraph  = { !blockcmd textelements //~ }+
+textelemts = command | text | block | inlinemath | inlineenv
 
-inlineenv  = beginenv { command | block | text }+ endenv
+inlineenv  = beginenv { textelements }+ endenv
 beginenv   = "\begin{" §NAME §"}"
 endenv     = "\end{" §::NAME §"}"
 
-command    = CMDNAME [[ //~ config ] //~ block ]
+command    = specialcmd | plaincmd
+specialcmd = "\footnote" parblock
+plaincmd   = CMDNAME [[ //~ config ] //~ block ]
 config     = "[" cfgtext §"]"
-block      = /{/ { command | text | block } §/}/
+block      = /{/ { textelements } §/}/
 
 text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+

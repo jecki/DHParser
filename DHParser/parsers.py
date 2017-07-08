@@ -206,6 +206,7 @@ def add_parser_guard(parser_func):
                 node, rest = parser.visited.get(location, (None, rest))
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
+                # TODO: Bei Gelegenheit messen, ob sich das hier überhaupt lohnt...
                 if node is None and not grammar.left_recursion_encountered__:
                     # ortherwise also cache None-results
                     parser.visited[location] = None, rest
