@@ -52,7 +52,8 @@ def selftest(file_name):
     else:
         # compile the grammar again using the result of the previous
         # compilation as parser
-        result = compileDSL(grammar, nil_scanner, result, transformer, compiler)
+        for i in range(100):
+            result = compileDSL(grammar, nil_scanner, result, transformer, compiler)
         print(result)
     return result
 

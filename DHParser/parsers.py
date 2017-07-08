@@ -181,6 +181,7 @@ def add_parser_guard(parser_func):
                 if grammar.last_rb__loc__ <= location:
                     grammar.rollback_to__(location)
                 grammar.moving_forward__ = True
+                grammar.left_recursion_encountered__ = False
 
             if grammar.history_tracking__:
                 grammar.call_stack__.append(parser)
@@ -191,6 +192,7 @@ def add_parser_guard(parser_func):
                 return parser.visited[location]
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
+                grammar.left_recursion_encountered__ = True
                 return None, text
 
             parser.recursion_counter[location] += 1
@@ -198,7 +200,12 @@ def add_parser_guard(parser_func):
             # run original __call__ method
             node, rest = parser_func(parser, text)
 
-            if node is not None:
+            if node is None:
+                if location in parser.visited:
+                    node, rest = parser.visited[location]
+                elif not grammar.left_recursion_encountered__:
+                    parser.visited[location] = None, rest
+            else:
                 # in case of a recursive call saves the result of the first
                 # (or left-most) call that matches
                 # variable manipulating parsers will be excluded, though,
@@ -206,11 +213,6 @@ def add_parser_guard(parser_func):
                 if grammar.last_rb__loc__ > location:
                     parser.visited[location] = (node, rest)
                 grammar.last_node__ = node   # store last node for Lookbehind parser
-            elif location in parser.visited:
-                # if parser did non match but a saved result exits, assume
-                # left recursion and use the saved result
-                node, rest = parser.visited[location]
-                # Note: For this to work None-results must not be cached!
 
             parser.recursion_counter[location] -= 1
 
@@ -413,6 +415,7 @@ class Grammar:
         self.history__ = []           # type: List[HistoryRecord]
         # also needed for call stack tracing
         self.moving_forward__ = True  # type: bool
+        self.left_recursion_encountered__ = False  # type: bool
 
     def _add_parser__(self, parser: Parser) -> None:
         """Adds the particular copy of the parser object to this
