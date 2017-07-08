@@ -52,6 +52,7 @@ __all__ = ['WHITESPACE_PTYPE',
            'collapse',
            'join',
            'replace_content',
+           'apply_if',
            'is_whitespace',
            'is_empty',
            'is_expendable',
@@ -758,6 +759,14 @@ def join(node, tag_names: List[str]):
 # ------------------------------------------------
 
 
+@transformation_factory
+def replace_content(node, func: Callable):      # Callable[[Node], ResultType]
+    """Replaces the content of the node. ``func`` takes the node
+    as an argument an returns the mapped result.
+    """
+    node.result = func(node.result)
+
+
 def is_whitespace(node):
     """Removes whitespace and comments defined with the
     ``@comment``-directive."""
@@ -788,6 +797,14 @@ def has_content(node, contents: AbstractSet[str]) -> bool:
 
 
 @transformation_factory
+def apply_if(node, transformation: Callable, condition: Callable):
+    """Applies a transformation only if a certain condition is met.
+    """
+    if condition(node):
+        transformation(node)
+
+
+@transformation_factory
 def keep_children(node, section: slice=slice(None, None, None), condition=lambda node: True):
     """Keeps only the nodes which fall into a slice of the result field
     and for which the function `condition(child_node)` evaluates to
@@ -809,23 +826,6 @@ remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
 remove_brackets = keep_children(slice(1,-1))
 
-# @transformation_factory(Callable)
-# def remove_first(node, condition=lambda node: True):
-#     """Removes the first child if the condition is met.
-#     Otherwise does nothing."""
-#     if node.children:
-#         if condition(node.children[0]):
-#             node.result = node.result[1:]
-#
-#
-# @transformation_factory(Callable)
-# def remove_last(node, condition=lambda node: True):
-#     """Removes the last child if the condition is met.
-#     Otherwise does nothing."""
-#     if node.children:
-#         if condition(node.children[-1]):
-#             node.result = node.result[:-1]
-
 
 @transformation_factory
 def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
@@ -845,14 +845,6 @@ def remove_parser(node, tag_names: AbstractSet[str]):
 def remove_content(node, contents: AbstractSet[str]):
     """Removes children depending on their string value."""
     remove_children_if(node, partial(has_content, contents=contents))
-
-
-@transformation_factory
-def replace_content(node, func: Callable):      # Callable[[Node], ResultType]
-    """Replaces the content of the node. ``func`` takes the node
-    as an argument an returns the mapped result.
-    """
-    node.result = func(node.result)
 
 
 ########################################################################

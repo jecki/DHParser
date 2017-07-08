@@ -1,7 +1,7 @@
 # latex Grammar
 
 @ testing    = True
-@ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/  # optional whitespace, including at most one linefeed
+@ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*(?:\n|$)/
 
 latexdoc   = preamble document

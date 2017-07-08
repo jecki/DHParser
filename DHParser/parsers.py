@@ -188,7 +188,7 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                return parser.visited[location]     # TODO: might not work with Capture-Retrieve-Pop-Parsers!!!
+                return parser.visited[location]
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
                 return None, text
@@ -200,7 +200,8 @@ def add_parser_guard(parser_func):
 
             if node is not None:
                 # in case of a recursive call saves the result of the first
-                # (or left-most) call that matches; but not for variable manipulating parsers,
+                # (or left-most) call that matches
+                # variable manipulating parsers will be excluded, though,
                 # because caching would interfere with changes of variable state
                 if grammar.last_rb__loc__ > location:
                     parser.visited[location] = (node, rest)
@@ -970,13 +971,10 @@ class Alternative(NaryOperator):
         self.been_here = dict()  # type: Dict[int, int]
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        location = len(text)
-        pindex = self.been_here.setdefault(location, 0)
-        for parser in self.parsers[pindex:]:
+        for parser in self.parsers:
             node, text_ = parser(text)
             if node:
                 return Node(self, node), text_
-            # self.been_here[location] += 1
         return None, text
 
     def __repr__(self):

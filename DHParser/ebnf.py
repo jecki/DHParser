@@ -71,8 +71,7 @@ def get_ebnf_scanner() -> ScannerFunc:
 #
 ########################################################################
 
-# TODO: Introduce dummy/rename-parser, for simple assignments (e.g. jahr = JAHRESZAHL) or substition!
-# TODO: Raise Error for unconnected parsers!
+
 class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file, with this grammar:
 
@@ -194,8 +193,6 @@ def get_ebnf_grammar() -> EBNFGrammar:
 ########################################################################
 
 
-#TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!?
-
 EBNF_transformation_table = {
     # AST Transformations for EBNF-grammar
     "+":
@@ -299,6 +296,8 @@ class EBNFCompilerError(Exception):
     in the strict sense, see `CompilationError` in module ``dsl.py``)"""
     pass
 
+
+#TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!? Is this possible at compile time?
 
 class EBNFCompiler(Compiler):
     """Generates a Parser from an abstract syntax tree of a grammar specified

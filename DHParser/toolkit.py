@@ -154,9 +154,7 @@ def is_logging() -> bool:
 def repr_call(f, parameter_list) -> str:
     """Turns a list of items into a string resembling the parameter
     list of a function call by omitting default values at the end:
-    >>> def(a, b=1):
-            print(a, b)
-
+    >>> def f(a, b=1):    print(a, b)
     >>> repr_call(f, (5,1))
     'f(5)'
     >>> repr_call(f, (5,2))
@@ -206,8 +204,8 @@ def compact_sexpr(s) -> str:
     whitespace.
 
     Example:
-        >>> compact_sexpr("(a\n    (b\n        c\n    )\n)\n")
-        (a (b c))
+    >>> compact_sexpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
+    '(a (b c))'
     """
     return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
 
@@ -306,26 +304,29 @@ def smart_list(arg) -> list:
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
     in this order, e.g.
-        >>> smart_list("1; 2, 3; 4")
-        ["1", "2, 3", "4"]
-        >>> smart_list("2, 3")
-        ["2", "3"]
-        >>> smart_list("a b cd")
-        ["a", "b", "cd"]
+    >>> smart_list('1; 2, 3; 4')
+    ['1', '2, 3', '4']
+    >>> smart_list('2, 3')
+    ['2', '3']
+    >>> smart_list('a b cd')
+    ['a', 'b', 'cd']
+
     If the argument is a collection other than a string, it will be
     returned as is, e.g.
-        >>> smart_list((1, 2, 3))
-        (1, 2, 3)
-        >>> smart_list({1, 2, 3})
-        {1, 2, 3}
+    >>> smart_list((1, 2, 3))
+    (1, 2, 3)
+    >>> smart_list({1, 2, 3})
+    {1, 2, 3}
+
     If the argument is another iterable than a collection, it will
     be converted into a list, e.g.
-        >>> smart_list(i for i in {1,2,3})
-        [1, 2, 3]
+    >>> smart_list(i for i in {1,2,3})
+    [1, 2, 3]
+
     Finally, if none of the above is true, the argument will be 
     wrapped in a list and returned, e.g.
-        >>> smart_list(125)
-        [125]
+    >>> smart_list(125)
+    [125]
     """
     if isinstance(arg, str):
         for delimiter in (';', ','):
@@ -333,8 +334,8 @@ def smart_list(arg) -> list:
             if len(lst) > 1:
                 return [s.strip() for s in lst]
         return [s.strip() for s in arg.strip().split(' ')]
-    # elif isinstance(arg, collections.abc.Sequence):  # python 3.6: collections.abc.Collection
-    #     return arg
+    elif isinstance(arg, collections.abc.Container):
+        return arg
     elif isinstance(arg, collections.abc.Iterable):
         return list(arg)
     else:
@@ -346,8 +347,8 @@ def expand_table(compact_table):
     containing comma separated words into single keyword entries with
     the same values. Returns the expanded table.
     Example:
-    >>> expand_table({"a, b": 1, "b": 1, ('d','e','f'):5, "c":3})
-    {'a': 1, 'b': 1, 'c': 3, 'd': 5, 'e': 5, 'f': 5}
+    >>> expand_table({"a, b": 1, ('d','e','f'):5, "c":3})
+    {'a': 1, 'b': 1, 'd': 5, 'e': 5, 'f': 5, 'c': 3}
     """
     expanded_table = {}
     keys = list(compact_table.keys())
@@ -358,24 +359,6 @@ def expand_table(compact_table):
                 raise KeyError("Key %s used more than once in compact table!" % key)
             expanded_table[k] = value
     return expanded_table
-
-# # commented, because this approach is too error-prone in connection with smart_list
-# def as_partial(partial_ellipsis) -> functools.partial:
-#     """Transforms ``partial_ellipsis`` into a partial function
-#     application, i.e. string "remove_tokens({'(', ')'})" will be
-#     transformed into the partial "partial(remove_tokens, {'(', ')'})".
-#     Partial ellipsises can be considered as a short hand notation for
-#     partials, which look like function, calls but aren't. Plain
-#     function names are returned as is. Also, if ``partial_ellipsis``
-#     already is a callable, it will be returned as is.
-#     """
-#     if callable(partial_ellipsis):
-#         return partial_ellipsis
-#     m = re.match('\s*(\w+)(?:\(([^)]*)\))?\s*$', partial_ellipsis)
-#     if m:
-#         fname, fargs = m.groups()
-#         return eval("functools.partial(%s, %s)" % (fname, fargs)) if fargs else eval(fname)
-#     raise SyntaxError(partial_ellipsis + " does not resemble a partial function ellipsis!")
 
 
 def sane_parser_name(name) -> bool:

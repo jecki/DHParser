@@ -48,7 +48,7 @@ class TestInfiLoopsAndRecursion:
         assert snippet == str(syntax_tree)
         if is_logging():
             syntax_tree.log("test_LeftRecursion_direct.cst")
-            # self.minilang_parser1.log_parsing_history__("test_LeftRecursion_direct")
+            parser.log_parsing_history__("test_LeftRecursion_direct")
 
     def test_direct_left_recursion2(self):
         minilang = """
@@ -81,7 +81,7 @@ class TestInfiLoopsAndRecursion:
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         snippet = "7 + 8 * 4"
         syntax_tree = parser(snippet)
-        print(syntax_tree.as_sxpr())
+        # print(syntax_tree.as_sxpr())
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
@@ -361,4 +361,5 @@ class TestWhitespaceHandling:
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    runner("", globals())
+    with logging(True):
+        runner("TestInfiLoopsAndRecursion.test_direct_left_recursion1", globals())

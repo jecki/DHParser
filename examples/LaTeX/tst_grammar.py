@@ -23,12 +23,15 @@ import sys
 sys.path.extend(['../../', '../', './'])
 
 from DHParser import testing
-testing.recompile_grammar('LaTeX.ebnf')     # recompiles Grammar only if it has changed
+if not testing.recompile_grammar('LaTeX.ebnf'):  # recompiles Grammar only if it has changed
+    with open('LaTeX_ebnf_ERRORS.txt') as f:
+        print(f.read())
+    sys.exit(1)
 
 from DHParser import toolkit
 from LaTeXCompiler import get_grammar, get_transformer
 
-with toolkit.logging(False):
+with toolkit.logging(True):
     error_report = testing.grammar_suite('grammar_tests', get_grammar,
                                          get_transformer, report=True, verbose=True)
 if error_report:

@@ -38,11 +38,7 @@ def mock_syntax_tree(sexpr):
 
     Example: 
     >>> mock_syntax_tree("(a (b c))").as_sxpr()
-    (a 
-        (b 
-            "c" 
-        )
-    )
+    '(a\\n    (b\\n        "c"\\n    )\\n)'
     """
     def next_block(s):
         s = s.strip()
@@ -109,6 +105,7 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
 
     base, ext = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
+    error_file_name = base + '_ebnf_ERRORS.txt'
     errors = []
     if (not os.path.exists(compiler_name) or force or
         grammar_changed(compiler_name, ebnf_filename)):
@@ -116,14 +113,14 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
         errors = compile_on_disk(ebnf_filename)
         if errors:
             # print("Errors while compiling: " + ebnf_filename + '!')
-            with open(base + '_errors.txt', 'w') as f:
+            with open(error_file_name, 'w') as f:
                 for e in errors:
                     f.write(e)
                     f.write('\n')
             return False
 
-    if not errors and os.path.exists(base + '_errors.txt'):
-        os.remove(base + '_errors.txt')
+    if not errors and os.path.exists(error_file_name):
+        os.remove(error_file_name)
     return True
 
 
@@ -133,7 +130,7 @@ UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 def unit_from_configfile(config_filename):
     """Reads a grammar unit test from a config file.
     """
-    cfg = configparser.ConfigParser()
+    cfg = configparser.ConfigParser(interpolation=None)
     cfg.read(config_filename)
     OD = collections.OrderedDict
     unit = OD()
