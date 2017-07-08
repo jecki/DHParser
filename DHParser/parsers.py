@@ -201,16 +201,20 @@ def add_parser_guard(parser_func):
             node, rest = parser_func(parser, text)
 
             if node is None:
-                if location in parser.visited:
-                    node, rest = parser.visited[location]
-                elif not grammar.left_recursion_encountered__:
+                # retrieve an earlier match result (from left recursion)
+                # if it exists
+                node, rest = parser.visited.get(location, (None, rest))
+                # don't overwrite any positive match (i.e. node not None) in the cache
+                # and don't add empty entries for parsers returning from left recursive calls!
+                if node is None and not grammar.left_recursion_encountered__:
+                    # ortherwise also cache None-results
                     parser.visited[location] = None, rest
             else:
-                # in case of a recursive call saves the result of the first
-                # (or left-most) call that matches
                 # variable manipulating parsers will be excluded, though,
                 # because caching would interfere with changes of variable state
                 if grammar.last_rb__loc__ > location:
+                    # in case of left recursion, the first recursive step that
+                    # matches will store its result in the cache
                     parser.visited[location] = (node, rest)
                 grammar.last_node__ = node   # store last node for Lookbehind parser
 
