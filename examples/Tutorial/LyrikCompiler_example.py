@@ -23,7 +23,7 @@ from DHParser.parsers import Grammar, Compiler, nil_scanner, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     ScannerFunc, Synonym
-from DHParser.syntaxtree import Node, traverse, remove_last, remove_first, \
+from DHParser.syntaxtree import Node, traverse, remove_first, remove_last, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
     collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc, \

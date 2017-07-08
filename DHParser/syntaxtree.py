@@ -61,8 +61,8 @@ __all__ = ['WHITESPACE_PTYPE',
            'has_content',
            'remove_parser',
            'remove_content',
-           'keep_children',
-           'remove_children_if',
+           'remove_first',
+           'remove_last',
            'remove_whitespace',
            'remove_empty',
            'remove_expendables',
@@ -825,6 +825,24 @@ remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children
 remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
 remove_brackets = keep_children(slice(1,-1))
+
+
+@transformation_factory(Callable)
+def remove_first(node, condition=lambda node: True):
+    """Removes the first child if the condition is met.
+    Otherwise does nothing."""
+    if node.children:
+        if condition(node.children[0]):
+            node.result = node.result[1:]
+
+
+@transformation_factory(Callable)
+def remove_last(node, condition=lambda node: True):
+    """Removes the last child if the condition is met.
+    Otherwise does nothing."""
+    if node.children:
+        if condition(node.children[-1]):
+            node.result = node.result[:-1]
 
 
 @transformation_factory
