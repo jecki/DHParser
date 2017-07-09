@@ -10,8 +10,8 @@ preamble       = { command }+
 
 document       = [PARSEP] "\begin{document}" [PARSEP]
                  frontpages [PARSEP]
-                 (chapters | sections) [PARSEP]
-                 [bibliography] [index] [PARSEP]
+                 (Chapters | Sections) [PARSEP]
+                 [Bibliography] [Index] [PARSEP]
                  "\end{document}" [PARSEP] §EOF
 frontpages     = sequence
 
@@ -31,7 +31,7 @@ Section        = "\Section" block [PARSEP] { sequence | SubSections }
 SubSections    = { SubSection [PARSEP] }+
 SubSection     = "\SubSection" block [PARSEP] { sequence | SubSubSections }
 
-SubSubsections = { SubSubSection [PARSEP] }+
+SubSubSections = { SubSubSection [PARSEP] }+
 SubSubSection  = "\SubSubSection" block [PARSEP] { sequence | Paragraphs }
 
 Paragraphs     = { Paragraph [PARSEP] }+
@@ -40,8 +40,8 @@ Paragraph      = "\paragraph" block [PARSEP] { sequence | SubParagraphs }
 SubParagraphs  = { SubParagraph [PARSEP] }+
 SubParagraph   = "\subparagpaph" block [PARSEP] { sequence }
 
-bibliography   = "\bibliography" block [PARSEP]
-index          = "\printindex" [PARSEP
+Bibliography   = "\bibliography" block [PARSEP]
+Index          = "\printindex" [PARSEP]
 
 
 #######################################################################
@@ -54,12 +54,20 @@ index          = "\printindex" [PARSEP
 #### block environments ####
 
 block_enrivonment   = known_enrivonment | generic_enrivonment
-known_enrivonment   = itemize | enumerate | figure | table
+known_enrivonment   = itemize | enumerate | figure | table | quotation
+                    | verbatim
 generic_enrivonment = begin_enrivonment sequence §end_enrivonment
 
 itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"end{enumerate}"
 item                = "\item" [PARSEP] sequence
+
+figure              = "\begin{figure}" sequence "\end{figure}"
+quotation           = ("\begin{quotation}" sequence "\end{quotation}")
+                    | ("\begin{quote}" sequence "\end{quote}")
+verbatim            = "\begin{verbatim}" sequence "\end{verbatim}"
+table               = "\begin{tabular}" table_config sequence "\end{tabular}"
+table_config        = "{" /[lcr|]+/~ "}"
 
 
 #### paragraphs and sequences of paragraphs ####
@@ -67,24 +75,24 @@ item                = "\item" [PARSEP] sequence
 block_of_paragraphs = /{/ sequence §/}/
 sequence            = { (paragraph | block_enrivonment ) [PARSEP] }+
 
-paragraph           = { !blockcmd textelements //~ }+
-textelemts          = command | text | block | inline_enrivonment
+paragraph           = { !blockcmd text_elements //~ }+
+text_elements       = command | text | block | inline_enrivonment
 
 
 #### inline enivronments ####
 
 inline_enrivonment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
-generic_inline_env  = begin_enrivonment { textelements }+ §end_enrivonment
+generic_inline_env  = begin_enrivonment { text_elements }+ §end_enrivonment
 begin_enrivonment   = "\begin{" §NAME §"}"
 end_enrivonment     = "\end{" §::NAME §"}"
 
-inline_math         = "$" math_Text "$"
+inline_math         = "$" MATH "$"
 
 
 #### commands ####
 
-command             = knownd_command | generic_command
+command             = known_command | generic_command
 known_command       = footnote
 generic_command     = CMDNAME [[ //~ config ] //~ block ]
 
@@ -98,15 +106,16 @@ footnote            = "\footnote" block_of_paragraphs
 #######################################################################
 
 config     = "[" cfgtext §"]"
-block      = /{/ { textelements } §/}/
+block      = /{/ { text_elements } §/}/
 
 text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
 word_sequence = { TEXTCHUNK //~ }+
 
 blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
-             | "\paragraph" | "\subparagraph" | "\begin{enumerate}"
-             | "\begin{itemize}" | "\item" | "\begin{figure}"
+           | "\paragraph" | "\subparagraph" | "\item"
+           | "\begin{" ("enumerate" | "itemize" | "figure" | "quote"
+                        | "quotation" | "tabular") "}"
 
 
 #######################################################################
@@ -117,6 +126,7 @@ blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
 
 CMDNAME    = /\\(?:(?!_)\w)+/~
 NAME       = /\w+/~
+MATH       = /[\w_^{}[\]]*/~
 
 ESCAPED    = /\\[%$&_\/]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
