@@ -93,11 +93,12 @@ inline_math         = "$" MATH "$"
 #### commands ####
 
 command             = known_command | generic_command
-known_command       = footnote
+known_command       = footnote | includegraphics | caption
 generic_command     = CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
-
+includegraphics     = "\includegraphics" config block
+caption             = "\caption" block
 
 #######################################################################
 #
@@ -112,10 +113,10 @@ text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
 word_sequence = { TEXTCHUNK //~ }+
 
-blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
-           | "\paragraph" | "\subparagraph" | "\item"
-           | "\begin{" ("enumerate" | "itemize" | "figure" | "quote"
-                        | "quotation" | "tabular") "}"
+blockcmd   = "\" ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
+                            | "quotation" | "tabular") "}"
+                 | "subsection" | "section" | "chapter" | "subsubsection"
+                 | "paragraph" | "subparagraph" | "item")
 
 
 #######################################################################

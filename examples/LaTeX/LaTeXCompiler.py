@@ -143,11 +143,12 @@ class LaTeXGrammar(Grammar):
     #### commands ####
     
     command             = known_command | generic_command
-    known_command       = footnote
+    known_command       = footnote | includegraphics | caption
     generic_command     = CMDNAME [[ //~ config ] //~ block ]
     
     footnote            = "\footnote" block_of_paragraphs
-    
+    includegraphics     = "\includegraphics" config block
+    caption             = "\caption" block
     
     #######################################################################
     #
@@ -162,10 +163,10 @@ class LaTeXGrammar(Grammar):
     cfgtext    = { word_sequence | (ESCAPED //~) }+
     word_sequence = { TEXTCHUNK //~ }+
     
-    blockcmd   = "\subsection" | "\section" | "\chapter" | "\subsubsection"
-               | "\paragraph" | "\subparagraph" | "\item"
-               | "\begin{" ("enumerate" | "itemize" | "figure" | "quote"
-                            | "quotation" | "tabular") "}"
+    blockcmd   = "\" ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
+                                | "quotation" | "tabular") "}"
+                     | "subsection" | "section" | "chapter" | "subsubsection"
+                     | "paragraph" | "subparagraph" | "item")
     
     
     #######################################################################
@@ -191,7 +192,7 @@ class LaTeXGrammar(Grammar):
     block_enrivonment = Forward()
     block_of_paragraphs = Forward()
     text_elements = Forward()
-    source_hash__ = "484ed98c05f7142c72f06d7c31e61089"
+    source_hash__ = "519dd615a108d58ae0577825f2dddd39"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -207,29 +208,17 @@ class LaTeXGrammar(Grammar):
     MATH = RE('[\\w_^{}[\\]]*')
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
-    blockcmd = Alternative(Token("\\subsection"), Token("\\section"), Token("\\chapter"), Token("\\subsubsection"),
-                           Token("\\paragraph"), Token("\\subparagraph"), Token("\\item"), Series(Token("\\begin{"),
-                                                                                                  Alternative(Token(
-                                                                                                      "enumerate"),
-                                                                                                              Token(
-                                                                                                                  "itemize"),
-                                                                                                              Token(
-                                                                                                                  "figure"),
-                                                                                                              Token(
-                                                                                                                  "quote"),
-                                                                                                              Token(
-                                                                                                                  "quotation"),
-                                                                                                              Token(
-                                                                                                                  "tabular")),
-                                                                                                  Token("}")))
+    blockcmd = Series(Token("\\"), Alternative(Series(Token("begin{"), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item")))
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))
     block = Series(RE('{', wR=''), ZeroOrMore(text_elements), Required(RE('}', wR='')))
     config = Series(Token("["), cfgtext, Required(Token("]")))
+    caption = Series(Token("\\caption"), block)
+    includegraphics = Series(Token("\\includegraphics"), config, block)
     footnote = Series(Token("\\footnote"), block_of_paragraphs)
     generic_command = Series(CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
-    known_command = Synonym(footnote)
+    known_command = Alternative(footnote, includegraphics, caption)
     command = Alternative(known_command, generic_command)
     inline_math = Series(Token("$"), MATH, Token("$"))
     end_enrivonment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
@@ -244,12 +233,10 @@ class LaTeXGrammar(Grammar):
     table_config = Series(Token("{"), RE('[lcr|]+'), Token("}"))
     table = Series(Token("\\begin{tabular}"), table_config, sequence, Token("\\end{tabular}"))
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Token("\\end{verbatim}"))
-    quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Token("\\end{quotation}")),
-                            Series(Token("\\begin{quote}"), sequence, Token("\\end{quote}")))
+    quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Token("\\end{quotation}")), Series(Token("\\begin{quote}"), sequence, Token("\\end{quote}")))
     figure = Series(Token("\\begin{figure}"), sequence, Token("\\end{figure}"))
     item = Series(Token("\\item"), Optional(PARSEP), sequence)
-    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item),
-                       Required(Token("end{enumerate}")))
+    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("end{enumerate}")))
     itemize = Series(Token("\\begin{itemize}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{itemize}")))
     generic_enrivonment = Series(begin_enrivonment, sequence, Required(end_enrivonment))
     known_enrivonment = Alternative(itemize, enumerate, figure, table, quotation, verbatim)
@@ -260,20 +247,16 @@ class LaTeXGrammar(Grammar):
     SubParagraphs = OneOrMore(Series(SubParagraph, Optional(PARSEP)))
     Paragraph = Series(Token("\\paragraph"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, SubParagraphs)))
     Paragraphs = OneOrMore(Series(Paragraph, Optional(PARSEP)))
-    SubSubSection = Series(Token("\\SubSubSection"), block, Optional(PARSEP),
-                           ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSection = Series(Token("\\SubSubSection"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, Paragraphs)))
     SubSubSections = OneOrMore(Series(SubSubSection, Optional(PARSEP)))
-    SubSection = Series(Token("\\SubSection"), block, Optional(PARSEP),
-                        ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSection = Series(Token("\\SubSection"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, SubSubSections)))
     SubSections = OneOrMore(Series(SubSection, Optional(PARSEP)))
     Section = Series(Token("\\Section"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, SubSections)))
     Sections = OneOrMore(Series(Section, Optional(PARSEP)))
     Chapter = Series(Token("\\Chapter"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Chapter, Optional(PARSEP)))
     frontpages = Synonym(sequence)
-    document = Series(Optional(PARSEP), Token("\\begin{document}"), Optional(PARSEP), frontpages, Optional(PARSEP),
-                      Alternative(Chapters, Sections), Optional(PARSEP), Optional(Bibliography), Optional(Index),
-                      Optional(PARSEP), Token("\\end{document}"), Optional(PARSEP), Required(EOF))
+    document = Series(Optional(PARSEP), Token("\\begin{document}"), Optional(PARSEP), frontpages, Optional(PARSEP), Alternative(Chapters, Sections), Optional(PARSEP), Optional(Bibliography), Optional(Index), Optional(PARSEP), Token("\\end{document}"), Optional(PARSEP), Required(EOF))
     preamble = OneOrMore(command)
     latexdoc = Series(preamble, document)
     root__ = latexdoc
