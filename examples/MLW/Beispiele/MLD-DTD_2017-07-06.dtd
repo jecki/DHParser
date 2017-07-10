@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DTD für MLW Erfassung neuer Artikel -->
+<!-- erstellt von Ursula Welsch, BADW -->
+<!-- Stand: 6.7.2017 -->
+
+<!-- Parameter-Entities -->
+<!ENTITY % textauszeichnungen   "kursiv | gesperrt | gerade" >
+
+<!-- Lexikon -->
+<!ELEMENT  MLW-test  (artikel)+  >
+
+<!-- Artikel -->
+<!ELEMENT  artikel  (lemma-position, artikelkopf?, bedeutung-position, verweis-position?, artikel-verfasser) >
+<!ATTLIST   artikel   xml:id   ID  #REQUIRED >
+
+<!-- =========================-->
+<!-- Lemma-Ansatz -->
+<!-- =========================-->
+<!ELEMENT  lemma-position  (((lemma, lemma-varianten?, grammatik-position) | (lemma-position | zusatz)+), etymologie-position?) >
+
+<!-- Lemma -->
+<!ELEMENT  lemma  (#PCDATA) >
+<!ATTLIST  lemma
+        klassisch  (ja | nein)   "ja"
+        gesichert  (ja | nein)    "ja"
+        >
+
+<!-- Lemma-Varianten -->
+<!ELEMENT  lemma-varianten  (lemma-variante+, zusatz?) >
+<!ELEMENT  lemma-variante  (#PCDATA)  >
+<!ATTLIST   lemma-variante  kurz   CDATA   #IMPLIED  >
+
+<!-- Grammatik-Position -->
+<!ELEMENT  grammatik-position  (grammatik, grammatik-varianten?)  >
+
+<!-- Grammatikangaben -->
+<!ELEMENT  grammatik  (#PCDATA) >
+<!ATTLIST  grammatik
+        wortart  (nomen | adjektiv | verb)  #REQUIRED
+        klasse  (us-i | a-ae | um-i | x-cis)  #IMPLIED
+        genus  (m | f | n)  #IMPLIED
+        >
+
+<!-- Grammatik-Varianten -->
+<!ELEMENT  grammatik-varianten  (grammatik-variante+) >
+<!ELEMENT  grammatik-variante  (grammatik, beleg) >
+
+<!-- Etymologie-Position -->
+<!ELEMENT  etymologie-position  (etymologie-variante+) >
+<!ELEMENT  etymologie-variante  (etymologie-besonderheit?, etymologie?, beleg)  >
+<!ELEMENT  etymologie  (#PCDATA) >
+<!ATTLIST   etymologie-variante  sprache (griech | lat)  #IMPLIED >
+<!ELEMENT  etymologie-besonderheit  (#PCDATA)  >
+
+
+<!-- =========================-->
+<!-- Artikelkopf -->
+<!-- =========================-->
+<!ELEMENT  artikelkopf ((schreibweisen-position, struktur-position?, gebrauch-position?, metrik-position?, verwechslung-position?) |
+        (struktur-position, gebrauch-position?, metrik-position?, verwechslung-position?) |
+        (gebrauch-position, metrik-position?, verwechslung-position?) |
+        (metrik-position, verwechslung-position?) |
+        verwechslung-position) >
+
+<!-- Schreibweisen-Position -->
+<!ELEMENT  schreibweisen-position  (schreibweisen-variante)+ >
+<!ELEMENT  schreibweisen-variante  (schreibweise-besonderheit?, schreibweise, (zusatz, schreibweise)*, (beleg, (zusatz | beleg))*) >
+<!ELEMENT  schreibweise-besonderheit  (#PCDATA) >
+<!ELEMENT  schreibweise  (#PCDATA) >
+<!ATTLIST   schreibweise-besonderheit  typ  (script | form | script-form)  #IMPLIED >
+
+<!-- Position für Strukturelle/Grammatische Besonderheiten -->
+<!ELEMENT  struktur-position  (struktur-variante+) >
+<!ELEMENT   struktur-variante  (struktur-besonderheit?, struktur?, beleg)  >
+<!ELEMENT  struktur-besonderheit  (#PCDATA) >
+<!ELEMENT  struktur  (#PCDATA) >
+<!ATTLIST   struktur-besonderheit  typ  (pendet | struct | struct-nota)  #IMPLIED >
+
+<!-- Position zu Gebrauchs-Besonderheiten -->
+<!ELEMENT  gebrauch-position  (gebrauch-variante+) >
+<!ELEMENT  gebrauch-variante  (gebrauch-besonderheit?, gebrauch?, beleg)  >
+<!ELEMENT  gebrauch-besonderheit  (#PCDATA) >
+<!ELEMENT  gebrauch  (#PCDATA) >
+<!ATTLIST   gebrauch-besonderheit  typ  (usu | partic)  #IMPLIED >
+
+<!-- Position zu Metrisch / Rhythmischen Besonderheiten -->
+<!ELEMENT  metrik-position  (metrik-variante+) >
+<!ELEMENT  metrik-variante  (metrik-besonderheit?, metrik?, beleg)  >
+<!ELEMENT  metrik-besonderheit  (#PCDATA) >
+<!ELEMENT  metrik  (#PCDATA) >
+<!ATTLIST   metrik-besonderheit   typ  (metr | rhythm)  #IMPLIED >
+
+<!-- Position zu Verwechselungsgefahren -->
+<!ELEMENT  verwechslung-position  (verwechslung-variante+) >
+<!ELEMENT  verwechslung-variante  (verwechslung-besonderheit?, verwechslung?, beleg)  >
+<!ELEMENT  verwechslung-besonderheit  (#PCDATA) >
+<!ELEMENT  verwechslung  (#PCDATA) >
+<!ATTLIST   verwechslung-besonderheit  typ  (confunditur)  "confunditur" >
+
+<!-- =========================-->
+<!-- Hauptteil: Bedeutungsposition -->
+<!-- =========================-->
+<!ELEMENT  bedeutung-position  (bedeutung+) >
+<!ELEMENT  bedeutung  (((klassifikation, interpretament-zusatz?) | (interpretament-zusatz) | (interpretament, interpretament-deutsch, interpretament-zusatz*)), (bedeutung | beleg-position)+) >
+<!ELEMENT   klassifikation  (#PCDATA)  >
+<!ATTLIST  bedeutung  nr  CDATA  #REQUIRED  >
+
+<!-- Interpretament -->
+<!ELEMENT  interpretament  (#PCDATA) >
+<!ELEMENT  interpretament-deutsch  (#PCDATA| verweis)* >
+<!ELEMENT  interpretament-zusatz  (#PCDATA | verweis)* >
+<!ATTLIST  interpretament  typ  (lat | griech | botan)  "lat" >
+
+<!-- Beleg-Position -->
+<!ELEMENT  beleg-position  (beleg+, zusatz?) >
+
+<!-- Artikelverfasser -->
+<!ELEMENT   artikel-verfasser  (#PCDATA)  >
+
+
+<!-- =========================-->
+<!--Elemente an verschiedenen Stellen der Struktur -->
+<!-- =========================-->
+<!-- Zusätze an verschiedenen Stellen der Struktur -->
+<!ELEMENT  zusatz  (#PCDATA) >
+<!ATTLIST   zusatz  typ  (al | sim | saepe | vel | vel-rarius | OFFEN)  #REQUIRED >
+
+<!-- Verweise an verschiedenen Stellen der Struktur -->
+<!ELEMENT  verweis  EMPTY >
+<!ATTLIST  verweis
+        typ  (beleg | artikel | literatur)  #REQUIRED
+        ziel  CDATA  #REQUIRED
+        >
+
+<!-- Belege an verschiedenen Stellen der Struktur -->
+<!--<!ELEMENT  beleg  ((beleg-quelle, beleg-text) | (verweis+, zusatz?)) >-->
+<!ELEMENT  beleg  ((beleg-quelle, beleg-text) | verweis) >
+<!-- Belegquelle -->
+<!ELEMENT  beleg-quelle  (autor, werk, stelle, datierung?) >
+<!ELEMENT  autor  (#PCDATA) >
+<!ELEMENT  werk  (#PCDATA) >
+<!ELEMENT  stelle  (#PCDATA | hoch)* >
+<!ELEMENT  datierung  (#PCDATA) >
+<!ATTLIST  beleg
+        id  ID  #REQUIRED
+        >
+
+<!-- Belegtext -->
+<!ELEMENT   beleg-text  (#PCDATA | lemma-beleg | redaktion-ergaenzung | lesart | hervorhebung | sigle | %textauszeichnungen;)* >
+<!ELEMENT  redaktion-ergaenzung  (#PCDATA | %textauszeichnungen;)* >  <!-- redaktionelle Ergänzungen des Artikelverfassers; die runden Klammern werden generiert -->
+<!ELEMENT   lemma-beleg  (#PCDATA) > <!-- das Vorkommen des Lemmas im Belegtext, erfasst wird die Langform; die Kurzform kommt in das Attribut kurzform -->
+<!ELEMENT  lesart  (#PCDATA | redaktion-ergaenzung)* > <!--  verschiedene Lesarten/Lemmavarianten, die hier mit aufgeführt werden  -->
+<!ELEMENT  hervorhebung  (#PCDATA) >  <!-- kleine Eckchen vor einer runden Klammer, die als Lesart bezeichnet wird -->
+<!ELEMENT  sigle  (#PCDATA) > <!--  Sigle einer Literaturstelle -->
+<!ATTLIST  lemma-beleg  kurzform  CDATA  #IMPLIED  >
+
+<!-- Textauszeichnung an verschiedenen Stellen -->
+<!ELEMENT   kursiv  (#PCDATA | gerade)* >
+<!ELEMENT   gesperrt  (#PCDATA) >
+<!ELEMENT   gerade  (#PCDATA | kursiv)* >
+<!ELEMENT   hoch  (#PCDATA) >

@@ -73,6 +73,7 @@ from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Pa
     Node, TransformationFunc
 from DHParser.toolkit import load_if_file, error_messages
 
+
 __all__ = ['ScannerFunc',
            'HistoryRecord',
            'Parser',
@@ -112,6 +113,7 @@ __all__ = ['ScannerFunc',
            'compile_source']
 
 
+
 ########################################################################
 #
 # Grammar and parsing infrastructure
@@ -127,6 +129,7 @@ LEFT_RECURSION_DEPTH = 20 if platform.python_implementation() == "PyPy" \
 # because of python's recursion depth limit, this value ought not to be set too high
 MAX_DROPOUTS = 25  # type: int
 # stop trying to recover parsing after so many errors
+
 
 class HistoryRecord:
     """
@@ -292,7 +295,8 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         pass
 
     def apply(self, func: ApplyFunc):
-        """Applies function `func(parser)` recursively to this parser and all
+        """
+        Applies function `func(parser)` recursively to this parser and all
         descendants of the tree of parsers. The same function can never
         be applied twice between calls of the ``reset()``-method!
         """
@@ -305,7 +309,8 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
 
 
 def mixin_comment(whitespace: str, comment: str) -> str:
-    """Returns a regular expression that merges comment and whitespace
+    """
+    Returns a regular expression that merges comment and whitespace
     regexps. Thus comments cann occur whereever whitespace is allowed
     and will be skipped just as implicit whitespace.
 
@@ -327,9 +332,11 @@ class Grammar:
     wspL__ = ''
     wspR__ = WSP__
 
+
     @classmethod
     def _assign_parser_names(cls):
-        """Initializes the `parser.name` fields of those
+        """
+        Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.
             class Grammar(Grammar):
@@ -361,6 +368,7 @@ class Grammar:
                     parser.parser.name = entry
         cls.parser_initialization__ = "done"
 
+
     def __init__(self, root: Parser=None) -> None:
         # if not hasattr(self.__class__, 'parser_initialization__'):
         #     self.__class__.parser_initialization__ = "pending"
@@ -372,13 +380,16 @@ class Grammar:
         self.dirty_flag__ = False
         self.history_tracking__ = False
         self._reset__()
+
         # prepare parsers in the class, first
         self._assign_parser_names()
+
         # then deep-copy the parser tree from class to instance;
         # parsers not connected to the root object will be copied later
         # on demand (see Grammar.__getitem__()). Usually, the need to
         # do so only arises during testing.
         self.root__ = root if root else copy.deepcopy(self.__class__.root__)
+
         if self.wspL__:
             self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
             self.wsp_left_parser__.grammar = self
@@ -393,6 +404,7 @@ class Grammar:
             self.wsp_right_parser__ = ZOMBIE_PARSER
         self.root__.apply(self._add_parser__)
 
+
     def __getitem__(self, key):
         try:
             return self.__dict__[key]
@@ -405,6 +417,7 @@ class Grammar:
                 # assert self[key] == parser
                 return self[key]
             raise KeyError('Unknown parser "%s" !' % key)
+
 
     def _reset__(self):
         self.document__ = ""          # type: str
@@ -422,8 +435,10 @@ class Grammar:
         self.moving_forward__ = True  # type: bool
         self.left_recursion_encountered__ = False  # type: bool
 
+
     def _add_parser__(self, parser: Parser) -> None:
-        """Adds the particular copy of the parser object to this
+        """
+        Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
         if parser.name:
@@ -436,8 +451,10 @@ class Grammar:
         self.all_parsers__.add(parser)
         parser.grammar = self
 
+
     def __call__(self, document: str, start_parser="root__") -> Node:
-        """Parses a document with with parser-combinators.
+        """
+        Parses a document with with parser-combinators.
 
         Args:
             document (str): The source text to be parsed.
@@ -504,8 +521,10 @@ class Grammar:
         result.pos = 0  # calculate all positions
         return result
 
+
     def push_rollback__(self, location, func):
-        """Adds a rollback function that either removes or re-adds
+        """
+        Adds a rollback function that either removes or re-adds
         values on the variable stack (`self.variables`) that have been
         added (or removed) by Capture or Pop Parsers, the results of
         which have been dismissed.
@@ -513,8 +532,10 @@ class Grammar:
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
 
+
     def rollback_to__(self, location):
-        """Rolls back the variable stacks (`self.variables`) to its
+        """
+        Rolls back the variable stacks (`self.variables`) to its
         state at an earlier location in the parsed document.
         """
         while self.rollback__ and self.rollback__[-1][0] <= location:
@@ -524,8 +545,10 @@ class Grammar:
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
             else (len(self.document__) + 1)
 
+
     def log_parsing_history__(self, log_file_name: str = '') -> None:
-        """Writes a log of the parsing history of the most recently parsed
+        """
+        Writes a log of the parsing history of the most recently parsed
         document. 
         """
         def prepare_line(record):
@@ -558,7 +581,8 @@ class Grammar:
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
-    """Returns an error message for errors in the parser configuration,
+    """
+    Returns an error message for errors in the parser configuration,
     e.g. errors that result in infinite loops.
 
     Args:
@@ -578,6 +602,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     return " ".join(msg)
 
 
+
 ########################################################################
 #
 # Token and Regular Expression parser classes (i.e. leaf classes)
@@ -591,7 +616,8 @@ END_SCANNER_TOKEN = '\x1c'
 
 
 def make_token(token: str, argument: str = '') -> str:
-    """Turns the ``token`` and ``argument`` into a special token that
+    """
+    Turns the ``token`` and ``argument`` into a special token that
     will be caught by the `ScannerToken`-parser.
 
     This function is a support function that should be used by scanners
@@ -766,7 +792,8 @@ class RE(Parser):
 
 
 class Token(RE):
-    """Class Token parses simple strings. Any regular regular
+    """
+    Class Token parses simple strings. Any regular regular
     expression commands will be interpreted as simple sequence of
     characters.
 
@@ -827,7 +854,8 @@ class NaryOperator(Parser):
 
 
 class Synonym(UnaryOperator):
-    """Simply calls another parser and encapsulates the result in
+    """
+    Simply calls another parser and encapsulates the result in
     another node if that parser matches.
 
     This parser is needed to support synonyms in EBNF, e.g.
@@ -954,7 +982,8 @@ class Series(NaryOperator):
 
 
 class Alternative(NaryOperator):
-    """Matches if at least one of several alternatives matches. Returns
+    """
+    Matches if at least one of several alternatives matches. Returns
     the first match.
 
     This parser represents the EBNF-operator "|" with the qualification
@@ -1008,6 +1037,7 @@ class Alternative(NaryOperator):
         super(Alternative, self).reset()
         self.been_here = {}
         return self
+
 
 
 ########################################################################
@@ -1259,6 +1289,7 @@ class Forward(Parser):
 
 
 class Compiler:
+
     def __init__(self, grammar_name="", grammar_source=""):
         self.dirty_flag = False
         self.set_grammar_name(grammar_name, grammar_source)

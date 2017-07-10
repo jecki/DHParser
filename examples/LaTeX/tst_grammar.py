@@ -23,7 +23,7 @@ import sys
 sys.path.extend(['../../', '../', './'])
 
 from DHParser import testing
-if not testing.recompile_grammar('LaTeX.ebnf'):  # recompiles Grammar only if it has changed
+if not testing.recompile_grammar('LaTeX.ebnf', force=True):  # recompiles Grammar only if it has changed
     with open('LaTeX_ebnf_ERRORS.txt') as f:
         print(f.read())
     sys.exit(1)

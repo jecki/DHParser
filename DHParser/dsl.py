@@ -119,7 +119,8 @@ if __name__ == "__main__":
 
 
 class GrammarError(Exception):
-    """Raised when (already) the grammar of a domain specific language (DSL)
+    """
+    Raised when (already) the grammar of a domain specific language (DSL)
     contains errors.
     """
 
@@ -129,7 +130,8 @@ class GrammarError(Exception):
 
 
 class CompilationError(Exception):
-    """Raised when a string or file in a domain specific language (DSL)
+    """
+    Raised when a string or file in a domain specific language (DSL)
     contains errors.
     """
     def __init__(self, error_messages, dsl_text, dsl_grammar, AST, result):
@@ -144,7 +146,8 @@ class CompilationError(Exception):
 
 
 def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
-    """Returns a grammar object and the source code of the grammar, from
+    """
+    Returns a grammar object and the source code of the grammar, from
     the given `grammar`-data which can be either a file name, ebnf-code,
     python-code, a Grammar-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
@@ -177,7 +180,8 @@ def compileDSL(text_or_file: str,
                dsl_grammar: Union[str, Grammar],
                ast_transformation: TransformationFunc,
                compiler: Compiler) -> Any:
-    """Compiles a text in a domain specific language (DSL) with an
+    """
+    Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
     compilation error.
     
@@ -197,7 +201,8 @@ def compileDSL(text_or_file: str,
 
 
 def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
-    """Compiles an EBNF grammar file and returns the compiler object
+    """
+    Compiles an EBNF grammar file and returns the compiler object
     that was used and which can now be queried for the result as well
     as skeleton code for scanner, transformer and compiler objects.
     
@@ -218,7 +223,8 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
 
 
 def compileEBNF(ebnf_src: str, branding="DSL") -> str:
-    """Compiles an EBNF source file and returns the source code of a
+    """
+    Compiles an EBNF source file and returns the source code of a
     compiler suite with skeletons for scanner, transformer and 
     compiler.
 
@@ -244,7 +250,8 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
 
 
 def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
-    """Compiles an EBNF grammar and returns a grammar-parser factory
+    """
+    Compiles an EBNF grammar and returns a grammar-parser factory
     function for that grammar.
 
     Args:
@@ -264,7 +271,8 @@ def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
 
 def load_compiler_suite(compiler_suite: str) -> \
         Tuple[ScannerFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
-    """Extracts a compiler suite from file or string ``compiler suite``
+    """
+    Extracts a compiler suite from file or string ``compiler suite``
     and returns it as a tuple (scanner, parser, ast, compiler).
     
     Returns:
@@ -300,7 +308,8 @@ def load_compiler_suite(compiler_suite: str) -> \
 
 
 def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
-    """Returns ``True``  if the ``compile_suite`` needs to be updated.
+    """
+    Returns ``True``  if the ``compile_suite`` needs to be updated.
      
     An update is needed, if either the grammar in the compieler suite 
     does not reflect the latest changes of ``grammar_source`` or if 
@@ -348,7 +357,8 @@ def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
 
 
 def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
-    """Compiles the a source file with a given compiler and writes the
+    """
+    Compiles the a source file with a given compiler and writes the
     result to a file.
 
     If no ``compiler_suite`` is given it is assumed that the source

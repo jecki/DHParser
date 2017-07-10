@@ -34,7 +34,8 @@ from DHParser.dsl import compile_on_disk
 
 
 def mock_syntax_tree(sexpr):
-    """Generates a tree of nodes from an S-expression.
+    """
+    Generates a tree of nodes from an S-expression.
 
     Example: 
     >>> mock_syntax_tree("(a (b c))").as_sxpr()
@@ -84,7 +85,8 @@ def mock_syntax_tree(sexpr):
 
 
 def recompile_grammar(ebnf_filename, force=False) -> bool:
-    """Recompiles an ebnf-grammar if necessary, that is if either no
+    """
+    Recompiles an ebnf-grammar if necessary, that is if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
     
@@ -128,7 +130,8 @@ UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 
 
 def unit_from_configfile(config_filename):
-    """Reads a grammar unit test from a config file.
+    """
+    Reads a grammar unit test from a config file.
     """
     cfg = configparser.ConfigParser(interpolation=None)
     cfg.read(config_filename)
@@ -152,7 +155,8 @@ def unit_from_configfile(config_filename):
 
 
 def unit_from_json(json_filename):
-    """Reads a grammar unit test from a json file.
+    """
+    Reads a grammar unit test from a json file.
     """
     with open(json_filename, 'r') as f:
         unit = json.load(f)
@@ -166,7 +170,8 @@ def unit_from_json(json_filename):
 
 
 def unit_from_file(filename):
-    """Reads a grammar unit test from a file. The format of the file is
+    """
+    Reads a grammar unit test from a file. The format of the file is
     determined by the ending of its name.
     """
     if filename.endswith(".json"):
@@ -178,7 +183,8 @@ def unit_from_file(filename):
 
 
 def get_report(test_unit):
-    """Returns a text-report of the results of a grammar unit test.
+    """
+    Returns a text-report of the results of a grammar unit test.
     """
     report = []
     for parser_name, tests in test_unit.items():
@@ -205,7 +211,8 @@ def get_report(test_unit):
 
 
 def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, verbose=False):
-    """Unit tests for a grammar-parser and ast transformations.
+    """
+    Unit tests for a grammar-parser and ast transformations.
     """
     if isinstance(test_unit, str):
         unit_dir, unit_name = os.path.split(os.path.splitext(test_unit)[0])
@@ -288,7 +295,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
 
 def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown_filetypes=False,
                   report=True, verbose=False):
-    """Runs all grammar unit tests in a directory. A file is considered a test
+    """
+    Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
     all_errors = collections.OrderedDict()
@@ -318,7 +326,8 @@ def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown
 
 
 def runner(tests, namespace):
-    """ Runs all or some selected Python unit tests found in the 
+    """
+    Runs all or some selected Python unit tests found in the
     namespace. To run all tests in a module, call 
     ``runner("", globals())`` from within that module.
 

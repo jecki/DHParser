@@ -100,6 +100,11 @@ class TestEBNFParser:
     def setup(self):
         self.EBNF = get_ebnf_grammar()
 
+    def test_RE(self):
+        gr = get_ebnf_grammar()
+        m = gr.regexp.main.regexp.match(r'/\\/ xxx /')
+        assert m.group().find('x') < 0, m.group()
+
     def test_literal(self):
         snippet = '"literal" '
         result = self.EBNF(snippet, 'literal')

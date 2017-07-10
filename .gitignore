@@ -21,3 +21,4 @@ test/tmp*
 build/
 dist/
 MANIFEST
+playground/*

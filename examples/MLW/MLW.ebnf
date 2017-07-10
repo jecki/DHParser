@@ -16,6 +16,7 @@ Artikel           = [LZ]
                     §ArtikelVerfasser
                     [LZ]  DATEI_ENDE
 
+
 #### LEMMA-POSITION ##########################################################
 
 LemmaPosition     = "LEMMA" [LZ] §Lemma §TR [LemmaVarianten] §GrammatikPosition [EtymologiePosition]
