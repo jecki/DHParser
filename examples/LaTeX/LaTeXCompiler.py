@@ -103,13 +103,15 @@ class LaTeXGrammar(Grammar):
     
     #### block environments ####
     
-    block_enrivonment   = known_enrivonment | generic_enrivonment
-    known_enrivonment   = itemize | enumerate | figure | table | quotation
+    # TODO: ambiguity between generic bock envieronments and generic inline environments
+    
+    block_environment   = known_environment | generic_environment
+    known_environment   = itemize | enumerate | figure | table | quotation
                         | verbatim
-    generic_enrivonment = begin_enrivonment sequence §end_enrivonment
+    generic_environment = begin_environment sequence §end_environment
     
     itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
-    enumerate           = "\begin{enumerate}" [PARSEP] {item } §"end{enumerate}"
+    enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
     item                = "\item" [PARSEP] sequence
     
     figure              = "\begin{figure}" sequence "\end{figure}"
@@ -123,19 +125,19 @@ class LaTeXGrammar(Grammar):
     #### paragraphs and sequences of paragraphs ####
     
     block_of_paragraphs = /{/ sequence §/}/
-    sequence            = { (paragraph | block_enrivonment ) [PARSEP] }+
+    sequence            = { (paragraph | block_environment ) [PARSEP] }+
     
     paragraph           = { !blockcmd text_elements //~ }+
-    text_elements       = command | text | block | inline_enrivonment
+    text_elements       = command | text | block | inline_environment
     
     
     #### inline enivronments ####
     
-    inline_enrivonment  = known_inline_env | generic_inline_env
+    inline_environment  = known_inline_env | generic_inline_env
     known_inline_env    = inline_math
-    generic_inline_env  = begin_enrivonment { text_elements }+ §end_enrivonment
-    begin_enrivonment   = "\begin{" §NAME §"}"
-    end_enrivonment     = "\end{" §::NAME §"}"
+    generic_inline_env  = begin_environment { text_elements }+ §end_environment
+    begin_environment   = "\begin{" §NAME §"}"
+    end_environment     = "\end{" §::NAME §"}"
     
     inline_math         = "$" MATH "$"
     
@@ -163,10 +165,13 @@ class LaTeXGrammar(Grammar):
     cfgtext    = { word_sequence | (ESCAPED //~) }+
     word_sequence = { TEXTCHUNK //~ }+
     
-    blockcmd   = /[\\]/ ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
-                                  | "quotation" | "tabular") "}"
-                         | "subsection" | "section" | "chapter" | "subsubsection"
-                         | "paragraph" | "subparagraph" | "item")
+    blockcmd   = /[\\]/ ( ( "begin{" | "end{" )
+                          ( "enumerate" | "itemize" | "figure" | "quote"
+                          | "quotation" | "tabular") "}"
+                        | structural)
+    
+    structural = "subsection" | "section" | "chapter" | "subsubsection"
+               | "paragraph" | "subparagraph" | "item"
     
     
     #######################################################################
@@ -189,10 +194,10 @@ class LaTeXGrammar(Grammar):
                                                 # [whitespace] linefeed [whitespace] linefeed
     EOF        = !/./
     """
-    block_enrivonment = Forward()
+    block_environment = Forward()
     block_of_paragraphs = Forward()
     text_elements = Forward()
-    source_hash__ = "9f1579db1994211dc53dd4a8f317bfb6"
+    source_hash__ = "9a8cba2b425d276af78e141d7dda162c"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -208,7 +213,13 @@ class LaTeXGrammar(Grammar):
     MATH = RE('[\\w_^{}[\\]]*')
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
-    blockcmd = Series(RE('[\\\\]', wR=''), Alternative(Series(Token("begin{"), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item")))
+    structural = Alternative(Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"),
+                             Token("paragraph"), Token("subparagraph"), Token("item"))
+    blockcmd = Series(RE('[\\\\]', wR=''), Alternative(Series(Alternative(Token("begin{"), Token("end{")),
+                                                              Alternative(Token("enumerate"), Token("itemize"),
+                                                                          Token("figure"), Token("quote"),
+                                                                          Token("quotation"), Token("tabular")),
+                                                              Token("}")), structural))
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))
@@ -221,14 +232,14 @@ class LaTeXGrammar(Grammar):
     known_command = Alternative(footnote, includegraphics, caption)
     command = Alternative(known_command, generic_command)
     inline_math = Series(Token("$"), MATH, Token("$"))
-    end_enrivonment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
-    begin_enrivonment = Series(Token("\\begin{"), Required(NAME), Required(Token("}")))
-    generic_inline_env = Series(begin_enrivonment, OneOrMore(text_elements), Required(end_enrivonment))
+    end_environment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
+    begin_environment = Series(Token("\\begin{"), Required(NAME), Required(Token("}")))
+    generic_inline_env = Series(begin_environment, OneOrMore(text_elements), Required(end_environment))
     known_inline_env = Synonym(inline_math)
-    inline_enrivonment = Alternative(known_inline_env, generic_inline_env)
-    text_elements.set(Alternative(command, text, block, inline_enrivonment))
+    inline_environment = Alternative(known_inline_env, generic_inline_env)
+    text_elements.set(Alternative(command, text, block, inline_environment))
     paragraph = OneOrMore(Series(NegativeLookahead(blockcmd), text_elements, RE('')))
-    sequence = OneOrMore(Series(Alternative(paragraph, block_enrivonment), Optional(PARSEP)))
+    sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
     block_of_paragraphs.set(Series(RE('{', wR=''), sequence, Required(RE('}', wR=''))))
     table_config = Series(Token("{"), RE('[lcr|]+'), Token("}"))
     table = Series(Token("\\begin{tabular}"), table_config, sequence, Token("\\end{tabular}"))
@@ -236,11 +247,12 @@ class LaTeXGrammar(Grammar):
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Token("\\end{quotation}")), Series(Token("\\begin{quote}"), sequence, Token("\\end{quote}")))
     figure = Series(Token("\\begin{figure}"), sequence, Token("\\end{figure}"))
     item = Series(Token("\\item"), Optional(PARSEP), sequence)
-    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("end{enumerate}")))
+    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item),
+                       Required(Token("\\end{enumerate}")))
     itemize = Series(Token("\\begin{itemize}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{itemize}")))
-    generic_enrivonment = Series(begin_enrivonment, sequence, Required(end_enrivonment))
-    known_enrivonment = Alternative(itemize, enumerate, figure, table, quotation, verbatim)
-    block_enrivonment.set(Alternative(known_enrivonment, generic_enrivonment))
+    generic_environment = Series(begin_environment, sequence, Required(end_environment))
+    known_environment = Alternative(itemize, enumerate, figure, table, quotation, verbatim)
+    block_environment.set(Alternative(known_environment, generic_environment))
     Index = Series(Token("\\printindex"), Optional(PARSEP))
     Bibliography = Series(Token("\\bibliography"), block, Optional(PARSEP))
     SubParagraph = Series(Token("\\subparagpaph"), block, Optional(PARSEP), ZeroOrMore(sequence))

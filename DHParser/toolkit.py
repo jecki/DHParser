@@ -176,7 +176,7 @@ def repr_call(f, parameter_list) -> str:
 def line_col(text: str, pos: int) -> Tuple[int, int]:
     """Returns the position within a text as (line, column)-tuple.
     """
-    assert pos < len(text), str(pos) + " >= " + str(len(text))
+    assert pos <= len(text), str(pos) + " > " + str(len(text))  # can point one character after EOF
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
     return line, column
