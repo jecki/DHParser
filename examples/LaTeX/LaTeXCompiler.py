@@ -163,10 +163,10 @@ class LaTeXGrammar(Grammar):
     cfgtext    = { word_sequence | (ESCAPED //~) }+
     word_sequence = { TEXTCHUNK //~ }+
     
-    blockcmd   = /A/ ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
-                                | "quotation" | "tabular") "}"
-                     | "subsection" | "section" | "chapter" | "subsubsection"
-                     | "paragraph" | "subparagraph" | "item")
+    blockcmd   = /[\\]/ ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
+                                  | "quotation" | "tabular") "}"
+                         | "subsection" | "section" | "chapter" | "subsubsection"
+                         | "paragraph" | "subparagraph" | "item")
     
     
     #######################################################################
@@ -192,7 +192,7 @@ class LaTeXGrammar(Grammar):
     block_enrivonment = Forward()
     block_of_paragraphs = Forward()
     text_elements = Forward()
-    source_hash__ = "7ef00020ebbb2b82e36d38460de56370"
+    source_hash__ = "9f1579db1994211dc53dd4a8f317bfb6"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -208,7 +208,7 @@ class LaTeXGrammar(Grammar):
     MATH = RE('[\\w_^{}[\\]]*')
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
-    blockcmd = Series(RE('A', wR=''), Alternative(Series(Token("begin{"), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item")))
+    blockcmd = Series(RE('[\\\\]', wR=''), Alternative(Series(Token("begin{"), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item")))
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))

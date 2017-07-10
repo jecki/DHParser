@@ -113,10 +113,10 @@ text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
 word_sequence = { TEXTCHUNK //~ }+
 
-blockcmd   = /\/ ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
-                            | "quotation" | "tabular") "}"
-                 | "subsection" | "section" | "chapter" | "subsubsection"
-                 | "paragraph" | "subparagraph" | "item")
+blockcmd   = /[\\]/ ("begin{" ("enumerate" | "itemize" | "figure" | "quote"
+                              | "quotation" | "tabular") "}"
+                     | "subsection" | "section" | "chapter" | "subsubsection"
+                     | "paragraph" | "subparagraph" | "item")
 
 
 #######################################################################

@@ -124,7 +124,7 @@ class EBNFGrammar(Grammar):
     wspR__ = WSP__
     EOF = NegativeLookahead(RE('.', wR=''))
     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-    regexp = RE('~?/(?:[^/]|(?<=\\\\)/)*/~?')
+    regexp = RE(r'~?/(?:\\/|[^/])*?/~?')  # RE('~?/(?:[^/]|(?<=\\\\)/)*/~?')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
     option = Series(Token("["), expression, Required(Token("]")))
@@ -300,7 +300,8 @@ class EBNFCompilerError(Exception):
 #TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!? Is this possible at compile time?
 
 class EBNFCompiler(Compiler):
-    """Generates a Parser from an abstract syntax tree of a grammar specified
+    """
+    Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
     """
     COMMENT_KEYWORD = "COMMENT__"
@@ -316,9 +317,11 @@ class EBNFCompiler(Compiler):
                   'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
                   'vertical': r'\s*'}
 
+
     def __init__(self, grammar_name="", grammar_source=""):
         super(EBNFCompiler, self).__init__(grammar_name, grammar_source)
         self._reset()
+
 
     def _reset(self):
         self._result = ''           # type: str
@@ -340,10 +343,14 @@ class EBNFCompiler(Compiler):
     def result(self) -> str:
         return self._result
 
+
+    # methods for generating skeleton code for scanner, transformer, and compiler
+
     def gen_scanner_skeleton(self) -> str:
         name = self.grammar_name + "Scanner"
         return "def %s(text):\n    return text\n" % name \
                + SCANNER_FACTORY.format(NAME=self.grammar_name)
+
 
     def gen_transformer_skeleton(self) -> str:
         if not self.rules:
@@ -362,6 +369,7 @@ class EBNFCompiler(Compiler):
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
+
 
     def gen_compiler_skeleton(self) -> str:
         if not self.rules:
@@ -387,9 +395,12 @@ class EBNFCompiler(Compiler):
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:
-        # fix capture of variables that have been defined before usage [sic!]
 
+    def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:
+        """
+        Creates the Python code for the parser after compilation of
+        the EBNF-Grammar
+        """
         if self.variables:
             for i in range(len(definitions)):
                 if definitions[i][0] in self.variables:
@@ -470,6 +481,9 @@ class EBNFCompiler(Compiler):
                        + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
         return self._result
 
+
+    ## compilation methods
+
     def on_syntax(self, node: Node) -> str:
         self._reset()
         definitions = []
@@ -488,6 +502,7 @@ class EBNFCompiler(Compiler):
                 node.error_flag = node.error_flag or nd.error_flag
 
         return self.assemble_parser(definitions, node)
+
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
         rule = str(node.children[0])
@@ -520,9 +535,11 @@ class EBNFCompiler(Compiler):
             rule, defn = rule + ':error', '"' + errmsg + '"'
         return rule, defn
 
+
     @staticmethod
     def _check_rx(node: Node, rx: str) -> str:
-        """Checks whether the string `rx` represents a valid regular
+        """
+        Checks whether the string `rx` represents a valid regular
         expression. Makes sure that multiline regular expressions are
         prepended by the multiline-flag. Returns the regular expression string.
         """
@@ -533,6 +550,7 @@ class EBNFCompiler(Compiler):
             node.add_error("malformed regular expression %s: %s" %
                            (repr(rx), str(re_error)))
         return rx
+
 
     def on_directive(self, node: Node) -> str:
         key = str(node.children[0]).lower()
@@ -593,18 +611,23 @@ class EBNFCompiler(Compiler):
                             ', '.join(list(self.directives.keys()))))
         return ""
 
+
     def non_terminal(self, node: Node, parser_class: str, custom_args: List[str]=[]) -> str:
-        """Compiles any non-terminal, where `parser_class` indicates the Parser class
+        """
+        Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
         arguments = [self._compile(r) for r in node.children] + custom_args
         return parser_class + '(' + ', '.join(arguments) + ')'
 
+
     def on_expression(self, node) -> str:
         return self.non_terminal(node, 'Alternative')
 
+
     def on_term(self, node) -> str:
         return self.non_terminal(node, 'Series')
+
 
     def on_factor(self, node: Node) -> str:
         assert node.children
@@ -639,21 +662,27 @@ class EBNFCompiler(Compiler):
             node.add_error('Unknown prefix "%s".' % prefix)
         return ""
 
+
     def on_option(self, node) -> str:
         return self.non_terminal(node, 'Optional')
+
 
     def on_repetition(self, node) -> str:
         return self.non_terminal(node, 'ZeroOrMore')
 
+
     def on_oneormore(self, node) -> str:
         return self.non_terminal(node, 'OneOrMore')
+
 
     def on_regexchain(self, node) -> str:
         raise EBNFCompilerError("Not yet implemented!")
 
+
     def on_group(self, node) -> str:
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
+
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = str(node)  # ; assert result == cast(str, node.result)
@@ -667,8 +696,10 @@ class EBNFCompiler(Compiler):
                 self.recursive.add(symbol)
             return symbol
 
+
     def on_literal(self, node) -> str:
         return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
+
 
     def on_regexp(self, node: Node) -> str:
         rx = str(node)
@@ -693,6 +724,7 @@ class EBNFCompiler(Compiler):
             node.add_error(errmsg)
             return '"' + errmsg + '"'
         return 'RE(' + ', '.join([arg] + name) + ')'
+
 
     def on_list_(self, node) -> Set[str]:
         assert node.children

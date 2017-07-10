@@ -30,7 +30,7 @@ option     =  "[" expression §"]"
 symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
 literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
             | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                  # '~' is a whitespace-marker, if present leading or trailing
                                                  # whitespace of a regular expression will be ignored tacitly.
 list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,

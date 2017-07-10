@@ -20,6 +20,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+try:
+    import regex as re
+except ImportError:
+    import re
 import sys
 from functools import partial
 from multiprocessing import Pool
@@ -102,8 +106,11 @@ class TestEBNFParser:
 
     def test_RE(self):
         gr = get_ebnf_grammar()
-        m = gr.regexp.main.regexp.match(r'/\\/ xxx /')
-        assert m.group().find('x') < 0, m.group()
+        m = gr.regexp.main.regexp.match(r'/[\\\\]/ xxx /')
+        rs = m.group()
+        assert rs.find('x') < 0, rs.group()
+        rx = re.compile(rs[1:-1])
+        assert rx.match(r'\\')
 
     def test_literal(self):
         snippet = '"literal" '
