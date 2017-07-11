@@ -715,7 +715,8 @@ class Whitespace(RegExp):
 
 
 class RE(Parser):
-    """Regular Expressions with optional leading or trailing whitespace.
+    """
+    Regular Expressions with optional leading or trailing whitespace.
     
     The RE-parser parses pieces of text that match a given regular
     expression. Other than the ``RegExp``-Parser it can also skip 
@@ -1289,6 +1290,25 @@ class Forward(Parser):
 
 
 class Compiler:
+    """
+    Class Compiler is the abstract base class for compilers. Compiler
+    objects are callable and take the root node of the abstract
+    syntax tree (AST) as agrument and return the compiled code in a
+    format chosen by the compiler itself.
+
+    Subclasses implementing a compiler must define `on_XXX()`-methods
+    for each node name that can occur in the AST where 'XXX' is the
+    node's name(for unnamed nodes it is the node's ptype without the
+    leading colon ':').
+
+    These compiler methods take the node on which they are run as
+    argument. Other than in the AST transformation, which runs depth-first,
+    compiler methods are called forward moving starting with the root
+    node, and they are responsible for compiling the child nodes
+    themselves. This should be done by invoking the `compile(node)`-
+    method which will pick the right `on_XXX`-method. It is not
+    recommended to call the `on_XXX`-methods directly.
+    """
 
     def __init__(self, grammar_name="", grammar_source=""):
         self.dirty_flag = False
@@ -1298,19 +1318,28 @@ class Compiler:
         pass
 
     def __call__(self, node: Node) -> Any:
-        """Compiles the abstract syntax tree with the root ``node``.
-        
-        It's called `compile_ast`` to avoid confusion with the 
-        ``_compile`` that is called from within the local node 
-        compiler methods.
+        """
+        Compiles the abstract syntax tree with the root node `node` and
+        returns the compiled code. It is up to subclasses implementing
+        the compiler to determine the format of the returned data.
+        (This very much depends on the kind and purpose of the
+        implemented compiler.)
         """
         if self.dirty_flag:
             self._reset()
         else:
             self.dirty_flag = True
-        return self._compile(node)
+        return self.compile(node)
 
-    def set_grammar_name(self, grammar_name, grammar_source):
+    def set_grammar_name(self, grammar_name="", grammar_source=""):
+        """
+        Changes the grammar's name and the grammar's source.
+
+        The grammar name and the source text of the grammar are
+        metadata about the grammar that do not affect the compilation
+        process. Classes inheriting from `Compiler` can use this
+        information to name and annotate its output.
+        """
         assert grammar_name == "" or re.match('\w+\Z', grammar_name)
         if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
@@ -1319,21 +1348,22 @@ class Compiler:
 
     @staticmethod
     def method_name(node_name: str) -> str:
-        """Returns the method name for ``node_name``, e.g.
+        """Returns the method name for `node_name`, e.g.
         >>> Compiler.method_name('expression')
         'on_expression'
         """
         return 'on_' + node_name
 
-    def _compile(self, node: Node) -> Any:
-        """Calls the compilation method for the given node and returns
-         the result of the compilation.
+    def compile(self, node: Node) -> Any:
+        """
+        Calls the compilation method for the given node and returns the
+        result of the compilation.
         
         The method's name is dreived from either the node's parser 
         name or, if the parser is anonymous, the node's parser's class
         name by adding the prefix 'on_'.
         
-        Note that ``_compile`` does not call any compilation functions
+        Note that ``compile`` does not call any compilation functions
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
         """
@@ -1355,7 +1385,8 @@ def compile_source(source: str,
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
                    compiler: Compiler):         # Node (AST) -> Any
-    """Compiles a source in four stages:
+    """
+    Compiles a source in four stages:
         1. Scanning (if needed)
         2. Parsing
         3. AST-transformation

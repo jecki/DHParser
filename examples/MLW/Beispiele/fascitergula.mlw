@@ -11,15 +11,16 @@ LEMMA facitergul|a
 GRAMMATIK
     nomen; -ae f.
 
-    -us, -i m.: verweis_ziel_001
-    -um, -i n.: verweis_ziel_002
+    -us, -i m.: ->ziel_001
+    -um, -i n.: ->ziel_002
 
 
 SCHREIBWEISE
     script.:
-        vizreg-:      verweis_ziel_003
-        festregel(a): verweis_ziel_004
-        fezdregl(a):  verweis_ziel_005
+        vizreg-:      ->ziel_003
+        festregel(a): ->ziel_004
+        fezdregl(a):  ->ziel_005
+
 
 BEDEUTUNG
 
@@ -37,6 +38,7 @@ BELEGE
   II."; 24,8  "-itella X."; 114,8 VIII  "fezdregle.";  6,24  "fasciutercule
   VII."; 92,6 "fascercule tres." 21,20 IIII "festregele."
   ZUSATZ saepe.
+
 
 BEDEUTUNG
 

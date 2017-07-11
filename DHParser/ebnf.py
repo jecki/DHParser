@@ -495,10 +495,10 @@ class EBNFCompiler(Compiler):
         # compile definitions and directives and collect definitions
         for nd in node.children:
             if nd.parser.name == "definition":
-                definitions.append(self._compile(nd))
+                definitions.append(self.compile(nd))
             else:
                 assert nd.parser.name == "directive", nd.as_sxpr()
-                self._compile(nd)
+                self.compile(nd)
                 node.error_flag = node.error_flag or nd.error_flag
 
         return self.assemble_parser(definitions, node)
@@ -522,7 +522,7 @@ class EBNFCompiler(Compiler):
         try:
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
-            defn = self._compile(node.children[1])
+            defn = self.compile(node.children[1])
             if rule in self.variables:
                 defn = 'Capture(%s)' % defn
                 self.variables.remove(rule)
@@ -561,7 +561,7 @@ class EBNFCompiler(Compiler):
                 if len(node.children[1].result) != 1:
                     node.add_error('Directive "%s" must have one, but not %i values.' %
                                    (key, len(node.children[1].result)))
-                value = self._compile(node.children[1]).pop()
+                value = self.compile(node.children[1]).pop()
                 if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
                     value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
                 else:
@@ -585,7 +585,7 @@ class EBNFCompiler(Compiler):
             self.directives['testing'] = value.lower() not in {"off", "false", "no"}
 
         elif key == 'literalws':
-            value = {item.lower() for item in self._compile(node.children[1])}
+            value = {item.lower() for item in self.compile(node.children[1])}
             if (len(value - {'left', 'right', 'both', 'none'}) > 0
                     or ('none' in value and len(value) > 1)):
                 node.add_error('Directive "literalws" allows the values '
@@ -596,10 +596,10 @@ class EBNFCompiler(Compiler):
             self.directives[key] = list(ws)
 
         elif key in {'tokens', 'scanner_tokens'}:
-            self.directives['tokens'] |= self._compile(node.children[1])
+            self.directives['tokens'] |= self.compile(node.children[1])
 
         elif key.endswith('_filter'):
-            filter_set = self._compile(node.children[1])
+            filter_set = self.compile(node.children[1])
             if not isinstance(filter_set, set) or len(filter_set) != 1:
                 node.add_error('Directive "%s" accepts exactly on symbol, not %s'
                                % (key, str(filter_set)))
@@ -617,7 +617,7 @@ class EBNFCompiler(Compiler):
         Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        arguments = [self._compile(r) for r in node.children] + custom_args
+        arguments = [self.compile(r) for r in node.children] + custom_args
         return parser_class + '(' + ', '.join(arguments) + ')'
 
 

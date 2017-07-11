@@ -5,6 +5,7 @@ Introduction to [DHParser](https://gitlab.lrz.de/badw-it/DHParser)
 
 Motto: **Computers enjoy XML, humans don't.**
 
+
 Why use domain specific languages in the humanities?
 ----------------------------------------------------
 
@@ -51,7 +52,7 @@ a few drawbacks to this approach:
   Editing and revising XML-encoded text is a pain. Just ask the 
   literary scientists who have to work with it.
 - The XML encoding, especially TEI-XML, is often unintuitive. Only
-  experts understand it. Now, if you had the idea that you humanist
+  experts understand it. Now, if you had the idea that your humanist
   friend, who is not into digital technologies, might help you with
   proof-reading, you better think about it again.
 - There is an awful lot of typing to do: All those lengthy opening 
@@ -187,7 +188,7 @@ for the full EBNF):
     LEERZEILE         = /\n[ \t]*(?=\n)/~
     ENDE              = !/./
 
-Now, without going into too much detail here, let me just explain a few basics of 
+Without going into too much detail here, let me just explain a few basics of 
 this formal description: The slashes `/` enclose ordinary regular expressions.
 Thus, `NZ` for ("Neue Zeile", German for: "new line") is defined as `/\n/~` which
 is the newline-token `\n` in a regular expression, plus further horizontal 

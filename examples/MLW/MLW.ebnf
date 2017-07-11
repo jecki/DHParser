@@ -96,7 +96,7 @@ Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
 Beleg            = Verweis
 
-Verweis          = ZielName
+Verweis          = "->" ZielName
 VerweisZiel      = "[" ZielName "]"
 ZielName         = BUCHSTABENFOLGE
 
