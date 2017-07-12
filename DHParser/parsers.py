@@ -771,8 +771,8 @@ class RE(Parser):
         return None, text
 
     def __repr__(self):
-        wL = '~' if self.wL else ''
-        wR = '~' if self.wR else ''
+        wL = '~' if self.wspLeft else ''
+        wR = '~' if self.wspRight else ''
         return wL + '/%s/' % self.main.regexp.pattern + wR
 
     def _grammar_assigned_notifier(self):
@@ -852,28 +852,6 @@ class NaryOperator(Parser):
         if super(NaryOperator, self).apply(func):
             for parser in self.parsers:
                 parser.apply(func)
-
-
-class Synonym(UnaryOperator):
-    """
-    Simply calls another parser and encapsulates the result in
-    another node if that parser matches.
-
-    This parser is needed to support synonyms in EBNF, e.g.
-        jahr       = JAHRESZAHL
-        JAHRESZAHL = /\d\d\d\d/
-    Otherwise the first line could not be represented by any parser
-    class, in which case it would be unclear whether the parser
-    RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'
-    """
-    def __call__(self, text: str) -> Tuple[Node, str]:
-        node, text = self.parser(text)
-        if node:
-            return Node(self, node), text
-        return None, text
-
-    def __repr__(self):
-        return self.name or self.parser.repr
 
 
 class Optional(UnaryOperator):
@@ -1111,6 +1089,7 @@ def iter_right_branch(node) -> Iterator[Node]:
 
 
 class Lookbehind(FlowOperator):
+    """EXPERIMENTAL AND NEVER TESTED!!!"""
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
@@ -1142,6 +1121,7 @@ class Lookbehind(FlowOperator):
 
 
 class NegativeLookbehind(Lookbehind):
+    """EXPERIMENTAL AND NEVER TESTED!!!"""
     def __repr__(self):
         return '-!' + self.parser.repr
 
@@ -1241,12 +1221,51 @@ class Pop(Retrieve):
 
 ########################################################################
 #
-# Forward class (for recursive symbols)
+# Aliasing parser classes
 #
 ########################################################################
 
 
+class Synonym(UnaryOperator):
+    """
+    Simply calls another parser and encapsulates the result in
+    another node if that parser matches.
+
+    This parser is needed to support synonyms in EBNF, e.g.
+        jahr       = JAHRESZAHL
+        JAHRESZAHL = /\d\d\d\d/
+    Otherwise the first line could not be represented by any parser
+    class, in which case it would be unclear whether the parser
+    RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
+    """
+    def __call__(self, text: str) -> Tuple[Node, str]:
+        node, text = self.parser(text)
+        if node:
+            return Node(self, node), text
+        return None, text
+
+    def __repr__(self):
+        return self.name or self.parser.repr
+
+
 class Forward(Parser):
+    """Forward allows to declare a parser before it is actually defined.
+    Forward declarations are needed for parsers that are recursively
+    nested, e.g.:
+    class Arithmetic(Grammar):
+        '''
+        expression =  term  { ("+" | "-") term }
+        term       =  factor  { ("*" | "/") factor }
+        factor     =  INTEGER | "("  expression  ")"
+        INTEGER    =  /\d+/~
+        '''
+        expression = Forward()
+        INTEGER    = RE('\\d+')
+        factor     = INTEGER | Token("(") + expression + Token(")")
+        term       = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
+        expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+        root__     = expression
+    """
     def __init__(self):
         Parser.__init__(self)
         self.parser = None
@@ -1272,8 +1291,8 @@ class Forward(Parser):
             return s
 
     def set(self, parser: Parser):
-        # assert isinstance(parser, Parser)
-        # self.name = parser.name  # redundant, see Grammar-constructor
+        """Sets the parser to which the calls to this Forward-object
+        shall be delegated."""
         self.parser = parser
 
     def apply(self, func: Parser.ApplyFunc):

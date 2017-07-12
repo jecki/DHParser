@@ -25,7 +25,7 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, logging, compile_python_object
-from DHParser.parsers import compile_source, Retrieve
+from DHParser.parsers import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
 
@@ -87,32 +87,6 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
-
-    # def test_indirect_left_recursion2(self):
-    #     """This will always fail, because of the precedence rule of the
-    #     "|"-operator. (Note: This is a difference between PEG and
-    #     classical EBNF). DHParser is a PEG-Parser although it uses the
-    #     syntax of classical EBNF."""
-    #     minilang = """
-    #         Expr    = //~ (Product | Sum | Value)
-    #         Product = Expr { ('*' | '/') Expr }
-    #         Sum     = Expr { ('+' | '-') Expr }
-    #         Value   = /[0-9.]+/~ | '(' Expr ')'
-    #         """
-    #     parser = parser_factory(minilang)()
-    #     assert parser
-    #     snippet = "8 * 4"
-    #     syntax_tree = parser(snippet)
-    #     assert not syntax_tree.error_flag, syntax_tree.collect_errors()
-    #     snippet = "7 + 8 * 4"
-    #     syntax_tree = parser(snippet)
-    #     print(syntax_tree.as_sxpr())
-    #     assert not syntax_tree.error_flag, syntax_tree.collect_errors()
-    #     snippet = "9 + 8 * (4 + 3)"
-    #     syntax_tree = parser(snippet)
-    #     assert not syntax_tree.error_flag, syntax_tree.collect_errors()
-    #     assert snippet == str(syntax_tree)
-
 
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""
@@ -190,6 +164,25 @@ class TestGrammar:
         grammar("eine Zeile", "textzeile")
         grammar("kein Haupt", "haupt")
         grammar("so ist es richtig", "haupt")
+
+    def test_grammar_subclassing(self):
+        class Arithmetic(Grammar):
+            '''
+            expression =  term  { ("+" | "-") term }
+            term       =  factor  { ("*" | "/") factor }
+            factor     =  INTEGER | "("  expression  ")"
+            INTEGER    =  /\d+/~
+            '''
+            expression = Forward()
+            INTEGER = RE('\\d+')
+            factor = INTEGER | Token("(") + expression + Token(")")
+            term = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
+            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            root__ = expression
+
+        grammar = Arithmetic()
+        CST = grammar('3+4')
+        assert not CST.error_flag, CST.as_sxpr()
 
 
 class TestPopRetrieve:
