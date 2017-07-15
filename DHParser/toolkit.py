@@ -30,6 +30,7 @@ the directory exists and raises an error if a file with the same name
 already exists.
 """
 
+import codecs
 import collections
 import contextlib
 import hashlib
@@ -38,6 +39,7 @@ try:
     import regex as re
 except ImportError:
     import re
+import sys
 try:
     from typing import Any, List, Tuple
 except ImportError:
@@ -389,3 +391,13 @@ def compile_python_object(python_src, catch_obj_regex=""):
         return namespace[matches[0]] if matches else None
     else:
         return namespace
+
+
+try:
+    if sys.stdout.encoding.upper() != "UTF-8":
+        # make sure that `print()` does not raise an error on 
+        # non-ASCII characters:
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+except AttributeError:
+    # somebody has already taken care of this !?
+    pass

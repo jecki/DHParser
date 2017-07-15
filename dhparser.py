@@ -18,7 +18,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-# TODO: This is still a stub...
+#  TODO: This is still a stub...
 
 import os
 import sys
@@ -26,7 +26,7 @@ from functools import partial
 
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.parsers import compile_source, nil_scanner
+from DHParser.parsers import compile_source, nil_preprocessor
 from DHParser.toolkit import logging
 
 
@@ -53,7 +53,7 @@ def selftest(file_name):
         # compile the grammar again using the result of the previous
         # compilation as parser
         for i in range(1):
-            result = compileDSL(grammar, nil_scanner, result, transformer, compiler)
+            result = compileDSL(grammar, nil_preprocessor, result, transformer, compiler)
         print(result)
     return result
 

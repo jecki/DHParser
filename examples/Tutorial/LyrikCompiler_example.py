@@ -7,9 +7,9 @@
 #######################################################################
 
 
-from functools import partial
 import os
 import sys
+from functools import partial
 
 sys.path.append('../../')
 
@@ -17,12 +17,12 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import Grammar, Compiler, nil_scanner, \
+from DHParser.toolkit import logging, is_filename, load_if_file
+from DHParser.parsers import Grammar, Compiler, nil_preprocessor, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    ScannerFunc, Synonym
+    PreprocessorFunc, Synonym
 from DHParser.syntaxtree import Node, traverse, remove_first, remove_last, \
     remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
     remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
@@ -39,7 +39,8 @@ from DHParser.syntaxtree import Node, traverse, remove_first, remove_last, \
 def LyrikScanner(text):
     return text
 
-def get_scanner() -> ScannerFunc:
+
+def get_scanner() -> PreprocessorFunc:
     return LyrikScanner
 
 

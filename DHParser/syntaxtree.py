@@ -98,6 +98,7 @@ class ParserBase:
     def repr(self) -> str:
         return self.name if self.name else repr(self)
 
+
 class MockParser(ParserBase):
     """
     MockParser objects can be used to reconstruct syntax trees from a
@@ -583,7 +584,7 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
     """Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
     in the ``calltable``-dictionary.
-    
+
     The most important use case is the transformation of a concrete
     syntax tree into an abstract tree (AST). But it is also imaginable
     to employ tree-traversal for the semantic analysis of the AST.
@@ -598,16 +599,16 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
         '~': always called (after any other processing function)
 
     Args:
-        root_node (Node): The root-node of the syntax tree to be traversed 
+        root_node (Node): The root-node of the syntax tree to be traversed
         processing_table (dict): node key -> sequence of functions that
             will be applied to matching nodes in order. This dictionary
-            is interpreted as a ``compact_table``. See 
+            is interpreted as a ``compact_table``. See
             ``toolkit.expand_table`` or ``EBNFCompiler.EBNFTransTable``
         key_func (function): A mapping key_func(node) -> keystr. The default
             key_func yields node.parser.name.
-            
+
     Example:
-        table = { "term": [replace_by_single_child, flatten], 
+        table = { "term": [replace_by_single_child, flatten],
             "factor, flowmarker, retrieveop": replace_by_single_child }
         traverse(node, table)
     """
@@ -656,19 +657,6 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
 # ------------------------------------------------
 
 
-@transformation_factory
-def replace_parser(node, name: str):
-    """Replaces the parser of a Node with a mock parser with the given
-    name.
-
-    Parameters:
-        name(str): "NAME:PTYPE" of the surogate. The ptype is optional
-        node(Node): The node where the parser shall be replaced
-    """
-    name, ptype = (name.split(':') + [''])[:2]
-    node.parser = MockParser(name, ptype)
-
-
 def replace_by_single_child(node):
     """Remove single branch node, replacing it by its immediate descendant.
     (In case the descendant's name is empty (i.e. anonymous) the
@@ -689,6 +677,19 @@ def reduce_single_child(node):
     if node.children and len(node.result) == 1:
         node._errors.extend(node.result[0].errors)
         node.result = node.result[0].result
+
+
+@transformation_factory
+def replace_parser(node, name: str):
+    """Replaces the parser of a Node with a mock parser with the given
+    name.
+
+    Parameters:
+        name(str): "NAME:PTYPE" of the surogate. The ptype is optional
+        node(Node): The node where the parser shall be replaced
+    """
+    name, ptype = (name.split(':') + [''])[:2]
+    node.parser = MockParser(name, ptype)
 
 
 @transformation_factory(Callable)

@@ -19,7 +19,7 @@ from DHParser.toolkit import logging, is_filename
 from DHParser.parsers import Grammar, Compiler, Alternative, Pop, Required, Token, Synonym, \
     Optional, OneOrMore, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    ScannerFunc
+    PreprocessorFunc
 from DHParser.syntaxtree import traverse, remove_brackets, reduce_single_child, replace_by_single_child, \
     remove_expendables, flatten, join, \
     collapse, replace_content, TransformationFunc, \
@@ -35,7 +35,8 @@ from DHParser.syntaxtree import traverse, remove_brackets, reduce_single_child, 
 def LaTeXScanner(text):
     return text
 
-def get_scanner() -> ScannerFunc:
+
+def get_scanner() -> PreprocessorFunc:
     return LaTeXScanner
 
 

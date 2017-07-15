@@ -30,10 +30,10 @@ except ImportError:
     from .typing34 import Any, cast, Tuple, Union
 
 from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
-    get_ebnf_scanner, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
-    ScannerFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
+    get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
+    PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
-from DHParser.parsers import Grammar, Compiler, compile_source, nil_scanner, ScannerFunc
+from DHParser.parsers import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
 
 
@@ -59,7 +59,7 @@ RX_SECTION_MARKER = re.compile(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
 RX_WHITESPACE = re.compile('\s*')
 
 SYMBOLS_SECTION = "SYMBOLS SECTION - Can be edited. Changes will be preserved."
-SCANNER_SECTION = "SCANNER SECTION - Can be edited. Changes will be preserved."
+PREPROCESSOR_SECTION = "PREPROCESSOR SECTION - Can be edited. Changes will be preserved."
 PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
@@ -75,11 +75,11 @@ try:
 except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import Grammar, Compiler, nil_scanner, \\
+from DHParser.parsers import Grammar, Compiler, nil_preprocessor, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
-    last_value, counterpart, accumulate, ScannerFunc
+    last_value, counterpart, accumulate, PreprocessorFunc
 from DHParser.syntaxtree import Node, traverse, remove_children_if, \\
     reduce_single_child, replace_by_single_child, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
@@ -98,7 +98,7 @@ def compile_src(source):
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \\
             if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_scanner(), 
+        result = compile_source(source, get_preprocessor(), 
                                 get_grammar(),
                                 get_transformer(), compiler)
     return result
@@ -176,7 +176,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 
 
 def compileDSL(text_or_file: str,
-               scanner: ScannerFunc,
+               preprocessor: PreprocessorFunc,
                dsl_grammar: Union[str, Grammar],
                ast_transformation: TransformationFunc,
                compiler: Compiler) -> Any:
@@ -192,7 +192,7 @@ def compileDSL(text_or_file: str,
     assert isinstance(compiler, Compiler)
 
     parser, grammar_src = grammar_instance(dsl_grammar)
-    result, errors, AST = compile_source(text_or_file, scanner, parser,
+    result, errors, AST = compile_source(text_or_file, preprocessor, parser,
                                          ast_transformation, compiler)
     if errors:
         src = load_if_file(text_or_file)
@@ -204,7 +204,7 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
     """
     Compiles an EBNF grammar file and returns the compiler object
     that was used and which can now be queried for the result as well
-    as skeleton code for scanner, transformer and compiler objects.
+    as skeleton code for preprocessor, transformer and compiler objects.
     
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
@@ -218,14 +218,14 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
     """
     grammar = get_ebnf_grammar()
     compiler = get_ebnf_compiler(branding , ebnf_src)
-    compileDSL(ebnf_src, nil_scanner, grammar, EBNFTransformer, compiler)
+    compileDSL(ebnf_src, nil_preprocessor, grammar, EBNFTransformer, compiler)
     return compiler
 
 
 def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     """
     Compiles an EBNF source file and returns the source code of a
-    compiler suite with skeletons for scanner, transformer and 
+    compiler suite with skeletons for preprocessor, transformer and
     compiler.
 
     Args:
@@ -241,7 +241,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_IMPORTS,
-           SECTION_MARKER.format(marker=SCANNER_SECTION), compiler.gen_scanner_skeleton(),
+           SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
            SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
@@ -264,32 +264,32 @@ def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
         A factory function for a grammar-parser for texts in the
         language defined by ``ebnf_src``.
     """
-    grammar_src = compileDSL(ebnf_src, nil_scanner, get_ebnf_grammar(),
+    grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding))
     return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_(?:\w+_)?grammar$')
 
 
 def load_compiler_suite(compiler_suite: str) -> \
-        Tuple[ScannerFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
+        Tuple[PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
     """
     Extracts a compiler suite from file or string ``compiler suite``
-    and returns it as a tuple (scanner, parser, ast, compiler).
+    and returns it as a tuple (preprocessor, parser, ast, compiler).
     
     Returns:
-        4-tuple (scanner function, parser class, ast transformer function, compiler class)
+        4-tuple (preprocessor function, parser class, ast transformer function, compiler class)
     """
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
     if is_python_code(compiler_suite):
         try:
-            intro, imports, scanner_py, parser_py, ast_py, compiler_py, outro = \
+            intro, imports, preprocessor_py, parser_py, ast_py, compiler_py, outro = \
                 RX_SECTION_MARKER.split(source)
         except ValueError as error:
             raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
         # TODO: Compile in one step and pick parts from namespace later ?
-        scanner = compile_python_object(imports + scanner_py, 'get_(?:\w+_)?scanner$')
+        preprocessor = compile_python_object(imports + preprocessor_py, 'get_(?:\w+_)?preprocessor$')
         parser = compile_python_object(imports + parser_py, 'get_(?:\w+_)?grammar$')
         ast = compile_python_object(imports + ast_py, 'get_(?:\w+_)?transformer$')
     else:
@@ -299,12 +299,12 @@ def load_compiler_suite(compiler_suite: str) -> \
                 get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if errors:
             raise GrammarError('\n\n'.join(errors), source)
-        scanner = get_ebnf_scanner
+        preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
     compiler = compile_python_object(imports + compiler_py, 'get_(?:\w+_)?compiler$')
 
-    return scanner, parser, ast, compiler
+    return preprocessor, parser, ast, compiler
 
 
 def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
@@ -327,7 +327,7 @@ def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
         True, if ``compiler_suite`` seems to be out of date.
     """
     try:
-        scanner, grammar, ast, compiler = load_compiler_suite(compiler_suite)
+        preprocessor, grammar, ast, compiler = load_compiler_suite(compiler_suite)
         return grammar_changed(grammar(), grammar_source)
     except ValueError:
         return True
@@ -352,8 +352,8 @@ def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
     Raises:
         CompilerError
     """
-    scanner, parser, ast, compiler = load_compiler_suite(compiler_suite)
-    return compileDSL(text_or_file, scanner(), parser(), ast(), compiler())
+    preprocessor, parser, ast, compiler = load_compiler_suite(compiler_suite)
+    return compileDSL(text_or_file, preprocessor(), parser(), ast(), compiler())
 
 
 def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
@@ -364,7 +364,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
     If no ``compiler_suite`` is given it is assumed that the source
     file is an EBNF grammar. In this case the result will be a Python
     script containing a parser for that grammar as well as the
-    skeletons for a scanner, AST transformation table, and compiler.
+    skeletons for a preprocessor, AST transformation table, and compiler.
     If the Python script already exists only the parser name in the
     script will be updated. (For this to work, the different names
     need to be delimited section marker blocks.). `compile_on_disk()`
@@ -396,7 +396,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
     if compiler_suite:
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
     else:
-        sfactory = get_ebnf_scanner
+        sfactory = get_ebnf_preprocessor
         pfactory = get_ebnf_grammar
         tfactory = get_ebnf_transformer
         cfactory = get_ebnf_compiler
@@ -408,7 +408,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
 
     elif cfactory == get_ebnf_compiler:  # trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
         ebnf_compiler = cast(EBNFCompiler, compiler1)
-        global SECTION_MARKER, RX_SECTION_MARKER, SCANNER_SECTION, PARSER_SECTION, \
+        global SECTION_MARKER, RX_SECTION_MARKER, PREPROCESSOR_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
             DHPARSER_MAIN, DHPARSER_IMPORTS
         f = None
@@ -416,9 +416,9 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
             f = open(rootname + 'Compiler.py', 'r', encoding="utf-8")
             source = f.read()
             sections = RX_SECTION_MARKER.split(source)
-            intro, imports, scanner, parser, ast, compiler, outro = sections
+            intro, imports, preprocessor, parser, ast, compiler, outro = sections
         except (PermissionError, FileNotFoundError, IOError) as error:
-            intro, imports, scanner, parser, ast, compiler, outro = '', '', '', '', '', '', ''
+            intro, imports, preprocessor, parser, ast, compiler, outro = '', '', '', '', '', '', ''
         except ValueError as error:
             name = '"' + rootname + 'Compiler.py"'
             raise ValueError('Could not identify all required sections in ' + name +
@@ -434,8 +434,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
             outro = DHPARSER_MAIN.format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHPARSER_IMPORTS
-        if RX_WHITESPACE.fullmatch(scanner):
-            scanner = ebnf_compiler.gen_scanner_skeleton()
+        if RX_WHITESPACE.fullmatch(preprocessor):
+            preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
             ast = ebnf_compiler.gen_transformer_skeleton()
         if RX_WHITESPACE.fullmatch(compiler):
@@ -446,8 +446,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
             f.write(intro)
             f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
             f.write(imports)
-            f.write(SECTION_MARKER.format(marker=SCANNER_SECTION))
-            f.write(scanner)
+            f.write(SECTION_MARKER.format(marker=PREPROCESSOR_SECTION))
+            f.write(preprocessor)
             f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
             f.write(result)
             f.write(SECTION_MARKER.format(marker=AST_SECTION))

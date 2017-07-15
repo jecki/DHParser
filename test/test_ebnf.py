@@ -31,7 +31,7 @@ from multiprocessing import Pool
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, compile_python_object
-from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_scanner
+from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_preprocessor
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, parser_factory
 
@@ -223,7 +223,7 @@ class TestSelfHosting:
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
-        compileDSL(self.grammar, nil_scanner, result, get_ebnf_transformer(), compiler)
+        compileDSL(self.grammar, nil_preprocessor, result, get_ebnf_transformer(), compiler)
 
     def multiprocessing_task(self):
         compiler_name = "EBNF"

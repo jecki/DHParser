@@ -29,17 +29,16 @@ except ImportError:
     from .typing34 import Callable, Dict, List, Set, Tuple
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
-from DHParser.parsers import Grammar, mixin_comment, nil_scanner, Forward, RE, NegativeLookahead, \
+from DHParser.parsers import Grammar, mixin_comment, nil_preprocessor, Forward, RE, NegativeLookahead, \
     Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
-    ScannerFunc
+    PreprocessorFunc
 from DHParser.syntaxtree import Node, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, TOKEN_PTYPE, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, \
     TransformationFunc
 from DHParser.versionnumber import __version__
 
-
-__all__ = ['get_ebnf_scanner',
+__all__ = ['get_ebnf_preprocessor',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
@@ -48,7 +47,7 @@ __all__ = ['get_ebnf_scanner',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed',
-           'ScannerFactoryFunc',
+           'PreprocessorFactoryFunc',
            'ParserFactoryFunc',
            'TransformerFactoryFunc',
            'CompilerFactoryFunc']
@@ -61,8 +60,8 @@ __all__ = ['get_ebnf_scanner',
 ########################################################################
 
 
-def get_ebnf_scanner() -> ScannerFunc:
-    return nil_scanner
+def get_ebnf_preprocessor() -> PreprocessorFunc:
+    return nil_preprocessor
 
 
 ########################################################################
@@ -247,15 +246,14 @@ def get_ebnf_transformer() -> TransformationFunc:
 ########################################################################
 
 
-ScannerFactoryFunc = Callable[[], ScannerFunc]
+PreprocessorFactoryFunc = Callable[[], PreprocessorFunc]
 ParserFactoryFunc = Callable[[], Grammar]
 TransformerFactoryFunc = Callable[[], TransformationFunc]
 CompilerFactoryFunc = Callable[[], Compiler]
 
-
-SCANNER_FACTORY = '''
-def get_scanner() -> ScannerFunc:
-    return {NAME}Scanner
+PREPROCESSOR_FACTORY = '''
+def get_preprocessor() -> PreprocessorFunc:
+    return {NAME}Preprocessor
 '''
 
 
@@ -335,21 +333,20 @@ class EBNFCompiler(Compiler):
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
                            'literalws': ['right'],
-                           'tokens': set(),     # alt. 'scanner_tokens'
-                           'filter': dict(),    # alt. 'filter'
-                           'testing': False }
+                           'tokens': set(),  # alt. 'preprocessor_tokens'
+                           'filter': dict(),  # alt. 'filter'
+                           'testing': False}
 
     @property
     def result(self) -> str:
         return self._result
 
+    # methods for generating skeleton code for preprocessor, transformer, and compiler
 
-    # methods for generating skeleton code for scanner, transformer, and compiler
-
-    def gen_scanner_skeleton(self) -> str:
-        name = self.grammar_name + "Scanner"
+    def gen_preprocessor_skeleton(self) -> str:
+        name = self.grammar_name + "Preprocessor"
         return "def %s(text):\n    return text\n" % name \
-               + SCANNER_FACTORY.format(NAME=self.grammar_name)
+               + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 
     def gen_transformer_skeleton(self) -> str:
@@ -515,7 +512,7 @@ class EBNFCompiler(Compiler):
                            ' end with a doube underscore "__".' % rule)
         elif rule in self.directives['tokens']:
             node.add_error('Symbol "%s" has already been defined as '
-                           'a scanner token.' % rule)
+                           'a preprocessor token.' % rule)
         elif keyword.iskeyword(rule):
             node.add_error('Python keyword "%s" may not be used as a symbol. '
                            % rule + '(This may change in the future.)')
@@ -595,7 +592,7 @@ class EBNFCompiler(Compiler):
                 else {} if 'none' in value else value
             self.directives[key] = list(ws)
 
-        elif key in {'tokens', 'scanner_tokens'}:
+        elif key in {'tokens', 'preprocessor_tokens'}:
             self.directives['tokens'] |= self.compile(node.children[1])
 
         elif key.endswith('_filter'):
@@ -687,7 +684,7 @@ class EBNFCompiler(Compiler):
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = str(node)  # ; assert result == cast(str, node.result)
         if symbol in self.directives['tokens']:
-            return 'ScannerToken("' + symbol + '")'
+            return 'PreprocessorToken("' + symbol + '")'
         else:
             self.current_symbols.append(node)
             if symbol not in self.symbols:

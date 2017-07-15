@@ -73,17 +73,16 @@ from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Pa
     Node, TransformationFunc
 from DHParser.toolkit import load_if_file, error_messages
 
-
-__all__ = ['ScannerFunc',
+__all__ = ['PreprocessorFunc',
            'HistoryRecord',
            'Parser',
            'Grammar',
-           'RX_SCANNER_TOKEN',
-           'BEGIN_SCANNER_TOKEN',
-           'END_SCANNER_TOKEN',
+           'RX_PREPROCESSOR_TOKEN',
+           'BEGIN_TOKEN',
+           'END_TOKEN',
            'make_token',
-           'nil_scanner',
-           'ScannerToken',
+           'nil_preprocessor',
+           'PreprocessorToken',
            'RegExp',
            'RE',
            'Token',
@@ -121,7 +120,7 @@ __all__ = ['ScannerFunc',
 ########################################################################
 
 
-ScannerFunc = Union[Callable[[str], str], partial]
+PreprocessorFunc = Union[Callable[[str], str], partial]
 
 
 LEFT_RECURSION_DEPTH = 20 if platform.python_implementation() == "PyPy" \
@@ -610,66 +609,65 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
 ########################################################################
 
 
-RX_SCANNER_TOKEN = re.compile('\w+')
-BEGIN_SCANNER_TOKEN = '\x1b'
-END_SCANNER_TOKEN = '\x1c'
+RX_PREPROCESSOR_TOKEN = re.compile('\w+')
+BEGIN_TOKEN = '\x1b'
+END_TOKEN = '\x1c'
 
 
 def make_token(token: str, argument: str = '') -> str:
     """
     Turns the ``token`` and ``argument`` into a special token that
-    will be caught by the `ScannerToken`-parser.
+    will be caught by the `PreprocessorToken`-parser.
 
-    This function is a support function that should be used by scanners
-    to inject scanner tokens into the source text.
+    This function is a support function that should be used by
+    preprocessors to inject preprocessor tokens into the source text.
     """
-    assert RX_SCANNER_TOKEN.match(token)
-    assert argument.find(BEGIN_SCANNER_TOKEN) < 0
-    assert argument.find(END_SCANNER_TOKEN) < 0
+    assert RX_PREPROCESSOR_TOKEN.match(token)
+    assert argument.find(BEGIN_TOKEN) < 0
+    assert argument.find(END_TOKEN) < 0
 
-    return BEGIN_SCANNER_TOKEN + token + argument + END_SCANNER_TOKEN
+    return BEGIN_TOKEN + token + argument + END_TOKEN
 
 
-def nil_scanner(text: str) -> str:
+def nil_preprocessor(text: str) -> str:
     return text
 
 
-class ScannerToken(Parser):
+class PreprocessorToken(Parser):
     """
-    Parses tokens that have been inserted by a Scanner.
+    Parses tokens that have been inserted by a preprocessor.
     
-    Scanners can generate Tokens with the ``make_token``-function.
+    Preprocessors can generate Tokens with the ``make_token``-function.
     These tokens start and end with magic characters that can only be
-    matched by the ScannerToken Parser. Scanner tokens can be used to
-    insert BEGIN - END delimiters at the beginning or ending of an 
-    indented block. Otherwise indented block are difficult to handle 
-    with parsing expression grammars.
+    matched by the PreprocessorToken Parser. Such tokens can be used to
+    insert BEGIN - END delimiters at the beginning or ending of a
+    quoted block, for example.
     """
 
-    def __init__(self, scanner_token: str) -> None:
-        assert scanner_token and scanner_token.isupper()
-        assert RX_SCANNER_TOKEN.match(scanner_token)
-        super(ScannerToken, self).__init__(scanner_token)
+    def __init__(self, token: str) -> None:
+        assert token and token.isupper()
+        assert RX_PREPROCESSOR_TOKEN.match(token)
+        super(PreprocessorToken, self).__init__(token)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        if text[0:1] == BEGIN_SCANNER_TOKEN:
-            end = text.find(END_SCANNER_TOKEN, 1)
+        if text[0:1] == BEGIN_TOKEN:
+            end = text.find(END_TOKEN, 1)
             if end < 0:
                 node = Node(self, '').add_error(
-                    'END_SCANNER_TOKEN delimiter missing from scanner token. '
-                    '(Most likely due to a scanner bug!)')  # type: Node
+                    'END_TOKEN delimiter missing from preprocessor token. '
+                    '(Most likely due to a preprocessor bug!)')  # type: Node
                 return node, text[1:]
             elif end == 0:
                 node = Node(self, '').add_error(
-                    'Scanner token cannot have zero length. '
-                    '(Most likely due to a scanner bug!)')
+                    'Preprocessor-token cannot have zero length. '
+                    '(Most likely due to a preprocessor bug!)')
                 return node, text[2:]
-            elif text.find(BEGIN_SCANNER_TOKEN, 1, end) >= 0:
+            elif text.find(BEGIN_TOKEN, 1, end) >= 0:
                 node = Node(self, text[len(self.name) + 1:end])
                 node.add_error(
-                    'Scanner tokens must not be nested or contain '
-                    'BEGIN_SCANNER_TOKEN delimiter as part of their argument. '
-                    '(Most likely due to a scanner bug!)')
+                    'Preprocessor-tokens must not be nested or contain '
+                    'BEGIN_TOKEN delimiter as part of their argument. '
+                    '(Most likely due to a preprocessor bug!)')
                 return node, text[end:]
             if text[1:len(self.name) + 1] == self.name:
                 return Node(self, text[len(self.name) + 1:end]), \
@@ -700,7 +698,7 @@ class RegExp(Parser):
         return RegExp(regexp, self.name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        match = text[0:1] != BEGIN_SCANNER_TOKEN and self.regexp.match(text)  # ESC starts a scanner token.
+        match = text[0:1] != BEGIN_TOKEN and self.regexp.match(text)  # ESC starts a preprocessor token.
         if match:
             end = match.end()
             return Node(self, text[:end]), text[end:]
@@ -1400,7 +1398,7 @@ class Compiler:
 
 
 def compile_source(source: str,
-                   scanner: ScannerFunc,  # str -> str
+                   preprocessor: PreprocessorFunc,  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
                    compiler: Compiler):         # Node (AST) -> Any
@@ -1416,8 +1414,8 @@ def compile_source(source: str,
     Args:
         source (str): The input text for compilation or a the name of a
             file containing the input text.
-        scanner (function):  text -> text. A scanner function or None,
-            if no scanner is needed.
+        preprocessor (function):  text -> text. A preprocessor function
+            or None, if no preprocessor is needed.
         parser (function):  A parsing function or grammar class 
         transformer (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
@@ -1435,8 +1433,8 @@ def compile_source(source: str,
     """
     source_text = load_if_file(source)
     log_file_name = logfile_basename(source, compiler)
-    if scanner is not None:
-        source_text = scanner(source_text)
+    if preprocessor is not None:
+        source_text = preprocessor(source_text)
     syntax_tree = parser(source_text)
     if is_logging():
         syntax_tree.log(log_file_name + '.cst')
