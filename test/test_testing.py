@@ -25,8 +25,9 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compact_sexpr
-from DHParser.syntaxtree import traverse, remove_expendables, \
-    replace_by_single_child, reduce_single_child, flatten, TOKEN_PTYPE
+from DHParser.syntaxtree import TOKEN_PTYPE
+from DHParser.transform import traverse, remove_expendables, \
+    replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import parser_factory
 from DHParser.testing import grammar_unit, mock_syntax_tree
 

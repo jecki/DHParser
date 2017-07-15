@@ -14,7 +14,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.parsers import Grammar, Compiler, Alternative, Required, Token, \
+from DHParser.parser import Grammar, Compiler, Alternative, Required, Token, \
     Optional, OneOrMore, Series, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source
 from DHParser.syntaxtree import traverse, reduce_single_child, replace_by_single_child, no_transformation, \
     remove_expendables, remove_tokens, flatten, \

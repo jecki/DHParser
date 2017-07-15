@@ -33,7 +33,7 @@ from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
-from DHParser.parsers import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
+from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
 
 
@@ -75,16 +75,17 @@ try:
 except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import Grammar, Compiler, nil_preprocessor, \\
+from DHParser.parser import Grammar, Compiler, nil_preprocessor, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     last_value, counterpart, accumulate, PreprocessorFunc
-from DHParser.syntaxtree import Node, traverse, remove_children_if, \\
+from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.transform import traverse, remove_children_if, \\
     reduce_single_child, replace_by_single_child, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
-    TransformationFunc, remove_parser, remove_content, remove_brackets, \\
+    remove_parser, remove_content, remove_brackets, \\
     keep_children, has_name, has_content, apply_if, remove_first, remove_last
 '''
 

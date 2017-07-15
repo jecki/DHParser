@@ -24,11 +24,9 @@ import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.parsers import Grammar, Compiler
+from DHParser.parser import Grammar, Compiler
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, parser_factory, \
     load_compiler_suite
-from DHParser.toolkit import is_filename
-
 
 ARITHMETIC_EBNF = """
     @ whitespace = linefeed

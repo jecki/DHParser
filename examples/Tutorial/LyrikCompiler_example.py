@@ -17,17 +17,14 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename, load_if_file
-from DHParser.parsers import Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
+from DHParser.toolkit import logging, is_filename
+from DHParser.parser import Grammar, Compiler, Required, Token, \
+    Optional, OneOrMore, Series, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, Synonym
-from DHParser.syntaxtree import Node, traverse, remove_first, remove_last, \
-    remove_children_if, reduce_single_child, replace_by_single_child, remove_whitespace, \
-    remove_expendables, remove_tokens, flatten, is_whitespace, is_expendable, \
-    collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, TransformationFunc, \
-    remove_parser, remove_empty, has_content, has_name
+from DHParser.syntaxtree import Node, traverse, remove_last, \
+    reduce_single_child, replace_by_single_child, remove_tokens, flatten, is_whitespace, collapse, replace_content, \
+    TransformationFunc, \
+    remove_parser, remove_empty, has_name
 
 
 #######################################################################

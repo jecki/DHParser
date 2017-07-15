@@ -16,7 +16,7 @@ try:
 except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename
-from DHParser.parsers import Grammar, Compiler, Alternative, Pop, Required, Token, Synonym, \
+from DHParser.parser import Grammar, Compiler, Alternative, Pop, Required, Token, Synonym, \
     Optional, OneOrMore, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc

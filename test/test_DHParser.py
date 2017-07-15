@@ -23,13 +23,6 @@ limitations under the License.
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import *
-from DHParser.syntaxtree import *
-from DHParser.parsers import *
-from DHParser.ebnf import *
-from DHParser.dsl import *
-
-
 if __name__ == "__main__":
     from DHParser.testing import runner
 

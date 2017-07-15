@@ -29,13 +29,13 @@ except ImportError:
     from .typing34 import Callable, Dict, List, Set, Tuple
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
-from DHParser.parsers import Grammar, mixin_comment, nil_preprocessor, Forward, RE, NegativeLookahead, \
+from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RE, NegativeLookahead, \
     Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     PreprocessorFunc
-from DHParser.syntaxtree import Node, traverse, remove_brackets, \
-    reduce_single_child, replace_by_single_child, TOKEN_PTYPE, remove_expendables, \
-    remove_tokens, flatten, forbid, assert_content, WHITESPACE_PTYPE, key_tag_name, \
-    TransformationFunc
+from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, Node, TransformationFunc
+from DHParser.transform import traverse, remove_brackets, \
+    reduce_single_child, replace_by_single_child, remove_expendables, \
+    remove_tokens, flatten, forbid, assert_content, key_tag_name
 from DHParser.versionnumber import __version__
 
 __all__ = ['get_ebnf_preprocessor',

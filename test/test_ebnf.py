@@ -25,13 +25,12 @@ try:
 except ImportError:
     import re
 import sys
-from functools import partial
 from multiprocessing import Pool
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging, compile_python_object
-from DHParser.parsers import compile_source, Retrieve, WHITESPACE_PTYPE, nil_preprocessor
+from DHParser.toolkit import compile_python_object
+from DHParser.parser import compile_source, WHITESPACE_PTYPE, nil_preprocessor
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, parser_factory
 

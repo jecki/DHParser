@@ -26,7 +26,7 @@ from functools import partial
 
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.parsers import compile_source, nil_preprocessor
+from DHParser.parser import compile_source, nil_preprocessor
 from DHParser.toolkit import logging
 
 

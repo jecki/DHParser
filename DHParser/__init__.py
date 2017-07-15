@@ -18,15 +18,15 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+from .dsl import *
+from .ebnf import *
+from .parser import *
+from .syntaxtree import *
 # Flat namespace for the DHParser Package. Is this a good idea...?
 from .toolkit import *
-from .syntaxtree import *
-from .parsers import *
-from .ebnf import *
-from .dsl import *
 # from .testing import *
 from .versionnumber import __version__
 
 __author__ = "Eckhart Arnold <arnold@badw.de>"
 __copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
-# __all__ = ['toolkit', 'syntaxtree', 'parsers', 'ebnf', 'dsl', 'testing', 'versionnumber']  # flat namespace
+# __all__ = ['toolkit', 'syntaxtree', 'parser', 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber']  # flat namespace

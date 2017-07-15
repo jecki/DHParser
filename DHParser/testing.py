@@ -32,6 +32,16 @@ from DHParser.syntaxtree import MockParser
 from DHParser.ebnf import grammar_changed
 from DHParser.dsl import compile_on_disk
 
+__all__ = ('mock_syntax_tree',
+           'recompile_grammar',
+           'unit_from_configfile',
+           'unit_from_json',
+           'unit_from_file',
+           'get_report',
+           'grammar_unit',
+           'grammar_suite',
+           'runner')
+
 
 def mock_syntax_tree(sexpr):
     """
