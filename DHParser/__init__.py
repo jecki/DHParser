@@ -24,6 +24,7 @@ from .parser import *
 from .syntaxtree import *
 # Flat namespace for the DHParser Package. Is this a good idea...?
 from .toolkit import *
+from .transform import *
 # from .testing import *
 from .versionnumber import __version__
 

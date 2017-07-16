@@ -1,4 +1,4 @@
-"""collect_symbols.py - EBNF -> Lists all exported symbols from DHParser
+"""collect_symbols.py - Lists all exported symbols from DHParser modules
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)

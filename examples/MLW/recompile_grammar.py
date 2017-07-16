@@ -20,7 +20,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from DHParser.testing import recompile_grammar
+from DHParser.dsl import recompile_grammar
+
 recompile_grammar('.')
 
 # import os

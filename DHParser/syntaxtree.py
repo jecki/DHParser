@@ -33,14 +33,14 @@ except ImportError:
 
 from DHParser.toolkit import log_dir, line_col
 
-
-__all__ = ['WHITESPACE_PTYPE',
+__all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
            'ZOMBIE_PARSER',
            'ParserBase',
            'Error',
            'Node',
-           'TransformationFunc']
+           'mock_syntax_tree',
+           'TransformationFunc')
 
 
 class ParserBase:
@@ -459,6 +459,58 @@ class Node:
     #         else:
     #             return self.result,
     #     return nav(path.split('/'))
+
+
+def mock_syntax_tree(sexpr):
+    """
+    Generates a tree of nodes from an S-expression.
+
+    Example:
+    >>> mock_syntax_tree("(a (b c))").as_sxpr()
+    '(a\\n    (b\\n        "c"\\n    )\\n)'
+    """
+
+    def next_block(s):
+        s = s.strip()
+        while s[0] != ')':
+            if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
+            # assert s[0] == '(', s
+            level = 1
+            i = 1
+            while level > 0:
+                if s[i] == '(':
+                    level += 1
+                elif s[i] == ')':
+                    level -= 1
+                i += 1
+            yield s[:i]
+            s = s[i:].strip()
+
+    sexpr = sexpr.strip()
+    if sexpr[0] != '(': raise ValueError('"(" expected, not ' + sexpr[:10])
+    # assert sexpr[0] == '(', sexpr
+    sexpr = sexpr[1:].strip()
+    m = re.match('[\w:]+', sexpr)
+    name, class_name = (sexpr[:m.end()].split(':') + [''])[:2]
+    sexpr = sexpr[m.end():].strip()
+    if sexpr[0] == '(':
+        result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
+    else:
+        lines = []
+        while sexpr and sexpr[0] != ')':
+            for qm in ['"""', "'''", '"', "'"]:
+                m = re.match(qm + r'.*?' + qm, sexpr)
+                if m:
+                    i = len(qm)
+                    lines.append(sexpr[i:m.end() - i])
+                    sexpr = sexpr[m.end():].strip()
+                    break
+            else:
+                m = re.match(r'(?:(?!\)).)*', sexpr)
+                lines.append(sexpr[:m.end()])
+                sexpr = sexpr[m.end():]
+        result = "\n".join(lines)
+    return Node(MockParser(name, ':' + class_name), result)
 
 
 TransformationFunc = Union[Callable[[Node], Any], partial]

@@ -20,14 +20,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import cProfile
 import functools
 import sys
 
 sys.path.extend(['../../', '../', './'])
 
 from DHParser.toolkit import logging
-from DHParser.testing import recompile_grammar
+from DHParser.dsl import recompile_grammar
 
 
 def profile(func):

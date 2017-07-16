@@ -26,7 +26,7 @@ import sys
 sys.path.extend(['../../', '../', './'])
 flag = os.path.exists('LyrikCompiler.py')
 
-from DHParser.testing import recompile_grammar
+from DHParser.dsl import recompile_grammar
 
 if not recompile_grammar('.', force=True):
     with open('Lyrik_ebnf_ERRORS.txt') as f:

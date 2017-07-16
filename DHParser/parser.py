@@ -61,10 +61,10 @@ except ImportError:
     import re
 try:
     from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
-    try:
-        from typing import Collection
-    except ImportError:
-        pass
+    # try:
+    #     from typing import Collection
+    # except ImportError:
+    #     pass
 except ImportError:
     from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
 
@@ -73,7 +73,7 @@ from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Pa
     Node, TransformationFunc
 from DHParser.toolkit import load_if_file, error_messages
 
-__all__ = ['PreprocessorFunc',
+__all__ = ('PreprocessorFunc',
            'HistoryRecord',
            'Parser',
            'Grammar',
@@ -109,7 +109,7 @@ __all__ = ['PreprocessorFunc',
            'Pop',
            'Forward',
            'Compiler',
-           'compile_source']
+           'compile_source')
 
 
 

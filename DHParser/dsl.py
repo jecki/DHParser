@@ -20,6 +20,7 @@ compilation of domain specific languages based on an EBNF-grammar.
 """
 
 import os
+
 try:
     import regex as re
 except ImportError:
@@ -36,15 +37,14 @@ from DHParser.toolkit import logging, load_if_file, is_python_code, compile_pyth
 from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
 
-
-__all__ = ['GrammarError',
+__all__ = ('GrammarError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
            'raw_compileEBNF',
            'compileEBNF',
            'parser_factory',
-           'compile_on_disk']
+           'compile_on_disk')
 
 
 SECTION_MARKER = """\n
@@ -74,14 +74,14 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parser import Grammar, Compiler, nil_preprocessor, \\
+from DHParser import logging, is_filename, load_if_file, \\
+    Grammar, Compiler, nil_preprocessor, \\
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
-    last_value, counterpart, accumulate, PreprocessorFunc
-from DHParser.syntaxtree import Node, TransformationFunc
-from DHParser.transform import traverse, remove_children_if, \\
+    last_value, counterpart, accumulate, PreprocessorFunc, \\
+    Node, TransformationFunc, \\
+    traverse, remove_children_if, \\
     reduce_single_child, replace_by_single_child, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
@@ -483,3 +483,45 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
             if f:  f.close()
 
     return []
+
+
+def recompile_grammar(ebnf_filename, force=False) -> bool:
+    """
+    Recompiles an ebnf-grammar if necessary, that is, if either no
+    corresponding 'XXXXCompiler.py'-file exists or if that file is
+    outdated.
+
+    Parameters:
+        ebnf_filename(str):  The filename of the ebnf-source of the
+            grammar. In case this is a directory and not a file, all
+            files within this directory ending with .ebnf will be
+            compiled.
+        force(bool):  If False (default), the grammar will only be
+            recompiled if it has been changed.
+    """
+    if os.path.isdir(ebnf_filename):
+        success = True
+        for entry in os.listdir(ebnf_filename):
+            if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
+                success = success and recompile_grammar(entry, force)
+        return success
+
+    base, ext = os.path.splitext(ebnf_filename)
+    compiler_name = base + 'Compiler.py'
+    error_file_name = base + '_ebnf_ERRORS.txt'
+    errors = []
+    if (not os.path.exists(compiler_name) or force or
+            grammar_changed(compiler_name, ebnf_filename)):
+        # print("recompiling parser for: " + ebnf_filename)
+        errors = compile_on_disk(ebnf_filename)
+        if errors:
+            # print("Errors while compiling: " + ebnf_filename + '!')
+            with open(error_file_name, 'w') as f:
+                for e in errors:
+                    f.write(e)
+                    f.write('\n')
+            return False
+
+    if not errors and os.path.exists(error_file_name):
+        os.remove(error_file_name)
+    return True

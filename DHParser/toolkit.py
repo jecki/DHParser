@@ -45,8 +45,7 @@ try:
 except ImportError:
     from .typing34 import Any, List, Tuple
 
-
-__all__ = ['logging',
+__all__ = ('logging',
            'is_logging',
            'log_dir',
            'logfile_basename',
@@ -63,7 +62,7 @@ __all__ = ['logging',
            'md5',
            'expand_table',
            'smart_list',
-           'sane_parser_name']
+           'sane_parser_name')
 
 
 def log_dir() -> str:

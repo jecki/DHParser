@@ -26,115 +26,17 @@ try:
 except ImportError:
     import re
 
-from DHParser import Node, error_messages
+from DHParser import error_messages
 from DHParser.toolkit import compact_sexpr, is_logging
-from DHParser.syntaxtree import MockParser
-from DHParser.ebnf import grammar_changed
-from DHParser.dsl import compile_on_disk
+from DHParser.syntaxtree import mock_syntax_tree
 
-__all__ = ('mock_syntax_tree',
-           'recompile_grammar',
-           'unit_from_configfile',
+__all__ = ('unit_from_configfile',
            'unit_from_json',
            'unit_from_file',
            'get_report',
            'grammar_unit',
            'grammar_suite',
            'runner')
-
-
-def mock_syntax_tree(sexpr):
-    """
-    Generates a tree of nodes from an S-expression.
-
-    Example: 
-    >>> mock_syntax_tree("(a (b c))").as_sxpr()
-    '(a\\n    (b\\n        "c"\\n    )\\n)'
-    """
-    def next_block(s):
-        s = s.strip()
-        while s[0] != ')':
-            if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
-            # assert s[0] == '(', s
-            level = 1
-            i = 1
-            while level > 0:
-                if s[i] == '(':
-                    level += 1
-                elif s[i] == ')':
-                    level -= 1
-                i += 1
-            yield s[:i]
-            s = s[i:].strip()
-
-    sexpr = sexpr.strip()
-    if sexpr[0] != '(': raise ValueError('"(" expected, not ' + sexpr[:10])
-    # assert sexpr[0] == '(', sexpr
-    sexpr = sexpr[1:].strip()
-    m = re.match('[\w:]+', sexpr)
-    name, class_name = (sexpr[:m.end()].split(':') + [''])[:2]
-    sexpr = sexpr[m.end():].strip()
-    if sexpr[0] == '(':
-        result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
-    else:
-        lines = []
-        while sexpr and sexpr[0] != ')':
-            for qm in ['"""', "'''", '"', "'"]:
-                m = re.match(qm + r'.*?' + qm, sexpr)
-                if m:
-                    i = len(qm)
-                    lines.append(sexpr[i:m.end() - i])
-                    sexpr = sexpr[m.end():].strip()
-                    break
-            else:
-                m = re.match(r'(?:(?!\)).)*', sexpr)
-                lines.append(sexpr[:m.end()])
-                sexpr = sexpr[m.end():]
-        result = "\n".join(lines)
-    return Node(MockParser(name, ':' + class_name), result)
-
-
-def recompile_grammar(ebnf_filename, force=False) -> bool:
-    """
-    Recompiles an ebnf-grammar if necessary, that is if either no
-    corresponding 'XXXXCompiler.py'-file exists or if that file is
-    outdated.
-    
-    Parameters:
-        ebnf_filename(str):  The filename of the ebnf-source of the 
-            grammar. In case this is a directory and not a file all
-            files within this directory ending with .ebnf will be 
-            compiled.
-        force(bool):  If False (default), the grammar will only be
-            recompiled if it has been changed.
-    """
-    if os.path.isdir(ebnf_filename):
-        success = True
-        for entry in os.listdir(ebnf_filename):
-            if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
-                success = success and recompile_grammar(entry, force)
-        return success
-
-    base, ext = os.path.splitext(ebnf_filename)
-    compiler_name = base + 'Compiler.py'
-    error_file_name = base + '_ebnf_ERRORS.txt'
-    errors = []
-    if (not os.path.exists(compiler_name) or force or
-        grammar_changed(compiler_name, ebnf_filename)):
-        # print("recompiling parser for: " + ebnf_filename)
-        errors = compile_on_disk(ebnf_filename)
-        if errors:
-            # print("Errors while compiling: " + ebnf_filename + '!')
-            with open(error_file_name, 'w') as f:
-                for e in errors:
-                    f.write(e)
-                    f.write('\n')
-            return False
-
-    if not errors and os.path.exists(error_file_name):
-        os.remove(error_file_name)
-    return True
-
 
 UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 
