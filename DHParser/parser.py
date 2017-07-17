@@ -245,10 +245,10 @@ def add_parser_guard(parser_func):
 
 class ParserMetaClass(abc.ABCMeta):
     def __init__(cls, name, bases, attrs):
-        # The following condition is necessary for classes that don't override
+        guarded_parser_call = add_parser_guard(cls.__call__)
+        # The following check is necessary for classes that don't override
         # the __call__() method, because in these cases the non-overridden
         # __call__()-method would be substituted a second time!
-        guarded_parser_call = add_parser_guard(cls.__call__)
         if cls.__call__.__code__ != guarded_parser_call.__code__:
             cls.__call__ = guarded_parser_call
         super(ParserMetaClass, cls).__init__(name, bases, attrs)

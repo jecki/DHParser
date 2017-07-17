@@ -30,42 +30,71 @@ from DHParser.parser import compile_source, nil_preprocessor
 from DHParser.toolkit import logging
 
 
-def selftest(file_name):
-    print(file_name)
-    with open('examples/' + file_name, encoding="utf-8") as f:
-        grammar = f.read()
-    compiler_name = os.path.basename(os.path.splitext(file_name)[0])
-    parser = get_ebnf_grammar()
-    print("\nAlphabetical List of Parsers:\n")
-    parser_list = sorted([p for p in parser.all_parsers__ if p.name], key=lambda p: p.name)
-    for p in parser_list:
-        print(p)
-    print('\n\n')
-    transformer = get_ebnf_transformer()
-    compiler = get_ebnf_compiler(compiler_name, grammar)
-    result, errors, syntax_tree = compile_source(grammar, None, parser,
-                                                 transformer, compiler)
-    print(result)
+# def selftest(file_name):
+#     print(file_name)
+#     with open('examples/' + file_name, encoding="utf-8") as f:
+#         grammar = f.read()
+#     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
+#     parser = get_ebnf_grammar()
+#     print("\nAlphabetical List of Parsers:\n")
+#     parser_list = sorted([p for p in parser.all_parsers__ if p.name], key=lambda p: p.name)
+#     for p in parser_list:
+#         print(p)
+#     print('\n\n')
+#     transformer = get_ebnf_transformer()
+#     compiler = get_ebnf_compiler(compiler_name, grammar)
+#     result, errors, syntax_tree = compile_source(grammar, None, parser,
+#                                                  transformer, compiler)
+#     print(result)
+#     if errors:
+#         print('\n\n'.join(errors))
+#         sys.exit(1)
+#     else:
+#         # compile the grammar again using the result of the previous
+#         # compilation as parser
+#         for i in range(1):
+#             result = compileDSL(grammar, nil_preprocessor, result, transformer, compiler)
+#         print(result)
+#     return result
+
+
+
+def selftest() -> bool:
+    print("DHParser selftest...")
+    print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
+    builtin_ebnf_parser = get_ebnf_grammar()
+    ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
+    ebnf_transformer = get_ebnf_transformer()
+    ebnf_compiler = get_ebnf_compiler('EBNF')
+    generated_ebnf_parser, errors, ast = compile_source(ebnf_src, None,
+        builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
+
     if errors:
-        print('\n\n'.join(errors))
-        sys.exit(1)
-    else:
-        # compile the grammar again using the result of the previous
-        # compilation as parser
-        for i in range(1):
-            result = compileDSL(grammar, nil_preprocessor, result, transformer, compiler)
-        print(result)
-    return result
+        print("Selftest FAILED :-(")
+        print("\n\n".join(errors))
+        return False
+    print(generated_ebnf_parser)
+    print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
+    selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
+                                        ebnf_transformer, ebnf_compiler)
+    print(selfhosted_ebnf_parser)
+    print("\n\n Selftest SUCCEEDED :-)\n\n")
+    return True
+
 
 
 def profile(func):
     import cProfile
     pr = cProfile.Profile()
     pr.enable()
-    func()
+    for i in range(1):
+        success = func()
+        if not success:
+            break
     pr.disable()
     # after your program ends
     pr.print_stats(sort="tottime")
+    return success
 
 
 # # Changes in the EBNF source that are not reflected in this file could be
@@ -88,4 +117,6 @@ if __name__ == "__main__":
         # run self test
         # selftest('EBNF/EBNF.ebnf')
         with logging(False):
-            profile(partial(selftest, file_name='EBNF/EBNF.ebnf'))
+            if not profile(selftest):
+                sys.exit(1)
+

@@ -1,5 +1,7 @@
-"""create_standalone.py - merges the DHParser modules into a standalone
-        DHParser.py module for easier deployment.
+#!/usr/bin/python3
+
+"""create_standalone.py - merges the DHParser modules into a single
+        standalone DHParser.py module for easier deployment.
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -19,13 +21,24 @@ permissions and limitations under the License.
 
 import functools
 import operator
+import os
 import sys
 
 sys.path.append('../')
+sys.path.append('./')
 try:
     import regex as re
 except ImportError:
     import re
+
+from DHParser import toolkit
+from DHParser import syntaxtree
+from DHParser import parser
+from DHParser import transform
+from DHParser import ebnf
+from DHParser import dsl
+from DHParser import testing
+from DHParser import versionnumber
 
 modules = ('toolkit', 'syntaxtree', 'parser', 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber')
 
@@ -40,7 +53,7 @@ def start(module):
     return i
 
 
-doc = "DHParser.py - Packrat-parser and parser-generator\n\n" + __doc__[__doc__.find('Copyright'):]
+doc = '"""DHParser.py - Packrat-parser and parser-generator\n\n' + __doc__[__doc__.find('Copyright'):] + '\n"""'
 
 imports = """
 import abc
@@ -50,10 +63,11 @@ from collections import OrderedDict
 import configparser
 import contextlib
 import copy
-from functools import partial
+from functools import partial, reduce, singledispatch
 import hashlib
 import inspect
 import json
+import keyword
 import os
 import platform
 try:
@@ -65,6 +79,8 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
         Iterator, List, NamedTuple, Sequence, Set, Union, Text, Tuple
 """
 
+symbols = "\n__all__ = (" + ",\n           ".join("'%s'" % sym for sym in all_symbols) + ")\n"
+
 heading = """
 #######################################################################
 #######################################################################
@@ -75,9 +91,52 @@ heading = """
 #######################################################################
 """
 
+main = r"""
+#######################################################################
+#######################################################################
+#
+# main / selftest
+#
+#######################################################################
+#######################################################################
+
+
+def selftest() -> bool:
+    print("DHParser selftest...")
+    print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
+    builtin_ebnf_parser = get_ebnf_grammar()
+    ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
+    ebnf_transformer = get_ebnf_transformer()
+    ebnf_compiler = get_ebnf_compiler('EBNF')
+    generated_ebnf_parser, errors, ast = compile_source(ebnf_src, None,
+        builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
+
+    if errors:
+        print("Selftest FAILED :-(")
+        print("\n\n".join(errors))
+        return False
+    print(generated_ebnf_parser)
+    print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
+    selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
+                                        ebnf_transformer, ebnf_compiler)
+    print(selfhosted_ebnf_parser)
+    print("\n\n Selftest SUCCEEDED :-)\n\n")
+    return True
+
+
+if __name__ == "__main__":
+    if not selftest():  sys.exit(1)
+
+"""
 
 def merge_modules(module_names, dhp_path='../DHParser/'):
-    components = [doc, imports]
+    paths = [dhp_path, '../DHParser/', 'DHParser/', '']
+    for pth in paths:
+        if os.path.exists(pth + 'ebnf.py'):
+            dhp_path = pth
+            break
+
+    components = [doc, imports, symbols]
 
     for name in module_names:
         with open(dhp_path + '%s.py' % name) as f:
@@ -85,8 +144,18 @@ def merge_modules(module_names, dhp_path='../DHParser/'):
             content = module[start(module):]
             components.append(heading % name)
             components.append(content)
+    components.append(main)
 
     return "\n".join(components)
 
 
-print(merge_modules(modules))
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python create_standalone.py [FILENAME]")
+    elif os.path.exists(sys.argv[1]):
+        print("File '%s' already exits. Please delete file first." % (sys.argv[1]))
+    else:
+
+        with open(sys.argv[1], 'w') as f:
+            f.write(merge_modules(modules))

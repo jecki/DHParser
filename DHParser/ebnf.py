@@ -38,7 +38,7 @@ from DHParser.transform import traverse, remove_brackets, \
     remove_tokens, flatten, forbid, assert_content, key_tag_name
 from DHParser.versionnumber import __version__
 
-__all__ = ['get_ebnf_preprocessor',
+__all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
@@ -50,7 +50,7 @@ __all__ = ['get_ebnf_preprocessor',
            'PreprocessorFactoryFunc',
            'ParserFactoryFunc',
            'TransformerFactoryFunc',
-           'CompilerFactoryFunc']
+           'CompilerFactoryFunc')
 
 
 ########################################################################
@@ -90,7 +90,6 @@ class EBNFGrammar(Grammar):
                 | [flowmarker] literal
                 | [flowmarker] regexp
                 | [flowmarker] group
-                | [flowmarker] regexchain
                 | [flowmarker] oneormore
                 | repetition
                 | option
