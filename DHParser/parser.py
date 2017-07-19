@@ -44,8 +44,15 @@ Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
 D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
 Berlin Heidelberg 2008.
 
+Elizabeth Scott and Adrian Johnstone, GLL Parsing,
+in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
+http://dotat.at/tmp/gll.pdf
+
 Juancarlo Añez: grako, a PEG parser generator in Python,
 https://bitbucket.org/apalala/grako
+
+Vegard Øye: General Parser Combinators in Racket, 2012,
+https://epsil.github.io/gll/
 """
 
 
@@ -174,6 +181,11 @@ class HistoryRecord:
 
 
 def add_parser_guard(parser_func):
+    """
+    Add a wrapper function to a parser functions (i.e. Parser.__call__ method)
+    that takes care of memoizing, left recursion and optionally tracing
+    (aka "history tracking") of parser calls. Returns the wrapped call.
+    """
     def guarded_call(parser: 'Parser', text: str) -> Tuple[Node, str]:
         try:
             location = len(text)
@@ -193,6 +205,7 @@ def add_parser_guard(parser_func):
             # return saved result
             if location in parser.visited:
                 return parser.visited[location]
+
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
                 grammar.left_recursion_encountered__ = True
@@ -244,6 +257,11 @@ def add_parser_guard(parser_func):
 
 
 class ParserMetaClass(abc.ABCMeta):
+    """
+    ParserMetaClass adds a wrapper to the __call__ method of parser
+    objects during initialization that takes care of memoizing,
+    left recursion and tracing.
+    """
     def __init__(cls, name, bases, attrs):
         guarded_parser_call = add_parser_guard(cls.__call__)
         # The following check is necessary for classes that don't override
@@ -255,6 +273,12 @@ class ParserMetaClass(abc.ABCMeta):
 
 
 class Parser(ParserBase, metaclass=ParserMetaClass):
+    """
+    (Abstract) Base class for Parser combinator parsers. Any parser
+    object that is actually used for parsing (i.e. no mock parsers)
+    should should be derived from this class.
+    """
+
     ApplyFunc = Callable[['Parser'], None]
 
     def __init__(self, name: str = '') -> None:
@@ -276,9 +300,14 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         return None, text  # default behaviour: don't match
 
     def __add__(self, other: 'Parser') -> 'Series':
+        """The + operator generates a series-parser that applies two
+        parsers in sequence."""
         return Series(self, other)
 
     def __or__(self, other: 'Parser') -> 'Alternative':
+        """The | operator generates an alternative parser that applies
+        the first parser and, if that does not match, the second parser.
+        """
         return Alternative(self, other)
 
     @property
@@ -287,10 +316,14 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
 
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
+        assert self._grammar is None or self._grammar == grammar, \
+            "Parser has already been assigned to a Grammar object!"
         self._grammar = grammar
         self._grammar_assigned_notifier()
 
     def _grammar_assigned_notifier(self):
+        """A function that notifies the parser object that it has been
+        assigned to a grammar."""
         pass
 
     def apply(self, func: ApplyFunc):
@@ -322,6 +355,61 @@ def mixin_comment(whitespace: str, comment: str) -> str:
 
 
 class Grammar:
+    """
+    Class Grammar is the (abstract) base class for grammars. Grammars
+    are collections of parser objects that are assigned to class
+    variables of a descendent of class Grammar. Except for tesing
+    purposes all parser objects should be rooted in a sinlge 'root'
+    parser which should be assigned to the class variable 'root__'
+
+    Collecting the parsers that define a grammar in a class and
+    assigning the named parsers to class variables rather than
+    global variables keeps the namespace clean. As a consequence,
+    though, it is highly recommended that a Grammar class should not
+    define any other variables or methods with names that are legal
+    parser names. A name ending with a double underscore '__' is *not*
+    a legal parser name and can safely be used.
+
+    Example:
+        class Arithmetic(Grammar):
+            # special fields for implicit whitespace and comment configuration
+            COMMENT__ = r'#.*(?:\n|$)'  # Python style comments
+            wspR__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)
+
+            # parsers
+            expression = Forward()
+            INTEGER = RE('\\d+')
+            factor = INTEGER | Token("(") + expression + Token(")")
+            term = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
+            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            root__ = expression
+
+    Upon instantiation the parser objects are deep-copied to the
+    Grammar object and assigned to object variables of the same name.
+    Any parser that is directly assigned to a class variable is a
+    'named' parser and its field `parser.name` contains the variable
+    name after instantiation of the Grammar class. All other parsers,
+    i.e. parsers that are defined within a `named` parser, are
+    "anonymous parsers" where `parser.name` is the empty string.
+    If one and the same parser is assigned to several class variables
+    such as, for example the parser `expression` in the example above,
+    the first name sticks.
+
+    Grammar objects are callable. Calling a grammar object with a UTF-8
+    encoded document, initiates the parsing of the document with the
+    root parser. The return value is the concrete syntax tree. Grammar
+    objects can be reused (i.e. called again) after parsing. Thus, it
+    is not necessary to instantiate more than one Grammar object per
+    thread.
+
+    Grammar objects contain a few special fields for implicit
+    whitespace and comments that should be overwritten, if the defaults
+    (no comments, horizontal right aligned whitespace) don't fit:
+    COMMENT__   - regular expression string for matching comments
+    wspL__      - regular expression string for left aligned whitespace
+    wspR__      - regular expression string for right aligned whitespace
+    """
+
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
@@ -333,7 +421,7 @@ class Grammar:
 
 
     @classmethod
-    def _assign_parser_names(cls):
+    def _assign_parser_names__(cls):
         """
         Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
@@ -371,17 +459,17 @@ class Grammar:
     def __init__(self, root: Parser=None) -> None:
         # if not hasattr(self.__class__, 'parser_initialization__'):
         #     self.__class__.parser_initialization__ = "pending"
-        if not hasattr(self.__class__, 'wspL__'):
-            self.wspL__ = ''
-        if not hasattr(self.__class__, 'wspR__'):
-            self.wspR__ = ''
+        # if not hasattr(self.__class__, 'wspL__'):
+        #     self.wspL__ = ''
+        # if not hasattr(self.__class__, 'wspR__'):
+        #     self.wspR__ = ''
         self.all_parsers__ = set()  # type: Set[Parser]
         self.dirty_flag__ = False
         self.history_tracking__ = False
         self._reset__()
 
         # prepare parsers in the class, first
-        self._assign_parser_names()
+        self._assign_parser_names__()
 
         # then deep-copy the parser tree from class to instance;
         # parsers not connected to the root object will be copied later
