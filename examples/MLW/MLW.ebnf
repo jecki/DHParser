@@ -57,7 +57,8 @@ genus            = "maskulinum" | "m." |
 
 ## ETYMOLOGIE-POSITION ##
 
-EtymologiePosition
+EtymologiePosition = "ETYMOLOGIE" [LZ] EtymologieVarianten
+EtymologieVarianten = { ( SW_LAT | SW_GRIECH ) !([LZ] ()) }+
 
 
 #### ARTIKEL-KOPF ############################################################
@@ -77,8 +78,8 @@ BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
 Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
 Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
 Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
-LateinischeBedeutung = "LAT" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-DeutscheBedeutung = "DEU" /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+LateinischeBedeutung = SW_LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+DeutscheBedeutung = SW_DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 Belege          = "BELEGE" [LZ] { "*" EinBeleg }
 EinBeleg        = { !([LZ] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
                     /\s*.*\s*/ }+
@@ -90,6 +91,13 @@ Zusatz          = "ZUSATZ" /\s*.*/ ABS
 
 ArtikelVerfasser = ("AUTORIN" | "AUTOR") Name
 Name             = { NAME | NAMENS_ABKÜRZUNG }+
+
+
+#### Schlüsselwörter #########################################################
+
+SW_LAT           = "LATEINISCH" | "LAT"
+SW_DEU           = "DEUTSCH" | "DEUT"
+SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
