@@ -25,7 +25,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.parser import Grammar, Compiler
-from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, parser_factory, \
+from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_provider, \
     load_compiler_suite
 
 ARITHMETIC_EBNF = """
@@ -45,7 +45,7 @@ class TestCompileFunctions:
         parser_src = compileEBNF(ARITHMETIC_EBNF, branding="CustomDSL")
         assert isinstance(parser_src, str), str(type(parser_src))
         assert parser_src.find('CustomDSLGrammar') >= 0
-        factory = parser_factory(ARITHMETIC_EBNF, branding="TestDSL")
+        factory = grammar_provider(ARITHMETIC_EBNF, branding="TestDSL")
         assert callable(factory)
         parser = factory()
         result = parser("5 + 3 * 4")

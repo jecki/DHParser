@@ -27,7 +27,7 @@ from DHParser.syntaxtree import Node, TOKEN_PTYPE, mock_syntax_tree
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.dsl import parser_factory
+from DHParser.dsl import grammar_provider
 
 
 class TestNode:
@@ -64,7 +64,7 @@ class TestNode:
                 "factor": [remove_expendables, reduce_single_child],
                 (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
                 "?": [remove_expendables, replace_by_single_child]}
-        parser = parser_factory(ebnf)()
+        parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
         compare_tree = mock_syntax_tree("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")

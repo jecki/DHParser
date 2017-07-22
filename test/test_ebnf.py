@@ -32,7 +32,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compile_python_object
 from DHParser.parser import compile_source, WHITESPACE_PTYPE, nil_preprocessor
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransformer, get_ebnf_compiler
-from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, parser_factory
+from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
 
 
 class TestDirectives:
@@ -46,7 +46,7 @@ class TestDirectives:
 
     def test_whitespace_linefeed(self):
         lang = "@ whitespace = linefeed\n" + self.mini_language
-        MinilangParser = parser_factory(lang)
+        MinilangParser = grammar_provider(lang)
         parser = MinilangParser()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
@@ -62,7 +62,7 @@ class TestDirectives:
 
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language
-        parser = parser_factory(lang)()
+        parser = grammar_provider(lang)()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
         assert not syntax_tree.collect_errors()
@@ -75,7 +75,7 @@ class TestDirectives:
 
     def test_whitespace_horizontal(self):
         lang = "@ whitespace = horizontal\n" + self.mini_language
-        parser = parser_factory(lang)()
+        parser = grammar_provider(lang)()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
         assert not syntax_tree.collect_errors()
@@ -269,7 +269,7 @@ class TestBoundaryCases:
                   unconnected = /.*/
         """
         try:
-            grammar = parser_factory(ebnf)()
+            grammar = grammar_provider(ebnf)()
             assert False, "EBNF compiler should complain about unconnected rules."
         except CompilationError as err:
             grammar_src = err.result
@@ -288,7 +288,7 @@ class TestBoundaryCases:
             pass
         ebnf_testing = "@testing = True\n" + ebnf
         try:
-            grammar = parser_factory(ebnf_testing)()
+            grammar = grammar_provider(ebnf_testing)()
         except CompilationError:
             assert False, "EBNF compiler should not complain about unconnected " \
                           "rules when directive @testing is set."
@@ -299,7 +299,7 @@ class TestSynonymDetection:
         ebnf = """a = b
                   b = /b/
         """
-        grammar = parser_factory(ebnf)()
+        grammar = grammar_provider(ebnf)()
         assert grammar['a'].name == 'a', grammar['a'].name
         assert grammar['b'].name == 'b', grammar['b'].name
         assert grammar('b').as_sxpr().count('b') == 2

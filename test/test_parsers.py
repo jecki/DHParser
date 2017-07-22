@@ -27,7 +27,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import is_logging, logging, compile_python_object
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.dsl import parser_factory, DHPARSER_IMPORTS
+from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
 
 class TestInfiLoopsAndRecursion:
@@ -41,7 +41,7 @@ class TestInfiLoopsAndRecursion:
             # example:  "5 + 3 * 4"
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
-        parser = parser_factory(minilang)()
+        parser = grammar_provider(minilang)()
         assert parser
         syntax_tree = parser(snippet)
         assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
@@ -61,7 +61,7 @@ class TestInfiLoopsAndRecursion:
             # example:  "5 + 3 * 4"
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
-        parser = parser_factory(minilang)()
+        parser = grammar_provider(minilang)()
         assert parser
         syntax_tree = parser(snippet)
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
@@ -74,7 +74,7 @@ class TestInfiLoopsAndRecursion:
             Sum     = Expr { ('+' | '-') Expr }+
             Value   = /[0-9.]+/~ | '(' Expr ')'
             """
-        parser = parser_factory(minilang)()
+        parser = grammar_provider(minilang)()
         assert parser
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
@@ -91,7 +91,7 @@ class TestInfiLoopsAndRecursion:
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""
         snippet = " "
-        parser = parser_factory(minilang)()
+        parser = grammar_provider(minilang)()
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.collect_errors())
@@ -216,9 +216,9 @@ class TestPopRetrieve:
         """
 
     def setup(self):
-        self.minilang_parser = parser_factory(self.mini_language)()
-        self.minilang_parser2 = parser_factory(self.mini_lang2)()
-        self.minilang_parser3 = parser_factory(self.mini_lang3)()
+        self.minilang_parser = grammar_provider(self.mini_language)()
+        self.minilang_parser2 = grammar_provider(self.mini_lang2)()
+        self.minilang_parser3 = grammar_provider(self.mini_lang3)()
 
     @staticmethod
     def opening_delimiter(node, name):
@@ -267,7 +267,7 @@ class TestPopRetrieve:
             variable = /\w+/~
             """
         case = "(secret)*. secret"
-        gr = parser_factory(lang)()
+        gr = grammar_provider(lang)()
         st = gr(case)
         assert not st.error_flag, str(st.collect_errors())
 
@@ -337,7 +337,7 @@ class TestWhitespaceHandling:
         """
 
     def setup(self):
-        self.gr = parser_factory(self.minilang)()
+        self.gr = grammar_provider(self.minilang)()
 
     def test_token_whitespace(self):
         st = self.gr("AB", 'doc')

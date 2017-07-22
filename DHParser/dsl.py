@@ -43,7 +43,7 @@ __all__ = ('GrammarError',
            'compileDSL',
            'raw_compileEBNF',
            'compileEBNF',
-           'parser_factory',
+           'grammar_provider',
            'compile_on_disk')
 
 
@@ -250,9 +250,9 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     return '\n'.join(src)
 
 
-def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
+def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
     """
-    Compiles an EBNF grammar and returns a grammar-parser factory
+    Compiles an EBNF grammar and returns a grammar-parser provider
     function for that grammar.
 
     Args:
@@ -262,7 +262,7 @@ def parser_factory(ebnf_src: str, branding="DSL") -> Grammar:
             suite source code. 
     
     Returns:
-        A factory function for a grammar-parser for texts in the
+        A provider function for a grammar object for texts in the
         language defined by ``ebnf_src``.
     """
     grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),

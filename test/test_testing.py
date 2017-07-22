@@ -28,7 +28,7 @@ from DHParser.toolkit import compact_sexpr
 from DHParser.syntaxtree import TOKEN_PTYPE, mock_syntax_tree
 from DHParser.transform import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
-from DHParser.dsl import parser_factory
+from DHParser.dsl import grammar_provider
 from DHParser.testing import grammar_unit
 
 ARITHMETIC_EBNF = """
@@ -104,7 +104,7 @@ class TestGrammarTest:
     }
 
     def test_testing_grammar(self):
-        parser_fac = parser_factory(ARITHMETIC_EBNF)
+        parser_fac = grammar_provider(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
         errata = grammar_unit(self.cases, parser_fac, trans_fac)
         assert not errata, str(errata)
