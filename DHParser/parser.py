@@ -59,7 +59,6 @@ https://epsil.github.io/gll/
 import abc
 import copy
 import os
-import platform
 from functools import partial
 
 try:
@@ -130,10 +129,10 @@ __all__ = ('PreprocessorFunc',
 PreprocessorFunc = Union[Callable[[str], str], partial]
 
 
-LEFT_RECURSION_DEPTH = 20 if platform.python_implementation() == "PyPy" \
-                          else 8 # type: int
-# because of python's recursion depth limit, this value ought not to be set too high
-MAX_DROPOUTS = 25  # type: int
+LEFT_RECURSION_DEPTH = 8  # type: int
+# because of python's recursion depth limit, this value ought not to be
+# set too high. PyPy allows higher values than CPython
+MAX_DROPOUTS = 5  # type: int
 # stop trying to recover parsing after so many errors
 
 
@@ -277,6 +276,23 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     (Abstract) Base class for Parser combinator parsers. Any parser
     object that is actually used for parsing (i.e. no mock parsers)
     should should be derived from this class.
+
+    Since parsers can contain other parsers (see classes UnaryOperator
+    and NaryOperator) they form a cyclical directed graph. A root
+    parser is a parser from which all other parsers can be reached.
+    Usually, there is one root parser which serves as the starting
+    point of the parsing process. When speaking of "the root parser"
+    it is this root parser object that is meant.
+
+    There are two different types of parsers:
+
+    1. *Named parsers* for which a name is set in field parser.name.
+       The results produced by these parsers can later be retrieved in
+       the AST by the parser name.
+
+    2. *Anonymous parsers* where the name-field just contains the empty
+       string. AST-transformation of Anonymous parsers can be hooked
+       only to their class name, and not to the individual parser.
     """
 
     ApplyFunc = Callable[['Parser'], None]
@@ -356,21 +372,46 @@ def mixin_comment(whitespace: str, comment: str) -> str:
 
 class Grammar:
     """
-    Class Grammar is the (abstract) base class for grammars. Grammars
-    are collections of parser objects that are assigned to class
-    variables of a descendent of class Grammar. Except for tesing
-    purposes all parser objects should be rooted in a sinlge 'root'
-    parser which should be assigned to the class variable 'root__'
+    Class Grammar directs the parsing process and stores global state
+    information of the parsers, i.e. state information that is shared
+    accross parsers.
 
-    Collecting the parsers that define a grammar in a class and
-    assigning the named parsers to class variables rather than
-    global variables keeps the namespace clean. As a consequence,
-    though, it is highly recommended that a Grammar class should not
-    define any other variables or methods with names that are legal
-    parser names. A name ending with a double underscore '__' is *not*
-    a legal parser name and can safely be used.
+    Grammars are basically collections of parser objects, which are
+    connected to an instance object of class Grammar. There exist two
+    ways of connecting parsers to grammar objects: Either by passing
+    the root parser object to the constructor of a Grammar object
+    ("direct instantiation"), or by assigning the root parser to the
+    class variable "root__" of a descendant class of class Grammar.
+
+    Example for direct instantian of a grammar:
+
+        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number_parser = Grammar(number)
+        >>> number_parser("3.1416").show()
+        '3.1416'
+
+    Collecting the parsers that define a grammar in a descentand class of
+    class Grammar and assigning the named parsers to class variables
+    rather than global variables has several advantages:
+
+    1. It keeps the namespace clean.
+
+    2. The parser names of named parsers do not need to be passed to the
+       constructor of the Parser object explicitly, but it suffices to
+       assign them to class variables.
+
+    3. The parsers in class do not necessarily need to be connected to one
+       single root parser, which is helpful for testing and building up a
+       parser successively of several components.
+
+    As a consequence, though, it is highly recommended that a Grammar
+    class should not define any other variables or methods with names
+    that are legal parser names. A name ending with a double
+    underscore '__' is *not* a legal parser name and can safely be
+    used.
 
     Example:
+
         class Arithmetic(Grammar):
             # special fields for implicit whitespace and comment configuration
             COMMENT__ = r'#.*(?:\n|$)'  # Python style comments
@@ -389,8 +430,9 @@ class Grammar:
     Any parser that is directly assigned to a class variable is a
     'named' parser and its field `parser.name` contains the variable
     name after instantiation of the Grammar class. All other parsers,
-    i.e. parsers that are defined within a `named` parser, are
-    "anonymous parsers" where `parser.name` is the empty string.
+    i.e. parsers that are defined within a `named` parser, remain
+    "anonymous parsers" where `parser.name` is the empty string, unless
+    a name has been passed explicitly upon instantiation.
     If one and the same parser is assigned to several class variables
     such as, for example the parser `expression` in the example above,
     the first name sticks.
@@ -408,6 +450,7 @@ class Grammar:
     COMMENT__   - regular expression string for matching comments
     wspL__      - regular expression string for left aligned whitespace
     wspR__      - regular expression string for right aligned whitespace
+    root__      - the root parser of the grammar
     """
 
     root__ = None  # type: Union[Parser, None]
@@ -910,6 +953,16 @@ class Token(RE):
 
 
 class UnaryOperator(Parser):
+    """
+    Base class of all unary parser operators, i.e. parser that
+    contains one and only one other parser, like the optional
+    parser for example.
+
+    The UnaryOperator base class supplies __deepcopy__ and apply
+    methods for unary parser operators. The __deepcopy__ method needs
+    to be overwritten, however, if the constructor of a derived class
+    has additional parameters.
+    """
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(UnaryOperator, self).__init__(name)
         # assert isinstance(parser, Parser)
@@ -925,6 +978,16 @@ class UnaryOperator(Parser):
 
 
 class NaryOperator(Parser):
+    """
+    Base class of all Nnary parser operators, i.e. parser that
+    contains one or more other parsers, like the alternative
+    parser for example.
+
+    The NnaryOperator base class supplies __deepcopy__ and apply
+    methods for unary parser operators. The __deepcopy__ method needs
+    to be overwritten, however, if the constructor of a derived class
+    has additional parameters.
+    """
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)

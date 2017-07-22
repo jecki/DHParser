@@ -69,7 +69,6 @@ import inspect
 import json
 import keyword
 import os
-import platform
 try:
     import regex as re
 except ImportError:
