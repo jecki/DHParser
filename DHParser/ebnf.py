@@ -326,8 +326,9 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []   # type: List[Node]
         self.symbols = {}           # type: Dict[str, Node]
         self.variables = set()      # type: Set[str]
-        # self.definition_names = []  # type: List[str]
+        self.definitions = []  # type: List[Tuple[str, str]]
         self.recursive = set()      # type: Set[str]
+        self.deferred_tasks = []  # type: List[Callable]
         self.root = ""              # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
@@ -397,10 +398,22 @@ class EBNFCompiler(Compiler):
         Creates the Python code for the parser after compilation of
         the EBNF-Grammar
         """
+
+        # execute deferred tasks, for example semantic checks that cannot
+        # be done before the symbol table is complete
+
+        for task in self.deferred_tasks:
+            task()
+
+        # provide for capturing of symbols that are variables, i.e. the
+        # value of will be retrieved at some point during the parsing process
+
         if self.variables:
             for i in range(len(definitions)):
                 if definitions[i][0] in self.variables:
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
+
+        # add special fields for Grammar class
 
         definitions.append(('wspR__', self.WHITESPACE_KEYWORD
                             if 'right' in self.directives['literalws'] else "''"))
@@ -482,7 +495,7 @@ class EBNFCompiler(Compiler):
 
     def on_syntax(self, node: Node) -> str:
         self._reset()
-        definitions = []
+        definitions = []  # type: List[Tuple[str, str]]
 
         # drop the wrapping sequence node
         if len(node.children) == 1 and not node.children[0].parser.name:
@@ -653,7 +666,20 @@ class EBNFCompiler(Compiler):
         node.result = node.children[1:]
         try:
             parser_class = self.PREFIX_TABLE[prefix]
-            return self.non_terminal(node, parser_class, custom_args)
+            result = self.non_terminal(node, parser_class, custom_args)
+            if prefix[:1] == '-':
+                def check(node):
+                    nd = node
+                    while len(nd.children) == 1 and nd.children[1].parser.name == "symbol":
+                        nd = nd.children[1]
+                    if (nd.parser.name != "regexp" or str(nd)[:1] != '/'
+                        or str(nd)[-1:] != '/'):
+                        node.add_error("Lookbehind-parser can only be used with plain RegExp-"
+                                       "parsers, not with: " + str(nd))
+
+                if not result.startswith('RegExp('):
+                    self.deferred_tasks.append(lambda: check(node))
+            return result
         except KeyError:
             node.add_error('Unknown prefix "%s".' % prefix)
         return ""
