@@ -1240,13 +1240,15 @@ def iter_right_branch(node) -> Iterator[Node]:
 class Lookbehind(FlowOperator):
     """EXPERIMENTAL AND NEVER TESTED!!!"""
     def __init__(self, parser: Parser, name: str = '') -> None:
+        assert parser.name or isinstance(parser, RegExp)
         super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        if isinstance(self.grammar.last_node__, Lookahead):
-            return Node(self, '').add_error('Lookbehind right after Lookahead '
-                                            'does not make sense!'), text
+        node = self.grammar.last_node__
+        # if isinstance(node.parser, Lookahead):
+        #     return Node(self, '').add_error('Lookbehind right after Lookahead '
+        #                                     'does not make sense!'), text
         if self.sign(self.condition()):
             return Node(self, ''), text
         else:
@@ -1259,13 +1261,13 @@ class Lookbehind(FlowOperator):
         return bool_value
 
     def condition(self):
-        node = None
-        for node in iter_right_branch(self.grammar.last_node__):
-            if node.parser.name == self.parser.name:
-                return True
-        if node and isinstance(self.parser, RegExp) and \
-                self.parser.regexp.match(str(node)):  # Is there really a use case for this?
+        node = self.grammar.last_node__
+        if node and isinstance(self.parser, RegExp) and self.parser.regexp.match(str(node)):
             return True
+        elif self.parser.name:
+            for node in iter_right_branch(self.grammar.last_node__):
+                if node.parser.name == self.parser.name:
+                    return True
         return False
 
 

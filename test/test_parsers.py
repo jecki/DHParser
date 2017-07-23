@@ -25,7 +25,8 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, logging, compile_python_object
-from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE
+from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
+    RegExp, Lookbehind, Lookahead, NegativeLookahead, OneOrMore
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
@@ -95,6 +96,28 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.collect_errors())
+
+
+class TestFlowControl:
+    def test_lookbehind(self):
+        ws = RegExp('\s*')
+        end = RegExp("END")
+        doc_end = Lookbehind(RegExp('.*\n$')) + end
+        word = RegExp('\w+')
+        sequence = OneOrMore(NegativeLookahead(end) + word + ws)
+        document = ws + sequence + doc_end + ws
+
+        parser = Grammar(document)
+        t1 = """
+        All work and no play 
+        makes Jack a dull boy
+        END
+        """
+        cst = parser(t1)
+        assert not cst.error_flag, cst.as_sxpr()
+        t2 = "All word and not play makes Jack a dull boy END\n"
+        cst = parser(t2)
+        assert cst.error_flag, cst.as_sxpr()
 
 
 class TestRegex:

@@ -53,7 +53,7 @@ Index          = "\printindex" [PARSEP]
 
 #### block environments ####
 
-# TODO: ambiguity between generic bock envieronments and generic inline environments
+# TODO: ambiguity between generic block envieronments and generic inline environments
 
 block_environment   = known_environment | generic_environment
 known_environment   = itemize | enumerate | figure | table | quotation
