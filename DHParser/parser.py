@@ -1224,31 +1224,27 @@ class NegativeLookahead(Lookahead):
         return not bool_value
 
 
-def iter_right_branch(node) -> Iterator[Node]:
-    """
-    Iterates over the right branch of `node` starting with node itself.
-    Iteration is stopped if either there are no child nodes any more or
-    if the parser of a node is a Lookahead parser. (Reason is: Since
-    lookahead nodes do not advance the parser, it does not make sense
-    to look back to them.)
-    """
-    while node and not isinstance(node.parser, Lookahead):  # the second condition should not be necessary
-        yield node  # for well-formed EBNF code
-        node = node.children[-1] if node.children else None
+# def iter_right_branch(node) -> Iterator[Node]:
+#     """
+#     Iterates over the right branch of `node` starting with node itself.
+#     Iteration is stopped if either there are no child nodes any more or
+#     if the parser of a node is a Lookahead parser. (Reason is: Since
+#     lookahead nodes do not advance the parser, it does not make sense
+#     to look back to them.)
+#     """
+#     while node:
+#         yield node  # for well-formed EBNF code
+#         node = node.children[-1] if node.children else None
 
 
 class Lookbehind(FlowOperator):
-    """EXPERIMENTAL AND NEVER TESTED!!!"""
+    """EXPERIMENTAL!!!"""
     def __init__(self, parser: Parser, name: str = '') -> None:
-        assert parser.name or isinstance(parser, RegExp)
+        assert isinstance(parser, RegExp)
         super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        node = self.grammar.last_node__
-        # if isinstance(node.parser, Lookahead):
-        #     return Node(self, '').add_error('Lookbehind right after Lookahead '
-        #                                     'does not make sense!'), text
         if self.sign(self.condition()):
             return Node(self, ''), text
         else:
@@ -1262,13 +1258,7 @@ class Lookbehind(FlowOperator):
 
     def condition(self):
         node = self.grammar.last_node__
-        if node and isinstance(self.parser, RegExp) and self.parser.regexp.match(str(node)):
-            return True
-        elif self.parser.name:
-            for node in iter_right_branch(self.grammar.last_node__):
-                if node.parser.name == self.parser.name:
-                    return True
-        return False
+        return node and self.parser.regexp.match(str(node))
 
 
 class NegativeLookbehind(Lookbehind):

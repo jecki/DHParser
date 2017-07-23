@@ -102,7 +102,7 @@ class TestFlowControl:
     def test_lookbehind(self):
         ws = RegExp('\s*')
         end = RegExp("END")
-        doc_end = Lookbehind(RegExp('.*\n$')) + end
+        doc_end = Lookbehind(RegExp('(?:.*\n)+\s*$')) + end
         word = RegExp('\w+')
         sequence = OneOrMore(NegativeLookahead(end) + word + ws)
         document = ws + sequence + doc_end + ws
