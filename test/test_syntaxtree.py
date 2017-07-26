@@ -30,6 +30,18 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.dsl import grammar_provider
 
 
+class TestMockSyntaxTree:
+    def test_mock_syntax_tree(self):
+        tree = mock_syntax_tree('(a (b c))')
+        tree = mock_syntax_tree('(a i\nj\nk)')
+        try:
+            tree = mock_syntax_tree('a b c')
+            assert False, "mock_syntax_tree() should raise a ValueError " \
+                          "if argument is not a tree!"
+        except ValueError:
+            pass
+
+
 class TestNode:
     """
     Tests for class Node 

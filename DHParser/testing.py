@@ -27,8 +27,8 @@ except ImportError:
     import re
 
 from DHParser import error_messages
-from DHParser.toolkit import compact_sexpr, is_logging
-from DHParser.syntaxtree import mock_syntax_tree
+from DHParser.toolkit import is_logging
+from DHParser.syntaxtree import mock_syntax_tree, compact_sxpr
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -171,8 +171,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                     errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                   '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                   % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                     compact_sexpr(compare.as_sxpr()),
-                                     compact_sexpr(ast.as_sxpr())))
+                                     compact_sxpr(compare.as_sxpr()),
+                                     compact_sxpr(ast.as_sxpr())))
                     tests.setdefault('__err__', {})[test_name] = errata[-1]
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))

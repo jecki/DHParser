@@ -35,11 +35,13 @@ import collections
 import contextlib
 import hashlib
 import os
+
 try:
     import regex as re
 except ImportError:
     import re
 import sys
+
 try:
     from typing import Any, List, Tuple
 except ImportError:
@@ -51,10 +53,9 @@ __all__ = ('logging',
            'logfile_basename',
            # 'supress_warnings',
            # 'warnings',
-           'repr_call',
+           # 'repr_call',
            'line_col',
            'error_messages',
-           'compact_sexpr',
            'escape_re',
            'is_filename',
            'load_if_file',
@@ -79,7 +80,7 @@ def log_dir() -> str:
     # the try-except clauses in the following are precautions for multiprocessing
     global LOGGING
     try:
-        dirname = LOGGING    # raises a name error if LOGGING is not defined
+        dirname = LOGGING  # raises a name error if LOGGING is not defined
         if not dirname:
             raise NameError  # raise a name error if LOGGING evaluates to False
     except NameError:
@@ -104,7 +105,7 @@ def log_dir() -> str:
 
 
 @contextlib.contextmanager
-def logging(dirname: str = "LOGS"):
+def logging(dirname="LOGS"):
     """Context manager. Log files within this context will be stored in
     directory ``dirname``. Logging is turned off if name is empty.
     
@@ -113,7 +114,7 @@ def logging(dirname: str = "LOGS"):
             turn logging of
     """
     global LOGGING
-    if dirname == True:  dirname = "LOGS"  # be fail tolerant here...
+    if dirname and not isinstance(dirname, str):  dirname = "LOGS"  # be fail tolerant here...
     try:
         save = LOGGING
     except NameError:
@@ -132,46 +133,25 @@ def is_logging() -> bool:
         return False
 
 
-# @contextlib.contextmanager
-# def supress_warnings(supress: bool = True):
-#     global SUPRESS_WARNINGS
-#     try:
-#         save = SUPRESS_WARNINGS
-#     except NameError:
-#         save = False  # global default for warning supression is False
-#     SUPRESS_WARNINGS = supress
-#     yield
-#     SUPRESS_WARNINGS = save
-#
-#
-# def warnings() -> bool:
-#     global SUPRESS_WARNINGS
-#     try:
-#         return not SUPRESS_WARNINGS
-#     except NameError:
-#         return True
-
-
-def repr_call(f, parameter_list) -> str:
-    """Turns a list of items into a string resembling the parameter
-    list of a function call by omitting default values at the end:
-    >>> def f(a, b=1):    print(a, b)
-    >>> repr_call(f, (5,1))
-    'f(5)'
-    >>> repr_call(f, (5,2))
-    'f(5, 2)'
-    """
-    i = 0
-    defaults = f.__defaults__ if f.__defaults__ is not None else []
-    for parameter, default in zip(reversed(parameter_list), reversed(defaults)):
-        if parameter != default:
-            break
-        i -= 1
-    if i < 0:
-        parameter_list = parameter_list[:i]
-    name = f.__self__.__class__.__name__ if f.__name__ == '__init__' else f.__name__
-    return "%s(%s)" % (name, ", ".join(repr(item) for item in parameter_list))
-
+# def repr_call(f, parameter_list) -> str:
+#     """Turns a list of items into a string resembling the parameter
+#     list of a function call by omitting default values at the end:
+#     >>> def f(a, b=1):    print(a, b)
+#     >>> repr_call(f, (5,1))
+#     'f(5)'
+#     >>> repr_call(f, (5,2))
+#     'f(5, 2)'
+#     """
+#     i = 0
+#     defaults = f.__defaults__ if f.__defaults__ is not None else []
+#     for parameter, default in zip(reversed(parameter_list), reversed(defaults)):
+#         if parameter != default:
+#             break
+#         i -= 1
+#     if i < 0:
+#         parameter_list = parameter_list[:i]
+#     name = f.__self__.__class__.__name__ if f.__name__ == '__init__' else f.__name__
+#     return "%s(%s)" % (name, ", ".join(repr(item) for item in parameter_list))
 
 
 def line_col(text: str, pos: int) -> Tuple[int, int]:
@@ -198,29 +178,6 @@ def error_messages(source_text, errors) -> List[str]:
     """
     return ["line: %i, column: %i" % line_col(source_text, err.pos) + ", error: %s" % err.msg
             for err in sorted(list(errors))]
-
-
-def compact_sexpr(s) -> str:
-    """Returns S-expression ``s`` as a one liner without unnecessary
-    whitespace.
-
-    Example:
-    >>> compact_sexpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
-    '(a (b c))'
-    """
-    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
-
-
-# def quick_report(parsing_result) -> str:
-#     """Returns short report (compact s-expression + errors messages)
-#     of the parsing results by either a call to a grammar or to a parser
-#     directly."""
-#     err = ''
-#     if isinstance(parsing_result, collections.Collection):
-#         result = parsing_result[0]
-#         err = ('\nUnmatched sequence: ' + parsing_result[1]) if parsing_result[1] else ''
-#     sexpr = compact_sexpr(result.as_sxpr())
-#     return sexpr + err
 
 
 def escape_re(s) -> str:
@@ -257,7 +214,7 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 def load_if_file(text_or_file) -> str:
     """Reads and returns content of a text-file if parameter
     `text_or_file` is a file name (i.e. a single line string),
-    otherwise (i.e. if `text_or_file` is a multiline string)
+    otherwise (i.e. if `text_or_file` is a multi-line string)
     `text_or_file` is returned.
     """
     if is_filename(text_or_file):
@@ -265,7 +222,7 @@ def load_if_file(text_or_file) -> str:
             with open(text_or_file, encoding="utf-8") as f:
                 content = f.read()
             return content
-        except FileNotFoundError as error:
+        except FileNotFoundError:
             if re.fullmatch(r'[\w/:. \\]+', text_or_file):
                 raise FileNotFoundError('Not a valid file: ' + text_or_file + '!\n(Add "\\n" '
                                         'to distinguish source data from a file name.)')
@@ -364,7 +321,7 @@ def expand_table(compact_table):
 
 def sane_parser_name(name) -> bool:
     """Checks whether given name is an acceptable parser name. Parser names
-    must not be preceeded or succeeded by a double underscore '__'!
+    must not be preceded or succeeded by a double underscore '__'!
     """
     return name and name[:2] != '__' and name[-2:] != '__'
 
@@ -385,11 +342,15 @@ def compile_python_object(python_src, catch_obj_regex=""):
             raise ValueError("No object matching /%s/ defined in source code." %
                              catch_obj_regex.pattern)
         elif len(matches) > 1:
-            raise ValueError("Ambigous matches for %s : %s" %
+            raise ValueError("Ambiguous matches for %s : %s" %
                              (str(catch_obj_regex), str(matches)))
         return namespace[matches[0]] if matches else None
     else:
         return namespace
+
+
+def identity(anything: Any) -> Any:
+    return anything
 
 
 try:

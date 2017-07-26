@@ -31,7 +31,7 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
-from DHParser.toolkit import log_dir, line_col
+from DHParser.toolkit import log_dir, line_col, identity
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
@@ -267,7 +267,7 @@ class Node:
             else str(self.result)
         return (' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
 
-    def _tree_repr(self, tab, openF, closeF, dataF=lambda s: s) -> str:
+    def _tree_repr(self, tab, openF, closeF, dataF=identity, density=0) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -293,24 +293,24 @@ class Node:
         tail = closeF(self)
 
         if not self.result:
-            return head + tail
+            return head.rstrip() + tail.lstrip()
 
-        head = head + '\n'  # place the head, tail and content
-        tail = '\n' + tail  # of the node on different lines
+        D = None if density & 2 else ''
 
         if self.children:
             content = []
             for child in self.children:
-                subtree = child._tree_repr(tab, openF, closeF, dataF).split('\n')
+                subtree = child._tree_repr(tab, openF, closeF, dataF, density).split('\n')
                 content.append('\n'.join((tab + s) for s in subtree))
-            return head + '\n'.join(content) + tail
+            return head + '\n'.join(content) + tail.lstrip(D)
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
-        if head[0] == "<" and res.find('\n') < 0:
-            # for XML: place tags for leaf-nodes on one line if possible
-            return head[:-1] + self.result + tail[1:]
+        if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
+            # except for XML, add a gap between opening statement and content
+            gap = ' ' if head.rstrip()[-1] != '>' else ''
+            return head.rstrip() + gap + dataF(self.result) + tail.lstrip()
         else:
-            return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail
+            return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail.lstrip(D)
 
     def as_sxpr(self, src: str=None) -> str:
         """
@@ -330,14 +330,14 @@ class Node:
             if node.errors:
                 s += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
                                                 for err in node.errors)
-            return s
+            return s + '\n'
 
         def pretty(s):
             return '"%s"' % s if s.find('"') < 0 \
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, lambda node: ')', pretty)
+        return self._tree_repr('    ', opening, lambda node: '\n)', pretty, density=0)
 
     def as_xml(self, src: str=None) -> str:
         """
@@ -356,14 +356,12 @@ class Node:
                 s += ' line="%i" col="%i"' % line_col(src, node.pos)
             if node.errors:
                 s += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
-            s += ">"
-            return s
+            return s + ">\n"
 
         def closing(node):
-            s = '</' + node.tag_name + '>'
-            return s
+            return '\n</' + node.tag_name + '>'
 
-        return self._tree_repr('    ', opening, closing)
+        return self._tree_repr('    ', opening, closing, density=1)
 
     def add_error(self, error_str) -> 'Node':
         self._errors.append(error_str)
@@ -461,7 +459,7 @@ class Node:
     #     return nav(path.split('/'))
 
 
-def mock_syntax_tree(sexpr):
+def mock_syntax_tree(sxpr):
     """
     Generates a tree of nodes from an S-expression.
 
@@ -486,31 +484,47 @@ def mock_syntax_tree(sexpr):
             yield s[:i]
             s = s[i:].strip()
 
-    sexpr = sexpr.strip()
-    if sexpr[0] != '(': raise ValueError('"(" expected, not ' + sexpr[:10])
-    # assert sexpr[0] == '(', sexpr
-    sexpr = sexpr[1:].strip()
-    m = re.match('[\w:]+', sexpr)
-    name, class_name = (sexpr[:m.end()].split(':') + [''])[:2]
-    sexpr = sexpr[m.end():].strip()
-    if sexpr[0] == '(':
-        result = tuple(mock_syntax_tree(block) for block in next_block(sexpr))
+    sxpr = sxpr.strip()
+    if sxpr[0] != '(': raise ValueError('"(" expected, not ' + sxpr[:10])
+    # assert sxpr[0] == '(', sxpr
+    sxpr = sxpr[1:].strip()
+    m = re.match('[\w:]+', sxpr)
+    name, class_name = (sxpr[:m.end()].split(':') + [''])[:2]
+    sxpr = sxpr[m.end():].strip()
+    if sxpr[0] == '(':
+        result = tuple(mock_syntax_tree(block) for block in next_block(sxpr))
     else:
         lines = []
-        while sexpr and sexpr[0] != ')':
+        while sxpr and sxpr[0] != ')':
             for qm in ['"""', "'''", '"', "'"]:
-                m = re.match(qm + r'.*?' + qm, sexpr)
+                m = re.match(qm + r'.*?' + qm, sxpr, re.DOTALL)
                 if m:
                     i = len(qm)
-                    lines.append(sexpr[i:m.end() - i])
-                    sexpr = sexpr[m.end():].strip()
+                    lines.append(sxpr[i:m.end() - i])
+                    sxpr = sxpr[m.end():].strip()
                     break
             else:
-                m = re.match(r'(?:(?!\)).)*', sexpr)
-                lines.append(sexpr[:m.end()])
-                sexpr = sexpr[m.end():]
+                m = re.match(r'(?:(?!\)).)*', sxpr, re.DOTALL)
+                lines.append(sxpr[:m.end()])
+                sxpr = sxpr[m.end():]
         result = "\n".join(lines)
     return Node(MockParser(name, ':' + class_name), result)
 
 
+def compact_sxpr(s) -> str:
+    """Returns S-expression ``s`` as a one liner without unnecessary
+    whitespace.
+
+    Example:
+    >>> compact_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
+    '(a (b c))'
+    """
+    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
+
+
 TransformationFunc = Union[Callable[[Node], Any], partial]
+
+if __name__ == "__main__":
+    st = mock_syntax_tree("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
+    print(st.as_sxpr())
+    print(st.as_xml())
