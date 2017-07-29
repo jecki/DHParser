@@ -305,6 +305,37 @@ class TestSynonymDetection:
         assert grammar('b').as_sxpr().count('b') == 2
 
 
+class TestFlowControlOperators:
+    def setup(self):
+        self.t1 = """
+        All work and no play 
+        makes Jack a dull boy
+        END
+        """
+        self.t2 = "All word and not play makes Jack a dull boy END\n"
+
+    def test_lookbehind_indirect(self):
+        lang = r"""
+            document = ws sequence doc_end ws         
+            sequence = { !end word ws }+
+            doc_end  = -&SUCC_LB end        
+            ws       = /\s*/
+            end      = /END/
+            word     = /\w+/
+            SUCC_LB  = indirection
+            indirection = /(?:.*\n)+\s*$/
+        """
+        # result, messages, syntax_tree = compile_source(lang, None, get_ebnf_grammar(),
+        #                 get_ebnf_transformer(), get_ebnf_compiler('LookbehindTest'))
+        # print(result)
+        parser = grammar_provider(lang)()
+        cst = parser(self.t1)
+        assert not cst.error_flag, cst.as_sxpr()
+        cst = parser(self.t2)
+        # this should fail, because 'END' is not preceeded by a line feed
+        assert cst.error_flag, cst.as_sxpr()
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

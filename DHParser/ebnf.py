@@ -670,12 +670,20 @@ class EBNFCompiler(Compiler):
             if prefix[:1] == '-':
                 def check(node):
                     nd = node
-                    while len(nd.children) == 1 and nd.children[1].parser.name == "symbol":
-                        nd = nd.children[1]
+                    if len(nd.children) >= 1:
+                        nd = nd.children[0]
+                    while nd.parser.name == "symbol":
+                        symlist = self.rules.get(str(nd), [])
+                        if len(symlist) == 2:
+                            nd = symlist[1]
+                        else:
+                            if len(symlist) == 1:
+                                nd = symlist[0].children[1]
+                            break
                     if (nd.parser.name != "regexp" or str(nd)[:1] != '/'
                         or str(nd)[-1:] != '/'):
                         node.add_error("Lookbehind-parser can only be used with plain RegExp-"
-                                       "parsers, not with: " + str(nd))
+                                       "parsers, not with: " + nd.parser.name + nd.parser.ptype)
 
                 if not result.startswith('RegExp('):
                     self.deferred_tasks.append(lambda: check(node))
@@ -713,7 +721,7 @@ class EBNFCompiler(Compiler):
         else:
             self.current_symbols.append(node)
             if symbol not in self.symbols:
-                self.symbols[symbol] = node
+                self.symbols[symbol] = node  # remember first use of symbol
             if symbol in self.rules:
                 self.recursive.add(symbol)
             return symbol
@@ -726,18 +734,22 @@ class EBNFCompiler(Compiler):
     def on_regexp(self, node: Node) -> str:
         rx = str(node)
         name = []   # type: List[str]
-        if rx[:2] == '~/':
-            if not 'left' in self.directives['literalws']:
-                name = ['wL=' + self.WHITESPACE_KEYWORD] + name
-            rx = rx[1:]
-        elif 'left' in self.directives['literalws']:
-            name = ["wL=''"] + name
-        if rx[-2:] == '/~':
-            if 'right' not in self.directives['literalws']:
-                name = ['wR=' + self.WHITESPACE_KEYWORD] + name
-            rx = rx[:-1]
-        elif 'right' in self.directives['literalws']:
-            name = ["wR=''"] + name
+        if rx[0] == '/' and rx[-1] == '/':
+            parser = 'RegExp('
+        else:
+            parser = 'RE('
+            if rx[:2] == '~/':
+                if not 'left' in self.directives['literalws']:
+                    name = ['wL=' + self.WHITESPACE_KEYWORD] + name
+                rx = rx[1:]
+            elif 'left' in self.directives['literalws']:
+                name = ["wL=''"] + name
+            if rx[-2:] == '/~':
+                if 'right' not in self.directives['literalws']:
+                    name = ['wR=' + self.WHITESPACE_KEYWORD] + name
+                rx = rx[:-1]
+            elif 'right' in self.directives['literalws']:
+                name = ["wR=''"] + name
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
@@ -745,7 +757,7 @@ class EBNFCompiler(Compiler):
                      node.as_sxpr()
             node.add_error(errmsg)
             return '"' + errmsg + '"'
-        return 'RE(' + ', '.join([arg] + name) + ')'
+        return parser + ', '.join([arg] + name) + ')'
 
 
     def on_list_(self, node) -> Set[str]:

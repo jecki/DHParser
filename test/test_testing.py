@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_parsers.py - tests of the parsers-module of DHParser 
+"""test_testing.py - tests of the testing-module of DHParser
 
 Author: Eckhart Arnold <arnold@badw.de>
 

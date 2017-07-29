@@ -900,8 +900,8 @@ class RE(Parser):
         return None, text
 
     def __repr__(self):
-        wL = '~' if self.wspLeft else ''
-        wR = '~' if self.wspRight else ''
+        wL = '~' if self.wspLeft != ZOMBIE_PARSER else ''
+        wR = '~' if self.wspRight != ZOMBIE_PARSER else ''
         return wL + '/%s/' % self.main.regexp.pattern + wR
 
     def _grammar_assigned_notifier(self):
@@ -1240,7 +1240,11 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowOperator):
     """EXPERIMENTAL!!!"""
     def __init__(self, parser: Parser, name: str = '') -> None:
-        assert isinstance(parser, RegExp)
+        p = parser
+        while isinstance(p, Synonym):
+            p = p.parser
+        assert isinstance(p, RegExp), str(type(p))
+        self.regexp = p.main.regexp if isinstance(p, RE) else p.regexp
         super(Lookbehind, self).__init__(parser, name)
         print("WARNING: Lookbehind Operator is experimental!")
 
@@ -1258,7 +1262,7 @@ class Lookbehind(FlowOperator):
 
     def condition(self):
         node = self.grammar.last_node__
-        return node and self.parser.regexp.match(str(node))
+        return node and self.regexp.match(str(node))
 
 
 class NegativeLookbehind(Lookbehind):
@@ -1336,7 +1340,7 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            return Node(self, '').add_error(dsl_error_msg(self,
+            return Node(self, '').add_error(dsl_error_msg(self, \
                                                           "'%s' undefined or exhausted." % self.symbol.name)), text
         if text.startswith(value):
             return Node(self, value), text[len(value):]

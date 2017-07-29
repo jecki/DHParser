@@ -53,12 +53,12 @@ Index          = "\printindex" [PARSEP]
 
 #### block environments ####
 
-# TODO: ambiguity between generic block envieronments and generic inline environments
-
-block_environment   = known_environment | generic_environment
+block_environment   = known_environment | generic_block
 known_environment   = itemize | enumerate | figure | table | quotation
                     | verbatim
-generic_environment = begin_environment sequence §end_environment
+generic_block       = begin_generic_block sequence §end_generic_block
+begin_generic_block = -&SUCC_LB begin_environment &PRED_LB
+end_generic_block   = -&SUCC_LB  end_environment  &PRED_LB
 
 itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -85,7 +85,9 @@ text_elements       = command | text | block | inline_environment
 
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
-generic_inline_env  = begin_environment { text_elements }+ §end_environment
+generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
+begin_inline_env    = (-!SUCC_LB begin_environment) | (begin_environment !PRED_LB)
+end_inline_env      = (-!SUCC_LB end_environment)   | (end_environment   !PRED_LB)
 begin_environment   = "\begin{" §NAME §"}"
 end_environment     = "\end{" §::NAME §"}"
 
@@ -139,7 +141,10 @@ BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 WSPC       = /[ \t]+/                       # (horizontal) whitespace
-LF         = !PARSEP /[ \t]*\n[ \t]*/       # LF but not an empty line
+LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
 PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
 EOF        = !/./
+
+SUCC_LB    = /(?:.*\n)+\s*$/                # linebreak succeeding an arbitrary chunk of text
+PRED_LB    = /\s*?\n/                       # linebreak preeceding any text

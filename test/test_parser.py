@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_parsers.py - tests of the parsers-module of DHParser 
+"""test_parser.py - tests of the parsers-module of DHParser
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -26,7 +26,7 @@ sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, logging, compile_python_object
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
-    RegExp, Lookbehind, Lookahead, NegativeLookahead, OneOrMore
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
@@ -99,6 +99,14 @@ class TestInfiLoopsAndRecursion:
 
 
 class TestFlowControl:
+    def setup(self):
+        self.t1 = """
+        All work and no play 
+        makes Jack a dull boy
+        END
+        """
+        self.t2 = "All word and not play makes Jack a dull boy END\n"
+
     def test_lookbehind(self):
         ws = RegExp('\s*')
         end = RegExp("END")
@@ -108,15 +116,27 @@ class TestFlowControl:
         document = ws + sequence + doc_end + ws
 
         parser = Grammar(document)
-        t1 = """
-        All work and no play 
-        makes Jack a dull boy
-        END
-        """
-        cst = parser(t1)
+        cst = parser(self.t1)
         assert not cst.error_flag, cst.as_sxpr()
-        t2 = "All word and not play makes Jack a dull boy END\n"
-        cst = parser(t2)
+        cst = parser(self.t2)
+        assert cst.error_flag, cst.as_sxpr()
+
+    def test_lookbehind_indirect(self):
+        class LookbehindTestGrammar(Grammar):
+            parser_initialization__ = "upon instantiation"
+            ws = RegExp('\\s*')
+            end = RegExp('END')
+            SUCC_LB = RegExp('(?:.*\\n)+\\s*$')
+            doc_end = Series(Lookbehind(SUCC_LB), end)
+            word = RegExp('\w+')
+            sequence = OneOrMore(Series(NegativeLookahead(end), word, ws))
+            document = Series(ws, sequence, doc_end, ws)
+            root__ = document
+
+        parser = LookbehindTestGrammar()
+        cst = parser(self.t1)
+        assert not cst.error_flag, cst.as_sxpr()
+        cst = parser(self.t2)
         assert cst.error_flag, cst.as_sxpr()
 
 

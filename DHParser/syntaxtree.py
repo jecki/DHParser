@@ -524,7 +524,8 @@ def compact_sxpr(s) -> str:
 
 TransformationFunc = Union[Callable[[Node], Any], partial]
 
-if __name__ == "__main__":
-    st = mock_syntax_tree("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
-    print(st.as_sxpr())
-    print(st.as_xml())
+
+# if __name__ == "__main__":
+#     st = mock_syntax_tree("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
+#     print(st.as_sxpr())
+#     print(st.as_xml())
