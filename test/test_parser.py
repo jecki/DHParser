@@ -110,7 +110,7 @@ class TestFlowControl:
     def test_lookbehind(self):
         ws = RegExp('\s*')
         end = RegExp("END")
-        doc_end = Lookbehind(RegExp('(?:.*\n)+\s*$')) + end
+        doc_end = Lookbehind(RegExp('\\s*?\\n')) + end
         word = RegExp('\w+')
         sequence = OneOrMore(NegativeLookahead(end) + word + ws)
         document = ws + sequence + doc_end + ws
@@ -126,7 +126,7 @@ class TestFlowControl:
             parser_initialization__ = "upon instantiation"
             ws = RegExp('\\s*')
             end = RegExp('END')
-            SUCC_LB = RegExp('(?:.*\\n)+\\s*$')
+            SUCC_LB = RegExp('\\s*?\\n')
             doc_end = Series(Lookbehind(SUCC_LB), end)
             word = RegExp('\w+')
             sequence = OneOrMore(Series(NegativeLookahead(end), word, ws))

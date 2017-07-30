@@ -323,7 +323,7 @@ class TestFlowControlOperators:
             end      = /END/
             word     = /\w+/
             SUCC_LB  = indirection
-            indirection = /(?:.*\n)+\s*$/
+            indirection = /\s*?\n/
         """
         # result, messages, syntax_tree = compile_source(lang, None, get_ebnf_grammar(),
         #                 get_ebnf_transformer(), get_ebnf_compiler('LookbehindTest'))

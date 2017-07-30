@@ -231,8 +231,6 @@ def add_parser_guard(parser_func):
                     # in case of left recursion, the first recursive step that
                     # matches will store its result in the cache
                     parser.visited[location] = (node, rest)
-                # store last non-empty node for Lookbehind parser
-                if len(rest) < location:  grammar.last_node__ = node
 
             parser.recursion_counter[location] -= 1
 
@@ -579,8 +577,6 @@ class Grammar:
         self.variables__ = dict()     # type: Dict[str, List[str]]
         self.rollback__ = []          # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1  # type: int
-        # previously parsed node, needed by Lookbehind parser
-        self.last_node__ = Node(ZOMBIE_PARSER, '')  # type: Node
         # support for call stack tracing
         self.call_stack__ = []        # type: List[Parser]
         # snapshots of call stacks
@@ -1319,7 +1315,8 @@ class Lookbehind(FlowOperator):
         super(Lookbehind, self).__init__(parser, name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        if self.sign(self.condition()):
+        backwards_text = self.grammar.document__[-len(text) - 1::-1]
+        if self.sign(self.regexp.match(backwards_text)):
             return Node(self, ''), text
         else:
             return None, text
@@ -1328,14 +1325,7 @@ class Lookbehind(FlowOperator):
         return '-&' + self.parser.repr
 
     def sign(self, bool_value) -> bool:
-        return bool_value
-
-    def condition(self):
-        node = self.grammar.last_node__
-        assert node is not None  # can be removed
-        s = str(node)
-        assert s or node.parser.name == '__ZOMBIE__', str(node.parser)
-        return self.regexp.match(s)
+        return bool(bool_value)
 
 
 class NegativeLookbehind(Lookbehind):
@@ -1344,7 +1334,7 @@ class NegativeLookbehind(Lookbehind):
         return '-!' + self.parser.repr
 
     def sign(self, bool_value) -> bool:
-        return not bool_value
+        return not bool(bool_value)
 
 
 ########################################################################
