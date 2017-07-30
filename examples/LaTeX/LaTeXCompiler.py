@@ -15,29 +15,29 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename
-from DHParser.parser import Grammar, Compiler, Alternative, Pop, Required, Token, Synonym, \
-    Optional, OneOrMore, Series, RE, Capture, \
+from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
+    Required, Token, Synonym, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    PreprocessorFunc
-from DHParser.syntaxtree import traverse, remove_brackets, reduce_single_child, replace_by_single_child, \
-    remove_expendables, flatten, join, \
-    collapse, replace_content, TransformationFunc, \
-    remove_empty
+    PreprocessorFunc, \
+    Node, TransformationFunc, \
+    traverse, join, \
+    reduce_single_child, replace_by_single_child, remove_expendables, remove_empty, flatten, \
+    collapse, replace_content, remove_brackets
 
 
 #######################################################################
 #
-# SCANNER SECTION - Can be edited. Changes will be preserved.
+# PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
 
-def LaTeXScanner(text):
+def LaTeXPreprocessor(text):
     return text
 
 
-def get_scanner() -> PreprocessorFunc:
-    return LaTeXScanner
+def get_preprocessor() -> PreprocessorFunc:
+    return LaTeXPreprocessor
 
 
 #######################################################################
@@ -104,12 +104,12 @@ class LaTeXGrammar(Grammar):
     
     #### block environments ####
     
-    # TODO: ambiguity between generic bock envieronments and generic inline environments
-    
-    block_environment   = known_environment | generic_environment
+    block_environment   = known_environment | generic_block
     known_environment   = itemize | enumerate | figure | table | quotation
                         | verbatim
-    generic_environment = begin_environment sequence §end_environment
+    generic_block       = begin_generic_block sequence §end_generic_block
+    begin_generic_block = -&SUCC_LB begin_environment -&SUCC_LB
+    end_generic_block   = -&SUCC_LB  end_environment  -&SUCC_LB
     
     itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
     enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -136,7 +136,9 @@ class LaTeXGrammar(Grammar):
     
     inline_environment  = known_inline_env | generic_inline_env
     known_inline_env    = inline_math
-    generic_inline_env  = begin_environment { text_elements }+ §end_environment
+    generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
+    begin_inline_env    = (-!SUCC_LB begin_environment) | (begin_environment -!SUCC_LB)
+    end_inline_env      = (-!SUCC_LB end_environment)   | (end_environment   -!SUCC_LB)
     begin_environment   = "\begin{" §NAME §"}"
     end_environment     = "\end{" §::NAME §"}"
     
@@ -190,41 +192,45 @@ class LaTeXGrammar(Grammar):
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
     WSPC       = /[ \t]+/                       # (horizontal) whitespace
-    LF         = !PARSEP /[ \t]*\n[ \t]*/       # LF but not an empty line
+    LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
     PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
-    EOF        = !/./
+    EOF        = /(?!.)/
+    
+    SUCC_LB    = /(?!.)|(?:.*\n)+\s*$/          # linebreak succeeding an arbitrary chunk of text
+    # PRED_LB    = /\s*(?!.)|\s*?\n/              # linebreak preeceding any text
     """
     block_environment = Forward()
     block_of_paragraphs = Forward()
     text_elements = Forward()
-    source_hash__ = "9a8cba2b425d276af78e141d7dda162c"
+    source_hash__ = "eb91cd592f8a8c60a796ba705a121b72"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
     wspL__ = ''
     wspR__ = WSP__
-    EOF = NegativeLookahead(RE('.', wR=''))
-    PARSEP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n[ \\t]*', wR='')
-    LF = Series(NegativeLookahead(PARSEP), RE('[ \\t]*\\n[ \\t]*', wR=''))
-    WSPC = RE('[ \\t]+', wR='')
-    TEXTCHUNK = RE('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+', wR='')
-    BRACKETS = RE('[\\[\\]]', wR='')
-    ESCAPED = RE('\\\\[%$&_/]', wR='')
+    SUCC_LB = RegExp('(?!.)|(?:.*\\n)+\\s*$')
+    EOF = RegExp('(?!.)')
+    PARSEP = RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n[ \\t]*')
+    LF = Series(NegativeLookahead(PARSEP), RegExp('[ \\t]*\\n[ \\t]*'))
+    WSPC = RegExp('[ \\t]+')
+    TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
+    BRACKETS = RegExp('[\\[\\]]')
+    ESCAPED = RegExp('\\\\[%$&_/]')
     MATH = RE('[\\w_^{}[\\]]*')
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
-    structural = Alternative(Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"),
-                             Token("paragraph"), Token("subparagraph"), Token("item"))
-    blockcmd = Series(RE('[\\\\]', wR=''), Alternative(Series(Alternative(Token("begin{"), Token("end{")),
-                                                              Alternative(Token("enumerate"), Token("itemize"),
-                                                                          Token("figure"), Token("quote"),
-                                                                          Token("quotation"), Token("tabular")),
-                                                              Token("}")), structural))
+    structural = Alternative(Token("subsection"), Token("section"), Token("chapter"),
+                             Token("subsubsection"), Token("paragraph"), Token("subparagraph"),
+                             Token("item"))
+    blockcmd = Series(RegExp('[\\\\]'), Alternative(
+        Series(Alternative(Token("begin{"), Token("end{")),
+               Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"),
+                           Token("quotation"), Token("tabular")), Token("}")), structural))
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))
-    block = Series(RE('{', wR=''), ZeroOrMore(text_elements), Required(RE('}', wR='')))
+    block = Series(RegExp('{'), ZeroOrMore(text_elements), Required(RegExp('}')))
     config = Series(Token("["), cfgtext, Required(Token("]")))
     caption = Series(Token("\\caption"), block)
     includegraphics = Series(Token("\\includegraphics"), config, block)
@@ -235,13 +241,18 @@ class LaTeXGrammar(Grammar):
     inline_math = Series(Token("$"), MATH, Token("$"))
     end_environment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
     begin_environment = Series(Token("\\begin{"), Required(NAME), Required(Token("}")))
-    generic_inline_env = Series(begin_environment, OneOrMore(text_elements), Required(end_environment))
+    end_inline_env = Alternative(Series(NegativeLookbehind(SUCC_LB), end_environment),
+                                 Series(end_environment, NegativeLookbehind(SUCC_LB)))
+    begin_inline_env = Alternative(Series(NegativeLookbehind(SUCC_LB), begin_environment),
+                                   Series(begin_environment, NegativeLookbehind(SUCC_LB)))
+    generic_inline_env = Series(begin_inline_env, OneOrMore(text_elements),
+                                Required(end_inline_env))
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     text_elements.set(Alternative(command, text, block, inline_environment))
     paragraph = OneOrMore(Series(NegativeLookahead(blockcmd), text_elements, RE('')))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
-    block_of_paragraphs.set(Series(RE('{', wR=''), sequence, Required(RE('}', wR=''))))
+    block_of_paragraphs.set(Series(RegExp('{'), sequence, Required(RegExp('}'))))
     table_config = Series(Token("{"), RE('[lcr|]+'), Token("}"))
     table = Series(Token("\\begin{tabular}"), table_config, sequence, Token("\\end{tabular}"))
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Token("\\end{verbatim}"))
@@ -251,9 +262,11 @@ class LaTeXGrammar(Grammar):
     enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item),
                        Required(Token("\\end{enumerate}")))
     itemize = Series(Token("\\begin{itemize}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{itemize}")))
-    generic_environment = Series(begin_environment, sequence, Required(end_environment))
+    end_generic_block = Series(Lookbehind(SUCC_LB), end_environment, Lookbehind(SUCC_LB))
+    begin_generic_block = Series(Lookbehind(SUCC_LB), begin_environment, Lookbehind(SUCC_LB))
+    generic_block = Series(begin_generic_block, sequence, Required(end_generic_block))
     known_environment = Alternative(itemize, enumerate, figure, table, quotation, verbatim)
-    block_environment.set(Alternative(known_environment, generic_environment))
+    block_environment.set(Alternative(known_environment, generic_block))
     Index = Series(Token("\\printindex"), Optional(PARSEP))
     Bibliography = Series(Token("\\bibliography"), block, Optional(PARSEP))
     SubParagraph = Series(Token("\\subparagpaph"), block, Optional(PARSEP), ZeroOrMore(sequence))
@@ -369,7 +382,7 @@ class LaTeXCompiler(Compiler):
         assert re.match('\w+\Z', grammar_name)
 
     def on_latexdoc(self, node):
-        return node.as_sexpr()
+        return node
 
     def on_preamble(self, node):
         pass
@@ -377,10 +390,91 @@ class LaTeXCompiler(Compiler):
     def on_document(self, node):
         pass
 
-    def on_blockenv(self, node):
+    def on_frontpages(self, node):
         pass
 
-    def on_parblock(self, node):
+    def on_Chapters(self, node):
+        pass
+
+    def on_Chapter(self, node):
+        pass
+
+    def on_Sections(self, node):
+        pass
+
+    def on_Section(self, node):
+        pass
+
+    def on_SubSections(self, node):
+        pass
+
+    def on_SubSection(self, node):
+        pass
+
+    def on_SubSubSections(self, node):
+        pass
+
+    def on_SubSubSection(self, node):
+        pass
+
+    def on_Paragraphs(self, node):
+        pass
+
+    def on_Paragraph(self, node):
+        pass
+
+    def on_SubParagraphs(self, node):
+        pass
+
+    def on_SubParagraph(self, node):
+        pass
+
+    def on_Bibliography(self, node):
+        pass
+
+    def on_Index(self, node):
+        pass
+
+    def on_block_environment(self, node):
+        pass
+
+    def on_known_environment(self, node):
+        pass
+
+    def on_generic_block(self, node):
+        pass
+
+    def on_begin_generic_block(self, node):
+        pass
+
+    def on_end_generic_block(self, node):
+        pass
+
+    def on_itemize(self, node):
+        pass
+
+    def on_enumerate(self, node):
+        pass
+
+    def on_item(self, node):
+        pass
+
+    def on_figure(self, node):
+        pass
+
+    def on_quotation(self, node):
+        pass
+
+    def on_verbatim(self, node):
+        pass
+
+    def on_table(self, node):
+        pass
+
+    def on_table_config(self, node):
+        pass
+
+    def on_block_of_paragraphs(self, node):
         pass
 
     def on_sequence(self, node):
@@ -389,16 +483,49 @@ class LaTeXCompiler(Compiler):
     def on_paragraph(self, node):
         pass
 
-    def on_inlineenv(self, node):
+    def on_text_elements(self, node):
         pass
 
-    def on_beginenv(self, node):
+    def on_inline_environment(self, node):
         pass
 
-    def on_endenv(self, node):
+    def on_known_inline_env(self, node):
+        pass
+
+    def on_generic_inline_env(self, node):
+        pass
+
+    def on_begin_inline_env(self, node):
+        pass
+
+    def on_end_inline_env(self, node):
+        pass
+
+    def on_begin_environment(self, node):
+        pass
+
+    def on_end_environment(self, node):
+        pass
+
+    def on_inline_math(self, node):
         pass
 
     def on_command(self, node):
+        pass
+
+    def on_known_command(self, node):
+        pass
+
+    def on_generic_command(self, node):
+        pass
+
+    def on_footnote(self, node):
+        pass
+
+    def on_includegraphics(self, node):
+        pass
+
+    def on_caption(self, node):
         pass
 
     def on_config(self, node):
@@ -419,10 +546,16 @@ class LaTeXCompiler(Compiler):
     def on_blockcmd(self, node):
         pass
 
+    def on_structural(self, node):
+        pass
+
     def on_CMDNAME(self, node):
         pass
 
     def on_NAME(self, node):
+        pass
+
+    def on_MATH(self, node):
         pass
 
     def on_ESCAPED(self, node):
@@ -444,6 +577,12 @@ class LaTeXCompiler(Compiler):
         pass
 
     def on_EOF(self, node):
+        pass
+
+    def on_SUCC_LB(self, node):
+        pass
+
+    def on_PRED_LB(self, node):
         pass
 
 
@@ -473,8 +612,8 @@ def compile_src(source):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_scanner(), 
+            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+        result = compile_source(source, get_preprocessor(),
                                 get_grammar(),
                                 get_transformer(), compiler)
     return result
@@ -488,6 +627,6 @@ if __name__ == "__main__":
                 print(error)
             sys.exit(1)
         else:
-            print(result)
+            print(result.as_xml() if isinstance(result, Node) else result)
     else:
         print("Usage: LaTeXCompiler.py [FILENAME]")

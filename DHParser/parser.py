@@ -132,7 +132,7 @@ PreprocessorFunc = Union[Callable[[str], str], partial]
 LEFT_RECURSION_DEPTH = 8  # type: int
 # because of python's recursion depth limit, this value ought not to be
 # set too high. PyPy allows higher values than CPython
-MAX_DROPOUTS = 5  # type: int
+MAX_DROPOUTS = 3  # type: int
 # stop trying to recover parsing after so many errors
 
 
@@ -231,7 +231,8 @@ def add_parser_guard(parser_func):
                     # in case of left recursion, the first recursive step that
                     # matches will store its result in the cache
                     parser.visited[location] = (node, rest)
-                grammar.last_node__ = node   # store last node for Lookbehind parser
+                # store last non-empty node for Lookbehind parser
+                if len(rest) < location:  grammar.last_node__ = node
 
             parser.recursion_counter[location] -= 1
 
@@ -293,6 +294,15 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     2. *Anonymous parsers* where the name-field just contains the empty
        string. AST-transformation of Anonymous parsers can be hooked
        only to their class name, and not to the individual parser.
+
+    Parser objects are callable and parsing is done by calling a parser
+    object with the text to parse. If the parser matches it returns
+    a tuple consisting of a node representing the root of the concrete
+    syntax tree resulting from the match as well as the substring
+    `text[i:]` where i is the length of matched text (which can be
+    zero in the case of parsers like `ZeroOrMore` or `Optional`).
+    If `i > 0` then the parser has "moved forward". If the parser does
+    not match it returns `(None, text).
     """
 
     ApplyFunc = Callable[['Parser'], None]
@@ -304,15 +314,27 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         self.reset()
 
     def __deepcopy__(self, memo):
+        """Deepcopy method of the parser. Upon instantiation of a Grammar-
+        object, parsers will be deep-copied to the Grammar object. If a
+        derived parser-class changes the signature of the constructor,
+        `__deepcopy__`-method must be replaced (i.e. overridden without
+        calling the same method from the superclass) by the derived class.
+        """
         return self.__class__(self.name)
 
     def reset(self):
+        """Initializes or resets any parser variables. If overwritten,
+        the `reset()`-method of the parent class must be called from the
+        `reset()`-method of the derived class."""
         self.visited = dict()            # type: Dict[int, Tuple[Node, str]]
         self.recursion_counter = dict()  # type: Dict[int, int]
         self.cycle_detection = set()     # type: Set[Callable]
         return self
 
     def __call__(self, text: str) -> Tuple[Node, str]:
+        """Applies the parser to the given `text` and returns a node with
+        the results or None as well as the text at the position right behind
+        the matching string."""
         return None, text  # default behaviour: don't match
 
     def __add__(self, other: 'Parser') -> 'Series':
@@ -332,10 +354,12 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
 
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
-        assert self._grammar is None or self._grammar == grammar, \
-            "Parser has already been assigned to a Grammar object!"
-        self._grammar = grammar
-        self._grammar_assigned_notifier()
+        if self._grammar is None:
+            self._grammar = grammar
+            self._grammar_assigned_notifier()
+        else:
+            assert self._grammar == grammar, \
+                "Parser has already been assigned to a different Grammar object!"
 
     def _grammar_assigned_notifier(self):
         """A function that notifies the parser object that it has been
@@ -345,7 +369,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     def apply(self, func: ApplyFunc):
         """
         Applies function `func(parser)` recursively to this parser and all
-        descendants of the tree of parsers. The same function can never
+        descendant parsers if any exist. The same function can never
         be applied twice between calls of the ``reset()``-method!
         """
         if func in self.cycle_detection:
@@ -387,7 +411,7 @@ class Grammar:
 
         >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
         >>> number_parser = Grammar(number)
-        >>> number_parser("3.1416").show()
+        >>> number_parser("3.1416").content()
         '3.1416'
 
     Collecting the parsers that define a grammar in a descentand class of
@@ -518,7 +542,7 @@ class Grammar:
         # parsers not connected to the root object will be copied later
         # on demand (see Grammar.__getitem__()). Usually, the need to
         # do so only arises during testing.
-        self.root__ = root if root else copy.deepcopy(self.__class__.root__)
+        self.root__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
 
         if self.wspL__:
             self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
@@ -556,7 +580,7 @@ class Grammar:
         self.rollback__ = []          # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1  # type: int
         # previously parsed node, needed by Lookbehind parser
-        self.last_node__ = None       # type: Node
+        self.last_node__ = Node(ZOMBIE_PARSER, '')  # type: Node
         # support for call stack tracing
         self.call_stack__ = []        # type: List[Parser]
         # snapshots of call stacks
@@ -807,13 +831,20 @@ class PreprocessorToken(Parser):
 
 
 class RegExp(Parser):
-    """
-    Regular expression parser.
+    """Regular expression parser.
     
     The RegExp-parser parses text that matches a regular expression.
     RegExp can also be considered as the "atomic parser", because all
     other parsers delegate part of the parsing job to other parsers,
     but do not match text directly.
+
+    Example:
+    >>> word = RegExp(r'\w+')
+    >>> Grammar(word)("Haus").content()
+    'Haus'
+
+    EBNF-Notation:  `/ ... /`
+    EBNF-Example:   `word = /\w+/`
     """
 
     def __init__(self, regexp, name: str = '') -> None:
@@ -856,6 +887,21 @@ class RE(Parser):
     string, e.g. use r'\s*' or r'[\t ]+', but not r'\s+'. If the
     respective parameters in the constructor are set to ``None`` the
     default whitespace expression from the Grammar object will be used.
+
+    Example (allowing whitespace on the right hand side, but not on
+    the left hand side of a regular expression):
+    >>> word = RE(r'\w+', wR=r'\s*')
+    >>> parser = Grammar(word)
+    >>> result = parser('Haus ')
+    >>> result.content()
+    'Haus '
+    >>> result.structure()
+    '(:RE (:RegExp "Haus") (:Whitespace " "))'
+    >>> parser(' Haus').content()
+    ' <<< Error on " Haus" | Parser did not match! Invalid source file? >>> '
+
+    EBNF-Notation:  `/ ... /~`  or  `~/ ... /`  or  `~/ ... /~`
+    EBNF-Example:   `word = /\w+/~`
     """
     def __init__(self, regexp, wL=None, wR=None, name=''):
         """Constructor for class RE.
@@ -1004,6 +1050,30 @@ class NaryOperator(Parser):
 
 
 class Optional(UnaryOperator):
+    """
+    Parser `Optional` always matches, even if its child-parser
+    did not match.
+
+    If the child-parser did not match `Optional` returns a node
+    with no content and does not move forward in the text.
+
+    If the child-parser did match, `Optional` returns the a node
+    with the node returnd by the child-parser as its single
+    child and the text at the position where the child-parser
+    left it.
+
+    Examples:
+    >>> number = Optional(Token('-')) + RegExp(r'\d+') + Optional(RegExp(r'\.\d+'))
+    >>> Grammar(number)('3.14159').content()
+    '3.14159'
+    >>> Grammar(number)('3.14159').structure()
+    '(:Series (:Optional) (:RegExp "3") (:Optional (:RegExp ".14159")))'
+    >>> Grammar(number)('-1').content()
+    '-1'
+
+    EBNF-Notation: `[ ... ]`
+    EBNF-Example:  `number = ["-"]  /\d+/  [ /\.\d+/ ]
+    """
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Optional, self).__init__(parser, name)
         # assert isinstance(parser, Parser)
@@ -1023,6 +1093,7 @@ class Optional(UnaryOperator):
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.name else self.parser.repr) + ']'
+
 
 class ZeroOrMore(Optional):
     def __call__(self, text: str) -> Tuple[Node, str]:
@@ -1120,12 +1191,12 @@ class Alternative(NaryOperator):
 
     # the order of the sub-expression matters!
     >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
-    >>> Grammar(number)("3.1416").show()
+    >>> Grammar(number)("3.1416").content()
     '3 <<< Error on ".1416" | Parser stopped before end! trying to recover... >>> '
 
     # the most selective expression should be put first:
     >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
-    >>> Grammar(number)("3.1416").show()
+    >>> Grammar(number)("3.1416").content()
     '3.1416'
     """
 
@@ -1246,7 +1317,6 @@ class Lookbehind(FlowOperator):
         assert isinstance(p, RegExp), str(type(p))
         self.regexp = p.main.regexp if isinstance(p, RE) else p.regexp
         super(Lookbehind, self).__init__(parser, name)
-        print("WARNING: Lookbehind Operator is experimental!")
 
     def __call__(self, text: str) -> Tuple[Node, str]:
         if self.sign(self.condition()):
@@ -1262,7 +1332,10 @@ class Lookbehind(FlowOperator):
 
     def condition(self):
         node = self.grammar.last_node__
-        return node and self.regexp.match(str(node))
+        assert node is not None  # can be removed
+        s = str(node)
+        assert s or node.parser.name == '__ZOMBIE__', str(node.parser)
+        return self.regexp.match(s)
 
 
 class NegativeLookbehind(Lookbehind):

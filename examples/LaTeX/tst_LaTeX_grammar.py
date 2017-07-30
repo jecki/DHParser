@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""tst_grammar.py - runs the unit tests for the LaTeX grammar
+"""tst_LaTeX_grammar.py - runs the unit tests for the LaTeX grammar
 
 Author: Eckhart Arnold <arnold@badw.de>
 

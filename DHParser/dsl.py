@@ -81,7 +81,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     last_value, counterpart, accumulate, PreprocessorFunc, \\
     Node, TransformationFunc, \\
-    traverse, remove_children_if, \\
+    traverse, remove_children_if, join, \\
     reduce_single_child, replace_by_single_child, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\

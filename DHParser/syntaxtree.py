@@ -132,6 +132,17 @@ StrictResultType = Union[ChildrenType, str]
 ResultType = Union[ChildrenType, 'Node', str, None]
 
 
+def oneliner_sxpr(sxpr: str) -> str:
+    """Returns S-expression `sxpr` as a one liner without unnecessary
+    whitespace.
+
+    Example:
+    >>> oneliner_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
+    '(a (b c))'
+    """
+    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', sxpr)).strip()
+
+
 class Node:
     """
     Represents a node in the concrete or abstract syntax tree.
@@ -259,13 +270,34 @@ class Node:
     def errors(self) -> List[Error]:
         return [Error(self.pos, err) for err in self._errors]
 
-    def show(self) -> str:
-        """Returns content as string, inserting error messages where
-        errors occurred.
+    def add_error(self, error_str) -> 'Node':
+        self._errors.append(error_str)
+        self.error_flag = True
+        return self
+
+    def propagate_error_flags(self) -> None:
+        """Recursively propagates error flags set on child nodes to its
+        parents. This can be used if errors are added to descendant
+        nodes after syntaxtree construction, i.e. in the compile phase.
         """
-        s = "".join(child.show() for child in self.children) if self.children \
-            else str(self.result)
-        return (' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
+        for child in self.children:
+            child.propagate_error_flags()
+            self.error_flag = self.error_flag or child.error_flag
+
+    def collect_errors(self, clear_errors=False) -> List[Error]:
+        """
+        Returns all errors of this node or any child node in the form
+        of a set of tuples (position, error_message), where position
+        is always relative to this node.
+        """
+        errors = self.errors
+        if clear_errors:
+            self._errors = []
+            self.error_flag = False
+        if self.children:
+            for child in self.children:
+                errors.extend(child.collect_errors(clear_errors))
+        return errors
 
     def _tree_repr(self, tab, openF, closeF, dataF=identity, density=0) -> str:
         """
@@ -363,39 +395,20 @@ class Node:
 
         return self._tree_repr('    ', opening, closing, density=1)
 
-    def add_error(self, error_str) -> 'Node':
-        self._errors.append(error_str)
-        self.error_flag = True
-        return self
+    def structure(self) -> str:
+        """Return structure (and content) as S-expression on a single line
+        without any line breaks."""
+        return oneliner_sxpr(self.as_sxpr())
 
-    def propagate_error_flags(self) -> None:
-        """Recursively propagates error flags set on child nodes to its
-        parents. This can be used if errors are added to descendant 
-        nodes after syntaxtree construction, i.e. in the compile phase.
+    def content(self) -> str:
         """
-        for child in self.children:
-            child.propagate_error_flags()
-            self.error_flag = self.error_flag or child.error_flag
-
-    def collect_errors(self, clear_errors=False) -> List[Error]:
+        Returns content as string, inserting error messages where
+        errors occurred.
         """
-        Returns all errors of this node or any child node in the form
-        of a set of tuples (position, error_message), where position
-        is always relative to this node.
-        """
-        errors = self.errors
-        if clear_errors:
-            self._errors = []
-            self.error_flag = False
-        if self.children:
-            for child in self.children:
-                errors.extend(child.collect_errors(clear_errors))
-        return errors
-
-    def log(self, log_file_name):
-        st_file_name = log_file_name
-        with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
-            f.write(self.as_sxpr())
+        s = "".join(child.content() for child in self.children) if self.children \
+            else str(self.result)
+        return (
+        ' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
 
     def find(self, match_function: Callable) -> Iterator['Node']:
         """Finds nodes in the tree that match a specific criterion.
@@ -458,6 +471,11 @@ class Node:
     #             return self.result,
     #     return nav(path.split('/'))
 
+    def log(self, log_file_name):
+        st_file_name = log_file_name
+        with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
+            f.write(self.as_sxpr())
+
 
 def mock_syntax_tree(sxpr):
     """
@@ -509,17 +527,6 @@ def mock_syntax_tree(sxpr):
                 sxpr = sxpr[m.end():]
         result = "\n".join(lines)
     return Node(MockParser(name, ':' + class_name), result)
-
-
-def compact_sxpr(s) -> str:
-    """Returns S-expression ``s`` as a one liner without unnecessary
-    whitespace.
-
-    Example:
-    >>> compact_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
-    '(a (b c))'
-    """
-    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', s)).strip()
 
 
 TransformationFunc = Union[Callable[[Node], Any], partial]
