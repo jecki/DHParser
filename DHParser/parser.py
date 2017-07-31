@@ -573,6 +573,7 @@ class Grammar:
 
     def _reset__(self):
         self.document__ = ""          # type: str
+        self._reversed__ = ""         # type: str
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = dict()     # type: Dict[str, List[str]]
         self.rollback__ = []          # type: List[Tuple[int, Callable]]
@@ -584,6 +585,13 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = True  # type: bool
         self.left_recursion_encountered__ = False  # type: bool
+
+
+    @property
+    def reversed__(self) -> str:
+        if not self._reversed__:
+            self._reversed__ = self.document__[::-1]
+        return self._reversed__
 
 
     def _add_parser__(self, parser: Parser) -> None:
@@ -1315,7 +1323,7 @@ class Lookbehind(FlowOperator):
         super(Lookbehind, self).__init__(parser, name)
 
     def __call__(self, text: str) -> Tuple[Node, str]:
-        backwards_text = self.grammar.document__[-len(text) - 1::-1]
+        backwards_text = self.grammar.reversed__[len(text):]  # self.grammar.document__[-len(text) - 1::-1]
         if self.sign(self.regexp.match(backwards_text)):
             return Node(self, ''), text
         else:

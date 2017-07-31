@@ -57,8 +57,8 @@ block_environment   = known_environment | generic_block
 known_environment   = itemize | enumerate | figure | table | quotation
                     | verbatim
 generic_block       = begin_generic_block sequence §end_generic_block
-begin_generic_block = -&SUCC_LB begin_environment -&SUCC_LB
-end_generic_block   = -&SUCC_LB  end_environment  -&SUCC_LB
+begin_generic_block = -&LB begin_environment -&LB
+end_generic_block   = -&LB  end_environment  -&LB
 
 itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -86,8 +86,8 @@ text_elements       = command | text | block | inline_environment
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
 generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
-begin_inline_env    = (-!SUCC_LB begin_environment) | (begin_environment -!SUCC_LB)
-end_inline_env      = (-!SUCC_LB end_environment)   | (end_environment   -!SUCC_LB)
+begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
+end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)
 begin_environment   = "\begin{" §NAME §"}"
 end_environment     = "\end{" §::NAME §"}"
 
@@ -98,7 +98,7 @@ inline_math         = "$" MATH "$"
 
 command             = known_command | generic_command
 known_command       = footnote | includegraphics | caption
-generic_command     = CMDNAME [[ //~ config ] //~ block ]
+generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
 includegraphics     = "\includegraphics" config block
@@ -117,10 +117,11 @@ text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
 word_sequence = { TEXTCHUNK //~ }+
 
+no_command = "\begin{" | "\end" | structural
 blockcmd   = /[\\]/ ( ( "begin{" | "end{" )
                       ( "enumerate" | "itemize" | "figure" | "quote"
                       | "quotation" | "tabular") "}"
-                    | structural)
+                    | structural | begin_generic_block | end_generic_block )
 
 structural = "subsection" | "section" | "chapter" | "subsubsection"
            | "paragraph" | "subparagraph" | "item"
@@ -146,5 +147,4 @@ PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
 EOF        = /(?!.)/
 
-SUCC_LB    = /(?!.)|(?:.*\n)+\s*$/          # linebreak succeeding an arbitrary chunk of text
-# PRED_LB    = /\s*(?!.)|\s*?\n/              # linebreak preeceding any text
+LB         = /\s*?\n|\s*?$/                 # backwards line break for Lookbehind-Operator

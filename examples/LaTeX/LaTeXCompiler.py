@@ -108,8 +108,8 @@ class LaTeXGrammar(Grammar):
     known_environment   = itemize | enumerate | figure | table | quotation
                         | verbatim
     generic_block       = begin_generic_block sequence §end_generic_block
-    begin_generic_block = -&SUCC_LB begin_environment -&SUCC_LB
-    end_generic_block   = -&SUCC_LB  end_environment  -&SUCC_LB
+    begin_generic_block = -&LB begin_environment -&LB
+    end_generic_block   = -&LB  end_environment  -&LB
     
     itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
     enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -137,8 +137,8 @@ class LaTeXGrammar(Grammar):
     inline_environment  = known_inline_env | generic_inline_env
     known_inline_env    = inline_math
     generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
-    begin_inline_env    = (-!SUCC_LB begin_environment) | (begin_environment -!SUCC_LB)
-    end_inline_env      = (-!SUCC_LB end_environment)   | (end_environment   -!SUCC_LB)
+    begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
+    end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)
     begin_environment   = "\begin{" §NAME §"}"
     end_environment     = "\end{" §::NAME §"}"
     
@@ -149,7 +149,7 @@ class LaTeXGrammar(Grammar):
     
     command             = known_command | generic_command
     known_command       = footnote | includegraphics | caption
-    generic_command     = CMDNAME [[ //~ config ] //~ block ]
+    generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
     
     footnote            = "\footnote" block_of_paragraphs
     includegraphics     = "\includegraphics" config block
@@ -168,10 +168,11 @@ class LaTeXGrammar(Grammar):
     cfgtext    = { word_sequence | (ESCAPED //~) }+
     word_sequence = { TEXTCHUNK //~ }+
     
+    no_command = "\begin{" | "\end" | structural
     blockcmd   = /[\\]/ ( ( "begin{" | "end{" )
                           ( "enumerate" | "itemize" | "figure" | "quote"
                           | "quotation" | "tabular") "}"
-                        | structural)
+                        | structural | begin_generic_block | end_generic_block )
     
     structural = "subsection" | "section" | "chapter" | "subsubsection"
                | "paragraph" | "subparagraph" | "item"
@@ -197,19 +198,20 @@ class LaTeXGrammar(Grammar):
                                                 # [whitespace] linefeed [whitespace] linefeed
     EOF        = /(?!.)/
     
-    SUCC_LB    = /(?!.)|(?:.*\n)+\s*$/          # linebreak succeeding an arbitrary chunk of text
-    # PRED_LB    = /\s*(?!.)|\s*?\n/              # linebreak preeceding any text
+    LB         = /\s*?\n|\s*?$/                 # backwards line break for Lookbehind-Operator
     """
+    begin_generic_block = Forward()
     block_environment = Forward()
     block_of_paragraphs = Forward()
+    end_generic_block = Forward()
     text_elements = Forward()
-    source_hash__ = "eb91cd592f8a8c60a796ba705a121b72"
+    source_hash__ = "cf722f798fd396d8094fcc28831d9dcd"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
     wspL__ = ''
     wspR__ = WSP__
-    SUCC_LB = RegExp('(?!.)|(?:.*\\n)+\\s*$')
+    LB = RegExp('\\s*?\\n|\\s*?$')
     EOF = RegExp('(?!.)')
     PARSEP = RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n[ \\t]*')
     LF = Series(NegativeLookahead(PARSEP), RegExp('[ \\t]*\\n[ \\t]*'))
@@ -220,13 +222,9 @@ class LaTeXGrammar(Grammar):
     MATH = RE('[\\w_^{}[\\]]*')
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
-    structural = Alternative(Token("subsection"), Token("section"), Token("chapter"),
-                             Token("subsubsection"), Token("paragraph"), Token("subparagraph"),
-                             Token("item"))
-    blockcmd = Series(RegExp('[\\\\]'), Alternative(
-        Series(Alternative(Token("begin{"), Token("end{")),
-               Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"),
-                           Token("quotation"), Token("tabular")), Token("}")), structural))
+    structural = Alternative(Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item"))
+    blockcmd = Series(RegExp('[\\\\]'), Alternative(Series(Alternative(Token("begin{"), Token("end{")), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), structural, begin_generic_block, end_generic_block))
+    no_command = Alternative(Token("\\begin{"), Token("\\end"), structural)
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))
@@ -235,18 +233,15 @@ class LaTeXGrammar(Grammar):
     caption = Series(Token("\\caption"), block)
     includegraphics = Series(Token("\\includegraphics"), config, block)
     footnote = Series(Token("\\footnote"), block_of_paragraphs)
-    generic_command = Series(CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
+    generic_command = Series(NegativeLookahead(no_command), CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
     known_command = Alternative(footnote, includegraphics, caption)
     command = Alternative(known_command, generic_command)
     inline_math = Series(Token("$"), MATH, Token("$"))
     end_environment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
     begin_environment = Series(Token("\\begin{"), Required(NAME), Required(Token("}")))
-    end_inline_env = Alternative(Series(NegativeLookbehind(SUCC_LB), end_environment),
-                                 Series(end_environment, NegativeLookbehind(SUCC_LB)))
-    begin_inline_env = Alternative(Series(NegativeLookbehind(SUCC_LB), begin_environment),
-                                   Series(begin_environment, NegativeLookbehind(SUCC_LB)))
-    generic_inline_env = Series(begin_inline_env, OneOrMore(text_elements),
-                                Required(end_inline_env))
+    end_inline_env = Alternative(Series(NegativeLookbehind(LB), end_environment), Series(end_environment, NegativeLookbehind(LB)))
+    begin_inline_env = Alternative(Series(NegativeLookbehind(LB), begin_environment), Series(begin_environment, NegativeLookbehind(LB)))
+    generic_inline_env = Series(begin_inline_env, OneOrMore(text_elements), Required(end_inline_env))
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     text_elements.set(Alternative(command, text, block, inline_environment))
@@ -259,11 +254,10 @@ class LaTeXGrammar(Grammar):
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Token("\\end{quotation}")), Series(Token("\\begin{quote}"), sequence, Token("\\end{quote}")))
     figure = Series(Token("\\begin{figure}"), sequence, Token("\\end{figure}"))
     item = Series(Token("\\item"), Optional(PARSEP), sequence)
-    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item),
-                       Required(Token("\\end{enumerate}")))
+    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{enumerate}")))
     itemize = Series(Token("\\begin{itemize}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{itemize}")))
-    end_generic_block = Series(Lookbehind(SUCC_LB), end_environment, Lookbehind(SUCC_LB))
-    begin_generic_block = Series(Lookbehind(SUCC_LB), begin_environment, Lookbehind(SUCC_LB))
+    end_generic_block.set(Series(Lookbehind(LB), end_environment, Lookbehind(LB)))
+    begin_generic_block.set(Series(Lookbehind(LB), begin_environment, Lookbehind(LB)))
     generic_block = Series(begin_generic_block, sequence, Required(end_generic_block))
     known_environment = Alternative(itemize, enumerate, figure, table, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))
