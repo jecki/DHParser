@@ -722,20 +722,23 @@ class Grammar:
             elif os.path.exists(path):
                 os.remove(path)
 
-        if not log_file_name:
-            name = self.__class__.__name__
-            log_file_name = name[:-7] if name.lower().endswith('grammar') else name
-        full_history, match_history, errors_only = [], [], []
-        for record in self.history__:
-            line = ";  ".join(prepare_line(record))
-            full_history.append(line)
-            if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
-                match_history.append(line)
-                if record.node.error_flag:
-                    errors_only.append(line)
-        write_log(full_history, log_file_name + '_full')
-        write_log(match_history, log_file_name + '_match')
-        write_log(errors_only, log_file_name + '_errors')
+        if is_logging():
+            assert self.history__, \
+                "Parser did not yet run or logging was turned off when running parser!"
+            if not log_file_name:
+                name = self.__class__.__name__
+                log_file_name = name[:-7] if name.lower().endswith('grammar') else name
+            full_history, match_history, errors_only = [], [], []
+            for record in self.history__:
+                line = ";  ".join(prepare_line(record))
+                full_history.append(line)
+                if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
+                    match_history.append(line)
+                    if record.node.error_flag:
+                        errors_only.append(line)
+            write_log(full_history, log_file_name + '_full')
+            write_log(match_history, log_file_name + '_match')
+            write_log(errors_only, log_file_name + '_errors')
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:

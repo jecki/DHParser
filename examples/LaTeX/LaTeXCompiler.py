@@ -108,8 +108,8 @@ class LaTeXGrammar(Grammar):
     known_environment   = itemize | enumerate | figure | table | quotation
                         | verbatim
     generic_block       = begin_generic_block sequence §end_generic_block
-    begin_generic_block = -&LB begin_environment -&LB
-    end_generic_block   = -&LB  end_environment  -&LB
+    begin_generic_block = -&LB begin_environment (EOF | -&LB)
+    end_generic_block   = -&LB  end_environment  (EOF | -&LB)
     
     itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
     enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -138,7 +138,7 @@ class LaTeXGrammar(Grammar):
     known_inline_env    = inline_math
     generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
     begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
-    end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)
+    end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)       # ambiguity with genric_block when EOF
     begin_environment   = "\begin{" §NAME §"}"
     end_environment     = "\end{" §::NAME §"}"
     
@@ -205,7 +205,7 @@ class LaTeXGrammar(Grammar):
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
     text_elements = Forward()
-    source_hash__ = "cf722f798fd396d8094fcc28831d9dcd"
+    source_hash__ = "f941997b8aca0a8aa2d2f38cb52818eb"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -256,8 +256,8 @@ class LaTeXGrammar(Grammar):
     item = Series(Token("\\item"), Optional(PARSEP), sequence)
     enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{enumerate}")))
     itemize = Series(Token("\\begin{itemize}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{itemize}")))
-    end_generic_block.set(Series(Lookbehind(LB), end_environment, Lookbehind(LB)))
-    begin_generic_block.set(Series(Lookbehind(LB), begin_environment, Lookbehind(LB)))
+    end_generic_block.set(Series(Lookbehind(LB), end_environment, Alternative(EOF, Lookbehind(LB))))
+    begin_generic_block.set(Series(Lookbehind(LB), begin_environment, Alternative(EOF, Lookbehind(LB))))
     generic_block = Series(begin_generic_block, sequence, Required(end_generic_block))
     known_environment = Alternative(itemize, enumerate, figure, table, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))

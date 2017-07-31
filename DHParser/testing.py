@@ -146,22 +146,21 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
             cst = parser(test_code, parser_name)
-            if is_logging():
-                cst.log("match_%s_%s.cst" % (parser_name, test_name))
-                parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
+            cst.log("match_%s_%s.cst" % (parser_name, test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                if is_logging():
-                    ast.log("match_%s_%s.ast" % (parser_name, test_name))
+                ast.log("match_%s_%s.ast" % (parser_name, test_name))
             if cst.error_flag:
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(m.replace('\n', '\n\t\t') for m in
                                            error_messages(test_code, cst.collect_errors()))))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+                # write parsing-history log only in case of failure!
+                parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                     errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                                   (test_name, parser_name, cst.as_sxpr()))
@@ -184,19 +183,20 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    fail-test  "' + test_name + '" ... '
                 errflag = len(errata)
             cst = parser(test_code, parser_name)
-            if is_logging():
-                cst.log("fail_%s_%s.cst" % (parser_name, test_name))
-                parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
+            # doesn't make sense to write cst for fail-tests
+            # cst.log("fail_%s_%s.cst" % (parser_name, test_name))
             if not cst.error_flag:
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+                # write parsing-history log only in case of test-failure
+                parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
             if verbose:
                 print(infostr + "OK" if len(errata) == errflag else "FAIL")
 
     # write test-report
     if report:
-        report_dir = os.path.join(unit_dir, "REPORT")
+        report_dir = "REPORT"
         if not os.path.exists(report_dir):
             os.mkdir(report_dir)
         with open(os.path.join(report_dir, unit_name + '.report'), 'w') as f:
@@ -214,18 +214,21 @@ def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown
     all_errors = collections.OrderedDict()
     if verbose:
         print("\nScanning test-directory: " + directory)
-    for filename in sorted(os.listdir(directory)):
+    save_cwd = os.getcwd()
+    os.chdir(directory)
+    for filename in sorted(os.listdir()):
         if filename.lower().find("test") >= 0:
             try:
                 if verbose:
                     print("\nRunning grammar tests from: " + filename)
-                errata = grammar_unit(os.path.join(directory, filename),
-                                      parser_factory, transformer_factory, report, verbose)
+                errata = grammar_unit(filename, parser_factory,
+                                      transformer_factory, report, verbose)
                 if errata:
                     all_errors[filename] = errata
             except ValueError as e:
                 if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                     raise e
+    os.chdir(save_cwd)
     error_report = []
     if all_errors:
         for filename in all_errors:

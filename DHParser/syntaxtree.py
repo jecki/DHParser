@@ -31,7 +31,7 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
-from DHParser.toolkit import log_dir, line_col, identity
+from DHParser.toolkit import is_logging, log_dir, line_col, identity
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
@@ -472,9 +472,10 @@ class Node:
     #     return nav(path.split('/'))
 
     def log(self, log_file_name):
-        st_file_name = log_file_name
-        with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
-            f.write(self.as_sxpr())
+        if is_logging():
+            st_file_name = log_file_name
+            with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
+                f.write(self.as_sxpr())
 
 
 def mock_syntax_tree(sxpr):

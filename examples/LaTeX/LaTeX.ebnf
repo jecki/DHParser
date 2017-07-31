@@ -57,8 +57,8 @@ block_environment   = known_environment | generic_block
 known_environment   = itemize | enumerate | figure | table | quotation
                     | verbatim
 generic_block       = begin_generic_block sequence §end_generic_block
-begin_generic_block = -&LB begin_environment -&LB
-end_generic_block   = -&LB  end_environment  -&LB
+begin_generic_block = -&LB begin_environment (EOF | -&LB)
+end_generic_block   = -&LB  end_environment  (EOF | -&LB)
 
 itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -87,7 +87,7 @@ inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
 generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
 begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
-end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)
+end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)       # ambiguity with genric_block when EOF
 begin_environment   = "\begin{" §NAME §"}"
 end_environment     = "\end{" §::NAME §"}"
 
