@@ -42,3 +42,5 @@ if error_report:
     print('\n')
     print(error_report)
     sys.exit(1)
+else:
+    print('\nSUCCESS! All tests passed :-)')

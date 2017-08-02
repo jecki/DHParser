@@ -136,13 +136,13 @@ class LaTeXGrammar(Grammar):
     
     inline_environment  = known_inline_env | generic_inline_env
     known_inline_env    = inline_math
-    generic_inline_env  = begin_inline_env { text_elements }+ §end_inline_env
+    generic_inline_env  = (begin_inline_env { text_elements }+ §end_environment)
     begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
-    end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)       # ambiguity with genric_block when EOF
+    # end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)       # ambiguity with genric_block when EOF
     begin_environment   = "\begin{" §NAME §"}"
     end_environment     = "\end{" §::NAME §"}"
     
-    inline_math         = "$" MATH "$"
+    inline_math         = "$" /[^$]*/ "$"
     
     
     #### commands ####
@@ -189,7 +189,6 @@ class LaTeXGrammar(Grammar):
     
     CMDNAME    = /\\(?:(?!_)\w)+/~
     NAME       = /\w+/~
-    MATH       = /[\w_^{}[\]]*/~
     
     ESCAPED    = /\\[%$&_\/]/
     BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
@@ -209,7 +208,7 @@ class LaTeXGrammar(Grammar):
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
     text_elements = Forward()
-    source_hash__ = "7f03d711d094ceb016614cec9e954fe3"
+    source_hash__ = "7f6e1c72047e44b0b39db4d20f5186e2"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -223,7 +222,6 @@ class LaTeXGrammar(Grammar):
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     BRACKETS = RegExp('[\\[\\]]')
     ESCAPED = RegExp('\\\\[%$&_/]')
-    MATH = RE('[\\w_^{}[\\]]*')
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
     structural = Alternative(Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item"))
@@ -240,12 +238,11 @@ class LaTeXGrammar(Grammar):
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
     known_command = Alternative(footnote, includegraphics, caption)
     command = Alternative(known_command, generic_command)
-    inline_math = Series(Token("$"), MATH, Token("$"))
+    inline_math = Series(Token("$"), RegExp('[^$]*'), Token("$"))
     end_environment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
     begin_environment = Series(Token("\\begin{"), Required(NAME), Required(Token("}")))
-    end_inline_env = Alternative(Series(NegativeLookbehind(LB), end_environment), Series(end_environment, NegativeLookbehind(LB)))
     begin_inline_env = Alternative(Series(NegativeLookbehind(LB), begin_environment), Series(begin_environment, NegativeLookbehind(LB)))
-    generic_inline_env = Series(begin_inline_env, OneOrMore(text_elements), Required(end_inline_env))
+    generic_inline_env = Series(begin_inline_env, OneOrMore(text_elements), Required(end_environment))
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     text_elements.set(Alternative(command, text, block, inline_environment))
