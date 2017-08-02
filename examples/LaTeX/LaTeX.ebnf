@@ -57,8 +57,8 @@ block_environment   = known_environment | generic_block
 known_environment   = itemize | enumerate | figure | table | quotation
                     | verbatim
 generic_block       = begin_generic_block sequence §end_generic_block
-begin_generic_block = -&LB begin_environment (EOF | -&LB)
-end_generic_block   = -&LB  end_environment  (EOF | -&LB)
+begin_generic_block = -&LB begin_environment -&LB
+end_generic_block   = -&LB  end_environment  -&LB
 
 itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -104,11 +104,13 @@ footnote            = "\footnote" block_of_paragraphs
 includegraphics     = "\includegraphics" config block
 caption             = "\caption" block
 
+
 #######################################################################
 #
 # low-level text and character sequences
 #
 #######################################################################
+
 
 config     = "[" cfgtext §"]"
 block      = /{/ { text_elements } §/}/
@@ -133,6 +135,7 @@ structural = "subsection" | "section" | "chapter" | "subsubsection"
 #
 #######################################################################
 
+
 CMDNAME    = /\\(?:(?!_)\w)+/~
 NAME       = /\w+/~
 MATH       = /[\w_^{}[\]]*/~
@@ -147,4 +150,5 @@ PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
 EOF        = /(?!.)/
 
-LB         = /\s*?\n|\s*?$/                 # backwards line break for Lookbehind-Operator
+LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
+                                            # beginning of text marker '$' added for test code
