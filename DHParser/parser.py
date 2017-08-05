@@ -294,13 +294,19 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
        only to their class name, and not to the individual parser.
 
     Parser objects are callable and parsing is done by calling a parser
-    object with the text to parse. If the parser matches it returns
-    a tuple consisting of a node representing the root of the concrete
-    syntax tree resulting from the match as well as the substring
-    `text[i:]` where i is the length of matched text (which can be
-    zero in the case of parsers like `ZeroOrMore` or `Optional`).
-    If `i > 0` then the parser has "moved forward". If the parser does
-    not match it returns `(None, text).
+    object with the text to parse.
+
+    If the parser matches it returns a tuple consisting of a node
+    representing the root of the concrete syntax tree resulting from the
+    match as well as the substring `text[i:]` where i is the length of
+    matched text (which can be zero in the case of parsers like
+    `ZeroOrMore` or `Optional`). If `i > 0` then the parser has "moved
+    forward".
+
+    If the parser does not match it returns `(None, text). **Note** that
+    this is not the same as an empty match `("", text)`. Any empty match
+    can for example be returned by the `ZeroOrMore`-parser in case the
+    contained parser is repeated zero times.
     """
 
     ApplyFunc = Callable[['Parser'], None]
@@ -674,8 +680,17 @@ class Grammar:
                 stitches.append(Node(None, rest))
             result = Node(None, tuple(stitches))
         if any(self.variables__.values()):
-            result.add_error("Capture-retrieve-stack not empty after end of parsing: "
-                             + str(self.variables__))
+            error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
+                            str(self.variables__)
+            if result.children:
+                # add another child node at the end to ensure that the position
+                # of the error will be the end of the text. Otherwise, the error
+                # message above ("...after end of parsing") would appear illogical.
+                error_node = Node(ZOMBIE_PARSER, '')
+                error_node.add_error(error_str)
+                result.result = result.children + (error_node,)
+            else:
+                result.add_error(error_str)
         result.pos = 0  # calculate all positions
         return result
 
@@ -886,14 +901,14 @@ class RE(Parser):
     Regular Expressions with optional leading or trailing whitespace.
     
     The RE-parser parses pieces of text that match a given regular
-    expression. Other than the ``RegExp``-Parser it can also skip 
+    expression. Other than the ``RegExp``-Parser it can also skip
     "implicit whitespace" before or after the matched text.
     
-    The whitespace is in turn defined by a regular expression. It
-    should be made sure that this expression also matches the empty
-    string, e.g. use r'\s*' or r'[\t ]+', but not r'\s+'. If the
-    respective parameters in the constructor are set to ``None`` the
-    default whitespace expression from the Grammar object will be used.
+    The whitespace is in turn defined by a regular expression. It should
+    be made sure that this expression also matches the empty string,
+    e.g. use r'\s*' or r'[\t ]+', but not r'\s+'. If the respective
+    parameters in the constructor are set to ``None`` the default
+    whitespace expression from the Grammar object will be used.
 
     Example (allowing whitespace on the right hand side, but not on
     the left hand side of a regular expression):
@@ -976,9 +991,8 @@ class RE(Parser):
 
 class Token(RE):
     """
-    Class Token parses simple strings. Any regular regular
-    expression commands will be interpreted as simple sequence of
-    characters.
+    Class Token parses simple strings. Any regular regular expression
+    commands will be interpreted as simple sequence of characters.
 
     Other than that class Token is essentially a renamed version of
     class RE. Because tokens often have a particular semantic different
@@ -1000,16 +1014,16 @@ class Token(RE):
 
 ########################################################################
 #
-# Combinator parser classes (i.e. trunk classes of the parser tree)
+# Containing parser classes, i.e. parsers that contain other parsers
+# to which they delegate (i.e. trunk classes)
 #
 ########################################################################
 
 
 class UnaryOperator(Parser):
     """
-    Base class of all unary parser operators, i.e. parser that
-    contains one and only one other parser, like the optional
-    parser for example.
+    Base class of all unary parser operators, i.e. parser that contains
+    one and only one other parser, like the optional parser for example.
 
     The UnaryOperator base class supplies __deepcopy__ and apply
     methods for unary parser operators. The __deepcopy__ method needs
@@ -1036,10 +1050,10 @@ class NaryOperator(Parser):
     contains one or more other parsers, like the alternative
     parser for example.
 
-    The NnaryOperator base class supplies __deepcopy__ and apply
-    methods for unary parser operators. The __deepcopy__ method needs
-    to be overwritten, however, if the constructor of a derived class
-    has additional parameters.
+    The NnaryOperator base class supplies __deepcopy__ and apply methods
+    for unary parser operators. The __deepcopy__ method needs to be
+    overwritten, however, if the constructor of a derived class has
+    additional parameters.
     """
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
@@ -1103,6 +1117,19 @@ class Optional(UnaryOperator):
 
 
 class ZeroOrMore(Optional):
+    """
+    `ZeroOrMore` applies a parser repeatedly as long as this parser
+    matches. Like `Optional` the `ZeroOrMore` parser always matches. In
+    case of zero repetitions, the empty match `((), text)` is returned.
+
+    Examples:
+    >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
+    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content()
+    'Wo viel der Weisheit, da auch viel des Grämens.'
+
+    EBNF-Notation: `{ ... }`
+    EBNF-Example:  `sentence = { /\w+,?/ } "."`
+    """
     def __call__(self, text: str) -> Tuple[Node, str]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1

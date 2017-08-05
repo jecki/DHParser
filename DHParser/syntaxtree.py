@@ -197,8 +197,6 @@ class Node:
         # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
         self._pos = -1  # type: int
         self.parser = parser or ZOMBIE_PARSER
-        self.error_flag = any(r.error_flag for r in self._children) \
-            if self._children else False  # type: bool
 
     def __str__(self):
         if self.children:
@@ -242,6 +240,8 @@ class Node:
         self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
         self._children = cast(ChildrenType, self._result) \
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
+        self.error_flag = any(r.error_flag for r in self._children) \
+            if self._children else False  # type: bool
 
     @property
     def children(self) -> ChildrenType:

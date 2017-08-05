@@ -119,11 +119,11 @@ text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
 word_sequence = { TEXTCHUNK //~ }+
 
-no_command = "\begin{" | "\end" | structural
-blockcmd   = /[\\]/ ( ( "begin{" | "end{" )
-                      ( "enumerate" | "itemize" | "figure" | "quote"
-                      | "quotation" | "tabular") "}"
-                    | structural | begin_generic_block | end_generic_block )
+no_command = "\begin{" | "\end" | BACKSLASH structural
+blockcmd   = BACKSLASH ( ( "begin{" | "end{" )
+                         ( "enumerate" | "itemize" | "figure" | "quote"
+                         | "quotation" | "tabular") "}"
+                       | structural | begin_generic_block | end_generic_block )
 
 structural = "subsection" | "section" | "chapter" | "subsubsection"
            | "paragraph" | "subparagraph" | "item"
@@ -147,7 +147,8 @@ WSPC       = /[ \t]+/                       # (horizontal) whitespace
 LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
 PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
-EOF        = /(?!.)/
-
 LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
                                             # beginning of text marker '$' added for test code
+BACKSLASH  = /[\\]/
+
+EOF        = /(?!.)/                        # End-Of-File

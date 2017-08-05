@@ -170,11 +170,11 @@ class LaTeXGrammar(Grammar):
     cfgtext    = { word_sequence | (ESCAPED //~) }+
     word_sequence = { TEXTCHUNK //~ }+
     
-    no_command = "\begin{" | "\end" | structural
-    blockcmd   = /[\\]/ ( ( "begin{" | "end{" )
-                          ( "enumerate" | "itemize" | "figure" | "quote"
-                          | "quotation" | "tabular") "}"
-                        | structural | begin_generic_block | end_generic_block )
+    no_command = "\begin{" | "\end" | BACKSLASH structural
+    blockcmd   = BACKSLASH ( ( "begin{" | "end{" )
+                             ( "enumerate" | "itemize" | "figure" | "quote"
+                             | "quotation" | "tabular") "}"
+                           | structural | begin_generic_block | end_generic_block )
     
     structural = "subsection" | "section" | "chapter" | "subsubsection"
                | "paragraph" | "subparagraph" | "item"
@@ -198,24 +198,26 @@ class LaTeXGrammar(Grammar):
     LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
     PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
-    EOF        = /(?!.)/
-    
     LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
                                                 # beginning of text marker '$' added for test code
+    BACKSLASH  = /[\\]/
+    
+    EOF        = /(?!.)/                        # End-Of-File
     """
     begin_generic_block = Forward()
     block_environment = Forward()
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
     text_elements = Forward()
-    source_hash__ = "7f6e1c72047e44b0b39db4d20f5186e2"
+    source_hash__ = "06385bac4dd7cb009bd29712a8fc692c"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
     wspL__ = ''
     wspR__ = WSP__
-    LB = RegExp('\\s*?\\n|$')
     EOF = RegExp('(?!.)')
+    BACKSLASH = RegExp('[\\\\]')
+    LB = RegExp('\\s*?\\n|$')
     PARSEP = RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n[ \\t]*')
     LF = Series(NegativeLookahead(PARSEP), RegExp('[ \\t]*\\n[ \\t]*'))
     WSPC = RegExp('[ \\t]+')
@@ -225,8 +227,8 @@ class LaTeXGrammar(Grammar):
     NAME = Capture(RE('\\w+'))
     CMDNAME = RE('\\\\(?:(?!_)\\w)+')
     structural = Alternative(Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item"))
-    blockcmd = Series(RegExp('[\\\\]'), Alternative(Series(Alternative(Token("begin{"), Token("end{")), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), structural, begin_generic_block, end_generic_block))
-    no_command = Alternative(Token("\\begin{"), Token("\\end"), structural)
+    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Token("begin{"), Token("end{")), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), structural, begin_generic_block, end_generic_block))
+    no_command = Alternative(Token("\\begin{"), Token("\\end"), Series(BACKSLASH, structural))
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))
