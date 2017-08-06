@@ -35,7 +35,7 @@ from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, R
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, Node, TransformationFunc
 from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
-    remove_tokens, flatten, forbid, assert_content, key_tag_name
+    remove_tokens, flatten, forbid, assert_content, key_tag_name, remove_infix_operator
 from DHParser.versionnumber import __version__
 
 __all__ = ('get_ebnf_preprocessor',
@@ -200,7 +200,7 @@ EBNF_transformation_table = {
     "directive, definition":
         remove_tokens('@', '='),
     "expression":
-        [replace_by_single_child, flatten, remove_tokens('|')],
+        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
     "term":
         [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
@@ -215,7 +215,7 @@ EBNF_transformation_table = {
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         reduce_single_child,
     "list_":
-        [flatten, remove_tokens(',')],
+        [flatten, remove_infix_operator],
     "*":
         replace_by_single_child
 }
@@ -353,7 +353,7 @@ class EBNFCompiler(Compiler):
         for name in self.rules:
             transtable.append('    "' + name + '": [],')
         transtable.append('    ":Token, :RE": reduce_single_child,')
-        transtable += ['    "*": replace_by_single_child', '}', '', tf_name +
+        transtable += ['    # "*": replace_by_single_child', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
@@ -719,7 +719,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node) -> str:
-        return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join_children([node.result]) + ')' ?
+        return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.merge_children([node.result]) + ')' ?
 
 
     def on_regexp(self, node: Node) -> str:

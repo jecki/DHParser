@@ -151,7 +151,7 @@ def is_logging() -> bool:
 #     if i < 0:
 #         parameter_list = parameter_list[:i]
 #     name = f.__self__.__class__.__name__ if f.__name__ == '__init__' else f.__name__
-#     return "%s(%s)" % (name, ", ".join_children(repr(item) for item in parameter_list))
+#     return "%s(%s)" % (name, ", ".merge_children(repr(item) for item in parameter_list))
 
 
 def line_col(text: str, pos: int) -> Tuple[int, int]:

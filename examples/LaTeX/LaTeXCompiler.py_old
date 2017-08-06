@@ -7,26 +7,23 @@
 #######################################################################
 
 
-from functools import partial
 import os
 import sys
+from functools import partial
+
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
+    Required, Token, Synonym, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationFunc, MockParser, \
-    traverse, remove_children_if, merge_children, TRUE_CONDITION, is_anonymous, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_parser, remove_content, remove_brackets, replace_parser, \
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
+    PreprocessorFunc, \
+    Node, TransformationFunc, \
+    traverse, merge_children, remove_whitespace, remove_parser, \
+    reduce_single_child, replace_by_single_child, remove_expendables, remove_empty, flatten, \
+    collapse, replace_content, remove_brackets, remove_first
 
 
 #######################################################################
@@ -37,6 +34,7 @@ from DHParser import logging, is_filename, load_if_file, \
 
 def LaTeXPreprocessor(text):
     return text
+
 
 def get_preprocessor() -> PreprocessorFunc:
     return LaTeXPreprocessor
@@ -130,18 +128,17 @@ class LaTeXGrammar(Grammar):
     block_of_paragraphs = /{/ sequence §/}/
     sequence            = { (paragraph | block_environment ) [PARSEP] }+
     
-    paragraph           = { !blockcmd text_element //~ }+
-    text_element       = command | text | block | inline_environment
+    paragraph           = { !blockcmd text_elements //~ }+
+    text_elements       = command | text | block | inline_environment
     
     
     #### inline enivronments ####
     
     inline_environment  = known_inline_env | generic_inline_env
     known_inline_env    = inline_math
-    generic_inline_env  = (begin_inline_env { text_element }+ §end_inline_env)
+    generic_inline_env  = (begin_inline_env { text_elements }+ §end_environment)
     begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
-    end_inline_env      = end_environment
-                          # (-!LB end_environment)   | (end_environment   -!LB)  # ambiguity with genric_block when EOF
+    # end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)       # ambiguity with genric_block when EOF
     begin_environment   = "\begin{" §NAME §"}"
     end_environment     = "\end{" §::NAME §"}"
     
@@ -167,7 +164,7 @@ class LaTeXGrammar(Grammar):
     
     
     config     = "[" cfgtext §"]"
-    block      = /{/ { text_element } §/}/
+    block      = /{/ { text_elements } §/}/
     
     text       = { cfgtext | (BRACKETS //~) }+
     cfgtext    = { word_sequence | (ESCAPED //~) }+
@@ -197,6 +194,7 @@ class LaTeXGrammar(Grammar):
     BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
+    WSPC       = /[ \t]+/                       # (horizontal) whitespace
     LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
     PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
@@ -210,8 +208,8 @@ class LaTeXGrammar(Grammar):
     block_environment = Forward()
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
-    text_element = Forward()
-    source_hash__ = "4e001b31490278efccfe43953bfdcf58"
+    text_elements = Forward()
+    source_hash__ = "06385bac4dd7cb009bd29712a8fc692c"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -222,6 +220,7 @@ class LaTeXGrammar(Grammar):
     LB = RegExp('\\s*?\\n|$')
     PARSEP = RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n[ \\t]*')
     LF = Series(NegativeLookahead(PARSEP), RegExp('[ \\t]*\\n[ \\t]*'))
+    WSPC = RegExp('[ \\t]+')
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     BRACKETS = RegExp('[\\[\\]]')
     ESCAPED = RegExp('\\\\[%$&_/]')
@@ -233,7 +232,7 @@ class LaTeXGrammar(Grammar):
     word_sequence = OneOrMore(Series(TEXTCHUNK, RE('')))
     cfgtext = OneOrMore(Alternative(word_sequence, Series(ESCAPED, RE(''))))
     text = OneOrMore(Alternative(cfgtext, Series(BRACKETS, RE(''))))
-    block = Series(RegExp('{'), ZeroOrMore(text_element), Required(RegExp('}')))
+    block = Series(RegExp('{'), ZeroOrMore(text_elements), Required(RegExp('}')))
     config = Series(Token("["), cfgtext, Required(Token("]")))
     caption = Series(Token("\\caption"), block)
     includegraphics = Series(Token("\\includegraphics"), config, block)
@@ -244,13 +243,12 @@ class LaTeXGrammar(Grammar):
     inline_math = Series(Token("$"), RegExp('[^$]*'), Token("$"))
     end_environment = Series(Token("\\end{"), Required(Pop(NAME)), Required(Token("}")))
     begin_environment = Series(Token("\\begin{"), Required(NAME), Required(Token("}")))
-    end_inline_env = Synonym(end_environment)
     begin_inline_env = Alternative(Series(NegativeLookbehind(LB), begin_environment), Series(begin_environment, NegativeLookbehind(LB)))
-    generic_inline_env = Series(begin_inline_env, OneOrMore(text_element), Required(end_inline_env))
+    generic_inline_env = Series(begin_inline_env, OneOrMore(text_elements), Required(end_environment))
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
-    text_element.set(Alternative(command, text, block, inline_environment))
-    paragraph = OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE('')))
+    text_elements.set(Alternative(command, text, block, inline_environment))
+    paragraph = OneOrMore(Series(NegativeLookahead(blockcmd), text_elements, RE('')))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
     block_of_paragraphs.set(Series(RegExp('{'), sequence, Required(RegExp('}'))))
     table_config = Series(Token("{"), RE('[lcr|]+'), Token("}"))
@@ -309,93 +307,71 @@ def streamline_whitespace(node):
     c = s.find('%')
     n = s.find('\n')
     if c >= 0:
-        node.result = '\n'
-        # node.result = ('  ' if (n >= c) or (n < 0) else '\n')+ s[c:].rstrip(' \t')
-        # node.parser = MockParser('COMMENT', '')
+        node.result = ('  ' if (n >= c) or (n < 0) else '\n')+ s[c:].rstrip(' \t')
     elif s.find('\n') >= 0:
         node.result = '\n'
     else:
         node.result = ' '
 
 
-def watch(node):
-    print(node.as_sxpr())
-
-
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "+": remove_empty,
+    "+":
+        remove_empty,
     "latexdoc": [],
     "preamble": [],
     "document": [],
-    "frontpages": [],
-    "Chapters": [],
-    "Chapter": [],
-    "Sections": [],
-    "Section": [],
-    "SubSections": [],
-    "SubSection": [],
-    "SubSubSections": [],
-    "SubSubSection": [],
-    "Paragraphs": [],
-    "Paragraph": [],
-    "SubParagraphs": [],
-    "SubParagraph": [],
-    "Bibliography": [],
-    "Index": [],
-    "block_environment": replace_by_single_child,
-    "known_environment": replace_by_single_child,
-    "generic_block": [],
-    "begin_generic_block, end_generic_block": reduce_single_child,
-    "itemize, enumerate": [remove_brackets, flatten],
-    "item": [remove_first],
-    "figure": [],
-    "quotation": [reduce_single_child, remove_brackets],
-    "verbatim": [],
-    "table": [],
-    "table_config": [],
-    "block_of_paragraphs": [],
-    "sequence": [flatten],
-    "paragraph": [flatten],
-    "text_element": [],
-    "inline_environment": replace_by_single_child,
-    "known_inline_env": replace_by_single_child,
-    "generic_inline_env": [],
-    "begin_inline_env, end_inline_env": [reduce_single_child],
-    "begin_environment, end_environment": [remove_brackets, reduce_single_child],
-    "inline_math": [remove_brackets, reduce_single_child],
-    "command": [],
-    "known_command": [],
-    "generic_command": [flatten],
-    "footnote": [],
-    "includegraphics": [],
-    "caption": [],
-    "config": [remove_brackets],
-    "block": [remove_brackets, reduce_single_child(is_anonymous)],
-    "text": [reduce_single_child, merge_children('word_sequence', ':Whitespace', 'TEXTCHUNK')],
-    "cfgtext": [flatten, reduce_single_child, replace_parser('text')],
-    "word_sequence": collapse,  # [flatten, merge_children('TEXTCHUNK', ':Whitespace'), reduce_single_child],
-    "no_command": [],
+    "block_environment": [],
+    "begin_generic_block":
+        [reduce_single_child],
+    "end_generic_block":
+        [reduce_single_child],
+    "parblock": [],
+    "sequence":
+        [flatten, remove_parser('PARSEP')],
+    "enumerate, itemize":
+        [remove_brackets, remove_parser('PARSEP'), reduce_single_child],
+    "item":
+        [remove_first, remove_parser('PARSEP')],
+    "paragraph":
+        [flatten(lambda node: not node.parser.name or node.parser.name == "text"),
+         merge_children('text', ':Whitespace')],
+    "quotation, generic_bloc, generic_inline_env, inline_math":
+        [reduce_single_child, remove_brackets],
+    "inline_environment": [],
+    "begin_environment": [remove_brackets, reduce_single_child],
+    "end_environment": [remove_brackets, reduce_single_child],
+    # "command": [],
+    "generic_command": [],
+    "config, block": [remove_brackets, reduce_single_child],
+    "text":
+        [reduce_single_child, merge_children('text', 'word_sequence', ':Whitespace')],
+    "cfgtext": [flatten, reduce_single_child],
+    "word_sequence":
+        [collapse],
     "blockcmd": [],
-    "structural": [],
-    "CMDNAME": [remove_whitespace, reduce_single_child(is_anonymous)],
-    "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
-    "ESCAPED": [replace_content(lambda node: str(node)[1:])],
+    "CMDNAME":
+        [remove_expendables, reduce_single_child],
+    "NAME": [reduce_single_child],
+    "ESCAPED": [reduce_single_child],
     "BRACKETS": [],
     "TEXTCHUNK": [],
-    "LF": [],
-    "PARSEP": replace_content(lambda node: '\n\n'),
-    "LB": [],
-    "BACKSLASH": [],
+    "WSPC, :Whitespace":
+        [],  # streamline_whitespace,  # whitespace will be removed anyway
+    "LF":
+        replace_content(lambda node: '\n'),
+    "PARSEP":
+        [],  # replace_content(lambda node: '\n\n'),
     "EOF": [],
-    ":Token": [],
-    ":RE": replace_by_single_child,
-    ":Whitespace": streamline_whitespace,
-    "*": replace_by_single_child
+    ":RE":
+        [reduce_single_child],
+    ":Token":
+        [],  # [remove_whitespace, reduce_single_child],  # Tokens will be removed anyway?
+    # "*": []  # replace_by_single_child
 }
 
 LaTeXTransform = partial(traverse, processing_table=LaTeX_AST_transformation_table)
-
+# LaTeXTransform = lambda tree : 1
 
 def get_transformer() -> TransformationFunc:
     return LaTeXTransform
@@ -517,7 +493,7 @@ class LaTeXCompiler(Compiler):
     def on_paragraph(self, node):
         pass
 
-    def on_text_element(self, node):
+    def on_text_elements(self, node):
         pass
 
     def on_inline_environment(self, node):
@@ -530,6 +506,9 @@ class LaTeXCompiler(Compiler):
         pass
 
     def on_begin_inline_env(self, node):
+        pass
+
+    def on_end_inline_env(self, node):
         pass
 
     def on_begin_environment(self, node):
@@ -574,9 +553,6 @@ class LaTeXCompiler(Compiler):
     def on_word_sequence(self, node):
         pass
 
-    def on_no_command(self, node):
-        pass
-
     def on_blockcmd(self, node):
         pass
 
@@ -587,6 +563,9 @@ class LaTeXCompiler(Compiler):
         pass
 
     def on_NAME(self, node):
+        pass
+
+    def on_MATH(self, node):
         pass
 
     def on_ESCAPED(self, node):
@@ -607,13 +586,13 @@ class LaTeXCompiler(Compiler):
     def on_PARSEP(self, node):
         pass
 
-    def on_LB(self, node):
-        pass
-
-    def on_BACKSLASH(self, node):
-        pass
-
     def on_EOF(self, node):
+        pass
+
+    def on_SUCC_LB(self, node):
+        pass
+
+    def on_PRED_LB(self, node):
         pass
 
 
@@ -643,8 +622,8 @@ def compile_src(source):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_preprocessor(), 
+            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+        result = compile_source(source, get_preprocessor(),
                                 get_grammar(),
                                 get_transformer(), compiler)
     return result

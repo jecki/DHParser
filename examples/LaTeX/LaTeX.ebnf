@@ -77,17 +77,18 @@ table_config        = "{" /[lcr|]+/~ "}"
 block_of_paragraphs = /{/ sequence §/}/
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
 
-paragraph           = { !blockcmd text_elements //~ }+
-text_elements       = command | text | block | inline_environment
+paragraph           = { !blockcmd text_element //~ }+
+text_element       = command | text | block | inline_environment
 
 
 #### inline enivronments ####
 
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
-generic_inline_env  = (begin_inline_env { text_elements }+ §end_environment)
+generic_inline_env  = (begin_inline_env { text_element }+ §end_inline_env)
 begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
-# end_inline_env      = (-!LB end_environment)   | (end_environment   -!LB)       # ambiguity with genric_block when EOF
+end_inline_env      = end_environment
+                      # (-!LB end_environment)   | (end_environment   -!LB)  # ambiguity with genric_block when EOF
 begin_environment   = "\begin{" §NAME §"}"
 end_environment     = "\end{" §::NAME §"}"
 
@@ -113,7 +114,7 @@ caption             = "\caption" block
 
 
 config     = "[" cfgtext §"]"
-block      = /{/ { text_elements } §/}/
+block      = /{/ { text_element } §/}/
 
 text       = { cfgtext | (BRACKETS //~) }+
 cfgtext    = { word_sequence | (ESCAPED //~) }+
@@ -143,7 +144,6 @@ ESCAPED    = /\\[%$&_\/]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
-WSPC       = /[ \t]+/                       # (horizontal) whitespace
 LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
 PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed

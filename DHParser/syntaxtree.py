@@ -34,6 +34,7 @@ except ImportError:
 from DHParser.toolkit import is_logging, log_dir, line_col, identity
 
 __all__ = ('WHITESPACE_PTYPE',
+           'MockParser',
            'TOKEN_PTYPE',
            'ZOMBIE_PARSER',
            'ParserBase',

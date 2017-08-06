@@ -43,14 +43,15 @@ __all__ = ('transformation_factory',
            'reduce_single_child',
            'replace_parser',
            'collapse',
-           'join_children',
+           'merge_children',
            'replace_content',
            'apply_if',
+           'is_anonymous',
            'is_whitespace',
            'is_empty',
            'is_expendable',
            'is_token',
-           'has_name',
+           'is_one_of',
            'has_content',
            'remove_children_if',
            'remove_parser',
@@ -61,12 +62,17 @@ __all__ = ('transformation_factory',
            'remove_empty',
            'remove_expendables',
            'remove_brackets',
+           'remove_infix_operator',
+           'remove_single_child',
            'remove_tokens',
            'keep_children',
            'flatten',
            'forbid',
            'require',
-           'assert_content')
+           'assert_content',
+           'assert_condition',
+           'assert_has_children',
+           'TRUE_CONDITION')
 
 
 def transformation_factory(t=None):
@@ -225,12 +231,18 @@ def traverse(root_node, processing_table, key_func=key_tag_name) -> None:
 # ------------------------------------------------
 
 
-def replace_by_single_child(node):
-    """Remove single branch node, replacing it by its immediate descendant.
+def TRUE_CONDITION(node):
+    return True
+
+
+@transformation_factory(Callable)
+def replace_by_single_child(node, condition=TRUE_CONDITION):
+    """Remove single branch node, replacing it by its immediate descendant
+    if and only if the condision on the descendant is true.
     (In case the descendant's name is empty (i.e. anonymous) the
     name of this node's parser is kept.)
     """
-    if node.children and len(node.result) == 1:
+    if node.children and len(node.result) == 1 and condition(node.children[0]):
         if not node.result[0].parser.name:
             node.result[0].parser.name = node.parser.name
         node.parser = node.result[0].parser
@@ -238,11 +250,14 @@ def replace_by_single_child(node):
         node.result = node.result[0].result
 
 
-def reduce_single_child(node):
+@transformation_factory(Callable)
+def reduce_single_child(node, condition=TRUE_CONDITION):
     """Reduce a single branch node, by transferring the result of its
     immediate descendant to this node, but keeping this node's parser entry.
+    If the condition evaluates to false on the descendant, it will not
+    be reduced.
     """
-    if node.children and len(node.result) == 1:
+    if node.children and len(node.result) == 1 and condition(node.children[0]):
         node._errors.extend(node.result[0]._errors)
         node.result = node.result[0].result
 
@@ -288,19 +303,20 @@ def flatten(node, condition=lambda node: not node.parser.name, recursive=True):
 
 
 def collapse(node):
-    """Collapses all sub-nodes by replacing the node's result with it's
-    string representation.
+    """Collapses all sub-nodes of a node by replacing them with the
+    string representation of the node.
     """
     node.result = str(node)
 
 
 @transformation_factory
-def join_children(node, tag_names: List[str]):
+def merge_children(node, tag_names: List[str]):
     """Joins all children next to each other and with particular tag-
-    names into a single child node with mock parser 'parser_name'.
+    names into a single child node with mock parser with the name of
+    the first tag name in the list.
     """
     result = []
-    name, ptype = (tag_names[0].split(':') + [''])[:2]
+    name, ptype = ('', tag_names[0]) if tag_names[0][:1] == ':' else (tag_names[0], '')
     if node.children:
         i = 0
         L = len(node.children)
@@ -356,9 +372,14 @@ def is_token(node, tokens: AbstractSet[str] = frozenset()) -> bool:
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
 
 
-def has_name(node, regexp: str) -> bool:
-    """Checks a node's tag name against a regular expression."""
-    return bool(re.match(regexp, node.tag_name))
+def is_anonymous(node):
+    return not node.parser.name
+
+
+def is_one_of(node, tag_name_set: AbstractSet[str]) -> bool:
+    """Returns true, if the node's tag_name is on of the
+    given tag names."""
+    return node.tag_name in tag_name_set
 
 
 def has_content(node, regexp: str) -> bool:
@@ -395,9 +416,11 @@ def remove_children_if(node, condition: Callable, section: slice = slice(None)):
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
-remove_first = keep_children(slice(1, None))
-remove_last = keep_children(slice(None, -1))
-remove_brackets = keep_children(slice(1, -1))
+remove_first = apply_if(keep_children(slice(1, None)), lambda nd: len(nd.children) > 1)
+remove_last = apply_if(keep_children(slice(None, -1)), lambda nd: len(nd.children) > 1)
+remove_brackets = apply_if(keep_children(slice(1, -1)), lambda nd: len(nd.children) >= 2)
+remove_infix_operator = keep_children(slice(0, None, 2))
+remove_single_child = apply_if(keep_children(slice(0)), lambda nd: len(nd.children) == 1)
 
 
 @transformation_factory
@@ -411,7 +434,7 @@ def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
 @transformation_factory
 def remove_parser(node, regexp: str):
     """Removes children by 'tag name'."""
-    remove_children_if(node, partial(has_name, regexp=regexp))
+    remove_children_if(node, partial(is_one_of, regexp=regexp))
 
 
 @transformation_factory
@@ -451,7 +474,7 @@ def assert_content(node, regexp: str):
 #
 # @transformation_factory
 # def assert_name(node, regexp: str):
-#     if not has_name(node, regexp):
+#     if not is_one_of(node, regexp):
 #         node.add_error('Element name "%s" does not match %s' % (node.tag_name), str(regexp))
 #
 #
