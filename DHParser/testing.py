@@ -98,6 +98,10 @@ def get_report(test_unit):
     """
     Returns a text-report of the results of a grammar unit test.
     """
+    def indent(txt):
+        lines = txt.split('\n')
+        lines[0] = '    ' + lines[0]
+        return "\n    ".join(lines)
     report = []
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
@@ -106,7 +110,7 @@ def get_report(test_unit):
             heading = 'Match-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:')
-            report.append(test_code)
+            report.append(indent(test_code))
             error = tests.get('__err__', {}).get(test_name, "")
             if error:
                 report.append('\n### Error:')
@@ -115,10 +119,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or cst == ast):
                 report.append('\n### CST')
-                report.append(cst.as_sxpr())
+                report.append(indent(cst.as_sxpr()))
             elif ast:
                 report.append('\n### AST')
-                report.append(ast.as_sxpr())
+                report.append(indent(ast.as_sxpr()))
     return '\n'.join(report)
 
 
@@ -199,7 +203,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         report_dir = "REPORT"
         if not os.path.exists(report_dir):
             os.mkdir(report_dir)
-        with open(os.path.join(report_dir, unit_name + '.report'), 'w') as f:
+        with open(os.path.join(report_dir, unit_name + '.md'), 'w') as f:
             f.write(get_report(test_unit))
 
     return errata

@@ -102,7 +102,7 @@ known_command       = footnote | includegraphics | caption
 generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
-includegraphics     = "\includegraphics" config block
+includegraphics     = "\includegraphics" [ config ] block
 caption             = "\caption" block
 
 

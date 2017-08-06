@@ -317,9 +317,9 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []   # type: List[Node]
         self.symbols = {}           # type: Dict[str, Node]
         self.variables = set()      # type: Set[str]
-        self.definitions = []  # type: List[Tuple[str, str]]
+        # self.definitions = []     # type: List[Tuple[str, str]]
         self.recursive = set()      # type: Set[str]
-        self.deferred_tasks = []  # type: List[Callable]
+        self.deferred_tasks = []    # type: List[Callable]
         self.root = ""              # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',

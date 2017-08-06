@@ -314,7 +314,7 @@ def expand_table(compact_table):
         value = compact_table[key]
         for k in smart_list(key):
             if k in expanded_table:
-                raise KeyError("Key %s used more than once in compact table!" % key)
+                raise KeyError('Key "%s" used more than once in compact table!' % key)
             expanded_table[k] = value
     return expanded_table
 

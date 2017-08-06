@@ -35,7 +35,7 @@ if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=True):  # recompiles G
 from DHParser import toolkit
 from LaTeXCompiler import get_grammar, get_transformer
 
-with toolkit.logging(True):
+with toolkit.logging(False):
     error_report = testing.grammar_suite('grammar_tests', get_grammar,
                                          get_transformer, report=True, verbose=True)
 if error_report:
