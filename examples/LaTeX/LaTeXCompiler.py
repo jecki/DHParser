@@ -21,9 +21,9 @@ from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Altern
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, \
     Node, TransformationFunc, \
-    traverse, join, \
+    traverse, join_children, remove_whitespace, remove_parser, \
     reduce_single_child, replace_by_single_child, remove_expendables, remove_empty, flatten, \
-    collapse, replace_content, remove_brackets
+    collapse, replace_content, remove_brackets, remove_first
 
 
 #######################################################################
@@ -324,35 +324,43 @@ LaTeX_AST_transformation_table = {
     "blockenv": [],
     "parblock": [],
     "sequence":
-        flatten,
+        [flatten, remove_parser('PARSEP'), replace_by_single_child],
+    "enumerate, itemize":
+        [remove_brackets, remove_parser('PARSEP'), reduce_single_child],
+    "item":
+        [remove_first, remove_parser('PARSEP')],
     "paragraph":
         [flatten(lambda node: not node.parser.name or node.parser.name == "text"),
-         join('text', ':Whitespace')],
-    "inlineenv": [],
-    "beginenv": [],
-    "endenv": [],
-    "command": [],
-    "config": [],
-    "block": [remove_brackets, reduce_single_child],
+         join_children('text', ':Whitespace')],
+    "quotation, generic_bloc, generic_inline_env, inline_math":
+        [remove_brackets],
+    "inline_environment": [],
+    "begin_environment": [],
+    "end_environment": [],
+    # "command": [],
+    "generic_command": [],
+    "config, block": [remove_brackets, reduce_single_child],
     "text":
-        [reduce_single_child, join('text', 'word_sequence', ':Whitespace')],
+        [reduce_single_child, join_children('text', 'word_sequence', ':Whitespace')],
     "cfgtext": [flatten, reduce_single_child],
     "word_sequence":
         [collapse],
     "blockcmd": [],
     "CMDNAME":
         [remove_expendables, reduce_single_child],
-    "NAME": [],
+    "NAME": [reduce_single_child],
     "ESCAPED": [reduce_single_child],
     "BRACKETS": [],
     "TEXTCHUNK": [],
     "WSPC, :Whitespace":
-        streamline_whitespace,
+        [],  # streamline_whitespace,  # whitespace will be removed anyway
     "LF":
         replace_content(lambda node: '\n'),
     "PARSEP":
-        replace_content(lambda node: '\n\n'),
+        [],  # replace_content(lambda node: '\n\n'),
     "EOF": [],
+    ":Token":
+        [],  # [remove_whitespace, reduce_single_child],  # Tokens will be removed anyway?
     "*":
         replace_by_single_child,
 }

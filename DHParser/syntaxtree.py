@@ -270,7 +270,8 @@ class Node:
     def errors(self) -> List[Error]:
         return [Error(self.pos, err) for err in self._errors]
 
-    def add_error(self, error_str) -> 'Node':
+    def add_error(self, error_str: str) -> 'Node':
+        assert isinstance(error_str, str)
         self._errors.append(error_str)
         self.error_flag = True
         return self

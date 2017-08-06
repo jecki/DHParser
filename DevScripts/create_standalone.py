@@ -112,7 +112,7 @@ def selftest() -> bool:
 
     if errors:
         print("Selftest FAILED :-(")
-        print("\n\n".join(errors))
+        print("\n\n".join_children(errors))
         return False
     print(generated_ebnf_parser)
     print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")

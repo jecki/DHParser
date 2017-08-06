@@ -43,7 +43,7 @@ __all__ = ('transformation_factory',
            'reduce_single_child',
            'replace_parser',
            'collapse',
-           'join',
+           'join_children',
            'replace_content',
            'apply_if',
            'is_whitespace',
@@ -133,7 +133,7 @@ def transformation_factory(t=None):
         # Provide for the case that transformation_factory has been
         # written as plain decorator and not as a function call that
         # returns the decorator proper.
-        func = t;
+        func = t
         t = None
         return decorator(func)
     else:
@@ -234,7 +234,7 @@ def replace_by_single_child(node):
         if not node.result[0].parser.name:
             node.result[0].parser.name = node.parser.name
         node.parser = node.result[0].parser
-        node._errors.extend(node.result[0].errors)
+        node._errors.extend(node.result[0]._errors)
         node.result = node.result[0].result
 
 
@@ -243,7 +243,7 @@ def reduce_single_child(node):
     immediate descendant to this node, but keeping this node's parser entry.
     """
     if node.children and len(node.result) == 1:
-        node._errors.extend(node.result[0].errors)
+        node._errors.extend(node.result[0]._errors)
         node.result = node.result[0].result
 
 
@@ -295,14 +295,14 @@ def collapse(node):
 
 
 @transformation_factory
-def join(node, tag_names: List[str]):
+def join_children(node, tag_names: List[str]):
     """Joins all children next to each other and with particular tag-
     names into a single child node with mock parser 'parser_name'.
     """
     result = []
     name, ptype = (tag_names[0].split(':') + [''])[:2]
     if node.children:
-        i = 0;
+        i = 0
         L = len(node.children)
         while i < L:
             while i < L and not node.children[i].tag_name in tag_names:
@@ -356,21 +356,17 @@ def is_token(node, tokens: AbstractSet[str] = frozenset()) -> bool:
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
 
 
-@transformation_factory
-def has_name(node, tag_names: AbstractSet[str]) -> bool:
-    """Checks if node has any of a given set of `tag names`.
-    See property `Node.tagname`."""
-    return node.tag_name in tag_names
+def has_name(node, regexp: str) -> bool:
+    """Checks a node's tag name against a regular expression."""
+    return bool(re.match(regexp, node.tag_name))
 
 
-@transformation_factory
-def has_content(node, contents: AbstractSet[str]) -> bool:
-    """Checks if the node's content (i.e. `str(node)`) matches any of
-    a given set of strings."""
-    return str(node) in contents
+def has_content(node, regexp: str) -> bool:
+    """Checks a node's content against a regular expression."""
+    return bool(re.match(regexp, str(node)))
 
 
-@transformation_factory
+@transformation_factory(Callable)
 def apply_if(node, transformation: Callable, condition: Callable):
     """Applies a transformation only if a certain condition is met.
     """
@@ -378,45 +374,30 @@ def apply_if(node, transformation: Callable, condition: Callable):
         transformation(node)
 
 
-@transformation_factory
-def keep_children(node, section: slice = slice(None, None, None), condition=lambda node: True):
-    """Keeps only the nodes which fall into a slice of the result field
-    and for which the function `condition(child_node)` evaluates to
-    `True`."""
+@transformation_factory(slice)
+def keep_children(node, section: slice = slice(None)):
+    """Keeps only child-nodes which fall into a slice of the result field."""
     if node.children:
-        node.result = tuple(c for c in node.children[section] if condition(c))
+        node.result = node.children[section]
 
 
 @transformation_factory(Callable)
-def remove_children_if(node, condition):
+def remove_children_if(node, condition: Callable, section: slice = slice(None)):
     """Removes all nodes from a slice of the result field if the function
-    ``condition(child_node)`` evaluates to ``True``."""
+    `condition(child_node)` evaluates to `True`."""
     if node.children:
-        node.result = tuple(c for c in node.children if not condition(c))
+        c = node.children
+        N = len(c)
+        rng = range(*section.indices(N))
+        node.result = tuple(c[i] for i in range(N) if not i in rng or not condition(c[i]))
 
 
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
+remove_first = keep_children(slice(1, None))
+remove_last = keep_children(slice(None, -1))
 remove_brackets = keep_children(slice(1, -1))
-
-
-@transformation_factory(Callable)
-def remove_first(node, condition=lambda node: True):
-    """Removes the first child if the condition is met.
-    Otherwise does nothing."""
-    if node.children:
-        if condition(node.children[0]):
-            node.result = node.result[1:]
-
-
-@transformation_factory(Callable)
-def remove_last(node, condition=lambda node: True):
-    """Removes the last child if the condition is met.
-    Otherwise does nothing."""
-    if node.children:
-        if condition(node.children[-1]):
-            node.result = node.result[:-1]
 
 
 @transformation_factory
@@ -428,23 +409,59 @@ def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory
-def remove_parser(node, tag_names: AbstractSet[str]):
+def remove_parser(node, regexp: str):
     """Removes children by 'tag name'."""
-    remove_children_if(node, partial(has_name, tag_names=tag_names))
+    remove_children_if(node, partial(has_name, regexp=regexp))
 
 
 @transformation_factory
-def remove_content(node, contents: AbstractSet[str]):
+def remove_content(node, regexp: str):
     """Removes children depending on their string value."""
-    remove_children_if(node, partial(has_content, contents=contents))
+    remove_children_if(node, partial(has_content, regexp=regexp))
 
 
 ########################################################################
 #
-# AST semantic validation functions
-# EXPERIMENTAL!
+# AST semantic validation functions (EXPERIMENTAL!!!)
 #
 ########################################################################
+
+@transformation_factory(Callable)
+def assert_condition(node, condition: Callable, error_msg: str='') -> bool:
+    """Checks for `condition`; adds an error message if condition is not met."""
+    if not condition(node):
+        if error_msg:
+            node.add_error(error_msg % node.tag_name if error_msg.find("%s") > 0 else error_msg)
+        else:
+            cond_name = condition.__name__ if hasattr(condition, '__name__') \
+                        else condition.__class__.__name__ if hasattr(condition, '__class__') \
+                        else '<unknown>'
+            node.add_error("transform.assert_condition: Failed to meet condition " + cond_name)
+
+
+assert_has_children = assert_condition(lambda nd: nd.children, 'Element "%s" has no children')
+
+
+@transformation_factory
+def assert_content(node, regexp: str):
+    if not has_content(node, regexp):
+        node.add_error('Element "%s" violates %s on %s' %
+                       (node.parser.name, str(regexp), str(node)))
+
+#
+# @transformation_factory
+# def assert_name(node, regexp: str):
+#     if not has_name(node, regexp):
+#         node.add_error('Element name "%s" does not match %s' % (node.tag_name), str(regexp))
+#
+#
+# @transformation_factory(Callable)
+# def assert_children(node, condition: Callable=lambda node: True,
+#                     error_msg: str='', section: slice=slice(None)):
+#     if node.children:
+#         for child in node.children:
+#             assert_condition(child, condition, error_msg)
+#
 
 
 @transformation_factory
@@ -461,11 +478,3 @@ def forbid(node, child_tags: AbstractSet[str]):
         if child.tag_name in child_tags:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
                            (child.parser.name, node.parser.name))
-
-
-@transformation_factory
-def assert_content(node, regex: str):
-    content = str(node)
-    if not re.match(regex, content):
-        node.add_error('Element "%s" violates %s on %s' %
-                       (node.parser.name, str(regex), content))

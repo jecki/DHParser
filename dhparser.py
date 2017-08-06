@@ -47,7 +47,7 @@ from DHParser.toolkit import logging
 #                                                  transformer, compiler)
 #     print(result)
 #     if errors:
-#         print('\n\n'.join(errors))
+#         print('\n\n'.join_children(errors))
 #         sys.exit(1)
 #     else:
 #         # compile the grammar again using the result of the previous

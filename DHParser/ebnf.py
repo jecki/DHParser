@@ -206,9 +206,10 @@ EBNF_transformation_table = {
     "factor, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
-        [remove_tokens('(', ')'), replace_by_single_child],
+        [remove_brackets, replace_by_single_child],
     "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets],
+        [reduce_single_child, remove_brackets,
+         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)')],
     "symbol, literal, regexp":
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
@@ -220,18 +221,8 @@ EBNF_transformation_table = {
 }
 
 
-EBNF_validation_table = {
-    # Semantic validation on the AST. EXPERIMENTAL!
-    "repetition, option, oneormore":
-        [forbid('repetition', 'option', 'oneormore'),
-         assert_content(r'(?!§)')]
-}
-
-
 def EBNFTransformer(syntax_tree: Node):
-    for processing_table, key_func in [(EBNF_transformation_table, key_tag_name),
-                                       (EBNF_validation_table, key_tag_name)]:
-        traverse(syntax_tree, processing_table, key_func)
+    traverse(syntax_tree, EBNF_transformation_table, key_tag_name)
 
 
 def get_ebnf_transformer() -> TransformationFunc:
@@ -728,7 +719,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node) -> str:
-        return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join([node.result]) + ')' ?
+        return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.join_children([node.result]) + ')' ?
 
 
     def on_regexp(self, node: Node) -> str:
