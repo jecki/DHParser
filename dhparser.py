@@ -77,6 +77,7 @@ def selftest() -> bool:
     print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
     selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
                                         ebnf_transformer, ebnf_compiler)
+    ebnf_compiler.gen_transformer_skeleton()
     print(selfhosted_ebnf_parser)
     print("\n\n Selftest SUCCEEDED :-)\n\n")
     return True

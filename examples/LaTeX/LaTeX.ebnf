@@ -64,12 +64,12 @@ itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
 item                = "\item" [PARSEP] sequence
 
-figure              = "\begin{figure}" sequence "\end{figure}"
-quotation           = ("\begin{quotation}" sequence "\end{quotation}")
-                    | ("\begin{quote}" sequence "\end{quote}")
-verbatim            = "\begin{verbatim}" sequence "\end{verbatim}"
-table               = "\begin{tabular}" table_config sequence "\end{tabular}"
-table_config        = "{" /[lcr|]+/~ "}"
+figure              = "\begin{figure}" sequence §"\end{figure}"
+quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
+                    | ("\begin{quote}" sequence §"\end{quote}")
+verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
+table               = "\begin{tabular}" table_config sequence §"\end{tabular}"
+table_config        = "{" /[lcr|]+/~ §"}"
 
 
 #### paragraphs and sequences of paragraphs ####
@@ -92,7 +92,7 @@ end_inline_env      = end_environment
 begin_environment   = "\begin{" §NAME §"}"
 end_environment     = "\end{" §::NAME §"}"
 
-inline_math         = "$" /[^$]*/ "$"
+inline_math         = "$" /[^$]*/ §"$"
 
 
 #### commands ####

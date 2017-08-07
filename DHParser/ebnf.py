@@ -330,6 +330,9 @@ class EBNFCompiler(Compiler):
         recursive - A set of symbols that are used recursively and
                 therefore require a `Forward`-operator.
 
+        definitions - A dictionary of definitions. Other than `rules`
+                this maps the symbols to their compiled definienda.
+
         deferred_taks - A list of callables that is filled during
                 compilatation, but that will be executed only after
                 compilation has finished. Typically, it contains
@@ -367,6 +370,7 @@ class EBNFCompiler(Compiler):
         self.symbols = {}           # type: Dict[str, Node]
         self.variables = set()      # type: Set[str]
         self.recursive = set()      # type: Set[str]
+        self.definitions = {}       # type: Dict[str, str]
         self.deferred_tasks = []    # type: List[Callable]
         self.root = ""              # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
@@ -407,9 +411,15 @@ class EBNFCompiler(Compiler):
                       self.grammar_name + '-grammar']
         transtable.append('    "+": remove_empty,')
         for name in self.rules:
-            transtable.append('    "' + name + '": [],')
+            tf = '[]'
+            rule = self.definitions[name]
+            if rule.startswith('Alternative'):
+                tf = '[replace_or_reduce]'
+            elif rule.startswith('Synonym'):
+                tf = '[replace_by_single_child]'
+            transtable.append('    "' + name + '": %s,' % tf)
         transtable.append('    ":Token, :RE": reduce_single_child,')
-        transtable += ['    # "*": replace_by_single_child', '}', '', tf_name +
+        transtable += ['    "*": replace_by_single_child', '}', '', tf_name +
                        ' = partial(traverse, processing_table=%s)' % tt_name, '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
@@ -560,6 +570,7 @@ class EBNFCompiler(Compiler):
                 assert nd.parser.name == "directive", nd.as_sxpr()
                 self.compile(nd)
                 node.error_flag = node.error_flag or nd.error_flag
+        self.definitions.update(definitions)
 
         return self.assemble_parser(definitions, node)
 

@@ -39,8 +39,10 @@ __all__ = ('transformation_factory',
            'key_parser_name',
            'key_tag_name',
            'traverse',
+           'is_named',
            'replace_by_single_child',
            'reduce_single_child',
+           'replace_or_reduce',
            'replace_parser',
            'collapse',
            'merge_children',
@@ -235,6 +237,21 @@ def TRUE_CONDITION(node):
     return True
 
 
+def replace_child(node):
+    assert len(node.children) == 1
+    if not node.children[0].parser.name:
+        node.children[0].parser.name = node.parser.name
+    node.parser = node.children[0].parser
+    node._errors.extend(node.children[0]._errors)
+    node.result = node.result[0].result
+
+
+def reduce_child(node):
+    assert len(node.children) == 1
+    node._errors.extend(node.children[0]._errors)
+    node.result = node.result[0].result
+
+
 @transformation_factory(Callable)
 def replace_by_single_child(node, condition=TRUE_CONDITION):
     """Remove single branch node, replacing it by its immediate descendant
@@ -242,12 +259,8 @@ def replace_by_single_child(node, condition=TRUE_CONDITION):
     (In case the descendant's name is empty (i.e. anonymous) the
     name of this node's parser is kept.)
     """
-    if node.children and len(node.result) == 1 and condition(node.children[0]):
-        if not node.result[0].parser.name:
-            node.result[0].parser.name = node.parser.name
-        node.parser = node.result[0].parser
-        node._errors.extend(node.result[0]._errors)
-        node.result = node.result[0].result
+    if len(node.children) == 1 and condition(node.children[0]):
+        replace_child(node)
 
 
 @transformation_factory(Callable)
@@ -257,9 +270,23 @@ def reduce_single_child(node, condition=TRUE_CONDITION):
     If the condition evaluates to false on the descendant, it will not
     be reduced.
     """
-    if node.children and len(node.result) == 1 and condition(node.children[0]):
-        node._errors.extend(node.result[0]._errors)
-        node.result = node.result[0].result
+    if len(node.children) == 1 and condition(node.children[0]):
+        reduce_child(node)
+
+
+def is_named(node):
+    return node.parser.name
+
+
+@transformation_factory(Callable)
+def replace_or_reduce(node, condition=is_named):
+    """Replaces node by a single child, if condition is met on child,
+    otherwise (i.e. if the child is anonymous) reduces the child.
+    """
+    if len(node.children) == 1 and condition(node.children[0]):
+        replace_child(node)
+    else:
+        reduce_child(node)
 
 
 @transformation_factory
