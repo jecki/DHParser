@@ -291,6 +291,55 @@ class EBNFCompiler(Compiler):
     """
     Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
+
+    Instances of this class must be called with the root-node of the
+    abstract syntax tree from an EBNF-specification of a formal language.
+    The returned value is the Python-source-code of a Grammar class for
+    this language that can be used to parse texts in this language.
+    See classes `parser.Compiler` and `parser.Grammar` for more information.
+
+    Addionally, class EBNFCompiler provides helper methods to generate
+    code-skeletons for a preprocessor, AST-transformation and full
+    compilation of the formal language. These method's names start with
+    the prefix `gen_`.
+
+    Attributes:
+        current_symbols - During compilation, a list containing the root
+                node of the currently compiled definition as first element
+                and then the nodes of the symbols that are referred to in
+                the currently compiled definition.
+
+        rules - Dictionary that maps rule names to a list of Nodes that
+                contain symbol-references in the definition of the rule.
+                The first item in the list is the node of the rule-
+                definition itself. Example:
+
+                           `alternative = a | b`
+
+                Now `[str(node) for node in self.rules['alternative']]`
+                yields `['alternative = a | b', 'a', 'b']`
+
+        symbols - A mapping of symbol names to their first usage (not
+                their definition!) in the EBNF source.
+
+        variables - A set of symbols names that are used with the
+                Pop or Retrieve operator. Because the values of these
+                symbols need to be captured they are called variables.
+                See `test_parser.TestPopRetrieve` for an example.
+
+        recursive - A set of symbols that are used recursively and
+                therefore require a `Forward`-operator.
+
+        deferred_taks - A list of callables that is filled during
+                compilatation, but that will be executed only after
+                compilation has finished. Typically, it contains
+                sementatic checks that require information that
+                is only available upon completion of compilation.
+
+        root -   The name of the root symbol.
+
+        directives - A dictionary of all directives and their default
+                values.
     """
     COMMENT_KEYWORD = "COMMENT__"
     WHITESPACE_KEYWORD = "WSP__"
@@ -317,7 +366,6 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []   # type: List[Node]
         self.symbols = {}           # type: Dict[str, Node]
         self.variables = set()      # type: Set[str]
-        # self.definitions = []     # type: List[Tuple[str, str]]
         self.recursive = set()      # type: Set[str]
         self.deferred_tasks = []    # type: List[Callable]
         self.root = ""              # type: str
@@ -335,12 +383,20 @@ class EBNFCompiler(Compiler):
     # methods for generating skeleton code for preprocessor, transformer, and compiler
 
     def gen_preprocessor_skeleton(self) -> str:
+        """
+        Returns Python-skeleton-code for a preprocessor-function for
+        the previously compiled formal language.
+        """
         name = self.grammar_name + "Preprocessor"
         return "def %s(text):\n    return text\n" % name \
                + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 
     def gen_transformer_skeleton(self) -> str:
+        """
+        Returns Python-skeleton-code for the AST-transformation for the
+        previously compiled formal language.
+        """
         if not self.rules:
             raise EBNFCompilerError('Compiler must be run before calling '
                                     '"gen_transformer_Skeleton()"!')
@@ -360,6 +416,10 @@ class EBNFCompiler(Compiler):
 
 
     def gen_compiler_skeleton(self) -> str:
+        """
+        Returns Python-skeleton-code for a Compiler-class for the
+        previously compiled formal language.
+        """
         if not self.rules:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')

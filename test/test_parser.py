@@ -232,7 +232,7 @@ class TestPopRetrieve:
     mini_language = """
         document       = { text | codeblock }
         codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
-        delimiter      = delimiter_sign  # never use delimiter between capture and retrieve!!!
+        delimiter      = delimiter_sign  # never use delimiter between capture and pop except for retrival!
         delimiter_sign = /`+/
         text           = /[^`]+/ 
         """
