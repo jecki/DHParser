@@ -144,8 +144,9 @@ ESCAPED    = /\\[%$&_\/]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
-LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
-PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
+LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
+PARSEP     = { GAP }+                       # paragraph separator
+GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
 LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
                                             # beginning of text marker '$' added for test code

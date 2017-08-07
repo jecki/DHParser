@@ -432,9 +432,9 @@ def remove_tokens(node, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory
-def remove_parser(node, regexp: str):
-    """Removes children by 'tag name'."""
-    remove_children_if(node, partial(is_one_of, regexp=regexp))
+def remove_parser(node, tag_names: AbstractSet[str]):
+    """Removes children by tag name."""
+    remove_children_if(node, partial(is_one_of, tag_name_set=tag_names))
 
 
 @transformation_factory

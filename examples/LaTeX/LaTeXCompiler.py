@@ -155,7 +155,7 @@ class LaTeXGrammar(Grammar):
     generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
     
     footnote            = "\footnote" block_of_paragraphs
-    includegraphics     = "\includegraphics" config block
+    includegraphics     = "\includegraphics" [ config ] block
     caption             = "\caption" block
     
     
@@ -197,8 +197,9 @@ class LaTeXGrammar(Grammar):
     BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
-    LF         = !PARSEP /[ \t]*\n[ \t]*/       # linefeed but not an empty line
-    PARSEP     = /[ \t]*(?:\n[ \t]*)+\n[ \t]*/  # at least one empty line, i.e.
+    LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
+    PARSEP     = { GAP }+                       # paragraph separator
+    GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
     LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
                                                 # beginning of text marker '$' added for test code
@@ -211,7 +212,7 @@ class LaTeXGrammar(Grammar):
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
     text_element = Forward()
-    source_hash__ = "4e001b31490278efccfe43953bfdcf58"
+    source_hash__ = "9cdeab7d908861b396d3667373fdcb9a"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -220,8 +221,9 @@ class LaTeXGrammar(Grammar):
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
     LB = RegExp('\\s*?\\n|$')
-    PARSEP = RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n[ \\t]*')
-    LF = Series(NegativeLookahead(PARSEP), RegExp('[ \\t]*\\n[ \\t]*'))
+    GAP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
+    PARSEP = OneOrMore(GAP)
+    LF = Series(NegativeLookahead(GAP), RegExp('[ \\t]*\\n[ \\t]*'))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     BRACKETS = RegExp('[\\[\\]]')
     ESCAPED = RegExp('\\\\[%$&_/]')
@@ -236,7 +238,7 @@ class LaTeXGrammar(Grammar):
     block = Series(RegExp('{'), ZeroOrMore(text_element), Required(RegExp('}')))
     config = Series(Token("["), cfgtext, Required(Token("]")))
     caption = Series(Token("\\caption"), block)
-    includegraphics = Series(Token("\\includegraphics"), config, block)
+    includegraphics = Series(Token("\\includegraphics"), Optional(config), block)
     footnote = Series(Token("\\footnote"), block_of_paragraphs)
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
     known_command = Alternative(footnote, includegraphics, caption)
@@ -324,7 +326,8 @@ def watch(node):
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "+": remove_empty,
+    "+": remove_children_if(lambda node: is_empty(node) or is_one_of(node, {'PARSEP'})),
+    # remove_empty,
     "latexdoc": [],
     "preamble": [],
     "document": [],
@@ -383,6 +386,7 @@ LaTeX_AST_transformation_table = {
     "TEXTCHUNK": [],
     "LF": [],
     "PARSEP": replace_content(lambda node: '\n\n'),
+    "GAP": [],
     "LB": [],
     "BACKSLASH": [],
     "EOF": [],
