@@ -197,9 +197,6 @@ def add_parser_guard(parser_func):
                 grammar.moving_forward__ = True
                 grammar.left_recursion_encountered__ = False
 
-            if grammar.history_tracking__:
-                grammar.call_stack__.append(parser)
-
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
@@ -209,6 +206,9 @@ def add_parser_guard(parser_func):
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
                 grammar.left_recursion_encountered__ = True
                 return None, text
+
+            if grammar.history_tracking__:
+                grammar.call_stack__.append(parser)
 
             parser.recursion_counter[location] += 1
 
@@ -1032,7 +1032,7 @@ class UnaryOperator(Parser):
     """
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(UnaryOperator, self).__init__(name)
-        # assert isinstance(parser, Parser)
+        assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
 
     def __deepcopy__(self, memo):
@@ -1057,7 +1057,7 @@ class NaryOperator(Parser):
     """
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
-        # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):

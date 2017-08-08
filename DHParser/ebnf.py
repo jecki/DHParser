@@ -786,6 +786,8 @@ class EBNFCompiler(Compiler):
                 self.symbols[symbol] = node  # remember first use of symbol
             if symbol in self.rules:
                 self.recursive.add(symbol)
+            if symbol in (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
+                return "RegExp(%s)" % symbol
             return symbol
 
 

@@ -76,10 +76,8 @@ tabular_config      = "{" /[lcr|]+/~ §"}"
 
 block_of_paragraphs = /{/~ sequence §/}/
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
-
 paragraph           = { !blockcmd text_element //~ }+
-text_element       = command | text | block | inline_environment
-
+text_element        = text | block | inline_environment | command
 
 #### inline enivronments ####
 
@@ -146,7 +144,8 @@ TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding white
                                             # linefeed and special characters
 LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
 LFF        = //~ -&LB [ WSPC ]              # at least one linefeed
-WSPC       = { ~/\s+/~ }+                   # arbitrary horizontal or vertical whitespace
+WSPC       = { COMMENT__ | /\s+/ }+
+# WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
 PARSEP     = { GAP }+                       # paragraph separator
 GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed

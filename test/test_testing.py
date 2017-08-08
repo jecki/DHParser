@@ -19,6 +19,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import re
 import sys
 from functools import partial
 
@@ -101,6 +103,18 @@ class TestGrammarTest:
             }
         }
     }
+
+    def teardown(self):
+        if os.path.exists('REPORT'):
+            files = os.listdir('REPORT')
+            flag = False
+            for file in files:
+                if re.match(r'\d+\.md', file):
+                    os.remove(os.path.join('REPORT', file))
+                else:
+                    flag = True
+            if not flag:
+                os.rmdir('REPORT')
 
     def test_testing_grammar(self):
         parser_fac = grammar_provider(ARITHMETIC_EBNF)

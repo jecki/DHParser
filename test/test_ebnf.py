@@ -83,6 +83,35 @@ class TestDirectives:
         assert syntax_tree.collect_errors()
 
 
+class TestReservedSymbols:
+    def test_comment_usage(self):
+        lang = r"""
+        @comment = /#.*(?:\n|$)/
+        document = text [ COMMENT__ ]
+        text = /[^#]+/
+        """
+        parser = grammar_provider(lang)()
+
+    def test_whitespace(self):
+        lang = r"""
+        @whitespace = /\s*/
+        document = WSP__ { word WSP__ }
+        word = /\w+/ 
+        """
+        parser = grammar_provider(lang)()
+
+    def test_mixin(self):
+        lang = r"""
+        @comment = /#.*(?:\n|$)/
+        @whitespace = /\s*/
+        document = WSP__ { word WSP__ }
+        word = /\w+/ 
+        """
+        parser = grammar_provider(lang)()
+        result = parser("test # kommentar")
+        assert not result.error_flag, str(result.as_sxpr())
+
+
 class TestEBNFParser:
     cases = {
         "list_": {

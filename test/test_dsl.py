@@ -77,7 +77,17 @@ class TestCompilerGeneration:
         for name in (self.grammar_name, self.compiler_name, self.text_name, self.result_name):
             if os.path.exists(name):
                 os.remove(name)
-        pass
+        if os.path.exists('LOGS'):
+            files = os.listdir('LOGS')
+            flag = False
+            for file in files:
+                if file.startswith('TestCompilerGenerationCompiler') or file == "info.txt":
+                    os.remove(os.path.join('LOGS', file))
+                else:
+                    flag = True
+            if not flag:
+                os.rmdir('LOGS')
+
 
     def test_load_compiler_suite(self):
         src = compileEBNF(self.trivial_lang, "Trivial")

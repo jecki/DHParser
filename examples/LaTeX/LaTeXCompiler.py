@@ -7,26 +7,22 @@
 #######################################################################
 
 
-from functools import partial
 import os
 import sys
+from functools import partial
+
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
+    Required, Token, Synonym, \
+    Optional, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationFunc, MockParser, \
-    traverse, remove_children_if, merge_children, TRUE_CONDITION, is_anonymous, \
+    PreprocessorFunc, \
+    Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_parser, remove_content, remove_brackets, replace_parser, \
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
+    flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first
 
 
 #######################################################################
@@ -129,10 +125,8 @@ class LaTeXGrammar(Grammar):
     
     block_of_paragraphs = /{/~ sequence §/}/
     sequence            = { (paragraph | block_environment ) [PARSEP] }+
-    
     paragraph           = { !blockcmd text_element //~ }+
-    text_element       = command | text | block | inline_environment
-    
+    text_element        = text | block | inline_environment | command
     
     #### inline enivronments ####
     
@@ -199,7 +193,8 @@ class LaTeXGrammar(Grammar):
                                                 # linefeed and special characters
     LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
     LFF        = //~ -&LB [ WSPC ]              # at least one linefeed
-    WSPC       = { ~/\s+/~ }+                   # arbitrary horizontal or vertical whitespace
+    WSPC       = { COMMENT__ | /\s+/ }+
+    # WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
     PARSEP     = { GAP }+                       # paragraph separator
     GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
@@ -215,7 +210,7 @@ class LaTeXGrammar(Grammar):
     end_generic_block = Forward()
     paragraph = Forward()
     text_element = Forward()
-    source_hash__ = "773d8d68e38663befc9488f7e0cb60e4"
+    source_hash__ = "529c853d5829c3016605e4ee7ed69ddb"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -226,7 +221,7 @@ class LaTeXGrammar(Grammar):
     LB = RegExp('\\s*?\\n|$')
     GAP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
     PARSEP = OneOrMore(GAP)
-    WSPC = OneOrMore(RE('\\s+', wL=WSP__))
+    WSPC = OneOrMore(Alternative(RegExp(COMMENT__), RegExp('\\s+')))
     LFF = Series(RE(''), Lookbehind(LB), Optional(WSPC))
     LF = Series(NegativeLookahead(GAP), RegExp('[ \\t]*\\n[ \\t]*'))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
@@ -256,7 +251,7 @@ class LaTeXGrammar(Grammar):
     generic_inline_env = Series(begin_inline_env, RE(''), paragraph, Required(end_inline_env))
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
-    text_element.set(Alternative(command, text, block, inline_environment))
+    text_element.set(Alternative(text, block, inline_environment, command))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
     block_of_paragraphs.set(Series(RE('{'), sequence, Required(RegExp('}'))))
