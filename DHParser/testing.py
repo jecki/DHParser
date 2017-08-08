@@ -27,8 +27,7 @@ except ImportError:
     import re
 
 from DHParser import error_messages
-from DHParser.toolkit import is_logging
-from DHParser.syntaxtree import mock_syntax_tree, oneliner_sxpr
+from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -150,15 +149,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
             cst = parser(test_code, parser_name)
-            cst.log("match_%s_%s.cst" % (parser_name, test_name))
+            cst.log("%s_match_%s_%s.cst" % (unit_name, parser_name, test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                ast.log("match_%s_%s.ast" % (parser_name, test_name))
+                ast.log("%s_match_%s_%s.ast" % (unit_name, parser_name, test_name))
             if cst.error_flag:
-                errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s' %
+                errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(m.replace('\n', '\n\t\t') for m in
                                            error_messages(test_code, cst.collect_errors()))))
@@ -174,8 +173,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                     errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                   '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                   % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                     oneliner_sxpr(compare.as_sxpr()),
-                                     oneliner_sxpr(ast.as_sxpr())))
+                                     flatten_sxpr(compare.as_sxpr()),
+                                     flatten_sxpr(ast.as_sxpr())))
                     tests.setdefault('__err__', {})[test_name] = errata[-1]
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
@@ -187,8 +186,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    fail-test  "' + test_name + '" ... '
                 errflag = len(errata)
             cst = parser(test_code, parser_name)
-            # doesn't make sense to write cst for fail-tests
-            # cst.log("fail_%s_%s.cst" % (parser_name, test_name))
             if not cst.error_flag:
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))

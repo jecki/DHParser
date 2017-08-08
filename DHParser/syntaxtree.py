@@ -133,12 +133,12 @@ StrictResultType = Union[ChildrenType, str]
 ResultType = Union[ChildrenType, 'Node', str, None]
 
 
-def oneliner_sxpr(sxpr: str) -> str:
-    """Returns S-expression `sxpr` as a one liner without unnecessary
+def flatten_sxpr(sxpr: str) -> str:
+    """Returns S-expression `sxpr` as a one-liner without unnecessary
     whitespace.
 
     Example:
-    >>> oneliner_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
+    >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
     '(a (b c))'
     """
     return re.sub('\s(?=\))', '', re.sub('\s+', ' ', sxpr)).strip()
@@ -199,10 +199,12 @@ class Node:
         self._pos = -1  # type: int
         self.parser = parser or ZOMBIE_PARSER
 
+
     def __str__(self):
         if self.children:
             return "".join(str(child) for child in self.children)
         return str(self.result)
+
 
     def __repr__(self):
         mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
@@ -211,12 +213,15 @@ class Node:
                "(" + ", ".join(repr(child) for child in self.children) + ")"
         return "Node(%s, %s)" % (parg, rarg)
 
+
     def __eq__(self, other):
         # return str(self.parser) == str(other.parser) and self.result == other.result
         return self.tag_name == other.tag_name and self.result == other.result
 
+
     def __hash__(self):
         return hash(self.tag_name)
+
 
     def __deepcopy__(self, memodict={}):
         result = copy.deepcopy(self.result)
@@ -224,9 +229,11 @@ class Node:
         other._pos = self._pos
         return other
 
+
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
     def tag_name(self) -> str:
         return self.parser.name or self.parser.ptype
+
 
     @property
     def result(self) -> StrictResultType:
@@ -234,7 +241,7 @@ class Node:
 
     @result.setter
     def result(self, result: ResultType):
-        # # made obsolete by static type checking with mypy is done
+        # # made obsolete by static type checking with mypy
         # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
@@ -244,14 +251,17 @@ class Node:
         self.error_flag = any(r.error_flag for r in self._children) \
             if self._children else False  # type: bool
 
+
     @property
     def children(self) -> ChildrenType:
         return self._children
+
 
     @property
     def len(self) -> int:
         # DEBUGGING:  print(self.tag_name, str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
         return self._len
+
 
     @property
     def pos(self) -> int:
@@ -267,15 +277,18 @@ class Node:
             child.pos = pos + offset
             offset += child.len
 
+
     @property
     def errors(self) -> List[Error]:
         return [Error(self.pos, err) for err in self._errors]
+
 
     def add_error(self, error_str: str) -> 'Node':
         assert isinstance(error_str, str)
         self._errors.append(error_str)
         self.error_flag = True
         return self
+
 
     def propagate_error_flags(self) -> None:
         """Recursively propagates error flags set on child nodes to its
@@ -285,6 +298,7 @@ class Node:
         for child in self.children:
             child.propagate_error_flags()
             self.error_flag = self.error_flag or child.error_flag
+
 
     def collect_errors(self, clear_errors=False) -> List[Error]:
         """
@@ -300,6 +314,7 @@ class Node:
             for child in self.children:
                 errors.extend(child.collect_errors(clear_errors))
         return errors
+
 
     def _tree_repr(self, tab, openF, closeF, dataF=identity, density=0) -> str:
         """
@@ -346,6 +361,7 @@ class Node:
         else:
             return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail.lstrip(D)
 
+
     def as_sxpr(self, src: str=None) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
@@ -373,6 +389,7 @@ class Node:
 
         return self._tree_repr('    ', opening, lambda node: '\n)', pretty, density=0)
 
+
     def as_xml(self, src: str=None) -> str:
         """
         Returns content as XML-tree.
@@ -397,10 +414,12 @@ class Node:
 
         return self._tree_repr('    ', opening, closing, density=1)
 
+
     def structure(self) -> str:
         """Return structure (and content) as S-expression on a single line
         without any line breaks."""
-        return oneliner_sxpr(self.as_sxpr())
+        return flatten_sxpr(self.as_sxpr())
+
 
     def content(self) -> str:
         """
@@ -411,6 +430,7 @@ class Node:
             else str(self.result)
         return (
         ' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
+
 
     def find(self, match_function: Callable) -> Iterator['Node']:
         """Finds nodes in the tree that match a specific criterion.
@@ -432,6 +452,7 @@ class Node:
             for child in self.children:
                 for nd in child.find(match_function):
                     yield nd
+
 
     # def range(self, match_first, match_last):
     #     """Iterates over the range of nodes, starting from the first
@@ -473,11 +494,12 @@ class Node:
     #             return self.result,
     #     return nav(path.split('/'))
 
+
     def log(self, log_file_name):
         if is_logging():
-            st_file_name = log_file_name
-            with open(os.path.join(log_dir(), st_file_name), "w", encoding="utf-8") as f:
+            with open(os.path.join(log_dir(), log_file_name), "w", encoding="utf-8") as f:
                 f.write(self.as_sxpr())
+
 
 
 def mock_syntax_tree(sxpr):

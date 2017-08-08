@@ -54,11 +54,11 @@ Index          = "\printindex" [PARSEP]
 #### block environments ####
 
 block_environment   = known_environment | generic_block
-known_environment   = itemize | enumerate | figure | table | quotation
+known_environment   = itemize | enumerate | figure | tabular | quotation
                     | verbatim
 generic_block       = begin_generic_block sequence §end_generic_block
-begin_generic_block = -&LB begin_environment -&LB
-end_generic_block   = -&LB  end_environment  -&LB
+begin_generic_block = -&LB begin_environment LFF
+end_generic_block   = -&LB  end_environment LFF
 
 itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
@@ -68,13 +68,13 @@ figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
                     | ("\begin{quote}" sequence §"\end{quote}")
 verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
-table               = "\begin{tabular}" table_config sequence §"\end{tabular}"
-table_config        = "{" /[lcr|]+/~ §"}"
+tabular             = "\begin{tabular}" tabular_config sequence §"\end{tabular}"
+tabular_config      = "{" /[lcr|]+/~ §"}"
 
 
 #### paragraphs and sequences of paragraphs ####
 
-block_of_paragraphs = /{/ sequence §/}/
+block_of_paragraphs = /{/~ sequence §/}/
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
 
 paragraph           = { !blockcmd text_element //~ }+
@@ -85,20 +85,21 @@ text_element       = command | text | block | inline_environment
 
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
-generic_inline_env  = (begin_inline_env { text_element }+ §end_inline_env)
-begin_inline_env    = (-!LB begin_environment) | (begin_environment -!LB)
+generic_inline_env  = begin_inline_env //~ paragraph §end_inline_env
+begin_inline_env    = (-!LB begin_environment) | (begin_environment !LFF)
 end_inline_env      = end_environment
-                      # (-!LB end_environment)   | (end_environment   -!LB)  # ambiguity with genric_block when EOF
-begin_environment   = "\begin{" §NAME §"}"
-end_environment     = "\end{" §::NAME §"}"
+                      ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with genric_block when EOF
+begin_environment   = /\\begin{/ §NAME §/}/
+end_environment     = /\\end{/ §::NAME §/}/
 
-inline_math         = "$" /[^$]*/ §"$"
+inline_math         = /\$/ /[^$]*/ §/\$/
 
 
 #### commands ####
 
-command             = known_command | generic_command
+command             = known_command | text_command | generic_command
 known_command       = footnote | includegraphics | caption
+text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
@@ -113,12 +114,9 @@ caption             = "\caption" block
 #######################################################################
 
 
-config     = "[" cfgtext §"]"
-block      = /{/ { text_element } §/}/
-
-text       = { cfgtext | (BRACKETS //~) }+
-cfgtext    = { word_sequence | (ESCAPED //~) }+
-word_sequence = { TEXTCHUNK //~ }+
+config     = "[" text §"]"
+block      = /{/ //~ { !blockcmd text_element //~ } §/}/
+text       = TEXTCHUNK { //~ TEXTCHUNK }
 
 no_command = "\begin{" | "\end" | BACKSLASH structural
 blockcmd   = BACKSLASH ( ( "begin{" | "end{" )
@@ -138,13 +136,17 @@ structural = "subsection" | "section" | "chapter" | "subsubsection"
 
 
 CMDNAME    = /\\(?:(?!_)\w)+/~
+TXTCOMMAND = /\\text\w+/
+ESCAPED    = /\\[%$&_\/{}]/
+BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
+
 NAME       = /\w+/~
 
-ESCAPED    = /\\[%$&_\/]/
-BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
+LFF        = //~ -&LB WSPC                  # at least one linefeed
+WSPC       = { ~/\s+/~ }                    # arbitrary horizontal or vertical whitespace
 PARSEP     = { GAP }+                       # paragraph separator
 GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed

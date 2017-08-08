@@ -24,7 +24,7 @@ from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import TOKEN_PTYPE, mock_syntax_tree, oneliner_sxpr
+from DHParser.syntaxtree import TOKEN_PTYPE, mock_syntax_tree, flatten_sxpr
 from DHParser.transform import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
@@ -118,25 +118,25 @@ class TestSExpr:
     Tests for S-expression handling.
     """
     def test_compact_sexpr(self):
-        assert oneliner_sxpr("(a\n    (b\n        c\n    )\n)\n") == "(a (b c))"
+        assert flatten_sxpr("(a\n    (b\n        c\n    )\n)\n") == "(a (b c))"
 
     def test_mock_syntax_tree(self):
         sexpr = '(a (b c) (d e) (f (g h)))'
         tree = mock_syntax_tree(sexpr)
-        assert oneliner_sxpr(tree.as_sxpr().replace('"', '')) == sexpr
+        assert flatten_sxpr(tree.as_sxpr().replace('"', '')) == sexpr
 
         # test different quotation marks
         sexpr = '''(a (b """c""" 'k' "l") (d e) (f (g h)))'''
         sexpr_stripped = '(a (b c k l) (d e) (f (g h)))'
         tree = mock_syntax_tree(sexpr)
-        assert oneliner_sxpr(tree.as_sxpr().replace('"', '')) == sexpr_stripped
+        assert flatten_sxpr(tree.as_sxpr().replace('"', '')) == sexpr_stripped
 
         sexpr_clean = '(a (b "c" "k" "l") (d "e") (f (g "h")))'
         tree = mock_syntax_tree(sexpr_clean)
-        assert oneliner_sxpr(tree.as_sxpr()) == sexpr_clean
+        assert flatten_sxpr(tree.as_sxpr()) == sexpr_clean
 
         tree = mock_syntax_tree(sexpr_stripped)
-        assert oneliner_sxpr(tree.as_sxpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
+        assert flatten_sxpr(tree.as_sxpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
 
     def test_mock_syntax_tree_with_classes(self):
         sexpr = '(a:class1 (b:class2 x) (:class3 y) (c z))'
