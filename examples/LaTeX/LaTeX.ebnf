@@ -8,11 +8,11 @@
 latexdoc       = preamble document
 preamble       = { command }+
 
-document       = [PARSEP] "\begin{document}" [PARSEP]
-                 frontpages [PARSEP]
-                 (Chapters | Sections) [PARSEP]
-                 [Bibliography] [Index] [PARSEP]
-                 "\end{document}" [PARSEP] §EOF
+document       = [WSPC] "\begin{document}" [WSPC]
+                 frontpages [WSPC]
+                 (Chapters | Sections) [WSPC]
+                 [Bibliography] [Index] [WSPC]
+                 "\end{document}" [WSPC] §EOF
 frontpages     = sequence
 
 
@@ -22,26 +22,26 @@ frontpages     = sequence
 #
 #######################################################################
 
-Chapters       = { Chapter [PARSEP] }+
-Chapter        = "\Chapter" block [PARSEP] { sequence | Sections }
+Chapters       = { Chapter [WSPC] }+
+Chapter        = "\Chapter" block [WSPC] { sequence | Sections }
 
-Sections       = { Section [PARSEP] }+
-Section        = "\Section" block [PARSEP] { sequence | SubSections }
+Sections       = { Section [WSPC] }+
+Section        = "\Section" block [WSPC] { sequence | SubSections }
 
-SubSections    = { SubSection [PARSEP] }+
-SubSection     = "\SubSection" block [PARSEP] { sequence | SubSubSections }
+SubSections    = { SubSection [WSPC] }+
+SubSection     = "\SubSection" block [WSPC] { sequence | SubSubSections }
 
-SubSubSections = { SubSubSection [PARSEP] }+
-SubSubSection  = "\SubSubSection" block [PARSEP] { sequence | Paragraphs }
+SubSubSections = { SubSubSection [WSPC] }+
+SubSubSection  = "\SubSubSection" block [WSPC] { sequence | Paragraphs }
 
-Paragraphs     = { Paragraph [PARSEP] }+
-Paragraph      = "\paragraph" block [PARSEP] { sequence | SubParagraphs }
+Paragraphs     = { Paragraph [WSPC] }+
+Paragraph      = "\paragraph" block [WSPC] { sequence | SubParagraphs }
 
-SubParagraphs  = { SubParagraph [PARSEP] }+
-SubParagraph   = "\subparagpaph" block [PARSEP] { sequence }
+SubParagraphs  = { SubParagraph [WSPC] }+
+SubParagraph   = "\subparagraph" block [WSPC] [ sequence ]
 
-Bibliography   = "\bibliography" block [PARSEP]
-Index          = "\printindex" [PARSEP]
+Bibliography   = "\bibliography" block [WSPC]
+Index          = "\printindex" [WSPC]
 
 
 #######################################################################
@@ -60,9 +60,9 @@ generic_block       = begin_generic_block sequence §end_generic_block
 begin_generic_block = -&LB begin_environment LFF
 end_generic_block   = -&LB  end_environment LFF
 
-itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
-enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
-item                = "\item" [PARSEP] sequence
+itemize             = "\begin{itemize}" [WSPC] { item } §"\end{itemize}"
+enumerate           = "\begin{enumerate}" [WSPC] {item } §"\end{enumerate}"
+item                = "\item" [WSPC] sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
@@ -145,8 +145,8 @@ NAME       = /\w+/~
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-LFF        = //~ -&LB WSPC                  # at least one linefeed
-WSPC       = { ~/\s+/~ }                    # arbitrary horizontal or vertical whitespace
+LFF        = //~ -&LB [ WSPC ]              # at least one linefeed
+WSPC       = { ~/\s+/~ }+                   # arbitrary horizontal or vertical whitespace
 PARSEP     = { GAP }+                       # paragraph separator
 GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed

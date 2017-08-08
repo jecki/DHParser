@@ -61,11 +61,11 @@ class LaTeXGrammar(Grammar):
     latexdoc       = preamble document
     preamble       = { command }+
     
-    document       = [PARSEP] "\begin{document}" [PARSEP]
-                     frontpages [PARSEP]
-                     (Chapters | Sections) [PARSEP]
-                     [Bibliography] [Index] [PARSEP]
-                     "\end{document}" [PARSEP] §EOF
+    document       = [WSPC] "\begin{document}" [WSPC]
+                     frontpages [WSPC]
+                     (Chapters | Sections) [WSPC]
+                     [Bibliography] [Index] [WSPC]
+                     "\end{document}" [WSPC] §EOF
     frontpages     = sequence
     
     
@@ -75,26 +75,26 @@ class LaTeXGrammar(Grammar):
     #
     #######################################################################
     
-    Chapters       = { Chapter [PARSEP] }+
-    Chapter        = "\Chapter" block [PARSEP] { sequence | Sections }
+    Chapters       = { Chapter [WSPC] }+
+    Chapter        = "\Chapter" block [WSPC] { sequence | Sections }
     
-    Sections       = { Section [PARSEP] }+
-    Section        = "\Section" block [PARSEP] { sequence | SubSections }
+    Sections       = { Section [WSPC] }+
+    Section        = "\Section" block [WSPC] { sequence | SubSections }
     
-    SubSections    = { SubSection [PARSEP] }+
-    SubSection     = "\SubSection" block [PARSEP] { sequence | SubSubSections }
+    SubSections    = { SubSection [WSPC] }+
+    SubSection     = "\SubSection" block [WSPC] { sequence | SubSubSections }
     
-    SubSubSections = { SubSubSection [PARSEP] }+
-    SubSubSection  = "\SubSubSection" block [PARSEP] { sequence | Paragraphs }
+    SubSubSections = { SubSubSection [WSPC] }+
+    SubSubSection  = "\SubSubSection" block [WSPC] { sequence | Paragraphs }
     
-    Paragraphs     = { Paragraph [PARSEP] }+
-    Paragraph      = "\paragraph" block [PARSEP] { sequence | SubParagraphs }
+    Paragraphs     = { Paragraph [WSPC] }+
+    Paragraph      = "\paragraph" block [WSPC] { sequence | SubParagraphs }
     
-    SubParagraphs  = { SubParagraph [PARSEP] }+
-    SubParagraph   = "\subparagpaph" block [PARSEP] { sequence }
+    SubParagraphs  = { SubParagraph [WSPC] }+
+    SubParagraph   = "\subparagraph" block [WSPC] [ sequence ]
     
-    Bibliography   = "\bibliography" block [PARSEP]
-    Index          = "\printindex" [PARSEP]
+    Bibliography   = "\bibliography" block [WSPC]
+    Index          = "\printindex" [WSPC]
     
     
     #######################################################################
@@ -113,9 +113,9 @@ class LaTeXGrammar(Grammar):
     begin_generic_block = -&LB begin_environment LFF
     end_generic_block   = -&LB  end_environment LFF
     
-    itemize             = "\begin{itemize}" [PARSEP] { item } §"\end{itemize}"
-    enumerate           = "\begin{enumerate}" [PARSEP] {item } §"\end{enumerate}"
-    item                = "\item" [PARSEP] sequence
+    itemize             = "\begin{itemize}" [WSPC] { item } §"\end{itemize}"
+    enumerate           = "\begin{enumerate}" [WSPC] {item } §"\end{enumerate}"
+    item                = "\item" [WSPC] sequence
     
     figure              = "\begin{figure}" sequence §"\end{figure}"
     quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
@@ -198,8 +198,8 @@ class LaTeXGrammar(Grammar):
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
     LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-    LFF        = //~ -&LB WSPC                  # at least one linefeed
-    WSPC       = { ~/\s+/~ }                    # arbitrary horizontal or vertical whitespace
+    LFF        = //~ -&LB [ WSPC ]              # at least one linefeed
+    WSPC       = { ~/\s+/~ }+                   # arbitrary horizontal or vertical whitespace
     PARSEP     = { GAP }+                       # paragraph separator
     GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
@@ -215,7 +215,7 @@ class LaTeXGrammar(Grammar):
     end_generic_block = Forward()
     paragraph = Forward()
     text_element = Forward()
-    source_hash__ = "b06aca9481c1e5bd756caadb8b707dff"
+    source_hash__ = "773d8d68e38663befc9488f7e0cb60e4"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -226,8 +226,8 @@ class LaTeXGrammar(Grammar):
     LB = RegExp('\\s*?\\n|$')
     GAP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
     PARSEP = OneOrMore(GAP)
-    WSPC = ZeroOrMore(RE('\\s+', wL=WSP__))
-    LFF = Series(RE(''), Lookbehind(LB), WSPC)
+    WSPC = OneOrMore(RE('\\s+', wL=WSP__))
+    LFF = Series(RE(''), Lookbehind(LB), Optional(WSPC))
     LF = Series(NegativeLookahead(GAP), RegExp('[ \\t]*\\n[ \\t]*'))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     NAME = Capture(RE('\\w+'))
@@ -265,30 +265,30 @@ class LaTeXGrammar(Grammar):
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Required(Token("\\end{verbatim}")))
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Required(Token("\\end{quotation}"))), Series(Token("\\begin{quote}"), sequence, Required(Token("\\end{quote}"))))
     figure = Series(Token("\\begin{figure}"), sequence, Required(Token("\\end{figure}")))
-    item = Series(Token("\\item"), Optional(PARSEP), sequence)
-    enumerate = Series(Token("\\begin{enumerate}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{enumerate}")))
-    itemize = Series(Token("\\begin{itemize}"), Optional(PARSEP), ZeroOrMore(item), Required(Token("\\end{itemize}")))
+    item = Series(Token("\\item"), Optional(WSPC), sequence)
+    enumerate = Series(Token("\\begin{enumerate}"), Optional(WSPC), ZeroOrMore(item), Required(Token("\\end{enumerate}")))
+    itemize = Series(Token("\\begin{itemize}"), Optional(WSPC), ZeroOrMore(item), Required(Token("\\end{itemize}")))
     end_generic_block.set(Series(Lookbehind(LB), end_environment, LFF))
     begin_generic_block.set(Series(Lookbehind(LB), begin_environment, LFF))
     generic_block = Series(begin_generic_block, sequence, Required(end_generic_block))
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))
-    Index = Series(Token("\\printindex"), Optional(PARSEP))
-    Bibliography = Series(Token("\\bibliography"), block, Optional(PARSEP))
-    SubParagraph = Series(Token("\\subparagpaph"), block, Optional(PARSEP), ZeroOrMore(sequence))
-    SubParagraphs = OneOrMore(Series(SubParagraph, Optional(PARSEP)))
-    Paragraph = Series(Token("\\paragraph"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, SubParagraphs)))
-    Paragraphs = OneOrMore(Series(Paragraph, Optional(PARSEP)))
-    SubSubSection = Series(Token("\\SubSubSection"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, Paragraphs)))
-    SubSubSections = OneOrMore(Series(SubSubSection, Optional(PARSEP)))
-    SubSection = Series(Token("\\SubSection"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, SubSubSections)))
-    SubSections = OneOrMore(Series(SubSection, Optional(PARSEP)))
-    Section = Series(Token("\\Section"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, SubSections)))
-    Sections = OneOrMore(Series(Section, Optional(PARSEP)))
-    Chapter = Series(Token("\\Chapter"), block, Optional(PARSEP), ZeroOrMore(Alternative(sequence, Sections)))
-    Chapters = OneOrMore(Series(Chapter, Optional(PARSEP)))
+    Index = Series(Token("\\printindex"), Optional(WSPC))
+    Bibliography = Series(Token("\\bibliography"), block, Optional(WSPC))
+    SubParagraph = Series(Token("\\subparagraph"), block, Optional(WSPC), Optional(sequence))
+    SubParagraphs = OneOrMore(Series(SubParagraph, Optional(WSPC)))
+    Paragraph = Series(Token("\\paragraph"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraphs = OneOrMore(Series(Paragraph, Optional(WSPC)))
+    SubSubSection = Series(Token("\\SubSubSection"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSections = OneOrMore(Series(SubSubSection, Optional(WSPC)))
+    SubSection = Series(Token("\\SubSection"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSections = OneOrMore(Series(SubSection, Optional(WSPC)))
+    Section = Series(Token("\\Section"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubSections)))
+    Sections = OneOrMore(Series(Section, Optional(WSPC)))
+    Chapter = Series(Token("\\Chapter"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, Sections)))
+    Chapters = OneOrMore(Series(Chapter, Optional(WSPC)))
     frontpages = Synonym(sequence)
-    document = Series(Optional(PARSEP), Token("\\begin{document}"), Optional(PARSEP), frontpages, Optional(PARSEP), Alternative(Chapters, Sections), Optional(PARSEP), Optional(Bibliography), Optional(Index), Optional(PARSEP), Token("\\end{document}"), Optional(PARSEP), Required(EOF))
+    document = Series(Optional(WSPC), Token("\\begin{document}"), Optional(WSPC), frontpages, Optional(WSPC), Alternative(Chapters, Sections), Optional(WSPC), Optional(Bibliography), Optional(Index), Optional(WSPC), Token("\\end{document}"), Optional(WSPC), Required(EOF))
     preamble = OneOrMore(command)
     latexdoc = Series(preamble, document)
     root__ = latexdoc
