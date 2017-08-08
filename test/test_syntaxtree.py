@@ -129,7 +129,8 @@ class TestErrorHandling:
     def test_error_flag_propagation(self):
         tree = mock_syntax_tree('(a (b c) (d (e (f (g h)))))')
 
-        def find_h(node):
+        def find_h(context):
+            node = context[-1]
             if node.result == "h":
                 node.add_error("an error deep inside the syntax tree")
 

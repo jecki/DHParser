@@ -290,16 +290,6 @@ class Node:
         return self
 
 
-    def propagate_error_flags(self) -> None:
-        """Recursively propagates error flags set on child nodes to its
-        parents. This can be used if errors are added to descendant
-        nodes after syntaxtree construction, i.e. in the compile phase.
-        """
-        for child in self.children:
-            child.propagate_error_flags()
-            self.error_flag = self.error_flag or child.error_flag
-
-
     def collect_errors(self, clear_errors=False) -> List[Error]:
         """
         Returns all errors of this node or any child node in the form

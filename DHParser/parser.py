@@ -307,6 +307,22 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     this is not the same as an empty match `("", text)`. Any empty match
     can for example be returned by the `ZeroOrMore`-parser in case the
     contained parser is repeated zero times.
+
+    Attributes:
+        visted:  Dictionary of places this parser has already been to
+                during the current parsing process and the results the
+                parser returned at the respective place. This dictionary
+                is used to implement memoizing.
+
+        recursion_counter:  Mapping of places to how often the parser
+                has already been called recursively at this place. This
+                is needed to implement left recursion. The number of
+                calls becomes irrelevant once a resault has been memoized.
+
+        cycle_detection: The apply()-method uses this variable to make
+                sure that one and the same function will not be applied
+                (recursively) a second time, if it has already been
+                applied to this parser.
     """
 
     ApplyFunc = Callable[['Parser'], None]
@@ -472,15 +488,72 @@ class Grammar:
     is not necessary to instantiate more than one Grammar object per
     thread.
 
-    Grammar objects contain a few special fields for implicit
+    Grammar classes contain a few special class fields for implicit
     whitespace and comments that should be overwritten, if the defaults
     (no comments, horizontal right aligned whitespace) don't fit:
-    COMMENT__   - regular expression string for matching comments
-    wspL__      - regular expression string for left aligned whitespace
-    wspR__      - regular expression string for right aligned whitespace
-    root__      - the root parser of the grammar
-    """
+    COMMENT__:  regular expression string for matching comments
+    WSP__:   regular expression for whitespace and comments
+    wspL__:  regular expression string for left aligned whitespace,
+             which either equals WSP__ or is empty.
+    wspR__:  regular expression string for right aligned whitespace,
+             which either equals WSP__ or is empty.
+    root__:  The root parser of the grammar. Theoretically, all parsers of the
+             grammar should be reachable by the root parser. However, for testing
+             of yet incomplete grammars class Grammar does not assume that this
+             is the case.
+    parser_initializiation__:  Before the parser class (!) has been initialized,
+             which happens upon the first time it is instantiated (see doctring for
+             method `_assign_parser_names()` for an explanation), this class
+             field contains a value other than "done". A value of "done" indicates
+             that the class has already been initialized.
 
+    Attributes:
+        all_parsers__:  A set of all parsers connected to this grammar object
+
+        hostory_tracking:  A flag indicating that the parsing history shall
+                be tracked
+
+        wsp_left_parser__:  A parser for the default left-adjacent-whitespace
+                or the zombie-parser (see `syntaxtree.ZOMBIE_PARSER`) if the
+                default is empty. The default whitespace will be used by parsers
+                `Token` and, if no other parsers are passed to its constructor,
+                by parser `RE'.
+        wsp_right_parser__: The same for the default right-adjacent-whitespace.
+                Both wsp_left_parser__ and wsp_right_parser__ merely serve the
+                purpose to avoid having to specify the default whitespace
+                explicitly every time an `RE`-parser-object is created.
+
+        _dirty_flag__:  A flag indicating that the Grammar has been called at
+                least once so that the parsing-variables need to be reset
+                when it is called again.
+
+        document__:  the text that has most recently been parsed or that is
+                currently being parsed.
+        _reversed__:  the same text in reverse order - needed by the `Lookbehind'-
+                parsers.
+        variables__:  A mapping for variable names to a stack of their respective
+                string values - needed by the `Capture`-, `Retrieve`- and `Pop`-
+                parsers.
+        rollback__:  A list of tuples (location, rollback-function) that are
+                deposited by the `Capture`- and `Pop`-parsers. If the parsing
+                process reaches a dead end then all rollback-functions up to
+                the point to which it retreats will be called and the state
+                of the variable stack restored accordingly.
+        call_stack__:  A stack of all parsers that have been called. This
+                is required for recording the parser history (for debugging)
+                and, eventually, i.e. one day in the future, for tracing through
+                the parsing process.
+        history__:  A list of parser-call-stacks. A parser-call-stack is
+                appended to the list each time a parser either matches, fails
+                or if a parser-error occurs.
+        moving_forward__:  This flag indicates that the parsing process is currently
+                moving forward. This information is needed among other thins to
+                trigger the roolback of variables, which happens stepwise when the
+                parser is reatreating form a dead end, i.e. not moving forward.
+                (See `add_parser_guard` and its local function `guarded_call`)
+        left_recursion_encountered__:  This flag indicates that left recursion has
+                been encountered and triggers the left-recursion algorithm.
+    """
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
@@ -515,16 +588,15 @@ class Grammar:
         selected reference will be chosen. See PEP 520
         (www.python.org/dev/peps/pep-0520/) for an explanation of why. 
         """
-        if cls.parser_initialization__ == "done":
-            return
-        cdict = cls.__dict__
-        for entry, parser in cdict.items():
-            if isinstance(parser, Parser) and sane_parser_name(entry):
-                if not parser.name:
-                    parser.name = entry
-                if (isinstance(parser, Forward) and (not parser.parser.name)):
-                    parser.parser.name = entry
-        cls.parser_initialization__ = "done"
+        if cls.parser_initialization__ != "done":
+            cdict = cls.__dict__
+            for entry, parser in cdict.items():
+                if isinstance(parser, Parser) and sane_parser_name(entry):
+                    if not parser.name:
+                        parser.name = entry
+                    if (isinstance(parser, Forward) and (not parser.parser.name)):
+                        parser.parser.name = entry
+            cls.parser_initialization__ = "done"
 
 
     def __init__(self, root: Parser=None) -> None:
@@ -535,8 +607,8 @@ class Grammar:
         # if not hasattr(self.__class__, 'wspR__'):
         #     self.wspR__ = ''
         self.all_parsers__ = set()  # type: Set[Parser]
-        self.dirty_flag__ = False
-        self.history_tracking__ = False
+        self._dirty_flag__ = False  # type: bool
+        self.history_tracking__ = False  # type: bool
         self._reset__()
 
         # prepare parsers in the class, first
@@ -631,12 +703,12 @@ class Grammar:
         # assert isinstance(document, str), type(document)
         if self.root__ is None:
             raise NotImplementedError()
-        if self.dirty_flag__:
+        if self._dirty_flag__:
             self._reset__()
             for parser in self.all_parsers__:
                 parser.reset()
         else:
-            self.dirty_flag__ = True
+            self._dirty_flag__ = True
         self.history_tracking__ = is_logging()
         self.document__ = document
         self.last_rb__loc__ = len(document) + 1  # rollback location
@@ -1574,14 +1646,24 @@ class Compiler:
     themselves. This should be done by invoking the `compile(node)`-
     method which will pick the right `on_XXX`-method. It is not
     recommended to call the `on_XXX`-methods directly.
-    """
 
+    Attributes:
+        context:  A list of parent nodes that ends with the currently
+                compiled node.
+        grammar_name:  The name of the grammar this compiler is related to
+        grammar_source:  The source code of the grammar this compiler is
+                related to.
+        _dirty_flag:  A flag indicating that the compiler has already been
+                called at least once and that therefore all compilation
+                variables must be reset when it is called again.
+    """
     def __init__(self, grammar_name="", grammar_source=""):
-        self.dirty_flag = False
+        self._reset()
+        self._dirty_flag = False
         self.set_grammar_name(grammar_name, grammar_source)
 
     def _reset(self):
-        pass
+        self.context = []  # type: List[Node]
 
     def __call__(self, node: Node) -> Any:
         """
@@ -1591,11 +1673,13 @@ class Compiler:
         (This very much depends on the kind and purpose of the
         implemented compiler.)
         """
-        if self.dirty_flag:
+        if self._dirty_flag:
             self._reset()
         else:
-            self.dirty_flag = True
-        return self.compile(node)
+            self._dirty_flag = True
+        result = self.compile(node)
+        self.propagate_error_flags(node)
+        return result
 
     def set_grammar_name(self, grammar_name="", grammar_source=""):
         """
@@ -1611,6 +1695,15 @@ class Compiler:
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
         self.grammar_name = grammar_name
         self.grammar_source = load_if_file(grammar_source)
+
+    @staticmethod
+    def propagate_error_flags(node: Node) -> None:
+        if not node.error_flag:
+            for child in node.children:
+                Compiler.propagate_error_flags(child)
+                if child.error_flag:
+                    node.error_flag = True
+                    return
 
     @staticmethod
     def method_name(node_name: str) -> str:
@@ -1641,8 +1734,15 @@ class Compiler:
             return None
         else:
             compiler = self.__getattribute__(self.method_name(elem))
+            self.context.append(node)
             result = compiler(node)
-            node.propagate_error_flags()
+            self.context.pop()
+            # # the following statement makes sure that the error_flag
+            # # is propagated early on. Otherwise it is redundant, because
+            # # the __call__ method globally propagates the node's error_flag
+            # # later anyway. So, maybe it could be removed here.
+            # for child in node.children:
+            #     node.error_flag = node.error_flag or child.error_flag
             return result
 
 
@@ -1704,4 +1804,3 @@ def compile_source(source: str,
             errors = syntax_tree.collect_errors() if syntax_tree.error_flag else []
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree
-

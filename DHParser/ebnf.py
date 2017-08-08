@@ -285,8 +285,6 @@ class EBNFCompilerError(Exception):
     pass
 
 
-#TODO: Add Capture and Retrieve Validation: A variable mustn't be captured twice before retrival?!? Is this possible at compile time?
-
 class EBNFCompiler(Compiler):
     """
     Generates a Parser from an abstract syntax tree of a grammar specified
@@ -304,12 +302,12 @@ class EBNFCompiler(Compiler):
     the prefix `gen_`.
 
     Attributes:
-        current_symbols - During compilation, a list containing the root
+        current_symbols:  During compilation, a list containing the root
                 node of the currently compiled definition as first element
                 and then the nodes of the symbols that are referred to in
                 the currently compiled definition.
 
-        rules - Dictionary that maps rule names to a list of Nodes that
+        rules:  Dictionary that maps rule names to a list of Nodes that
                 contain symbol-references in the definition of the rule.
                 The first item in the list is the node of the rule-
                 definition itself. Example:
@@ -319,29 +317,29 @@ class EBNFCompiler(Compiler):
                 Now `[str(node) for node in self.rules['alternative']]`
                 yields `['alternative = a | b', 'a', 'b']`
 
-        symbols - A mapping of symbol names to their first usage (not
+        symbols:  A mapping of symbol names to their first usage (not
                 their definition!) in the EBNF source.
 
-        variables - A set of symbols names that are used with the
+        variables:  A set of symbols names that are used with the
                 Pop or Retrieve operator. Because the values of these
                 symbols need to be captured they are called variables.
                 See `test_parser.TestPopRetrieve` for an example.
 
-        recursive - A set of symbols that are used recursively and
+        recursive:  A set of symbols that are used recursively and
                 therefore require a `Forward`-operator.
 
-        definitions - A dictionary of definitions. Other than `rules`
+        definitions:  A dictionary of definitions. Other than `rules`
                 this maps the symbols to their compiled definienda.
 
-        deferred_taks - A list of callables that is filled during
+        deferred_taks:  A list of callables that is filled during
                 compilatation, but that will be executed only after
                 compilation has finished. Typically, it contains
                 sementatic checks that require information that
                 is only available upon completion of compilation.
 
-        root -   The name of the root symbol.
+        root:   The name of the root symbol.
 
-        directives - A dictionary of all directives and their default
+        directives:  A dictionary of all directives and their default
                 values.
     """
     COMMENT_KEYWORD = "COMMENT__"
@@ -364,6 +362,7 @@ class EBNFCompiler(Compiler):
 
 
     def _reset(self):
+        super(EBNFCompiler, self)._reset()
         self._result = ''           # type: str
         self.rules = OrderedDict()  # type: OrderedDict[str, List[Node]]
         self.current_symbols = []   # type: List[Node]
@@ -372,7 +371,7 @@ class EBNFCompiler(Compiler):
         self.recursive = set()      # type: Set[str]
         self.definitions = {}       # type: Dict[str, str]
         self.deferred_tasks = []    # type: List[Callable]
-        self.root = ""              # type: str
+        self.root_symbol = ""  # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
                            'literalws': ['right'],
@@ -444,7 +443,7 @@ class EBNFCompiler(Compiler):
                     "        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.rules:
             method_name = Compiler.method_name(name)
-            if name == self.root:
+            if name == self.root_symbol:
                 compiler += ['    def ' + method_name + '(self, node):',
                              '        return node', '']
             else:
@@ -507,7 +506,7 @@ class EBNFCompiler(Compiler):
 
         # turn definitions into declarations in reverse order
 
-        self.root = definitions[0][0] if definitions else ""
+        self.root_symbol = definitions[0][0] if definitions else ""
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.recursive))]
@@ -523,7 +522,7 @@ class EBNFCompiler(Compiler):
         for symbol in self.symbols:
             if symbol not in defined_symbols:
                 self.symbols[symbol].add_error("Missing definition for symbol '%s'" % symbol)
-                root_node.error_flag = True
+                # root_node.error_flag = True
 
         # check for unconnected rules
 
@@ -536,16 +535,18 @@ class EBNFCompiler(Compiler):
                     for related in self.rules[symbol][1:]:
                         remove_connections(str(related))
 
-            remove_connections(self.root)
+            remove_connections(self.root_symbol)
             for leftover in defined_symbols:
                 self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
-                    'root "%s" !') % (leftover, self.root) + ' (Use directive "@testing=True" '
+                                                   'root "%s" !') % (leftover,
+                                                                     self.root_symbol) + ' (Use directive "@testing=True" '
                     'to supress this error message.)')
+                # root_node.error_flag = True
 
-        # set root parser and assemble python grammar definition
+        # set root_symbol parser and assemble python grammar definition
 
-        if self.root and 'root__' not in self.rules:
-            declarations.append('root__ = ' + self.root)
+        if self.root_symbol and 'root__' not in self.rules:
+            declarations.append('root__ = ' + self.root_symbol)
         declarations.append('')
         self._result = '\n    '.join(declarations) \
                        + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
@@ -555,7 +556,6 @@ class EBNFCompiler(Compiler):
     ## compilation methods
 
     def on_syntax(self, node: Node) -> str:
-        self._reset()
         definitions = []  # type: List[Tuple[str, str]]
 
         # drop the wrapping sequence node

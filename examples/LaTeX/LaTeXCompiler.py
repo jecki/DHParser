@@ -55,7 +55,7 @@ class LaTeXGrammar(Grammar):
     
     
     latexdoc       = preamble document
-    preamble       = { command }+
+    preamble       = { [WSPC] command }+
     
     document       = [WSPC] "\begin{document}" [WSPC]
                      frontpages [WSPC]
@@ -210,7 +210,7 @@ class LaTeXGrammar(Grammar):
     end_generic_block = Forward()
     paragraph = Forward()
     text_element = Forward()
-    source_hash__ = "c77c91d639f2898ac2a58e1bfdf7e608"
+    source_hash__ = "61275add092114be64d558c654b94bcb"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -284,7 +284,7 @@ class LaTeXGrammar(Grammar):
     Chapters = OneOrMore(Series(Chapter, Optional(WSPC)))
     frontpages = Synonym(sequence)
     document = Series(Optional(WSPC), Token("\\begin{document}"), Optional(WSPC), frontpages, Optional(WSPC), Alternative(Chapters, Sections), Optional(WSPC), Optional(Bibliography), Optional(Index), Optional(WSPC), Token("\\end{document}"), Optional(WSPC), Required(EOF))
-    preamble = OneOrMore(command)
+    preamble = OneOrMore(Series(Optional(WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc
     
@@ -305,7 +305,8 @@ def get_grammar() -> LaTeXGrammar:
 #######################################################################
 
 
-def streamline_whitespace(node):
+def streamline_whitespace(context):
+    node = context[-1]
     assert node.tag_name in ['WSPC', ':Whitespace']
     s = str(node)
     c = s.find('%')
