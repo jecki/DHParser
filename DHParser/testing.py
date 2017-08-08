@@ -26,7 +26,7 @@ try:
 except ImportError:
     import re
 
-from DHParser import error_messages
+from DHParser.toolkit import is_logging, clear_logs, error_messages
 from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
 
 __all__ = ('unit_from_configfile',
@@ -149,13 +149,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
             cst = parser(test_code, parser_name)
-            cst.log("%s_match_%s_%s.cst" % (unit_name, parser_name, test_name))
+            cst.log("match_%s_%s.cst" % (parser_name, test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                ast.log("%s_match_%s_%s.ast" % (unit_name, parser_name, test_name))
+                ast.log("match_%s_%s.ast" % (parser_name, test_name))
             if cst.error_flag:
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
@@ -217,6 +217,7 @@ def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown
         print("\nScanning test-directory: " + directory)
     save_cwd = os.getcwd()
     os.chdir(directory)
+    if is_logging():    clear_logs()
     for filename in sorted(os.listdir()):
         if filename.lower().find("test") >= 0:
             try:

@@ -497,9 +497,11 @@ class Node:
 
     def log(self, log_file_name):
         if is_logging():
-            with open(os.path.join(log_dir(), log_file_name), "w", encoding="utf-8") as f:
+            path = os.path.join(log_dir(), log_file_name)
+            if os.path.exists(path):
+                print('WARNING: Log-file "%s" already exists and will be overwritten!' % path)
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(self.as_sxpr())
-
 
 
 def mock_syntax_tree(sxpr):

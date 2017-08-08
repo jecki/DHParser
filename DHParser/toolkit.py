@@ -133,6 +133,23 @@ def is_logging() -> bool:
         return False
 
 
+def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
+    """Removes all logs from the log-directory and removes the
+    log-directory if it is empty.
+    """
+    log_dirname = log_dir()
+    files = os.listdir(log_dirname)
+    only_log_files = True
+    for file in files:
+        path = os.path.join(log_dirname, file)
+        if os.path.splitext(file)[1] in logfile_types or file == 'info.txt':
+            os.remove(path)
+        else:
+            only_log_files = False
+    if only_log_files:
+        os.rmdir(log_dirname)
+
+
 # def repr_call(f, parameter_list) -> str:
 #     """Turns a list of items into a string resembling the parameter
 #     list of a function call by omitting default values at the end:

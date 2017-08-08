@@ -6,7 +6,7 @@
 
 
 latexdoc       = preamble document
-preamble       = { command }+
+preamble       = { [WSPC] command }+
 
 document       = [WSPC] "\begin{document}" [WSPC]
                  frontpages [WSPC]
@@ -23,16 +23,16 @@ frontpages     = sequence
 #######################################################################
 
 Chapters       = { Chapter [WSPC] }+
-Chapter        = "\Chapter" block [WSPC] { sequence | Sections }
+Chapter        = "\chapter" block [WSPC] { sequence | Sections }
 
 Sections       = { Section [WSPC] }+
-Section        = "\Section" block [WSPC] { sequence | SubSections }
+Section        = "\section" block [WSPC] { sequence | SubSections }
 
 SubSections    = { SubSection [WSPC] }+
-SubSection     = "\SubSection" block [WSPC] { sequence | SubSubSections }
+SubSection     = "\subsection" block [WSPC] { sequence | SubSubSections }
 
 SubSubSections = { SubSubSection [WSPC] }+
-SubSubSection  = "\SubSubSection" block [WSPC] { sequence | Paragraphs }
+SubSubSection  = "\subsubsection" block [WSPC] { sequence | Paragraphs }
 
 Paragraphs     = { Paragraph [WSPC] }+
 Paragraph      = "\paragraph" block [WSPC] { sequence | SubParagraphs }

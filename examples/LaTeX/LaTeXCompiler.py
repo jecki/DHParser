@@ -72,16 +72,16 @@ class LaTeXGrammar(Grammar):
     #######################################################################
     
     Chapters       = { Chapter [WSPC] }+
-    Chapter        = "\Chapter" block [WSPC] { sequence | Sections }
+    Chapter        = "\chapter" block [WSPC] { sequence | Sections }
     
     Sections       = { Section [WSPC] }+
-    Section        = "\Section" block [WSPC] { sequence | SubSections }
+    Section        = "\section" block [WSPC] { sequence | SubSections }
     
     SubSections    = { SubSection [WSPC] }+
-    SubSection     = "\SubSection" block [WSPC] { sequence | SubSubSections }
+    SubSection     = "\subsection" block [WSPC] { sequence | SubSubSections }
     
     SubSubSections = { SubSubSection [WSPC] }+
-    SubSubSection  = "\SubSubSection" block [WSPC] { sequence | Paragraphs }
+    SubSubSection  = "\subsubsection" block [WSPC] { sequence | Paragraphs }
     
     Paragraphs     = { Paragraph [WSPC] }+
     Paragraph      = "\paragraph" block [WSPC] { sequence | SubParagraphs }
@@ -210,7 +210,7 @@ class LaTeXGrammar(Grammar):
     end_generic_block = Forward()
     paragraph = Forward()
     text_element = Forward()
-    source_hash__ = "529c853d5829c3016605e4ee7ed69ddb"
+    source_hash__ = "c77c91d639f2898ac2a58e1bfdf7e608"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -274,13 +274,13 @@ class LaTeXGrammar(Grammar):
     SubParagraphs = OneOrMore(Series(SubParagraph, Optional(WSPC)))
     Paragraph = Series(Token("\\paragraph"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubParagraphs)))
     Paragraphs = OneOrMore(Series(Paragraph, Optional(WSPC)))
-    SubSubSection = Series(Token("\\SubSubSection"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSection = Series(Token("\\subsubsection"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, Paragraphs)))
     SubSubSections = OneOrMore(Series(SubSubSection, Optional(WSPC)))
-    SubSection = Series(Token("\\SubSection"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSection = Series(Token("\\subsection"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubSubSections)))
     SubSections = OneOrMore(Series(SubSection, Optional(WSPC)))
-    Section = Series(Token("\\Section"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubSections)))
+    Section = Series(Token("\\section"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, SubSections)))
     Sections = OneOrMore(Series(Section, Optional(WSPC)))
-    Chapter = Series(Token("\\Chapter"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, Sections)))
+    Chapter = Series(Token("\\chapter"), block, Optional(WSPC), ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Chapter, Optional(WSPC)))
     frontpages = Synonym(sequence)
     document = Series(Optional(WSPC), Token("\\begin{document}"), Optional(WSPC), frontpages, Optional(WSPC), Alternative(Chapters, Sections), Optional(WSPC), Optional(Bibliography), Optional(Index), Optional(WSPC), Token("\\end{document}"), Optional(WSPC), Required(EOF))

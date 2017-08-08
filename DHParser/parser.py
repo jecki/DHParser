@@ -731,11 +731,12 @@ class Grammar:
 
         def write_log(history, log_name):
             path = os.path.join(log_dir(), log_name + "_parser.log")
+            if os.path.exists(path):
+                os.remove(path)
+                print('WARNING: Log-file "%s" already existed and was deleted.' % path)
             if history:
                 with open(path, "w", encoding="utf-8") as f:
                     f.write("\n".join(history))
-            elif os.path.exists(path):
-                os.remove(path)
 
         if is_logging():
             assert self.history__, \
