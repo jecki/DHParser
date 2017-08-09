@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""tst_LaTeX_grammar.py - runs the unit tests for the LaTeX grammar
+"""tst_LaTeX_doc.py - tests with full documents in subdir 'testdata'
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -19,14 +19,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 
 import DHParser.dsl
+from DHParser import toolkit
 
 sys.path.extend(['../../', '../', './'])
-
-from DHParser import testing
-from DHParser import toolkit
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
@@ -34,14 +33,31 @@ if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles 
         print(f.read())
     sys.exit(1)
 
+
 from LaTeXCompiler import get_grammar, get_transformer
 
+parser = get_grammar()
+transformer = get_transformer()
+
+def fail_on_error(src, result):
+    if result.error_flag:
+        print(result.as_sxpr())
+        for e in toolkit.error_messages(src, result.collect_errors()):
+            print(e)
+        sys.exit(1)
+
 with toolkit.logging(True):
-    error_report = testing.grammar_suite('grammar_tests', get_grammar,
-                                         get_transformer, report=True, verbose=True)
-if error_report:
-    print('\n')
-    print(error_report)
-    sys.exit(1)
-else:
-    print('\nSUCCESS! All tests passed :-)')
+    files = os.listdir('testdata')
+    files.sort()
+    for file in files:
+        if file.lower().endswith('.tex'):
+            with open(os.path.join('testdata', file), 'r') as f:
+                doc = f.read()
+            print('\n\nParsing document: "%s"\n' % file)
+            result = parser(doc)
+            parser.log_parsing_history__()
+            fail_on_error(doc, result)
+            ast = transformer(result)
+            fail_on_error(doc, ast)
+            print(ast.as_sxpr())
+

@@ -68,7 +68,8 @@ figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
                     | ("\begin{quote}" sequence §"\end{quote}")
 verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
-tabular             = "\begin{tabular}" tabular_config sequence §"\end{tabular}"
+tabular             = "\begin{tabular}" tabular_config { tabular_cell } §"\end{tabular}"
+tabular_cell        = sequence
 tabular_config      = "{" /[lcr|]+/~ §"}"
 
 
@@ -96,14 +97,15 @@ inline_math         = /\$/ /[^$]*/ §/\$/
 #### commands ####
 
 command             = known_command | text_command | generic_command
-known_command       = footnote | includegraphics | caption
-text_command        = TXTCOMMAND | ESCAPED | BRACKETS
+known_command       = footnote | includegraphics | caption | multicolumn
+text_command        = TXTCOMMAND | ESCAPED | BRACKETS | LINEFEED
 generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
 includegraphics     = "\includegraphics" [ config ] block
 caption             = "\caption" block
-
+multicolumn         = "\multicolumn" "{" INTEGER "}"
+                      tabular_config block_of_paragraphs
 
 #######################################################################
 #
@@ -112,7 +114,8 @@ caption             = "\caption" block
 #######################################################################
 
 
-config     = "[" text §"]"
+config     = "[" cfg_text §"]"
+cfg_text   = { ([//~] text) | CMDNAME }
 block      = /{/ //~ { !blockcmd text_element //~ } §/}/
 text       = TEXTCHUNK { //~ TEXTCHUNK }
 
@@ -137,14 +140,16 @@ CMDNAME    = /\\(?:(?!_)\w)+/~
 TXTCOMMAND = /\\text\w+/
 ESCAPED    = /\\[%$&_\/{}]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
+LINEFEED   = /[\\][\\]/
 
 NAME       = /\w+/~
+INTEGER    = /\d+/~
 
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-LFF        = //~ -&LB [ WSPC ]              # at least one linefeed
-WSPC       = { COMMENT__ | /\s+/ }+
+LFF        = ~/\n?/ -&LB [ WSPC ]              # at least one linefeed
+WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
 # WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
 PARSEP     = { GAP }+                       # paragraph separator
 GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.

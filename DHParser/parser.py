@@ -66,18 +66,18 @@ try:
 except ImportError:
     import re
 try:
-    from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
+    from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
     # try:
     #     from typing import Collection
     # except ImportError:
     #     pass
 except ImportError:
-    from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union
+    from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
     Node, TransformationFunc
-from DHParser.toolkit import load_if_file, error_messages
+from DHParser.toolkit import load_if_file, error_messages, line_col
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
@@ -149,7 +149,7 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'remaining')
+    __slots__ = ('call_stack', 'node', 'remaining', 'line_col')
 
     MATCH = "MATCH"
     ERROR = "ERROR"
@@ -159,6 +159,12 @@ class HistoryRecord:
         self.call_stack = call_stack    # type: List['Parser']
         self.node = node                # type: Node
         self.remaining = remaining      # type: int
+        document = call_stack[-1].grammar.document__ if call_stack else ''
+        self.line_col = line_col(document, len(document) - remaining)  # type: Tuple[int, int]
+
+    def __str__(self):
+        return 'line %i, column %i:  %s  "%s"' % \
+               (self.line_col[0], self.line_col[1], self.stack, str(self.node))
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(self.node._errors).replace('\n', '\\')
@@ -177,6 +183,43 @@ class HistoryRecord:
     def extent(self) -> slice:
         return (slice(-self.remaining - self.node.len, -self.remaining) if self.node
                 else slice(-self.remaining, None))
+
+
+    @staticmethod
+    def last_match(history: List['HistoryRecord']) -> Optional['HistoryRecord']:
+        """
+        Returns the last match from the parsing-history.
+        Args:
+            history:  the parsing-history as a list of HistoryRecord objects
+
+        Returns:
+            the history record of the last match or none if either history is
+            empty or no parser could match
+        """
+        for record in reversed(history):
+            if record.status == HistoryRecord.MATCH:
+                return record
+        return None
+
+    @staticmethod
+    def most_advanced_match(history: List['HistoryRecord']) -> Optional['HistoryRecord']:
+        """
+        Returns the closest-to-the-end-match from the parsing-history.
+        Args:
+            history:  the parsing-history as a list of HistoryRecord objects
+
+        Returns:
+            the history record of the closest-to-the-end-match or none if either history is
+            empty or no parser could match
+        """
+        remaining = -1
+        result = None
+        for record in history:
+            if (record.status == HistoryRecord.MATCH and
+                    (record.remaining < remaining or remaining < 0)):
+                result = record
+                remaining = record.remaining
+        return result
 
 
 def add_parser_guard(parser_func):
@@ -323,6 +366,9 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
                 sure that one and the same function will not be applied
                 (recursively) a second time, if it has already been
                 applied to this parser.
+
+        grammar:  A reference to the Grammar object to which the parser
+                is attached.
     """
 
     ApplyFunc = Callable[['Parser'], None]
@@ -510,7 +556,7 @@ class Grammar:
     Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
 
-        hostory_tracking:  A flag indicating that the parsing history shall
+        hostory_tracking__:  A flag indicating that the parsing history shall
                 be tracked
 
         wsp_left_parser__:  A parser for the default left-adjacent-whitespace
@@ -725,7 +771,10 @@ class Grammar:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None:
-                    error_msg = "Parser did not match! Invalid source file?"
+                    error_msg = 'Parser did not match! Invalid source file?' \
+                                '\n    Most advanced: %s\n    Last match:    %s;' % \
+                                (str(HistoryRecord.most_advanced_match(self.history__)),
+                                 str(HistoryRecord.last_match(self.history__)))
                 else:
                     stitches.append(result)
                     error_msg = "Parser stopped before end" + \
@@ -775,6 +824,7 @@ class Grammar:
         which have been dismissed.
         """
         self.rollback__.append((location, func))
+        # print("push:  line %i, col %i" % line_col(self.document__, len(self.document__) - location))
         self.last_rb__loc__ = location
 
 
@@ -783,10 +833,15 @@ class Grammar:
         Rolls back the variable stacks (`self.variables`) to its
         state at an earlier location in the parsed document.
         """
+        # print("rollback:  line %i, col %i" % line_col(self.document__, len(self.document__) - location))
         while self.rollback__ and self.rollback__[-1][0] <= location:
             loc, rollback_func = self.rollback__.pop()
-            assert not loc > self.last_rb__loc__
+            # assert not loc > self.last_rb__loc__, \
+            #     "Rollback confusion: line %i, col %i < line %i, col %i" % \
+            #     (*line_col(self.document__, len(self.document__) - loc),
+            #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
+            # print("rb to:  line %i, col %i" % line_col(self.document__, len(self.document__) - loc))
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
             else (len(self.document__) + 1)
 

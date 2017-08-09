@@ -117,7 +117,8 @@ class LaTeXGrammar(Grammar):
     quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
                         | ("\begin{quote}" sequence §"\end{quote}")
     verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
-    tabular             = "\begin{tabular}" tabular_config sequence §"\end{tabular}"
+    tabular             = "\begin{tabular}" tabular_config { tabular_cell } §"\end{tabular}"
+    tabular_cell        = sequence
     tabular_config      = "{" /[lcr|]+/~ §"}"
     
     
@@ -145,14 +146,15 @@ class LaTeXGrammar(Grammar):
     #### commands ####
     
     command             = known_command | text_command | generic_command
-    known_command       = footnote | includegraphics | caption
-    text_command        = TXTCOMMAND | ESCAPED | BRACKETS
+    known_command       = footnote | includegraphics | caption | multicolumn
+    text_command        = TXTCOMMAND | ESCAPED | BRACKETS | LINEFEED
     generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
     
     footnote            = "\footnote" block_of_paragraphs
     includegraphics     = "\includegraphics" [ config ] block
     caption             = "\caption" block
-    
+    multicolumn         = "\multicolumn" "{" INTEGER "}"
+                          tabular_config block_of_paragraphs
     
     #######################################################################
     #
@@ -161,7 +163,8 @@ class LaTeXGrammar(Grammar):
     #######################################################################
     
     
-    config     = "[" text §"]"
+    config     = "[" cfg_text §"]"
+    cfg_text   = { ([//~] text) | CMDNAME }
     block      = /{/ //~ { !blockcmd text_element //~ } §/}/
     text       = TEXTCHUNK { //~ TEXTCHUNK }
     
@@ -186,14 +189,16 @@ class LaTeXGrammar(Grammar):
     TXTCOMMAND = /\\text\w+/
     ESCAPED    = /\\[%$&_\/{}]/
     BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
+    LINEFEED   = /[\\][\\]/
     
     NAME       = /\w+/~
+    INTEGER    = /\d+/~
     
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
     LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-    LFF        = //~ -&LB [ WSPC ]              # at least one linefeed
-    WSPC       = { COMMENT__ | /\s+/ }+
+    LFF        = ~/\n?/ -&LB [ WSPC ]              # at least one linefeed
+    WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
     # WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
     PARSEP     = { GAP }+                       # paragraph separator
     GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
@@ -209,8 +214,9 @@ class LaTeXGrammar(Grammar):
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
     paragraph = Forward()
+    tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "61275add092114be64d558c654b94bcb"
+    source_hash__ = "fc3ee1800932b561e9cec1e22aab7157"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -222,10 +228,12 @@ class LaTeXGrammar(Grammar):
     GAP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
     PARSEP = OneOrMore(GAP)
     WSPC = OneOrMore(Alternative(RegExp(COMMENT__), RegExp('\\s+')))
-    LFF = Series(RE(''), Lookbehind(LB), Optional(WSPC))
+    LFF = Series(RE('\\n?', wR='', wL=WSP__), Lookbehind(LB), Optional(WSPC))
     LF = Series(NegativeLookahead(GAP), RegExp('[ \\t]*\\n[ \\t]*'))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
+    INTEGER = RE('\\d+')
     NAME = Capture(RE('\\w+'))
+    LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     ESCAPED = RegExp('\\\\[%$&_/{}]')
     TXTCOMMAND = RegExp('\\\\text\\w+')
@@ -235,13 +243,15 @@ class LaTeXGrammar(Grammar):
     no_command = Alternative(Token("\\begin{"), Token("\\end"), Series(BACKSLASH, structural))
     text = Series(TEXTCHUNK, ZeroOrMore(Series(RE(''), TEXTCHUNK)))
     block = Series(RegExp('{'), RE(''), ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))), Required(RegExp('}')))
-    config = Series(Token("["), text, Required(Token("]")))
+    cfg_text = ZeroOrMore(Alternative(Series(Optional(RE('')), text), CMDNAME))
+    config = Series(Token("["), cfg_text, Required(Token("]")))
+    multicolumn = Series(Token("\\multicolumn"), Token("{"), INTEGER, Token("}"), tabular_config, block_of_paragraphs)
     caption = Series(Token("\\caption"), block)
     includegraphics = Series(Token("\\includegraphics"), Optional(config), block)
     footnote = Series(Token("\\footnote"), block_of_paragraphs)
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
-    text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
-    known_command = Alternative(footnote, includegraphics, caption)
+    text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS, LINEFEED)
+    known_command = Alternative(footnote, includegraphics, caption, multicolumn)
     command = Alternative(known_command, text_command, generic_command)
     inline_math = Series(RegExp('\\$'), RegExp('[^$]*'), Required(RegExp('\\$')))
     end_environment = Series(RegExp('\\\\end{'), Required(Pop(NAME)), Required(RegExp('}')))
@@ -255,8 +265,9 @@ class LaTeXGrammar(Grammar):
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
     block_of_paragraphs.set(Series(RE('{'), sequence, Required(RegExp('}'))))
-    tabular_config = Series(Token("{"), RE('[lcr|]+'), Required(Token("}")))
-    tabular = Series(Token("\\begin{tabular}"), tabular_config, sequence, Required(Token("\\end{tabular}")))
+    tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Required(Token("}"))))
+    tabular_cell = Synonym(sequence)
+    tabular = Series(Token("\\begin{tabular}"), tabular_config, ZeroOrMore(tabular_cell), Required(Token("\\end{tabular}")))
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Required(Token("\\end{verbatim}")))
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Required(Token("\\end{quotation}"))), Series(Token("\\begin{quote}"), sequence, Required(Token("\\end{quote}"))))
     figure = Series(Token("\\begin{figure}"), sequence, Required(Token("\\end{figure}")))
