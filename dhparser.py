@@ -85,7 +85,7 @@ def selftest() -> bool:
 
 
 def profile(func):
-    import cProfile
+    import cProfile, pstats
     pr = cProfile.Profile()
     pr.enable()
     for i in range(1):
@@ -94,7 +94,10 @@ def profile(func):
             break
     pr.disable()
     # after your program ends
-    pr.print_stats(sort="tottime")
+    st = pstats.Stats(pr)
+    st.strip_dirs()
+    st.sort_stats('time').print_stats(10)
+    # pr.print_stats(sort="tottime")
     return success
 
 
