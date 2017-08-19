@@ -35,7 +35,11 @@ except ImportError:
 
 from DHParser.toolkit import expand_table, smart_list
 
-__all__ = ('transformation_factory',
+__all__ = ('TransformationDict',
+           'TransformationProc',
+           'ConditionFunc',
+           'KeyFunc',
+           'transformation_factory',
            'key_parser_name',
            'key_tag_name',
            'traverse',
@@ -78,6 +82,7 @@ __all__ = ('transformation_factory',
 
 
 TransformationProc = Callable[[List[Node]], None]
+TransformationDict = Dict
 ConditionFunc = Callable  # Callable[[List[Node]], bool]
 KeyFunc = Callable[[Node], str]
 
@@ -191,8 +196,8 @@ def traverse(root_node: Node,
         root_node (Node): The root-node of the syntax tree to be traversed
         processing_table (dict): node key -> sequence of functions that
             will be applied to matching nodes in order. This dictionary
-            is interpreted as a ``compact_table``. See
-            ``toolkit.expand_table`` or ``EBNFCompiler.EBNFTransTable``
+            is interpreted as a `compact_table`. See
+            `toolkit.expand_table` or ``EBNFCompiler.EBNFTransTable`
         key_func (function): A mapping key_func(node) -> keystr. The default
             key_func yields node.parser.name.
 
@@ -201,11 +206,27 @@ def traverse(root_node: Node,
             "factor, flowmarker, retrieveop": replace_by_single_child }
         traverse(node, table)
     """
-    # normalize processing_table entries by turning single values into lists
-    # with a single value
-    table = {name: smart_list(call) for name, call in list(processing_table.items())}
-    table = expand_table(table)
-    cache = {}  # type: Dict[str, List[Callable]]
+    # Is this optimazation really needed?
+    if '__cache__' in processing_table:
+        # assume that processing table has already been expanded
+        table = processing_table
+        cache = processing_table['__cache__']
+    else:
+        # normalize processing_table entries by turning single values into lists
+        # with a single value
+        table = {name: smart_list(call) for name, call in list(processing_table.items())}
+        table = expand_table(table)
+        cache = table.setdefault('__cache__', {})  # type: Dict[str, List[Callable]]
+        # change processing table in place, so that table expansion does not get lost
+        # between calls
+        processing_table.clear();
+        processing_table.update(table)
+
+    # assert '__cache__' in processing_table
+    # # Code without optimization
+    # table = {name: smart_list(call) for name, call in list(processing_table.items())}
+    # table = expand_table(table)
+    # cache = {}
 
     def traverse_recursive(context):
         node = context[-1]
@@ -232,6 +253,8 @@ def traverse(root_node: Node,
             call(context)
 
     traverse_recursive([root_node])
+    # assert processing_table['__cache__']
+
 
 
 # ------------------------------------------------

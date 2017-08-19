@@ -19,7 +19,7 @@ from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Altern
     Required, Token, Synonym, \
     Optional, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    PreprocessorFunc, \
+    PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first
@@ -126,7 +126,7 @@ class LaTeXGrammar(Grammar):
     
     block_of_paragraphs = /{/~ sequence §/}/
     sequence            = { (paragraph | block_environment ) [PARSEP] }+
-    paragraph           = { !blockcmd text_element //~ }+
+    paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
     text_element        = text | block | inline_environment | command
     
     #### inline enivronments ####
@@ -147,7 +147,7 @@ class LaTeXGrammar(Grammar):
     
     command             = known_command | text_command | generic_command
     known_command       = footnote | includegraphics | caption | multicolumn
-    text_command        = TXTCOMMAND | ESCAPED | BRACKETS | LINEFEED
+    text_command        = TXTCOMMAND | ESCAPED | BRACKETS
     generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
     
     footnote            = "\footnote" block_of_paragraphs
@@ -216,7 +216,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "fc3ee1800932b561e9cec1e22aab7157"
+    source_hash__ = "a99d24bcde48695ca003d544738b8057"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -250,7 +250,7 @@ class LaTeXGrammar(Grammar):
     includegraphics = Series(Token("\\includegraphics"), Optional(config), block)
     footnote = Series(Token("\\footnote"), block_of_paragraphs)
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Optional(Series(Optional(Series(RE(''), config)), RE(''), block)))
-    text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS, LINEFEED)
+    text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
     known_command = Alternative(footnote, includegraphics, caption, multicolumn)
     command = Alternative(known_command, text_command, generic_command)
     inline_math = Series(RegExp('\\$'), RegExp('[^$]*'), Required(RegExp('\\$')))
@@ -262,7 +262,8 @@ class LaTeXGrammar(Grammar):
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     text_element.set(Alternative(text, block, inline_environment, command))
-    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))))
+    paragraph.set(
+        OneOrMore(Series(NegativeLookahead(blockcmd), Alternative(text_element, LINEFEED), RE(''))))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
     block_of_paragraphs.set(Series(RE('{'), sequence, Required(RegExp('}'))))
     tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Required(Token("}"))))
@@ -409,11 +410,19 @@ LaTeX_AST_transformation_table = {
     "*": replace_by_single_child
 }
 
-LaTeXTransform = partial(traverse, processing_table=LaTeX_AST_transformation_table)
 
+def LaTeXTransform() -> TransformationDict:
+    return partial(traverse, processing_table=LaTeX_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
-    return LaTeXTransform
+    global thread_local_LaTeX_transformer_singleton
+    try:
+        transformer = thread_local_LaTeX_transformer_singleton
+    except NameError:
+        thread_local_LaTeX_transformer_singleton = LaTeXTransform()
+        transformer = thread_local_LaTeX_transformer_singleton
+    return transformer
+
 
 
 #######################################################################

@@ -30,7 +30,7 @@ try:
 except ImportError:
     from .typing34 import Any, cast, Tuple, Union
 
-from DHParser.ebnf import EBNFTransformer, EBNFCompiler, grammar_changed, \
+from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
@@ -80,7 +80,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     last_value, counterpart, accumulate, PreprocessorFunc, \\
-    Node, TransformationFunc, TRUE_CONDITION, \\
+    Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \\
     traverse, remove_children_if, merge_children, is_anonymous, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
@@ -219,7 +219,8 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
     """
     grammar = get_ebnf_grammar()
     compiler = get_ebnf_compiler(branding , ebnf_src)
-    compileDSL(ebnf_src, nil_preprocessor, grammar, EBNFTransformer, compiler)
+    transformer = get_ebnf_transformer()
+    compileDSL(ebnf_src, nil_preprocessor, grammar, transformer, compiler)
     return compiler
 
 

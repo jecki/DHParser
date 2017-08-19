@@ -18,6 +18,7 @@ permissions and limitations under the License.
 
 import keyword
 from collections import OrderedDict
+from functools import partial
 
 try:
     import regex as re
@@ -33,9 +34,9 @@ from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, R
     Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     PreprocessorFunc
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, Node, TransformationFunc
-from DHParser.transform import traverse, remove_brackets, \
+from DHParser.transform import TransformationDict, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
-    remove_tokens, flatten, forbid, assert_content, key_tag_name, remove_infix_operator
+    remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
 
 __all__ = ('get_ebnf_preprocessor',
@@ -43,7 +44,7 @@ __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
            'EBNFGrammar',
-           'EBNFTransformer',
+           'EBNFTransform',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed',
@@ -191,7 +192,7 @@ def get_ebnf_grammar() -> EBNFGrammar:
 ########################################################################
 
 
-EBNF_transformation_table = {
+EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "+":
         remove_expendables,
@@ -221,12 +222,17 @@ EBNF_transformation_table = {
 }
 
 
-def EBNFTransformer(syntax_tree: Node):
-    traverse(syntax_tree, EBNF_transformation_table, key_tag_name)
-
+def EBNFTransform() -> TransformationDict:
+    return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 def get_ebnf_transformer() -> TransformationFunc:
-    return EBNFTransformer
+    global thread_local_EBNF_transformer_singleton
+    try:
+        transformer = thread_local_EBNF_transformer_singleton
+    except NameError:
+        thread_local_EBNF_transformer_singleton = EBNFTransform()
+        transformer = thread_local_EBNF_transformer_singleton
+    return transformer
 
 
 ########################################################################
@@ -252,16 +258,25 @@ def get_grammar() -> {NAME}Grammar:
     global thread_local_{NAME}_grammar_singleton
     try:
         grammar = thread_local_{NAME}_grammar_singleton
-        return grammar
     except NameError:
         thread_local_{NAME}_grammar_singleton = {NAME}Grammar()
-        return thread_local_{NAME}_grammar_singleton
+        grammar = thread_local_{NAME}_grammar_singleton
+    return grammar
 '''
 
 
 TRANSFORMER_FACTORY = '''
+def {NAME}Transform() -> TransformationDict:
+    return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
+
 def get_transformer() -> TransformationFunc:
-    return {NAME}Transform
+    global thread_local_{NAME}_transformer_singleton
+    try:
+        transformer = thread_local_{NAME}_transformer_singleton
+    except NameError:
+        thread_local_{NAME}_transformer_singleton = {NAME}Transform()
+        transformer = thread_local_{NAME}_transformer_singleton
+    return transformer
 '''
 
 
@@ -271,11 +286,11 @@ def get_compiler(grammar_name="{NAME}", grammar_source="") -> {NAME}Compiler:
     try:
         compiler = thread_local_{NAME}_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
-        return compiler
     except NameError:
         thread_local_{NAME}_compiler_singleton = \\
             {NAME}Compiler(grammar_name, grammar_source)
-        return thread_local_{NAME}_compiler_singleton 
+        compiler = thread_local_{NAME}_compiler_singleton
+    return compiler
 '''
 
 
@@ -404,7 +419,6 @@ class EBNFCompiler(Compiler):
             raise EBNFCompilerError('Compiler must be run before calling '
                                     '"gen_transformer_Skeleton()"!')
         tt_name = self.grammar_name + '_AST_transformation_table'
-        tf_name = self.grammar_name + 'Transform'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' +
                       self.grammar_name + '-grammar']
@@ -418,8 +432,7 @@ class EBNFCompiler(Compiler):
                 tf = '[replace_by_single_child]'
             transtable.append('    "' + name + '": %s,' % tf)
         transtable.append('    ":Token, :RE": reduce_single_child,')
-        transtable += ['    "*": replace_by_single_child', '}', '', tf_name +
-                       ' = partial(traverse, processing_table=%s)' % tt_name, '']
+        transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
 

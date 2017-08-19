@@ -77,7 +77,7 @@ tabular_config      = "{" /[lcr|]+/~ §"}"
 
 block_of_paragraphs = /{/~ sequence §/}/
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
-paragraph           = { !blockcmd text_element //~ }+
+paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
 text_element        = text | block | inline_environment | command
 
 #### inline enivronments ####
@@ -98,7 +98,7 @@ inline_math         = /\$/ /[^$]*/ §/\$/
 
 command             = known_command | text_command | generic_command
 known_command       = footnote | includegraphics | caption | multicolumn
-text_command        = TXTCOMMAND | ESCAPED | BRACKETS | LINEFEED
+text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
