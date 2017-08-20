@@ -361,7 +361,7 @@ class EBNFCompiler(Compiler):
     WHITESPACE_KEYWORD = "WSP__"
     RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
-                "Potentially due to erroneuos AST transformation."
+                "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
                     '&': 'Lookahead', '!': 'NegativeLookahead',
                     '-&': 'Lookbehind', '-!': 'NegativeLookbehind',
@@ -591,7 +591,11 @@ class EBNFCompiler(Compiler):
     def on_definition(self, node: Node) -> Tuple[str, str]:
         rule = str(node.children[0])
         if rule in self.rules:
-            node.add_error('A rule with name "%s" has already been defined.' % rule)
+            first = self.rules[rule][0]
+            if not first._errors:
+                first.add_error('First definition of rule "%s" '
+                                'followed by illegal redefinitions.' % rule)
+            node.add_error('A rule with name "%s" has already been defined earlier.' % rule)
         elif rule in EBNFCompiler.RESERVED_SYMBOLS:
             node.add_error('Symbol "%s" is a reserved symbol.' % rule)
         elif not sane_parser_name(rule):

@@ -164,6 +164,8 @@ class Node:
             example by calling ``isinstance(node.parer, ...)``.
         errors (list):  A list of parser- or compiler-errors:
             tuple(position, string) attached to this node
+        error_flag (bool):  True, if either the node or any of its
+            descendants has errors.
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the concatenated string
             result's of its descendants. The figure always represents

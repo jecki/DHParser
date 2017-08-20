@@ -68,14 +68,14 @@ figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
                     | ("\begin{quote}" sequence §"\end{quote}")
 verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
-tabular             = "\begin{tabular}" tabular_config { tabular_cell } §"\end{tabular}"
-tabular_cell        = sequence
+tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
+tabular_row         = [multicolumn | tabular_cell] { "&" [multicolumn | tabular_cell] } "\\" [ hline | cline ]
+tabular_cell        = { text_element //~ }+
 tabular_config      = "{" /[lcr|]+/~ §"}"
-
 
 #### paragraphs and sequences of paragraphs ####
 
-block_of_paragraphs = /{/~ sequence §/}/
+block_of_paragraphs = /{/~ [sequence] §/}/
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
 paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
 text_element        = text | block | inline_environment | command
@@ -93,19 +93,20 @@ end_environment     = /\\end{/ §::NAME §/}/
 
 inline_math         = /\$/ /[^$]*/ §/\$/
 
-
 #### commands ####
 
 command             = known_command | text_command | generic_command
-known_command       = footnote | includegraphics | caption | multicolumn
+known_command       = footnote | includegraphics | caption | multicolumn | hline | cline
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
 footnote            = "\footnote" block_of_paragraphs
 includegraphics     = "\includegraphics" [ config ] block
 caption             = "\caption" block
-multicolumn         = "\multicolumn" "{" INTEGER "}"
-                      tabular_config block_of_paragraphs
+multicolumn         = "\multicolumn" "{" INTEGER "}" tabular_config block_of_paragraphs
+hline               = "\hline"
+cline               = "\cline{" INTEGER "-" INTEGER "}"
+
 
 #######################################################################
 #
@@ -115,7 +116,7 @@ multicolumn         = "\multicolumn" "{" INTEGER "}"
 
 
 config     = "[" cfg_text §"]"
-cfg_text   = { ([//~] text) | CMDNAME }
+cfg_text   = { ([//~] text) | CMDNAME | SPECIAL }
 block      = /{/ //~ { !blockcmd text_element //~ } §/}/
 text       = TEXTCHUNK { //~ TEXTCHUNK }
 
@@ -139,6 +140,7 @@ structural = "subsection" | "section" | "chapter" | "subsubsection"
 CMDNAME    = /\\(?:(?!_)\w)+/~
 TXTCOMMAND = /\\text\w+/
 ESCAPED    = /\\[%$&_\/{}]/
+SPECIAL    = /[$&_\\\\\/]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/
 

@@ -226,7 +226,7 @@ def traverse(root_node: Node,
     # # Code without optimization
     # table = {name: smart_list(call) for name, call in list(processing_table.items())}
     # table = expand_table(table)
-    # cache = {}
+    # cache = {}  # type: Dict[str, List[Callable]]
 
     def traverse_recursive(context):
         node = context[-1]
@@ -234,7 +234,7 @@ def traverse(root_node: Node,
             for child in node.result:
                 context.append(child)
                 traverse_recursive(context)  # depth first
-                node.error_flag |= child.error_flag  # propagate error flag
+                node.error_flag = node.error_flag or child.error_flag  # propagate error flag
                 context.pop()
 
         key = key_func(node)
