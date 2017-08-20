@@ -156,7 +156,9 @@ class HistoryRecord:
     FAIL = "FAIL"
 
     def __init__(self, call_stack: List['Parser'], node: Node, remaining: int) -> None:
-        self.call_stack = call_stack    # type: List['Parser']
+        # copy call stack, dropping uninformative Forward-Parsers
+        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]
+        # type: List['Parser']
         self.node = node                # type: Node
         self.remaining = remaining      # type: int
         document = call_stack[-1].grammar.document__ if call_stack else ''
@@ -183,7 +185,6 @@ class HistoryRecord:
     def extent(self) -> slice:
         return (slice(-self.remaining - self.node.len, -self.remaining) if self.node
                 else slice(-self.remaining, None))
-
 
     @staticmethod
     def last_match(history: List['HistoryRecord']) -> Optional['HistoryRecord']:
@@ -280,7 +281,7 @@ def add_parser_guard(parser_func):
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 if grammar.moving_forward__ or (node and node._errors):
-                    record = HistoryRecord(grammar.call_stack__.copy(), node, len(rest))
+                    record = HistoryRecord(grammar.call_stack__, node, len(rest))
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
                 grammar.call_stack__.pop()
@@ -1365,7 +1366,8 @@ class Alternative(NaryOperator):
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
-        assert all(not isinstance(p, Optional) for p in self.parsers)
+        # only the last alternative may be optional. Could this be checked at compile time?
+        assert all(not isinstance(p, Optional) for p in self.parsers[:-1])
         self.been_here = dict()  # type: Dict[int, int]
 
     def __call__(self, text: str) -> Tuple[Node, str]:

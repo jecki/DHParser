@@ -69,13 +69,14 @@ quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
                     | ("\begin{quote}" sequence §"\end{quote}")
 verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
-tabular_row         = [multicolumn | tabular_cell] { "&" [multicolumn | tabular_cell] } "\\" [ hline | cline ]
-tabular_cell        = { text_element //~ }+
+tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
+                      "\\" ( hline | { cline } )
+tabular_cell        = { text_element //~ }
 tabular_config      = "{" /[lcr|]+/~ §"}"
 
 #### paragraphs and sequences of paragraphs ####
 
-block_of_paragraphs = /{/~ [sequence] §/}/
+block_of_paragraphs = "{" [sequence] §"}"
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
 paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
 text_element        = text | block | inline_environment | command

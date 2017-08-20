@@ -118,13 +118,14 @@ class LaTeXGrammar(Grammar):
                         | ("\begin{quote}" sequence §"\end{quote}")
     verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
     tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
-    tabular_row         = [multicolumn | tabular_cell] { "&" [multicolumn | tabular_cell] } "\\" [ hline | cline ]
-    tabular_cell        = { text_element //~ }+
+    tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
+                          "\\" ( hline | { cline } )
+    tabular_cell        = { text_element //~ }
     tabular_config      = "{" /[lcr|]+/~ §"}"
     
     #### paragraphs and sequences of paragraphs ####
     
-    block_of_paragraphs = /{/~ [sequence] §/}/
+    block_of_paragraphs = "{" [sequence] §"}"
     sequence            = { (paragraph | block_environment ) [PARSEP] }+
     paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
     text_element        = text | block | inline_environment | command
@@ -218,7 +219,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "4003d206b4ecbd76dd8be99df87af4c0"
+    source_hash__ = "e493869bdc02eb835ec3ce1ebfb0a4ea"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -269,10 +270,12 @@ class LaTeXGrammar(Grammar):
     text_element.set(Alternative(text, block, inline_environment, command))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), Alternative(text_element, LINEFEED), RE(''))))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
-    block_of_paragraphs.set(Series(RE('{'), Optional(sequence), Required(RegExp('}'))))
+    block_of_paragraphs.set(Series(Token("{"), Optional(sequence), Required(Token("}"))))
     tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Required(Token("}"))))
-    tabular_cell = OneOrMore(Series(text_element, RE('')))
-    tabular_row = Series(Optional(Alternative(multicolumn, tabular_cell)), ZeroOrMore(Series(Token("&"), Optional(Alternative(multicolumn, tabular_cell)))), Token("\\\\"), Optional(Alternative(hline, cline)))
+    tabular_cell = ZeroOrMore(Series(text_element, RE('')))
+    tabular_row = Series(Alternative(multicolumn, tabular_cell),
+                         ZeroOrMore(Series(Token("&"), Alternative(multicolumn, tabular_cell))),
+                         Token("\\\\"), Alternative(hline, ZeroOrMore(cline)))
     tabular = Series(Token("\\begin{tabular}"), tabular_config, ZeroOrMore(tabular_row), Required(Token("\\end{tabular}")))
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Required(Token("\\end{verbatim}")))
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Required(Token("\\end{quotation}"))), Series(Token("\\begin{quote}"), sequence, Required(Token("\\end{quote}"))))
