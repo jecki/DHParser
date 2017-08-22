@@ -195,8 +195,8 @@ class Node:
         # self._children = ()  # type: ChildrenType
         self._errors = []  # type: List[str]
         self.result = result
-        self._len = len(result) if not self._children else \
-            sum(child._len for child in self._children)  # type: int
+        self._len = len(result) if not self.children else \
+            sum(child._len for child in self.children)  # type: int
         # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
         self._pos = -1  # type: int
         self.parser = parser or ZOMBIE_PARSER
@@ -248,15 +248,14 @@ class Node:
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
         self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
-        self._children = cast(ChildrenType, self._result) \
+        self.children = cast(ChildrenType, self._result) \
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
-        self.error_flag = any(r.error_flag for r in self._children) \
-            if self._children else False  # type: bool
+        self.error_flag = any(r.error_flag for r in self.children) \
+            if self.children else False  # type: bool
 
-
-    @property
-    def children(self) -> ChildrenType:
-        return self._children
+    # @property
+    # def children(self) -> ChildrenType:
+    #     return self._children
 
 
     @property
