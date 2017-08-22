@@ -212,14 +212,13 @@ def traverse(root_node: Node,
         table = processing_table
         cache = processing_table['__cache__']
     else:
-        # normalize processing_table entries by turning single values into lists
-        # with a single value
+        # normalize processing_table entries by turning single values
+        # into lists with a single value
         table = {name: smart_list(call) for name, call in list(processing_table.items())}
         table = expand_table(table)
         cache = table.setdefault('__cache__', {})  # type: Dict[str, List[Callable]]
-        # change processing table in place, so that table expansion does not get lost
-        # between calls
-        processing_table.clear();
+        # change processing table in place, so its already expanded and cache filled next time
+        processing_table.clear()
         processing_table.update(table)
 
     # assert '__cache__' in processing_table
@@ -238,8 +237,9 @@ def traverse(root_node: Node,
                 context.pop()
 
         key = key_func(node)
-        sequence = cache.get(key, None)
-        if sequence is None:
+        try:
+            sequence = cache[key]
+        except KeyError:
             sequence = table.get('+', []) + \
                        table.get(key, table.get('*', [])) + \
                        table.get('~', [])
@@ -494,6 +494,14 @@ def keep_children(context: List[Node], section: slice = slice(None)):
 
 @transformation_factory(Callable)
 def remove_children_if(context: List[Node], condition: Callable, section: slice = slice(None)):
+    """Removes all children for which `condition()` returns `True`."""
+    node = context[-1]
+    if node.children:
+        node.result = tuple(c for c in node.children if not condition(context + [c]))
+
+
+@transformation_factory(Callable)
+def remove_children(context: List[Node], condition: Callable, section: slice = slice(None)):
     """Removes all nodes from a slice of the result field if the function
     `condition(child_node)` evaluates to `True`."""
     node = context[-1]

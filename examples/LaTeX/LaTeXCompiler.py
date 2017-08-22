@@ -120,15 +120,16 @@ class LaTeXGrammar(Grammar):
     tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
     tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                           "\\" ( hline | { cline } )
-    tabular_cell        = { text_element //~ }
+    tabular_cell        = { line_element //~ }
     tabular_config      = "{" /[lcr|]+/~ §"}"
     
     #### paragraphs and sequences of paragraphs ####
     
     block_of_paragraphs = "{" [sequence] §"}"
     sequence            = { (paragraph | block_environment ) [PARSEP] }+
-    paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
-    text_element        = text | block | inline_environment | command
+    paragraph           = { !blockcmd text_element //~ }+
+    text_element        = line_element | LINEFEED
+    line_element        = text | block | inline_environment | command
     
     #### inline enivronments ####
     
@@ -219,7 +220,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "e493869bdc02eb835ec3ce1ebfb0a4ea"
+    source_hash__ = "1d9bad5194b49edf88a447f370541ed1"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -267,12 +268,13 @@ class LaTeXGrammar(Grammar):
     generic_inline_env = Series(begin_inline_env, RE(''), paragraph, Required(end_inline_env))
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
-    text_element.set(Alternative(text, block, inline_environment, command))
-    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), Alternative(text_element, LINEFEED), RE(''))))
+    line_element = Alternative(text, block, inline_environment, command)
+    text_element.set(Alternative(line_element, LINEFEED))
+    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))))
     sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Optional(PARSEP)))
     block_of_paragraphs.set(Series(Token("{"), Optional(sequence), Required(Token("}"))))
     tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Required(Token("}"))))
-    tabular_cell = ZeroOrMore(Series(text_element, RE('')))
+    tabular_cell = ZeroOrMore(Series(line_element, RE('')))
     tabular_row = Series(Alternative(multicolumn, tabular_cell),
                          ZeroOrMore(Series(Token("&"), Alternative(multicolumn, tabular_cell))),
                          Token("\\\\"), Alternative(hline, ZeroOrMore(cline)))

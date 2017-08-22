@@ -19,13 +19,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import cProfile as profile
 import os
+import pstats
 import sys
+
+sys.path.extend(['../../', '../', './'])
 
 import DHParser.dsl
 from DHParser import toolkit
-
-sys.path.extend(['../../', '../', './'])
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
@@ -46,18 +48,24 @@ def fail_on_error(src, result):
             print(e)
         sys.exit(1)
 
-with toolkit.logging(True):
+
+with toolkit.logging(False):
     files = os.listdir('testdata')
     files.sort()
+    pr = profile.Profile()
+    pr.enable()
     for file in files:
-        if file.lower().endswith('.tex'):
+        if file.lower().endswith('.tex') and file.lower().find('error') < 0:
             with open(os.path.join('testdata', file), 'r') as f:
                 doc = f.read()
             print('\n\nParsing document: "%s"\n' % file)
             result = parser(doc)
             parser.log_parsing_history__()
             fail_on_error(doc, result)
-            ast = transformer(result)
-            fail_on_error(doc, ast)
-            print(ast.as_sxpr())
-
+            transformer(result)
+            fail_on_error(doc, result)
+            print(result.as_sxpr())
+    pr.disable()
+    st = pstats.Stats(pr)
+    st.strip_dirs()
+    st.sort_stats('time').print_stats(20)

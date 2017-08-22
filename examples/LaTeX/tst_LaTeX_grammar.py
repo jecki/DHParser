@@ -21,10 +21,9 @@ limitations under the License.
 
 import sys
 
-import DHParser.dsl
-
 sys.path.extend(['../../', '../', './'])
 
+import DHParser.dsl
 from DHParser import testing
 from DHParser import toolkit
 

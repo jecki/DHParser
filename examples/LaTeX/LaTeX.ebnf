@@ -71,15 +71,16 @@ verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                       "\\" ( hline | { cline } )
-tabular_cell        = { text_element //~ }
+tabular_cell        = { line_element //~ }
 tabular_config      = "{" /[lcr|]+/~ §"}"
 
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
 sequence            = { (paragraph | block_environment ) [PARSEP] }+
-paragraph           = { !blockcmd (text_element | LINEFEED) //~ }+
-text_element        = text | block | inline_environment | command
+paragraph           = { !blockcmd text_element //~ }+
+text_element        = line_element | LINEFEED
+line_element        = text | block | inline_environment | command
 
 #### inline enivronments ####
 
