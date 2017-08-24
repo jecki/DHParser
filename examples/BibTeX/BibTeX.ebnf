@@ -1,0 +1,21 @@
+# BibTeX-Grammar
+
+@ testing     = True
+@ whitespace  = /\s*/
+@ ignorecase  = True
+@ comment     = /%.*(?:\n|$)/
+
+bibliography = { preamble | comment | entry }
+
+preamble      = "@Preamble{" /"/ PREAMBLE /"/~ §"}"
+comment       = "@Comment{" COMMENT §"}"
+entry         = /@/ entry_type "{" KEY { "," NAME §"=" field_content } §"}"
+
+field_content = /\{/ content §"}" | PLAIN_CONTENT
+content       = { /(?:\\.|[^\\{}])*/ ( /\{/ content /\}/ ) }
+
+PREAMBLE      = /[^"]*/
+COMMENT       = /[^}]*/
+KEY           = /[^,}]*/~
+NAME          = /\w+/~
+PLAIN_CONTENT = /[^,}]*/

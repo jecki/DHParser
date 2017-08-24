@@ -356,6 +356,9 @@ class EBNFCompiler(Compiler):
 
         directives:  A dictionary of all directives and their default
                 values.
+
+        re_flags:  A set of regular expression flags to be added to all
+                regular expressions found in the current parsing process
     """
     COMMENT_KEYWORD = "COMMENT__"
     WHITESPACE_KEYWORD = "WSP__"
@@ -379,6 +382,7 @@ class EBNFCompiler(Compiler):
     def _reset(self):
         super(EBNFCompiler, self)._reset()
         self._result = ''           # type: str
+        self.re_flags = set()       # type: Set[str]
         self.rules = OrderedDict()  # type: OrderedDict[str, List[Node]]
         self.current_symbols = []   # type: List[Node]
         self.symbols = {}           # type: Dict[str, Node]
@@ -392,6 +396,7 @@ class EBNFCompiler(Compiler):
                            'literalws': ['right'],
                            'tokens': set(),  # alt. 'preprocessor_tokens'
                            'filter': dict(),  # alt. 'filter'
+                           'ignorecase': False,
                            'testing': False}
 
     @property
@@ -624,14 +629,14 @@ class EBNFCompiler(Compiler):
         return rule, defn
 
 
-    @staticmethod
-    def _check_rx(node: Node, rx: str) -> str:
+    def _check_rx(self, node: Node, rx: str) -> str:
         """
         Checks whether the string `rx` represents a valid regular
         expression. Makes sure that multiline regular expressions are
         prepended by the multiline-flag. Returns the regular expression string.
         """
-        rx = rx if rx.find('\n') < 0 or rx[0:4] == '(?x)' else '(?x)' + rx
+        flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
+        rx = "(?%s)%s" % ("".join(flags), rx)
         try:
             re.compile(rx)
         except Exception as re_error:
@@ -667,6 +672,12 @@ class EBNFCompiler(Compiler):
                     node.add_error("Implicit whitespace should always match the empty string, "
                                    "/%s/ does not." % value)
             self.directives[key] = value
+
+        elif key == 'ignorecase':
+            value = str(node.children[1]).lower() not in {"off", "false", "no"}
+            self.directives['ignorecase'] == value
+            if value:
+                self.re_flags.add('i')
 
         elif key == 'testing':
             value = str(node.children[1])

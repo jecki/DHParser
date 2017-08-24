@@ -150,12 +150,42 @@ class TestRegex:
         result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
-        assert not messages
+        assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         node, rest = parser.regex('abc+def')
         assert rest == ''
         assert node.parser.name == "regex"
         assert str(node) == 'abc+def'
+
+    def text_ignore_case(self):
+        mlregex = r"""
+        @ ignorecase = True
+        regex = /alpha/
+        """
+        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+        assert result
+        assert not messages
+        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        node, rest = parser.regex('Alpha')
+        assert node
+        assert not node.error_flag
+        assert rest == ''
+        assert node.parser.name == "regex"
+        assert str(node) == 'Alpha'
+
+        mlregex = r"""
+        @ ignorecase = False
+        regex = /alpha/
+        """
+        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+        assert result
+        assert not messages
+        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        node, rest = parser.regex('Alpha')
+        assert node.error_flag
+
 
     def test_token(self):
         tokenlang = r"""

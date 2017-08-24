@@ -56,7 +56,7 @@ with toolkit.logging(False):
     pr.enable()
     for file in files:
         if file.lower().endswith('.tex') and file.lower().find('error') < 0:
-            with open(os.path.join('testdata', file), 'r') as f:
+            with open(os.path.join('testdata', file), 'r', encoding="utf-8") as f:
                 doc = f.read()
             print('\n\nParsing document: "%s"\n' % file)
             result = parser(doc)
