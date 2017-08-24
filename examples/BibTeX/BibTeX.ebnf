@@ -7,15 +7,16 @@
 
 bibliography = { preamble | comment | entry }
 
-preamble      = "@Preamble{" /"/ PREAMBLE /"/~ §"}"
-comment       = "@Comment{" COMMENT §"}"
-entry         = /@/ entry_type "{" KEY { "," NAME §"=" field_content } §"}"
+preamble      = "@Preamble{" /"/ pre_code /"/~ §"}"
+pre_code      = { /[^"%]+/ | /%.*\n/ }
 
-field_content = /\{/ content §"}" | PLAIN_CONTENT
-content       = { /(?:\\.|[^\\{}])*/ ( /\{/ content /\}/ ) }
+comment       = "@Comment{" text §"}"
 
-PREAMBLE      = /[^"]*/
-COMMENT       = /[^}]*/
-KEY           = /[^,}]*/~
-NAME          = /\w+/~
-PLAIN_CONTENT = /[^,}]*/
+entry         = /@/ type "{" key { "," field §"=" content } §"}"
+type          = /\w+/
+key           = /[^ \t\n,%]+/~
+field         = /\w+/~
+content       = "{" text "}" | plain_content
+
+plain_content = { /[^,%]+/ | /(?=%)/~ }
+text          = { /(?:\\\{|\\\}|[^}%])+/~ | /\{/ text /\}/ | /(?=%)/~ }
