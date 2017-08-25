@@ -22,41 +22,113 @@ permissions and limitations under the License.
 
 import os
 import sys
-from functools import partial
 
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.parser import compile_source, nil_preprocessor
+from DHParser.parser import compile_source
 from DHParser.toolkit import logging
 
 
-# def selftest(file_name):
-#     print(file_name)
-#     with open('examples/' + file_name, encoding="utf-8") as f:
-#         grammar = f.read()
-#     compiler_name = os.path.basename(os.path.splitext(file_name)[0])
-#     parser = get_ebnf_grammar()
-#     print("\nAlphabetical List of Parsers:\n")
-#     parser_list = sorted([p for p in parser.all_parsers__ if p.name], key=lambda p: p.name)
-#     for p in parser_list:
-#         print(p)
-#     print('\n\n')
-#     transformer = get_ebnf_transformer()
-#     compiler = get_ebnf_compiler(compiler_name, grammar)
-#     result, errors, syntax_tree = compile_source(grammar, None, parser,
-#                                                  transformer, compiler)
-#     print(result)
-#     if errors:
-#         print('\n\n'.merge_children(errors))
-#         sys.exit(1)
-#     else:
-#         # compile the grammar again using the result of the previous
-#         # compilation as parser
-#         for i in range(1):
-#             result = compileDSL(grammar, nil_preprocessor, result, transformer, compiler)
-#         print(result)
-#     return result
+EBNF_TEMPLATE = """# {name}-grammar
 
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ testing     = True            # testing supresses error messages for unconnected symbols
+@ whitespace  = horizontal      # implicit whitespace ends at the end of the line
+@ literalws   = right           # literals have implicit whitespace on the right hand side 
+@ comment     = /#.*(?:\n|$)/   # comments range from a '#'-character to the end of the line
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+
+
+#######################################################################
+#
+#  Structure and Components
+#
+#######################################################################
+
+document = //~ { WORD } §EOF    # root parser: optional whitespace followed by a sequence of words
+                                # until the end of file
+
+#######################################################################
+#
+#  Regular Expressions
+#
+#######################################################################
+
+WORD     =  /\w+/~              # a sequence of letters, possibly followed by implicit whitespace
+EOF      =  !/./                # no more characters ahead, end of file reached
+"""
+
+
+README_TEMPLATE = """# {name}
+
+PLACE A SHORT DESCRIPTION HERE
+
+Author: AUTHOR'S NAME <EMAIL>, AFFILIATION
+
+
+## License
+
+{name} is open source software under the [MIT License](https://opensource.org/licenses/MIT)
+
+Copyright YEAR AUTHOR'S NAME <EMAIL>, AFFILIATION
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the 
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject
+ to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
+
+GRAMMAR_TEST_TEMPLATE = '''#!/usr/bin/python3
+
+"""tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
+"""
+
+import sys
+
+import DHParser.dsl
+from DHParser import testing
+from DHParser import toolkit
+
+if not DHParser.dsl.recompile_grammar('{name}.ebnf', force=False):  # recompiles Grammar only if it has changed
+    print('\nErrors while recompiling "{name}.ebnf":\n--------------------------------------\n\n')
+    with open('{name}_ebnf_ERRORS.txt') as f:
+        print(f.read())
+    sys.exit(1)
+
+sys.path.append('./')
+# must be appended after module creation, because otherwise an ImportError is raised under Windows
+from {name}Compiler import get_grammar, get_transformer
+
+with toolkit.logging(True):
+    error_report = testing.grammar_suite('grammar_tests', get_grammar,
+                                         get_transformer, report=True, verbose=True)
+if error_report:
+    print('\n')
+    print(error_report)
+    sys.exit(1)
+else:
+    print('\nSUCCESS! All tests passed :-)')
+'''
 
 
 def selftest() -> bool:
@@ -83,6 +155,28 @@ def selftest() -> bool:
     return True
 
 
+def create_project(path,
+                   ebnf_tmpl=EBNF_TEMPLATE,
+                   readme_tmpl=README_TEMPLATE,
+                   grammar_test_tmpl=GRAMMAR_TEST_TEMPLATE):
+    if os._exists(path):
+        print('Cannot create new DHParser-project, because path %s alread exists!' % path)
+        sys.exit(1)
+    name = os.path.basename(path)
+    print('Creating new DHParser-project "%s"...' % name)
+    os.mkdir(path)
+    # curr_dir = os.getcwd()
+    os.chdir(path)
+    os.mkdir('grammar_tests')
+    with open(name + '.ebnf', 'w') as f:
+        f.write(EBNF_TEMPLATE.format(name=name))
+    with open('README.md', 'w') as f:
+        f.write(README_TEMPLATE.format(name=name))
+    with open('tst_%s_grammar.py') as f:
+        f.write(GRAMMAR_TEST_TEMPLATE.format(name=name))
+    # os.chdir(curr_dir)
+    print('ready.')
+
 
 def profile(func):
     import cProfile, pstats
@@ -97,26 +191,19 @@ def profile(func):
     st = pstats.Stats(pr)
     st.strip_dirs()
     st.sort_stats('time').print_stats(10)
-    # pr.print_stats(sort="tottime")
     return success
 
 
-# # Changes in the EBNF source that are not reflected in this file could be
-# # a source of sometimes obscure errors! Therefore, we will check this.
-# if (os.path.exists('examples/EBNF/EBNF.ebnf')
-#     and source_changed('examples/EBNF/EBNF.ebnf', EBNFGrammar)):
-#     assert False, "WARNING: Grammar source has changed. The parser may not " \
-#         "represent the actual grammar any more!!!"
-#     pass
-
 if __name__ == "__main__":
-    print(sys.argv)
     if len(sys.argv) > 1:
-        _errors = compile_on_disk(sys.argv[1],
-                                  sys.argv[2] if len(sys.argv) > 2 else "")
-        if _errors:
-            print('\n\n'.join(_errors))
-            sys.exit(1)
+        if os.path.exists(sys.argv[1]):
+            _errors = compile_on_disk(sys.argv[1],
+                                      sys.argv[2] if len(sys.argv) > 2 else "")
+            if _errors:
+                print('\n\n'.join(_errors))
+                sys.exit(1)
+        else:
+            create_project(sys.argv[1])
     else:
         # run self test
         # selftest('EBNF/EBNF.ebnf')
