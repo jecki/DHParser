@@ -1,9 +1,22 @@
 # BibTeX-Grammar
 
+#######################################################################
+#
+#  EBNF-Directives
+#
+######################################################################
+
 @ testing     = True
 @ whitespace  = /\s*/
 @ ignorecase  = True
 @ comment     = /%.*(?:\n|$)/
+
+
+#######################################################################
+#
+#  Bib-file Structure and Components
+#
+#######################################################################
 
 bibliography = { preamble | comment | entry }
 
@@ -13,10 +26,23 @@ pre_code      = { /[^"%]+/ | /%.*\n/ }
 comment       = "@Comment{" text §"}"
 
 entry         = /@/ type "{" key { "," field §"=" content } §"}"
-type          = /\w+/
-key           = /[^ \t\n,%]+/~
-field         = /\w+/~
+type          = WORD
+key           = NO_BLANK_STRING
+field         = WORD_
 content       = "{" text "}" | plain_content
 
-plain_content = { /[^,%]+/ | /(?=%)/~ }
-text          = { /(?:\\\{|\\\}|[^}%])+/~ | /\{/ text /\}/ | /(?=%)/~ }
+plain_content = COMMA_TERMINATED_STRING
+text          = NESTED_BRACES_STRING
+
+
+#######################################################################
+#
+#  Regular Expressions
+#
+#######################################################################
+
+WORD          = /\w+/
+WORD_         = /\w+/~
+NO_BLANK_STRING         = /[^ \t\n,%]+/~
+COMMA_TERMINATED_STRING = { /[^,%]+/ | /(?=%)/~ }
+NESTED_BRACES_STRING    = { /(?:\\\{|\\\}|[^}%])+/~ | /\{/ NESTED_BRACES_STRING /\}/ | /(?=%)/~ }

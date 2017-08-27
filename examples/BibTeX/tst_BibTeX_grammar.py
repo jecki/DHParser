@@ -21,7 +21,7 @@ limitations under the License.
 
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend(['../../', '../'])
 
 import DHParser.dsl
 from DHParser import testing
@@ -33,6 +33,8 @@ if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles
         print(f.read())
     sys.exit(1)
 
+sys.path.append('./')
+# must be appended after module creation, because otherwise an ImportError is raised under Windows
 from BibTeXCompiler import get_grammar, get_transformer
 
 with toolkit.logging(True):
