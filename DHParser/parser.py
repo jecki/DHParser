@@ -231,7 +231,7 @@ def add_parser_guard(parser_func):
     """
     def guarded_call(parser: 'Parser', text: str) -> Tuple[Node, str]:
         try:
-            location = len(text)
+            location = len(text)    # mind that location is always the distance to the end
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
 
             if not grammar.moving_forward__:
@@ -266,7 +266,7 @@ def add_parser_guard(parser_func):
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
                 if node is None and not grammar.left_recursion_encountered__:
-                    # ortherwise also cache None-results
+                    # otherwise also cache None-results
                     parser.visited[location] = None, rest
             else:
                 # variable manipulating parsers will be excluded, though,
@@ -353,7 +353,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     contained parser is repeated zero times.
 
     Attributes:
-        visted:  Dictionary of places this parser has already been to
+        visited:  Dictionary of places this parser has already been to
                 during the current parsing process and the results the
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
@@ -363,7 +363,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
                 is needed to implement left recursion. The number of
                 calls becomes irrelevant once a resault has been memoized.
 
-        cycle_detection: The apply()-method uses this variable to make
+        cycle_detection:  The apply()-method uses this variable to make
                 sure that one and the same function will not be applied
                 (recursively) a second time, if it has already been
                 applied to this parser.
@@ -586,6 +586,14 @@ class Grammar:
                 process reaches a dead end then all rollback-functions up to
                 the point to which it retreats will be called and the state
                 of the variable stack restored accordingly.
+        last_rb__loc__:  The last, i.e. most advanced location in the text
+                where a variable changing operation occurred. If the parser
+                backtracks to a location at or before `last_rb__loc__` (which,
+                since locations are counted from the reverse, means:
+                `location >= last_rb__loc__`) then a rollback of all variable
+                changing operations is necessary that occurred after the
+                location to which the parser backtracks. This is done by
+                calling method `.rollback_to__(location)`.
         call_stack__:  A stack of all parsers that have been called. This
                 is required for recording the parser history (for debugging)
                 and, eventually, i.e. one day in the future, for tracing through
