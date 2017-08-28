@@ -1433,7 +1433,7 @@ class Required(FlowOperator):
             node = Node(self, text[:i])
             text_ = text[i:]
             # assert False, "*"+text[:i]+"*"
-            node.add_error('%s expected; "%s..." found!' %
+            node.add_error('%s expected; "%s" found!' %
                            (str(self.parser), text[:10]))
         return node, text_
 

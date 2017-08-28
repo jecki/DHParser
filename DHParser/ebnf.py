@@ -636,7 +636,7 @@ class EBNFCompiler(Compiler):
         prepended by the multiline-flag. Returns the regular expression string.
         """
         flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
-        rx = "(?%s)%s" % ("".join(flags), rx)
+        if flags:  rx = "(?%s)%s" % ("".join(flags), rx)
         try:
             re.compile(rx)
         except Exception as re_error:

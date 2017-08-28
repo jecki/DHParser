@@ -29,7 +29,7 @@ from DHParser.parser import compile_source
 from DHParser.toolkit import logging
 
 
-EBNF_TEMPLATE = """# {name}-grammar
+EBNF_TEMPLATE = r"""-grammar
 
 #######################################################################
 #
@@ -38,7 +38,7 @@ EBNF_TEMPLATE = """# {name}-grammar
 #######################################################################
 
 @ testing     = True            # testing supresses error messages for unconnected symbols
-@ whitespace  = horizontal      # implicit whitespace ends at the end of the line
+@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
 @ literalws   = right           # literals have implicit whitespace on the right hand side 
 @ comment     = /#.*(?:\n|$)/   # comments range from a '#'-character to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
@@ -63,6 +63,22 @@ WORD     =  /\w+/~              # a sequence of letters, possibly followed by im
 EOF      =  !/./                # no more characters ahead, end of file reached
 """
 
+TEST_WORD_TEMPLATE = r'''[match:WORD]
+1  : word
+2  : one_word_with_underscores
+
+[fail:WORD]
+1  : two words
+'''
+
+TEST_DOCUMENT_TEMPLATE = r'''[match:document]
+1  : """This is a sequence of words
+     extending over several lines"""
+     
+[fail:document]
+1  : """This test should fail, because neither
+     comma nor full have been defined anywhere."""
+'''
 
 README_TEMPLATE = """# {name}
 
@@ -98,7 +114,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 
-GRAMMAR_TEST_TEMPLATE = '''#!/usr/bin/python3
+GRAMMAR_TEST_TEMPLATE = r'''#!/usr/bin/python3
 
 """tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
 """
@@ -159,22 +175,36 @@ def create_project(path,
                    ebnf_tmpl=EBNF_TEMPLATE,
                    readme_tmpl=README_TEMPLATE,
                    grammar_test_tmpl=GRAMMAR_TEST_TEMPLATE):
-    if os._exists(path):
-        print('Cannot create new DHParser-project, because path %s alread exists!' % path)
+    def create_file(name, content):
+        if not os.path.exists(name):
+            print('Creating file "%s".' % name)
+            with open(name, 'w') as f:
+                f.write(content)
+        else:
+            print('"%s" already exists! Not overwritten.' % name)
+
+    if os.path.exists(path) and not os.path.isdir(path):
+        print('Cannot create new project, because a file named "%s" alread exists!' % path)
         sys.exit(1)
     name = os.path.basename(path)
-    print('Creating new DHParser-project "%s"...' % name)
-    os.mkdir(path)
-    # curr_dir = os.getcwd()
+    print('Creating new DHParser-project "%s".' % name)
+    if not os.path.exists(path):
+        os.mkdir(path)
+    curr_dir = os.getcwd()
     os.chdir(path)
-    os.mkdir('grammar_tests')
-    with open(name + '.ebnf', 'w') as f:
-        f.write(EBNF_TEMPLATE.format(name=name))
-    with open('README.md', 'w') as f:
-        f.write(README_TEMPLATE.format(name=name))
-    with open('tst_%s_grammar.py') as f:
-        f.write(GRAMMAR_TEST_TEMPLATE.format(name=name))
-    # os.chdir(curr_dir)
+    if os.path.exists('grammar_tests'):
+        if not os.path.isdir('grammar_tests'):
+            print('Cannot overwrite existing file "grammar_tests"')
+            sys.exit(1)
+    else:
+        os.mkdir('grammar_tests')
+
+    create_file(os.path.join('grammar_tests', '01_test_word.ini'), TEST_WORD_TEMPLATE)
+    create_file(os.path.join('grammar_tests', '02_test_document.ini'), TEST_DOCUMENT_TEMPLATE)
+    create_file(name + '.ebnf', '# ' + name + EBNF_TEMPLATE)
+    create_file('README.md', README_TEMPLATE.format(name=name))
+    create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(name=name))
+    os.chdir(curr_dir)
     print('ready.')
 
 
@@ -196,7 +226,7 @@ def profile(func):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        if os.path.exists(sys.argv[1]):
+        if os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
             _errors = compile_on_disk(sys.argv[1],
                                       sys.argv[2] if len(sys.argv) > 2 else "")
             if _errors:
