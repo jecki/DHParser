@@ -152,7 +152,7 @@ INTEGER    = /\d+/~
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-LFF        = ~/\n?/ -&LB [ WSPC ]              # at least one linefeed
+LFF        = ~/\n?/ -&LB [ WSPC ]           # at least one linefeed
 WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
 # WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
 PARSEP     = { GAP }+                       # paragraph separator

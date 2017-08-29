@@ -2,7 +2,8 @@
 
 @ testing = True
 
-@ comment         =  /#.*(?:\n|$)/    # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+@ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+                                      # ohne das Zeilenende zu beinhalten
 @ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
 @ literalws       =  right            # Leerraum vor und nach Literalen wird automatisch entfernt
 
@@ -19,7 +20,8 @@ Artikel           = [LZ]
 
 #### LEMMA-POSITION ##########################################################
 
-LemmaPosition     = "LEMMA" [LZ] §Lemma §TR [LemmaVarianten] §GrammatikPosition [EtymologiePosition]
+LemmaPosition     = "LEMMA" [LZ] §Lemma §TR [LemmaVarianten]
+                    §GrammatikPosition [EtymologiePosition]
 
 Lemma             = [klassisch] [gesichert] LemmaWort
   klassisch       = "*"
@@ -40,25 +42,27 @@ LemmaZusatz       = "ZUSATZ" §lzs_typ
 GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §flexion [genus] §ABS
                     [GrammatikVarianten]
 
-wortart          = "nomen"  | "n." |
-                   "verb"   | "v." |
-                   "adverb" | "adv." |
-                   "adjektiv" | "adj."
+wortart          = "nomen"  | "n."
+                 | "verb"   | "v."
+                 | "adverb" | "adv."
+                 | "adjektiv" | "adj."
+                 | "praeposition" | "praep."
 
 GrammatikVarianten = { [wortart ABS] flexion [genus]  ":"  Beleg §ABS }+
 
 flexion          = FLEX { "," §FLEX }
 FLEX             = /-?[a-z]+/~
 
-genus            = "maskulinum" | "m." |
-                   "femininum" | "f." |
-                   "neutrum" | "n."
+genus            = "maskulinum" | "m."
+                 | "femininum" | "f."
+                 | "neutrum" | "n."
 
 
 ## ETYMOLOGIE-POSITION ##
 
 EtymologiePosition = "ETYMOLOGIE" [LZ] EtymologieVarianten
-EtymologieVarianten = { ( SW_LAT | SW_GRIECH ) !([LZ] ()) }+
+EtymologieVarianten = { !([LZ] GROSSFOLGE) EtymologieVariante }+
+EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
 
 
 #### ARTIKEL-KOPF ############################################################
@@ -80,10 +84,9 @@ Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
 Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
 LateinischeBedeutung = SW_LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = SW_DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-Belege          = "BELEGE" [LZ] { "*" EinBeleg }
-EinBeleg        = { !([LZ] ("*" | "BEDEUTUNG" | "AUTOR" | "NAME" | "ZUSATZ"))
-                    /\s*.*\s*/ }+
-                  [Zusatz]
+
+Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg })
+EinBeleg        = { !([LZ] ("*" | GROSSFOLGE )) /\s*[^\n]*\s*/ }+ [Zusatz]
 Zusatz          = "ZUSATZ" /\s*.*/ ABS
 
 
@@ -117,15 +120,25 @@ DEU_KLEIN        = /[a-zäöüß]+/~
 LAT_WORT         = /[a-z]+/~
 LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
+GROSSFOLGE       = /[A-ZÄÖÜ][A-ZÄÖÜ][A-ZÄÖÜ]/   # drei Großbuchstaben in Folge
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
 
 TR               = ABS | LZ             # (beliebiger) Trenner
-ABS              = /\s*;\s*/ | { ZW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
-ZW               = /\n/~                # Zeilenwechsel
+ABS              = /\s*;\s*/ | { ZWW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
+# ZW               = /\n/~                # Zeilenwechsel
 LZ               = /\s+/                # Leerzeichen oder -zeilen
+
+ZW               = !LÜCKE ZEILENSPRUNG       # Zeilenwechsel, aber keine Leerzeile(n)
+ZWW              = ZEILENSPRUNG [ LEERRAUM ] # mindestens ein Zeilenwechsel
+LÜCKE            = KOMMENTARZEILEN LEERZEILE [LEERRAUM] # Leerraum mit mindestens einer echten Leerzeile
+LEERRAUM         = { COMMENT__ | /\s+/ }+   # beliebiger horizontaler oder vertikaler Leerraum
+LEERZEILE        = /[ \t]*(?:\n[ \t]*)+\n/ ~/\n?/ # eine oder mehrere echte LEERZEILEN
+RZS              = /\s*?\n|$/               # Rückwärtiger Zeilensprung oder Textanfang
+
+ZEILENSPRUNG     = /[ \t]*\n/~
+KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
 
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/
-

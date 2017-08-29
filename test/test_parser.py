@@ -425,6 +425,28 @@ class TestWhitespaceHandling:
         assert st.error_flag
 
 
+class TestBorderlineCases:
+    def test_not_matching(self):
+        minilang = """parser = /X/"""
+        gr = grammar_provider(minilang)()
+        cst = gr('X', 'parser')
+        assert not cst.error_flag
+        cst = gr(' ', 'parser')
+        assert cst.error_flag
+        cst = gr('', 'parser')
+        assert cst.error_flag
+
+    def test_matching(self):
+        minilang = """parser = /.?/"""
+        gr = grammar_provider(minilang)()
+        cst = gr(' ', 'parser')
+        assert not cst.error_flag
+        cst = gr('  ', 'parser')
+        assert cst.error_flag
+        cst = gr('', 'parser')
+        assert not cst.error_flag
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     with logging(True):

@@ -45,7 +45,7 @@ def unit_from_configfile(config_filename):
     Reads a grammar unit test from a config file.
     """
     cfg = configparser.ConfigParser(interpolation=None)
-    cfg.read(config_filename)
+    cfg.read(config_filename, encoding="utf8")
     OD = collections.OrderedDict
     unit = OD()
     for section in cfg.sections():
@@ -58,6 +58,8 @@ def unit_from_configfile(config_filename):
         for testkey, testcode in cfg[section].items():
             if testcode[:3] + testcode[-3:] in {"''''''", '""""""'}:
                 testcode = testcode[3:-3]
+                # testcode = testcode.replace('\\#', '#')
+                testcode = re.sub(r'(?<!\\)\\#', '#', testcode).replace('\\\\', '\\')
             elif testcode[:1] + testcode[-1:] in {"''", '""'}:
                 testcode = testcode[1:-1]
             unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
@@ -69,7 +71,7 @@ def unit_from_json(json_filename):
     """
     Reads a grammar unit test from a json file.
     """
-    with open(json_filename, 'r') as f:
+    with open(json_filename, 'r', encoding='utf8') as f:
         unit = json.load(f)
     for symbol in unit:
         for stage in unit[symbol]:
@@ -200,7 +202,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         report_dir = "REPORT"
         if not os.path.exists(report_dir):
             os.mkdir(report_dir)
-        with open(os.path.join(report_dir, unit_name + '.md'), 'w') as f:
+        with open(os.path.join(report_dir, unit_name + '.md'), 'w', encoding='utf8') as f:
             f.write(get_report(test_unit))
 
     return errata

@@ -774,6 +774,9 @@ class Grammar:
         rest = document
         if not rest:
             result, ignore = parser(rest)
+            if result is None:
+                result = Node(None, '')
+                result.add_error('Parser "%s" did not match empty document.' % str(parser))
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
             if rest:

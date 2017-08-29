@@ -201,7 +201,7 @@ class LaTeXGrammar(Grammar):
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
     LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-    LFF        = ~/\n?/ -&LB [ WSPC ]              # at least one linefeed
+    LFF        = ~/\n?/ -&LB [ WSPC ]           # at least one linefeed
     WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
     # WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
     PARSEP     = { GAP }+                       # paragraph separator
@@ -220,7 +220,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "1d9bad5194b49edf88a447f370541ed1"
+    source_hash__ = "2d33db878d9e5354a05e23f48a756604"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*(?:\n|$)'
     WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
@@ -275,9 +275,7 @@ class LaTeXGrammar(Grammar):
     block_of_paragraphs.set(Series(Token("{"), Optional(sequence), Required(Token("}"))))
     tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Required(Token("}"))))
     tabular_cell = ZeroOrMore(Series(line_element, RE('')))
-    tabular_row = Series(Alternative(multicolumn, tabular_cell),
-                         ZeroOrMore(Series(Token("&"), Alternative(multicolumn, tabular_cell))),
-                         Token("\\\\"), Alternative(hline, ZeroOrMore(cline)))
+    tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Token("&"), Alternative(multicolumn, tabular_cell))), Token("\\\\"), Alternative(hline, ZeroOrMore(cline)))
     tabular = Series(Token("\\begin{tabular}"), tabular_config, ZeroOrMore(tabular_row), Required(Token("\\end{tabular}")))
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Required(Token("\\end{verbatim}")))
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Required(Token("\\end{quotation}"))), Series(Token("\\begin{quote}"), sequence, Required(Token("\\end{quote}"))))

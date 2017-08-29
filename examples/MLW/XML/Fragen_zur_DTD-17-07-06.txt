@@ -1,0 +1,1 @@
+Können Lemma-Positionen, so wie es die DTD zulässt (Zeile 19), tatsächlich ineinander geschachtelt sein?

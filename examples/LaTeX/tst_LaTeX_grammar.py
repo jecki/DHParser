@@ -25,7 +25,6 @@ sys.path.extend(['../../', '../', './'])
 
 import DHParser.dsl
 from DHParser import testing
-from DHParser import toolkit
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
