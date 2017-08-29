@@ -40,7 +40,7 @@ EBNF_TEMPLATE = r"""-grammar
 @ testing     = True            # testing supresses error messages for unconnected symbols
 @ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
 @ literalws   = right           # literals have implicit whitespace on the right hand side 
-@ comment     = /#.*(?:\n|$)/   # comments range from a '#'-character to the end of the line
+@ comment     = /#.*/           # comments range from a '#'-character to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 
 

@@ -18,6 +18,7 @@ permissions and limitations under the License.
 import collections
 import configparser
 import copy
+import fnmatch
 import inspect
 import json
 import os
@@ -195,7 +196,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 # write parsing-history log only in case of test-failure
                 parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
             if verbose:
-                print(infostr + "OK" if len(errata) == errflag else "FAIL")
+                print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
     # write test-report
     if report:
@@ -208,12 +209,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     return errata
 
 
-def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown_filetypes=False,
-                  report=True, verbose=False):
+def grammar_suite(directory, parser_factory, transformer_factory,
+                  fn_patterns=['*test*'],
+                  ignore_unknown_filetypes=False,
+                  report=True, verbose=True):
     """
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
+    if not isinstance(fn_patterns, collections.abc.Collection):
+        fn_patterns = [fn_patterns]
     all_errors = collections.OrderedDict()
     if verbose:
         print("\nScanning test-directory: " + directory)
@@ -221,7 +226,7 @@ def grammar_suite(directory, parser_factory, transformer_factory, ignore_unknown
     os.chdir(directory)
     if is_logging():    clear_logs()
     for filename in sorted(os.listdir()):
-        if filename.lower().find("test") >= 0:
+        if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
             try:
                 if verbose:
                     print("\nRunning grammar tests from: " + filename)

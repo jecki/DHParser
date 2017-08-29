@@ -51,7 +51,7 @@ class LaTeXGrammar(Grammar):
     
     @ testing    = True
     @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
-    @ comment    = /%.*(?:\n|$)/
+    @ comment    = /%.*/
     
     
     latexdoc       = preamble document
@@ -200,13 +200,13 @@ class LaTeXGrammar(Grammar):
     
     TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                                 # linefeed and special characters
-    LF         = !GAP /[ \t]*\n[ \t]*/          # linefeed but not an empty line
-    LFF        = ~/\n?/ -&LB [ WSPC ]           # at least one linefeed
+    LF         = NEW_LINE { COMMENT__ WHITESPACE__ }   # linefeed but not an empty line
+    LFF        = NEW_LINE [ WSPC ]              # at least one linefeed
+    PARSEP     = { WHITESPACE__ COMMENT__ } GAP [WSPC] # paragraph separator
     WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
-    # WSPC       = { /\s+/~ | ~/\s+/ }+           # arbitrary horizontal or vertical whitespace
-    PARSEP     = { GAP }+                       # paragraph separator
     GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                                 # [whitespace] linefeed [whitespace] linefeed
+    NEW_LINE   = /[ \t]*/ [COMMENT__] /\n/
     LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
                                                 # beginning of text marker '$' added for test code
     BACKSLASH  = /[\\]/
@@ -220,20 +220,22 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "2d33db878d9e5354a05e23f48a756604"
+    source_hash__ = "ed181ac517b686f843e13d5783527fe3"
     parser_initialization__ = "upon instantiation"
-    COMMENT__ = r'%.*(?:\n|$)'
-    WSP__ = mixin_comment(whitespace=r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?', comment=r'%.*(?:\n|$)')
+    COMMENT__ = r'%.*'
+    WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
+    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
     LB = RegExp('\\s*?\\n|$')
+    NEW_LINE = Series(RegExp('[ \\t]*'), Optional(RegExp(COMMENT__)), RegExp('\\n'))
     GAP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
-    PARSEP = OneOrMore(GAP)
     WSPC = OneOrMore(Alternative(RegExp(COMMENT__), RegExp('\\s+')))
-    LFF = Series(RE('\\n?', wR='', wL=WSP__), Lookbehind(LB), Optional(WSPC))
-    LF = Series(NegativeLookahead(GAP), RegExp('[ \\t]*\\n[ \\t]*'))
+    PARSEP = Series(ZeroOrMore(Series(RegExp(WHITESPACE__), RegExp(COMMENT__))), GAP, Optional(WSPC))
+    LFF = Series(NEW_LINE, Optional(WSPC))
+    LF = Series(NEW_LINE, ZeroOrMore(Series(RegExp(COMMENT__), RegExp(WHITESPACE__))))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     INTEGER = RE('\\d+')
     NAME = Capture(RE('\\w+'))

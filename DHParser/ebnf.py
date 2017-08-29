@@ -362,7 +362,8 @@ class EBNFCompiler(Compiler):
     """
     COMMENT_KEYWORD = "COMMENT__"
     WHITESPACE_KEYWORD = "WSP__"
-    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, COMMENT_KEYWORD}
+    RAW_WS_KEYWORD = "WHITESPACE__"
+    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -425,8 +426,7 @@ class EBNFCompiler(Compiler):
                                     '"gen_transformer_Skeleton()"!')
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
-                      '    # AST Transformations for the ' +
-                      self.grammar_name + '-grammar']
+                      '    # AST Transformations for the ' + self.grammar_name + '-grammar']
         transtable.append('    "+": remove_empty,')
         for name in self.rules:
             tf = '[]'
@@ -498,9 +498,9 @@ class EBNFCompiler(Compiler):
         definitions.append(('wspL__', self.WHITESPACE_KEYWORD
                             if 'left' in self.directives['literalws'] else "''"))
         definitions.append((self.WHITESPACE_KEYWORD,
-                            ("mixin_comment(whitespace="
-                             "r'{whitespace}', comment=r'{comment}')").
-                            format(**self.directives)))
+                            ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD +
+                             ", comment=" + self.COMMENT_KEYWORD + ")")))
+        definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
         definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
 
         # prepare parser class header and docstring and
@@ -814,7 +814,7 @@ class EBNFCompiler(Compiler):
                 self.symbols[symbol] = node  # remember first use of symbol
             if symbol in self.rules:
                 self.recursive.add(symbol)
-            if symbol in (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
+            if symbol in EBNFCompiler.RESERVED_SYMBOLS:  # (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
                 return "RegExp(%s)" % symbol
             return symbol
 
