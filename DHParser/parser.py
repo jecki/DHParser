@@ -240,8 +240,8 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                node, rlen = parser.visited[location]
-                assert rlen == location - (0 if node is None else node.len)
+                node = parser.visited[location]
+                rlen = location - (0 if node is None else node.len)
                 rest = grammar.document__[-rlen:] if rlen else ''
                 return node, rest
 
@@ -261,15 +261,15 @@ def add_parser_guard(parser_func):
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
-                node, rlen = parser.visited.get(location, (None, len(rest)))
-                assert rlen == location - (0 if node is None else node.len)
+                node = parser.visited.get(location, None)
+                rlen = location - (0 if node is None else node.len)
                 rest = grammar.document__[-rlen:] if rlen else ''
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
                 # TODO: uncomment the following for full memoizazion
                 if node is None and location not in grammar.recursion_locations__:
                     # otherwise also cache None-results
-                    parser.visited[location] = None, len(rest)
+                    parser.visited[location] = None
             else:
                 # variable manipulating parsers will be excluded, though,
                 # because caching would interfere with changes of variable state
@@ -278,7 +278,7 @@ def add_parser_guard(parser_func):
                     # matches will store its result in the cache
                     # TODO: remove if clause for full memoization
                     # if location in grammar.recursion_locations__:
-                    parser.visited[location] = (node, len(rest))
+                    parser.visited[location] = node
 
             parser.recursion_counter[location] -= 1
 
@@ -358,8 +358,8 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     contained parser is repeated zero times.
 
     Attributes:
-        visited:  Dictionary of places this parser has already been to
-                during the current parsing process and the results the
+        visited:  Mapping of places this parser has already been to
+                during the current parsing process onto the node the
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
@@ -398,7 +398,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         """Initializes or resets any parser variables. If overwritten,
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
-        self.visited = dict()            # type: Dict[int, Tuple[Node, str]]
+        self.visited = dict()            # type: Dict[int, Node]
         self.recursion_counter = dict()  # type: Dict[int, int]
         self.cycle_detection = set()     # type: Set[Callable]
         return self
