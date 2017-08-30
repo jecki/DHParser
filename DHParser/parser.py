@@ -173,7 +173,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join((repr(p) if p.ptype == ':RegExp' else p.name or p.ptype)
+        return "->".join((p.repr if p.ptype == ':RegExp' else p.name or p.ptype)
                          for p in self.call_stack)
 
     @property
@@ -234,25 +234,22 @@ def add_parser_guard(parser_func):
             location = len(text)    # mind that location is always the distance to the end
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
 
-            if not grammar.moving_forward__:
-                # rollback variable changes from discarded parser passes
-                if grammar.last_rb__loc__ <= location:
-                    grammar.rollback_to__(location)
-                grammar.moving_forward__ = True
+            if grammar.last_rb__loc__ <= location:
+                grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                grammar.moving_forward__ = False
                 return parser.visited[location]
 
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
-                grammar.moving_forward__ = False
+                grammar.recursion_locations__.add(location)
                 return None, text
 
             if grammar.history_tracking__:
                 grammar.call_stack__.append(parser)
+                grammar.moving_forward__ = True
 
             parser.recursion_counter[location] += 1
 
@@ -264,25 +261,30 @@ def add_parser_guard(parser_func):
                 node, rest = parser.visited.get(location, (None, rest))
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
-                if node is None and grammar.moving_forward__:
-                    # otherwise also cache None-results
-                    parser.visited[location] = None, rest
+                # TODO: uncomment the following for full memoizazion
+                # if node is None and location not in grammar.recursion_locations__:
+                #     # otherwise also cache None-results
+                #     parser.visited[location] = None, rest
             else:
                 # variable manipulating parsers will be excluded, though,
                 # because caching would interfere with changes of variable state
                 if grammar.last_rb__loc__ > location:
                     # in case of left recursion, the first recursive step that
                     # matches will store its result in the cache
-                    parser.visited[location] = (node, rest)
+                    # TODO: remove if clause for full memoization
+                    if location in grammar.recursion_locations__:
+                        parser.visited[location] = (node, rest)
 
             parser.recursion_counter[location] -= 1
 
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
+                remaining = len(rest)
                 if grammar.moving_forward__ or (node and node._errors):
-                    record = HistoryRecord(grammar.call_stack__, node, len(rest))
+                    record = HistoryRecord(grammar.call_stack__, node, remaining)
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
+                grammar.moving_forward__ = False
                 grammar.call_stack__.pop()
 
         except RecursionError:
@@ -291,7 +293,6 @@ def add_parser_guard(parser_func):
                            "potentially due to too many errors!")
             rest = ''
 
-        grammar.moving_forward__ = False
         return node, rest
 
     return guarded_call
@@ -600,11 +601,16 @@ class Grammar:
         history__:  A list of parser-call-stacks. A parser-call-stack is
                 appended to the list each time a parser either matches, fails
                 or if a parser-error occurs.
-        moving_forward__:  This flag indicates that the parsing process is currently
-                moving forward. This information is needed among other thins to
-                trigger the roolback of variables, which happens stepwise when the
-                parser is reatreating form a dead end, i.e. not moving forward.
-                (See `add_parser_guard` and its local function `guarded_call`)
+        moving_forward__: This flag indicates that the parsing process is currently
+                moving forward . It is needed to reduce noise in history recording
+                and should not be considered as having a valid value if history
+                recording is turned off! (See `add_parser_guard` and its local
+                function `guarded_call`)
+        recursion_locations__:  Stores the locations where left recursion was
+                detected. Needed to provide minimal memoization for the left
+                recursion detection algorithm, but, strictly speaking, superfluous
+                if full memoization is enabled. (See `add_parser_guard` and its
+                local function `guarded_call`)
     """
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
@@ -713,7 +719,8 @@ class Grammar:
         # snapshots of call stacks
         self.history__ = []           # type: List[HistoryRecord]
         # also needed for call stack tracing
-        self.moving_forward__ = True  # type: bool
+        self.moving_forward__ = False  # type: bool
+        self.recursion_locations__ = set()  # type: Set[int]
 
 
     @property

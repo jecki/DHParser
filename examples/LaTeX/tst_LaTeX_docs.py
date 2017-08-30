@@ -49,23 +49,45 @@ def fail_on_error(src, result):
         sys.exit(1)
 
 
-with toolkit.logging(False):
-    files = os.listdir('testdata')
-    files.sort()
+def test():
+    with toolkit.logging(False):
+        files = os.listdir('testdata')
+        files.sort()
+        for file in files:
+            if file.lower().endswith('.tex') and file.lower().find('error') < 0:
+                with open(os.path.join('testdata', file), 'r', encoding="utf-8") as f:
+                    doc = f.read()
+                print('\n\nParsing document: "%s"\n' % file)
+                result = parser(doc)
+                parser.log_parsing_history__()
+                fail_on_error(doc, result)
+                transformer(result)
+                fail_on_error(doc, result)
+                # print(result.as_sxpr())
+
+
+def cpu_profile(func):
     pr = profile.Profile()
     pr.enable()
-    for file in files:
-        if file.lower().endswith('.tex') and file.lower().find('error') < 0:
-            with open(os.path.join('testdata', file), 'r', encoding="utf-8") as f:
-                doc = f.read()
-            print('\n\nParsing document: "%s"\n' % file)
-            result = parser(doc)
-            parser.log_parsing_history__()
-            fail_on_error(doc, result)
-            transformer(result)
-            fail_on_error(doc, result)
-            print(result.as_sxpr())
+    func()
     pr.disable()
     st = pstats.Stats(pr)
     st.strip_dirs()
     st.sort_stats('time').print_stats(20)
+
+
+def mem_profile(func):
+    import tracemalloc
+    tracemalloc.start()
+    func()
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print("[ Top 20 ]")
+    for stat in top_stats[:20]:
+        print(stat)
+
+if __name__ == "__main__":
+    mem_profile(test)
+
+
+

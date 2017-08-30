@@ -224,6 +224,18 @@ def profile(func):
     return success
 
 
+def mem_profile(func):
+    import tracemalloc
+    tracemalloc.start()
+    success = func()
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print("[ Top 20 ]")
+    for stat in top_stats[:20]:
+        print(stat)
+    return success
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
@@ -238,6 +250,6 @@ if __name__ == "__main__":
         # run self test
         # selftest('EBNF/EBNF.ebnf')
         with logging(False):
-            if not profile(selftest):
+            if not mem_profile(selftest):
                 sys.exit(1)
 
