@@ -260,8 +260,7 @@ def add_parser_guard(parser_func):
             node, rest = parser_func(parser, text)
 
             if node is None:
-                # retrieve an earlier match result (from left recursion)
-                # if it exists
+                # retrieve an earlier match result (from left recursion) if it exists
                 node, rest = parser.visited.get(location, (None, rest))
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!

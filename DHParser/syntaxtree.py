@@ -187,12 +187,15 @@ class Node:
             AST-transformation.
     """
 
+    __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag']
+
     def __init__(self, parser, result: ResultType) -> None:
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
         # self._result = ''  # type: StrictResultType
         # self.children = ()  # type: ChildrenType
+        # self.error_flag = False  # type: bool
         self._errors = []  # type: List[str]
         self.result = result
         self._len = len(result) if not self.children else \
@@ -479,6 +482,11 @@ class Node:
     #         else:
     #             return self.result,
     #     return nav(path.split('/'))
+
+
+    def tree_size(self) -> int:
+        """Recursively counts the number of nodes in the tree including the root node."""
+        return sum(child.tree_size() for child in self.children) + 1
 
 
     def log(self, log_file_name):
