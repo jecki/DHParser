@@ -266,7 +266,7 @@ def add_parser_guard(parser_func):
                 rest = grammar.document__[-rlen:] if rlen else ''
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
-                # TODO: uncomment the following for full memoizazion
+                # COMMENT THIS TO TURN FULL MEMOIZATION OFF
                 if node is None and location not in grammar.recursion_locations__:
                     # otherwise also cache None-results
                     parser.visited[location] = None
@@ -276,7 +276,7 @@ def add_parser_guard(parser_func):
                 if grammar.last_rb__loc__ > location:
                     # in case of left recursion, the first recursive step that
                     # matches will store its result in the cache
-                    # TODO: remove if clause for full memoization
+                    # UNCOMMENT THIS TO TURN FULL MEMOIZATION OFF
                     # if location in grammar.recursion_locations__:
                     parser.visited[location] = node
 
