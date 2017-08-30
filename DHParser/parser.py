@@ -239,16 +239,16 @@ def add_parser_guard(parser_func):
                 if grammar.last_rb__loc__ <= location:
                     grammar.rollback_to__(location)
                 grammar.moving_forward__ = True
-                grammar.left_recursion_encountered__ = False
 
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
+                grammar.moving_forward__ = False
                 return parser.visited[location]
 
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
-                grammar.left_recursion_encountered__ = True
+                grammar.moving_forward__ = False
                 return None, text
 
             if grammar.history_tracking__:
@@ -264,7 +264,7 @@ def add_parser_guard(parser_func):
                 node, rest = parser.visited.get(location, (None, rest))
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
-                if node is None and not grammar.left_recursion_encountered__:
+                if node is None and grammar.moving_forward__:
                     # otherwise also cache None-results
                     parser.visited[location] = None, rest
             else:
@@ -284,7 +284,6 @@ def add_parser_guard(parser_func):
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
                 grammar.call_stack__.pop()
-            grammar.moving_forward__ = False
 
         except RecursionError:
             node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
@@ -292,6 +291,7 @@ def add_parser_guard(parser_func):
                            "potentially due to too many errors!")
             rest = ''
 
+        grammar.moving_forward__ = False
         return node, rest
 
     return guarded_call
@@ -605,8 +605,6 @@ class Grammar:
                 trigger the roolback of variables, which happens stepwise when the
                 parser is reatreating form a dead end, i.e. not moving forward.
                 (See `add_parser_guard` and its local function `guarded_call`)
-        left_recursion_encountered__:  This flag indicates that left recursion has
-                been encountered and triggers the left-recursion algorithm.
     """
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
@@ -716,7 +714,6 @@ class Grammar:
         self.history__ = []           # type: List[HistoryRecord]
         # also needed for call stack tracing
         self.moving_forward__ = True  # type: bool
-        self.left_recursion_encountered__ = False  # type: bool
 
 
     @property
