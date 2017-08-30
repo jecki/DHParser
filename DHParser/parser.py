@@ -241,6 +241,7 @@ def add_parser_guard(parser_func):
             # return saved result
             if location in parser.visited:
                 node, rlen = parser.visited[location]
+                assert rlen == location - (0 if node is None else node.len)
                 rest = grammar.document__[-rlen:] if rlen else ''
                 return node, rest
 
@@ -261,6 +262,7 @@ def add_parser_guard(parser_func):
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
                 node, rlen = parser.visited.get(location, (None, len(rest)))
+                assert rlen == location - (0 if node is None else node.len)
                 rest = grammar.document__[-rlen:] if rlen else ''
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
