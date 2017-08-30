@@ -83,7 +83,7 @@ def mem_profile(func):
     snapshot = tracemalloc.take_snapshot()
     top_stats = snapshot.statistics('lineno')
     print("[ Top 20 ]")
-    for stat in top_stats[:20]:
+    for stat in top_stats[:40]:
         print(stat)
 
 if __name__ == "__main__":

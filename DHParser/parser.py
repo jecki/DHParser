@@ -235,6 +235,11 @@ def add_parser_guard(parser_func):
             rlen = location - (0 if node is None else node.len)
             rest = grammar.document__[-rlen:] if rlen else ''
             return node, rest
+            # NOTE: An older and simpler implementation of memoization
+            # relied on `parser.visited[location] == node, rest`. Although,
+            # rest is really just a substring of one and the same document,
+            # this resulted in an explosion of memory usage. Seems as if
+            # `rext = text[i:]` really copies the sub-string!?
 
         try:
             location = len(text)    # mind that location is always the distance to the end
