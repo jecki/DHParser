@@ -43,9 +43,9 @@ except ImportError:
 import sys
 
 try:
-    from typing import Any, List, Tuple
+    from typing import Any, List, Tuple, Optional
 except ImportError:
-    from .typing34 import Any, List, Tuple
+    from .typing34 import Any, List, Tuple, Optional
 
 __all__ = ('logging',
            'is_logging',
@@ -148,6 +148,24 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
             only_log_files = False
     if only_log_files:
         os.rmdir(log_dirname)
+
+
+class TextView:
+    __slots__ = ['text', 'begin', 'end']
+
+    def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
+        self.text = text  # type: str
+        self.begin = begin or 0  # type: int
+        self.end = end or len(text)  # type: int
+
+    def __str__(self):
+        return self.text[self.begin:self.end]
+
+    def __getitem__(self, index):
+        assert isinstance(index, slice), "Minimal implementation of TextView just allows slicing."
+        start = index.start or 0
+        stop = index.stop or (self.end - self.begin)
+        return TextView(self.text, self.begin + start, self.begin + stop)
 
 
 # def repr_call(f, parameter_list) -> str:

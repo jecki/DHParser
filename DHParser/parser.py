@@ -238,8 +238,9 @@ def add_parser_guard(parser_func):
             # NOTE: An older and simpler implementation of memoization
             # relied on `parser.visited[location] == node, rest`. Although,
             # rest is really just a substring of one and the same document,
-            # this resulted in an explosion of memory usage. Seems as if
-            # `rext = text[i:]` really copies the sub-string!?
+            # this resulted in an explosion of memory usage. Seems that
+            # `rext = text[i:]` really copies the sub-string. See:
+            # https://mail.python.org/pipermail/python-dev/2008-May/079699.html
 
         try:
             location = len(text)    # mind that location is always the distance to the end
