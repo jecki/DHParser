@@ -208,11 +208,11 @@ def create_project(path,
     print('ready.')
 
 
-def profile(func):
+def cpu_profile(func, repetitions=1):
     import cProfile, pstats
     pr = cProfile.Profile()
     pr.enable()
-    for i in range(1):
+    for i in range(repetitions):
         success = func()
         if not success:
             break
@@ -220,11 +220,11 @@ def profile(func):
     # after your program ends
     st = pstats.Stats(pr)
     st.strip_dirs()
-    st.sort_stats('time').print_stats(10)
+    st.sort_stats('time').print_stats(40)
     return success
 
 
-def mem_profile(func):
+def mem_profile(func, dummy=0):
     import tracemalloc
     tracemalloc.start()
     success = func()
@@ -250,6 +250,6 @@ if __name__ == "__main__":
         # run self test
         # selftest('EBNF/EBNF.ebnf')
         with logging(False):
-            if not mem_profile(selftest):
+            if not cpu_profile(selftest, 1):
                 sys.exit(1)
 

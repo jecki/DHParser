@@ -230,6 +230,12 @@ def add_parser_guard(parser_func):
     (aka "history tracking") of parser calls. Returns the wrapped call.
     """
     def guarded_call(parser: 'Parser', text: str) -> Tuple[Node, str]:
+        def memoized(parser, location):
+            node = parser.visited[location]
+            rlen = location - (0 if node is None else node.len)
+            rest = grammar.document__[-rlen:] if rlen else ''
+            return node, rest
+
         try:
             location = len(text)    # mind that location is always the distance to the end
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
@@ -240,10 +246,7 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                node = parser.visited[location]
-                rlen = location - (0 if node is None else node.len)
-                rest = grammar.document__[-rlen:] if rlen else ''
-                return node, rest
+                return memoized(parser, location)
 
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
@@ -261,24 +264,21 @@ def add_parser_guard(parser_func):
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
-                node = parser.visited.get(location, None)
-                rlen = location - (0 if node is None else node.len)
-                rest = grammar.document__[-rlen:] if rlen else ''
-                # don't overwrite any positive match (i.e. node not None) in the cache
-                # and don't add empty entries for parsers returning from left recursive calls!
-                # COMMENT THIS TO TURN FULL MEMOIZATION OFF
-                if node is None and location not in grammar.recursion_locations__:
+                if location in grammar.recursion_locations__:
+                    if location in parser.visited:
+                        node, rest = memoized(parser, location)
+                    # don't overwrite any positive match (i.e. node not None) in the cache
+                    # and don't add empty entries for parsers returning from left recursive calls!
+                elif grammar.memoization__:
                     # otherwise also cache None-results
                     parser.visited[location] = None
-            else:
-                # variable manipulating parsers will be excluded, though,
-                # because caching would interfere with changes of variable state
-                if grammar.last_rb__loc__ > location:
-                    # in case of left recursion, the first recursive step that
-                    # matches will store its result in the cache
-                    # UNCOMMENT THIS TO TURN FULL MEMOIZATION OFF
-                    # if location in grammar.recursion_locations__:
-                    parser.visited[location] = node
+            elif ((grammar.memoization__ or location in grammar.recursion_locations__)
+                  and grammar.last_rb__loc__ > location):
+                # - variable manipulating parsers will not be entered into the cache,
+                #   because caching would interfere with changes of variable state
+                # - in case of left recursion, the first recursive step that
+                #   matches will store its result in the cache
+                parser.visited[location] = node
 
             parser.recursion_counter[location] -= 1
 
@@ -616,6 +616,10 @@ class Grammar:
                 recursion detection algorithm, but, strictly speaking, superfluous
                 if full memoization is enabled. (See `add_parser_guard` and its
                 local function `guarded_call`)
+        memoization__:  Turns full memoization on or off. Turning memoization off
+                results in less memory usage and sometimes reduced parsing time.
+                In some situations it may drastically increase parsing time, so
+                it is safer to leave it on.
     """
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
@@ -672,6 +676,7 @@ class Grammar:
         self.all_parsers__ = set()  # type: Set[Parser]
         self._dirty_flag__ = False  # type: bool
         self.history_tracking__ = False  # type: bool
+        self.memoization__ = True  # type: bool
         self._reset__()
 
         # prepare parsers in the class, first

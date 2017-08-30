@@ -73,7 +73,7 @@ def cpu_profile(func):
     pr.disable()
     st = pstats.Stats(pr)
     st.strip_dirs()
-    st.sort_stats('time').print_stats(20)
+    st.sort_stats('time').print_stats(40)
 
 
 def mem_profile(func):
@@ -87,7 +87,7 @@ def mem_profile(func):
         print(stat)
 
 if __name__ == "__main__":
-    mem_profile(test)
+    cpu_profile(test)
 
 
 
