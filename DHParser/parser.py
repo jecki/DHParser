@@ -240,7 +240,9 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                return parser.visited[location]
+                node, rlen = parser.visited[location]
+                rest = grammar.document__[-rlen:] if rlen else ''
+                return node, rest
 
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
@@ -258,13 +260,14 @@ def add_parser_guard(parser_func):
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
-                node, rest = parser.visited.get(location, (None, rest))
+                node, rlen = parser.visited.get(location, (None, len(rest)))
+                rest = grammar.document__[-rlen:] if rlen else ''
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
                 # TODO: uncomment the following for full memoizazion
-                # if node is None and location not in grammar.recursion_locations__:
-                #     # otherwise also cache None-results
-                #     parser.visited[location] = None, rest
+                if node is None and location not in grammar.recursion_locations__:
+                    # otherwise also cache None-results
+                    parser.visited[location] = None, len(rest)
             else:
                 # variable manipulating parsers will be excluded, though,
                 # because caching would interfere with changes of variable state
@@ -272,8 +275,8 @@ def add_parser_guard(parser_func):
                     # in case of left recursion, the first recursive step that
                     # matches will store its result in the cache
                     # TODO: remove if clause for full memoization
-                    if location in grammar.recursion_locations__:
-                        parser.visited[location] = (node, rest)
+                    # if location in grammar.recursion_locations__:
+                    parser.visited[location] = (node, len(rest))
 
             parser.recursion_counter[location] -= 1
 
