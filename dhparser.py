@@ -147,30 +147,6 @@ else:
 '''
 
 
-def selftest() -> bool:
-    print("DHParser selftest...")
-    print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
-    builtin_ebnf_parser = get_ebnf_grammar()
-    ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
-    ebnf_transformer = get_ebnf_transformer()
-    ebnf_compiler = get_ebnf_compiler('EBNF')
-    generated_ebnf_parser, errors, ast = compile_source(ebnf_src, None,
-        builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
-
-    if errors:
-        print("Selftest FAILED :-(")
-        print("\n\n".join(errors))
-        return False
-    print(generated_ebnf_parser)
-    print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
-    selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
-                                        ebnf_transformer, ebnf_compiler)
-    ebnf_compiler.gen_transformer_skeleton()
-    print(selfhosted_ebnf_parser)
-    print("\n\n Selftest SUCCEEDED :-)\n\n")
-    return True
-
-
 def create_project(path,
                    ebnf_tmpl=EBNF_TEMPLATE,
                    readme_tmpl=README_TEMPLATE,
@@ -206,6 +182,30 @@ def create_project(path,
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(name=name))
     os.chdir(curr_dir)
     print('ready.')
+
+
+def selftest() -> bool:
+    print("DHParser selftest...")
+    print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
+    builtin_ebnf_parser = get_ebnf_grammar()
+    ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
+    ebnf_transformer = get_ebnf_transformer()
+    ebnf_compiler = get_ebnf_compiler('EBNF')
+    generated_ebnf_parser, errors, ast = compile_source(ebnf_src, None,
+        builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
+
+    if errors:
+        print("Selftest FAILED :-(")
+        print("\n\n".join(errors))
+        return False
+    print(generated_ebnf_parser)
+    print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
+    selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
+                                        ebnf_transformer, ebnf_compiler)
+    ebnf_compiler.gen_transformer_skeleton()
+    print(selfhosted_ebnf_parser)
+    print("\n\n Selftest SUCCEEDED :-)\n\n")
+    return True
 
 
 def cpu_profile(func, repetitions=1):

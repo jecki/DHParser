@@ -87,7 +87,7 @@ def mem_profile(func):
         print(stat)
 
 if __name__ == "__main__":
-    mem_profile(tst_func)
+    cpu_profile(tst_func)
 
 
 

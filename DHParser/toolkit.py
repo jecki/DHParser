@@ -43,9 +43,9 @@ except ImportError:
 import sys
 
 try:
-    from typing import Any, List, Tuple, Collection, Union, Optional
+    from typing import Any, List, Tuple, Iterable, Union, Optional
 except ImportError:
-    from .typing34 import Any, List, Tuple, Collection, Union, Optional
+    from .typing34 import Any, List, Tuple, Iterable, Union, Optional
 
 __all__ = ('logging',
            'is_logging',
@@ -218,7 +218,7 @@ def sv_match(regex, sv: StringView):
     return regex.match(sv.text, pos=sv.begin, endpos=sv.end)
 
 
-def sv_index(absolute_index: Union[int, Collection], sv: StringView) -> Union[int, tuple]:
+def sv_index(absolute_index: Union[int, Iterable], sv: StringView) -> Union[int, tuple]:
     """
     Converts the an index into string watched by a StringView object
     to an index relativ to the string view object, e.g.:
