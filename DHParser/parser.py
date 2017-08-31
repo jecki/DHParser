@@ -184,7 +184,7 @@ class HistoryRecord:
 
     @property
     def extent(self) -> slice:
-        return (slice(-self.remaining - self.node.len, -self.remaining) if self.node
+        return (slice(-self.remaining - len(self.node), -self.remaining) if self.node
                 else slice(-self.remaining, None))
 
     @staticmethod

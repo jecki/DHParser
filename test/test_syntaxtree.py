@@ -115,11 +115,11 @@ class TestNode:
     def test_len_and_pos(self):
         """Test len-property of Node."""
         nd1 = Node(None, "123")
-        assert nd1.len == 3, "Expected Node.len == 3, got %i" % nd1.len
+        assert len(nd1) == 3, "Expected Node.len == 3, got %i" % len(nd1)
         nd2 = Node(None, "456")
-        assert nd2.len == 3, "Expected Node.len == 3, got %i" % nd1.len
+        assert len(nd2) == 3, "Expected Node.len == 3, got %i" % len(nd2)
         nd = Node(None, (nd1, nd2))
-        assert nd.len == 6, "Expected Node.len == 6, got %i" % nd.len
+        assert len(nd) == 6, "Expected Node.len == 6, got %i" % len(nd)
         nd.pos = 0
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos

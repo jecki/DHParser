@@ -220,6 +220,15 @@ class Node:
         return "Node(%s, %s)" % (parg, rarg)
 
 
+    def __len__(self):
+        return self._len
+
+
+    def __bool__(self):
+        # A node that is not None is always True, even if it's empty
+        return True
+
+
     def __eq__(self, other):
         # return str(self.parser) == str(other.parser) and self.result == other.result
         return self.tag_name == other.tag_name and self.result == other.result
@@ -257,13 +266,6 @@ class Node:
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
         self.error_flag = any(r.error_flag for r in self.children)  # type: bool
 
-
-    @property
-    def len(self) -> int:
-        # DEBUGGING:  print(self.tag_name, str(self.pos), str(self._len), str(self)[:10].replace('\n','.'))
-        return self._len
-
-
     @property
     def pos(self) -> int:
         assert self._pos >= 0, "position value not initialized!"
@@ -276,7 +278,7 @@ class Node:
         offset = 0
         for child in self.children:
             child.pos = pos + offset
-            offset += child.len
+            offset += len(child)
 
 
     @property
