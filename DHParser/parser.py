@@ -77,7 +77,7 @@ except ImportError:
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
     Node, TransformationFunc
-from DHParser.toolkit import load_if_file, error_messages, line_col
+from DHParser.toolkit import TextView, load_if_file, error_messages, line_col
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
@@ -233,7 +233,7 @@ def add_parser_guard(parser_func):
         def memoized(parser, location):
             node = parser.visited[location]
             rlen = location - (0 if node is None else node.len)
-            rest = grammar.document__[-rlen:] if rlen else ''
+            rest = TextView(grammar.document__, -rlen) if rlen else ''
             return node, rest
             # NOTE: An older and simpler implementation of memoization
             # relied on `parser.visited[location] == node, rest`. Although,
@@ -409,7 +409,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         self.cycle_detection = set()     # type: Set[Callable]
         return self
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: TextView) -> Tuple[Node, TextView]:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""

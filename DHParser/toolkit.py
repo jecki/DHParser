@@ -155,7 +155,7 @@ class TextView:
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         self.text = text  # type: str
-        self.begin = begin or 0  # type: int
+        self.begin = begin or 0  # type: int # TODO: Negative Values!!!
         self.end = end or len(text)  # type: int
 
     def __str__(self):

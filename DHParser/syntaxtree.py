@@ -31,7 +31,7 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
-from DHParser.toolkit import is_logging, log_dir, line_col, identity
+from DHParser.toolkit import is_logging, log_dir, TextView, line_col, identity
 
 __all__ = ('WHITESPACE_PTYPE',
            'MockParser',
@@ -129,8 +129,8 @@ ZOMBIE_PARSER = ZombieParser()
 Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
 ChildrenType = Tuple['Node', ...]
-StrictResultType = Union[ChildrenType, str]
-ResultType = Union[ChildrenType, 'Node', str, None]
+StrictResultType = Union[ChildrenType, TextView, str]
+ResultType = Union[ChildrenType, 'Node', TextView, str, None]
 
 
 def flatten_sxpr(sxpr: str) -> str:
@@ -250,7 +250,8 @@ class Node:
         # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
-        self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
+        self._result = (result,) if isinstance(result, Node) else str(result) \
+            if isinstance(result, TextView) else result or ''  # type: StrictResultType
         self.children = cast(ChildrenType, self._result) \
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
         self.error_flag = any(r.error_flag for r in self.children)  # type: bool
