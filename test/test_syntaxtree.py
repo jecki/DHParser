@@ -97,6 +97,7 @@ class TestNode:
         transform = get_ebnf_transformer()
         compiler = get_ebnf_compiler()
         tree = parser(ebnf)
+        print(tree.as_sxpr())
         tree_copy = copy.deepcopy(tree)
         transform(tree_copy)
         res1 = compiler(tree_copy)

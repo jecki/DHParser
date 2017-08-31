@@ -77,7 +77,8 @@ except ImportError:
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
     Node, TransformationFunc
-from DHParser.toolkit import TextView, load_if_file, error_messages, line_col
+from DHParser.toolkit import StringView, EMPTY_STRING_VIEW, sv_match, sv_index, sv_search, \
+    load_if_file, error_messages, line_col
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
@@ -161,7 +162,7 @@ class HistoryRecord:
         # type: List['Parser']
         self.node = node                # type: Node
         self.remaining = remaining      # type: int
-        document = call_stack[-1].grammar.document__ if call_stack else ''
+        document = call_stack[-1].grammar.document__.text if call_stack else ''
         self.line_col = line_col(document, len(document) - remaining)  # type: Tuple[int, int]
 
     def __str__(self):
@@ -229,11 +230,13 @@ def add_parser_guard(parser_func):
     that takes care of memoizing, left recursion and optionally tracing
     (aka "history tracking") of parser calls. Returns the wrapped call.
     """
-    def guarded_call(parser: 'Parser', text: str) -> Tuple[Node, str]:
+    def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Node, StringView]:
+        assert isinstance(text, StringView)
+
         def memoized(parser, location):
             node = parser.visited[location]
             rlen = location - (0 if node is None else node.len)
-            rest = TextView(grammar.document__, -rlen) if rlen else ''
+            rest = grammar.document__[-rlen:] if rlen else EMPTY_STRING_VIEW
             return node, rest
             # NOTE: An older and simpler implementation of memoization
             # relied on `parser.visited[location] == node, rest`. Although,
@@ -267,6 +270,7 @@ def add_parser_guard(parser_func):
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
+            assert isinstance(rest, StringView)
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
@@ -302,7 +306,7 @@ def add_parser_guard(parser_func):
             node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
             node.add_error("maximum recursion depth of parser reached; "
                            "potentially due to too many errors!")
-            rest = ''
+            rest = EMPTY_STRING_VIEW
 
         return node, rest
 
@@ -409,7 +413,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         self.cycle_detection = set()     # type: Set[Callable]
         return self
 
-    def __call__(self, text: TextView) -> Tuple[Node, TextView]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
@@ -724,8 +728,8 @@ class Grammar:
 
 
     def _reset__(self):
-        self.document__ = ""          # type: str
-        self._reversed__ = ""         # type: str
+        self.document__ = EMPTY_STRING_VIEW   # type: StringView
+        self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = dict()     # type: Dict[str, List[str]]
         self.rollback__ = []          # type: List[Tuple[int, Callable]]
@@ -742,7 +746,7 @@ class Grammar:
     @property
     def reversed__(self) -> str:
         if not self._reversed__:
-            self._reversed__ = self.document__[::-1]
+            self._reversed__ = StringView(self.document__.text[::-1])
         return self._reversed__
 
 
@@ -784,13 +788,13 @@ class Grammar:
         else:
             self._dirty_flag__ = True
         self.history_tracking__ = is_logging()
-        self.document__ = document
-        self.last_rb__loc__ = len(document) + 1  # rollback location
+        self.document__ = StringView(document)
+        self.last_rb__loc__ = len(self.document__) + 1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
         stitches = []  # type: List[Node]
-        rest = document
+        rest = self.document__
         if not rest:
             result, ignore = parser(rest)
             if result is None:
@@ -883,7 +887,7 @@ class Grammar:
         document. 
         """
         def prepare_line(record):
-            excerpt = self.document__.__getitem__(record.extent)[:25].replace('\n', '\\n')
+            excerpt = self.document__.text.__getitem__(record.extent)[:25].replace('\n', '\\n')
             excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
             return record.stack, record.status, excerpt
 
@@ -985,7 +989,7 @@ class PreprocessorToken(Parser):
         assert RX_PREPROCESSOR_TOKEN.match(token)
         super(PreprocessorToken, self).__init__(token)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -1040,10 +1044,10 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         return RegExp(regexp, self.name)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
-        match = text[0:1] != BEGIN_TOKEN and self.regexp.match(text)  # ESC starts a preprocessor token.
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+        match = text[0:1] != BEGIN_TOKEN and sv_match(self.regexp, text)  # ESC starts a preprocessor token.
         if match:
-            end = match.end()
+            end = sv_index(match.end(), text)
             return Node(self, text[:end]), text[end:]
         return None, text
 
@@ -1114,9 +1118,9 @@ class RE(Parser):
             regexp = self.main.regexp.pattern
         return self.__class__(regexp, self.wL, self.wR, self.name)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         # assert self.main.regexp.pattern != "@"
-        t = text    # type: str
+        t = text    # type: StringView
         wL, t = self.wspLeft(t)
         main, t = self.main(t)
         if main:
@@ -1264,7 +1268,7 @@ class Optional(UnaryOperator):
             "Nesting options with required elements is contradictory: " \
             "%s(%s)" % (str(name), str(parser.name))
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -1289,7 +1293,7 @@ class ZeroOrMore(Optional):
     EBNF-Notation: `{ ... }`
     EBNF-Example:  `sentence = { /\w+,?/ } "."`
     """
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1
         while text and len(text) < n:
@@ -1314,9 +1318,9 @@ class OneOrMore(UnaryOperator):
             "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
             "%s(%s)" % (str(name), str(parser.name))
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         results = ()  # type: Tuple[Node, ...]
-        text_ = text  # type: str
+        text_ = text  # type: StringView
         n = len(text) + 1
         while text_ and len(text_) < n:
             n = len(text_)
@@ -1340,9 +1344,9 @@ class Series(NaryOperator):
         super(Series, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         results = ()  # type: Tuple[Node, ...]
-        text_ = text  # type: str
+        text_ = text  # type: StringView
         for parser in self.parsers:
             node, text_ = parser(text_)
             if not node:
@@ -1400,7 +1404,7 @@ class Alternative(NaryOperator):
         assert all(not isinstance(p, Optional) for p in self.parsers[:-1])
         self.been_here = dict()  # type: Dict[int, int]
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
@@ -1447,11 +1451,13 @@ class FlowOperator(UnaryOperator):
 
 class Required(FlowOperator):
     # Add constructor that checks for logical errors, like `Required(Optional(...))` constructs ?
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    RX_ARGUMENT = re.compile(r'\s(\S)')
+
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text_ = self.parser(text)
         if not node:
-            m = re.search(r'\s(\S)', text)
-            i = max(1, m.regs[1][0]) if m else 1
+            m = sv_search(Required.RX_ARGUMENT, text)  # re.search(r'\s(\S)', text)
+            i = max(1, sv_index(m.regs[1][0], text)) if m else 1
             node = Node(self, text[:i])
             text_ = text[i:]
             # assert False, "*"+text[:i]+"*"
@@ -1467,7 +1473,7 @@ class Lookahead(FlowOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Lookahead, self).__init__(parser, name)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text_ = self.parser(text)
         if self.sign(node is not None):
             return Node(self, ''), text
@@ -1512,9 +1518,9 @@ class Lookbehind(FlowOperator):
         self.regexp = p.main.regexp if isinstance(p, RE) else p.regexp
         super(Lookbehind, self).__init__(parser, name)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         backwards_text = self.grammar.reversed__[len(text):]  # self.grammar.document__[-len(text) - 1::-1]
-        if self.sign(self.regexp.match(backwards_text)):
+        if self.sign(sv_match(self.regexp, backwards_text)):
             return Node(self, ''), text
         else:
             return None, text
@@ -1548,7 +1554,7 @@ class Capture(UnaryOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Capture, self).__init__(parser, name)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text_ = self.parser(text)
         if node:
             stack = self.grammar.variables__.setdefault(self.name, [])
@@ -1590,13 +1596,13 @@ class Retrieve(Parser):
     def __deepcopy__(self, memo):
         return self.__class__(self.symbol, self.filter, self.name)
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
 
     def __repr__(self):
         return ':' + self.symbol.repr
 
-    def call(self, text: str) -> Tuple[Node, str]:
+    def call(self, text: StringView) -> Tuple[Node, StringView]:
         try:
             stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
@@ -1612,7 +1618,7 @@ class Retrieve(Parser):
 class Pop(Retrieve):
     """STILL EXPERIMENTAL!!!"""
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         nd, txt = super(Pop, self).call(text)  # call() instead of __call__() to avoid parser guard
         if nd and not nd.error_flag:
             stack = self.grammar.variables__[self.symbol.name]
@@ -1644,7 +1650,7 @@ class Synonym(UnaryOperator):
     class, in which case it would be unclear whether the parser
     RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -1684,7 +1690,7 @@ class Forward(Parser):
         duplicate.set(parser)
         return duplicate
 
-    def __call__(self, text: str) -> Tuple[Node, str]:
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         return self.parser(text)
 
     def __repr__(self):

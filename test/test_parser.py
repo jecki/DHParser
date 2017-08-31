@@ -24,7 +24,7 @@ from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging, logging, compile_python_object
+from DHParser.toolkit import is_logging, logging, StringView, compile_python_object
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -152,7 +152,7 @@ class TestRegex:
         assert result
         assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
-        node, rest = parser.regex('abc+def')
+        node, rest = parser.regex(StringView('abc+def'))
         assert rest == ''
         assert node.parser.name == "regex"
         assert str(node) == 'abc+def'

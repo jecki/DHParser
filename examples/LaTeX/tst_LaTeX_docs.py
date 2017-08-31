@@ -49,7 +49,7 @@ def fail_on_error(src, result):
         sys.exit(1)
 
 
-def test():
+def tst_func():
     with toolkit.logging(False):
         files = os.listdir('testdata')
         files.sort()
@@ -87,7 +87,8 @@ def mem_profile(func):
         print(stat)
 
 if __name__ == "__main__":
-    cpu_profile(test)
+    cpu_profile(tst_func)
+
 
 
 

@@ -43,14 +43,18 @@ except ImportError:
 import sys
 
 try:
-    from typing import Any, List, Tuple, Optional
+    from typing import Any, List, Tuple, Collection, Union, Optional
 except ImportError:
-    from .typing34 import Any, List, Tuple, Optional
+    from .typing34 import Any, List, Tuple, Collection, Union, Optional
 
 __all__ = ('logging',
            'is_logging',
            'log_dir',
            'logfile_basename',
+           'StringView',
+           'sv_match',
+           'sv_index',
+           'sv_search',
            # 'supress_warnings',
            # 'warnings',
            # 'repr_call',
@@ -150,22 +154,93 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
         os.rmdir(log_dirname)
 
 
-class TextView:
-    __slots__ = ['text', 'begin', 'end']
+class StringView:
+    """"A rudimentary StringView class, just enough for the use cases
+    in parswer.py.
+
+    Slicing Python-strings always yields copies of a segment of the original
+    string. See: https://mail.python.org/pipermail/python-dev/2008-May/079699.html
+    However, this becomes costly (in terms of space and as a consequence also
+    time) when parsing longer documents. Unfortunately, Python's `memoryview`
+    does not work for unicode strings. Hence, the StringView class.
+    """
+
+    __slots__ = ['text', 'begin', 'end', 'len']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         self.text = text  # type: str
-        self.begin = begin or 0  # type: int # TODO: Negative Values!!!
-        self.end = end or len(text)  # type: int
+        self.begin, self.end = StringView.real_indices(begin, end, len(text))
+        self.len = max(self.end - self.begin, 0)
+
+    @staticmethod
+    def real_indices(begin, end, len):
+        def pack(index, len):
+            index = index if index >= 0 else index + len
+            return 0 if index < 0 else len if index > len else index
+        if begin is None:  begin = 0
+        if end is None:  end = len
+        return pack(begin, len), pack(end, len)
+
+    def __bool__(self):
+        return bool(self.text) and self.end > self.begin
+
+    def __len__(self):
+        return self.len
 
     def __str__(self):
         return self.text[self.begin:self.end]
 
     def __getitem__(self, index):
-        assert isinstance(index, slice), "Minimal implementation of TextView just allows slicing."
-        start = index.start or 0
-        stop = index.stop or (self.end - self.begin)
-        return TextView(self.text, self.begin + start, self.begin + stop)
+        assert isinstance(index, slice), "As of now, StringView only allows slicing."
+        assert index.step is None or index.step == 1, \
+            "Step sizes other than 1 are not yet supported by StringView"
+        start, stop = StringView.real_indices(index.start, index.stop, self.len)
+        return StringView(self.text, self.begin + start, self.begin + stop)
+
+    def __eq__(self, other):
+        return str(self) == str(other)  # PERFORMANCE WARNING: This creates copies of the strings
+
+    def find(self, sub, start=None, end=None) -> int:
+        if start is None and end is None:
+            return self.text.find(sub, self.begin, self.end) - self.begin
+        else:
+            start, end = StringView.real_indices(start, end, self.len)
+            return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
+
+    def startswith(self, prefix: str, start:int = 0, end:Optional[int] = None) -> bool:
+        start += self.begin
+        end = self.end if end is None else self.begin + end
+        return self.text.startswith(prefix, start, end)
+
+
+
+def sv_match(regex, sv: StringView):
+    return regex.match(sv.text, pos=sv.begin, endpos=sv.end)
+
+
+def sv_index(absolute_index: Union[int, Collection], sv: StringView) -> Union[int, tuple]:
+    """
+    Converts the an index into string watched by a StringView object
+    to an index relativ to the string view object, e.g.:
+    >>> sv = StringView('xxIxx')[2:3]
+    >>> match = sv_match(re.compile('I'), sv)
+    >>> match.end()
+    3
+    >>> sv_index(match.end(), sv)
+    1
+    """
+    try:
+        return absolute_index - sv.begin
+    except TypeError:
+        return tuple(index - sv.begin for index in absolute_index)
+
+
+def sv_search(regex, sv: StringView):
+    return regex.search(sv.text, pos=sv.begin, endpos=sv.end)
+
+
+
+EMPTY_STRING_VIEW = StringView('')
 
 
 # def repr_call(f, parameter_list) -> str:
