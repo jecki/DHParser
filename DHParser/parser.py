@@ -231,19 +231,17 @@ def add_parser_guard(parser_func):
     (aka "history tracking") of parser calls. Returns the wrapped call.
     """
     def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Node, StringView]:
-        assert isinstance(text, StringView)
-
-        def memoized(parser, location):
-            node = parser.visited[location]
-            rlen = location - (0 if node is None else node.len)
-            rest = grammar.document__[-rlen:] if rlen else EMPTY_STRING_VIEW
-            return node, rest
-            # NOTE: An older and simpler implementation of memoization
-            # relied on `parser.visited[location] == node, rest`. Although,
-            # rest is really just a substring of one and the same document,
-            # this resulted in an explosion of memory usage. Seems that
-            # `rext = text[i:]` really copies the sub-string. See:
-            # https://mail.python.org/pipermail/python-dev/2008-May/079699.html
+        # def memoized(parser, location):
+        #     node = parser.visited[location]
+        #     rlen = location - (0 if node is None else node.len)
+        #     rest = grammar.document__[-rlen:] if rlen else EMPTY_STRING_VIEW
+        #     return node, rest
+        #     # NOTE: An older and simpler implementation of memoization
+        #     # relied on `parser.visited[location] == node, rest`. Although,
+        #     # rest is really just a substring of one and the same document,
+        #     # this resulted in an explosion of memory usage. Seems that
+        #     # `rext = text[i:]` really copies the sub-string. See:
+        #     # https://mail.python.org/pipermail/python-dev/2008-May/079699.html
 
         try:
             location = len(text)    # mind that location is always the distance to the end
@@ -255,7 +253,7 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                return memoized(parser, location)
+                return parser.visited[location]
 
             # break left recursion at the maximum allowed depth
             if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
@@ -270,25 +268,24 @@ def add_parser_guard(parser_func):
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
-            assert isinstance(rest, StringView)
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
                 if location in grammar.recursion_locations__:
                     if location in parser.visited:
-                        node, rest = memoized(parser, location)
+                        node, rest = parser.visited[location]
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
                     # otherwise also cache None-results
-                    parser.visited[location] = None
+                    parser.visited[location] = (None, rest)
             elif ((grammar.memoization__ or location in grammar.recursion_locations__)
                   and grammar.last_rb__loc__ > location):
                 # - variable manipulating parsers will not be entered into the cache,
                 #   because caching would interfere with changes of variable state
                 # - in case of left recursion, the first recursive step that
                 #   matches will store its result in the cache
-                parser.visited[location] = node
+                parser.visited[location] = (node, rest)
 
             parser.recursion_counter[location] -= 1
 
@@ -369,7 +366,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
 
     Attributes:
         visited:  Mapping of places this parser has already been to
-                during the current parsing process onto the node the
+                during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
@@ -408,7 +405,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         """Initializes or resets any parser variables. If overwritten,
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
-        self.visited = dict()            # type: Dict[int, Node]
+        self.visited = dict()            # type: Dict[int, Tuple[Node, StringView]]
         self.recursion_counter = dict()  # type: Dict[int, int]
         self.cycle_detection = set()     # type: Set[Callable]
         return self

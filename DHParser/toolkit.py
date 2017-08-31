@@ -191,9 +191,9 @@ class StringView:
         return self.text[self.begin:self.end]
 
     def __getitem__(self, index):
-        assert isinstance(index, slice), "As of now, StringView only allows slicing."
-        assert index.step is None or index.step == 1, \
-            "Step sizes other than 1 are not yet supported by StringView"
+        # assert isinstance(index, slice), "As of now, StringView only allows slicing."
+        # assert index.step is None or index.step == 1, \
+        #     "Step sizes other than 1 are not yet supported by StringView"
         start, stop = StringView.real_indices(index.start, index.stop, self.len)
         return StringView(self.text, self.begin + start, self.begin + stop)
 
