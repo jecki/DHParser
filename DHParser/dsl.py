@@ -44,7 +44,8 @@ __all__ = ('GrammarError',
            'raw_compileEBNF',
            'compileEBNF',
            'grammar_provider',
-           'compile_on_disk')
+           'compile_on_disk',
+           'recompile_grammar')
 
 
 SECTION_MARKER = """\n

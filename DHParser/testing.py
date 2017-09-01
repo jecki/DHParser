@@ -217,7 +217,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
-    if not isinstance(fn_patterns, collections.abc.Collection):
+    if not isinstance(fn_patterns, collections.abc.Iterable):
         fn_patterns = [fn_patterns]
     all_errors = collections.OrderedDict()
     if verbose:
