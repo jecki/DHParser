@@ -15,7 +15,7 @@ try:
 except ImportError:
     import re
 from DHParser.parser import Grammar, Compiler, Alternative, Required, Token, \
-    Optional, OneOrMore, Series, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source
+    Option, OneOrMore, Series, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source
 from DHParser.syntaxtree import traverse, reduce_single_child, replace_by_single_child, no_transformation, \
     remove_expendables, remove_tokens, flatten, \
     WHITESPACE_KEYWORD, TOKEN_KEYWORD
@@ -160,36 +160,36 @@ class MLWGrammar(Grammar):
     Name = Series(WORT, ZeroOrMore(Alternative(WORT, NAMENS_ABKÜRZUNG)))
     Autorinfo = Series(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
     Zusatz = Series(Token("ZUSATZ"), RE('\\s*.*', wR='', wL=''), TRENNER)
-    EinBeleg = Series(OneOrMore(Series(NegativeLookahead(Series(Optional(LEER), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Optional(Zusatz))
-    Belege = Series(Token("BELEGE"), Optional(LEER), ZeroOrMore(Series(Token("*"), EinBeleg)))
+    EinBeleg = Series(OneOrMore(Series(NegativeLookahead(Series(Option(LEER), Alternative(Token("*"), Token("BEDEUTUNG"), Token("AUTOR"), Token("NAME"), Token("ZUSATZ")))), RE('\\s*.*\\s*', wR='', wL=''))), Option(Zusatz))
+    Belege = Series(Token("BELEGE"), Option(LEER), ZeroOrMore(Series(Token("*"), EinBeleg)))
     DeutscheBedeutung = Series(Token("DEU"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
     LateinischeBedeutung = Series(Token("LAT"), RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''))
-    Interpretamente = Series(LateinischeBedeutung, Optional(LEER), Required(DeutscheBedeutung), Optional(LEER))
-    Bedeutungskategorie = Series(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''), Optional(LEER))
-    Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Optional(Belege))
-    BedeutungsPosition = OneOrMore(Series(Token("BEDEUTUNG"), Optional(LEER), Required(Bedeutung)))
+    Interpretamente = Series(LateinischeBedeutung, Option(LEER), Required(DeutscheBedeutung), Option(LEER))
+    Bedeutungskategorie = Series(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+', wL=''), Option(LEER))
+    Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Option(Belege))
+    BedeutungsPosition = OneOrMore(Series(Token("BEDEUTUNG"), Option(LEER), Required(Bedeutung)))
     VerweisZiel = RE('<\\w+>')
     Verweis = RE('\\w+')
     Beleg = Verweis
     Schreibweise = Alternative(Token("vizreg-"), Token("festregel(a)"), Token("fezdregl(a)"), Token("fat-"))
     SWVariante = Series(Schreibweise, Token(":"), Beleg)
     SWTyp = Alternative(Token("script."), Token("script. fat-"))
-    SchreibweisenPosition = Series(Token("SCHREIBWEISE"), Optional(LEER), Required(SWTyp), Token(":"), Optional(LEER), Required(SWVariante), ZeroOrMore(Series(TRENNER, SWVariante)), Optional(LEER))
+    SchreibweisenPosition = Series(Token("SCHREIBWEISE"), Option(LEER), Required(SWTyp), Token(":"), Option(LEER), Required(SWVariante), ZeroOrMore(Series(TRENNER, SWVariante)), Option(LEER))
     ArtikelKopf = SchreibweisenPosition
     _genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
     Flexion = RE('-?[a-z]+', wL='')
     Flexionen = Series(Flexion, ZeroOrMore(Series(Token(","), Required(Flexion))))
-    GVariante = Series(Flexionen, Optional(_genus), Token(":"), Beleg)
+    GVariante = Series(Flexionen, Option(_genus), Token(":"), Beleg)
     GrammatikVarianten = Series(TRENNER, GVariante)
     _wortart = Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."))
-    GrammatikPosition = Series(Token("GRAMMATIK"), Optional(LEER), Required(_wortart), Required(TRENNER), Required(Flexionen), Optional(_genus), ZeroOrMore(GrammatikVarianten), Optional(TRENNER))
+    GrammatikPosition = Series(Token("GRAMMATIK"), Option(LEER), Required(_wortart), Required(TRENNER), Required(Flexionen), Option(_genus), ZeroOrMore(GrammatikVarianten), Option(TRENNER))
     LVZusatz = Series(Token("ZUSATZ"), Token("sim."))
     LVariante = RE('(?:[a-z]|-)+')
-    LemmaVarianten = Series(Token("VARIANTEN"), Optional(LEER), Required(LVariante), ZeroOrMore(Series(TRENNER, LVariante)), Optional(Series(TRENNER, LVZusatz)), Optional(TRENNER))
+    LemmaVarianten = Series(Token("VARIANTEN"), Option(LEER), Required(LVariante), ZeroOrMore(Series(TRENNER, LVariante)), Option(Series(TRENNER, LVZusatz)), Option(TRENNER))
     _tll = Token("*")
-    Lemma = Series(Optional(_tll), WORT_KLEIN, Optional(LEER))
-    LemmaPosition = Series(Token("LEMMA"), Required(Lemma), Optional(LemmaVarianten), Required(GrammatikPosition))
-    Artikel = Series(Optional(LEER), Required(LemmaPosition), Optional(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Optional(LEER), DATEI_ENDE)
+    Lemma = Series(Option(_tll), WORT_KLEIN, Option(LEER))
+    LemmaPosition = Series(Token("LEMMA"), Required(Lemma), Option(LemmaVarianten), Required(GrammatikPosition))
+    Artikel = Series(Option(LEER), Required(LemmaPosition), Option(ArtikelKopf), Required(BedeutungsPosition), Required(Autorinfo), Option(LEER), DATEI_ENDE)
     root__ = Artikel
     
 

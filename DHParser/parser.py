@@ -97,7 +97,7 @@ __all__ = ('PreprocessorFunc',
            # 'UnaryOperator',
            # 'NaryOperator',
            'Synonym',
-           'Optional',
+           'Option',
            'ZeroOrMore',
            'OneOrMore',
            'Series',
@@ -355,7 +355,7 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
     representing the root of the concrete syntax tree resulting from the
     match as well as the substring `text[i:]` where i is the length of
     matched text (which can be zero in the case of parsers like
-    `ZeroOrMore` or `Optional`). If `i > 0` then the parser has "moved
+    `ZeroOrMore` or `Option`). If `i > 0` then the parser has "moved
     forward".
 
     If the parser does not match it returns `(None, text). **Note** that
@@ -1229,7 +1229,7 @@ class NaryOperator(Parser):
                 parser.apply(func)
 
 
-class Optional(UnaryOperator):
+class Option(UnaryOperator):
     """
     Parser `Optional` always matches, even if its child-parser
     did not match.
@@ -1243,7 +1243,7 @@ class Optional(UnaryOperator):
     left it.
 
     Examples:
-    >>> number = Optional(Token('-')) + RegExp(r'\d+') + Optional(RegExp(r'\.\d+'))
+    >>> number = Option(Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
     >>> Grammar(number)('3.14159').content()
     '3.14159'
     >>> Grammar(number)('3.14159').structure()
@@ -1255,9 +1255,9 @@ class Optional(UnaryOperator):
     EBNF-Example:  `number = ["-"]  /\d+/  [ /\.\d+/ ]
     """
     def __init__(self, parser: Parser, name: str = '') -> None:
-        super(Optional, self).__init__(parser, name)
+        super(Option, self).__init__(parser, name)
         # assert isinstance(parser, Parser)
-        assert not isinstance(parser, Optional), \
+        assert not isinstance(parser, Option), \
             "Redundant nesting of options: %s(%s)" % \
             (str(name), str(parser.name))
         assert not isinstance(parser, Required), \
@@ -1275,10 +1275,10 @@ class Optional(UnaryOperator):
                       and not self.parser.name else self.parser.repr) + ']'
 
 
-class ZeroOrMore(Optional):
+class ZeroOrMore(Option):
     """
     `ZeroOrMore` applies a parser repeatedly as long as this parser
-    matches. Like `Optional` the `ZeroOrMore` parser always matches. In
+    matches. Like `Option` the `ZeroOrMore` parser always matches. In
     case of zero repetitions, the empty match `((), text)` is returned.
 
     Examples:
@@ -1310,8 +1310,8 @@ class ZeroOrMore(Optional):
 class OneOrMore(UnaryOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(OneOrMore, self).__init__(parser, name)
-        assert not isinstance(parser, Optional), \
-            "Use ZeroOrMore instead of nesting OneOrMore and Optional: " \
+        assert not isinstance(parser, Option), \
+            "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (str(name), str(parser.name))
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
@@ -1397,7 +1397,7 @@ class Alternative(NaryOperator):
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
-        assert all(not isinstance(p, Optional) for p in self.parsers[:-1])
+        assert all(not isinstance(p, Option) for p in self.parsers[:-1])
         self.been_here = dict()  # type: Dict[int, int]
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
@@ -1446,7 +1446,7 @@ class FlowOperator(UnaryOperator):
 
 
 class Required(FlowOperator):
-    # Add constructor that checks for logical errors, like `Required(Optional(...))` constructs ?
+    # Add constructor that checks for logical errors, like `Required(Option(...))` constructs ?
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:

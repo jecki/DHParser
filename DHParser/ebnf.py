@@ -31,7 +31,7 @@ except ImportError:
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RE, NegativeLookahead, \
-    Alternative, Series, Optional, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
+    Alternative, Series, Option, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     PreprocessorFunc
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, Node, TransformationFunc
 from DHParser.transform import TransformationDict, traverse, remove_brackets, \
@@ -132,15 +132,15 @@ class EBNFGrammar(Grammar):
     group = Series(Token("("), expression, Required(Token(")")))
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Optional(flowmarker), Optional(retrieveop), symbol, NegativeLookahead(Token("="))),
-                         Series(Optional(flowmarker), literal), Series(Optional(flowmarker), regexp),
-                         Series(Optional(flowmarker), group), Series(Optional(flowmarker), oneormore),
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+                         Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
+                         Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore),
                          repetition, option)
     term = OneOrMore(factor)
     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
     directive = Series(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
     definition = Series(symbol, Required(Token("=")), expression)
-    syntax = Series(Optional(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
+    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
     root__ = syntax
 
 
@@ -784,7 +784,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_option(self, node) -> str:
-        return self.non_terminal(node, 'Optional')
+        return self.non_terminal(node, 'Option')
 
 
     def on_repetition(self, node) -> str:

@@ -169,6 +169,8 @@ class StringView(collections.abc.Sized):
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         self.text = text  # type: str
+        self.begin = 0  # type: int
+        self.end = 0    # type: int
         self.begin, self.end = StringView.real_indices(begin, end, len(text))
         self.len = max(self.end - self.begin, 0)
 
@@ -218,7 +220,7 @@ def sv_match(regex, sv: StringView):
     return regex.match(sv.text, pos=sv.begin, endpos=sv.end)
 
 
-def sv_index(absolute_index: Union[int, Iterable], sv: StringView) -> int:
+def sv_index(absolute_index: int, sv: StringView) -> int:
     """
     Converts the an index into string watched by a StringView object
     to an index relativ to the string view object, e.g.:
@@ -232,7 +234,7 @@ def sv_index(absolute_index: Union[int, Iterable], sv: StringView) -> int:
     return absolute_index - sv.begin
 
 
-def sv_indices(absolute_indices: Iterable[int], sv: StringView) -> Tuple[int]:
+def sv_indices(absolute_indices: Iterable[int], sv: StringView) -> Tuple[int, ...]:
     """Converts the an index into string watched by a StringView object
     to an index relativ to the string view object. See also: `sv_index()`
     """

@@ -19,7 +19,7 @@ except ImportError:
     import re
 from DHParser.toolkit import logging, is_filename
 from DHParser.parser import Grammar, Compiler, Required, Token, \
-    Optional, OneOrMore, Series, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source, \
+    Option, OneOrMore, Series, RE, ZeroOrMore, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, Synonym
 from DHParser.syntaxtree import Node, traverse, remove_last, \
     reduce_single_child, replace_by_single_child, remove_tokens, flatten, is_whitespace, collapse, replace_content, \
@@ -105,13 +105,13 @@ class LyrikGrammar(Grammar):
     namenfolge = OneOrMore(NAME)
     wortfolge = OneOrMore(WORT)
     jahr = Synonym(JAHRESZAHL)
-    ort = Series(wortfolge, Optional(verknüpfung))
-    untertitel = Series(wortfolge, Optional(verknüpfung))
-    werk = Series(wortfolge, Optional(Series(Token("."), Required(untertitel))), Optional(verknüpfung))
-    autor = Series(namenfolge, Optional(verknüpfung))
-    bibliographisches = Series(autor, Required(Token(",")), Optional(NZ), werk, Required(Token(",")), Optional(NZ), ort,
-                               Required(Token(",")), Optional(NZ), jahr, Required(Token(".")))
-    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Optional(serie), Required(titel), Required(text),
+    ort = Series(wortfolge, Option(verknüpfung))
+    untertitel = Series(wortfolge, Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Token("."), Required(untertitel))), Option(verknüpfung))
+    autor = Series(namenfolge, Option(verknüpfung))
+    bibliographisches = Series(autor, Required(Token(",")), Option(NZ), werk, Required(Token(",")), Option(NZ), ort,
+                               Required(Token(",")), Option(NZ), jahr, Required(Token(".")))
+    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), Required(titel), Required(text),
                      RE('\\s*', wR=''), Required(ENDE))
     root__ = gedicht
 
