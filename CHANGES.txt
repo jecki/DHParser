@@ -1,5 +1,17 @@
-DHParser Verions 0.7.4 (2.7.2017)
-.................................
+DHParser Verion 0.7.7 (2.9.2017)
+................................
+
+- dhparser script now creates and initializes project dir
+- parsing is now based on a StringView class which other
+  than plain Python strings does not copy strings when
+  slicing. (Speeds up parsing for longer documents.)
+- AST-transformations now receive the complete context, i.e.
+  the list of all parent nodes instead of just the node to
+  transform
+
+
+DHParser Verion 0.7.4 (2.7.2017)
+................................
 
 - package now includes 'dhparser' script
 - more transformation primitives for AST-transformation
