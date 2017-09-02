@@ -43,9 +43,9 @@ except ImportError:
 import sys
 
 try:
-    from typing import Any, List, Tuple, Iterable, Union, Optional
+    from typing import Any, List, Tuple, Iterable, Sequence, Union, Optional, TypeVar
 except ImportError:
-    from .typing34 import Any, List, Tuple, Iterable, Union, Optional
+    from .typing34 import Any, List, Tuple, Iterable, Sequence, Union, Optional, TypeVar
 
 __all__ = ('logging',
            'is_logging',
@@ -154,7 +154,7 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
         os.rmdir(log_dirname)
 
 
-class StringView:
+class StringView(collections.abc.Sized):
     """"A rudimentary StringView class, just enough for the use cases
     in parswer.py.
 
@@ -218,7 +218,7 @@ def sv_match(regex, sv: StringView):
     return regex.match(sv.text, pos=sv.begin, endpos=sv.end)
 
 
-def sv_index(absolute_index: Union[int, Iterable], sv: StringView) -> Union[int, tuple]:
+def sv_index(absolute_index: Union[int, Iterable], sv: StringView) -> int:
     """
     Converts the an index into string watched by a StringView object
     to an index relativ to the string view object, e.g.:
@@ -229,10 +229,14 @@ def sv_index(absolute_index: Union[int, Iterable], sv: StringView) -> Union[int,
     >>> sv_index(match.end(), sv)
     1
     """
-    try:
-        return absolute_index - sv.begin
-    except TypeError:
-        return tuple(index - sv.begin for index in absolute_index)
+    return absolute_index - sv.begin
+
+
+def sv_indices(absolute_indices: Iterable[int], sv: StringView) -> Tuple[int]:
+    """Converts the an index into string watched by a StringView object
+    to an index relativ to the string view object. See also: `sv_index()`
+    """
+    return tuple(index - sv.begin for index in absolute_indices)
 
 
 def sv_search(regex, sv: StringView):
@@ -366,7 +370,8 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
-def smart_list(arg) -> list:
+# def smart_list(arg: Union[str, Iterable[T]]) -> Union[Sequence[str], Sequence[T]]:
+def smart_list(arg: Union[str, Iterable, Any]) -> Sequence:
     """Returns the argument as list, depending on its type and content.
     
     If the argument is a string, it will be interpreted as a list of
@@ -402,9 +407,9 @@ def smart_list(arg) -> list:
             if len(lst) > 1:
                 return [s.strip() for s in lst]
         return [s.strip() for s in arg.strip().split(' ')]
-    elif isinstance(arg, collections.abc.Container):
+    elif isinstance(arg, Sequence):
         return arg
-    elif isinstance(arg, collections.abc.Iterable):
+    elif isinstance(arg, Iterable):
         return list(arg)
     else:
         return [arg]

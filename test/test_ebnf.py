@@ -354,9 +354,6 @@ class TestFlowControlOperators:
             SUCC_LB  = indirection
             indirection = /\s*?\n/
         """
-        # result, messages, syntax_tree = compile_source(lang, None, get_ebnf_grammar(),
-        #                 get_ebnf_transformer(), get_ebnf_compiler('LookbehindTest'))
-        # print(result)
         parser = grammar_provider(lang)()
         cst = parser(self.t1)
         assert not cst.error_flag, cst.as_sxpr()

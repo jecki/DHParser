@@ -82,7 +82,8 @@ __all__ = ('TransformationDict',
 
 
 TransformationProc = Callable[[List[Node]], None]
-TransformationDict = Dict
+TransformationDict = Dict[str, Sequence[Callable]]
+ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[List[Node]], bool]
 KeyFunc = Callable[[Node], str]
 
@@ -172,7 +173,7 @@ def key_tag_name(node: Node) -> str:
 
 
 def traverse(root_node: Node,
-             processing_table: Dict[str, List[Callable]],
+             processing_table: ProcessingTableType,
              key_func: KeyFunc=key_tag_name) -> None:
     """
     Traverses the snytax tree starting with the given ``node`` depth
@@ -216,7 +217,7 @@ def traverse(root_node: Node,
         # into lists with a single value
         table = {name: smart_list(call) for name, call in list(processing_table.items())}
         table = expand_table(table)
-        cache = table.setdefault('__cache__', {})  # type: Dict[str, List[Callable]]
+        cache = table.setdefault('__cache__', cast(TransformationDict, dict()))
         # change processing table in place, so its already expanded and cache filled next time
         processing_table.clear()
         processing_table.update(table)
@@ -278,13 +279,13 @@ def replace_child(node: Node):
         node.children[0].parser.name = node.parser.name
     node.parser = node.children[0].parser
     node._errors.extend(node.children[0]._errors)
-    node.result = node.result[0].result
+    node.result = node.children[0].result
 
 
 def reduce_child(node: Node):
     assert len(node.children) == 1
     node._errors.extend(node.children[0]._errors)
-    node.result = node.result[0].result
+    node.result = node.children[0].result
 
 
 @transformation_factory(Callable)
@@ -320,7 +321,7 @@ def reduce_single_child(context: List[Node], condition: Callable=TRUE_CONDITION)
 
 
 def is_named(context: List[Node]) -> bool:
-    return context[-1].parser.name
+    return bool(context[-1].parser.name)
 
 
 def is_anonymous(context: List[Node]) -> bool:
@@ -376,7 +377,7 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
     """
     node = context[-1]
     if node.children:
-        new_result = []
+        new_result = []     # type: List[Node]
         for child in node.children:
             context.append(child)
             if child.children and condition(context):
@@ -405,7 +406,7 @@ def merge_children(context: List[Node], tag_names: List[str]):
     names into a single child node with a mock-parser with the name of
     the first tag-name in the list.
     """
-    node = context
+    node = context[-1]
     result = []
     name, ptype = ('', tag_names[0]) if tag_names[0][:1] == ':' else (tag_names[0], '')
     if node.children:
@@ -421,7 +422,8 @@ def merge_children(context: List[Node], tag_names: List[str]):
                 k += 1
             if i < L:
                 result.append(Node(MockParser(name, ptype),
-                                   reduce(lambda a, b: a + b, (node.result for node in node.children[i:k]))))
+                                   reduce(lambda a, b: a + b,
+                                          (node.children for node in node.children[i:k]))))
             i = k
         node.result = tuple(result)
 
@@ -558,7 +560,7 @@ def remove_content(context: List[Node], regexp: str):
 ########################################################################
 
 @transformation_factory(Callable)
-def assert_condition(context: List[Node], condition: Callable, error_msg: str = '') -> bool:
+def assert_condition(context: List[Node], condition: Callable, error_msg: str = ''):
     """Checks for `condition`; adds an error message if condition is not met."""
     node = context[-1]
     if not condition(context):

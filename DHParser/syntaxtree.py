@@ -16,6 +16,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+import collections.abc
 import copy
 import os
 from functools import partial
@@ -144,7 +145,7 @@ def flatten_sxpr(sxpr: str) -> str:
     return re.sub('\s(?=\))', '', re.sub('\s+', ' ', sxpr)).strip()
 
 
-class Node:
+class Node(collections.abc.Sized):
     """
     Represents a node in the concrete or abstract syntax tree.
 
@@ -199,7 +200,7 @@ class Node:
         # self.error_flag = False  # type: bool
         self._errors = []  # type: List[str]
         self.result = result
-        self._len = len(result) if not self.children else \
+        self._len = len(self._result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
         # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
         self._pos = -1  # type: int

@@ -26,9 +26,9 @@ try:
 except ImportError:
     import re
 try:
-    from typing import Any, cast, Tuple, Union
+    from typing import Any, cast, Tuple, Union, Iterable
 except ImportError:
-    from .typing34 import Any, cast, Tuple, Union
+    from .typing34 import Any, cast, Tuple, Union, Iterable
 
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -511,7 +511,7 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
     base, ext = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
-    errors = []
+    errors = []  # type: Iterable[str]
     if (not os.path.exists(compiler_name) or force or
             grammar_changed(compiler_name, ebnf_filename)):
         # print("recompiling parser for: " + ebnf_filename)

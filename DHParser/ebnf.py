@@ -25,9 +25,9 @@ try:
 except ImportError:
     import re
 try:
-    from typing import Callable, Dict, List, Set, Tuple
+    from typing import Callable, Dict, List, Set, Tuple, Union
 except ImportError:
-    from .typing34 import Callable, Dict, List, Set, Tuple
+    from .typing34 import Callable, Dict, List, Set, Tuple, Union
 
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RE, NegativeLookahead, \
@@ -222,7 +222,7 @@ EBNF_AST_transformation_table = {
 }
 
 
-def EBNFTransform() -> TransformationDict:
+def EBNFTransform() -> TransformationFunc:
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 def get_ebnf_transformer() -> TransformationFunc:

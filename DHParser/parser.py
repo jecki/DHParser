@@ -158,8 +158,7 @@ class HistoryRecord:
 
     def __init__(self, call_stack: List['Parser'], node: Node, remaining: int) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]
-        # type: List['Parser']
+        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['Parser']
         self.node = node                # type: Node
         self.remaining = remaining      # type: int
         document = call_stack[-1].grammar.document__.text if call_stack else ''
@@ -188,7 +187,7 @@ class HistoryRecord:
                 else slice(-self.remaining, None))
 
     @staticmethod
-    def last_match(history: List['HistoryRecord']) -> Optional['HistoryRecord']:
+    def last_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
         """
         Returns the last match from the parsing-history.
         Args:
@@ -204,7 +203,7 @@ class HistoryRecord:
         return None
 
     @staticmethod
-    def most_advanced_match(history: List['HistoryRecord']) -> Optional['HistoryRecord']:
+    def most_advanced_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
         """
         Returns the closest-to-the-end-match from the parsing-history.
         Args:
@@ -632,10 +631,10 @@ class Grammar:
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
     # some default values
-    COMMENT__ = r''  # r'#.*(?:\n|$)'
-    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP__
+    COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
+    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
+    wspL__ = ''     # type: str
+    wspR__ = WSP__  # type: str
 
 
     @classmethod
@@ -741,7 +740,7 @@ class Grammar:
 
 
     @property
-    def reversed__(self) -> str:
+    def reversed__(self) -> StringView:
         if not self._reversed__:
             self._reversed__ = StringView(self.document__.text[::-1])
         return self._reversed__

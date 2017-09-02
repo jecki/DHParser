@@ -82,7 +82,6 @@ class TestInfiLoopsAndRecursion:
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         snippet = "7 + 8 * 4"
         syntax_tree = parser(snippet)
-        # print(syntax_tree.as_sxpr())
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
@@ -95,7 +94,6 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
-        # print(syntax_tree.collect_errors())
 
 
 class TestFlowControl:
