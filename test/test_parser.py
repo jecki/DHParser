@@ -447,5 +447,5 @@ class TestBorderlineCases:
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    with logging(True):
-        runner("TestInfiLoopsAndRecursion.test_direct_left_recursion1", globals())
+    with logging(False):
+        runner("", globals())
