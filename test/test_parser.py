@@ -34,12 +34,9 @@ from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion1(self):
         minilang =""" 
-            @ whitespace = linefeed
-            formula = [ //~ ] expr
             expr = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
-            # example:  "5 + 3 * 4"
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
@@ -53,13 +50,10 @@ class TestInfiLoopsAndRecursion:
 
     def test_direct_left_recursion2(self):
         minilang = """
-            @ whitespace = linefeed
-            formula = [ //~ ] expr
             expr = ex
             ex   = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
-            # example:  "5 + 3 * 4"
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()

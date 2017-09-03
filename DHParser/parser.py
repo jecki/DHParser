@@ -254,25 +254,29 @@ def add_parser_guard(parser_func):
             if location in parser.visited:
                 return parser.visited[location]
 
-            # break left recursion at the maximum allowed depth
-            if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
-                grammar.recursion_locations__.add(location)
-                return None, text
-
             if grammar.history_tracking__:
                 grammar.call_stack__.append(parser)
                 grammar.moving_forward__ = True
 
-            parser.recursion_counter[location] += 1
+            # break left recursion at the maximum allowed depth
+            if grammar.left_recursion_handling__:
+                if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
+                    grammar.recursion_locations__.add(location)
+                    return None, text
+                parser.recursion_counter[location] += 1
 
             # run original __call__ method
             node, rest = parser_func(parser, text)
+
+            if grammar.left_recursion_handling__:
+                parser.recursion_counter[location] -= 1
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
                 if location in grammar.recursion_locations__:
                     if location in parser.visited:
                         node, rest = parser.visited[location]
+                        # TODO: add a warning about occurence of left-recursion here
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
@@ -286,8 +290,6 @@ def add_parser_guard(parser_func):
                 #   matches will store its result in the cache
                 parser.visited[location] = (node, rest)
 
-            parser.recursion_counter[location] -= 1
-
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 remaining = len(rest)
@@ -299,7 +301,7 @@ def add_parser_guard(parser_func):
                 grammar.call_stack__.pop()
 
         except RecursionError:
-            node = Node(None, text[:min(10, max(1, text.find("\n")))] + " ...")
+            node = Node(None, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node.add_error("maximum recursion depth of parser reached; "
                            "potentially due to too many errors!")
             rest = EMPTY_STRING_VIEW
@@ -640,7 +642,11 @@ class Grammar:
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
                 In some situations it may drastically increase parsing time, so
-                it is safer to leave it on.
+                it is safer to leave it on. (Default: on)
+
+        left_recursion_handling__:  Turns left recursion handling on or off.
+                If turned off, a recursion error will result in case of left
+                recursion.
     """
     root__ = None  # type: Union[Parser, None]
     # root__ must be overwritten with the root-parser by grammar subclass
@@ -694,10 +700,11 @@ class Grammar:
         #     self.wspL__ = ''
         # if not hasattr(self.__class__, 'wspR__'):
         #     self.wspR__ = ''
-        self.all_parsers__ = set()  # type: Set[Parser]
-        self._dirty_flag__ = False  # type: bool
-        self.history_tracking__ = False  # type: bool
-        self.memoization__ = True  # type: bool
+        self.all_parsers__ = set()             # type: Set[Parser]
+        self._dirty_flag__ = False             # type: bool
+        self.history_tracking__ = False        # type: bool
+        self.memoization__ = True              # type: bool
+        self.left_recursion_handling__ = False # type: bool
         self._reset__()
 
         # prepare parsers in the class, first

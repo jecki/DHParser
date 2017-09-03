@@ -358,7 +358,7 @@ class Node(collections.abc.Sized):
             return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail.lstrip(D)
 
 
-    def as_sxpr(self, src: str=None) -> str:
+    def as_sxpr(self, src: str=None, compact: bool=False) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -368,8 +368,10 @@ class Node(collections.abc.Sized):
                 reported as line and column.
         """
 
+        lB, rB, D = ('', '', 1) if compact else ('(', '\n)', 0)
+
         def opening(node) -> str:
-            s = '(' + node.tag_name
+            s = lB + node.tag_name
             # s += " '(pos %i)" % node.pos
             if src:
                 s += " '(pos %i " % node.pos + " %i %i)" % line_col(src, node.pos)
@@ -383,7 +385,7 @@ class Node(collections.abc.Sized):
                 else "'%s'" % s if s.find("'") < 0 \
                 else '"%s"' % s.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, lambda node: '\n)', pretty, density=0)
+        return self._tree_repr('    ', opening, lambda node: rB, pretty, density=D)
 
 
     def as_xml(self, src: str=None) -> str:
