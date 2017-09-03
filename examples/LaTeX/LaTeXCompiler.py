@@ -123,6 +123,7 @@ class LaTeXGrammar(Grammar):
     tabular_cell        = { line_element //~ }
     tabular_config      = "{" /[lcr|]+/~ §"}"
     
+    
     #### paragraphs and sequences of paragraphs ####
     
     block_of_paragraphs = "{" [sequence] §"}"
@@ -130,6 +131,7 @@ class LaTeXGrammar(Grammar):
     paragraph           = { !blockcmd text_element //~ }+
     text_element        = line_element | LINEFEED
     line_element        = text | block | inline_environment | command
+    
     
     #### inline enivronments ####
     
@@ -143,6 +145,7 @@ class LaTeXGrammar(Grammar):
     end_environment     = /\\end{/ §::NAME §/}/
     
     inline_math         = /\$/ /[^$]*/ §/\$/
+    
     
     #### commands ####
     
@@ -220,7 +223,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "ed181ac517b686f843e13d5783527fe3"
+    source_hash__ = "57dd004091e87ff603b51f0a47857cf4"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

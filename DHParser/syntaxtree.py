@@ -261,6 +261,8 @@ class Node(collections.abc.Sized):
         # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
         #         or isinstance(result, Node)
         #         or isinstance(result, str)), str(result)
+        # Possible optimization: Do not allow single nodes as argument:
+        # assert not isinstance(result, Node)
         self._result = (result,) if isinstance(result, Node) else str(result) \
             if isinstance(result, StringView) else result or ''  # type: StrictResultType
         self.children = cast(ChildrenType, self._result) \

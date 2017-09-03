@@ -278,8 +278,8 @@ def add_parser_guard(parser_func):
                 elif grammar.memoization__:
                     # otherwise also cache None-results
                     parser.visited[location] = (None, rest)
-            elif ((grammar.memoization__ or location in grammar.recursion_locations__)
-                  and grammar.last_rb__loc__ > location):
+            elif (grammar.last_rb__loc__ > location
+                  and (grammar.memoization__ or location in grammar.recursion_locations__)):
                 # - variable manipulating parsers will not be entered into the cache,
                 #   because caching would interfere with changes of variable state
                 # - in case of left recursion, the first recursive step that
@@ -492,7 +492,7 @@ class Grammar:
         >>> number_parser("3.1416").content()
         '3.1416'
 
-    Collecting the parsers that define a grammar in a descentand class of
+    Collecting the parsers that define a grammar in a descendant class of
     class Grammar and assigning the named parsers to class variables
     rather than global variables has several advantages:
 
@@ -500,11 +500,12 @@ class Grammar:
 
     2. The parser names of named parsers do not need to be passed to the
        constructor of the Parser object explicitly, but it suffices to
-       assign them to class variables.
+       assign them to class variables, which results in better
+       readability of the Python code.
 
-    3. The parsers in class do not necessarily need to be connected to one
-       single root parser, which is helpful for testing and building up a
-       parser successively of several components.
+    3. The parsers in the class do not necessarily need to be connected
+       to one single root parser, which is helpful for testing and
+       building up a parser successively of several components.
 
     As a consequence, though, it is highly recommended that a Grammar
     class should not define any other variables or methods with names
@@ -551,14 +552,18 @@ class Grammar:
     (no comments, horizontal right aligned whitespace) don't fit:
     COMMENT__:  regular expression string for matching comments
     WSP__:   regular expression for whitespace and comments
+
     wspL__:  regular expression string for left aligned whitespace,
              which either equals WSP__ or is empty.
+
     wspR__:  regular expression string for right aligned whitespace,
              which either equals WSP__ or is empty.
+
     root__:  The root parser of the grammar. Theoretically, all parsers of the
              grammar should be reachable by the root parser. However, for testing
              of yet incomplete grammars class Grammar does not assume that this
              is the case.
+
     parser_initializiation__:  Before the parser class (!) has been initialized,
              which happens upon the first time it is instantiated (see doctring for
              method `_assign_parser_names()` for an explanation), this class
@@ -568,7 +573,7 @@ class Grammar:
     Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
 
-        hostory_tracking__:  A flag indicating that the parsing history shall
+        history_tracking__:  A flag indicating that the parsing history shall
                 be tracked
 
         wsp_left_parser__:  A parser for the default left-adjacent-whitespace
@@ -576,6 +581,7 @@ class Grammar:
                 default is empty. The default whitespace will be used by parsers
                 `Token` and, if no other parsers are passed to its constructor,
                 by parser `RE'.
+
         wsp_right_parser__: The same for the default right-adjacent-whitespace.
                 Both wsp_left_parser__ and wsp_right_parser__ merely serve the
                 purpose to avoid having to specify the default whitespace
@@ -587,16 +593,20 @@ class Grammar:
 
         document__:  the text that has most recently been parsed or that is
                 currently being parsed.
+
         _reversed__:  the same text in reverse order - needed by the `Lookbehind'-
                 parsers.
+
         variables__:  A mapping for variable names to a stack of their respective
                 string values - needed by the `Capture`-, `Retrieve`- and `Pop`-
                 parsers.
+
         rollback__:  A list of tuples (location, rollback-function) that are
                 deposited by the `Capture`- and `Pop`-parsers. If the parsing
                 process reaches a dead end then all rollback-functions up to
                 the point to which it retreats will be called and the state
                 of the variable stack restored accordingly.
+
         last_rb__loc__:  The last, i.e. most advanced location in the text
                 where a variable changing operation occurred. If the parser
                 backtracks to a location at or before `last_rb__loc__` (which,
@@ -605,23 +615,28 @@ class Grammar:
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
                 calling method `.rollback_to__(location)`.
+
         call_stack__:  A stack of all parsers that have been called. This
                 is required for recording the parser history (for debugging)
                 and, eventually, i.e. one day in the future, for tracing through
                 the parsing process.
+
         history__:  A list of parser-call-stacks. A parser-call-stack is
                 appended to the list each time a parser either matches, fails
                 or if a parser-error occurs.
+
         moving_forward__: This flag indicates that the parsing process is currently
                 moving forward . It is needed to reduce noise in history recording
                 and should not be considered as having a valid value if history
                 recording is turned off! (See `add_parser_guard` and its local
                 function `guarded_call`)
+
         recursion_locations__:  Stores the locations where left recursion was
                 detected. Needed to provide minimal memoization for the left
                 recursion detection algorithm, but, strictly speaking, superfluous
                 if full memoization is enabled. (See `add_parser_guard` and its
                 local function `guarded_call`)
+
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
                 In some situations it may drastically increase parsing time, so
@@ -1079,7 +1094,7 @@ class RE(Parser):
     >>> result.structure()
     '(:RE (:RegExp "Haus") (:Whitespace " "))'
     >>> parser(' Haus').content()
-    ' <<< Error on " Haus" | Parser did not match! Invalid source file? >>> '
+    ' <<< Error on " Haus" | Parser did not match! Invalid source file?\\n    Most advanced: None\\n    Last match:    None; >>> '
 
     EBNF-Notation:  `/ ... /~`  or  `~/ ... /`  or  `~/ ... /~`
     EBNF-Example:   `word = /\w+/~`
@@ -1247,7 +1262,7 @@ class Option(UnaryOperator):
     >>> Grammar(number)('3.14159').content()
     '3.14159'
     >>> Grammar(number)('3.14159').structure()
-    '(:Series (:Optional) (:RegExp "3") (:Optional (:RegExp ".14159")))'
+    '(:Series (:Option) (:RegExp "3") (:Option (:RegExp ".14159")))'
     >>> Grammar(number)('-1').content()
     '-1'
 
@@ -1285,6 +1300,8 @@ class ZeroOrMore(Option):
     >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
     >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content()
     'Wo viel der Weisheit, da auch viel des Grämens.'
+    >>> Grammar(sentence)('.').content()  # an empty sentence also matches
+    '.'
 
     EBNF-Notation: `{ ... }`
     EBNF-Example:  `sentence = { /\w+,?/ } "."`
@@ -1308,6 +1325,22 @@ class ZeroOrMore(Option):
 
 
 class OneOrMore(UnaryOperator):
+    """
+    `OneOrMore` applies a parser repeatedly as long as this parser
+    matches. Other than `ZeroOrMore` which always matches, at least
+    one match is required by `OneOrMore`.
+
+    Examples:
+    >>> sentence = OneOrMore(RE(r'\w+,?')) + Token('.')
+    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content()
+    'Wo viel der Weisheit, da auch viel des Grämens.'
+    >>> Grammar(sentence)('.').content()  # an empty sentence also matches
+    ' <<< Error on "." | Parser did not match! Invalid source file?\\n    Most advanced: None\\n    Last match:    None; >>> '
+
+    EBNF-Notation: `{ ... }+`
+    EBNF-Example:  `sentence = { /\w+,?/ }+`
+    """
+
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(OneOrMore, self).__init__(parser, name)
         assert not isinstance(parser, Option), \
@@ -1336,6 +1369,21 @@ class OneOrMore(UnaryOperator):
 
 
 class Series(NaryOperator):
+    """
+    Matches if each of a series of parsers matches exactly in the order of
+    the series.
+
+    Example:
+    >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
+    >>> Grammar(variable_name)('variable_1').content()
+    'variable_1'
+    >>> Grammar(variable_name)('1_variable').content()
+    ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\\n    Most advanced: None\\n    Last match:    None; >>> '
+
+    EBNF-Notation: `... ...`    (sequence of parsers separated by a blank or new line)
+    EBNF-Example:  `series = letter letter_or_digit`
+    """
+
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(Series, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
@@ -1355,6 +1403,9 @@ class Series(NaryOperator):
 
     def __repr__(self):
         return " ".join(parser.repr for parser in self.parsers)
+
+    # The following operator definitions add syntactical sugar, so one can write:
+    # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
 
     def __add__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
@@ -1385,12 +1436,15 @@ class Alternative(NaryOperator):
     # the order of the sub-expression matters!
     >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
     >>> Grammar(number)("3.1416").content()
-    '3 <<< Error on ".1416" | Parser stopped before end! trying to recover... >>> '
+    '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
 
     # the most selective expression should be put first:
     >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
     >>> Grammar(number)("3.1416").content()
     '3.1416'
+
+    EBNF-Notation: `... | ...`
+    EBNF-Example:  `sentence = /\d+\.\d+/ | /\d+/`
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
@@ -1410,6 +1464,15 @@ class Alternative(NaryOperator):
     def __repr__(self):
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
+    def reset(self):
+        super(Alternative, self).reset()
+        self.been_here = {}
+        return self
+
+    # The following operator definitions add syntactical sugar, so one can write:
+    # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
+    # `Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))`
+
     def __or__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
                         else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
@@ -1426,10 +1489,6 @@ class Alternative(NaryOperator):
         self.parsers += other_parsers
         return self
 
-    def reset(self):
-        super(Alternative, self).reset()
-        self.been_here = {}
-        return self
 
 
 

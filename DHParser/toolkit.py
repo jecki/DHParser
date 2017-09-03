@@ -299,7 +299,7 @@ def error_messages(source_text, errors) -> List[str]:
 def escape_re(s) -> str:
     """Returns `s` with all regular expression special characters escaped.
     """
-    assert isinstance(s, str)
+    # assert isinstance(s, str)
     re_chars = r"\.^$*+?{}[]()#<>=|!"
     for esc_ch in re_chars:
         s = s.replace(esc_ch, '\\' + esc_ch)

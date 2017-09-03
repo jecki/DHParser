@@ -74,6 +74,7 @@ tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_
 tabular_cell        = { line_element //~ }
 tabular_config      = "{" /[lcr|]+/~ §"}"
 
+
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
@@ -81,6 +82,7 @@ sequence            = { (paragraph | block_environment ) [PARSEP] }+
 paragraph           = { !blockcmd text_element //~ }+
 text_element        = line_element | LINEFEED
 line_element        = text | block | inline_environment | command
+
 
 #### inline enivronments ####
 
@@ -94,6 +96,7 @@ begin_environment   = /\\begin{/ §NAME §/}/
 end_environment     = /\\end{/ §::NAME §/}/
 
 inline_math         = /\$/ /[^$]*/ §/\$/
+
 
 #### commands ####
 
