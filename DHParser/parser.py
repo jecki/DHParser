@@ -1902,10 +1902,10 @@ class Compiler:
 
 
 def compile_source(source: str,
-                   preprocessor: PreprocessorFunc,  # str -> str
-                   parser: Grammar,  # str -> Node (concrete syntax tree (CST))
+                   preprocessor: PreprocessorFunc,   # str -> str
+                   parser: Grammar,                  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
-                   compiler: Compiler):         # Node (AST) -> Any
+                   compiler: Compiler) -> Tuple[Any, List[str], Node]:  # Node (AST) -> Any
     """
     Compiles a source in four stages:
         1. Scanning (if needed)

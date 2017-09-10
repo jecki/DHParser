@@ -235,7 +235,7 @@ def sv_index(absolute_index: int, sv: StringView) -> int:
 
 
 def sv_indices(absolute_indices: Iterable[int], sv: StringView) -> Tuple[int, ...]:
-    """Converts the an index into string watched by a StringView object
+    """Converts indices into a string watched by a StringView object
     to an index relativ to the string view object. See also: `sv_index()`
     """
     return tuple(index - sv.begin for index in absolute_indices)
