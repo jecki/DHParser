@@ -76,7 +76,7 @@ except ImportError:
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
-    Error, is_error, Node, TransformationFunc
+    Error, is_error, has_errors, Node, TransformationFunc
 from DHParser.toolkit import StringView, EMPTY_STRING_VIEW, sv_match, sv_index, sv_search, \
     load_if_file, error_messages, line_col
 
@@ -161,15 +161,17 @@ class HistoryRecord:
         self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['Parser']
         self.node = node                # type: Node
         self.remaining = remaining      # type: int
-        document = call_stack[-1].grammar.document__.text if call_stack else ''
-        self.line_col = line_col(document, len(document) - remaining)  # type: Tuple[int, int]
+        self.line_col = (1, 1)          # type: Tuple[int, int]
+        if call_stack:
+            document = call_stack[-1].grammar.document__.text
+            self.line_col = line_col(document, len(document) - remaining)
 
     def __str__(self):
         return 'line %i, column %i:  %s  "%s"' % \
                (self.line_col[0], self.line_col[1], self.stack, str(self.node))
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(self.node._errors).replace('\n', '\\')
+        return self.ERROR + ": " + "; ".join(str(e) for e in self.node._errors).replace('\n', '\\')
 
     @property
     def stack(self) -> str:
@@ -179,7 +181,7 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            self.err_msg() if self.node._errors else self.MATCH
+            self.err_msg() if has_errors(self.node._errors) else self.MATCH
 
     @property
     def extent(self) -> slice:
@@ -1933,7 +1935,7 @@ def compile_source(source: str,
         (result, errors, abstract syntax tree). In detail:
         1. The result as returned by the compiler or ``None`` in case
             of failure,
-        2. A list of error messages
+        2. A list of error or warning messages
         3. The root-node of the abstract syntax treelow
     """
     source_text = load_if_file(source)
@@ -1950,12 +1952,11 @@ def compile_source(source: str,
     # likely that error list gets littered with compile error messages
     result = None
     if is_error(syntax_tree.error_flag):
-        errors = syntax_tree.collect_errors()
+        messages = syntax_tree.collect_errors()
     else:
         transformer(syntax_tree)
         if is_logging():  syntax_tree.log(log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
-        errors = syntax_tree.collect_errors()
-    messages = error_messages(source_text, errors)
+        messages = syntax_tree.collect_errors()
     return result, messages, syntax_tree

@@ -27,10 +27,10 @@ except ImportError:
     import re
 try:
     from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple
 except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple
 
 from DHParser.toolkit import is_logging, log_dir, StringView, linebreaks, line_col, identity
 
@@ -42,6 +42,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'Error',
            'is_warning',
            'is_error',
+           'has_errors',
            'Node',
            'mock_syntax_tree',
            'TransformationFunc')
@@ -148,7 +149,7 @@ class Error:
     @staticmethod
     def from_template(template: str, level: int=ERROR, content: Union[tuple, dict]=()):
         if isinstance(content, tuple):
-            return Error(template % content, level, template)
+            return Error((template % content) if content else template, level, template)
         else:
             return Error(template.format(**content), level, template)
 
@@ -157,12 +158,24 @@ class Error:
         return "warning" if is_warning(self.level) else "error"
 
 
-def is_warning(level):
+def is_warning(level: int) -> bool:
     return level < Error.ERROR
 
 
-def is_error(level):
+def is_error(level:  int) -> bool:
     return level >= Error.ERROR
+
+
+def has_errors(messages: Iterable[Error], level: int=Error.ERROR) -> bool:
+    """
+    Returns True, if at least one entry in `messages` has at
+    least the given error `level`.
+    """
+    for err_obj in messages:
+        if err_obj.level >= level:
+            return True
+    return False
+
 
 
 ChildrenType = Tuple['Node', ...]

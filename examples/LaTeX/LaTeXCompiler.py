@@ -186,7 +186,7 @@ class LaTeXGrammar(Grammar):
     
     #######################################################################
     #
-    # Primitives
+    # primitives
     #
     #######################################################################
     
@@ -223,7 +223,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "57dd004091e87ff603b51f0a47857cf4"
+    source_hash__ = "939c094e994677d2ab894169c013cf58"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

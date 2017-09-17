@@ -25,6 +25,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.parser import Grammar, Compiler
+from DHParser.syntaxtree import is_error
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_provider, \
     load_compiler_suite
 
@@ -51,7 +52,7 @@ class TestCompileFunctions:
         result = parser("5 + 3 * 4")
         assert not result.error_flag
         result = parser("5A + 4B ** 4C")
-        assert result.error_flag
+        assert is_error(result.error_flag)
 
 
 class TestCompilerGeneration:
