@@ -438,6 +438,9 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
+            compact:  If True a compact representation is returned where
+                brackets are ommited and only the indentation indicates the
+                tree structure.
         """
 
         lB, rB, D = ('', '', 1) if compact else ('(', '\n)', 0)
