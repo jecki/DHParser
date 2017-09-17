@@ -358,8 +358,27 @@ class TestFlowControlOperators:
         cst = parser(self.t1)
         assert not cst.error_flag, cst.as_sxpr()
         cst = parser(self.t2)
-        # this should fail, because 'END' is not preceeded by a line feed
+        # this should fail, because 'END' is not preceded by a line feed
         assert cst.error_flag, cst.as_sxpr()
+
+    def test_required_error_reporting(self):
+        """Tests whether failures to comply with the required operator '§'
+        are correctly reported as such.
+        """
+        lang1 = "nonsense == /\w+/~  # wrong_equal_sign"
+        lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions"
+        try:
+            parser_class = grammar_provider(lang1)
+            assert False, "Compilation error expected."
+        except CompilationError as error:
+            pass
+            # print(error)
+        try:
+            parser_class = grammar_provider(lang2)
+            assert False, "Compilation error expected."
+        except CompilationError as error:
+            pass
+            # print(error)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
 @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
 
 syntax     =  [~//] { definition | directive } §EOF
-definition =  symbol §"=" expression
+definition =  symbol §("=" expression)
 directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
 
 expression =  term { "|" term }

@@ -32,7 +32,7 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
-from DHParser.toolkit import is_logging, log_dir, StringView, line_col, identity
+from DHParser.toolkit import is_logging, log_dir, StringView, linebreaks, line_col, identity
 
 __all__ = ('WHITESPACE_PTYPE',
            'MockParser',
@@ -123,11 +123,31 @@ class ZombieParser(MockParser):
 ZOMBIE_PARSER = ZombieParser()
 
 
-# # Python 3.6:
-# class Error(NamedTuple):
-#     pos: int
-#     msg: str
-Error = NamedTuple('Error', [('pos', int), ('msg', str)])
+class Error:
+    __slots__ = ['message', 'category', 'code', 'pos', 'line', 'column']
+
+    ERROR = "error"
+    WARNING = "warning"
+
+    def __init__(self, message: str, category: str='', code: str=''):
+        self.message = message
+        self.category = category or Error.ERROR
+        self.code = code
+        self.pos = -1
+        self.line = -1
+        self.column = -1
+
+    def __str__(self):
+        return ("line: %3i, column: %2i" % (self.line, self.column)
+                + ", %s: %s" % (self.category, self.message))
+
+    @staticmethod
+    def from_template(template: str, category: str='', content: Union[tuple, dict]=()):
+        if isinstance(content, tuple):
+            return Error(template % content, category, template)
+        else:
+            return Error(template.format(**content), category, template)
+
 
 ChildrenType = Tuple['Node', ...]
 StrictResultType = Union[ChildrenType, StringView, str]
@@ -198,7 +218,7 @@ class Node(collections.abc.Sized):
         # self._result = ''  # type: StrictResultType
         # self.children = ()  # type: ChildrenType
         # self.error_flag = False  # type: bool
-        self._errors = []  # type: List[str]
+        self._errors = []  # type: List[Error]
         self.result = result
         self._len = len(self._result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
@@ -276,24 +296,57 @@ class Node(collections.abc.Sized):
 
     @pos.setter
     def pos(self, pos: int):
-        # assert isinstance(pos, int)
         self._pos = pos
         offset = 0
+        # recursively adjust pos-values of all children
         for child in self.children:
             child.pos = pos + offset
             offset += len(child)
+        # add pos-values to Error-objects
+        for err in self._errors:
+            err.pos = pos
 
 
     @property
     def errors(self) -> List[Error]:
-        return [Error(self.pos, err) for err in self._errors]
+        return self._errors.copy()
 
 
-    def add_error(self, error_str: str) -> 'Node':
-        assert isinstance(error_str, str)
-        self._errors.append(error_str)
+    # def add_error(self, error_str: str) -> 'Node':
+    #     assert isinstance(error_str, str)
+    #     self._errors.append(error_str)
+    #     self.error_flag = True
+    #     return self
+
+
+    def add_error(self: 'Node',
+                  template: Union[str, Error],
+                  category: str='',
+                  content: Union[tuple, dict]=()) -> 'Node':
+        if isinstance(template, Error):
+            assert not (bool(category) or bool(content))
+            self._errors.append(template)
+        else:
+            self._errors.append(Error.from_template(template, category, content))
         self.error_flag = True
         return self
+
+
+    def _finalize_errors(self, lbreaks: List[int]):
+        if self.error_flag:
+            for err in self._errors:
+                assert err.pos >= 0
+                err.line, err.column = line_col(lbreaks, err.pos)
+            for child in self.children:
+                child._finalize_errors(lbreaks)
+
+
+    def finalize_errors(self, source_text: Union[StringView, str]):
+        """Recursively adds line- and column-numbers to all error objects.
+        """
+        if self.error_flag:
+            lbreaks = linebreaks(source_text)
+            self._finalize_errors(lbreaks)
 
 
     def collect_errors(self, clear_errors=False) -> List[Error]:

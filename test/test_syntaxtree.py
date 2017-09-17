@@ -80,7 +80,7 @@ class TestNode:
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
         compare_tree = mock_syntax_tree("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
-        assert tree == compare_tree
+        assert tree == compare_tree, tree.as_sxpr()
 
     def test_copy(self):
         cpy = copy.deepcopy(self.unique_tree)

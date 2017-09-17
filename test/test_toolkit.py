@@ -31,7 +31,7 @@ except ImportError:
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, StringView, \
-    sv_match, sv_search, EMPTY_STRING_VIEW
+    sv_match, sv_search, EMPTY_STRING_VIEW, linebreaks, line_col, error_messages
 
 
 class TestStringView:
@@ -131,7 +131,55 @@ class TestStringView:
         assert len(EMPTY_STRING_VIEW[0:1]) == 0
 
 
-class TestToolkit:
+class TestErrorSupport:
+    def mini_suite(self, s, data, offset):
+        l, c = line_col(data, 0)
+        assert (l, c) == (1, 1), str((l, c))
+        l, c = line_col(data, 0 + offset)
+        assert (l, c) == (1 + offset, 1), str((l, c))
+        l, c = line_col(data, 1 + offset)
+        assert (l, c) == (1 + offset, 2), str((l, c))
+        l, c = line_col(data, 9 + offset)
+        assert (l, c) == (1 + offset, 10), str((l, c))
+        l, c = line_col(data, 10 + offset)
+        assert (l, c) == (2 + offset, 1), str((l, c))
+        l, c = line_col(data, 18 + offset)
+        assert (l, c) == (2 + offset, 9), str((l, c))
+        l, c = line_col(data, 19 + offset)
+        assert (l, c) == (2 + offset, 10), str((l, c))
+        try:
+            l, c = line_col(data, -1)
+            assert False, "ValueError expected for negative position."
+        except ValueError:
+            pass
+        try:
+            l, c = line_col(data, len(s) + 1)
+            assert False, "ValueError expected for postion > pos(EOF)+1."
+        except ValueError:
+            pass
+
+    def test_line_col(self):
+        s = "123456789\n123456789"
+        self.mini_suite(s, s, 0)
+        s = "\n123456789\n123456789"
+        self.mini_suite(s, s, 1)
+        s = "123456789\n123456789\n"
+        self.mini_suite(s, s, 0)
+        s = "\n123456789\n123456789\n"
+        self.mini_suite(s, s, 1)
+
+    def test_line_col_bisect(self):
+        s = "123456789\n123456789"
+        self.mini_suite(s, linebreaks(s), 0)
+        s = "\n123456789\n123456789"
+        self.mini_suite(s, linebreaks(s), 1)
+        s = "123456789\n123456789\n"
+        self.mini_suite(s, linebreaks(s), 0)
+        s = "\n123456789\n123456789\n"
+        self.mini_suite(s, linebreaks(s), 1)
+
+
+class TestLoggingAndLoading:
     filename = "tmp/test.py" if os.path.isdir('tmp') else "test/tmp/test.py"
     code1 = "x = 46"
     code2 = "def f():\n    return 46"

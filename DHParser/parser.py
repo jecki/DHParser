@@ -276,7 +276,7 @@ def add_parser_guard(parser_func):
                 if location in grammar.recursion_locations__:
                     if location in parser.visited:
                         node, rest = parser.visited[location]
-                        # TODO: add a warning about occurence of left-recursion here
+                        # TODO: maybe add a warning about occurrence of left-recursion here?
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
@@ -704,7 +704,7 @@ class Grammar:
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
-        self.left_recursion_handling__ = False # type: bool
+        self.left_recursion_handling__ = True  # type: bool
         self._reset__()
 
         # prepare parsers in the class, first
@@ -866,6 +866,7 @@ class Grammar:
             else:
                 result.add_error(error_str)
         result.pos = 0  # calculate all positions
+        result.finalize_errors(self.document__)
         return result
 
 

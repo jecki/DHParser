@@ -30,9 +30,11 @@ the directory exists and raises an error if a file with the same name
 already exists.
 """
 
+import bisect
 import codecs
 import collections
 import contextlib
+import functools
 import hashlib
 import os
 
@@ -58,6 +60,7 @@ __all__ = ('logging',
            # 'supress_warnings',
            # 'warnings',
            # 'repr_call',
+           'linebreaks',
            'line_col',
            'error_messages',
            'escape_re',
@@ -165,7 +168,7 @@ class StringView(collections.abc.Sized):
     does not work for unicode strings. Hence, the StringView class.
     """
 
-    __slots__ = ['text', 'begin', 'end', 'len']
+    __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         self.text = text  # type: str
@@ -173,6 +176,7 @@ class StringView(collections.abc.Sized):
         self.end = 0    # type: int
         self.begin, self.end = StringView.real_indices(begin, end, len(text))
         self.len = max(self.end - self.begin, 0)
+        self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
 
     @staticmethod
     def real_indices(begin, end, len):
@@ -190,6 +194,8 @@ class StringView(collections.abc.Sized):
         return self.len
 
     def __str__(self):
+        if self.fullstring_flag:  # optimization: avoid slicing/copying
+            return self.text
         return self.text[self.begin:self.end]
 
     def __getitem__(self, index):
@@ -202,12 +208,32 @@ class StringView(collections.abc.Sized):
     def __eq__(self, other):
         return str(self) == str(other)  # PERFORMANCE WARNING: This creates copies of the strings
 
+    def count(self, sub, start=None, end=None) -> int:
+        if self.fullstring_flag:
+            return self.text.count(sub, start, end)
+        elif start is None and end is None:
+            return self.text.count(sub, self.begin, self.end)
+        else:
+            start, end = StringView.real_indices(start, end, self.len)
+            return self.text.count(sub, self.begin + start, self.begin + end)
+
     def find(self, sub, start=None, end=None) -> int:
-        if start is None and end is None:
+        if self.fullstring_flag:
+            return self.text.find(sub, start, end)
+        elif start is None and end is None:
             return self.text.find(sub, self.begin, self.end) - self.begin
         else:
             start, end = StringView.real_indices(start, end, self.len)
             return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
+
+    def rfind(self, sub, start=None, end=None) -> int:
+        if self.fullstring_flag:
+            return self.text.rfind(sub, start, end)
+        if start is None and end is None:
+            return self.text.rfind(sub, self.begin, self.end) - self.begin
+        else:
+            start, end = StringView.real_indices(start, end, self.len)
+            return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
 
     def startswith(self, prefix: str, start:int = 0, end:Optional[int] = None) -> bool:
         start += self.begin
@@ -270,12 +296,37 @@ EMPTY_STRING_VIEW = StringView('')
 #     return "%s(%s)" % (name, ", ".merge_children(repr(item) for item in parameter_list))
 
 
-def line_col(text: str, pos: int) -> Tuple[int, int]:
+def linebreaks(text: Union[StringView, str]):
+    lb = [-1]
+    i = text.find('\n', 0)
+    while i >= 0:
+        lb.append(i)
+        i = text.find('\n', i+1)
+    lb.append(len(text))
+    return lb
+
+
+@functools.singledispatch
+def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
     """Returns the position within a text as (line, column)-tuple.
     """
-    assert pos <= len(text), str(pos) + " > " + str(len(text))  # can point one character after EOF
+    if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
+        raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
+    # assert pos <= len(text), str(pos) + " > " + str(len(text))
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
+    return line, column
+
+
+@line_col.register(list)
+def _line_col(linebreaks: List[int], pos: int) -> Tuple[int, int]:
+    """Returns the position within a text as (line, column)-tuple based
+    on a list of all line breaks, including -1 and EOF.
+    """
+    if pos < 0 or pos > linebreaks[-1]:  # one character behind EOF is still an allowed position!
+        raise ValueError('Position %i outside text of length %s !' % (pos, linebreaks[-1]))
+    line = bisect.bisect_left(linebreaks, pos)
+    column = pos - linebreaks[line-1]
     return line, column
 
 
@@ -292,8 +343,10 @@ def error_messages(source_text, errors) -> List[str]:
         a list that contains all error messages in string form. Each
         string starts with "line: [Line-No], column: [Column-No]
     """
-    return ["line: %3i, column: %2i" % line_col(source_text, err.pos) + ", error: %s" % err.msg
-            for err in sorted(list(errors))]
+    for err in errors:
+        if err.pos >= 0 and err.line < 0:
+            err.line, err.column = line_col(source_text, err.pos)
+    return [str(err) for err in sorted(errors, key=lambda err: err.pos)]
 
 
 def escape_re(s) -> str:

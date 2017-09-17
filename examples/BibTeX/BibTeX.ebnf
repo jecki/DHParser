@@ -32,7 +32,7 @@ field         = WORD_
 content       = "{" text "}" | plain_content
 
 plain_content = COMMA_TERMINATED_STRING
-text          = NESTED_BRACES_STRING
+text          = { CONTENT_STRING | "{" text "}" }
 
 
 #######################################################################
@@ -45,4 +45,4 @@ WORD          = /\w+/
 WORD_         = /\w+/~
 NO_BLANK_STRING         = /[^ \t\n,%]+/~
 COMMA_TERMINATED_STRING = { /[^,%]+/ | /(?=%)/~ }
-NESTED_BRACES_STRING    = { /(?:\\\{|\\\}|[^}%])+/~ | /\{/ NESTED_BRACES_STRING /\}/ | /(?=%)/~ }
+CONTENT_STRING = { [^{}%]+ | /(?=%)/~ }
