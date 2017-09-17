@@ -76,7 +76,7 @@ except ImportError:
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
 from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
-    Node, TransformationFunc
+    Error, is_error, Node, TransformationFunc
 from DHParser.toolkit import StringView, EMPTY_STRING_VIEW, sv_match, sv_index, sv_search, \
     load_if_file, error_messages, line_col
 
@@ -1854,11 +1854,11 @@ class Compiler:
 
     @staticmethod
     def propagate_error_flags(node: Node) -> None:
-        if not node.error_flag:
+        if node.error_flag < Error.HIGHEST:
             for child in node.children:
                 Compiler.propagate_error_flags(child)
-                if child.error_flag:
-                    node.error_flag = True
+                node.error_flag = max(node.error_flag, child.error_flag)
+                if node.error_flag >= Error.HIGHEST:
                     return
 
     @staticmethod
@@ -1945,18 +1945,17 @@ def compile_source(source: str,
         syntax_tree.log(log_file_name + '.cst')
         parser.log_parsing_history__(log_file_name)
 
-    assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
+    assert is_error(syntax_tree.error_flag) or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None
-    if syntax_tree.error_flag:
+    if is_error(syntax_tree.error_flag):
         errors = syntax_tree.collect_errors()
     else:
         transformer(syntax_tree)
         if is_logging():  syntax_tree.log(log_file_name + '.ast')
-        errors = syntax_tree.collect_errors()
-        if not errors:
+        if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
-            errors = syntax_tree.collect_errors() if syntax_tree.error_flag else []
+        errors = syntax_tree.collect_errors()
     messages = error_messages(source_text, errors)
     return result, messages, syntax_tree

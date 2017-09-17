@@ -556,9 +556,9 @@ class EBNFCompiler(Compiler):
             remove_connections(self.root_symbol)
             for leftover in defined_symbols:
                 self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
-                                                   'root "%s" !') % (leftover,
-                                                                     self.root_symbol) + ' (Use directive "@testing=True" '
-                    'to supress this error message.)')
+                                                   'root "%s" !') % (leftover, self.root_symbol)
+                                                  + ' (Use directive "@testing=True" '
+                                                    'to supress this error message.)')
                 # root_node.error_flag = True
 
         # set root_symbol parser and assemble python grammar definition
@@ -587,7 +587,7 @@ class EBNFCompiler(Compiler):
             else:
                 assert nd.parser.name == "directive", nd.as_sxpr()
                 self.compile(nd)
-                node.error_flag = node.error_flag or nd.error_flag
+                node.error_flag = max(node.error_flag, nd.error_flag)
         self.definitions.update(definitions)
 
         return self.assemble_parser(definitions, node)

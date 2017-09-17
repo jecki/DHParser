@@ -40,6 +40,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'ZOMBIE_PARSER',
            'ParserBase',
            'Error',
+           'is_warning',
+           'is_error',
            'Node',
            'mock_syntax_tree',
            'TransformationFunc')
@@ -124,14 +126,16 @@ ZOMBIE_PARSER = ZombieParser()
 
 
 class Error:
-    __slots__ = ['message', 'category', 'code', 'pos', 'line', 'column']
+    __slots__ = ['message', 'level', 'code', 'pos', 'line', 'column']
 
-    ERROR = "error"
-    WARNING = "warning"
+    WARNING   = 1
+    ERROR     = 1000
+    HIGHEST   = ERROR
 
-    def __init__(self, message: str, category: str='', code: str=''):
+    def __init__(self, message: str, level: int=ERROR, code: str=''):
         self.message = message
-        self.category = category or Error.ERROR
+        assert level >= 0
+        self.level = level or Error.ERROR
         self.code = code
         self.pos = -1
         self.line = -1
@@ -139,14 +143,26 @@ class Error:
 
     def __str__(self):
         return ("line: %3i, column: %2i" % (self.line, self.column)
-                + ", %s: %s" % (self.category, self.message))
+                + ", %s: %s" % (self.level_str, self.message))
 
     @staticmethod
-    def from_template(template: str, category: str='', content: Union[tuple, dict]=()):
+    def from_template(template: str, level: int=ERROR, content: Union[tuple, dict]=()):
         if isinstance(content, tuple):
-            return Error(template % content, category, template)
+            return Error(template % content, level, template)
         else:
-            return Error(template.format(**content), category, template)
+            return Error(template.format(**content), level, template)
+
+    @property
+    def level_str(self):
+        return "warning" if is_warning(self.level) else "error"
+
+
+def is_warning(level):
+    return level < Error.ERROR
+
+
+def is_error(level):
+    return level >= Error.ERROR
 
 
 ChildrenType = Tuple['Node', ...]
@@ -185,8 +201,9 @@ class Node(collections.abc.Sized):
             example by calling ``isinstance(node.parer, ...)``.
         errors (list):  A list of parser- or compiler-errors:
             tuple(position, string) attached to this node
-        error_flag (bool):  True, if either the node or any of its
-            descendants has errors.
+        error_flag (int):  0 if no error occurred in either the node
+            itself or any of its descendants. Otherwise contains the
+            highest warning or error level or all errors that occurred.
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the concatenated string
             result's of its descendants. The figure always represents
@@ -217,7 +234,7 @@ class Node(collections.abc.Sized):
         """
         # self._result = ''  # type: StrictResultType
         # self.children = ()  # type: ChildrenType
-        # self.error_flag = False  # type: bool
+        self.error_flag = 0   # type: bool
         self._errors = []  # type: List[Error]
         self.result = result
         self._len = len(self._result) if not self.children else \
@@ -287,7 +304,9 @@ class Node(collections.abc.Sized):
             if isinstance(result, StringView) else result or ''  # type: StrictResultType
         self.children = cast(ChildrenType, self._result) \
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
-        self.error_flag = any(r.error_flag for r in self.children)  # type: bool
+        if self.children:
+            self.error_flag = max(self.error_flag,
+                                  max(child.error_flag for child in self.children))  # type: bool
 
     @property
     def pos(self) -> int:
@@ -321,14 +340,14 @@ class Node(collections.abc.Sized):
 
     def add_error(self: 'Node',
                   template: Union[str, Error],
-                  category: str='',
+                  level: int=0,
                   content: Union[tuple, dict]=()) -> 'Node':
         if isinstance(template, Error):
-            assert not (bool(category) or bool(content))
+            assert not (bool(level) or bool(content))
             self._errors.append(template)
         else:
-            self._errors.append(Error.from_template(template, category, content))
-        self.error_flag = True
+            self._errors.append(Error.from_template(template, level, content))
+        self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
 
 
@@ -358,7 +377,7 @@ class Node(collections.abc.Sized):
         errors = self.errors
         if clear_errors:
             self._errors = []
-            self.error_flag = False
+            self.error_flag = 0
         if self.children:
             for child in self.children:
                 errors.extend(child.collect_errors(clear_errors))
