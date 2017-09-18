@@ -120,31 +120,39 @@ if __name__ == "__main__":
 '''
 
 
-class GrammarError(Exception):
+class DSLException(Exception):
+    """
+    Base class for DSL-exceptions.
+    """
+    def __init__(self, errors):
+        assert isinstance(errors, list) or isinstance(errors, tuple)
+        self.errors = errors
+
+    def __str__(self):
+        return '\n'.join(str(err) for err in self.errors)
+
+
+class GrammarError(DSLException):
     """
     Raised when (already) the grammar of a domain specific language (DSL)
     contains errors.
     """
-
-    def __init__(self, error_messages, grammar_src):
-        self.error_messages = error_messages
+    def __init__(self, errors, grammar_src):
+        super().__init__(errors)
         self.grammar_src = grammar_src
 
 
-class CompilationError(Exception):
+class CompilationError(DSLException):
     """
     Raised when a string or file in a domain specific language (DSL)
     contains errors.
     """
-    def __init__(self, error_messages, dsl_text, dsl_grammar, AST, result):
-        self.error_messages = error_messages
+    def __init__(self, errors, dsl_text, dsl_grammar, AST, result):
+        super().__init__(errors)
         self.dsl_text = dsl_text
         self.dsl_grammar = dsl_grammar
         self.AST = AST
         self.result = result
-
-    def __str__(self):
-        return '\n'.join(self.error_messages)
 
 
 def error_str(messages: Iterable[Error]) -> str:
@@ -172,7 +180,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
                 parser_py, messages, AST = compile_source(grammar_src, None,
                     get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if has_errors(messages):
-            raise GrammarError(error_str(messages), grammar_src)
+            raise GrammarError(messages, grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w+Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
@@ -206,7 +214,7 @@ def compileDSL(text_or_file: str,
                                          ast_transformation, compiler)
     if has_errors(messages):
         src = load_if_file(text_or_file)
-        raise CompilationError(error_str(messages), src, grammar_src, AST, result)
+        raise CompilationError(messages, src, grammar_src, AST, result)
     return result
 
 
@@ -309,7 +317,7 @@ def load_compiler_suite(compiler_suite: str) -> \
             compile_py, messages, AST = compile_source(source, None,
                 get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if has_errors(messages):
-            raise GrammarError(error_str(messages), source)
+            raise GrammarError(messages, source)
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
