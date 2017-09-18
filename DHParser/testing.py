@@ -29,6 +29,7 @@ except ImportError:
 
 from DHParser.toolkit import is_logging, clear_logs, error_messages
 from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
+from DHParser.base import is_error
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -159,7 +160,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast.log("match_%s_%s.ast" % (parser_name, test_name))
-            if cst.error_flag:
+            if is_error(cst.error_flag):
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(m.replace('\n', '\n\t\t') for m in
@@ -189,7 +190,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    fail-test  "' + test_name + '" ... '
                 errflag = len(errata)
             cst = parser(test_code, parser_name)
-            if not cst.error_flag:
+            if not is_error(cst.error_flag):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]

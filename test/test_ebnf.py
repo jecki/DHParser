@@ -30,7 +30,8 @@ from multiprocessing import Pool
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compile_python_object
-from DHParser.parser import compile_source, WHITESPACE_PTYPE, nil_preprocessor
+from DHParser.parser import compile_source, nil_preprocessor
+from DHParser.base import WHITESPACE_PTYPE, has_errors
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
 
@@ -297,13 +298,19 @@ class TestBoundaryCases:
         ebnf = """root = /.*/
                   unconnected = /.*/
         """
-        try:
-            grammar = grammar_provider(ebnf)()
-            assert False, "EBNF compiler should complain about unconnected rules."
-        except CompilationError as err:
-            grammar_src = err.result
+        result, messages, AST = compile_source(ebnf, nil_preprocessor,
+                                               get_ebnf_grammar(),
+                                               get_ebnf_transformer(),
+                                               get_ebnf_compiler())
+        if messages:
+            assert not has_errors(messages), "Unconnected rules should result in a warning, " \
+                "not an error: " + str(messages)
+            grammar_src = result
             grammar = compile_python_object(DHPARSER_IMPORTS + grammar_src,
                                             'get_(?:\w+_)?grammar$')()
+        else:
+            assert False, "EBNF compiler should warn about unconnected rules."
+
         assert grammar['root'], "Grammar objects should be subscriptable by parser names!"
         try:
             unconnected = grammar['unconnected']
@@ -315,12 +322,6 @@ class TestBoundaryCases:
                           "a non-existant parser name!"
         except KeyError:
             pass
-        ebnf_testing = "@testing = True\n" + ebnf
-        try:
-            grammar = grammar_provider(ebnf_testing)()
-        except CompilationError:
-            assert False, "EBNF compiler should not complain about unconnected " \
-                          "rules when directive @testing is set."
 
 
 class TestSynonymDetection:
@@ -358,8 +359,28 @@ class TestFlowControlOperators:
         cst = parser(self.t1)
         assert not cst.error_flag, cst.as_sxpr()
         cst = parser(self.t2)
-        # this should fail, because 'END' is not preceeded by a line feed
+        # this should fail, because 'END' is not preceded by a line feed
         assert cst.error_flag, cst.as_sxpr()
+
+    def test_required_error_reporting(self):
+        """Tests whether failures to comply with the required operator '§'
+        are correctly reported as such.
+        """
+        lang1 = "nonsense == /\w+/~  # wrong_equal_sign"
+        lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions"
+        try:
+            parser_class = grammar_provider(lang1)
+            assert False, "Compilation error expected."
+        except CompilationError as error:
+            pass
+            # print(error)
+        try:
+            parser_class = grammar_provider(lang2)
+            assert False, "Compilation error expected."
+        except CompilationError as error:
+            pass
+            # print(error)
+
 
 
 if __name__ == "__main__":

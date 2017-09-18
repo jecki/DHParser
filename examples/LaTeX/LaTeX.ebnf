@@ -1,9 +1,14 @@
 # LaTeX-Grammar for DHParser
 
-@ testing    = True
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*/
 
+
+########################################################################
+#
+# outer document structure
+#
+########################################################################
 
 latexdoc       = preamble document
 preamble       = { [WSPC] command }+

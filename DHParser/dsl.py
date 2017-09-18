@@ -15,7 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied.  See the License for the specific language governing
 permissions and limitations under the License.
 
-Module ``DSLsupport`` contains various functions to support the
+Module ``dsl`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
@@ -26,9 +26,9 @@ try:
 except ImportError:
     import re
 try:
-    from typing import Any, cast, Tuple, Union, Iterable
+    from typing import Any, cast, Tuple, Union, Iterator, Iterable
 except ImportError:
-    from .typing34 import Any, cast, Tuple, Union, Iterable
+    from .typing34 import Any, cast, Tuple, Union, Iterator, Iterable
 
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -36,6 +36,7 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, \
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
 from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.base import Error, is_error, has_errors, only_errors
 
 __all__ = ('GrammarError',
            'CompilationError',
@@ -120,31 +121,48 @@ if __name__ == "__main__":
 '''
 
 
-class GrammarError(Exception):
+class DSLException(Exception):
+    """
+    Base class for DSL-exceptions.
+    """
+    def __init__(self, errors):
+        assert isinstance(errors, Iterator) or isinstance(errors, list) \
+               or isinstance(errors, tuple)
+        self.errors = errors
+
+    def __str__(self):
+        return '\n'.join(str(err) for err in self.errors)
+
+
+class GrammarError(DSLException):
     """
     Raised when (already) the grammar of a domain specific language (DSL)
     contains errors.
     """
-
-    def __init__(self, error_messages, grammar_src):
-        self.error_messages = error_messages
+    def __init__(self, errors, grammar_src):
+        super().__init__(errors)
         self.grammar_src = grammar_src
 
 
-class CompilationError(Exception):
+class CompilationError(DSLException):
     """
     Raised when a string or file in a domain specific language (DSL)
     contains errors.
     """
-    def __init__(self, error_messages, dsl_text, dsl_grammar, AST, result):
-        self.error_messages = error_messages
+    def __init__(self, errors, dsl_text, dsl_grammar, AST, result):
+        super().__init__(errors)
         self.dsl_text = dsl_text
         self.dsl_grammar = dsl_grammar
         self.AST = AST
         self.result = result
 
-    def __str__(self):
-        return '\n'.join(self.error_messages)
+
+def error_str(messages: Iterable[Error]) -> str:
+    """
+    Returns all true errors (i.e. not just warnings) from the
+    `messages` as a concatenated multiline string.
+    """
+    return '\n\n'.join(str(m) for m in  messages if is_error(m.level))
 
 
 def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
@@ -158,13 +176,13 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
         # read grammar
         grammar_src = load_if_file(grammar_representation)
         if is_python_code(grammar_src):
-            parser_py, errors, AST = grammar_src, '', None
+            parser_py, messages, AST = grammar_src, [], None
         else:
             with logging(False):
-                parser_py, errors, AST = compile_source(grammar_src, None,
+                parser_py, messages, AST = compile_source(grammar_src, None,
                     get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
-        if errors:
-            raise GrammarError('\n\n'.join(errors), grammar_src)
+        if has_errors(messages):
+            raise GrammarError(only_errors(messages), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w+Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
@@ -194,11 +212,11 @@ def compileDSL(text_or_file: str,
     assert isinstance(compiler, Compiler)
 
     parser, grammar_src = grammar_instance(dsl_grammar)
-    result, errors, AST = compile_source(text_or_file, preprocessor, parser,
+    result, messages, AST = compile_source(text_or_file, preprocessor, parser,
                                          ast_transformation, compiler)
-    if errors:
+    if has_errors(messages):
         src = load_if_file(text_or_file)
-        raise CompilationError(errors, src, grammar_src, AST, result)
+        raise CompilationError(only_errors(messages), src, grammar_src, AST, result)
     return result
 
 
@@ -298,10 +316,10 @@ def load_compiler_suite(compiler_suite: str) -> \
     else:
         # assume source is an ebnf grammar. Is there really any reasonable application case for this?
         with logging(False):
-            compile_py, errors, AST = compile_source(source, None,
+            compile_py, messages, AST = compile_source(source, None,
                 get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
-        if errors:
-            raise GrammarError('\n\n'.join(errors), source)
+        if has_errors(messages):
+            raise GrammarError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
@@ -388,8 +406,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
             extension.
             
     Returns:
-        A list of error messages or an empty list if there were no 
-        errors. 
+        A (potentially empty) list of error or warning messages.
     """
     filepath = os.path.normpath(source_file)
     # with open(source_file, encoding="utf-8") as f:
@@ -405,9 +422,9 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
         cfactory = get_ebnf_compiler
     compiler1 = cfactory()
     compiler1.set_grammar_name(compiler_name, source_file)
-    result, errors, ast = compile_source(source_file, sfactory(), pfactory(), tfactory(), compiler1)
-    if errors:
-        return errors
+    result, messages, ast = compile_source(source_file, sfactory(), pfactory(), tfactory(), compiler1)
+    if has_errors(messages):
+        return messages
 
     elif cfactory == get_ebnf_compiler:  # trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
         ebnf_compiler = cast(EBNFCompiler, compiler1)
@@ -484,7 +501,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
         finally:
             if f:  f.close()
 
-    return []
+    return messages
 
 
 def recompile_grammar(ebnf_filename, force=False) -> bool:
@@ -511,19 +528,20 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
     base, ext = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
-    errors = []  # type: Iterable[str]
+    messages = []  # type: Iterable[str]
     if (not os.path.exists(compiler_name) or force or
             grammar_changed(compiler_name, ebnf_filename)):
         # print("recompiling parser for: " + ebnf_filename)
-        errors = compile_on_disk(ebnf_filename)
-        if errors:
+        messages = compile_on_disk(ebnf_filename)
+        if messages:
             # print("Errors while compiling: " + ebnf_filename + '!')
-            with open(error_file_name, 'w') as f:
-                for e in errors:
-                    f.write(e)
+            with open(error_file_name, 'w', encoding="UTF-8") as f:
+                for e in messages:
+                    f.write(str(e))
                     f.write('\n')
-            return False
+            if has_errors(messages):
+                return False
 
-    if not errors and os.path.exists(error_file_name):
+    if not messages and os.path.exists(error_file_name):
         os.remove(error_file_name)
     return True

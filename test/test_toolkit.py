@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_tookkit.py - tests of the toolkit-module of DHParser 
+"""test_toolkit.py - tests of the toolkit-module of DHParser
 
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -30,108 +30,58 @@ except ImportError:
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, StringView, \
-    sv_match, sv_search, EMPTY_STRING_VIEW
+from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, linebreaks, line_col
 
 
-class TestStringView:
-    def test_real_indices(self):
-        assert StringView.real_indices(3, 5, 10) == (3, 5)
-        assert StringView.real_indices(None, None, 10) == (0, 10)
-        assert StringView.real_indices(-2, -1, 10) == (8, 9)
-        assert StringView.real_indices(-3, 11, 10) == (7, 10)
-        assert StringView.real_indices(-5, -12, 10) == (5, 0)
-        assert StringView.real_indices(-12, -5, 10) == (0, 5)
-        assert StringView.real_indices(7, 6, 10) == (7, 6)
-        assert StringView.real_indices(None, 0, 10) == (0, 0)
+class TestErrorSupport:
+    def mini_suite(self, s, data, offset):
+        l, c = line_col(data, 0)
+        assert (l, c) == (1, 1), str((l, c))
+        l, c = line_col(data, 0 + offset)
+        assert (l, c) == (1 + offset, 1), str((l, c))
+        l, c = line_col(data, 1 + offset)
+        assert (l, c) == (1 + offset, 2), str((l, c))
+        l, c = line_col(data, 9 + offset)
+        assert (l, c) == (1 + offset, 10), str((l, c))
+        l, c = line_col(data, 10 + offset)
+        assert (l, c) == (2 + offset, 1), str((l, c))
+        l, c = line_col(data, 18 + offset)
+        assert (l, c) == (2 + offset, 9), str((l, c))
+        l, c = line_col(data, 19 + offset)
+        assert (l, c) == (2 + offset, 10), str((l, c))
+        try:
+            l, c = line_col(data, -1)
+            assert False, "ValueError expected for negative position."
+        except ValueError:
+            pass
+        try:
+            l, c = line_col(data, len(s) + 1)
+            assert False, "ValueError expected for postion > pos(EOF)+1."
+        except ValueError:
+            pass
 
-    def test_creation(self):
-        s = "0123456789"
-        assert str(StringView(s)) == s
-        assert str(StringView(s, 3, 4)) == '3'
-        assert str(StringView(s, -4)) == '6789'
+    def test_line_col(self):
+        s = "123456789\n123456789"
+        self.mini_suite(s, s, 0)
+        s = "\n123456789\n123456789"
+        self.mini_suite(s, s, 1)
+        s = "123456789\n123456789\n"
+        self.mini_suite(s, s, 0)
+        s = "\n123456789\n123456789\n"
+        self.mini_suite(s, s, 1)
 
-    def test_equality(self):
-        s = "0123456789"
-        assert StringView(s) == s
-        assert StringView(s, 3, 4) == '3'
-        assert StringView(s, -4) == '6789'
-
-    def test_slicing(self):
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert sv == '0123456789'
-        assert sv[3:4] == '3'
-        assert sv[-3:-1] == '78'
-        assert sv[4:3] == ''
-        assert sv[:4] == '0123'
-        assert sv[4:] == '456789'
-        assert sv[-2:] == '89'
-        assert sv[:-5] == '01234'
-        assert isinstance(sv[3:5], StringView)
-
-    def test_len(self):
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert len(sv) == 10
-        assert sv.len == 10
-        assert len(sv[5:5]) == 0
-        assert len(sv[7:4]) == 0
-        assert len(sv[-12:-2]) == 8
-        assert len(sv[-12:12]) == 10
-
-    def test_bool(self):
-        assert not StringView('')
-        assert StringView('x')
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert not sv[5:4]
-        assert sv[4:5], str(sv[4:5])
-        assert not sv[3:3]
-        assert not sv[12:13]
-        assert sv[0:20]
-
-    def test_sv_match(self):
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert sv_match(re.compile(r'\d'), sv)
-        assert sv_match(re.compile(r'\d+'), sv)
-        assert not sv_match(re.compile(r' '), sv)
-        assert sv_match(re.compile(r'45'), sv[4:])
-
-    def test_sv_search(self):
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert sv_search(re.compile(r'5'), sv)
-        assert not sv_search(re.compile(r' '), sv)
-        assert sv_search(re.compile(r'5'), sv[5:])
-        assert not sv_search(re.compile(r'9'), sv[:9])
-
-    def test_find(self):
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert sv.find('5') == 5
-        assert sv.find(' ') < 0
-        assert sv.find('0', 1)  < 0
-        assert sv.find('9', 0, 8) < 0
-        assert sv.find('45', 1, 8) == 4
-
-    def test_startswith(self):
-        s = " 0123456789 "
-        sv = StringView(s, 1, -1)
-        assert sv.startswith('012')
-        assert sv.startswith('123', 1)
-        assert not sv.startswith('123', 1, 3)
-
-    def test_EMPTY_STRING_VIEW(self):
-        assert len(EMPTY_STRING_VIEW) == 0
-        assert EMPTY_STRING_VIEW.find('x') < 0
-        assert not sv_match(re.compile(r'x'), EMPTY_STRING_VIEW)
-        assert sv_match(re.compile(r'.*'), EMPTY_STRING_VIEW)
-        assert len(EMPTY_STRING_VIEW[0:1]) == 0
+    def test_line_col_bisect(self):
+        s = "123456789\n123456789"
+        self.mini_suite(s, linebreaks(s), 0)
+        s = "\n123456789\n123456789"
+        self.mini_suite(s, linebreaks(s), 1)
+        s = "123456789\n123456789\n"
+        self.mini_suite(s, linebreaks(s), 0)
+        s = "\n123456789\n123456789\n"
+        self.mini_suite(s, linebreaks(s), 1)
 
 
-class TestToolkit:
+class TestLoggingAndLoading:
     filename = "tmp/test.py" if os.path.isdir('tmp') else "test/tmp/test.py"
     code1 = "x = 46"
     code2 = "def f():\n    return 46"

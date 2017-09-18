@@ -23,7 +23,8 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, TOKEN_PTYPE, mock_syntax_tree
+from DHParser.syntaxtree import Node, mock_syntax_tree
+from DHParser.base import TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -80,7 +81,7 @@ class TestNode:
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
         compare_tree = mock_syntax_tree("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
-        assert tree == compare_tree
+        assert tree == compare_tree, tree.as_sxpr()
 
     def test_copy(self):
         cpy = copy.deepcopy(self.unique_tree)

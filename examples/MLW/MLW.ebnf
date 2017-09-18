@@ -1,6 +1,5 @@
 # EBNF-Syntax für MLW-Artikel
 
-@ testing = True
 
 @ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
                                       # ohne das Zeilenende zu beinhalten

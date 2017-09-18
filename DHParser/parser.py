@@ -75,10 +75,10 @@ except ImportError:
     from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
-from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
-    Node, TransformationFunc
-from DHParser.toolkit import StringView, EMPTY_STRING_VIEW, sv_match, sv_index, sv_search, \
-    load_if_file, error_messages, line_col
+from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.base import ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Error, is_error, has_errors, \
+    StringView, EMPTY_STRING_VIEW
+from DHParser.toolkit import load_if_file, error_messages, line_col
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
@@ -161,15 +161,17 @@ class HistoryRecord:
         self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['Parser']
         self.node = node                # type: Node
         self.remaining = remaining      # type: int
-        document = call_stack[-1].grammar.document__.text if call_stack else ''
-        self.line_col = line_col(document, len(document) - remaining)  # type: Tuple[int, int]
+        self.line_col = (1, 1)          # type: Tuple[int, int]
+        if call_stack:
+            document = call_stack[-1].grammar.document__.text
+            self.line_col = line_col(document, len(document) - remaining)
 
     def __str__(self):
         return 'line %i, column %i:  %s  "%s"' % \
                (self.line_col[0], self.line_col[1], self.stack, str(self.node))
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(self.node._errors).replace('\n', '\\')
+        return self.ERROR + ": " + "; ".join(str(e) for e in self.node._errors).replace('\n', '\\')
 
     @property
     def stack(self) -> str:
@@ -179,7 +181,7 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            self.err_msg() if self.node._errors else self.MATCH
+            self.err_msg() if has_errors(self.node._errors) else self.MATCH
 
     @property
     def extent(self) -> slice:
@@ -276,7 +278,7 @@ def add_parser_guard(parser_func):
                 if location in grammar.recursion_locations__:
                     if location in parser.visited:
                         node, rest = parser.visited[location]
-                        # TODO: add a warning about occurence of left-recursion here
+                        # TODO: maybe add a warning about occurrence of left-recursion here?
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
@@ -704,7 +706,7 @@ class Grammar:
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
-        self.left_recursion_handling__ = False # type: bool
+        self.left_recursion_handling__ = True  # type: bool
         self._reset__()
 
         # prepare parsers in the class, first
@@ -866,6 +868,7 @@ class Grammar:
             else:
                 result.add_error(error_str)
         result.pos = 0  # calculate all positions
+        result.finalize_errors(self.document__)
         return result
 
 
@@ -1063,9 +1066,9 @@ class RegExp(Parser):
         return RegExp(regexp, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
-        match = text[0:1] != BEGIN_TOKEN and sv_match(self.regexp, text)  # ESC starts a preprocessor token.
+        match = text[0:1] != BEGIN_TOKEN and text.match(self.regexp)  # ESC starts a preprocessor token.
         if match:
-            end = sv_index(match.end(), text)
+            end = text.index(match.end())
             return Node(self, text[:end]), text[end:]
         return None, text
 
@@ -1518,8 +1521,8 @@ class Required(FlowOperator):
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text_ = self.parser(text)
         if not node:
-            m = sv_search(Required.RX_ARGUMENT, text)  # re.search(r'\s(\S)', text)
-            i = max(1, sv_index(m.regs[1][0], text)) if m else 1
+            m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
+            i = max(1, text.index(m.regs[1][0])) if m else 1
             node = Node(self, text[:i])
             text_ = text[i:]
             # assert False, "*"+text[:i]+"*"
@@ -1582,7 +1585,7 @@ class Lookbehind(FlowOperator):
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         backwards_text = self.grammar.reversed__[len(text):]  # self.grammar.document__[-len(text) - 1::-1]
-        if self.sign(sv_match(self.regexp, backwards_text)):
+        if self.sign(backwards_text.match(self.regexp)):
             return Node(self, ''), text
         else:
             return None, text
@@ -1853,11 +1856,11 @@ class Compiler:
 
     @staticmethod
     def propagate_error_flags(node: Node) -> None:
-        if not node.error_flag:
+        if node.error_flag < Error.HIGHEST:
             for child in node.children:
                 Compiler.propagate_error_flags(child)
-                if child.error_flag:
-                    node.error_flag = True
+                node.error_flag = max(node.error_flag, child.error_flag)
+                if node.error_flag >= Error.HIGHEST:
                     return
 
     @staticmethod
@@ -1902,10 +1905,10 @@ class Compiler:
 
 
 def compile_source(source: str,
-                   preprocessor: PreprocessorFunc,  # str -> str
-                   parser: Grammar,  # str -> Node (concrete syntax tree (CST))
+                   preprocessor: PreprocessorFunc,   # str -> str
+                   parser: Grammar,                  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
-                   compiler: Compiler):         # Node (AST) -> Any
+                   compiler: Compiler) -> Tuple[Any, List[str], Node]:  # Node (AST) -> Any
     """
     Compiles a source in four stages:
         1. Scanning (if needed)
@@ -1932,7 +1935,7 @@ def compile_source(source: str,
         (result, errors, abstract syntax tree). In detail:
         1. The result as returned by the compiler or ``None`` in case
             of failure,
-        2. A list of error messages
+        2. A list of error or warning messages
         3. The root-node of the abstract syntax treelow
     """
     source_text = load_if_file(source)
@@ -1944,18 +1947,16 @@ def compile_source(source: str,
         syntax_tree.log(log_file_name + '.cst')
         parser.log_parsing_history__(log_file_name)
 
-    assert syntax_tree.error_flag or str(syntax_tree) == source_text, str(syntax_tree)
+    assert is_error(syntax_tree.error_flag) or str(syntax_tree) == source_text, str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None
-    if syntax_tree.error_flag:
-        errors = syntax_tree.collect_errors()
+    if is_error(syntax_tree.error_flag):
+        messages = syntax_tree.collect_errors()
     else:
         transformer(syntax_tree)
         if is_logging():  syntax_tree.log(log_file_name + '.ast')
-        errors = syntax_tree.collect_errors()
-        if not errors:
+        if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
-            errors = syntax_tree.collect_errors() if syntax_tree.error_flag else []
-    messages = error_messages(source_text, errors)
+        messages = syntax_tree.collect_errors()
     return result, messages, syntax_tree

@@ -33,7 +33,8 @@ from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
 from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RE, NegativeLookahead, \
     Alternative, Series, Option, Required, OneOrMore, ZeroOrMore, Token, Compiler, \
     PreprocessorFunc
-from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, Node, TransformationFunc
+from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.base import WHITESPACE_PTYPE, TOKEN_PTYPE, Error
 from DHParser.transform import TransformationDict, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
@@ -397,8 +398,7 @@ class EBNFCompiler(Compiler):
                            'literalws': ['right'],
                            'tokens': set(),  # alt. 'preprocessor_tokens'
                            'filter': dict(),  # alt. 'filter'
-                           'ignorecase': False,
-                           'testing': False}
+                           'ignorecase': False}
 
     @property
     def result(self) -> str:
@@ -544,22 +544,18 @@ class EBNFCompiler(Compiler):
 
         # check for unconnected rules
 
-        if not self.directives['testing']:
-            defined_symbols.difference_update(self.RESERVED_SYMBOLS)
+        defined_symbols.difference_update(self.RESERVED_SYMBOLS)
 
-            def remove_connections(symbol):
-                if symbol in defined_symbols:
-                    defined_symbols.remove(symbol)
-                    for related in self.rules[symbol][1:]:
-                        remove_connections(str(related))
+        def remove_connections(symbol):
+            if symbol in defined_symbols:
+                defined_symbols.remove(symbol)
+                for related in self.rules[symbol][1:]:
+                    remove_connections(str(related))
 
-            remove_connections(self.root_symbol)
-            for leftover in defined_symbols:
-                self.rules[leftover][0].add_error(('Rule "%s" is not connected to parser '
-                                                   'root "%s" !') % (leftover,
-                                                                     self.root_symbol) + ' (Use directive "@testing=True" '
-                    'to supress this error message.)')
-                # root_node.error_flag = True
+        remove_connections(self.root_symbol)
+        for leftover in defined_symbols:
+            self.rules[leftover][0].add_error(('Rule "%s" is not connected to '
+                'parser root "%s" !') % (leftover, self.root_symbol), Error.WARNING)
 
         # set root_symbol parser and assemble python grammar definition
 
@@ -587,7 +583,7 @@ class EBNFCompiler(Compiler):
             else:
                 assert nd.parser.name == "directive", nd.as_sxpr()
                 self.compile(nd)
-                node.error_flag = node.error_flag or nd.error_flag
+                node.error_flag = max(node.error_flag, nd.error_flag)
         self.definitions.update(definitions)
 
         return self.assemble_parser(definitions, node)
@@ -679,9 +675,9 @@ class EBNFCompiler(Compiler):
             if value:
                 self.re_flags.add('i')
 
-        elif key == 'testing':
-            value = str(node.children[1])
-            self.directives['testing'] = value.lower() not in {"off", "false", "no"}
+        # elif key == 'testing':
+        #     value = str(node.children[1])
+        #     self.directives['testing'] = value.lower() not in {"off", "false", "no"}
 
         elif key == 'literalws':
             value = {item.lower() for item in self.compile(node.children[1])}

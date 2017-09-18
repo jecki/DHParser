@@ -30,11 +30,14 @@ the directory exists and raises an error if a file with the same name
 already exists.
 """
 
+import bisect
 import codecs
-import collections
 import contextlib
+import functools
 import hashlib
 import os
+
+from DHParser.base import StringView
 
 try:
     import regex as re
@@ -51,13 +54,7 @@ __all__ = ('logging',
            'is_logging',
            'log_dir',
            'logfile_basename',
-           'StringView',
-           'sv_match',
-           'sv_index',
-           'sv_search',
-           # 'supress_warnings',
-           # 'warnings',
-           # 'repr_call',
+           'linebreaks',
            'line_col',
            'error_messages',
            'escape_re',
@@ -154,128 +151,37 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
         os.rmdir(log_dirname)
 
 
-class StringView(collections.abc.Sized):
-    """"A rudimentary StringView class, just enough for the use cases
-    in parswer.py.
-
-    Slicing Python-strings always yields copies of a segment of the original
-    string. See: https://mail.python.org/pipermail/python-dev/2008-May/079699.html
-    However, this becomes costly (in terms of space and as a consequence also
-    time) when parsing longer documents. Unfortunately, Python's `memoryview`
-    does not work for unicode strings. Hence, the StringView class.
-    """
-
-    __slots__ = ['text', 'begin', 'end', 'len']
-
-    def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
-        self.text = text  # type: str
-        self.begin = 0  # type: int
-        self.end = 0    # type: int
-        self.begin, self.end = StringView.real_indices(begin, end, len(text))
-        self.len = max(self.end - self.begin, 0)
-
-    @staticmethod
-    def real_indices(begin, end, len):
-        def pack(index, len):
-            index = index if index >= 0 else index + len
-            return 0 if index < 0 else len if index > len else index
-        if begin is None:  begin = 0
-        if end is None:  end = len
-        return pack(begin, len), pack(end, len)
-
-    def __bool__(self):
-        return bool(self.text) and self.end > self.begin
-
-    def __len__(self):
-        return self.len
-
-    def __str__(self):
-        return self.text[self.begin:self.end]
-
-    def __getitem__(self, index):
-        # assert isinstance(index, slice), "As of now, StringView only allows slicing."
-        # assert index.step is None or index.step == 1, \
-        #     "Step sizes other than 1 are not yet supported by StringView"
-        start, stop = StringView.real_indices(index.start, index.stop, self.len)
-        return StringView(self.text, self.begin + start, self.begin + stop)
-
-    def __eq__(self, other):
-        return str(self) == str(other)  # PERFORMANCE WARNING: This creates copies of the strings
-
-    def find(self, sub, start=None, end=None) -> int:
-        if start is None and end is None:
-            return self.text.find(sub, self.begin, self.end) - self.begin
-        else:
-            start, end = StringView.real_indices(start, end, self.len)
-            return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
-
-    def startswith(self, prefix: str, start:int = 0, end:Optional[int] = None) -> bool:
-        start += self.begin
-        end = self.end if end is None else self.begin + end
-        return self.text.startswith(prefix, start, end)
+def linebreaks(text: Union[StringView, str]):
+    lb = [-1]
+    i = text.find('\n', 0)
+    while i >= 0:
+        lb.append(i)
+        i = text.find('\n', i+1)
+    lb.append(len(text))
+    return lb
 
 
-
-def sv_match(regex, sv: StringView):
-    return regex.match(sv.text, pos=sv.begin, endpos=sv.end)
-
-
-def sv_index(absolute_index: int, sv: StringView) -> int:
-    """
-    Converts the an index into string watched by a StringView object
-    to an index relativ to the string view object, e.g.:
-    >>> sv = StringView('xxIxx')[2:3]
-    >>> match = sv_match(re.compile('I'), sv)
-    >>> match.end()
-    3
-    >>> sv_index(match.end(), sv)
-    1
-    """
-    return absolute_index - sv.begin
-
-
-def sv_indices(absolute_indices: Iterable[int], sv: StringView) -> Tuple[int, ...]:
-    """Converts the an index into string watched by a StringView object
-    to an index relativ to the string view object. See also: `sv_index()`
-    """
-    return tuple(index - sv.begin for index in absolute_indices)
-
-
-def sv_search(regex, sv: StringView):
-    return regex.search(sv.text, pos=sv.begin, endpos=sv.end)
-
-
-
-EMPTY_STRING_VIEW = StringView('')
-
-
-# def repr_call(f, parameter_list) -> str:
-#     """Turns a list of items into a string resembling the parameter
-#     list of a function call by omitting default values at the end:
-#     >>> def f(a, b=1):    print(a, b)
-#     >>> repr_call(f, (5,1))
-#     'f(5)'
-#     >>> repr_call(f, (5,2))
-#     'f(5, 2)'
-#     """
-#     i = 0
-#     defaults = f.__defaults__ if f.__defaults__ is not None else []
-#     for parameter, default in zip(reversed(parameter_list), reversed(defaults)):
-#         if parameter != default:
-#             break
-#         i -= 1
-#     if i < 0:
-#         parameter_list = parameter_list[:i]
-#     name = f.__self__.__class__.__name__ if f.__name__ == '__init__' else f.__name__
-#     return "%s(%s)" % (name, ", ".merge_children(repr(item) for item in parameter_list))
-
-
-def line_col(text: str, pos: int) -> Tuple[int, int]:
+@functools.singledispatch
+def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
     """Returns the position within a text as (line, column)-tuple.
     """
-    assert pos <= len(text), str(pos) + " > " + str(len(text))  # can point one character after EOF
+    if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
+        raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
+    # assert pos <= len(text), str(pos) + " > " + str(len(text))
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
+    return line, column
+
+
+@line_col.register(list)
+def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
+    """Returns the position within a text as (line, column)-tuple based
+    on a list of all line breaks, including -1 and EOF.
+    """
+    if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
+        raise ValueError('Position %i outside text of length %s !' % (pos, lbreaks[-1]))
+    line = bisect.bisect_left(lbreaks, pos)
+    column = pos - lbreaks[line - 1]
     return line, column
 
 
@@ -292,8 +198,10 @@ def error_messages(source_text, errors) -> List[str]:
         a list that contains all error messages in string form. Each
         string starts with "line: [Line-No], column: [Column-No]
     """
-    return ["line: %3i, column: %2i" % line_col(source_text, err.pos) + ", error: %s" % err.msg
-            for err in sorted(list(errors))]
+    for err in errors:
+        if err.pos >= 0 and err.line <= 0:
+            err.line, err.column = line_col(source_text, err.pos)
+    return [str(err) for err in sorted(errors, key=lambda err: err.pos)]
 
 
 def escape_re(s) -> str:

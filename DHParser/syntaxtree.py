@@ -27,107 +27,18 @@ except ImportError:
     import re
 try:
     from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 
-from DHParser.toolkit import is_logging, log_dir, StringView, line_col, identity
+from DHParser.toolkit import is_logging, log_dir, linebreaks, line_col, identity
+from DHParser.base import MockParser, ZOMBIE_PARSER, Error, StringView
 
-__all__ = ('WHITESPACE_PTYPE',
-           'MockParser',
-           'TOKEN_PTYPE',
-           'ZOMBIE_PARSER',
-           'ParserBase',
-           'Error',
-           'Node',
+__all__ = ('Node',
            'mock_syntax_tree',
            'TransformationFunc')
 
-
-class ParserBase:
-    """
-    ParserBase is the base class for all real and mock parser classes.
-    It is defined here, because Node objects require a parser object
-    for instantiation.
-    """
-    def __init__(self, name=''):  # , pbases=frozenset()):
-        self.name = name  # type: str
-        self._ptype = ':' + self.__class__.__name__  # type: str
-
-    def __repr__(self):
-        return self.name + self.ptype
-
-    def __str__(self):
-        return self.name + (' = ' if self.name else '') + repr(self)
-
-    @property
-    def ptype(self) -> str:
-        return self._ptype
-
-    @property
-    def repr(self) -> str:
-        return self.name if self.name else repr(self)
-
-
-WHITESPACE_PTYPE = ':Whitespace'
-TOKEN_PTYPE = ':Token'
-
-
-class MockParser(ParserBase):
-    """
-    MockParser objects can be used to reconstruct syntax trees from a
-    serialized form like S-expressions or XML. Mock objects can mimic
-    different parser types by assigning them a ptype on initialization.
-    
-    Mock objects should not be used for anything other than 
-    syntax tree (re-)construction. In all other cases where a parser
-    object substitute is needed, chose the singleton ZOMBIE_PARSER.
-    """
-    def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
-        assert not ptype or ptype[0] == ':'
-        super(MockParser, self).__init__(name)
-        self.name = name
-        self._ptype = ptype or ':' + self.__class__.__name__
-
-
-class ZombieParser(MockParser):
-    """
-    Serves as a substitute for a Parser instance.
-
-    ``ZombieParser`` is the class of the singelton object
-    ``ZOMBIE_PARSER``. The  ``ZOMBIE_PARSER`` has a name and can be
-    called, but it never matches. It serves as a substitute where only
-    these (or one of these properties) is needed, but no real Parser-
-    object is instantiated.
-    """
-    alive = False
-
-    def __init__(self):
-        super(ZombieParser, self).__init__("__ZOMBIE__")
-        assert not self.__class__.alive, "There can be only one!"
-        assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.__class__.alive = True
-
-    def __copy__(self):
-        return self
-
-    def __deepcopy__(self, memo):
-        return self
-
-    def __call__(self, text):
-        """Better call Saul ;-)"""
-        return None, text
-
-
-ZOMBIE_PARSER = ZombieParser()
-
-
-# # Python 3.6:
-# class Error(NamedTuple):
-#     pos: int
-#     msg: str
-Error = NamedTuple('Error', [('pos', int), ('msg', str)])
 
 ChildrenType = Tuple['Node', ...]
 StrictResultType = Union[ChildrenType, StringView, str]
@@ -165,8 +76,9 @@ class Node(collections.abc.Sized):
             example by calling ``isinstance(node.parer, ...)``.
         errors (list):  A list of parser- or compiler-errors:
             tuple(position, string) attached to this node
-        error_flag (bool):  True, if either the node or any of its
-            descendants has errors.
+        error_flag (int):  0 if no error occurred in either the node
+            itself or any of its descendants. Otherwise contains the
+            highest warning or error level or all errors that occurred.
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the concatenated string
             result's of its descendants. The figure always represents
@@ -197,8 +109,8 @@ class Node(collections.abc.Sized):
         """
         # self._result = ''  # type: StrictResultType
         # self.children = ()  # type: ChildrenType
-        # self.error_flag = False  # type: bool
-        self._errors = []  # type: List[str]
+        self.error_flag = 0   # type: bool
+        self._errors = []  # type: List[Error]
         self.result = result
         self._len = len(self._result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
@@ -267,7 +179,9 @@ class Node(collections.abc.Sized):
             if isinstance(result, StringView) else result or ''  # type: StrictResultType
         self.children = cast(ChildrenType, self._result) \
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
-        self.error_flag = any(r.error_flag for r in self.children)  # type: bool
+        if self.children:
+            self.error_flag = max(self.error_flag,
+                                  max(child.error_flag for child in self.children))  # type: bool
 
     @property
     def pos(self) -> int:
@@ -276,24 +190,43 @@ class Node(collections.abc.Sized):
 
     @pos.setter
     def pos(self, pos: int):
-        # assert isinstance(pos, int)
         self._pos = pos
         offset = 0
+        # recursively adjust pos-values of all children
         for child in self.children:
             child.pos = pos + offset
             offset += len(child)
+        # add pos-values to Error-objects
+        for err in self._errors:
+            err.pos = pos
 
 
     @property
     def errors(self) -> List[Error]:
-        return [Error(self.pos, err) for err in self._errors]
+        return self._errors.copy()
 
 
-    def add_error(self, error_str: str) -> 'Node':
-        assert isinstance(error_str, str)
-        self._errors.append(error_str)
-        self.error_flag = True
+    def add_error(self, message: str, level: int= Error.ERROR, code: Hashable=0) -> 'Node':
+        self._errors.append(Error(message, level, code))
+        self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
+
+
+    def _finalize_errors(self, lbreaks: List[int]):
+        if self.error_flag:
+            for err in self._errors:
+                assert err.pos >= 0
+                err.line, err.column = line_col(lbreaks, err.pos)
+            for child in self.children:
+                child._finalize_errors(lbreaks)
+
+
+    def finalize_errors(self, source_text: Union[StringView, str]):
+        """Recursively adds line- and column-numbers to all error objects.
+        """
+        if self.error_flag:
+            lbreaks = linebreaks(source_text)
+            self._finalize_errors(lbreaks)
 
 
     def collect_errors(self, clear_errors=False) -> List[Error]:
@@ -305,7 +238,7 @@ class Node(collections.abc.Sized):
         errors = self.errors
         if clear_errors:
             self._errors = []
-            self.error_flag = False
+            self.error_flag = 0
         if self.children:
             for child in self.children:
                 errors.extend(child.collect_errors(clear_errors))
@@ -366,6 +299,9 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
+            compact:  If True a compact representation is returned where
+                brackets are ommited and only the indentation indicates the
+                tree structure.
         """
 
         lB, rB, D = ('', '', 1) if compact else ('(', '\n)', 0)
@@ -450,47 +386,6 @@ class Node(collections.abc.Sized):
             for child in self.children:
                 for nd in child.find(match_function):
                     yield nd
-
-
-    # def range(self, match_first, match_last):
-    #     """Iterates over the range of nodes, starting from the first
-    #     node for which ``match_first`` becomes True until the first node
-    #     after this one for which ``match_last`` becomes true or until
-    #     the end if it never does.
-    #
-    #     Args:
-    #         match_first (function): A function  that takes as Node
-    #             object as argument and returns True or False
-    #         match_last (function): A function  that takes as Node
-    #             object as argument and returns True or False
-    #     Yields:
-    #         Node: all nodes of the tree for which
-    #         ``match_function(node)`` returns True
-    #     """
-
-
-    # def navigate(self, path):
-    #     """Yields the results of all descendant elements matched by
-    #     ``path``, e.g.
-    #     'd/s' yields 'l' from (d (s l)(e (r x1) (r x2))
-    #     'e/r' yields 'x1', then 'x2'
-    #     'e'   yields (r x1)(r x2)
-    #
-    #     Args:
-    #         path (str):  The path of the object, e.g. 'a/b/c'. The
-    #             components of ``path`` can be regular expressions
-    #
-    #     Returns:
-    #         The object at the path, either a string or a Node or
-    #         ``None``, if the path did not match.
-    #     """
-    #     def nav(node, pl):
-    #         if pl:
-    #             return itertools.chain(nav(child, pl[1:]) for child in node.children
-    #                                    if re.match(pl[0], child.tag_name))
-    #         else:
-    #             return self.result,
-    #     return nav(path.split('/'))
 
 
     def tree_size(self) -> int:
