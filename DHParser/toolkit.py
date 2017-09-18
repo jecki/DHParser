@@ -57,9 +57,6 @@ __all__ = ('logging',
            'sv_match',
            'sv_index',
            'sv_search',
-           # 'supress_warnings',
-           # 'warnings',
-           # 'repr_call',
            'linebreaks',
            'line_col',
            'error_messages',
@@ -159,7 +156,7 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
 
 class StringView(collections.abc.Sized):
     """"A rudimentary StringView class, just enough for the use cases
-    in parswer.py.
+    in parser.py.
 
     Slicing Python-strings always yields copies of a segment of the original
     string. See: https://mail.python.org/pipermail/python-dev/2008-May/079699.html
@@ -275,27 +272,6 @@ def sv_search(regex, sv: StringView):
 EMPTY_STRING_VIEW = StringView('')
 
 
-# def repr_call(f, parameter_list) -> str:
-#     """Turns a list of items into a string resembling the parameter
-#     list of a function call by omitting default values at the end:
-#     >>> def f(a, b=1):    print(a, b)
-#     >>> repr_call(f, (5,1))
-#     'f(5)'
-#     >>> repr_call(f, (5,2))
-#     'f(5, 2)'
-#     """
-#     i = 0
-#     defaults = f.__defaults__ if f.__defaults__ is not None else []
-#     for parameter, default in zip(reversed(parameter_list), reversed(defaults)):
-#         if parameter != default:
-#             break
-#         i -= 1
-#     if i < 0:
-#         parameter_list = parameter_list[:i]
-#     name = f.__self__.__class__.__name__ if f.__name__ == '__init__' else f.__name__
-#     return "%s(%s)" % (name, ", ".merge_children(repr(item) for item in parameter_list))
-
-
 def linebreaks(text: Union[StringView, str]):
     lb = [-1]
     i = text.find('\n', 0)
@@ -344,7 +320,7 @@ def error_messages(source_text, errors) -> List[str]:
         string starts with "line: [Line-No], column: [Column-No]
     """
     for err in errors:
-        if err.pos >= 0 and err.line < 0:
+        if err.pos >= 0 and err.line <= 0:
             err.line, err.column = line_col(source_text, err.pos)
     return [str(err) for err in sorted(errors, key=lambda err: err.pos)]
 

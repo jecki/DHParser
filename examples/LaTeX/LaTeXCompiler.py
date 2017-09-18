@@ -49,10 +49,15 @@ class LaTeXGrammar(Grammar):
     
     # LaTeX-Grammar for DHParser
     
-    @ testing    = True
     @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
     @ comment    = /%.*/
     
+    
+    ########################################################################
+    #
+    # outer document structure
+    #
+    ########################################################################
     
     latexdoc       = preamble document
     preamble       = { [WSPC] command }+
@@ -223,7 +228,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "939c094e994677d2ab894169c013cf58"
+    source_hash__ = "37585004123d6b80ecf8f67217b43479"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

@@ -30,6 +30,7 @@ from multiprocessing import Pool
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compile_python_object
+from DHParser.syntaxtree import has_errors
 from DHParser.parser import compile_source, WHITESPACE_PTYPE, nil_preprocessor
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
@@ -297,13 +298,19 @@ class TestBoundaryCases:
         ebnf = """root = /.*/
                   unconnected = /.*/
         """
-        try:
-            grammar = grammar_provider(ebnf)()
-            assert False, "EBNF compiler should complain about unconnected rules."
-        except CompilationError as err:
-            grammar_src = err.result
+        result, messages, AST = compile_source(ebnf, nil_preprocessor,
+                                               get_ebnf_grammar(),
+                                               get_ebnf_transformer(),
+                                               get_ebnf_compiler())
+        if messages:
+            assert not has_errors(messages), "Unconnected rules should result in a warning, " \
+                "not an error: " + str(messages)
+            grammar_src = result
             grammar = compile_python_object(DHPARSER_IMPORTS + grammar_src,
                                             'get_(?:\w+_)?grammar$')()
+        else:
+            assert False, "EBNF compiler should warn about unconnected rules."
+
         assert grammar['root'], "Grammar objects should be subscriptable by parser names!"
         try:
             unconnected = grammar['unconnected']
@@ -315,12 +322,6 @@ class TestBoundaryCases:
                           "a non-existant parser name!"
         except KeyError:
             pass
-        ebnf_testing = "@testing = True\n" + ebnf
-        try:
-            grammar = grammar_provider(ebnf_testing)()
-        except CompilationError:
-            assert False, "EBNF compiler should not complain about unconnected " \
-                          "rules when directive @testing is set."
 
 
 class TestSynonymDetection:

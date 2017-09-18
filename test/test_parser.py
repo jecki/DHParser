@@ -392,7 +392,7 @@ class TestPopRetrieve:
 
 
 class TestWhitespaceHandling:
-    minilang = """@testing = True
+    minilang = """
         doc = A B
         A = "A"
         B = "B"

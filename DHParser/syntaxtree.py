@@ -27,10 +27,10 @@ except ImportError:
     import re
 try:
     from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 
 from DHParser.toolkit import is_logging, log_dir, StringView, linebreaks, line_col, identity
 
@@ -133,7 +133,7 @@ class Error:
     ERROR     = 1000
     HIGHEST   = ERROR
 
-    def __init__(self, message: str, level: int=ERROR, code: str=''):
+    def __init__(self, message: str, level: int=ERROR, code: Hashable=0):
         self.message = message
         assert level >= 0
         self.level = level or Error.ERROR
@@ -143,19 +143,14 @@ class Error:
         self.column = -1
 
     def __str__(self):
-        return ("line: %3i, column: %2i" % (self.line, self.column)
-                + ", %s: %s" % (self.level_str, self.message))
-
-    @staticmethod
-    def from_template(template: str, level: int=ERROR, content: Union[tuple, dict]=()):
-        if isinstance(content, tuple):
-            return Error((template % content) if content else template, level, template)
-        else:
-            return Error(template.format(**content), level, template)
+        prefix = ''
+        if self.line > 0:
+            prefix = "line: %3i, column: %2i, " % (self.line, self.column)
+        return prefix + "%s: %s" % (self.level_str, self.message)
 
     @property
     def level_str(self):
-        return "warning" if is_warning(self.level) else "error"
+        return "Warning" if is_warning(self.level) else "Error"
 
 
 def is_warning(level: int) -> bool:
@@ -175,6 +170,14 @@ def has_errors(messages: Iterable[Error], level: int=Error.ERROR) -> bool:
         if err_obj.level >= level:
             return True
     return False
+
+
+def only_errors(messages: Iterable[Error], level: int=Error.ERROR) -> Iterator[Error]:
+    """
+    Returns an Iterator that yields only those messages that have
+    at least the given error level.
+    """
+    return (err for err in messages if err.level >= level)
 
 
 
@@ -344,22 +347,8 @@ class Node(collections.abc.Sized):
         return self._errors.copy()
 
 
-    # def add_error(self, error_str: str) -> 'Node':
-    #     assert isinstance(error_str, str)
-    #     self._errors.append(error_str)
-    #     self.error_flag = True
-    #     return self
-
-
-    def add_error(self: 'Node',
-                  template: Union[str, Error],
-                  level: int=0,
-                  content: Union[tuple, dict]=()) -> 'Node':
-        if isinstance(template, Error):
-            assert not (bool(level) or bool(content))
-            self._errors.append(template)
-        else:
-            self._errors.append(Error.from_template(template, level, content))
+    def add_error(self, message: str, level: int=Error.ERROR, code: Hashable=0) -> 'Node':
+        self._errors.append(Error(message, level, code))
         self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
 
@@ -538,47 +527,6 @@ class Node(collections.abc.Sized):
             for child in self.children:
                 for nd in child.find(match_function):
                     yield nd
-
-
-    # def range(self, match_first, match_last):
-    #     """Iterates over the range of nodes, starting from the first
-    #     node for which ``match_first`` becomes True until the first node
-    #     after this one for which ``match_last`` becomes true or until
-    #     the end if it never does.
-    #
-    #     Args:
-    #         match_first (function): A function  that takes as Node
-    #             object as argument and returns True or False
-    #         match_last (function): A function  that takes as Node
-    #             object as argument and returns True or False
-    #     Yields:
-    #         Node: all nodes of the tree for which
-    #         ``match_function(node)`` returns True
-    #     """
-
-
-    # def navigate(self, path):
-    #     """Yields the results of all descendant elements matched by
-    #     ``path``, e.g.
-    #     'd/s' yields 'l' from (d (s l)(e (r x1) (r x2))
-    #     'e/r' yields 'x1', then 'x2'
-    #     'e'   yields (r x1)(r x2)
-    #
-    #     Args:
-    #         path (str):  The path of the object, e.g. 'a/b/c'. The
-    #             components of ``path`` can be regular expressions
-    #
-    #     Returns:
-    #         The object at the path, either a string or a Node or
-    #         ``None``, if the path did not match.
-    #     """
-    #     def nav(node, pl):
-    #         if pl:
-    #             return itertools.chain(nav(child, pl[1:]) for child in node.children
-    #                                    if re.match(pl[0], child.tag_name))
-    #         else:
-    #             return self.result,
-    #     return nav(path.split('/'))
 
 
     def tree_size(self) -> int:
