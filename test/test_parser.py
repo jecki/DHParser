@@ -24,7 +24,8 @@ from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging, logging, StringView, compile_python_object
+from DHParser.toolkit import is_logging, logging, compile_python_object
+from DHParser.base import StringView
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler

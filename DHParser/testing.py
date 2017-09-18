@@ -28,7 +28,8 @@ except ImportError:
     import re
 
 from DHParser.toolkit import is_logging, clear_logs, error_messages
-from DHParser.syntaxtree import is_error, mock_syntax_tree, flatten_sxpr
+from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
+from DHParser.base import is_error
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',

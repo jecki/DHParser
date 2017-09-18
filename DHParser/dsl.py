@@ -15,7 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied.  See the License for the specific language governing
 permissions and limitations under the License.
 
-Module ``DSLsupport`` contains various functions to support the
+Module ``dsl`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
@@ -35,7 +35,8 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
 from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Error, is_error, has_errors, only_errors, Node, TransformationFunc
+from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.base import Error, is_error, has_errors, only_errors
 
 __all__ = ('GrammarError',
            'CompilationError',

@@ -30,8 +30,8 @@ from multiprocessing import Pool
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compile_python_object
-from DHParser.syntaxtree import has_errors
-from DHParser.parser import compile_source, WHITESPACE_PTYPE, nil_preprocessor
+from DHParser.parser import compile_source, nil_preprocessor
+from DHParser.base import WHITESPACE_PTYPE, has_errors
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
 

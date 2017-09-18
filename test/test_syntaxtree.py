@@ -23,7 +23,8 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, TOKEN_PTYPE, mock_syntax_tree
+from DHParser.syntaxtree import Node, mock_syntax_tree
+from DHParser.base import TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler

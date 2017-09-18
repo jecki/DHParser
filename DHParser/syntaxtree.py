@@ -32,153 +32,12 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 
-from DHParser.toolkit import is_logging, log_dir, StringView, linebreaks, line_col, identity
+from DHParser.toolkit import is_logging, log_dir, linebreaks, line_col, identity
+from DHParser.base import MockParser, ZOMBIE_PARSER, Error, StringView
 
-__all__ = ('WHITESPACE_PTYPE',
-           'MockParser',
-           'TOKEN_PTYPE',
-           'ZOMBIE_PARSER',
-           'ParserBase',
-           'Error',
-           'is_warning',
-           'is_error',
-           'has_errors',
-           'Node',
+__all__ = ('Node',
            'mock_syntax_tree',
            'TransformationFunc')
-
-
-class ParserBase:
-    """
-    ParserBase is the base class for all real and mock parser classes.
-    It is defined here, because Node objects require a parser object
-    for instantiation.
-    """
-    def __init__(self, name=''):  # , pbases=frozenset()):
-        self.name = name  # type: str
-        self._ptype = ':' + self.__class__.__name__  # type: str
-
-    def __repr__(self):
-        return self.name + self.ptype
-
-    def __str__(self):
-        return self.name + (' = ' if self.name else '') + repr(self)
-
-    @property
-    def ptype(self) -> str:
-        return self._ptype
-
-    @property
-    def repr(self) -> str:
-        return self.name if self.name else repr(self)
-
-
-WHITESPACE_PTYPE = ':Whitespace'
-TOKEN_PTYPE = ':Token'
-
-
-class MockParser(ParserBase):
-    """
-    MockParser objects can be used to reconstruct syntax trees from a
-    serialized form like S-expressions or XML. Mock objects can mimic
-    different parser types by assigning them a ptype on initialization.
-    
-    Mock objects should not be used for anything other than 
-    syntax tree (re-)construction. In all other cases where a parser
-    object substitute is needed, chose the singleton ZOMBIE_PARSER.
-    """
-    def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
-        assert not ptype or ptype[0] == ':'
-        super(MockParser, self).__init__(name)
-        self.name = name
-        self._ptype = ptype or ':' + self.__class__.__name__
-
-
-class ZombieParser(MockParser):
-    """
-    Serves as a substitute for a Parser instance.
-
-    ``ZombieParser`` is the class of the singelton object
-    ``ZOMBIE_PARSER``. The  ``ZOMBIE_PARSER`` has a name and can be
-    called, but it never matches. It serves as a substitute where only
-    these (or one of these properties) is needed, but no real Parser-
-    object is instantiated.
-    """
-    alive = False
-
-    def __init__(self):
-        super(ZombieParser, self).__init__("__ZOMBIE__")
-        assert not self.__class__.alive, "There can be only one!"
-        assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.__class__.alive = True
-
-    def __copy__(self):
-        return self
-
-    def __deepcopy__(self, memo):
-        return self
-
-    def __call__(self, text):
-        """Better call Saul ;-)"""
-        return None, text
-
-
-ZOMBIE_PARSER = ZombieParser()
-
-
-class Error:
-    __slots__ = ['message', 'level', 'code', 'pos', 'line', 'column']
-
-    WARNING   = 1
-    ERROR     = 1000
-    HIGHEST   = ERROR
-
-    def __init__(self, message: str, level: int=ERROR, code: Hashable=0):
-        self.message = message
-        assert level >= 0
-        self.level = level or Error.ERROR
-        self.code = code
-        self.pos = -1
-        self.line = -1
-        self.column = -1
-
-    def __str__(self):
-        prefix = ''
-        if self.line > 0:
-            prefix = "line: %3i, column: %2i, " % (self.line, self.column)
-        return prefix + "%s: %s" % (self.level_str, self.message)
-
-    @property
-    def level_str(self):
-        return "Warning" if is_warning(self.level) else "Error"
-
-
-def is_warning(level: int) -> bool:
-    return level < Error.ERROR
-
-
-def is_error(level:  int) -> bool:
-    return level >= Error.ERROR
-
-
-def has_errors(messages: Iterable[Error], level: int=Error.ERROR) -> bool:
-    """
-    Returns True, if at least one entry in `messages` has at
-    least the given error `level`.
-    """
-    for err_obj in messages:
-        if err_obj.level >= level:
-            return True
-    return False
-
-
-def only_errors(messages: Iterable[Error], level: int=Error.ERROR) -> Iterator[Error]:
-    """
-    Returns an Iterator that yields only those messages that have
-    at least the given error level.
-    """
-    return (err for err in messages if err.level >= level)
-
 
 
 ChildrenType = Tuple['Node', ...]
@@ -347,7 +206,7 @@ class Node(collections.abc.Sized):
         return self._errors.copy()
 
 
-    def add_error(self, message: str, level: int=Error.ERROR, code: Hashable=0) -> 'Node':
+    def add_error(self, message: str, level: int= Error.ERROR, code: Hashable=0) -> 'Node':
         self._errors.append(Error(message, level, code))
         self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self

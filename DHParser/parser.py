@@ -75,10 +75,10 @@ except ImportError:
     from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
 
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
-from DHParser.syntaxtree import WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, ParserBase, \
-    Error, is_error, has_errors, Node, TransformationFunc
-from DHParser.toolkit import StringView, EMPTY_STRING_VIEW, sv_match, sv_index, sv_search, \
-    load_if_file, error_messages, line_col
+from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.base import ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Error, is_error, has_errors, \
+    StringView, EMPTY_STRING_VIEW
+from DHParser.toolkit import load_if_file, error_messages, line_col
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
@@ -1066,9 +1066,9 @@ class RegExp(Parser):
         return RegExp(regexp, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
-        match = text[0:1] != BEGIN_TOKEN and sv_match(self.regexp, text)  # ESC starts a preprocessor token.
+        match = text[0:1] != BEGIN_TOKEN and text.match(self.regexp)  # ESC starts a preprocessor token.
         if match:
-            end = sv_index(match.end(), text)
+            end = text.index(match.end())
             return Node(self, text[:end]), text[end:]
         return None, text
 
@@ -1521,8 +1521,8 @@ class Required(FlowOperator):
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text_ = self.parser(text)
         if not node:
-            m = sv_search(Required.RX_ARGUMENT, text)  # re.search(r'\s(\S)', text)
-            i = max(1, sv_index(m.regs[1][0], text)) if m else 1
+            m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
+            i = max(1, text.index(m.regs[1][0])) if m else 1
             node = Node(self, text[:i])
             text_ = text[i:]
             # assert False, "*"+text[:i]+"*"
@@ -1585,7 +1585,7 @@ class Lookbehind(FlowOperator):
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         backwards_text = self.grammar.reversed__[len(text):]  # self.grammar.document__[-len(text) - 1::-1]
-        if self.sign(sv_match(self.regexp, backwards_text)):
+        if self.sign(backwards_text.match(self.regexp)):
             return Node(self, ''), text
         else:
             return None, text
