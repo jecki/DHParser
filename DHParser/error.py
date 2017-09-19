@@ -34,9 +34,15 @@ __all__ = ('Error',
 class Error:
     __slots__ = ['message', 'level', 'code', 'pos', 'line', 'column']
 
+    # error levels
+
     WARNING   = 1
     ERROR     = 1000
     HIGHEST   = ERROR
+
+    # error codes
+
+    MANDATORY_CONTINUATION = 1001
 
     def __init__(self, message: str, level: int=ERROR, code: Hashable=0):
         self.message = message

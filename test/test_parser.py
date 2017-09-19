@@ -25,8 +25,9 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, logging, compile_python_object, StringView
+from DHParser.error import Error
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
-    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
@@ -248,6 +249,75 @@ class TestGrammar:
         grammar = Arithmetic()
         CST = grammar('3+4')
         assert not CST.error_flag, CST.as_sxpr()
+
+
+class TestSeries:
+    def test_non_mandatory(self):
+        lang = """
+        document = series | /.*/
+        series = "A" "B" "C" "D"
+        """
+        parser = grammar_provider(lang)()
+        st = parser("ABCD");
+        assert not st.error_flag
+        st = parser("A_CD");
+        assert not st.error_flag
+        st = parser("AB_D");
+        assert not st.error_flag
+
+    def test_mandatory(self):
+        """Test for the §-operator. The Series-parser should raise an
+        error for any non-match that occurs after the mandatory-operator.
+        """
+        lang = """
+        document = series | /.*/
+        series = "A" "B" §"C" "D"
+        """
+        parser = grammar_provider(lang)()
+        st = parser("ABCD");
+        assert not st.error_flag
+        st = parser("A_CD");
+        assert not st.error_flag
+        st = parser("AB_D");
+        assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        st = parser("ABC_");
+        assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+
+    def test_series_composition(self):
+        TA, TB, TC, TD, TE = (Token(b) for b in "ABCDE")
+        s1 = Series(TA, TB, TC, mandatory=2)
+        s2 = Series(TD, TE)
+
+        combined = Alternative(s1 + s2, RegExp('.*'))
+        parser = Grammar(combined)
+        st = parser("ABCDE");
+        assert not st.error_flag
+        st = parser("A_CDE");
+        assert not st.error_flag
+        st = parser("AB_DE");
+        assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        st = parser("ABC_E");
+        assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+
+        combined = Alternative(s2 + s1, RegExp('.*'))
+        parser = Grammar(combined)
+        st = parser("DEABC");
+        assert not st.error_flag
+        st = parser("_EABC");
+        assert not st.error_flag
+        st = parser("D_ABC");
+        assert not st.error_flag
+        st = parser("DE_BC");
+        assert not st.error_flag
+        st = parser("DEA_C");
+        assert not st.error_flag
+        st = parser("DEAB_");
+        assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
 
 
 class TestPopRetrieve:
