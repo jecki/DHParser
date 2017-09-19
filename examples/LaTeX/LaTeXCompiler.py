@@ -49,6 +49,7 @@ class LaTeXGrammar(Grammar):
     
     # LaTeX-Grammar for DHParser
     
+    
     @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
     @ comment    = /%.*/
     
@@ -228,7 +229,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "37585004123d6b80ecf8f67217b43479"
+    source_hash__ = "2438244cc4ad969a9d12e946b8218eb6"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

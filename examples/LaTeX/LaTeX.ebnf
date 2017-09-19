@@ -1,5 +1,6 @@
 # LaTeX-Grammar for DHParser
 
+
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*/
 

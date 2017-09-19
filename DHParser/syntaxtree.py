@@ -362,8 +362,8 @@ class Node(collections.abc.Sized):
         """
         s = "".join(child.content() for child in self.children) if self.children \
             else str(self.result)
-        return (
-        ' <<< Error on "%s" | %s >>> ' % (s, '; '.join(self._errors))) if self._errors else s
+        return (' <<< Error on "%s" | %s >>> '
+                % (s, '; '.join(e.message for e in self._errors))) if self._errors else s
 
 
     def find(self, match_function: Callable) -> Iterator['Node']:
