@@ -31,7 +31,8 @@ sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compile_python_object
 from DHParser.parser import compile_source, nil_preprocessor
-from DHParser.base import WHITESPACE_PTYPE, has_errors
+from DHParser.error import has_errors
+from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
 

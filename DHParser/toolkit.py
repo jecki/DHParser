@@ -30,14 +30,11 @@ the directory exists and raises an error if a file with the same name
 already exists.
 """
 
-import bisect
 import codecs
+import collections
 import contextlib
-import functools
 import hashlib
 import os
-
-from DHParser.base import StringView
 
 try:
     import regex as re
@@ -46,17 +43,15 @@ except ImportError:
 import sys
 
 try:
-    from typing import Any, List, Tuple, Iterable, Sequence, Union, Optional, TypeVar
+    from typing import Any, List, Tuple, Iterable, Sequence, Set, Union, Optional, TypeVar
 except ImportError:
-    from .typing34 import Any, List, Tuple, Iterable, Sequence, Union, Optional, TypeVar
+    from .typing34 import Any, List, Tuple, Iterable, Sequence, Set, Union, Optional, TypeVar
 
 __all__ = ('logging',
            'is_logging',
+           'clear_logs',
            'log_dir',
            'logfile_basename',
-           'linebreaks',
-           'line_col',
-           'error_messages',
            'escape_re',
            'is_filename',
            'load_if_file',
@@ -64,7 +59,17 @@ __all__ = ('logging',
            'md5',
            'expand_table',
            'smart_list',
-           'sane_parser_name')
+           'sane_parser_name',
+           'identity',
+           'StringView',
+           'EMPTY_STRING_VIEW')
+
+
+#######################################################################
+#
+# logging
+#
+#######################################################################
 
 
 def log_dir() -> str:
@@ -151,59 +156,6 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
         os.rmdir(log_dirname)
 
 
-def linebreaks(text: Union[StringView, str]):
-    lb = [-1]
-    i = text.find('\n', 0)
-    while i >= 0:
-        lb.append(i)
-        i = text.find('\n', i+1)
-    lb.append(len(text))
-    return lb
-
-
-@functools.singledispatch
-def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
-    """Returns the position within a text as (line, column)-tuple.
-    """
-    if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
-        raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
-    # assert pos <= len(text), str(pos) + " > " + str(len(text))
-    line = text.count("\n", 0, pos) + 1
-    column = pos - text.rfind("\n", 0, pos)
-    return line, column
-
-
-@line_col.register(list)
-def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
-    """Returns the position within a text as (line, column)-tuple based
-    on a list of all line breaks, including -1 and EOF.
-    """
-    if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
-        raise ValueError('Position %i outside text of length %s !' % (pos, lbreaks[-1]))
-    line = bisect.bisect_left(lbreaks, pos)
-    column = pos - lbreaks[line - 1]
-    return line, column
-
-
-def error_messages(source_text, errors) -> List[str]:
-    """Returns the sequence or iterator of error objects as an intertor
-    of error messages with line and column numbers at the beginning.
-    
-    Args:
-        source_text (str):  The source text on which the errors occurred.
-            (Needed in order to determine the line and column numbers.)
-        errors (list):  The list of errors as returned by the method 
-            ``collect_errors()`` of a Node object     
-    Returns:
-        a list that contains all error messages in string form. Each
-        string starts with "line: [Line-No], column: [Column-No]
-    """
-    for err in errors:
-        if err.pos >= 0 and err.line <= 0:
-            err.line, err.column = line_col(source_text, err.pos)
-    return [str(err) for err in sorted(errors, key=lambda err: err.pos)]
-
-
 def escape_re(s) -> str:
     """Returns `s` with all regular expression special characters escaped.
     """
@@ -233,6 +185,13 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
             s = function_or_class_or_instance.__class__.__name__
         i = s.find('.')
         return s[:i] + '_out' if i >= 0 else s
+
+
+#######################################################################
+#
+# loading and compiling
+#
+#######################################################################
 
 
 def load_if_file(text_or_file) -> str:
@@ -280,6 +239,36 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
+def compile_python_object(python_src, catch_obj_regex=""):
+    """Compiles the python source code and returns the (first) object
+    the name of which is matched by ``catch_obj_regex``. If catch_obj
+    is the empty string, the namespace dictionary will be returned.
+    """
+    if isinstance(catch_obj_regex, str):
+        catch_obj_regex = re.compile(catch_obj_regex)
+    code = compile(python_src, '<string>', 'exec')
+    namespace = {}
+    exec(code, namespace)  # safety risk?
+    if catch_obj_regex:
+        matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
+        if len(matches) == 0:
+            raise ValueError("No object matching /%s/ defined in source code." %
+                             catch_obj_regex.pattern)
+        elif len(matches) > 1:
+            raise ValueError("Ambiguous matches for %s : %s" %
+                             (str(catch_obj_regex), str(matches)))
+        return namespace[matches[0]] if matches else None
+    else:
+        return namespace
+
+
+#######################################################################
+#
+# smart lists and multi-keyword tables
+#
+#######################################################################
+
+
 # def smart_list(arg: Union[str, Iterable[T]]) -> Union[Sequence[str], Sequence[T]]:
 def smart_list(arg: Union[str, Iterable, Any]) -> Sequence:
     """Returns the argument as list, depending on its type and content.
@@ -317,7 +306,7 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Sequence:
             if len(lst) > 1:
                 return [s.strip() for s in lst]
         return [s.strip() for s in arg.strip().split(' ')]
-    elif isinstance(arg, Sequence):
+    elif isinstance(arg, Sequence) or isinstance(arg, Set):
         return arg
     elif isinstance(arg, Iterable):
         return list(arg)
@@ -344,6 +333,133 @@ def expand_table(compact_table):
     return expanded_table
 
 
+#######################################################################
+#
+# string view
+#
+#######################################################################
+
+
+class StringView(collections.abc.Sized):
+    """"A rudimentary StringView class, just enough for the use cases
+    in parser.py.
+
+    Slicing Python-strings always yields copies of a segment of the original
+    string. See: https://mail.python.org/pipermail/python-dev/2008-May/079699.html
+    However, this becomes costly (in terms of space and as a consequence also
+    time) when parsing longer documents. Unfortunately, Python's `memoryview`
+    does not work for unicode strings. Hence, the StringView class.
+    """
+
+    __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
+
+    def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
+        self.text = text  # type: str
+        self.begin = 0  # type: int
+        self.end = 0  # type: int
+        self.begin, self.end = StringView.real_indices(begin, end, len(text))
+        self.len = max(self.end - self.begin, 0)
+        self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
+
+    @staticmethod
+    def real_indices(begin, end, len):
+        def pack(index, len):
+            index = index if index >= 0 else index + len
+            return 0 if index < 0 else len if index > len else index
+
+        if begin is None:  begin = 0
+        if end is None:  end = len
+        return pack(begin, len), pack(end, len)
+
+    def __bool__(self):
+        return bool(self.text) and self.end > self.begin
+
+    def __len__(self):
+        return self.len
+
+    def __str__(self):
+        if self.fullstring_flag:  # optimization: avoid slicing/copying
+            return self.text
+        return self.text[self.begin:self.end]
+
+    def __getitem__(self, index):
+        # assert isinstance(index, slice), "As of now, StringView only allows slicing."
+        # assert index.step is None or index.step == 1, \
+        #     "Step sizes other than 1 are not yet supported by StringView"
+        start, stop = StringView.real_indices(index.start, index.stop, self.len)
+        return StringView(self.text, self.begin + start, self.begin + stop)
+
+    def __eq__(self, other):
+        return str(self) == str(other)  # PERFORMANCE WARNING: This creates copies of the strings
+
+    def count(self, sub, start=None, end=None) -> int:
+        if self.fullstring_flag:
+            return self.text.count(sub, start, end)
+        elif start is None and end is None:
+            return self.text.count(sub, self.begin, self.end)
+        else:
+            start, end = StringView.real_indices(start, end, self.len)
+            return self.text.count(sub, self.begin + start, self.begin + end)
+
+    def find(self, sub, start=None, end=None) -> int:
+        if self.fullstring_flag:
+            return self.text.find(sub, start, end)
+        elif start is None and end is None:
+            return self.text.find(sub, self.begin, self.end) - self.begin
+        else:
+            start, end = StringView.real_indices(start, end, self.len)
+            return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
+
+    def rfind(self, sub, start=None, end=None) -> int:
+        if self.fullstring_flag:
+            return self.text.rfind(sub, start, end)
+        if start is None and end is None:
+            return self.text.rfind(sub, self.begin, self.end) - self.begin
+        else:
+            start, end = StringView.real_indices(start, end, self.len)
+            return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
+
+    def startswith(self, prefix: str, start: int = 0, end: Optional[int] = None) -> bool:
+        start += self.begin
+        end = self.end if end is None else self.begin + end
+        return self.text.startswith(prefix, start, end)
+
+    def match(self, regex):
+        return regex.match(self.text, pos=self.begin, endpos=self.end)
+
+    def index(self, absolute_index: int) -> int:
+        """
+        Converts an index for a string watched by a StringView object
+        to an index relative to the string view object, e.g.:
+        >>> sv = StringView('xxIxx')[2:3]
+        >>> match = sv.match(re.compile('I'))
+        >>> match.end()
+        3
+        >>> sv.index(match.end())
+        1
+        """
+        return absolute_index - self.begin
+
+    def indices(self, absolute_indices: Iterable[int]) -> Tuple[int, ...]:
+        """Converts indices for a string watched by a StringView object
+        to indices relative to the string view object. See also: `sv_index()`
+        """
+        return tuple(index - self.begin for index in absolute_indices)
+
+    def search(self, regex):
+        return regex.search(self.text, pos=self.begin, endpos=self.end)
+
+
+EMPTY_STRING_VIEW = StringView('')
+
+
+#######################################################################
+#
+# miscellaneous
+#
+#######################################################################
+
+
 def sane_parser_name(name) -> bool:
     """Checks whether given name is an acceptable parser name. Parser names
     must not be preceded or succeeded by a double underscore '__'!
@@ -351,31 +467,15 @@ def sane_parser_name(name) -> bool:
     return name and name[:2] != '__' and name[-2:] != '__'
 
 
-def compile_python_object(python_src, catch_obj_regex=""):
-    """Compiles the python source code and returns the (first) object 
-    the name of which is matched by ``catch_obj_regex``. If catch_obj
-    is the empty string, the namespace dictionary will be returned.
-    """
-    if isinstance(catch_obj_regex, str):
-        catch_obj_regex = re.compile(catch_obj_regex)
-    code = compile(python_src, '<string>', 'exec')
-    namespace = {}
-    exec(code, namespace)  # safety risk?
-    if catch_obj_regex:
-        matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
-        if len(matches) == 0:
-            raise ValueError("No object matching /%s/ defined in source code." %
-                             catch_obj_regex.pattern)
-        elif len(matches) > 1:
-            raise ValueError("Ambiguous matches for %s : %s" %
-                             (str(catch_obj_regex), str(matches)))
-        return namespace[matches[0]] if matches else None
-    else:
-        return namespace
-
-
 def identity(anything: Any) -> Any:
     return anything
+
+
+#######################################################################
+#
+# initialization
+#
+#######################################################################
 
 
 try:

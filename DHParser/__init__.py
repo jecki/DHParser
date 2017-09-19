@@ -18,7 +18,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-from .base import *
+from .error import *
 from .dsl import *
 from .ebnf import *
 from .parser import *
@@ -26,9 +26,10 @@ from .syntaxtree import *
 # Flat namespace for the DHParser Package. Is this a good idea...?
 from .toolkit import *
 from .transform import *
-# from .testing import *
+from .testing import *
 from .versionnumber import __version__
 
 __author__ = "Eckhart Arnold <arnold@badw.de>"
 __copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
-# __all__ = ['toolkit', 'base', 'syntaxtree', 'parser', 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber']  # flat namespace
+# __all__ = ['toolkit', 'error', 'syntaxtree', 'parser', 'transform', 'ebnf', 'dsl', 'testing',
+# 'versionnumber']  # flat namespace

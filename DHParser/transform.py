@@ -20,8 +20,7 @@ permissions and limitations under the License.
 import inspect
 from functools import partial, reduce, singledispatch
 
-from DHParser.syntaxtree import Node
-from DHParser.base import WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
 
 try:
     import regex as re

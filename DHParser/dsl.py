@@ -36,7 +36,7 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, \
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object
 from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
-from DHParser.base import Error, is_error, has_errors, only_errors
+from DHParser.error import Error, is_error, has_errors, only_errors
 
 __all__ = ('GrammarError',
            'CompilationError',

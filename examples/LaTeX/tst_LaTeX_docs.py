@@ -24,6 +24,8 @@ import os
 import pstats
 import sys
 
+import DHParser.error
+
 sys.path.extend(['../../', '../', './'])
 
 import DHParser.dsl
@@ -44,7 +46,7 @@ transformer = get_transformer()
 def fail_on_error(src, result):
     if result.error_flag:
         print(result.as_sxpr())
-        for e in toolkit.error_messages(src, result.collect_errors()):
+        for e in DHParser.error.error_messages(src, result.collect_errors()):
             print(e)
         sys.exit(1)
 

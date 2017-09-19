@@ -74,11 +74,12 @@ try:
 except ImportError:
     from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
 
-from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
-from DHParser.syntaxtree import Node, TransformationFunc
-from DHParser.base import ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER, Error, is_error, has_errors, \
+from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
     StringView, EMPTY_STRING_VIEW
-from DHParser.toolkit import load_if_file, error_messages, line_col
+from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    ZOMBIE_PARSER
+from DHParser.error import Error, is_error, has_errors, line_col, error_messages
+from DHParser.toolkit import load_if_file
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
