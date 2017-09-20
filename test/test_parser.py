@@ -281,6 +281,7 @@ class TestSeries:
         st = parser("AB_D");
         assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        # transitivity of mandatory-operator
         st = parser("ABC_");
         assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION

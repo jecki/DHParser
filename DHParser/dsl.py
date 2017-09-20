@@ -213,7 +213,7 @@ def compileDSL(text_or_file: str,
 
     parser, grammar_src = grammar_instance(dsl_grammar)
     result, messages, AST = compile_source(text_or_file, preprocessor, parser,
-                                         ast_transformation, compiler)
+                                           ast_transformation, compiler)
     if has_errors(messages):
         src = load_if_file(text_or_file)
         raise CompilationError(only_errors(messages), src, grammar_src, AST, result)
@@ -316,8 +316,8 @@ def load_compiler_suite(compiler_suite: str) -> \
     else:
         # assume source is an ebnf grammar. Is there really any reasonable application case for this?
         with logging(False):
-            compile_py, messages, AST = compile_source(source, None,
-                get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
+            compile_py, messages, AST = compile_source(source, None, get_ebnf_grammar(),
+                                                       get_ebnf_transformer(), get_ebnf_compiler())
         if has_errors(messages):
             raise GrammarError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor

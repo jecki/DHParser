@@ -234,7 +234,7 @@ def traverse(root_node: Node,
             for child in node.result:
                 context.append(child)
                 traverse_recursive(context)  # depth first
-                node.error_flag = node.error_flag or child.error_flag  # propagate error flag
+                node.error_flag = max(node.error_flag, child.error_flag)  # propagate error flag
                 context.pop()
 
         key = key_func(node)

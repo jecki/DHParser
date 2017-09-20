@@ -1975,12 +1975,15 @@ def compile_source(source: str,
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None
-    if is_error(syntax_tree.error_flag):
-        messages = syntax_tree.collect_errors()
-    else:
+    ef = syntax_tree.error_flag
+    messages = syntax_tree.collect_errors(clear_errors=True)
+    if not is_error(ef):
         transformer(syntax_tree)
+        ef = max(ef, syntax_tree.error_flag)
+        messages.extend(syntax_tree.collect_errors(clear_errors=True))
         if is_logging():  syntax_tree.log(log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
-        messages = syntax_tree.collect_errors()
+        messages.extend(syntax_tree.collect_errors())
+        syntax_tree.error_flag = max(syntax_tree.error_flag, ef)
     return result, messages, syntax_tree

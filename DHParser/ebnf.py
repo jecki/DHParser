@@ -35,7 +35,7 @@ from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, R
     PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.error import Error
-from DHParser.transform import TransformationDict, traverse, remove_brackets, \
+from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
@@ -619,7 +619,10 @@ class EBNFCompiler(Compiler):
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
         except TypeError as error:
-            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + node.as_sxpr()
+            from traceback import extract_tb
+            trace = str(extract_tb(error.__traceback__)[-1])
+            errmsg = "%s (TypeError: %s; %s)\n%s" \
+                     % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             node.add_error(errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
         return rule, defn
@@ -702,8 +705,7 @@ class EBNFCompiler(Compiler):
 
         else:
             node.add_error('Unknown directive %s ! (Known ones are %s .)' %
-                           (key,
-                            ', '.join(list(self.directives.keys()))))
+                           (key, ', '.join(list(self.directives.keys()))))
         return ""
 
 
@@ -721,7 +723,27 @@ class EBNFCompiler(Compiler):
 
 
     def on_term(self, node) -> str:
-        return self.non_terminal(node, 'Series')
+        mandatory_marker = []
+        filtered_children = []
+        i = 0
+        for nd in node.children:
+            if nd.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
+                mandatory_marker.append(i)
+                if i == 0:
+                    nd.add_error('First item of a series should not be mandatory.',
+                                 code=Error.WARNING)
+                elif len(mandatory_marker) > 1:
+                    nd.add_error('One mandatory marker (§) sufficient to declare the '
+                                 'rest of the series as mandatory.', code=Error.WARNING)
+            else:
+                filtered_children.append(nd)
+                i += 1
+        saved_result = node.result
+        node.result = tuple(filtered_children)
+        mandatory_marker.append(Series.NOPE)
+        compiled = self.non_terminal(node, 'Series', ['mandatory=%i' % mandatory_marker[0]])
+        node.result = saved_result
+        return compiled
 
 
     def on_factor(self, node: Node) -> str:
@@ -841,8 +863,10 @@ class EBNFCompiler(Compiler):
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
-            errmsg = EBNFCompiler.AST_ERROR + " (" + str(error) + ")\n" + \
-                     node.as_sxpr()
+            from traceback import extract_tb
+            trace = str(extract_tb(error.__traceback__)[-1])
+            errmsg = "%s (AttributeError: %s; %s)\n%s" \
+                     % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             node.add_error(errmsg)
             return '"' + errmsg + '"'
         return parser + ', '.join([arg] + name) + ')'
