@@ -60,7 +60,7 @@ class ParserBase:
     for instantiation.
     """
     def __init__(self, name=''):  # , pbases=frozenset()):
-        self.name = name  # type: str
+        self._name = name  # type: str
         self._ptype = ':' + self.__class__.__name__  # type: str
 
     def __repr__(self):
@@ -68,6 +68,10 @@ class ParserBase:
 
     def __str__(self):
         return self.name + (' = ' if self.name else '') + repr(self)
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def ptype(self) -> str:
@@ -94,8 +98,7 @@ class MockParser(ParserBase):
     """
     def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
         assert not ptype or ptype[0] == ':'
-        super(MockParser, self).__init__(name)
-        self.name = name
+        super().__init__(name)
         self._ptype = ptype or ':' + self.__class__.__name__
 
 
@@ -303,44 +306,41 @@ class Node(collections.abc.Sized):
     def errors(self) -> List[Error]:
         return self._errors.copy()
 
-
-    def add_error(self, message: str, level: int= Error.ERROR, code: Hashable=0) -> 'Node':
+    def add_error(self, message: str, level: int = Error.ERROR, code: Hashable = 0) -> 'Node':
         self._errors.append(Error(message, level, code))
         self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
 
-
-    def _finalize_errors(self, lbreaks: List[int]):
-        if self.error_flag:
-            for err in self._errors:
-                assert err.pos >= 0
-                err.line, err.column = line_col(lbreaks, err.pos)
-            for child in self.children:
-                child._finalize_errors(lbreaks)
-
-
-    def finalize_errors(self, source_text: Union[StringView, str]):
-        """Recursively adds line- and column-numbers to all error objects.
+    def collect_errors(self, document: Union[StringView, str] = '', clear_errors=False) -> List[
+        Error]:
         """
-        if self.error_flag:
-            lbreaks = linebreaks(source_text)
-            self._finalize_errors(lbreaks)
-
-
-    def collect_errors(self, clear_errors=False) -> List[Error]:
-        """
+        Recursively adds line- and column-numbers to all error objects.
         Returns all errors of this node or any child node in the form
         of a set of tuples (position, error_message), where position
         is always relative to this node.
         """
-        errors = self.errors
-        if clear_errors:
-            self._errors = []
-            self.error_flag = 0
-        if self.children:
-            for child in self.children:
-                errors.extend(child.collect_errors(clear_errors))
-        return errors
+        if self.error_flag:
+            lbreaks = linebreaks(document) if document else []
+            return self._collect_errors(lbreaks, clear_errors)
+        else:
+            return []
+
+    def _collect_errors(self, lbreaks: List[int] = [], clear_errors=False) -> List[Error]:
+        if self.error_flag:
+            errors = self.errors
+            if lbreaks:
+                for err in errors:
+                    err.pos = self.pos
+                    err.line, err.column = line_col(lbreaks, err.pos)
+            if clear_errors:
+                self._errors = []
+                self.error_flag = 0
+            if self.children:
+                for child in self.children:
+                    errors.extend(child._collect_errors(lbreaks, clear_errors))
+            return errors
+        else:
+            return []
 
 
     def _tree_repr(self, tab, openF, closeF, dataF=identity, density=0) -> str:
@@ -408,7 +408,7 @@ class Node(collections.abc.Sized):
             s = lB + node.tag_name
             # s += " '(pos %i)" % node.pos
             if src:
-                s += " '(pos %i " % node.pos + " %i %i)" % line_col(src, node.pos)
+                s += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
             if node.errors:
                 s += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
                                                 for err in node.errors)

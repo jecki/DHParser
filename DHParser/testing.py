@@ -29,7 +29,7 @@ except ImportError:
 
 from DHParser.toolkit import is_logging, clear_logs
 from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
-from DHParser.error import is_error, error_messages
+from DHParser.error import is_error
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -78,7 +78,7 @@ def unit_from_json(json_filename):
     for symbol in unit:
         for stage in unit[symbol]:
             if stage not in UNIT_STAGES:
-                raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
+                raise ValueError('Test stage %s not in: %s' % (stage, str(UNIT_STAGES)))
     return unit
 
 # TODO: add support for yaml, cson, toml
@@ -163,8 +163,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if is_error(cst.error_flag):
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                               '\n\t'.join(m.replace('\n', '\n\t\t') for m in
-                                           error_messages(test_code, cst.collect_errors()))))
+                               '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in
+                                           cst.collect_errors(test_code))))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
                 parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))

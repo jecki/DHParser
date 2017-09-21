@@ -275,11 +275,13 @@ def TRUE_CONDITION(context: List[Node]) -> bool:
 
 def replace_child(node: Node):
     assert len(node.children) == 1
-    if not node.children[0].parser.name:
-        node.children[0].parser.name = node.parser.name
-    node.parser = node.children[0].parser
-    node._errors.extend(node.children[0]._errors)
-    node.result = node.children[0].result
+    child = node.children[0]
+    if not child.parser.name:
+        child.parser = MockParser(node.parser.name, child.parser.ptype)
+        # parser names must not be overwritten, else: child.parser.name = node.parser.name
+    node.parser = child.parser
+    node._errors.extend(child._errors)
+    node.result = child.result
 
 
 def reduce_child(node: Node):

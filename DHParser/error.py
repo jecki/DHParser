@@ -27,8 +27,7 @@ __all__ = ('Error',
            'has_errors',
            'only_errors',
            'linebreaks',
-           'line_col',
-           'error_messages')
+           'line_col')
 
 
 class Error:
@@ -44,20 +43,25 @@ class Error:
 
     MANDATORY_CONTINUATION = 1001
 
-    def __init__(self, message: str, level: int=ERROR, code: Hashable=0):
+    def __init__(self, message: str, level: int = ERROR, code: Hashable = 0,
+                 pos: int = -1, line: int = -1, column: int = -1):
         self.message = message
         assert level >= 0
         self.level = level or Error.ERROR
         self.code = code
-        self.pos = -1
-        self.line = -1
-        self.column = -1
+        self.pos = pos
+        self.line = line
+        self.column = column
 
     def __str__(self):
         prefix = ''
         if self.line > 0:
             prefix = "line: %3i, column: %2i, " % (self.line, self.column)
         return prefix + "%s: %s" % (self.level_str, self.message)
+
+    def __repr__(self):
+        return 'Error("%s", %i, %s, %i, %i, %i)' \
+               % (self.message, self.level, repr(self.code), self.pos, self.line, self.column)
 
     @property
     def level_str(self):
@@ -124,21 +128,20 @@ def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
     column = pos - lbreaks[line - 1]
     return line, column
 
-
-def error_messages(source_text, errors) -> List[str]:
-    """Returns the sequence or iterator of error objects as an intertor
-    of error messages with line and column numbers at the beginning.
-
-    Args:
-        source_text (str):  The source text on which the errors occurred.
-            (Needed in order to determine the line and column numbers.)
-        errors (list):  The list of errors as returned by the method
-            ``collect_errors()`` of a Node object
-    Returns:
-        a list that contains all error messages in string form. Each
-        string starts with "line: [Line-No], column: [Column-No]
-    """
-    for err in errors:
-        if err.pos >= 0 and err.line <= 0:
-            err.line, err.column = line_col(source_text, err.pos)
-    return [str(err) for err in sorted(errors, key=lambda err: err.pos)]
+# def error_messages(source_text:str, errors: List[Error]) -> List[str]:
+#     """Adds line, column information for error messages, if the position
+#     is given.
+#
+#     Args:
+#         source_text (str):  The source text on which the errors occurred.
+#             (Needed in order to determine the line and column numbers.)
+#         errors (list):  The list of errors as returned by the method
+#             ``collect_errors()`` of a Node object
+#     Returns:
+#         The same list of error messages, which now contain line and
+#         column numbers.
+#     """
+#     for err in errors:
+#         if err.pos >= 0 and err.line <= 0:
+#             err.line, err.column = line_col(source_text, err.pos)
+#     return errors

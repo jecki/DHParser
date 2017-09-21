@@ -29,11 +29,14 @@ from DHParser import toolkit
 
 # print(dir(dsl))
 
-if not dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
-    print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
-    with open('LaTeX_ebnf_ERRORS.txt') as f:
-        print(f.read())
-    sys.exit(1)
+with toolkit.logging(False):
+    if not dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has
+        # changed
+        print(
+            '\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
+        with open('LaTeX_ebnf_ERRORS.txt') as f:
+            print(f.read())
+        sys.exit(1)
 
 from LaTeXCompiler import get_grammar, get_transformer
 

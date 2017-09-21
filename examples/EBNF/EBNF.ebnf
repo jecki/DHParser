@@ -19,7 +19,7 @@ factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be
             | option
 
 flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-              "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+            | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" expression §")"

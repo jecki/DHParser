@@ -153,6 +153,25 @@ class TestEBNFParser:
         assert result.error_flag  # literals catch following, but not leading whitespace
 
 
+class TestParserNameOverwriteBug:
+    def test_term_bug(self):
+        grammar = get_ebnf_grammar()
+        st = grammar('impossible = [§"an optional requirement"]')
+        # print(st.as_sxpr())
+        get_ebnf_transformer()(st)
+        # print(st.as_sxpr())
+        lang = """series = "A" "B" §"C" "D"
+        """
+        parser = get_ebnf_grammar()
+        st = grammar(lang)
+        # print(st.as_sxpr())
+        get_ebnf_transformer()(st)
+        # print(st.as_sxpr())
+        result = get_ebnf_compiler()(st)
+        messages = st.collect_errors()
+        assert not has_errors(messages), str(messages)
+
+
 class TestSemanticValidation:
     def check(self, minilang, bool_filter=lambda x: x):
         grammar = get_ebnf_grammar()
@@ -210,7 +229,7 @@ class TestSelfHosting:
 
         syntax     =  [~//] { definition | directive } §EOF
         definition =  symbol §"=" expression
-        directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
+        directive  =  "@" §symbol "=" ( regexp | literal | list_ )
 
         expression =  term { "|" term }
         term       =  { factor }+
@@ -241,7 +260,7 @@ class TestSelfHosting:
                                                          # whitespace of a regular expression will be ignored tacitly.
         list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
                                                          # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-        EOF =  !/./        
+        EOF =  !/./
         """
 
     def test_self(self):
@@ -386,4 +405,5 @@ class TestFlowControlOperators:
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    runner("", globals())
+
+    runner("TestTermBug", globals())

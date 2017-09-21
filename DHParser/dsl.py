@@ -409,8 +409,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
         A (potentially empty) list of error or warning messages.
     """
     filepath = os.path.normpath(source_file)
-    # with open(source_file, encoding="utf-8") as f:
-    #     source = f.read()
+    with open(source_file, encoding="utf-8") as f:
+        source = f.read()
     rootname = os.path.splitext(filepath)[0]
     compiler_name = os.path.basename(rootname)
     if compiler_suite:
@@ -422,7 +422,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
         cfactory = get_ebnf_compiler
     compiler1 = cfactory()
     compiler1.set_grammar_name(compiler_name, source_file)
-    result, messages, ast = compile_source(source_file, sfactory(), pfactory(), tfactory(), compiler1)
+    result, messages, ast = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
     if has_errors(messages):
         return messages
 

@@ -690,9 +690,9 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     if not parser.name:
-                        parser.name = entry
-                    if (isinstance(parser, Forward) and (not parser.parser.name)):
-                        parser.parser.name = entry
+                        parser._name = entry
+                    if (isinstance(parser, Forward) and (not parser.parser._name)):
+                        parser.parser._name = entry
             cls.parser_initialization__ = "done"
 
 
@@ -843,7 +843,7 @@ class Grammar:
                 stitches[-1].add_error(error_msg)
                 if self.history_tracking__:
                     # some parsers may have matched and left history records with nodes != None.
-                    # Because these are not connected to the stiched root node, their pos
+                    # Because these are not connected to the stitched root node, their pos-
                     # properties will not be initialized by setting the root node's pos property
                     # to zero. Therefore, their pos properties need to be initialized here
                     for record in self.history__:
@@ -869,7 +869,7 @@ class Grammar:
             else:
                 result.add_error(error_str)
         result.pos = 0  # calculate all positions
-        result.finalize_errors(self.document__)
+        # result.collect_errors(self.document__)
         return result
 
 
@@ -1426,9 +1426,10 @@ class Series(NaryOperator):
                     text_ = text[i:]
                     node.add_error('%s expected; "%s" found!' % (str(parser), text[:10]),
                                    code=Error.MANDATORY_CONTINUATION)
+                    return node, text_
             results += (node,)
-            if node.error_flag:
-                break
+            # if node.error_flag:
+            #     break
             pos += 1
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
@@ -1976,14 +1977,14 @@ def compile_source(source: str,
     # likely that error list gets littered with compile error messages
     result = None
     ef = syntax_tree.error_flag
-    messages = syntax_tree.collect_errors(clear_errors=True)
+    messages = syntax_tree.collect_errors(source_text, clear_errors=True)
     if not is_error(ef):
         transformer(syntax_tree)
         ef = max(ef, syntax_tree.error_flag)
-        messages.extend(syntax_tree.collect_errors(clear_errors=True))
+        messages.extend(syntax_tree.collect_errors(source_text, clear_errors=True))
         if is_logging():  syntax_tree.log(log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
-        messages.extend(syntax_tree.collect_errors())
+        messages.extend(syntax_tree.collect_errors(source_text))
         syntax_tree.error_flag = max(syntax_tree.error_flag, ef)
     return result, messages, syntax_tree
