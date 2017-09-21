@@ -25,4 +25,4 @@ sys.path.extend(['../../', '../', './'])
 
 from DHParser import dsl
 
-dsl.recompile_grammar('.')
+dsl.recompile_grammar('.', force=True)
