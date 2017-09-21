@@ -165,6 +165,7 @@ class HistoryRecord:
         self.line_col = (1, 1)          # type: Tuple[int, int]
         if call_stack:
             document = call_stack[-1].grammar.document__.text
+            # TODO: Use lbreaks instead of document here
             self.line_col = line_col(document, len(document) - remaining)
 
     def __str__(self):

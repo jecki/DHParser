@@ -190,38 +190,31 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "a131abc5259738631000cda90d2fc65b"
-    parser_initialization__ = "upon instantiation"
+    tialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'), mandatory=1000)),
-                   mandatory=1000)
+    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
     option = Series(Token("["), expression, Token("]"), mandatory=2)
     repetition = Series(Token("{"), expression, Token("}"), mandatory=2)
-    oneormore = Series(Token("{"), expression, Token("}+"), mandatory=1000)
+    oneormore = Series(Token("{"), expression, Token("}+"))
     group = Series(Token("("), expression, Token(")"), mandatory=2)
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(
-        Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("=")),
-               mandatory=1000), Series(Option(flowmarker), literal, mandatory=1000),
-        Series(Option(flowmarker), regexp, mandatory=1000),
-        Series(Option(flowmarker), group, mandatory=1000),
-        Series(Option(flowmarker), oneormore, mandatory=1000), repetition, option)
-    term = OneOrMore(Series(Option(Token("§")), factor, mandatory=1000))
-    expression.set(
-        Series(term, ZeroOrMore(Series(Token("|"), term, mandatory=1000)), mandatory=1000))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_),
-                       mandatory=1)
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+                         Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
+                         Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore), repetition, option)
+    term = OneOrMore(Series(Option(Token("§")), factor))
+    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
+    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
     definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)),
-                    EOF, mandatory=2)
+    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
