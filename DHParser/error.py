@@ -111,7 +111,6 @@ def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
     """
     if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
         raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
-    # assert pos <= len(text), str(pos) + " > " + str(len(text))
     line = text.count("\n", 0, pos) + 1
     column = pos - text.rfind("\n", 0, pos)
     return line, column
@@ -127,6 +126,7 @@ def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
     line = bisect.bisect_left(lbreaks, pos)
     column = pos - lbreaks[line - 1]
     return line, column
+
 
 # def error_messages(source_text:str, errors: List[Error]) -> List[str]:
 #     """Adds line, column information for error messages, if the position

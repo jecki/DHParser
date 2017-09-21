@@ -78,7 +78,7 @@ from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, s
     StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     ZOMBIE_PARSER
-from DHParser.error import Error, is_error, has_errors, line_col
+from DHParser.error import Error, is_error, has_errors, linebreaks, line_col
 from DHParser.toolkit import load_if_file
 
 __all__ = ('PreprocessorFunc',
@@ -164,9 +164,10 @@ class HistoryRecord:
         self.remaining = remaining      # type: int
         self.line_col = (1, 1)          # type: Tuple[int, int]
         if call_stack:
-            document = call_stack[-1].grammar.document__.text
-            # TODO: Use lbreaks instead of document here
-            self.line_col = line_col(document, len(document) - remaining)
+            grammar = call_stack[-1].grammar
+            document = grammar.document__
+            lbreaks = grammar.document_lbreaks__
+            self.line_col = line_col(lbreaks, len(document) - remaining)
 
     def __str__(self):
         return 'line %i, column %i:  %s  "%s"' % \
@@ -600,6 +601,11 @@ class Grammar:
         document__:  the text that has most recently been parsed or that is
                 currently being parsed.
 
+        document_lbreaks__:  list of linebreaks within the document, starting
+                with -1 and ending with EOF. This helps generating line
+                and column number for history recording and will only be
+                initialized if `history_tracking__` is true.
+
         _reversed__:  the same text in reverse order - needed by the `Lookbehind'-
                 parsers.
 
@@ -752,6 +758,7 @@ class Grammar:
     def _reset__(self):
         self.document__ = EMPTY_STRING_VIEW   # type: StringView
         self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
+        self.document_lbreaks__ = []          # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = dict()     # type: Dict[str, List[str]]
         self.rollback__ = []          # type: List[Tuple[int, Callable]]
@@ -811,6 +818,7 @@ class Grammar:
             self._dirty_flag__ = True
         self.history_tracking__ = is_logging()
         self.document__ = StringView(document)
+        self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = len(self.document__) + 1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
@@ -1424,14 +1432,13 @@ class Series(NaryOperator):
                     # Provide useful error messages
                     m = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(m.regs[1][0])) if m else 1
-                    node = Node(self, text[:i])
-                    text_ = text[i:]
+                    node = Node(self, text_[:i])
+                    text_ = text_[i:]
                     node.add_error('%s expected; "%s" found!' % (str(parser), text[:10]),
                                    code=Error.MANDATORY_CONTINUATION)
-                    return node, text_
             results += (node,)
-            # if node.error_flag:
-            #     break
+            # if node.error_flag:  # break on first error
+            #    break
             pos += 1
         assert len(results) <= len(self.parsers)
         return Node(self, results), text_
