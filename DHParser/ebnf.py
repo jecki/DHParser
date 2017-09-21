@@ -74,7 +74,7 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 
 
 # class EBNFGrammar(Grammar):
-#     r"""Parser for an EBNF source file, with this grammar:
+#     r"""Parser for an EBNF_variant source file, with this grammar:
 #
 #     # EBNF-Grammar in EBNF
 #
@@ -83,8 +83,8 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 #     @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
 #
 #     syntax     =  [~//] { definition | directive } §EOF
-#     definition =  symbol §"=" expression
-#     directive  =  "@" §symbol §"=" ( regexp | literal | list_ )
+#     definition =  symbol §"=" §expression
+#     directive  =  "@" §symbol §"=" §( regexp | literal | list_ )
 #
 #     expression =  term { "|" term }
 #     term       =  { factor }+
@@ -96,8 +96,8 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 #                 | repetition
 #                 | option
 #
-#     flowmarker =  "!"  | "&"  | "§" |                # '!' negative lookahead, '&' positive lookahead, '§' required
-#                   "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+#     flowmarker =  "!"  | "&"  | "§"                  # '!' negative lookahead, '&' positive lookahead, '§' required
+#                 | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
 #     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 #
 #     group      =  "(" expression §")"
@@ -108,7 +108,7 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 #     symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
 #     literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
 #                 | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-#     regexp     =  /~?\/(?:[^\/]|(?<=\\)\/)*\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+#     regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
 #                                                      # '~' is a whitespace-marker, if present leading or trailing
 #                                                      # whitespace of a regular expression will be ignored tacitly.
 #     list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
@@ -116,33 +116,36 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 #     EOF =  !/./
 #     """
 #     expression = Forward()
-#     source_hash__ = "a410e1727fb7575e98ff8451dbf8f3bd"
+#     source_hash__ = "4735db10f0b79d44209d1de0184b2ca0"
 #     parser_initialization__ = "upon instantiation"
 #     COMMENT__ = r'#.*(?:\n|$)'
-#     WSP__ = mixin_comment(whitespace=r'\s*', comment=r'#.*(?:\n|$)')
+#     WHITESPACE__ = r'\s*'
+#     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
 #     wspL__ = ''
 #     wspR__ = WSP__
-#     EOF = NegativeLookahead(RE('.', wR=''))
-#     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-#     regexp = RE(r'~?/(?:\\/|[^/])*?/~?')  # RE('~?/(?:[^/]|(?<=\\\\)/)*/~?')
+#     EOF = NegativeLookahead(RegExp('.'))
+#     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'), mandatory=1000)), mandatory=1000)
+#     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
 #     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
 #     symbol = RE('(?!\\d)\\w+')
-#     option = Series(Token("["), expression, Required(Token("]")))
-#     repetition = Series(Token("{"), expression, Required(Token("}")))
-#     oneormore = Series(Token("{"), expression, Token("}+"))
-#     group = Series(Token("("), expression, Required(Token(")")))
+#     option = Series(Token("["), expression, Token("]"), mandatory=2)
+#     repetition = Series(Token("{"), expression, Token("}"), mandatory=2)
+#     oneormore = Series(Token("{"), expression, Token("}+"), mandatory=1000)
+#     group = Series(Token("("), expression, Token(")"), mandatory=2)
 #     retrieveop = Alternative(Token("::"), Token(":"))
 #     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
-#     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
-#                          Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
-#                          Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore),
-#                          repetition, option)
+#     factor = Alternative(
+#         Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("=")), mandatory=1000),
+#         Series(Option(flowmarker), literal, mandatory=1000), Series(Option(flowmarker), regexp, mandatory=1000),
+#         Series(Option(flowmarker), group, mandatory=1000), Series(Option(flowmarker), oneormore, mandatory=1000),
+#         repetition, option)
 #     term = OneOrMore(factor)
-#     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-#     directive = Series(Token("@"), Required(symbol), Required(Token("=")), Alternative(regexp, literal, list_))
-#     definition = Series(symbol, Required(Token("=")), expression)
-#     syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
+#     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term, mandatory=1000)), mandatory=1000))
+#     directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
+#     definition = Series(symbol, Token("="), expression, mandatory=1)
+#     syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
 #     root__ = syntax
+
 
 class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file, with this grammar:
