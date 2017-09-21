@@ -1420,6 +1420,7 @@ class Series(NaryOperator):
                 if pos < self.mandatory:
                     return None, text
                 else:
+                    # Provide useful error messages
                     m = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(m.regs[1][0])) if m else 1
                     node = Node(self, text[:i])
@@ -1554,7 +1555,8 @@ class FlowOperator(UnaryOperator):
 
 
 class Required(FlowOperator):
-    # Add constructor that checks for logical errors, like `Required(Option(...))` constructs ?
+    """OBSOLETE. Use mandatory-parameter of Series-parser instead!
+    """
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:

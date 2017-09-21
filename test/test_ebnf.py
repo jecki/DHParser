@@ -130,7 +130,6 @@ class TestEBNFParser:
         }
     }
 
-
     def setup(self):
         self.EBNF = get_ebnf_grammar()
 

@@ -30,7 +30,7 @@ from DHParser import toolkit
 # print(dir(dsl))
 
 with toolkit.logging(False):
-    if not dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has
+    if not dsl.recompile_grammar('LaTeX.ebnf', force=True):  # recompiles Grammar only if it has
         # changed
         print(
             '\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')

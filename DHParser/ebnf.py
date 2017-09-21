@@ -73,81 +73,8 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 ########################################################################
 
 
-class EBNFGrammar(Grammar):
-    r"""Parser for an EBNF_variant source file, with this grammar:
-
-    # EBNF-Grammar in EBNF
-
-    @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace =  /\s*/                            # whitespace includes linefeed
-    @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
-
-    syntax     =  [~//] { definition | directive } §EOF
-    definition =  symbol §"=" §expression
-    directive  =  "@" §symbol §"=" §( regexp | literal | list_ )
-
-    expression =  term { "|" term }
-    term       =  { factor }+
-    factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-                | [flowmarker] literal
-                | [flowmarker] regexp
-                | [flowmarker] group
-                | [flowmarker] oneormore
-                | repetition
-                | option
-
-    flowmarker =  "!"  | "&"  | "§"                  # '!' negative lookahead, '&' positive lookahead, '§' required
-                | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
-
-    group      =  "(" expression §")"
-    oneormore  =  "{" expression "}+"
-    repetition =  "{" expression §"}"
-    option     =  "[" expression §"]"
-
-    symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-    literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                     # '~' is a whitespace-marker, if present leading or trailing
-                                                     # whitespace of a regular expression will be ignored tacitly.
-    list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                     # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-    EOF =  !/./
-    """
-    expression = Forward()
-    source_hash__ = "4735db10f0b79d44209d1de0184b2ca0"
-    parser_initialization__ = "upon instantiation"
-    COMMENT__ = r'#.*(?:\n|$)'
-    WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP__
-    EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-    regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
-    literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
-    symbol = RE('(?!\\d)\\w+')
-    option = Series(Token("["), expression, Required(Token("]")))
-    repetition = Series(Token("{"), expression, Required(Token("}")))
-    oneormore = Series(Token("{"), expression, Token("}+"))
-    group = Series(Token("("), expression, Required(Token(")")))
-    retrieveop = Alternative(Token("::"), Token(":"))
-    flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
-                         Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
-                         Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore), repetition, option)
-    term = OneOrMore(factor)
-    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), Required(symbol), Required(Token("=")),
-                       Required(Alternative(regexp, literal, list_)))
-    definition = Series(symbol, Required(Token("=")), Required(expression))
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
-    root__ = syntax
-
-
 # class EBNFGrammar(Grammar):
-#     r"""Parser for an EBNF source file, with this grammar:
+#     r"""Parser for an EBNF_variant source file, with this grammar:
 #
 #     # EBNF-Grammar in EBNF
 #
@@ -156,11 +83,11 @@ class EBNFGrammar(Grammar):
 #     @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
 #
 #     syntax     =  [~//] { definition | directive } §EOF
-#     definition =  symbol §"=" expression
-#     directive  =  "@" §symbol "=" ( regexp | literal | list_ )
+#     definition =  symbol §"=" §expression
+#     directive  =  "@" §symbol §"=" §( regexp | literal | list_ )
 #
 #     expression =  term { "|" term }
-#     term       =  { ["§"] factor }+                       # "§" means all following factors mandatory
+#     term       =  { factor }+
 #     factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
 #                 | [flowmarker] literal
 #                 | [flowmarker] regexp
@@ -169,7 +96,7 @@ class EBNFGrammar(Grammar):
 #                 | repetition
 #                 | option
 #
-#     flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+#     flowmarker =  "!"  | "&"  | "§"                  # '!' negative lookahead, '&' positive lookahead, '§' required
 #                 | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
 #     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 #
@@ -189,7 +116,7 @@ class EBNFGrammar(Grammar):
 #     EOF =  !/./
 #     """
 #     expression = Forward()
-#     source_hash__ = "a131abc5259738631000cda90d2fc65b"
+#     source_hash__ = "4735db10f0b79d44209d1de0184b2ca0"
 #     parser_initialization__ = "upon instantiation"
 #     COMMENT__ = r'#.*(?:\n|$)'
 #     WHITESPACE__ = r'\s*'
@@ -197,32 +124,105 @@ class EBNFGrammar(Grammar):
 #     wspL__ = ''
 #     wspR__ = WSP__
 #     EOF = NegativeLookahead(RegExp('.'))
-#     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'), mandatory=1000)),
-#                    mandatory=1000)
+#     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
 #     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
 #     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
 #     symbol = RE('(?!\\d)\\w+')
-#     option = Series(Token("["), expression, Token("]"), mandatory=2)
-#     repetition = Series(Token("{"), expression, Token("}"), mandatory=2)
-#     oneormore = Series(Token("{"), expression, Token("}+"), mandatory=1000)
-#     group = Series(Token("("), expression, Token(")"), mandatory=2)
+#     option = Series(Token("["), expression, Required(Token("]")))
+#     repetition = Series(Token("{"), expression, Required(Token("}")))
+#     oneormore = Series(Token("{"), expression, Token("}+"))
+#     group = Series(Token("("), expression, Required(Token(")")))
 #     retrieveop = Alternative(Token("::"), Token(":"))
-#     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-#     factor = Alternative(
-#         Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("=")),
-#                mandatory=1000), Series(Option(flowmarker), literal, mandatory=1000),
-#         Series(Option(flowmarker), regexp, mandatory=1000),
-#         Series(Option(flowmarker), group, mandatory=1000),
-#         Series(Option(flowmarker), oneormore, mandatory=1000), repetition, option)
-#     term = OneOrMore(Series(Option(Token("§")), factor, mandatory=1000))
-#     expression.set(
-#         Series(term, ZeroOrMore(Series(Token("|"), term, mandatory=1000)), mandatory=1000))
-#     directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_),
-#                        mandatory=1)
-#     definition = Series(symbol, Token("="), expression, mandatory=1)
-#     syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)),
-#                     EOF, mandatory=2)
+#     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
+#     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+#                          Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
+#                          Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore), repetition, option)
+#     term = OneOrMore(factor)
+#     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
+#     directive = Series(Token("@"), Required(symbol), Required(Token("=")),
+#                        Required(Alternative(regexp, literal, list_)))
+#     definition = Series(symbol, Required(Token("=")), Required(expression))
+#     syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
 #     root__ = syntax
+
+
+class EBNFGrammar(Grammar):
+    r"""Parser for an EBNF source file, with this grammar:
+
+    # EBNF-Grammar in EBNF
+
+    @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace =  /\s*/                            # whitespace includes linefeed
+    @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
+
+    syntax     =  [~//] { definition | directive } §EOF
+    definition =  symbol §"=" expression
+    directive  =  "@" §symbol "=" ( regexp | literal | list_ )
+
+    expression =  term { "|" term }
+    term       =  { ["§"] factor }+                       # "§" means all following factors mandatory
+    factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+                | [flowmarker] literal
+                | [flowmarker] regexp
+                | [flowmarker] group
+                | [flowmarker] oneormore
+                | repetition
+                | option
+
+    flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+                | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
+
+    group      =  "(" expression §")"
+    oneormore  =  "{" expression "}+"
+    repetition =  "{" expression §"}"
+    option     =  "[" expression §"]"
+
+    symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+    regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                     # '~' is a whitespace-marker, if present leading or trailing
+                                                     # whitespace of a regular expression will be ignored tacitly.
+    list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                     # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+    EOF =  !/./
+    """
+    expression = Forward()
+    source_hash__ = "a131abc5259738631000cda90d2fc65b"
+    parser_initialization__ = "upon instantiation"
+    COMMENT__ = r'#.*(?:\n|$)'
+    WHITESPACE__ = r'\s*'
+    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wspL__ = ''
+    wspR__ = WSP__
+    EOF = NegativeLookahead(RegExp('.'))
+    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'), mandatory=1000)),
+                   mandatory=1000)
+    regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
+    literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
+    symbol = RE('(?!\\d)\\w+')
+    option = Series(Token("["), expression, Token("]"), mandatory=2)
+    repetition = Series(Token("{"), expression, Token("}"), mandatory=2)
+    oneormore = Series(Token("{"), expression, Token("}+"), mandatory=1000)
+    group = Series(Token("("), expression, Token(")"), mandatory=2)
+    retrieveop = Alternative(Token("::"), Token(":"))
+    flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
+    factor = Alternative(
+        Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("=")),
+               mandatory=1000), Series(Option(flowmarker), literal, mandatory=1000),
+        Series(Option(flowmarker), regexp, mandatory=1000),
+        Series(Option(flowmarker), group, mandatory=1000),
+        Series(Option(flowmarker), oneormore, mandatory=1000), repetition, option)
+    term = OneOrMore(Series(Option(Token("§")), factor, mandatory=1000))
+    expression.set(
+        Series(term, ZeroOrMore(Series(Token("|"), term, mandatory=1000)), mandatory=1000))
+    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_),
+                       mandatory=1)
+    definition = Series(symbol, Token("="), expression, mandatory=1)
+    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)),
+                    EOF, mandatory=2)
+    root__ = syntax
 
 
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
@@ -804,28 +804,31 @@ class EBNFCompiler(Compiler):
 
 
     def on_term(self, node) -> str:
-        # mandatory_marker = []
-        # filtered_children = []
-        # i = 0
-        # for nd in node.children:
-        #     if nd.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
-        #         mandatory_marker.append(i)
-        #         if i == 0:
-        #             nd.add_error('First item of a series should not be mandatory.',
-        #                          Error.WARNING)
-        #         elif len(mandatory_marker) > 1:
-        #             nd.add_error('One mandatory marker (§) sufficient to declare the '
-        #                          'rest of the series as mandatory.', Error.WARNING)
-        #     else:
-        #         filtered_children.append(nd)
-        #         i += 1
-        # saved_result = node.result
-        # node.result = tuple(filtered_children)
-        # mandatory_marker.append(Series.NOPE)
-        # compiled = self.non_terminal(node, 'Series', ['mandatory=%i' % mandatory_marker[0]])
-        # node.result = saved_result
-        # return compiled
-        return self.non_terminal(node, 'Series')
+        # Basically, the following code does only this:
+        #       return self.non_terminal(node, 'Series')
+        # What makes it (look) more complicated is the handling of the
+        # mandatory §-operator
+        mandatory_marker = []
+        filtered_children = []
+        i = 0
+        for nd in node.children:
+            if nd.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
+                mandatory_marker.append(i)
+                if i == 0:
+                    nd.add_error('First item of a series should not be mandatory.',
+                                 Error.WARNING)
+                elif len(mandatory_marker) > 1:
+                    nd.add_error('One mandatory marker (§) sufficient to declare the '
+                                 'rest of the series as mandatory.', Error.WARNING)
+            else:
+                filtered_children.append(nd)
+                i += 1
+        saved_result = node.result
+        node.result = tuple(filtered_children)
+        custom_args =  ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
+        compiled = self.non_terminal(node, 'Series', custom_args)
+        node.result = saved_result
+        return compiled
 
 
     def on_factor(self, node: Node) -> str:
