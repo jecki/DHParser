@@ -11,7 +11,7 @@ Why use domain specific languages in the humanities?
 
 Suppose you are a literary scientist and you would like to edit a poem
 like Heinrich Heine's "Lyrisches Intermezzo". Usually, the technology of
-choice would be XML and you would use an XML-Editor to write to code
+choice would be XML and you would use an XML-Editor to write
 something like this:
 
     <?xml version="1.0" encoding="UTF-8" ?>
