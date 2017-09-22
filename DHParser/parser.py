@@ -1433,9 +1433,9 @@ class Series(NaryOperator):
                     m = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(m.regs[1][0])) if m else 1
                     node = Node(self, text_[:i])
-                    text_ = text_[i:]
-                    node.add_error('%s expected; "%s" found!' % (str(parser), text[:10]),
+                    node.add_error('%s expected; "%s" found!' % (str(parser), text_[:10]),
                                    code=Error.MANDATORY_CONTINUATION)
+                    text_ = text_[i:]
             results += (node,)
             # if node.error_flag:  # break on first error
             #    break
@@ -1509,7 +1509,8 @@ class Alternative(NaryOperator):
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
-        assert all(not isinstance(p, Option) for p in self.parsers[:-1])
+        assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
+            "Parser-specification Error (EBNF): only the last alternative may be optional!"
         self.been_here = dict()  # type: Dict[int, int]
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
@@ -1793,18 +1794,31 @@ class Forward(Parser):
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         return self.parser(text)
 
-    def __repr__(self):
+    def __cycle_guard(self, func, alt_return):
+        """
+        Returns the value of `func()` or `alt_return` if a cycle has
+        been reached (which can happen if `func` calls methods of
+        child parsers).
+        """
         if self.cycle_reached:
-            return "..."
+            return alt_return
         else:
             self.cycle_reached = True
-            s = repr(self.parser)
+            ret = func()
             self.cycle_reached = False
-            return s
+            return ret
+
+    def __repr__(self):
+        return self.__cycle_guard(lambda : repr(self.parser), '...')
+
+    def __str__(self):
+        return self.__cycle_guard(lambda : str(self.parser), '...')
 
     def set(self, parser: Parser):
-        """Sets the parser to which the calls to this Forward-object
-        shall be delegated."""
+        """
+        Sets the parser to which the calls to this Forward-object
+        shall be delegated.
+        """
         self.parser = parser
 
     def apply(self, func: Parser.ApplyFunc):

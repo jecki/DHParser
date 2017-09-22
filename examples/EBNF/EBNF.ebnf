@@ -22,10 +22,10 @@ flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' p
             | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
-group      =  "(" expression §")"
+group      =  "(" §expression ")"
 oneormore  =  "{" expression "}+"
-repetition =  "{" expression §"}"
-option     =  "[" expression §"]"
+repetition =  "{" §expression "}"
+option     =  "[" §expression "]"
 
 symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
 literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'

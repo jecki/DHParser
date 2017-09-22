@@ -1,12 +1,12 @@
 # BibTeX-Grammar
 
+
 #######################################################################
 #
 #  EBNF-Directives
 #
 ######################################################################
 
-@ testing     = True
 @ whitespace  = /\s*/
 @ ignorecase  = True
 @ comment     = /%.*(?:\n|$)/
@@ -45,4 +45,4 @@ WORD          = /\w+/
 WORD_         = /\w+/~
 NO_BLANK_STRING         = /[^ \t\n,%]+/~
 COMMA_TERMINATED_STRING = { /[^,%]+/ | /(?=%)/~ }
-CONTENT_STRING = { [^{}%]+ | /(?=%)/~ }
+CONTENT_STRING = { /[^{}%]+/ | /(?=%)/~ }+

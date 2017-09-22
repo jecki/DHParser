@@ -274,16 +274,12 @@ class TestSeries:
         series = "A" "B" §"C" "D"
         """
         parser = grammar_provider(lang)()
-        st = parser("ABCD");
-        assert not st.error_flag
-        st = parser("A_CD");
-        assert not st.error_flag
-        st = parser("AB_D");
-        assert st.error_flag
+        st = parser("ABCD");  assert not st.error_flag
+        st = parser("A_CD");  assert not st.error_flag
+        st = parser("AB_D");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         # transitivity of mandatory-operator
-        st = parser("ABC_");
-        assert st.error_flag
+        st = parser("ABC_");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
 
     def test_series_composition(self):
@@ -293,31 +289,21 @@ class TestSeries:
 
         combined = Alternative(s1 + s2, RegExp('.*'))
         parser = Grammar(combined)
-        st = parser("ABCDE");
-        assert not st.error_flag
-        st = parser("A_CDE");
-        assert not st.error_flag
-        st = parser("AB_DE");
-        assert st.error_flag
+        st = parser("ABCDE");  assert not st.error_flag
+        st = parser("A_CDE");  assert not st.error_flag
+        st = parser("AB_DE");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        st = parser("ABC_E");
-        assert st.error_flag
+        st = parser("ABC_E");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
 
         combined = Alternative(s2 + s1, RegExp('.*'))
         parser = Grammar(combined)
-        st = parser("DEABC");
-        assert not st.error_flag
-        st = parser("_EABC");
-        assert not st.error_flag
-        st = parser("D_ABC");
-        assert not st.error_flag
-        st = parser("DE_BC");
-        assert not st.error_flag
-        st = parser("DEA_C");
-        assert not st.error_flag
-        st = parser("DEAB_");
-        assert st.error_flag
+        st = parser("DEABC");  assert not st.error_flag
+        st = parser("_EABC");  assert not st.error_flag
+        st = parser("D_ABC");  assert not st.error_flag
+        st = parser("DE_BC");  assert not st.error_flag
+        st = parser("DEA_C");  assert not st.error_flag
+        st = parser("DEAB_");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
 
 

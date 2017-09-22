@@ -201,10 +201,10 @@ class EBNFGrammar(Grammar):
     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
-    option = Series(Token("["), expression, Token("]"), mandatory=2)
-    repetition = Series(Token("{"), expression, Token("}"), mandatory=2)
+    option = Series(Token("["), expression, Token("]"), mandatory=1)
+    repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
     oneormore = Series(Token("{"), expression, Token("}+"))
-    group = Series(Token("("), expression, Token(")"), mandatory=2)
+    group = Series(Token("("), expression, Token(")"), mandatory=1)
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
