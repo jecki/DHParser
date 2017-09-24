@@ -61,29 +61,13 @@ import copy
 import os
 from functools import partial
 
-try:
-    import regex as re
-except ImportError:
-    import re
-try:
-    from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
-    # try:
-    #     from typing import Collection
-    # except ImportError:
-    #     pass
-except ImportError:
-    from .typing34 import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
-
-from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name
+from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, load_if_file, \
+        re, typing
+from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     ZOMBIE_PARSER
 from DHParser.error import Error, is_error, has_errors, linebreaks, line_col
-from DHParser.toolkit import load_if_file
-try:
-    import pyximport; pyximport.install()
-    from DHParser.cstringview import StringView, EMPTY_STRING_VIEW
-except ImportError:
-    from DHParser.stringview import StringView, EMPTY_STRING_VIEW
+from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',

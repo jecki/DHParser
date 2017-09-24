@@ -21,24 +21,12 @@ import copy
 import os
 from functools import partial
 
-try:
-    import regex as re
-except ImportError:
-    import re
-try:
-    from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
-except ImportError:
-    from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
-
-from DHParser.toolkit import is_logging, log_dir, identity
+from DHParser.toolkit import is_logging, log_dir, identity, re, typing
 from DHParser.error import Error, linebreaks, line_col
-try:
-    import pyximport; pyximport.install()
-    from DHParser.cstringview import StringView
-except ImportError:
-    from DHParser.stringview import StringView
+from DHParser.stringview import StringView
+
+from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',

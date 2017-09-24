@@ -20,16 +20,7 @@ import keyword
 from collections import OrderedDict
 from functools import partial
 
-try:
-    import regex as re
-except ImportError:
-    import re
-try:
-    from typing import Callable, Dict, List, Set, Tuple, Union
-except ImportError:
-    from .typing34 import Callable, Dict, List, Set, Tuple, Union
-
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, typing
 from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RegExp, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
     Required, Compiler, PreprocessorFunc
@@ -39,6 +30,8 @@ from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
+
+from typing import Callable, Dict, List, Set, Tuple, Union
 
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',

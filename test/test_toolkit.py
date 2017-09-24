@@ -23,14 +23,10 @@ limitations under the License.
 import concurrent.futures
 import os
 import sys
-try:
-    import regex as re
-except ImportError:
-    import re
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import load_if_file, logging, log_dir, is_logging
+from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, re
 
 
 class TestLoggingAndLoading:

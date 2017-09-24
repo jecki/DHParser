@@ -29,12 +29,12 @@ from typing import Optional, Iterable, Tuple
 __all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
-cdef inline int pack_index(int index, int len):
+def pack_index(index, len):
     index = index if index >= 0 else index + len
     return 0 if index < 0 else len if index > len else index
 
 
-cdef real_indices(begin, end, len):
+def real_indices(begin, end, len):
     if begin is None:  begin = 0
     if end is None:  end = len
     return pack_index(begin, len), pack_index(end, len)

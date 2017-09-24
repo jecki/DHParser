@@ -28,19 +28,19 @@ except ImportError:
 sys.path.extend(['../', './'])
 
 import pyximport; pyximport.install()
-from DHParser.cstringview import StringView, EMPTY_STRING_VIEW, real_indices
+from DHParser.cstringview import StringView, EMPTY_STRING_VIEW
 
 
 class TestStringView:
-    def test_real_indices(self):
-        assert real_indices(3, 5, 10) == (3, 5)
-        assert real_indices(None, None, 10) == (0, 10)
-        assert real_indices(-2, -1, 10) == (8, 9)
-        assert real_indices(-3, 11, 10) == (7, 10)
-        assert real_indices(-5, -12, 10) == (5, 0)
-        assert real_indices(-12, -5, 10) == (0, 5)
-        assert real_indices(7, 6, 10) == (7, 6)
-        assert real_indices(None, 0, 10) == (0, 0)
+    # def test_real_indices(self):
+        # assert real_indices(3, 5, 10) == (3, 5)
+        # assert real_indices(None, None, 10) == (0, 10)
+        # assert real_indices(-2, -1, 10) == (8, 9)
+        # assert real_indices(-3, 11, 10) == (7, 10)
+        # assert real_indices(-5, -12, 10) == (5, 0)
+        # assert real_indices(-12, -5, 10) == (0, 5)
+        # assert real_indices(7, 6, 10) == (7, 6)
+        # assert real_indices(None, 0, 10) == (0, 0)
 
     def test_creation(self):
         s = "0123456789"
@@ -126,6 +126,16 @@ class TestStringView:
         assert not EMPTY_STRING_VIEW.match(re.compile(r'x'))
         assert EMPTY_STRING_VIEW.match(re.compile(r'.*'))
         assert len(EMPTY_STRING_VIEW[0:1]) == 0
+
+    def text_strip(self):
+        s = StringView('  test  ', 1, -1)
+        assert s.strip() == "test"
+        s = StringView(' test ', 1, -1)
+        assert s.strip() == "test"
+
+    def text_split(self):
+        s = StringView(' 1,2,3,4,5 ', 1, -1)
+        assert s.split(',') == ['1', '2', '3', '4', '5']
 
 
 if __name__ == "__main__":

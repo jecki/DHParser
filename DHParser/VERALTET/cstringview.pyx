@@ -23,10 +23,16 @@ However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 """
+
 import collections
 from typing import Optional, Iterable, Tuple
 
 __all__ = ('StringView', 'EMPTY_STRING_VIEW')
+
+
+cdef struct Range:
+    int begin
+    int end
 
 
 cdef inline int pack_index(int index, int len):
@@ -34,10 +40,15 @@ cdef inline int pack_index(int index, int len):
     return 0 if index < 0 else len if index > len else index
 
 
-cdef real_indices(begin, end, len):
-    if begin is None:  begin = 0
-    if end is None:  end = len
-    return pack_index(begin, len), pack_index(end, len)
+cdef Range real_indices(begin, end, int len):
+    cdef int ibegin = 0
+    cdef int iend = len
+    if begin is not None:  ibegin = begin
+    if end is not None:  iend = end
+    cdef Range r
+    r.begin = pack_index(ibegin, len)
+    r.end = pack_index(iend, len)
+    return r
 
 
 class StringView(collections.abc.Sized):
@@ -55,7 +66,9 @@ class StringView(collections.abc.Sized):
         self.text = text  # type: str
         self.begin = 0  # type: int
         self.end = 0  # type: int
-        self.begin, self.end = real_indices(begin, end, len(text))
+        cdef Range r = real_indices(begin, end, len(text))
+        self.begin = r.begin
+        self.end = r.end
         self.len = max(self.end - self.begin, 0)
         self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
 
@@ -99,34 +112,41 @@ class StringView(collections.abc.Sized):
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
-        start, stop = real_indices(index.start, index.stop, self.len)
+        cdef Range r = real_indices(index.start, index.stop, self.len)
+        start = r.begin;  stop = r.end
         return StringView(self.text, self.begin + start, self.begin + stop)
 
     def count(self, sub, start=None, end=None) -> int:
+        cdef Range r
         if self.fullstring_flag:
             return self.text.count(sub, start, end)
         elif start is None and end is None:
             return self.text.count(sub, self.begin, self.end)
         else:
-            start, end = real_indices(start, end, self.len)
+            r = real_indices(start, end, self.len)
+            start = r.begin; end = r.end
             return self.text.count(sub, self.begin + start, self.begin + end)
 
     def find(self, sub, start=None, end=None) -> int:
+        cdef Range r
         if self.fullstring_flag:
             return self.text.find(sub, start, end)
         elif start is None and end is None:
             return self.text.find(sub, self.begin, self.end) - self.begin
         else:
-            start, end = real_indices(start, end, self.len)
+            r = real_indices(start, end, self.len)
+            start = r.begin; end = r.end
             return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
 
     def rfind(self, sub, start=None, end=None) -> int:
+        cdef Range r
         if self.fullstring_flag:
             return self.text.rfind(sub, start, end)
         if start is None and end is None:
             return self.text.rfind(sub, self.begin, self.end) - self.begin
         else:
-            start, end = real_indices(start, end, self.len)
+            r = real_indices(start, end, self.len)
+            start = r.begin; end = r.end
             return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
 
     def startswith(self, prefix: str, start: int = 0, end: Optional[int] = None) -> bool:

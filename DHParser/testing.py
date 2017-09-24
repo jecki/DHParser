@@ -22,12 +22,8 @@ import fnmatch
 import inspect
 import json
 import os
-try:
-    import regex as re
-except ImportError:
-    import re
 
-from DHParser.toolkit import is_logging, clear_logs
+from DHParser.toolkit import is_logging, clear_logs, re
 from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
 from DHParser.error import is_error
 

@@ -42,9 +42,11 @@ except ImportError:
 import sys
 
 try:
-    from typing import Any, List, Tuple, Iterable, Sequence, Set, Union, Optional, TypeVar
+    import typing
 except ImportError:
-    from .typing34 import Any, List, Tuple, Iterable, Sequence, Set, Union, Optional, TypeVar
+    import DHParser.typing34 as typing
+
+from typing import Any, List, Tuple, Iterable, Sequence, Set, Union, Optional, TypeVar
 
 __all__ = ('logging',
            'is_logging',

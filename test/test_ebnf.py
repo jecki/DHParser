@@ -20,16 +20,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-try:
-    import regex as re
-except ImportError:
-    import re
 import sys
 from multiprocessing import Pool
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import compile_python_object
+from DHParser.toolkit import compile_python_object, re
 from DHParser.parser import compile_source, nil_preprocessor
 from DHParser.error import has_errors
 from DHParser.syntaxtree import WHITESPACE_PTYPE

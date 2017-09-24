@@ -27,7 +27,7 @@ except ImportError:
 
 sys.path.extend(['../', './'])
 
-from DHParser.stringview import StringView, EMPTY_STRING_VIEW, real_indices
+from DHParser.pstringview import StringView, EMPTY_STRING_VIEW, real_indices
 
 
 class TestStringView:
@@ -125,6 +125,17 @@ class TestStringView:
         assert not EMPTY_STRING_VIEW.match(re.compile(r'x'))
         assert EMPTY_STRING_VIEW.match(re.compile(r'.*'))
         assert len(EMPTY_STRING_VIEW[0:1]) == 0
+
+
+    def text_strip(self):
+        s = StringView('  test  ', 1, -1)
+        assert s.strip() == "test"
+        s = StringView(' test ', 1, -1)
+        assert s.strip() == "test"
+
+    def text_split(self):
+        s = StringView(' 1,2,3,4,5 ', 1, -1)
+        assert s.split(',') == ['1', '2', '3', '4', '5']
 
 
 if __name__ == "__main__":

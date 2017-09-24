@@ -22,18 +22,10 @@ from functools import partial, reduce, singledispatch
 
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
 
-try:
-    import regex as re
-except ImportError:
-    import re
-try:
-    from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
-except ImportError:
-    from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+from DHParser.toolkit import expand_table, smart_list, re, typing
 
-from DHParser.toolkit import expand_table, smart_list
+from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+    Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
 
 __all__ = ('TransformationDict',
            'TransformationProc',
