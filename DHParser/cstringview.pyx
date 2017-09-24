@@ -34,10 +34,10 @@ cdef inline int pack_index(int index, int len):
     return 0 if index < 0 else len if index > len else index
 
 
-cdef real_indices(begin, end, len):
-    if begin is None:  begin = 0
-    if end is None:  end = len
-    return pack_index(begin, len), pack_index(end, len)
+cdef real_indices(begin, end, int len):
+    cdef int begin_i = 0 if begin is None else begin
+    cdef int end_i = len if end is None else end
+    return pack_index(begin_i, len), pack_index(end_i, len)
 
 
 class StringView(collections.abc.Sized):
@@ -52,9 +52,7 @@ class StringView(collections.abc.Sized):
     __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
-        self.text = text  # type: str
-        self.begin = 0  # type: int
-        self.end = 0  # type: int
+        self.text = text
         self.begin, self.end = real_indices(begin, end, len(text))
         self.len = max(self.end - self.begin, 0)
         self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
@@ -160,6 +158,7 @@ class StringView(collections.abc.Sized):
         return regex.search(self.text, pos=self.begin, endpos=self.end)
 
     def strip(self):
+        cdef int begin, end
         if self.fullstring_flag:
             return self.text.strip()
         else:
@@ -173,6 +172,7 @@ class StringView(collections.abc.Sized):
         # return str(self).strip()  # PERFORMANCE WARNING: This creates a copy of the string
 
     def split(self, sep=None):
+        cdef int i, k, l
         if self.fullstring_flag:
             return self.text.split(sep)
         else:

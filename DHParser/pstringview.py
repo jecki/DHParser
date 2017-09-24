@@ -41,7 +41,7 @@ def real_indices(begin, end, len):
 
 
 class StringView(collections.abc.Sized):
-    """"
+    """
     A rudimentary StringView class, just enough for the use cases
     in parser.py. The difference between a StringView and the python
     builtin strings is that StringView-objects do slicing without
@@ -53,11 +53,9 @@ class StringView(collections.abc.Sized):
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         self.text = text  # type: str
-        self.begin = 0  # type: int
-        self.end = 0  # type: int
         self.begin, self.end = real_indices(begin, end, len(text))
-        self.len = max(self.end - self.begin, 0)
-        self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
+        self.len = max(self.end - self.begin, 0)  # type: int
+        self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))  # type: bool
 
     def __bool__(self):
         return self.end > self.begin  # and bool(self.text)

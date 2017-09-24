@@ -25,13 +25,11 @@ However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 """
-import collections
-from typing import Optional, Iterable, Tuple
 
 __all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 try:
-    import pyximport; pyximport.install()
+    # import pyximport; pyximport.install()  # only for development
     from DHParser.cstringview import StringView, EMPTY_STRING_VIEW
 except ImportError:
     from DHParser.pstringview import StringView, EMPTY_STRING_VIEW

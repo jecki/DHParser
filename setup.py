@@ -15,7 +15,7 @@ setup(
     name='DHParser',
     version=__version__,
     packages=['DHParser'],
-    ext_modules = cythonize('DHParser/cstringview.pyx')
+    ext_modules=cythonize('DHParser/cstringview.pyx'),
     url='https://gitlab.lrz.de/badw-it/DHParser',
     license='MIT License (https://opensource.org/licenses/MIT)',
     author='Eckhart Arnold',

@@ -20,13 +20,10 @@ limitations under the License.
 """
 
 import sys
-try:
-    import regex as re
-except ImportError:
-    import re
 
 sys.path.extend(['../', './'])
 
+from DHParser.toolkit import re
 import pyximport; pyximport.install()
 from DHParser.cstringview import StringView, EMPTY_STRING_VIEW
 

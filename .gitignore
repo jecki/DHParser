@@ -23,3 +23,5 @@ dist/
 MANIFEST
 playground/*
 DevScripts/DHParser.py
+DHParser/cstringview.c
+*.so
