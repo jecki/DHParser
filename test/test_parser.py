@@ -25,12 +25,16 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import is_logging, logging, compile_python_object
-from DHParser.stringview import StringView
 from DHParser.error import Error
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
+try:
+    import pyximport; pyximport.install()
+    from DHParser.cstringview import StringView
+except ImportError:
+    from DHParser.stringview import StringView
 
 
 class TestInfiLoopsAndRecursion:

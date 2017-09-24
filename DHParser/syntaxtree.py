@@ -33,8 +33,12 @@ except ImportError:
         Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 
 from DHParser.toolkit import is_logging, log_dir, identity
-from DHParser.stringview import StringView
 from DHParser.error import Error, linebreaks, line_col
+try:
+    import pyximport; pyximport.install()
+    from DHParser.cstringview import StringView
+except ImportError:
+    from DHParser.stringview import StringView
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',
@@ -224,7 +228,9 @@ class Node(collections.abc.Sized):
     def __str__(self):
         if self.children:
             return "".join(str(child) for child in self.children)
-        return str(self.result)
+        elif isinstance(self.result, StringView):
+            self.result = str(self.result)
+        return self.result
 
 
     def __repr__(self):
@@ -277,8 +283,9 @@ class Node(collections.abc.Sized):
         #         or isinstance(result, str)), str(result)
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
-        self._result = (result,) if isinstance(result, Node) else str(result) \
-            if isinstance(result, StringView) else result or ''  # type: StrictResultType
+        self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
+        # self._result = (result,) if isinstance(result, Node) else str(result) \
+        #     if isinstance(result, StringView) else result or ''  # type: StrictResultType
         self.children = cast(ChildrenType, self._result) \
             if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
         if self.children:
