@@ -32,7 +32,8 @@ except ImportError:
     from .typing34 import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
         Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
 
-from DHParser.toolkit import is_logging, log_dir, identity, StringView
+from DHParser.toolkit import is_logging, log_dir, identity
+from DHParser.stringview import StringView
 from DHParser.error import Error, linebreaks, line_col
 
 __all__ = ('ParserBase',

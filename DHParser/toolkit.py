@@ -31,7 +31,6 @@ already exists.
 """
 
 import codecs
-import collections
 import contextlib
 import hashlib
 import os
@@ -60,9 +59,7 @@ __all__ = ('logging',
            'expand_table',
            'smart_list',
            'sane_parser_name',
-           'identity',
-           'StringView',
-           'EMPTY_STRING_VIEW')
+           'identity')
 
 
 #######################################################################
@@ -331,126 +328,6 @@ def expand_table(compact_table):
                 raise KeyError('Key "%s" used more than once in compact table!' % key)
             expanded_table[k] = value
     return expanded_table
-
-
-#######################################################################
-#
-# string view
-#
-#######################################################################
-
-
-class StringView(collections.abc.Sized):
-    """"A rudimentary StringView class, just enough for the use cases
-    in parser.py.
-
-    Slicing Python-strings always yields copies of a segment of the original
-    string. See: https://mail.python.org/pipermail/python-dev/2008-May/079699.html
-    However, this becomes costly (in terms of space and as a consequence also
-    time) when parsing longer documents. Unfortunately, Python's `memoryview`
-    does not work for unicode strings. Hence, the StringView class.
-    """
-
-    __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
-
-    def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
-        self.text = text  # type: str
-        self.begin = 0  # type: int
-        self.end = 0  # type: int
-        self.begin, self.end = StringView.real_indices(begin, end, len(text))
-        self.len = max(self.end - self.begin, 0)
-        self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
-
-    @staticmethod
-    def real_indices(begin, end, len):
-        def pack(index, len):
-            index = index if index >= 0 else index + len
-            return 0 if index < 0 else len if index > len else index
-
-        if begin is None:  begin = 0
-        if end is None:  end = len
-        return pack(begin, len), pack(end, len)
-
-    def __bool__(self):
-        return bool(self.text) and self.end > self.begin
-
-    def __len__(self):
-        return self.len
-
-    def __str__(self):
-        if self.fullstring_flag:  # optimization: avoid slicing/copying
-            return self.text
-        return self.text[self.begin:self.end]
-
-    def __getitem__(self, index):
-        # assert isinstance(index, slice), "As of now, StringView only allows slicing."
-        # assert index.step is None or index.step == 1, \
-        #     "Step sizes other than 1 are not yet supported by StringView"
-        start, stop = StringView.real_indices(index.start, index.stop, self.len)
-        return StringView(self.text, self.begin + start, self.begin + stop)
-
-    def __eq__(self, other):
-        return str(self) == str(other)  # PERFORMANCE WARNING: This creates copies of the strings
-
-    def count(self, sub, start=None, end=None) -> int:
-        if self.fullstring_flag:
-            return self.text.count(sub, start, end)
-        elif start is None and end is None:
-            return self.text.count(sub, self.begin, self.end)
-        else:
-            start, end = StringView.real_indices(start, end, self.len)
-            return self.text.count(sub, self.begin + start, self.begin + end)
-
-    def find(self, sub, start=None, end=None) -> int:
-        if self.fullstring_flag:
-            return self.text.find(sub, start, end)
-        elif start is None and end is None:
-            return self.text.find(sub, self.begin, self.end) - self.begin
-        else:
-            start, end = StringView.real_indices(start, end, self.len)
-            return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
-
-    def rfind(self, sub, start=None, end=None) -> int:
-        if self.fullstring_flag:
-            return self.text.rfind(sub, start, end)
-        if start is None and end is None:
-            return self.text.rfind(sub, self.begin, self.end) - self.begin
-        else:
-            start, end = StringView.real_indices(start, end, self.len)
-            return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
-
-    def startswith(self, prefix: str, start: int = 0, end: Optional[int] = None) -> bool:
-        start += self.begin
-        end = self.end if end is None else self.begin + end
-        return self.text.startswith(prefix, start, end)
-
-    def match(self, regex):
-        return regex.match(self.text, pos=self.begin, endpos=self.end)
-
-    def index(self, absolute_index: int) -> int:
-        """
-        Converts an index for a string watched by a StringView object
-        to an index relative to the string view object, e.g.:
-        >>> sv = StringView('xxIxx')[2:3]
-        >>> match = sv.match(re.compile('I'))
-        >>> match.end()
-        3
-        >>> sv.index(match.end())
-        1
-        """
-        return absolute_index - self.begin
-
-    def indices(self, absolute_indices: Iterable[int]) -> Tuple[int, ...]:
-        """Converts indices for a string watched by a StringView object
-        to indices relative to the string view object. See also: `sv_index()`
-        """
-        return tuple(index - self.begin for index in absolute_indices)
-
-    def search(self, regex):
-        return regex.search(self.text, pos=self.begin, endpos=self.end)
-
-
-EMPTY_STRING_VIEW = StringView('')
 
 
 #######################################################################

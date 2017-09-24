@@ -19,7 +19,7 @@ import bisect
 import functools
 from typing import Hashable, Iterable, Iterator, Union, Tuple, List
 
-from DHParser.toolkit import StringView
+from DHParser.stringview import StringView
 
 __all__ = ('Error',
            'is_error',
