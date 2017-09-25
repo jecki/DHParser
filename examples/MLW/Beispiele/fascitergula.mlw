@@ -11,15 +11,15 @@ LEMMA facitergul|a
 GRAMMATIK
     nomen; -ae f.
 
-    -us, -i m.: ->ziel_001
-    -um, -i n.: ->ziel_002
+    -us, -i m.:  Verweis_001
+    -um, -i n.:  Verweis_002
 
 
 SCHREIBWEISE
     script.:
-        vizreg-:      ->ziel_003
-        festregel(a): ->ziel_004
-        fezdregl(a):  ->ziel_005
+        vizreg-:       Verweis_003
+        festregel(a):  Verweis_004
+        fezdregl(a):   Verweis_005
 
 
 BEDEUTUNG

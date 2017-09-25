@@ -43,7 +43,6 @@ transformer = get_transformer()
 
 def fail_on_error(src, result):
     if result.error_flag:
-        result.finalize_errors(src)
         print(result.as_sxpr())
         for e in result.collect_errors():
             print(str(e))

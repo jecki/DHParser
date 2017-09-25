@@ -12,15 +12,15 @@
 Artikel           = [LZ]
                     §LemmaPosition
                     [ArtikelKopf]
-                    §BedeutungsPosition
-                    §ArtikelVerfasser
+                    BedeutungsPosition
+                    ArtikelVerfasser
                     [LZ]  DATEI_ENDE
 
 
 #### LEMMA-POSITION ##########################################################
 
-LemmaPosition     = "LEMMA" [LZ] §Lemma §TR [LemmaVarianten]
-                    §GrammatikPosition [EtymologiePosition]
+LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
+                    GrammatikPosition [EtymologiePosition]
 
 Lemma             = [klassisch] [gesichert] LemmaWort
   klassisch       = "*"
@@ -38,7 +38,7 @@ LemmaZusatz       = "ZUSATZ" §lzs_typ
 
 ## GRAMMATIK-POSITION ##
 
-GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §flexion [genus] §ABS
+GrammatikPosition = "GRAMMATIK" [LZ] §wortart ABS flexion [genus] ABS
                     [GrammatikVarianten]
 
 wortart          = "nomen"  | "n."
@@ -68,7 +68,7 @@ EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
 
 ArtikelKopf     = SchreibweisenPosition
 SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
-                         §SWVariante { ABS SWVariante} [LZ]
+                         SWVariante { ABS SWVariante} [LZ]
 SWTyp           = "script." | "script. fat-"
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = ZEICHENFOLGE
@@ -106,7 +106,7 @@ SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 
 Beleg            = Verweis
 
-Verweis          = "->" ZielName
+Verweis          = ["->"] ZielName
 VerweisZiel      = "[" ZielName "]"
 ZielName         = BUCHSTABENFOLGE
 
@@ -124,10 +124,10 @@ GROSSFOLGE       = /[A-ZÄÖÜ][A-ZÄÖÜ][A-ZÄÖÜ]/   # drei Großbuchstaben 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
 
-TR               = ABS | LZ             # (beliebiger) Trenner
-ABS              = /\s*;\s*/ | { ZWW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
-# ZW               = /\n/~                # Zeilenwechsel
-LZ               = /\s+/                # Leerzeichen oder -zeilen
+TR               = ABS | LZ                     # (beliebiger) Trenner
+ABS              = /\s*;\s*/ | { ZWW }+         # Abschluss (durch Semikolon oder Zeilenwechsel)
+# ZW               = /\n/~                        # Zeilenwechsel
+LZ               = /\s+/                        # Leerzeichen oder -zeilen
 
 ZW               = !LÜCKE ZEILENSPRUNG       # Zeilenwechsel, aber keine Leerzeile(n)
 ZWW              = ZEILENSPRUNG [ LEERRAUM ] # mindestens ein Zeilenwechsel

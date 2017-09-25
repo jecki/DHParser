@@ -1,3 +1,5 @@
+# http://publikationen.badw.de:9000/de/lemma/imperium
+
 imperium
 
 (inp-), -i n.

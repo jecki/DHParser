@@ -1492,7 +1492,6 @@ class Alternative(NaryOperator):
     EBNF-Notation: `... | ...`
     EBNF-Example:  `sentence = /\d+\.\d+/ | /\d+/`
     """
-
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
