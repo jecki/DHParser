@@ -104,9 +104,9 @@ SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
 
-Beleg            = Verweis
+Beleg            = ["->"] Verweis
 
-Verweis          = ["->"] ZielName
+Verweis          =  ZielName
 VerweisZiel      = "[" ZielName "]"
 ZielName         = BUCHSTABENFOLGE
 
