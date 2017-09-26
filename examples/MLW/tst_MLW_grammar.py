@@ -37,15 +37,6 @@ from MLWCompiler import get_grammar, get_transformer
 with toolkit.logging(True):
     error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
                                          verbose=True)
-# assert not error_report, error_report
+    print(error_report)
 
-# class TestMLWGrammar:
-#     def test_lemma_position(self):
-#         errata = testing.grammar_unit('grammar_tests/test_lemmaposition.ini',  # MLW_TEST_CASES_LEMMA_POSITION,
-#                                       get_MLW_grammar,
-#                                       get_MLW_transformer)
-#         assert not errata, str(errata)
-#
-#
-# if __name__ == "__main__":
-#     testing.runner("", globals())
+

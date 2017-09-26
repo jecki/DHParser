@@ -786,6 +786,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_expression(self, node) -> str:
+        # TODO: Add check for errors like "a" | "ab" (which will always yield a, even for ab)
         return self.non_terminal(node, 'Alternative')
 
 

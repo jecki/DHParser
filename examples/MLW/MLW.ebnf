@@ -60,7 +60,7 @@ genus            = "maskulinum" | "m."
 ## ETYMOLOGIE-POSITION ##
 
 EtymologiePosition = "ETYMOLOGIE" [LZ] EtymologieVarianten
-EtymologieVarianten = { !([LZ] GROSSFOLGE) EtymologieVariante }+
+EtymologieVarianten = { !SCHLUESSELWORT EtymologieVariante }+
 EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
 
 
@@ -69,7 +69,7 @@ EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
 ArtikelKopf     = SchreibweisenPosition
 SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
                          SWVariante { ABS SWVariante} [LZ]
-SWTyp           = "script." | "script. fat-"
+SWTyp           = "script. fat-" | "script."
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = ZEICHENFOLGE
 
@@ -84,9 +84,9 @@ Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
 LateinischeBedeutung = SW_LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = SW_DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 
-Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg })
-EinBeleg        = { !([LZ] ("*" | GROSSFOLGE )) /\s*[^\n]*\s*/ }+ [Zusatz]
-Zusatz          = "ZUSATZ" /\s*.*/ ABS
+Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg }) ABS
+EinBeleg        = { !([LZ] "*" | SCHLUESSELWORT) /\s*[^\n]*/~ [ZW] }+ [Zusatz]
+Zusatz          = "ZUSATZ" /\s*.*/
 
 
 #### AUTOR/AUTORIN ###########################################################
@@ -98,8 +98,10 @@ Name             = { NAME | NAMENS_ABKÜRZUNG }+
 #### Schlüsselwörter #########################################################
 
 SW_LAT           = "LATEINISCH" | "LAT"
-SW_DEU           = "DEUTSCH" | "DEUT"
+SW_DEU           = "DEUTSCH" | "DEU"
 SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
+
+SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
@@ -119,7 +121,8 @@ DEU_KLEIN        = /[a-zäöüß]+/~
 LAT_WORT         = /[a-z]+/~
 LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
-GROSSFOLGE       = /[A-ZÄÖÜ][A-ZÄÖÜ][A-ZÄÖÜ]/   # drei Großbuchstaben in Folge
+ZAHL             = /\d+/~
+ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~

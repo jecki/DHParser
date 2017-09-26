@@ -86,11 +86,26 @@ def unit_from_file(filename):
     determined by the ending of its name.
     """
     if filename.endswith(".json"):
-        return unit_from_json(filename)
+        test_unit = unit_from_json(filename)
     elif filename.endswith(".ini"):
-        return unit_from_configfile(filename)
+        test_unit = unit_from_configfile(filename)
     else:
         raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
+
+    # Check for ambiguous Test names
+    errors = []
+    for parser_name, tests in test_unit.items():
+        m_names = set(tests.get('match', dict()).keys())
+        f_names = set(tests.get('fail', dict()).keys())
+        intersection = list(m_names & f_names);  intersection.sort()
+        if intersection:
+            errors.append("Same names %s assigned to match and fail test "
+                          "of parser %s." % (str(intersection), parser_name))
+    if errors:
+        raise EnvironmentError("Error(s) in Testfile %s :\n" % filename
+                               + '\n'.join(errors))
+
+    return test_unit
 
 
 def get_report(test_unit):
@@ -122,6 +137,15 @@ def get_report(test_unit):
             elif ast:
                 report.append('\n### AST')
                 report.append(indent(ast.as_sxpr()))
+        for test_name, test_code in tests.get('fail', dict()).items():
+            heading = 'Fail-test "%s"' % test_name
+            report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
+            report.append('### Test-code:')
+            report.append(indent(test_code))
+            error = tests.get('__err__', {}).get(test_name, "")
+            if error:
+                report.append('\n### Error:')
+                report.append(error)
     return '\n'.join(report)
 
 
@@ -235,14 +259,17 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                     raise e
     os.chdir(save_cwd)
-    error_report = []
+    error_report = [];  err_N = 0
     if all_errors:
         for filename in all_errors:
             error_report.append('Errors found by unit test "%s":' % filename)
+            err_N += len(all_errors[filename])
             for error in all_errors[filename]:
                 error_report.append('\t' + '\n\t'.join(error.split('\n')))
     if error_report:
+        if verbose:  print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
         return ('Test suite "%s" revealed some errors:\n\n' % directory) + '\n'.join(error_report)
+    if verbose:  print("\nSUCCESS! All tests passed :-)\n")
     return ''
 
 
