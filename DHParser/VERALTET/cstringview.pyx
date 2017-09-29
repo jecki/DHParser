@@ -23,16 +23,10 @@ However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 """
-
 import collections
 from typing import Optional, Iterable, Tuple
 
 __all__ = ('StringView', 'EMPTY_STRING_VIEW')
-
-
-cdef struct Range:
-    int begin
-    int end
 
 
 cdef inline int pack_index(int index, int len):
@@ -40,15 +34,10 @@ cdef inline int pack_index(int index, int len):
     return 0 if index < 0 else len if index > len else index
 
 
-cdef Range real_indices(begin, end, int len):
-    cdef int ibegin = 0
-    cdef int iend = len
-    if begin is not None:  ibegin = begin
-    if end is not None:  iend = end
-    cdef Range r
-    r.begin = pack_index(ibegin, len)
-    r.end = pack_index(iend, len)
-    return r
+cdef real_indices(begin, end, int len):
+    cdef int begin_i = 0 if begin is None else begin
+    cdef int end_i = len if end is None else end
+    return pack_index(begin_i, len), pack_index(end_i, len)
 
 
 class StringView(collections.abc.Sized):
@@ -63,12 +52,8 @@ class StringView(collections.abc.Sized):
     __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
-        self.text = text  # type: str
-        self.begin = 0  # type: int
-        self.end = 0  # type: int
-        cdef Range r = real_indices(begin, end, len(text))
-        self.begin = r.begin
-        self.end = r.end
+        self.text = text
+        self.begin, self.end = real_indices(begin, end, len(text))
         self.len = max(self.end - self.begin, 0)
         self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))
 
@@ -112,41 +97,34 @@ class StringView(collections.abc.Sized):
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
-        cdef Range r = real_indices(index.start, index.stop, self.len)
-        start = r.begin;  stop = r.end
+        start, stop = real_indices(index.start, index.stop, self.len)
         return StringView(self.text, self.begin + start, self.begin + stop)
 
     def count(self, sub, start=None, end=None) -> int:
-        cdef Range r
         if self.fullstring_flag:
             return self.text.count(sub, start, end)
         elif start is None and end is None:
             return self.text.count(sub, self.begin, self.end)
         else:
-            r = real_indices(start, end, self.len)
-            start = r.begin; end = r.end
+            start, end = real_indices(start, end, self.len)
             return self.text.count(sub, self.begin + start, self.begin + end)
 
     def find(self, sub, start=None, end=None) -> int:
-        cdef Range r
         if self.fullstring_flag:
             return self.text.find(sub, start, end)
         elif start is None and end is None:
             return self.text.find(sub, self.begin, self.end) - self.begin
         else:
-            r = real_indices(start, end, self.len)
-            start = r.begin; end = r.end
+            start, end = real_indices(start, end, self.len)
             return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
 
     def rfind(self, sub, start=None, end=None) -> int:
-        cdef Range r
         if self.fullstring_flag:
             return self.text.rfind(sub, start, end)
         if start is None and end is None:
             return self.text.rfind(sub, self.begin, self.end) - self.begin
         else:
-            r = real_indices(start, end, self.len)
-            start = r.begin; end = r.end
+            start, end = real_indices(start, end, self.len)
             return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
 
     def startswith(self, prefix: str, start: int = 0, end: Optional[int] = None) -> bool:
@@ -180,6 +158,7 @@ class StringView(collections.abc.Sized):
         return regex.search(self.text, pos=self.begin, endpos=self.end)
 
     def strip(self):
+        cdef int begin, end
         if self.fullstring_flag:
             return self.text.strip()
         else:
@@ -193,6 +172,7 @@ class StringView(collections.abc.Sized):
         # return str(self).strip()  # PERFORMANCE WARNING: This creates a copy of the string
 
     def split(self, sep=None):
+        cdef int i, k, l
         if self.fullstring_flag:
             return self.text.split(sep)
         else:

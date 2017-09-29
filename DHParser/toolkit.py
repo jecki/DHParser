@@ -44,9 +44,9 @@ import sys
 try:
     import typing
 except ImportError:
-    import DHParser.typing34 as typing
+    import DHParser.foreign_typing as typing
 
-from typing import Any, List, Tuple, Iterable, Sequence, Set, Union, Optional, TypeVar
+from typing import Any, Iterable, Sequence, Set, Union
 
 __all__ = ('logging',
            'is_logging',

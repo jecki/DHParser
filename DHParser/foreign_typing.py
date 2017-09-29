@@ -8,13 +8,14 @@
 
 
 import abc
-from abc import abstractmethod, abstractproperty
 import collections
 import contextlib
 import functools
 import re as stdlib_re  # Avoid confusion with the re we export.
 import sys
 import types
+from abc import abstractmethod, abstractproperty
+
 try:
     import collections.abc as collections_abc
 except ImportError:
