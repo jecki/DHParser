@@ -41,18 +41,17 @@ __all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
 @cython.cfunc
+@cython.inline
 def pack_index(index: cython.int, len: cython.int) -> cython.int:
     index = index if index >= 0 else index + len
     return 0 if index < 0 else len if index > len else index
 
 
 @cython.ccall
+@cython.locals(cbegin=cython.int, cend=cython.int)
 def real_indices(begin, end, len: cython.int):
-    cython.declare(cbegin=cython.int, cend=cython.int)
     cbegin = 0 if begin is None else begin
     cend = len if end is None else end
-    # if begin is None:  begin = 0
-    # if end is None:  end = len
     return pack_index(cbegin, len), pack_index(cend, len)
 
 
@@ -64,7 +63,7 @@ class StringView(collections.abc.Sized):
     copying, i.e. slices are just a view on a section of the sliced
     string.
     """
-
+    cython.declare(begin=cython.int, end=cython.int, len=cython.int, fullstring_flag=cython.bint)
     __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
@@ -109,11 +108,14 @@ class StringView(collections.abc.Sized):
         else:
             return StringView(str(other) + str(self))
 
+    @cython.locals(start=cython.int, stop=cython.int)
     def __getitem__(self, index):
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
-        start, stop = real_indices(index.start, index.stop, self.len)
+        # start, stop = real_indices(index.start, index.stop, self.len)
+        start = pack_index(0 if index.start is None else index.start, self.len)
+        stop = pack_index(self.len if index.stop is None else index.stop, self.len)
         return StringView(self.text, self.begin + start, self.begin + stop)
 
     def count(self, sub, start=None, end=None) -> int:
@@ -174,8 +176,8 @@ class StringView(collections.abc.Sized):
     def search(self, regex):
         return regex.search(self.text, pos=self.begin, endpos=self.end)
 
+    @cython.locals(begin=cython.int, end=cython.int)
     def strip(self):
-        cython.declare(begin=cython.int, end=cython.int)
         if self.fullstring_flag:
             return self.text.strip()
         else:
@@ -188,8 +190,8 @@ class StringView(collections.abc.Sized):
             return self.text[begin:end]
         # return str(self).strip()  # PERFORMANCE WARNING: This creates a copy of the string
 
+    @cython.locals(i=cython.int, k=cython.int, l=cython.int)
     def split(self, sep=None):
-        cython.declare(i=cython.int, k=cython.int, l=cython.int)
         if self.fullstring_flag:
             return self.text.split(sep)
         else:
