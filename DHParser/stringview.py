@@ -29,9 +29,15 @@ from typing import Optional, Iterable, Tuple
 try:
     import cython
 except ImportError:
-    from DHParser import foreign_cython as cython
+    # from DHParser import foreign_cython as cython
+    pass
+# needs to be imported because otherwise cython hickups on
+# cpdef-functions with cython parameter annotations, like
+# cpdef real_indices(begin, end, len: cython.int):
+#                                     ^
+from DHParser import foreign_cython as cython
 
-__all__ = ('StringView', 'EMPTY_STRING_VIEW', 'real_indices')
+__all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
 @cython.cfunc
@@ -40,7 +46,7 @@ def pack_index(index: cython.int, len: cython.int) -> cython.int:
     return 0 if index < 0 else len if index > len else index
 
 
-@cython.cfunc
+@cython.ccall
 def real_indices(begin, end, len: cython.int):
     cython.declare(cbegin=cython.int, cend=cython.int)
     cbegin = 0 if begin is None else begin
