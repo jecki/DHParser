@@ -20,17 +20,16 @@ compilation of domain specific languages based on an EBNF-grammar.
 """
 
 import os
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
 
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
-from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object, \
-    re, typing
+from DHParser.error import Error, is_error, has_errors, only_errors
 from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
-from DHParser.error import Error, is_error, has_errors, only_errors
-
-from typing import Any, cast, Tuple, Union, Iterator, Iterable
+from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object, \
+    re
 
 __all__ = ('GrammarError',
            'CompilationError',
@@ -170,7 +169,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
         # read grammar
         grammar_src = load_if_file(grammar_representation)
         if is_python_code(grammar_src):
-            parser_py, messages, AST = grammar_src, [], None
+            parser_py, messages, AST = grammar_src, [], None  # type: str, List[Error], Node
         else:
             with logging(False):
                 parser_py, messages, AST = compile_source(grammar_src, None,
@@ -371,7 +370,7 @@ def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
     return compileDSL(text_or_file, preprocessor(), parser(), ast(), compiler())
 
 
-def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
+def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> Iterable[Error]:
     """
     Compiles the a source file with a given compiler and writes the
     result to a file.
@@ -416,7 +415,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml"):
         cfactory = get_ebnf_compiler
     compiler1 = cfactory()
     compiler1.set_grammar_name(compiler_name, source_file)
-    result, messages, ast = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
+    result, messages, AST = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
     if has_errors(messages):
         return messages
 
@@ -522,7 +521,7 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
     base, ext = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
-    messages = []  # type: Iterable[str]
+    messages = []  # type: Iterable[Error]
     if (not os.path.exists(compiler_name) or force or
             grammar_changed(compiler_name, ebnf_filename)):
         # print("recompiling parser for: " + ebnf_filename)

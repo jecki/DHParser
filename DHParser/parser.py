@@ -60,14 +60,14 @@ import abc
 import copy
 import os
 from functools import partial
+from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union
 
-from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, load_if_file, \
-        re, typing
-from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    ZOMBIE_PARSER
 from DHParser.error import Error, is_error, has_errors, linebreaks, line_col
-from typing import Any, Callable, cast, Dict, Iterator, List, Set, Tuple, Union, Optional
+from DHParser.stringview import StringView, EMPTY_STRING_VIEW
+from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, ZOMBIE_PARSER
+from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
+    load_if_file, re
 
 __all__ = ('PreprocessorFunc',
            'HistoryRecord',
@@ -689,7 +689,6 @@ class Grammar:
                     if (isinstance(parser, Forward) and (not parser.parser._name)):
                         parser.parser._name = entry
             cls.parser_initialization__ = "done"
-
 
     def __init__(self, root: Parser=None) -> None:
         # if not hasattr(self.__class__, 'parser_initialization__'):
@@ -1603,7 +1602,7 @@ class Lookbehind(FlowOperator):
         while isinstance(p, Synonym):
             p = p.parser
         assert isinstance(p, RegExp), str(type(p))
-        self.regexp = p.main.regexp if isinstance(p, RE) else p.regexp
+        self.regexp = cast(RE, p).main.regexp if isinstance(p, RE) else p.regexp
         super(Lookbehind, self).__init__(parser, name)
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
@@ -1941,10 +1940,10 @@ class Compiler:
 
 
 def compile_source(source: str,
-                   preprocessor: PreprocessorFunc,   # str -> str
-                   parser: Grammar,                  # str -> Node (concrete syntax tree (CST))
+                   preprocessor: PreprocessorFunc,  # str -> str
+                   parser: Grammar,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
-                   compiler: Compiler) -> Tuple[Any, List[str], Node]:  # Node (AST) -> Any
+                   compiler: Compiler) -> Tuple[Any, List[Error], Node]:  # Node (AST) -> Any
     """
     Compiles a source in four stages:
         1. Scanning (if needed)

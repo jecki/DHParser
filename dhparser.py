@@ -188,7 +188,7 @@ def selftest() -> bool:
 
     if errors:
         print("Selftest FAILED :-(")
-        print("\n\n".join(errors))
+        print("\n\n".join(str(err) for err in errors))
         return False
     print(generated_ebnf_parser)
     print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
@@ -234,7 +234,7 @@ if __name__ == "__main__":
             _errors = compile_on_disk(sys.argv[1],
                                       sys.argv[2] if len(sys.argv) > 2 else "")
             if _errors:
-                print('\n\n'.join(_errors))
+                print('\n\n'.join(str(err) for err in _errors))
                 sys.exit(1)
         else:
             create_project(sys.argv[1])

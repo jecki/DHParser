@@ -26,30 +26,28 @@ does not work for unicode strings. Hence, the StringView class.
 import collections
 from typing import Optional, Iterable, Tuple
 
-try:
-    import cython
-except ImportError:
-    # from DHParser import foreign_cython as cython
-    pass
-# needs to be imported because otherwise cython hickups on
-# cpdef-functions with cython parameter annotations, like
-# cpdef real_indices(begin, end, len: cython.int):
-#                                     ^
-from DHParser import foreign_cython as cython
 
 __all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
-@cython.cfunc
-@cython.inline
-def pack_index(index: cython.int, len: cython.int) -> cython.int:
+def first_char(text, begin, end) -> int:
+    while begin < end and text[begin] in ' \n\t':
+        begin += 1
+    return begin
+
+
+def last_char(text, begin, end) -> int:
+    while end > begin and text[end] in ' \n\t':
+        end -= 1
+    return end
+
+
+def pack_index(index, len) -> int:
     index = index if index >= 0 else index + len
     return 0 if index < 0 else len if index > len else index
 
 
-@cython.ccall
-@cython.locals(cbegin=cython.int, cend=cython.int)
-def real_indices(begin, end, len: cython.int):
+def real_indices(begin, end, len) -> Tuple[int, int]:
     cbegin = 0 if begin is None else begin
     cend = len if end is None else end
     return pack_index(cbegin, len), pack_index(cend, len)
@@ -63,7 +61,6 @@ class StringView(collections.abc.Sized):
     copying, i.e. slices are just a view on a section of the sliced
     string.
     """
-    cython.declare(begin=cython.int, end=cython.int, len=cython.int, fullstring_flag=cython.bint)
     __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
@@ -108,14 +105,11 @@ class StringView(collections.abc.Sized):
         else:
             return StringView(str(other) + str(self))
 
-    @cython.locals(start=cython.int, stop=cython.int)
     def __getitem__(self, index):
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
-        # start, stop = real_indices(index.start, index.stop, self.len)
-        start = pack_index(0 if index.start is None else index.start, self.len)
-        stop = pack_index(self.len if index.stop is None else index.stop, self.len)
+        start, stop = real_indices(index.start, index.stop, self.len)
         return StringView(self.text, self.begin + start, self.begin + stop)
 
     def count(self, sub, start=None, end=None) -> int:
@@ -176,21 +170,14 @@ class StringView(collections.abc.Sized):
     def search(self, regex):
         return regex.search(self.text, pos=self.begin, endpos=self.end)
 
-    @cython.locals(begin=cython.int, end=cython.int)
     def strip(self):
         if self.fullstring_flag:
             return self.text.strip()
         else:
-            begin = self.begin
-            end = self.end
-            while begin < end and self.text[begin] in ' \n\t':
-                begin += 1
-            while end > begin and self.text[end] in ' \n\t':
-                end -= 1
+            begin = first_char(self.text, self.begin, self.end)
+            end = last_char(self.text, self.begin, self.end)
             return self.text[begin:end]
-        # return str(self).strip()  # PERFORMANCE WARNING: This creates a copy of the string
 
-    @cython.locals(i=cython.int, k=cython.int, l=cython.int)
     def split(self, sep=None):
         if self.fullstring_flag:
             return self.text.split(sep)
@@ -205,7 +192,6 @@ class StringView(collections.abc.Sized):
                 i = self.find(sep, k)
             pieces.append(self.text[self.begin + k : self.end])
             return pieces
-        # return str(self).split(sep, maxsplit)  # PERFORMANCE WARNING: This creates a copy of the string
 
 
 EMPTY_STRING_VIEW = StringView('')

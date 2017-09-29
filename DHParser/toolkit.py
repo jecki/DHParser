@@ -269,7 +269,7 @@ def compile_python_object(python_src, catch_obj_regex=""):
 
 
 # def smart_list(arg: Union[str, Iterable[T]]) -> Union[Sequence[str], Sequence[T]]:
-def smart_list(arg: Union[str, Iterable, Any]) -> Sequence:
+def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
     """Returns the argument as list, depending on its type and content.
     
     If the argument is a string, it will be interpreted as a list of

@@ -20,13 +20,11 @@ import collections.abc
 import copy
 import os
 from functools import partial
+from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable
 
-from DHParser.toolkit import is_logging, log_dir, identity, re, typing
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
-
-from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-        Iterator, Iterable, List, NamedTuple, Sequence, Union, Text, Tuple, Hashable
+from DHParser.toolkit import is_logging, log_dir, identity, re
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',
@@ -203,7 +201,7 @@ class Node(collections.abc.Sized):
         """
         # self._result = ''  # type: StrictResultType
         # self.children = ()  # type: ChildrenType
-        self.error_flag = 0   # type: bool
+        self.error_flag = 0  # type: int
         self._errors = []  # type: List[Error]
         self.result = result
         self._len = len(self._result) if not self.children else \

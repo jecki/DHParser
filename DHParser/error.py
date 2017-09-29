@@ -44,7 +44,7 @@ class Error:
     MANDATORY_CONTINUATION = 1001
 
     def __init__(self, message: str, level: int = ERROR, code: Hashable = 0,
-                 pos: int = -1, line: int = -1, column: int = -1):
+                 pos: int = -1, line: int = -1, column: int = -1) -> None:
         self.message = message
         assert level >= 0
         self.level = level or Error.ERROR
