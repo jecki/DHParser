@@ -1471,7 +1471,7 @@ class Series(NaryOperator):
 
 class Alternative(NaryOperator):
     """
-    Matches if at least one of several alternatives matches. Returns
+    Matches if one of several alternatives matches. Returns
     the first match.
 
     This parser represents the EBNF-operator "|" with the qualification
@@ -1491,13 +1491,12 @@ class Alternative(NaryOperator):
     EBNF-Notation: `... | ...`
     EBNF-Example:  `sentence = /\d+\.\d+/ | /\d+/`
     """
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
+    def __init__(self, *parsers: Parser, name: str='') -> None:
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
             "Parser-specification Error (EBNF): only the last alternative may be optional!"
-        self.been_here = dict()  # type: Dict[int, int]
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         for parser in self.parsers:
@@ -1511,7 +1510,6 @@ class Alternative(NaryOperator):
 
     def reset(self):
         super(Alternative, self).reset()
-        self.been_here = {}
         return self
 
     # The following operator definitions add syntactical sugar, so one can write:
@@ -1533,8 +1531,6 @@ class Alternative(NaryOperator):
                         else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
         return self
-
-
 
 
 ########################################################################
