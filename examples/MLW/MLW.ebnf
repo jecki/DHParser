@@ -22,7 +22,7 @@ Artikel           = [LZ]
 LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
                     GrammatikPosition [EtymologiePosition]
 
-Lemma             = [klassisch] [gesichert] LemmaWort
+Lemma             = { klassisch | gesichert } LemmaWort
   klassisch       = "*"
   gesichert       = "$"
 
@@ -66,12 +66,15 @@ EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
 
 #### ARTIKEL-KOPF ############################################################
 
-ArtikelKopf     = SchreibweisenPosition
+ArtikelKopf     = { SchreibweisenPosition | StrukturPosition
+                  | GebrauchPosition | MetrikPosition | VerwechselungPosition }+
+
 SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
                          SWVariante { ABS SWVariante} [LZ]
 SWTyp           = "script. fat-" | "script."
 SWVariante      = Schreibweise ":" Beleg
 Schreibweise    = ZEICHENFOLGE
+
 
 
 #### BEDEUTUNGS-POSITION #####################################################
@@ -104,13 +107,16 @@ SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 
-#### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
+#### BELEGE ##################################################################
 
-Beleg            = ["->"] Verweis
+Beleg            = InternerVerweis | ExternerVerweis
 
 Verweis          =  ZielName
 VerweisZiel      = "[" ZielName "]"
 ZielName         = BUCHSTABENFOLGE
+
+
+#### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
 
 NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
@@ -144,3 +150,5 @@ KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
 
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/
+
+DUMMY            = "EBNF-Grammatik an dieser Stelle noch nicht definiert!"
