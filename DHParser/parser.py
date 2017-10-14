@@ -1535,6 +1535,82 @@ class Alternative(NaryOperator):
         return self
 
 
+class FullSet(NaryOperator):
+    """
+    Matches if all elemtns of a set of parsers match. Each parser must
+    match exactly once. Other than in a sequence, the order in which
+    the parsers match is arbitrary, however.
+
+    Example:
+    >>> prefixes = FullSet(Token("A"), Token("B"))
+    >>> Grammar(prefixes)('A B').content()
+    'A B'
+    >>> Grammar(prefixes)('B A').content()
+    'B A'
+
+    EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
+    EBNF-Example:  `set = <letter letter_or_digit>`
+    """
+    # TODO: Implement set
+    RX_ARGUMENT = re.compile(r'\s(\S)')
+    NOPE = 1000
+
+    def __init__(self, *parsers: Parser, mandatory: int = NOPE, name: str = '') -> None:
+        super(Series, self).__init__(*parsers, name=name)
+        L = len(self.parsers)
+        assert 1 <= L < Series.NOPE, 'Length %i of series exceeds maximum length of %i' \
+                                     % (L, Series.NOPE)
+        if mandatory < 0:  mandatory += L
+        assert 0 <= mandatory < L or mandatory == Series.NOPE
+        self.mandatory = mandatory
+
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        return self.__class__(*parsers, mandatory=self.mandatory, name=self.name)
+
+    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+        results = ()  # type: Tuple[Node, ...]
+        text_ = text  # type: StringView
+        pos = 0
+        for parser in self.parsers:
+            node, text_ = parser(text_)
+            if not node:
+                if pos < self.mandatory:
+                    return None, text
+                else:
+                    # Provide useful error messages
+                    m = text.search(Series.RX_ARGUMENT)
+                    i = max(1, text.index(m.regs[1][0])) if m else 1
+                    node = Node(self, text_[:i])
+                    node.add_error('%s expected; "%s" found!' % (str(parser), text_[:10]),
+                                   code=Error.MANDATORY_CONTINUATION)
+                    text_ = text_[i:]
+            results += (node,)
+            # if node.error_flag:  # break on first error
+            #    break
+            pos += 1
+        assert len(results) <= len(self.parsers)
+        return Node(self, results), text_
+
+    def __repr__(self):
+        return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
+                        + (['§'] if self.mandatory != Series.NOPE else [])
+                        + [parser.repr for parser in self.parsers[self.mandatory:]])
+
+    # The following operator definitions add syntactical sugar, so one can write:
+    # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
+
+    @staticmethod
+    def combined_mandatory(left, right):
+        left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
+            if isinstance(left, Series) else (Series.NOPE, 1)
+        if left_mandatory != Series.NOPE:
+            return left_mandatory
+        right_mandatory = right.mandatory if isinstance(right, Series) else Series.NOPE
+        if right_mandatory != Series.NOPE:
+            return right_mandatory + left_length
+        return Series.NOPE
+
 
 
 ########################################################################
