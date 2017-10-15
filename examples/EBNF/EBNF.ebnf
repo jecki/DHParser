@@ -24,7 +24,7 @@ flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' p
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" §expression ")"
-# set        =  "<" §expression ">"
+set        =  "<" §expression ">"
 oneormore  =  "{" expression "}+"
 repetition =  "{" §expression "}"
 option     =  "[" §expression "]"
