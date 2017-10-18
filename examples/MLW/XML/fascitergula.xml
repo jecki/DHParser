@@ -1,0 +1,938 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MLW-test SYSTEM "../DTD/MLW-DTD_2017-07-12.dtd">
+<MLW-test>
+    <artikel xml:id="facitergula">
+        <!-- Lemma-Ansatz -->
+        <!-- nur ein Lemma  -->
+        <lemma-position>
+            <lemma klassisch="nein" gesichert="nein">facitergula</lemma>
+            <!-- Lemmavarianten -->
+            <lemma-varianten>
+                <lemma-variante kurz="fasc-">fascitergula</lemma-variante>
+                <lemma-variante kurz="-iet-">facietergula</lemma-variante>
+                <lemma-variante kurz="-ist-">facistergula</lemma-variante>
+                <lemma-variante kurz="-rcu-">facitercula</lemma-variante>
+                <zusatz typ="sim"></zusatz>
+            <lemma-varianten>
+            <!-- Grammatik            -->
+            <grammatik-position>
+                <!-- Grammatik fürs Lemma                 -->
+                <grammatik wortart="nomen" genus="f" klasse="a-ae">-ae</grammatik>
+                <!-- Grammatik für die Varianten                -->
+                <grammatik-varianten>
+                    <grammatik-variante>
+                        <grammatik wortart="nomen" genus="m" klasse="us-i">-us, -i</grammatik>
+                        <beleg id="facitergula-001">
+                            <verweis typ="beleg" ziel="facitergula_003"></verweis>
+                            <!-- l. 8 -->
+                        </beleg>
+                    </grammatik-variante>
+                    <grammatik-variante>
+                        <grammatik wortart="nomen" genus="m" klasse="um-i">-um, -i</grammatik>
+                        <beleg id="facitergula-beleg002">
+                            <verweis typ="beleg" ziel="facitergula_002"></verweis>
+                            <!-- l. 6.11 = Mehrfachverweis -->
+                        </beleg>
+                        <beleg id="facitergula-beleg002b">
+                            <verweis typ="beleg" ziel="facitergula_008"></verweis>
+                            <!-- l. 6.11 = Mehrfachverweis -->
+                        </beleg>
+                    </grammatik-variante>
+                </grammatik-varianten>
+            </grammatik-position>
+            <!-- Etymologie-Position: hier nicht vorhanden         -->
+        </lemma-position>
+        <!--  Artikelkopf -->
+        <artikelkopf>
+            <!-- Schreibweisen des Lemmas            -->
+            <schreibweisen-position>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script"></schreibweise-besonderheit>
+                    <!--wenn nur eine Schreibweise, dann nach "script." KEIN Doppelpunkt, sonst schon!-->
+                    <schreibweise>vizreg-</schreibweise>
+                    <beleg id="facitergula-beleg003">
+                        <verweis typ="beleg" ziel="facitergula_013"></verweis>
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script"></schreibweise-besonderheit>
+                    <schreibweise>festregel(a)</schreibweise>
+                    <beleg id="facitergula-beleg004">
+                        <verweis typ="beleg" ziel="facitergula_010"></verweis>
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script"></schreibweise-besonderheit>
+                    <schreibweise>fezdregl(a)</schreibweise>
+                    <beleg id="facitergula-beleg005">
+                        <verweis typ="beleg" ziel="facitergula_008"></verweis>
+                    </beleg>
+                </schreibweisen-variante>
+            </schreibweisen-position>
+        </artikelkopf>
+        <!-- Hauptteil -->
+        <bedeutung-position>
+            <!-- nur eine Bedeutungsposition in jedem Artikel -->
+            <!-- 1. Bedeutung -->
+            <bedeutung nr="1">
+                <interpretament typ="lat">pannus, faciale, sudarium</interpretament>
+                <interpretament-deutsch>(Gesichts-, Schweiß-)Tuch</interpretament-deutsch>
+                <interpretament-zusatz>usu liturg.</interpretament-zusatz>
+                <interpretament-zusatz>de re v.                     
+                    <verweis typ="beleg" ziel="???"></verweis>p. 32,63
+                
+                </interpretament-zusatz>
+                <!--                Belege für die 1. Bedeutung -->
+                <beleg-position>
+                    <!--                    Beleg 1 -->
+                    <beleg id="facitergula_beleg001">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>28,11</stelle>
+                            <datierung>Post 851</datierung>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-um">facitergulum</lemma-beleg> Ill.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 2 -->
+                    <beleg id="facitergula_beleg002">
+                        <beleg-quelle>
+                            <autor>Form.</autor>
+                            <werk>Sangall.</werk>
+                            <stelle>39 p. 421,16</stelle>
+                        </beleg-quelle>
+                        <beleg-text>munuscula ... direximus, hoc est palliolum ...,                             
+                            <lemma-beleg kurzform="-as">facitergulas</lemma-beleg> duas.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 3 -->
+                    <beleg id="facitergula_beleg003">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>18,7</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-eterculi">faciterculi</lemma-beleg> viginti quatuor.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 4 -->
+                    <beleg id="facitergula_beleg004">
+                        <beleg-quelle>
+                            <autor>Libri</autor>
+                            <werk>confrat. I</werk>
+                            <stelle>app. A 6 p. 137,30</stelle>
+                        </beleg-quelle>
+                        <beleg-text>pulpitum ...                             
+                            <lemma-beleg kurzform="-a">facitergula</lemma-beleg> cocco imaginata circumdari iussit                             
+                            <redaktion-ergaenzung>pontifex</redaktion-ergaenzung>.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 5 -->
+                    <beleg id="facitergula_beleg005">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>76,15</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-rulae">faciterulae</lemma-beleg> Il.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 6 -->
+                    <beleg id="facitergula_beleg013">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>40,5 VI</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg>vizregule</lemma-beleg>.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 7 -->
+                    <beleg id="facitergula_beleg006">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>129
+                                
+                                <hoch>a</hoch>,5
+                            
+                            </stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-sterculas">facisterculas</lemma-beleg> Il.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 8 -->
+                    <beleg id="facitergula_beleg007">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>24,8</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-itella">facitella</lemma-beleg> X.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 9 -->
+                    <beleg id="facitergula_beleg008">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>114,8</stelle>
+                        </beleg-quelle>
+                        <beleg-text>VIII                             
+                            <lemma-beleg>fezdregle</lemma-beleg>.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 10 -->
+                    <beleg id="facitergula_beleg014">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>6,24</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg>fasciutercule</lemma-beleg> VII.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 11 -->
+                    <beleg id="facitergula_beleg009">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>92,6</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg>fascercule</lemma-beleg> tres.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 12 -->
+                    <beleg id="facitergula_beleg010">
+                        <beleg-quelle>
+                            <autor>Catal.</autor>
+                            <werk>thes. Germ.</werk>
+                            <stelle>21,20</stelle>
+                        </beleg-quelle>
+                        <beleg-text>IIII                             
+                            <lemma-beleg>festregele</lemma-beleg>.
+                        
+                        </beleg-text>
+                    </beleg>
+                    <zusatz typ="saepe"></zusatz>
+                </beleg-position>
+            </bedeutung>
+            <!-- 2. Bedeutung -->
+            <bedeutung nr="2">
+                <interpretament typ="lat">capital, rica</interpretament>
+                <interpretament-deutsch>Kopftuch</interpretament-deutsch>
+                <!-- Belege für die 2. Bedeutung -->
+                <beleg-position>
+                    <!--                    Beleg 1 -->
+                    <beleg id="facitergula_beleg011">
+                        <beleg-quelle>
+                            <autor>Transl.</autor>
+                            <werk>Libor. I</werk>
+                            <stelle>32</stelle>
+                        </beleg-quelle>
+                        <beleg-text>raptis feminarum                             
+                            <lemma-beleg kurzform="-is">facitergulis</lemma-beleg> (
+                            
+                            <lemma-beleg>fa[s]citergiis</lemma-beleg>
+                            <redaktion-ergaenzung>var. l.</redaktion-ergaenzung>).
+                        
+                        </beleg-text>
+                    </beleg>
+                    <!--                    Beleg 2 -->
+                    <beleg id="facitergula_beleg012">
+                        <beleg-quelle>
+                            <autor>Transl.</autor>
+                            <werk>Libor. II</werk>
+                            <stelle>20</stelle>
+                        </beleg-quelle>
+                        <beleg-text>nuditatem membrorum illius                             
+                            <redaktion-ergaenzung>(puellae)</redaktion-ergaenzung> tegere festinarunt fideles clerici et laici inprimis cum eorum                             
+                            <lemma-beleg kurzform="-cula">facitercula</lemma-beleg>, dein vestibus solitis.
+                        
+                        </beleg-text>
+                    </beleg>
+                </beleg-position>
+            </bedeutung>
+        </bedeutung-position>
+        <!-- Verweisposition         -->
+        <!--        hier kein Verweis vorhanden -->
+        <!-- Verfasser des Artikels-->
+        <artikel-verfasser>Johannes Staub</artikel-verfasser>
+    </artikel>
+    <artikel xml:id="fagus">
+        <!-- Lemma-Ansatz        -->
+        <!--  Mehrfach-Lemma -->
+        <lemma-position>
+            <!-- erstes Lemma            -->
+            <lemma-position>
+                <lemma>fagus</lemma>
+                <grammatik-position>
+                    <grammatik wortart="nomen" genus="f" klasse="us-i">-i</grammatik>
+                </grammatik-position>
+            </lemma-position>
+            <!-- verbindungswort -->
+            <zusatz typ="vel"></zusatz>
+            <!-- zweites Lemma -->
+            <lemma-position>
+                <lemma>faga</lemma>
+                <grammatik-position>
+                    <grammatik wortart="nomen" genus="f" klasse="a-ae">-ae</grammatik>
+                </grammatik-position>
+            </lemma-position>
+        </lemma-position>
+        <!--        Artikelkopf -->
+        <artikelkopf>
+            <!-- Schreibweisen             -->
+            <schreibweisen-position>
+                <schreibweisen-variante>
+                    <schreibweise>fabus</schreibweise>
+                    <beleg id="facitergula-beleg006">
+                        <verweis typ="beleg" ziel="???"></verweis>
+                        <!-- l. 65. 68. -->
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script"></schreibweise-besonderheit>
+                    <schreibweise>favus</schreibweise>
+                    <zusatz typ="vel"></zusatz>
+                    <schreibweise>fava</schreibweise>
+                    <beleg id="facitergula-beleg007">
+                        <verweis typ="beleg" ziel="???"></verweis>
+                        <!-- l. 65.68.70. -->
+                    </beleg>
+                </schreibweisen-variante>
+            </schreibweisen-position>
+        </artikelkopf>
+        <!-- Hauptteil       -->
+        <bedeutung-position>
+            <!-- erste und einzige Bedeutung, jedoch mit Untergliederung -->
+            <bedeutung nr="ohne">
+                <interpretament typ="griech">xxxx</interpretament>
+                <interpretament-deutsch>Buche</interpretament-deutsch>
+                <!-- erster Gliederungspunkt / Gruppe -->
+                <!--  Es muss nicht bei jeder Bedeutung ein Interpretament stehen, aber es muss "oberhalb" eines vorhanden sein -->
+                <bedeutung nr="1">
+                    <klassifikation>in univ.</klassifikation>
+                    <interpretament-zusatz>de termino:                         
+                        <verweis typ="beleg" ziel="???"></verweis>
+                        <!-- l. 70.72. --> al.                     
+                    </interpretament-zusatz>
+                    <!-- Belege für den 1. Gliederungspunkt -->
+                    <beleg-position>
+                        <beleg id="fagus-beleg001">
+                            <beleg-quelle>
+                                <autor>Lex</autor>
+                                <werk>Baiuv.</werk>
+                                <stelle>22,4</stelle>
+                            </beleg-quelle>
+                            <beleg-text>de favis                                 
+                                <gerade>
+                                    <!-- hier gerade -->(-is, fabis, fabulis                                     
+                                    <!--<zusatz typ="OFFEN"/>-->var. l.)
+                                
+                                </gerade> ... tremisse ... arbores.
+                            
+                            </beleg-text>
+                        </beleg>
+                        <beleg id="fagus-beleg002">
+                            <beleg-quelle>
+                                <autor>Lex</autor>
+                                <!-- autor und werk werk werden im Print rausgekürzt -->
+                                <werk>Baiuv.</werk>
+                                <stelle>22,5</stelle>
+                            </beleg-quelle>
+                            <beleg-text>si malum vel pirum ... favi                                 
+                                <gerade>
+                                    <!-- hier gerade -->(favum, fabi, -i, -um                                     
+                                    <!-- <zusatz typ="???"/> -->var. l.) perseveret.
+                                
+                                </gerade>
+                            </beleg-text>
+                        </beleg>
+                        <beleg id="fagus-beleg003">
+                            <beleg-quelle>
+                                <autor>Trad.</autor>
+                                <werk>Frising</werk>
+                                <stelle>548</stelle>
+                            </beleg-quelle>
+                            <beleg-text>marca ... circumiens ... ad                                 
+                                <hervorhebung>illo temino, que</hervorhebung> (illum terminum, qui                                 
+                                <sigle>B</sigle>) in eis habent.
+                            
+                            </beleg-text>
+                        </beleg>
+                        <beleg id="fagus-beleg005">
+                            <beleg-quelle>
+                                <autor>Chart.</autor>
+                                <werk>Sangall. A 564</werk>
+                                <stelle>p. 177,33sq.</stelle>
+                            </beleg-quelle>
+                            <beleg-text>usque ad                                 
+                                <lemma-beleg kurzform="-um">fagum</lemma-beleg> ... et ab ipsa                                 
+                                <lemma-beleg kurzform="-o">fago</lemma-beleg> eqs.
+                            
+                            </beleg-text>
+                        </beleg>
+                    </beleg-position>
+                </bedeutung>
+                <!-- zweiter Gliederungspunkt / Gruppe        -->
+                <bedeutung nr="2">
+                    <klassifikation>in nominibus</klassifikation>
+                    <!-- erste Untergliederung  (a)          -->
+                    <bedeutung nr="a">
+                        <klassifikation>locorum</klassifikation>
+                        <!--  Es muss nicht bei jeder Bedeutung ein Interpretament stehen, aber es muss "oberhalb" eines vorhanden sein -->
+                        <beleg-position>
+                            <beleg id="fagus-beleg006">
+                                <beleg-quelle>
+                                    <autor>Dipl.</autor>
+                                    <werk>Heinr. IV</werk>
+                                    <stelle>156 p. 202,31</stelle>
+                                </beleg-quelle>
+                                <beleg-text>aput Fagumvillam                                     
+                                    <redaktion-ergaenzung>('Foug')
+                                        
+                                        <!--ist redaktionelle Ergänzung, mit Klammern erfassen -->.
+                                    
+                                    </redaktion-ergaenzung>
+                                </beleg-text>
+                            </beleg>
+                            <beleg id="fagus-beleg007">
+                                <beleg-quelle>
+                                    <autor>Metell.</autor>
+                                    <werk>Quir.</werk>
+                                    <stelle>63,5</stelle>
+                                </beleg-quelle>
+                                <beleg-text>Fagus                                     
+                                    <redaktion-ergaenzung>('Puchhof', cf. ind. p. 389)
+                                        
+                                        <!-- alles nur Lesart? --> habet locus is notamen.
+                                    
+                                    </redaktion-ergaenzung>
+                                </beleg-text>
+                            </beleg>
+                            <zusatz typ="al"></zusatz>
+                        </beleg-position>
+                        <!-- zweite Untergliederung (eine Ebene tiefer!)          -->
+                    </bedeutung>
+                    <bedeutung nr="ohne">
+                        <klassifikation>in cognomine</klassifikation>
+                        <!--Hier fehlt ein Interpretament!!!-->
+                        <beleg-position>
+                            <beleg id="fagus-beleg008">
+                                <beleg-quelle>
+                                    <autor>Chart.</autor>
+                                    <werk>Advoc.</werk>
+                                    <stelle>66 p.32,11 (a. 1237)</stelle>
+                                </beleg-quelle>
+                                <beleg-text>Sophia de Alta                                     
+                                    <lemma-beleg kurzform="-o">fago</lemma-beleg>.
+                                
+                                </beleg-text>
+                            </beleg>
+                        </beleg-position>
+                    </bedeutung>
+                </bedeutung>
+            </bedeutung>
+            <!-- erste Untergliederung (b)    -->
+            <bedeutung nr="b">
+                <klassifikation>plantae</klassifikation>
+                <beleg-position>
+                    <beleg id="fagus-belegxxx">
+                        <beleg-quelle>
+                            <autor>???</autor>
+                            <werk></werk>
+                            <stelle></stelle>
+                        </beleg-quelle>
+                        <beleg-text>spina                             
+                            <lemma-beleg kurzform="-i">fagi</lemma-beleg>
+                        </beleg-text>
+                    </beleg>
+                </beleg-position>
+                <bedeutung nr="ohne">
+                    <interpretament typ="botan">i. q. spina alba (Crataegus oxyacantha L.)                         
+                        <!-- mit Klammern erfassen? -->
+                    </interpretament>
+                    <interpretament-deutsch>Weißdorn                         
+                        <verweis typ="beleg" ziel="???"></verweis>
+                        <!-- cf. p. 43,52 -->
+                    </interpretament-deutsch>
+                    <beleg-position>
+                        <beleg id="fagus-beleg009">
+                            <beleg-quelle>
+                                <autor>Albert. M.</autor>
+                                <werk>animal.</werk>
+                                <stelle>8,18</stelle>
+                            </beleg-quelle>
+                            <beleg-text>est haec spina magna, quam quidam vocant spinam albam et alii ... spinam                                 
+                                <lemma-beleg kurzform="-i">fagi</lemma-beleg>.
+                            
+                            </beleg-text>
+                        </beleg>
+                    </beleg-position>
+                </bedeutung>
+            </bedeutung>
+        </bedeutung-position>
+        <artikel-verfasser>Pörnbacher</artikel-verfasser>
+    </artikel>
+    <artikel xml:id="faida">
+        <lemma-position>
+            <lemma-position>
+                <lemma klassisch="nein">faida</lemma>
+                <lemma-varianten>
+                    <lemma-variante kurz="pha-">phaida</lemma-variante>
+                    <lemma-variante kurz="fei-">feida</lemma-variante>
+                    <lemma-variante kurz="fahi-">fahida</lemma-variante>
+                    <lemma-variante>fayda</lemma-variante>
+                    <lemma-variante kurz="-dia">fadia</lemma-variante>
+                </lemma-varianten>
+                <grammatik-position>
+                    <grammatik genus="f" wortart="nomen" klasse="a-ae">-ae</grammatik>
+                </grammatik-position>
+            </lemma-position>
+            <zusatz typ="vel"></zusatz>
+            <lemma-position>
+                <lemma klassisch="nein">faidus</lemma>
+                <grammatik-position>
+                    <grammatik wortart="nomen" genus="m" klasse="us-i">-i</grammatik>
+                </grammatik-position>
+            </lemma-position>
+            <etymologie-position>
+                <etymologie-variante>
+                    <etymologie-besonderheit>theod. vet.</etymologie-besonderheit>
+                    <etymologie>[gi]fehida, vehe[de]</etymologie>
+                    <beleg id="faida-belegxxxx">
+                        <beleg-text>????</beleg-text>
+                    </beleg>
+                </etymologie-variante>
+            </etymologie-position>
+        </lemma-position>
+        <artikelkopf>
+            <schreibweisen-position>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit>confunditur c.</schreibweise-besonderheit>
+                    <schreibweise>feudum</schreibweise>
+                    <beleg id="faida-beleg002">
+                        <beleg-quelle>
+                            <autor>Lex.</autor>
+                            <werk>fam. Worm.</werk>
+                            <stelle>18</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <redaktion-ergaenzung>var. l.</redaktion-ergaenzung>
+                        </beleg-text>
+                    </beleg>
+                </schreibweisen-variante>
+            </schreibweisen-position>
+        </artikelkopf>
+        <bedeutung-position>
+            <bedeutung nr="ohne">
+                <interpretament typ="lat">inimicitia, vindicta</interpretament>
+                <interpretament-deutsch>Feindschaft, (private) Vergeltung, Blutrache, 'Fehde'</interpretament-deutsch>
+                <interpretament-zusatz>de re ?? v HRG I. p. 1083sqq. Stotz, Handb. 1,III § 28.5</interpretament-zusatz>
+                <beleg-position>
+                    <beleg id="faida-beleg001">
+                        <beleg-quelle>
+                            <autor>Edict.</autor>
+                            <werk>Roth.</werk>
+                            <stelle>45</stelle>
+                        </beleg-quelle>
+                        <beleg-text>de feritas ... coponatu                             
+                            <gesperrt>cessante</gesperrt>
+                            <lemma-beleg kurzform="-a">faida</lemma-beleg>
+                        </beleg-text>
+                    </beleg>
+                    <!--die folgenden Belege sind in der Printfassung zusammengefasst zu:
+(75. 138 [-e, feida var. l.]).-->
+                    <beleg id="faida-beleg005">
+                        <beleg-quelle>
+                            <autor>Edict.</autor>
+                            <werk>Roth.</werk>
+                            <stelle>75</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-a">faida</lemma-beleg>
+                        </beleg-text>
+                    </beleg>
+                    <beleg id="faida-beleg006">
+                        <beleg-quelle>
+                            <autor>Edict.</autor>
+                            <werk>Roth.</werk>
+                            <stelle>138</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <lemma-beleg kurzform="-a">faida</lemma-beleg>
+                            <lesart>-e, feida var. l.</lesart>.
+                        
+                        </beleg-text>
+                    </beleg>
+                </beleg-position>
+            </bedeutung>
+        </bedeutung-position>
+        <artikel-verfasser>nnn</artikel-verfasser>
+    </artikel>
+    <artikel xml:id="faux">
+        <lemma-position>
+            <lemma>faux</lemma>
+            <grammatik-position>
+                <grammatik genus="f" wortart="nomen" klasse="x-cis">-cis</grammatik>
+            </grammatik-position>
+        </lemma-position>
+        <artikelkopf>
+            <schreibweisen-position>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form"></schreibweise-besonderheit>
+                    <schreibweise>foc-</schreibweise>
+                    <beleg id="faux-beleg-001">
+                        <!-- p. 110, 21. 23. 26. -->
+                        <verweis typ="beleg" ziel="p.110,21"></verweis>
+                    </beleg>
+                    <beleg id="faux-beleg003">
+                        <verweis typ="beleg" ziel="p.110,23"></verweis>
+                    </beleg>
+                    <beleg id="faux-beleg004">
+                        <verweis typ="beleg" ziel="p.110,26"></verweis>
+                    </beleg>
+                    <zusatz typ="al"></zusatz>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form"></schreibweise-besonderheit>
+                    <schreibweise>fuc-</schreibweise>
+                    <beleg id="faux-beleg002">
+                        <!-- p. 110, 28. -->
+                        <verweis typ="beleg" ziel="p.110,28"></verweis>
+                    </beleg>
+                    <zusatz typ="adde"></zusatz>
+                    <beleg id="faux-beleg005">
+                        <beleg-quelle>
+                            <autor>Annal.</autor>
+                            <werk>Ianuens.</werk>
+                            <stelle>II p. 133,13</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                            <redaktion-ergaenzung>var.l.</redaktion-ergaenzung>
+                        </beleg-text>
+                    </beleg>
+                    <zusatz typ="OFFEN">ibid. al.</zusatz>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form">abl. sg.</schreibweise-besonderheit>
+                    <schreibweise>-ca</schreibweise>
+                    <beleg id="faux-beleg006">
+                        <verweis typ="beleg" ziel="??"></verweis>
+                        <!--p. 110, 23-->
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form">abl. pl.</schreibweise-besonderheit>
+                    <schreibweise>-cebus</schreibweise>
+                    <beleg id="faux-beleg014">
+                        <verweis typ="beleg" ziel="sss"></verweis>
+                        <!--l.32-->
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form">abl. pl.</schreibweise-besonderheit>
+                    <schreibweise>-cis</schreibweise>
+                    <beleg id="faux-beleg015">
+                        <beleg-quelle>
+                            <autor>Epist.</autor>
+                            <werk></werk>
+                            <stelle></stelle>
+                        </beleg-quelle>
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form">gen. pl.</schreibweise-besonderheit>
+                    <schreibweise>-tium</schreibweise>
+                    <beleg id="faux-beleg016">
+                        <verweis typ="beleg" ziel="mmm"></verweis>
+                    </beleg>
+                </schreibweisen-variante>
+            </schreibweisen-position>
+            <gebrauch-position>
+                <gebrauch-variante>
+                    <gebrauch-besonderheit>saepe usu plur.</gebrauch-besonderheit>
+                    <beleg id="faux-beleg0017">
+                        <beleg-text>[Wirklich ohne Belegtext und ohne Quellen angabe???</beleg-text>
+                    </beleg>
+                </gebrauch-variante>
+            </gebrauch-position>
+        </artikelkopf>
+        <bedeutung-position>
+            <bedeutung nr="ohne">
+                <interpretament typ="lat">gula, iugulum, gurgulio</interpretament>
+                <interpretament-deutsch>Kehle, Rachen, Gurgel</interpretament-deutsch>
+                <bedeutung nr="I">
+                    <klassifikation>proprie vel in imag.</klassifikation>
+                    <bedeutung nr="A">
+                        <klassifikation>strictius</klassifikation>
+                        <bedeutung nr="1">
+                            <klassifikation>gener.</klassifikation>
+                            <bedeutung nr="a">
+                                <klassifikation>in univ.</klassifikation>
+                                <beleg-position>
+                                    <beleg id="faux-beleg0018">
+                                        <beleg-quelle>
+                                            <autor>Chron.</autor>
+                                            <werk>Fred.</werk>
+                                            <stelle>3,80</stelle>
+                                        </beleg-quelle>
+                                        <beleg-text>Gunthramnus . . . Dracoleno mactat in                                             
+                                            <lemma-beleg kurzform="-ebus">fauxebus</lemma-beleg>
+                                        </beleg-text>
+                                        <!--Chron. Fred. 3,80 Gunthramnus . . . Dracoleno mactat in
+-ebus. Ruotg. Brun. 43 p. 46,18 anhelitus intercluso -ium meatu
+vitalium lassitudinem premonstravit. Walth. Spir. Christoph.
+II 3,61 eripe me, . . . sinergia patris, irarum manibus ac . . .
+thoracem galeamque tui portende pavoris -bus invidiae.
+Thietm. chron. 2,9 qui (Conradus) captivos cum omni preda
+ex lupi raptoris -bus eripuit. saepe.-->
+                                    </beleg>
+                                </beleg-position>
+                                <bedeutung nr="ohne">
+                                    <klassifikation>de verme</klassifikation>
+                                    <beleg-position>
+                                        <beleg id="faux-beleg007">
+                                            <beleg-quelle>
+                                                <autor>Thiofr.</autor>
+                                                <werk></werk>
+                                                <stelle></stelle>
+                                            </beleg-quelle>
+                                            <beleg-text></beleg-text>
+                                        </beleg>
+                                    </beleg-position>
+                                </bedeutung>
+                            </bedeutung>
+                        </bedeutung>
+                    </bedeutung>
+                </bedeutung>
+            </bedeutung>
+        </bedeutung-position>
+        <artikel-verfasser></artikel-verfasser>
+    </artikel>
+    <!--faux, -cis f. script. et form. : foc- : p. 110, 21. 23. 26. al.
+fuc- : p. 110, 28. adde Annal. Ianuens. II p. 133,13. ibid. al.
+
+abl. : sg. -ca : p. 110, 23. plur. : -cebus : l. 32. -cis : Epist.
+Wisig. 20 p. 690,2. gen. plur. -tium : l. 42. saepe usu plur.
+gula, iugulum, gurgulio – Kehle, Rachen, Gurgel :
+I proprie vel in imag. : A strictius : 1 gener. : a univ. :
+Chron. Fred. 3,80 Gunthramnus . . . Dracoleno mactat in
+-ebus. Ruotg. Brun. 43 p. 46,18 anhelitus intercluso -ium meatu
+vitalium lassitudinem premonstravit. Walth. Spir. Christoph.
+II 3,61 eripe me, . . . sinergia patris, irarum manibus ac . . .
+thoracem galeamque tui portende pavoris -bus invidiae.
+Thietm. chron. 2,9 qui (Conradus) captivos cum omni preda
+ex lupi raptoris -bus eripuit. saepe. de verme : Thiofr. Willibr.
+II 4,114 soma sacrum . . . non vermis -e minutum. b
+spectat ad vocem edendam : Carm. Paul. Diac. app. I 4,2,1 cecini
+de -e (fasce a. corr. cod.) libellos psalmorum. Otfr. ad Liutb.
+73 ob stridorem . . . dentium . . . ‘z’ utuntur, ‘k’ autem obsae
+-tium sonoritatem. Ekkeh. IV. bened. I prol. 2,90 -e (gloss. : id
+est arteriis, quibus vox hilaratur) sit . . . melior, boesis cui gratia
+maior. saepius. c spectat ad gustum, gustatum sim. : Arbeo
+Corb. 8 manna . . . populo . . . secundum animi voluntatem diversis
+-bus diversum reddebat saporem. Walahfr. hort. 178
+candorque saporque oblectant -es. Albert. M. Iob 12,11 -es
+. . . saepe contritum cibum et undique tactum secundum saporem
+diiudicant. al. 2 natur., medic., anat. : Recept. Lauresh.
+2,42 capit. p. 81 ad uvam distillantem et ad -es tumentes. Alfan.
+premn. phys. 14,4 p. 91 thorax et pulmo et trachea arteria
+et -es (fames var. l.; PG 40,668B '!"-) . . . exspirationis
+sunt instrumenta. 28,16 p. 137 huic (sc. gutturi coniungitur)
+. . . -x (PG 40,713A !- [!"-, '!"- var. l.]), deinde
+os et nasus. Tract. de aegr. cur. p. 110,20 branchos est prefocatio
+-ium. Albert. M. animal. 2,62 qui (lucius) -es superiores
+habet plenos dentibus. saepe. B latius i. q. mandibula, maxilla
+– Kinnbacken, -lade : Heinr. Wirz. cur. 674 sternit millenos
+-x (gloss. S : maxilla) asinina viros (cf. Vulg. iud. 15,15).
+II per compar. de rebus : A in univ. : Tract. de fist. org. p.
+16 quod (instrumentum) in ipso angusto aditu -ium . . . aperientem
+et claudentem habet uvam. B vorago, abyssus –
+Schlund, Abgrund, Tiefe : Alcuin. rhythm. 2,4,3 (MGPoet.
+IV p. 908) eripe (sc. Deus) me . . . de laqueo delictorum et -bus
+inferorum. Agius epic. Hath. 284 tres pueros . . . avida . . . -e
+voravit humus. de fumario : Ekkeh. IV. pict. Mog. 517 rapidus
+quos (tres pueri) hausit -e caminus.
+III meton. i. q. vox, interpres – Stimme, Sprachrohr, Sprecher
+: Cosmas chron. 1,19 p. 39,6 nos (sc. primates populi),
+qui sumus . . . populi -es et tenemus dignitatum fasces.
+IV translate : A angustiae – Engpaß : Annal. Altah. a.
+1060 p. 57,5 quem (regem) frater . . . in ipsis -bus viarum, quas-->
+    <!--  Sublemmata -->
+    <!--    Sublemmata kann es nur geben als Anhang zu einem Lemma resp. Artikel-->
+    <artikel xml:id="febricito">
+        <lemma-position>
+            <lemma>febricito</lemma>
+            <grammatik-position>
+                <grammatik wortart="verb" konjugation="are">-avi, -atum, -are</grammatik>
+            </grammatik-position>
+        </lemma-position>
+        <artikelkopf>
+            <schreibweisen-position>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form"></schreibweise-besonderheit>
+                    <schreibweise>efe-</schreibweise>
+                    <beleg id="febricito-beleg001">
+                        <verweis typ="beleg" ziel="mmm">
+                            <!-- l. 57 -->
+                        </verweis>
+                    </beleg>
+                </schreibweisen-variante>
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form"></schreibweise-besonderheit>
+                    <schreibweise>fab-</schreibweise>
+                    <beleg id="febricito-beleg002">
+                        <verweis typ="beleg" ziel="mmm">
+                            <!-- l. 42 -->
+                        </verweis>
+                    </beleg>
+                </schreibweisen-variante>
+                <!--            diverse weitere  -->
+                <schreibweisen-variante>
+                    <schreibweise-besonderheit typ="script-form">partic. praes.: dat. sg.                         
+                        <!-- oder lieber schachteln? -->
+                    </schreibweise-besonderheit>
+                    <schreibweise>-o</schreibweise>
+                    <beleg id="febricito-beleg003">
+                        <verweis typ="beleg" ziel="mmm">
+                            <!-- l. 52 -->
+                        </verweis>
+                    </beleg>
+                </schreibweisen-variante>
+            </schreibweisen-position>
+            <gebrauch-position>
+                <gebrauch-variante>
+                    <gebrauch-besonderheit typ="OFFEN">partic. praes.: usu adi.</gebrauch-besonderheit>
+                    <!--das zweite "partic. praes." muss für die Printausgabe rausgekürzt werden - Doppelpunkt ggf. generieren-->
+                    <beleg id="febricito-beleg004">
+                        <verweis typ="beleg" ziel="xxx"></verweis>
+                        <!-- l. 39 -->
+                    </beleg>
+                    <beleg id="febricito-beleg005">
+                        <verweis typ="beleg" ziel="xxx"></verweis>
+                        <!-- p. 112,36 -->
+                    </beleg>
+                </gebrauch-variante>
+                <gebrauch-variante>
+                    <gebrauch-besonderheit typ="OFFEN">depon.</gebrauch-besonderheit>
+                    <beleg id="febricito-beleg006">
+                        <verweis typ="beleg" ziel="xxx"></verweis>
+                        <!-- l. 36 -->
+                    </beleg>
+                    <!-- dto noch für l. 40 und l. 46 -->
+                </gebrauch-variante>
+                <zusatz typ="adde"></zusatz>
+                <gebrauch-variante>
+                    <beleg id="febricito-beleg007">
+                        <beleg-quelle>
+                            <autor>Otto Mor.</autor>
+                            <werk>hist.</werk>
+                            <stelle>p. 207,14</stelle>
+                        </beleg-quelle>
+                    </beleg>
+                </gebrauch-variante>
+            </gebrauch-position>
+        </artikelkopf>
+        <bedeutung-position>
+            <bedeutung nr="1">
+                <interpretament typ="lat">febri laborare, febrire</interpretament>
+                <interpretament-deutsch>an Fieber leiden, Fieber haben, fiebern</interpretament-deutsch>
+            </bedeutung>
+            <!-- diverse Belege .... -->
+        </bedeutung-position>
+        <sub-artikel>
+            <lemma-position>
+                <lemma>febricitans</lemma>
+                <grammatik-position>
+                    <!-- Wortart nachgestellt und nomen statt subst. -->
+                    <grammatik wortart="nomen" genus="m">-antis</grammatik>
+                </grammatik-position>
+            </lemma-position>
+            <bedeutung-position>
+                <bedeutung nr="ohne">
+                    <interpretament typ="lat">qui febri laborat, febricosus</interpretament>
+                    <interpretament-deutsch>Fieberkranker</interpretament-deutsch>
+                    <beleg-position>
+                        <beleg id="febricitans">
+                            <beleg-quelle>
+                                <autor>Pass.</autor>
+                                <werk>Leod.</werk>
+                                <stelle>36</stelle>
+                                <edition>MGMer. V p. 3182,2</edition>
+                            </beleg-quelle>
+                            <beleg-text>refrigerantur                                 
+                                <lemma-beleg kurzform="-zitantes">febrizitantes</lemma-beleg>
+                                <redaktion-ergaenzung>
+                                    <gerade>-zatantes</gerade> a. corr.
+                                
+                                </redaktion-ergaenzung>
+                            </beleg-text>
+                        </beleg>
+                        <!-- und noch weitere Belege -->
+                    </beleg-position>
+                </bedeutung>
+            </bedeutung-position>
+        </sub-artikel>
+        <sub-artikel>
+            <!--  Nummerierung der Lemmaposition wegen Sublemma "Coniugatus" eingeführt -->
+            <lemma-position nr="1.">
+                <lemma>coniugatus</lemma>
+                <grammatik-position>
+                    <grammatik wortart="nomen" genus="m" klasse="us-i">-i</grammatik>
+                </grammatik-position>
+            </lemma-position>
+            <bedeutung-position>
+                <bedeutung nr="ohne">
+                    <interpretament typ="lat">qui lege matrimonii tenetur</interpretament>
+                    <interpretament-deutsch>Verheirateter</interpretament-deutsch>
+                    <bedeutung nr="1">
+                        <klassifikation>in univ. (saepe c. respectu condicionis)</klassifikation>
+                        <bedeutung nr="a">
+                            <klassifikation>gener.</klassifikation>
+                            <interpretament-zusatz>(hic illic accedit ad notionem q.e.                                 
+                                <interpretament typ="lat">laicus</interpretament> &#8211;                                 
+                                <interpretament-deutsch>Laie</interpretament-deutsch>, e. g.                                 
+                                <verweis typ="beleg" ziel="xxx">l. 63</verweis>)
+                            
+                            </interpretament-zusatz>
+                            <beleg-position>
+                                <beleg id="coniugatus-beleg001">
+                                    <beleg-quelle>
+                                        <autor>Conc.</autor>
+                                        <werk>Karol. 21</werk>
+                                        <stelle>p. 189,20</stelle>
+                                    </beleg-quelle>
+                                    <beleg-text>pueri .......................</beleg-text>
+                                </beleg>
+                            </beleg-position>
+                        </bedeutung>
+                    </bedeutung>
+                </bedeutung>
+            </bedeutung-position>
+        </sub-artikel>
+        <artikel-verfasser>NNNNNNNN</artikel-verfasser>
+    </artikel>
+</MLW-test>
+

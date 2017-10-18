@@ -13,8 +13,9 @@ term       =  { ["§"] factor }+                       # "§" means all followin
 factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
             | [flowmarker] literal
             | [flowmarker] regexp
-            | [flowmarker] group
             | [flowmarker] oneormore
+            | [flowmarker] group
+#             | [flowmarker] set
             | repetition
             | option
 
@@ -23,6 +24,7 @@ flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' p
 retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
 group      =  "(" §expression ")"
+set        =  "<" §expression ">"
 oneormore  =  "{" expression "}+"
 repetition =  "{" §expression "}"
 option     =  "[" §expression "]"

@@ -26,9 +26,9 @@ for entry in os.listdir():
                                                    get_grammar(),
                                                    get_transformer(),
                                                    get_compiler())
-        if AST:
-            with open(raw_name + '.ast', 'w', encoding='utf-8') as f:
-                f.write(AST.as_sxpr(compact=False))
+        # if AST:
+        #     with open(raw_name + '.ast', 'w', encoding='utf-8') as f:
+        #         f.write(AST.as_sxpr(compact=False))
         if messages:
             print("Errors in: " + entry)
             with open(raw_name + '.messages', 'w', encoding='utf-8') as f:

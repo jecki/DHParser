@@ -65,8 +65,9 @@ a few drawbacks to this approach:
   particular, there are no good open source XML-Editors.
 
 On the other hand, there are good reasons why XML is used in the
-humanities: Important encoding standards like TEI-XML are defined in
-XML. Its strict syntax and the possibility to check data against a
+humanities: Important encoding standards like 
+[TEI-XML](http://www.tei-c.org/index.xml) are defined in
+XML. Its strict syntax and the possibility to check data against
 schema help to detect and avoiding encoding errors. If the schema is
 well-defined, it is unambiguous, and it is easy to parse for a computer.
 Most of these advantages, however, are on a technical level and few of

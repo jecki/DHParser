@@ -9,52 +9,57 @@
             </lemma-varianten>
             <grammatik-position>
                 <grammatik wortart="adj" klasse="???">-a, -um</grammatik>
-             </grammatik-position>
+            </grammatik-position>
         </lemma-position>
         <artikelkopf>
-       ???<usu-position>
-           <usu typ="subst">
-               <verweis typ="intern" ziel="???">p. 32,63</verweis>
-           </usu>       
-          </usu-position>
+       ???
+            <usu-position>
+                <usu typ="subst">
+                    <verweis typ="intern" ziel="???">p. 32,63</verweis>
+                </usu>
+            </usu-position>
         </artikelkopf>
         <bedeutung-position>
-            ????<bedeutung nr="0">
+            ????
+            <bedeutung nr="0">
                 <interpretament-latein>non iucundus, molestus, odiosus</interpretament-latein>
                 <interpretament-deutsch>unangenehm, unerfreulich</interpretament-deutsch>
                 <interpretament-zusatz>
                     in figura rhet. litotes q. d.
+                    
                     <verweis typ="intern" ziel="???">p. 32,63</verweis>
                 </interpretament-zusatz>
-               </bedeutung>
+            </bedeutung>
             <bedeutung nr="1" element="de rebus">
                 <beleg-position>
                     <beleg name="iniocundus" id="iniocundus_001">
-                    <beleg-quelle>
-                        <autor>Agius</autor>
-                        <werk>comput.</werk>
-                        <stelle> 1,40</stelle>
-                    </beleg-quelle>
-                    <beleg-text>
-                        vigilanti pectore lectum non iniocundum forsan erit opus nimium    
-                    </beleg-text>
-                  </beleg>
+                        <beleg-quelle>
+                            <autor>Agius</autor>
+                            <werk>comput.</werk>
+                            <stelle> 1,40</stelle>
+                        </beleg-quelle>
+                        <beleg-text>
+                        vigilanti pectore lectum non iniocundum forsan erit opus nimium                        </beleg-text>
+                    </beleg>
                     <beleg>
                         <beleg-quelle>
                             <autor>Epist.</autor>
                             <werk>Ratisb.</werk>
                             <stelle> 10 p. 327,36</stelle>
                         </beleg-quelle>
-                        <beleg-text>ne cui iniocundum, sed gratissimum videatur, quod exempla veterum sumuntur <zusatz typ="ergänzung">eqs.</zusatz>                           
+                        <beleg-text>ne cui iniocundum, sed gratissimum videatur, quod exempla veterum sumuntur 
+                            <zusatz typ="ergänzung">eqs.</zusatz>
                         </beleg-text>
                     </beleg>
                     <beleg name="iniocundus" id="iniocundus_002">
-                            <beleg-quelle>
-                                <autor>Epist.</autor>
-                                <werk>Ratisb.</werk>
-                                <stelle>11 p. 329,33</stelle>
-                            </beleg-quelle>
-                        <beleg-text>non iniocundum mihi esse non potest, quod <zusatz typ="ergänzung">eqs.</zusatz></beleg-text>
+                        <beleg-quelle>
+                            <autor>Epist.</autor>
+                            <werk>Ratisb.</werk>
+                            <stelle>11 p. 329,33</stelle>
+                        </beleg-quelle>
+                        <beleg-text>non iniocundum mihi esse non potest, quod 
+                            <zusatz typ="ergänzung">eqs.</zusatz>
+                        </beleg-text>
                     </beleg>
                     <beleg name="iniocundus" id="iniocundus_003">
                         <beleg-quelle>
@@ -73,13 +78,12 @@
                     <beleg name="iniocundus" id="iniocundus_010"></beleg>
                     <beleg name="iniocundus" id="iniocundus_011"></beleg>
                     <beleg name="iniocundus" id="iniocundus_012"></beleg>
-            
-            38 p. 222A quod superflue infusum aut noxium fiet cibum aut iniucundum.
+                        38 p. 222A quod superflue infusum aut noxium fiet cibum aut iniucundum.
             Frid. II. Imp. epist. B 10 p. 428,21 quicquid prosperitas vobis (sc. fidelibus) iocundi peperit et adversitas iniocundi.
             Nicol. anat. 216 in cellula logistica fit discretio, scilicet ... honesti ab inhonesto, iocundi ab iniocundo.
             al.
-            
-            </beleg-position>
+                        
+                </beleg-position>
             </bedeutung>
             <bedeutung nr="2" element="de hominibus">
                 <beleg-position>
@@ -87,12 +91,7 @@ Annal. Egm. a. 1152 p. 208,18 puella fuit Iudea, facie quidem pulcherrima, sed i
 
                 </beleg-position>
             </bedeutung>
-            
         </bedeutung-position>
-    
-    
-    
     </artikel>
-    
 </MLW-test>
 
