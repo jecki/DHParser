@@ -305,8 +305,8 @@ class Node(collections.abc.Sized):
         self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
 
-    def collect_errors(self, document: Union[StringView, str] = '', clear_errors=False) -> List[
-        Error]:
+    def collect_errors(self, document: Union[StringView, str] = '', clear_errors=False) \
+            -> List[Error]:
         """
         Recursively adds line- and column-numbers to all error objects.
         Returns all errors of this node or any child node in the form

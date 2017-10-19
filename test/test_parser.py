@@ -28,7 +28,7 @@ from DHParser.toolkit import is_logging, logging, compile_python_object
 from DHParser.stringview import StringView
 from DHParser.error import Error
 from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
-    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
@@ -306,6 +306,51 @@ class TestSeries:
         st = parser("DEA_C");  assert not st.error_flag
         st = parser("DEAB_");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+
+
+class TestAllOfSomeOf:
+    def test_allOf_order(self):
+        """Test that parsers of an AllOf-List can match in arbitrary order."""
+        prefixes = AllOf(Token("A"), Token("B"))
+        assert Grammar(prefixes)('A B').content() == 'A B'
+        assert Grammar(prefixes)('B A').content() == 'B A'
+        # aternative Form
+        prefixes = AllOf(Series(Token("B"), Token("A")))
+        assert Grammar(prefixes)('A B').content() == 'A B'
+
+    def test_allOf_completeness(self):
+        """Test that an error is raised if not  all parsers of an AllOf-List
+        match."""
+        prefixes = AllOf(Token("A"), Token("B"))
+        assert Grammar(prefixes)('B').error_flag
+
+    def test_allOf_redundance(self):
+        """Test that one and the same parser may be listed several times
+        and must be matched several times accordingly."""
+        prefixes = AllOf(Token("A"), Token("B"), Token("A"))
+        assert Grammar(prefixes)('A A B').content() == 'A A B'
+        assert Grammar(prefixes)('A B A').content() == 'A B A'
+        assert Grammar(prefixes)('B A A').content() == 'B A A'
+        assert Grammar(prefixes)('A B B').error_flag
+
+    def test_someOf_order(self):
+        """Test that parsers of an AllOf-List can match in arbitrary order."""
+        prefixes = SomeOf(Token("A"), Token("B"))
+        assert Grammar(prefixes)('A B').content() == 'A B'
+        assert Grammar(prefixes)('B A').content() == 'B A'
+        # aternative Form
+        prefixes = SomeOf(Alternative(Token("B"), Token("A")))
+        assert Grammar(prefixes)('A B').content() == 'A B'
+        assert Grammar(prefixes)('B').content() == 'B'
+
+    def test_someOf_redundance(self):
+        """Test that one and the same parser may be listed several times
+        and must be matched several times accordingly."""
+        prefixes = SomeOf(Token("A"), Token("B"), Token("A"))
+        assert Grammar(prefixes)('A A B').content() == 'A A B'
+        assert Grammar(prefixes)('A B A').content() == 'A B A'
+        assert Grammar(prefixes)('B A A').content() == 'B A A'
+        assert Grammar(prefixes)('A B B').error_flag
 
 
 class TestPopRetrieve:

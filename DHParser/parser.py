@@ -91,6 +91,8 @@ __all__ = ('PreprocessorFunc',
            'OneOrMore',
            'Series',
            'Alternative',
+           'AllOf',
+           'SomeOf',
            'FlowOperator',
            'Required',
            'Lookahead',
@@ -1535,7 +1537,7 @@ class Alternative(NaryOperator):
 
 class AllOf(NaryOperator):
     """
-    Matches if all elements of a set of parsers match. Each parser must
+    Matches if all elements of a list of parsers match. Each parser must
     match exactly once. Other than in a sequence, the order in which
     the parsers match is arbitrary, however.
 
@@ -1562,15 +1564,14 @@ class AllOf(NaryOperator):
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
-        pset = set(self.parsers)  # type: Set[Parser]
-        while pset:
-            # TODO: Ordnung berücksichtigen, kein SET verwenden!
-            for parser in pset:
+        parsers = list(self.parsers)  # type: List[Parser]
+        while parsers:
+            for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
                     results += (node,)
                     text_ = text__
-                    pset.remove(parser)
+                    del parsers[i]
                     break
             else:
                 return None, text
@@ -1583,7 +1584,7 @@ class AllOf(NaryOperator):
 
 class SomeOf(NaryOperator):
     """
-    Matches if at least one element of a set of parsers match. No parser
+    Matches if at least one element of a list of parsers match. No parser
     must match more than once . Other than in a sequence, the order in which
     the parsers match is arbitrary, however.
 
@@ -1611,18 +1612,17 @@ class SomeOf(NaryOperator):
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
-        pset = set(self.parsers)  # type: Set[Parser]
-        while pset:
-            # TODO: Ordnung berücksichtigen, kein Set verwenden!!!
-            for parser in pset:
+        parsers = list(self.parsers)  # type: List[Parser]
+        while parsers:
+            for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
                     results += (node,)
                     text_ = text__
-                    pset.remove(parser)
+                    del parsers[i]
                     break
             else:
-                pset = set()
+                parsers = []
         assert len(results) <= len(self.parsers)
         if results:
             return Node(self, results), text_
