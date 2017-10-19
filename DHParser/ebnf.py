@@ -829,8 +829,17 @@ class EBNFCompiler(Compiler):
                                 "AST transformation!")
 
     def on_unordered(self, node) -> str:
-        # TODO: implementation must support AllOf as well as SomeOf
-        return self.non_terminal(node, 'Unordered')
+        # return self.non_terminal(node, 'Unordered')
+        assert len(node.children) == 1
+        nd = node.children[0]
+        args = ', '.join(self.compile(r) for r in nd.children)
+        if nd.parser.name == "term":
+            return "AllOf(" + args + ")"
+        elif nd.parser.name == "expression":
+            return "SomeOf(" + args + ")"
+        else:
+            node.add_error("Unordered sequence or alternative requires at least two elements.")
+            return ""
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = str(node)  # ; assert result == cast(str, node.result)

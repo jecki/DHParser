@@ -1,8 +1,7 @@
 import cython
 
-
-# type hints for Cython python -> C compiler
-
+# type hints for Cython python -> C compiler to speed up the most
+# critical code paths of stringview.py.
 
 cdef int first_char(text, int begin, int end)
 
