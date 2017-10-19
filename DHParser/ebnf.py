@@ -19,19 +19,18 @@ permissions and limitations under the License.
 import keyword
 from collections import OrderedDict
 from functools import partial
+from typing import Callable, Dict, List, Set, Tuple
 
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, typing
+from DHParser.error import Error
 from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RegExp, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
-    Required, Compiler, PreprocessorFunc
+    Compiler, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
-from DHParser.error import Error
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re
 from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
-
-from typing import Callable, Dict, List, Set, Tuple, Union
 
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
@@ -66,79 +65,6 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 ########################################################################
 
 
-# class EBNFGrammar(Grammar):
-#     r"""Parser for an EBNF_variant source file, with this grammar:
-#
-#     # EBNF-Grammar in EBNF
-#
-#     @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-#     @ whitespace =  /\s*/                            # whitespace includes linefeed
-#     @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
-#
-#     syntax     =  [~//] { definition | directive } §EOF
-#     definition =  symbol §"=" §expression
-#     directive  =  "@" §symbol §"=" §( regexp | literal | list_ )
-#
-#     expression =  term { "|" term }
-#     term       =  { factor }+
-#     factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-#                 | [flowmarker] literal
-#                 | [flowmarker] regexp
-#                 | [flowmarker] group
-#                 | [flowmarker] oneormore
-#                 | repetition
-#                 | option
-#
-#     flowmarker =  "!"  | "&"  | "§"                  # '!' negative lookahead, '&' positive lookahead, '§' required
-#                 | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-#     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
-#
-#     group      =  "(" expression §")"
-#     oneormore  =  "{" expression "}+"
-#     repetition =  "{" expression §"}"
-#     option     =  "[" expression §"]"
-#
-#     symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-#     literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-#                 | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-#     regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-#                                                      # '~' is a whitespace-marker, if present leading or trailing
-#                                                      # whitespace of a regular expression will be ignored tacitly.
-#     list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-#                                                      # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-#     EOF =  !/./
-#     """
-#     expression = Forward()
-#     source_hash__ = "4735db10f0b79d44209d1de0184b2ca0"
-#     parser_initialization__ = "upon instantiation"
-#     COMMENT__ = r'#.*(?:\n|$)'
-#     WHITESPACE__ = r'\s*'
-#     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-#     wspL__ = ''
-#     wspR__ = WSP__
-#     EOF = NegativeLookahead(RegExp('.'))
-#     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-#     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
-#     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
-#     symbol = RE('(?!\\d)\\w+')
-#     option = Series(Token("["), expression, Required(Token("]")))
-#     repetition = Series(Token("{"), expression, Required(Token("}")))
-#     oneormore = Series(Token("{"), expression, Token("}+"))
-#     group = Series(Token("("), expression, Required(Token(")")))
-#     retrieveop = Alternative(Token("::"), Token(":"))
-#     flowmarker = Alternative(Token("!"), Token("&"), Token("§"), Token("-!"), Token("-&"))
-#     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
-#                          Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
-#                          Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore), repetition, option)
-#     term = OneOrMore(factor)
-#     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-#     directive = Series(Token("@"), Required(symbol), Required(Token("=")),
-#                        Required(Alternative(regexp, literal, list_)))
-#     definition = Series(symbol, Required(Token("=")), Required(expression))
-#     syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), Required(EOF))
-#     root__ = syntax
-
-
 class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file, with this grammar:
 
@@ -157,8 +83,9 @@ class EBNFGrammar(Grammar):
     factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
                 | [flowmarker] literal
                 | [flowmarker] regexp
-                | [flowmarker] group
                 | [flowmarker] oneormore
+                | [flowmarker] group
+                | [flowmarker] unordered
                 | repetition
                 | option
 
@@ -166,10 +93,11 @@ class EBNFGrammar(Grammar):
                 | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
 
-    group      =  "(" expression §")"
+    group      =  "(" §expression ")"
+    unordered  =  "<" §expression ">"                # elements of expression in arbitrary order
     oneormore  =  "{" expression "}+"
-    repetition =  "{" expression §"}"
-    option     =  "[" expression §"]"
+    repetition =  "{" §expression "}"
+    option     =  "[" §expression "]"
 
     symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
     literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
@@ -182,8 +110,8 @@ class EBNFGrammar(Grammar):
     EOF =  !/./
     """
     expression = Forward()
-    source_hash__ = "a131abc5259738631000cda90d2fc65b"
-    tialization__ = "upon instantiation"
+    source_hash__ = "3fc9f5a340f560e847d9af0b61a68743"
+    parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
@@ -197,17 +125,22 @@ class EBNFGrammar(Grammar):
     option = Series(Token("["), expression, Token("]"), mandatory=1)
     repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
     oneormore = Series(Token("{"), expression, Token("}+"))
+    unordered = Series(Token("<"), expression, Token(">"), mandatory=1)
     group = Series(Token("("), expression, Token(")"), mandatory=1)
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
-                         Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
-                         Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore), repetition, option)
+    factor = Alternative(
+        Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+        Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
+        Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
+        Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Token("§")), factor))
     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
+    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_),
+                       mandatory=1)
     definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)),
+                    EOF, mandatory=2)
     root__ = syntax
 
 
@@ -275,6 +208,8 @@ EBNF_AST_transformation_table = {
         replace_by_single_child,
     "group":
         [remove_brackets, replace_by_single_child],
+    "unordered":
+        remove_brackets,
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets,
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)')],
@@ -893,6 +828,9 @@ class EBNFCompiler(Compiler):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
+    def on_unordered(self, node) -> str:
+        # TODO: implementation must support AllOf as well as SomeOf
+        return self.non_terminal(node, 'Unordered')
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = str(node)  # ; assert result == cast(str, node.result)

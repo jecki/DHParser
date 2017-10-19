@@ -15,7 +15,7 @@ factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be
             | [flowmarker] regexp
             | [flowmarker] oneormore
             | [flowmarker] group
-#             | [flowmarker] set
+            | [flowmarker] unordered
             | repetition
             | option
 

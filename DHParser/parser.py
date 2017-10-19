@@ -93,6 +93,7 @@ __all__ = ('PreprocessorFunc',
            'Alternative',
            'AllOf',
            'SomeOf',
+           'Unordered',
            'FlowOperator',
            'Required',
            'Lookahead',
@@ -108,7 +109,6 @@ __all__ = ('PreprocessorFunc',
            'Forward',
            'Compiler',
            'compile_source')
-
 
 
 ########################################################################
@@ -1632,6 +1632,17 @@ class SomeOf(NaryOperator):
     def __repr__(self):
         return '<' + ' | '.join(parser.repr for parser in self.parsers) + '>'
 
+
+def Unordered(parser: NaryOperator, name: str = '') -> NaryOperator:
+    """Returns an AllOf- or SomeOf-parser depending on whether `parser`
+    is a Series (AllOf) or an Alternative (SomeOf).
+    """
+    if isinstance(parser, Series):
+        return AllOf(parser, name=name)
+    elif isinstance(parser, Alternative):
+        return SomeOf(parser, name=name)
+    else:
+        raise AssertionError("Unordered can take only Series or Alternative as parser.")
 
 
 ########################################################################

@@ -71,7 +71,7 @@ except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, \\
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \\
+    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, AllOf, SomeOf, Unordered, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
     last_value, counterpart, accumulate, PreprocessorFunc, \\
