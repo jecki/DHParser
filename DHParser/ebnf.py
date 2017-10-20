@@ -832,6 +832,9 @@ class EBNFCompiler(Compiler):
         # return self.non_terminal(node, 'Unordered')
         assert len(node.children) == 1
         nd = node.children[0]
+        for r in nd.children:
+            if r.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
+                node.add_error("Unordered parser lists cannot contain mandatory (§) items.")
         args = ', '.join(self.compile(r) for r in nd.children)
         if nd.parser.name == "term":
             return "AllOf(" + args + ")"

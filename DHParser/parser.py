@@ -55,8 +55,6 @@ Vegard Øye: General Parser Combinators in Racket, 2012,
 https://epsil.github.io/gll/
 """
 
-
-import abc
 import copy
 import os
 from functools import partial
@@ -95,7 +93,7 @@ __all__ = ('PreprocessorFunc',
            'SomeOf',
            'Unordered',
            'FlowOperator',
-           'Required',
+           # 'Required',
            'Lookahead',
            'NegativeLookahead',
            'Lookbehind',
@@ -225,18 +223,6 @@ def add_parser_guard(parser_func):
     (aka "history tracking") of parser calls. Returns the wrapped call.
     """
     def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Node, StringView]:
-        # def memoized(parser, location):
-        #     node = parser.visited[location]
-        #     rlen = location - (0 if node is None else node.len)
-        #     rest = grammar.document__[-rlen:] if rlen else EMPTY_STRING_VIEW
-        #     return node, rest
-        #     # NOTE: An older and simpler implementation of memoization
-        #     # relied on `parser.visited[location] == node, rest`. Although,
-        #     # rest is really just a substring of one and the same document,
-        #     # this resulted in an explosion of memory usage. Seems that
-        #     # `rext = text[i:]` really copies the sub-string. See:
-        #     # https://mail.python.org/pipermail/python-dev/2008-May/079699.html
-
         try:
             location = len(text)    # mind that location is always the distance to the end
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
@@ -306,23 +292,7 @@ def add_parser_guard(parser_func):
     return guarded_call
 
 
-class ParserMetaClass(abc.ABCMeta):
-    """
-    ParserMetaClass adds a wrapper to the __call__ method of parser
-    objects during initialization that takes care of memoizing,
-    left recursion and tracing.
-    """
-    def __init__(cls, name, bases, attrs):
-        guarded_parser_call = add_parser_guard(cls.__call__)
-        # The following check is necessary for classes that don't override
-        # the __call__() method, because in these cases the non-overridden
-        # __call__()-method would be substituted a second time!
-        if cls.__call__.__code__ != guarded_parser_call.__code__:
-            cls.__call__ = guarded_parser_call
-        super(ParserMetaClass, cls).__init__(name, bases, attrs)
-
-
-class Parser(ParserBase, metaclass=ParserMetaClass):
+class Parser(ParserBase):
     """
     (Abstract) Base class for Parser combinator parsers. Any parser
     object that is actually used for parsing (i.e. no mock parsers)
@@ -387,6 +357,15 @@ class Parser(ParserBase, metaclass=ParserMetaClass):
         super(Parser, self).__init__(name)
         self._grammar = None  # type: 'Grammar'
         self.reset()
+
+        # add "aspect oriented" wrapper around parser calls
+        # for memoizing, left recursion and tracing
+        guarded_parser_call = add_parser_guard(self.__class__.__call__)
+        # The following check is necessary for classes that don't override
+        # the __call__() method, because in these cases the non-overridden
+        # __call__()-method would be substituted a second time!
+        if self.__class__.__call__.__code__ != guarded_parser_call.__code__:
+            self.__class__.__call__ = guarded_parser_call
 
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-
@@ -1284,9 +1263,9 @@ class Option(UnaryOperator):
         assert not isinstance(parser, Option), \
             "Redundant nesting of options: %s(%s)" % \
             (str(name), str(parser.name))
-        assert not isinstance(parser, Required), \
-            "Nesting options with required elements is contradictory: " \
-            "%s(%s)" % (str(name), str(parser.name))
+        # assert not isinstance(parser, Required), \
+        #     "Nesting options with required elements is contradictory: " \
+        #     "%s(%s)" % (str(name), str(parser.name))
 
     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
         node, text = self.parser(text)
@@ -1557,6 +1536,8 @@ class AllOf(NaryOperator):
             assert isinstance(parsers[0], Series), \
                 "Parser-specification Error: No single arguments other than a Series " \
                 "allowed as arguments for AllOf-Parser !"
+            assert parsers[0].mandatory == Series.NOPE, \
+                "AllOf cannot contain mandatory (§) elements!"
             parsers = parsers[0].parsers
         super().__init__(*parsers, name=name)
 
@@ -1657,24 +1638,24 @@ class FlowOperator(UnaryOperator):
         super(FlowOperator, self).__init__(parser, name)
 
 
-class Required(FlowOperator):
-    """OBSOLETE. Use mandatory-parameter of Series-parser instead!
-    """
-    RX_ARGUMENT = re.compile(r'\s(\S)')
-
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
-        node, text_ = self.parser(text)
-        if not node:
-            m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
-            i = max(1, text.index(m.regs[1][0])) if m else 1
-            node = Node(self, text[:i])
-            text_ = text[i:]
-            node.add_error('%s expected; "%s" found!' % (str(self.parser), text[:10]),
-                           code=Error.MANDATORY_CONTINUATION)
-        return node, text_
-
-    def __repr__(self):
-        return '§' + self.parser.repr
+# class Required(FlowOperator):
+#     """OBSOLETE. Use mandatory-parameter of Series-parser instead!
+#     """
+#     RX_ARGUMENT = re.compile(r'\s(\S)')
+#
+#     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+#         node, text_ = self.parser(text)
+#         if not node:
+#             m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
+#             i = max(1, text.index(m.regs[1][0])) if m else 1
+#             node = Node(self, text[:i])
+#             text_ = text[i:]
+#             node.add_error('%s expected; "%s" found!' % (str(self.parser), text[:10]),
+#                            code=Error.MANDATORY_CONTINUATION)
+#         return node, text_
+#
+#     def __repr__(self):
+#         return '§' + self.parser.repr
 
 
 class Lookahead(FlowOperator):
