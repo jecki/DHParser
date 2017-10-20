@@ -360,6 +360,7 @@ class Parser(ParserBase):
 
         # add "aspect oriented" wrapper around parser calls
         # for memoizing, left recursion and tracing
+
         guarded_parser_call = add_parser_guard(self.__class__.__call__)
         # The following check is necessary for classes that don't override
         # the __call__() method, because in these cases the non-overridden
