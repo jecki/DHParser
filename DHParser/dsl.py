@@ -155,7 +155,7 @@ def error_str(messages: Iterable[Error]) -> str:
     Returns all true errors (i.e. not just warnings) from the
     `messages` as a concatenated multiline string.
     """
-    return '\n\n'.join(str(m) for m in  messages if is_error(m.level))
+    return '\n\n'.join(str(m) for m in messages if is_error(m.level))
 
 
 def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
@@ -230,7 +230,7 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
         CompilationError if any errors occurred during compilation      
     """
     grammar = get_ebnf_grammar()
-    compiler = get_ebnf_compiler(branding , ebnf_src)
+    compiler = get_ebnf_compiler(branding, ebnf_src)
     transformer = get_ebnf_transformer()
     compileDSL(ebnf_src, nil_preprocessor, grammar, transformer, compiler)
     return compiler
@@ -295,6 +295,7 @@ def load_compiler_suite(compiler_suite: str) -> \
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
+    imports = DHPARSER_IMPORTS
     if is_python_code(compiler_suite):
         try:
             intro, imports, preprocessor_py, parser_py, ast_py, compiler_py, outro = \

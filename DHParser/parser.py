@@ -58,7 +58,7 @@ https://epsil.github.io/gll/
 import copy
 import os
 from functools import partial
-from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union
+from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
 
 from DHParser.error import Error, is_error, has_errors, linebreaks, line_col
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -219,10 +219,10 @@ class HistoryRecord:
 def add_parser_guard(parser_func):
     """
     Add a wrapper function to a parser functions (i.e. Parser.__call__ method)
-    that takes care of memoizing, left recursion and optionally tracing
+    that takes care of memoizing, left recursion and, optionally, tracing
     (aka "history tracking") of parser calls. Returns the wrapped call.
     """
-    def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Node, StringView]:
+    def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         try:
             location = len(text)    # mind that location is always the distance to the end
             grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
@@ -330,7 +330,7 @@ class Parser(ParserBase):
     can for example be returned by the `ZeroOrMore`-parser in case the
     contained parser is repeated zero times.
 
-    Attributes:
+    Attributes and Properties:
         visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
@@ -381,12 +381,11 @@ class Parser(ParserBase):
         """Initializes or resets any parser variables. If overwritten,
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
-        self.visited = dict()            # type: Dict[int, Tuple[Node, StringView]]
+        self.visited = dict()            # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = dict()  # type: Dict[int, int]
         self.cycle_detection = set()     # type: Set[Callable]
-        return self
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
@@ -421,7 +420,7 @@ class Parser(ParserBase):
         assigned to a grammar."""
         pass
 
-    def apply(self, func: ApplyFunc):
+    def apply(self, func: ApplyFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers if any exist. The same function can never
@@ -628,7 +627,7 @@ class Grammar:
                 If turned off, a recursion error will result in case of left
                 recursion.
     """
-    root__ = None  # type: Union[Parser, None]
+    root__ = ZOMBIE_PARSER  # type: ParserBase
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
     # some default values
@@ -668,9 +667,10 @@ class Grammar:
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     if not parser.name:
                         parser._name = entry
-                    if (isinstance(parser, Forward) and (not parser.parser._name)):
+                    if isinstance(parser, Forward) and (not parser.parser._name):
                         parser.parser._name = entry
             cls.parser_initialization__ = "done"
+
 
     def __init__(self, root: Parser=None) -> None:
         # if not hasattr(self.__class__, 'parser_initialization__'):
@@ -679,7 +679,7 @@ class Grammar:
         #     self.wspL__ = ''
         # if not hasattr(self.__class__, 'wspR__'):
         #     self.wspR__ = ''
-        self.all_parsers__ = set()             # type: Set[Parser]
+        self.all_parsers__ = set()             # type: Set[ParserBase]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
@@ -729,16 +729,16 @@ class Grammar:
         self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
         self.document_lbreaks__ = []          # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
-        self.variables__ = dict()     # type: Dict[str, List[str]]
-        self.rollback__ = []          # type: List[Tuple[int, Callable]]
-        self.last_rb__loc__ = -1  # type: int
+        self.variables__ = dict()             # type: Dict[str, List[str]]
+        self.rollback__ = []                  # type: List[Tuple[int, Callable]]
+        self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
-        self.call_stack__ = []        # type: List[Parser]
+        self.call_stack__ = []                # type: List[Parser]
         # snapshots of call stacks
-        self.history__ = []           # type: List[HistoryRecord]
+        self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
-        self.moving_forward__ = False  # type: bool
-        self.recursion_locations__ = set()  # type: Set[int]
+        self.moving_forward__ = False         # type: bool
+        self.recursion_locations__ = set()    # type: Set[int]
 
 
     @property
@@ -792,6 +792,7 @@ class Grammar:
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
+        result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         rest = self.document__
         if not rest:
@@ -837,15 +838,16 @@ class Grammar:
         if any(self.variables__.values()):
             error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
                             str(self.variables__)
-            if result.children:
-                # add another child node at the end to ensure that the position
-                # of the error will be the end of the text. Otherwise, the error
-                # message above ("...after end of parsing") would appear illogical.
-                error_node = Node(ZOMBIE_PARSER, '')
-                error_node.add_error(error_str)
-                result.result = result.children + (error_node,)
-            else:
-                result.add_error(error_str)
+            if result:
+                if result.children:
+                    # add another child node at the end to ensure that the position
+                    # of the error will be the end of the text. Otherwise, the error
+                    # message above ("...after end of parsing") would appear illogical.
+                    error_node = Node(ZOMBIE_PARSER, '')
+                    error_node.add_error(error_str)
+                    result.result = result.children + (error_node,)
+                else:
+                    result.add_error(error_str)
         result.pos = 0  # calculate all positions
         # result.collect_errors(self.document__)
         return result
@@ -989,7 +991,7 @@ class PreprocessorToken(Parser):
         assert RX_PREPROCESSOR_TOKEN.match(token)
         super(PreprocessorToken, self).__init__(token)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -1044,11 +1046,12 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         return RegExp(regexp, self.name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
-        match = text[0:1] != BEGIN_TOKEN and text.match(self.regexp)  # ESC starts a preprocessor token.
-        if match:
-            end = text.index(match.end())
-            return Node(self, text[:end]), text[end:]
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        if text[0:1] != BEGIN_TOKEN:  # ESC starts a preprocessor token.
+            match = text.match(self.regexp)
+            if match:
+                end = text.index(match.end())
+                return Node(self, text[:end]), text[end:]
         return None, text
 
     def __repr__(self):
@@ -1118,7 +1121,7 @@ class RE(Parser):
             regexp = self.main.regexp.pattern
         return self.__class__(regexp, self.wL, self.wR, self.name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # assert self.main.regexp.pattern != "@"
         t = text    # type: StringView
         wL, t = self.wspLeft(t)
@@ -1143,13 +1146,15 @@ class RE(Parser):
             if self.wR is None:
                 self.wspRight = self.grammar.wsp_right_parser__
 
-    def apply(self, func: Parser.ApplyFunc):
+    def apply(self, func: Parser.ApplyFunc) -> bool:
         if super(RE, self).apply(func):
             if self.wL:
                 self.wspLeft.apply(func)
             if self.wR:
                 self.wspRight.apply(func)
             self.main.apply(func)
+            return True
+        return False
 
 
 class Token(RE):
@@ -1202,9 +1207,11 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         return self.__class__(parser, self.name)
 
-    def apply(self, func: Parser.ApplyFunc):
+    def apply(self, func: Parser.ApplyFunc) -> bool:
         if super(UnaryOperator, self).apply(func):
             self.parser.apply(func)
+            return True
+        return False
 
 
 class NaryOperator(Parser):
@@ -1227,10 +1234,12 @@ class NaryOperator(Parser):
         parsers = copy.deepcopy(self.parsers, memo)
         return self.__class__(*parsers, name=self.name)
 
-    def apply(self, func: Parser.ApplyFunc):
+    def apply(self, func: Parser.ApplyFunc) -> bool:
         if super(NaryOperator, self).apply(func):
             for parser in self.parsers:
                 parser.apply(func)
+            return True
+        return False
 
 
 class Option(UnaryOperator):
@@ -1268,7 +1277,7 @@ class Option(UnaryOperator):
         #     "Nesting options with required elements is contradictory: " \
         #     "%s(%s)" % (str(name), str(parser.name))
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -1295,7 +1304,7 @@ class ZeroOrMore(Option):
     EBNF-Notation: `{ ... }`
     EBNF-Example:  `sentence = { /\w+,?/ } "."`
     """
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1
         while text and len(text) < n:
@@ -1336,7 +1345,7 @@ class OneOrMore(UnaryOperator):
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (str(name), str(parser.name))
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         n = len(text) + 1
@@ -1378,8 +1387,8 @@ class Series(NaryOperator):
     def __init__(self, *parsers: Parser, mandatory: int = NOPE, name: str = '') -> None:
         super(Series, self).__init__(*parsers, name=name)
         L = len(self.parsers)
-        assert 1 <= L < Series.NOPE, 'Length %i of series exceeds maximum length of %i' \
-                                     % (L, Series.NOPE)
+        assert 1 <= L < Series.NOPE, ('Length %i of series exceeds maximum length of %i'
+                                      % (L, Series.NOPE))
         if mandatory < 0:  mandatory += L
         assert 0 <= mandatory < L or mandatory == Series.NOPE
         self.mandatory = mandatory
@@ -1388,7 +1397,7 @@ class Series(NaryOperator):
         parsers = copy.deepcopy(self.parsers, memo)
         return self.__class__(*parsers, mandatory=self.mandatory, name=self.name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         pos = 0
@@ -1421,7 +1430,7 @@ class Series(NaryOperator):
     # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
 
     @staticmethod
-    def combined_mandatory(left, right):
+    def combined_mandatory(left: Parser, right: Parser):
         left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
             if isinstance(left, Series) else (Series.NOPE, 1)
         if left_mandatory != Series.NOPE:
@@ -1480,7 +1489,7 @@ class Alternative(NaryOperator):
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
             "Parser-specification Error: only the last alternative may be optional!"
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
@@ -1531,19 +1540,18 @@ class AllOf(NaryOperator):
     EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
     EBNF-Example:  `set = <letter letter_or_digit>`
     """
-
     def __init__(self, *parsers: Parser, name: str = '') -> None:
-        if len(parsers) == 1:
+        if len(parsers) == 1 and isinstance(parsers[0], Series):
             assert isinstance(parsers[0], Series), \
                 "Parser-specification Error: No single arguments other than a Series " \
                 "allowed as arguments for AllOf-Parser !"
-            assert parsers[0].mandatory == Series.NOPE, \
+            series = cast(Series, parsers[0])
+            assert series.mandatory == Series.NOPE, \
                 "AllOf cannot contain mandatory (§) elements!"
-            parsers = parsers[0].parsers
+            parsers = series.parsers
         super().__init__(*parsers, name=name)
 
-
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         parsers = list(self.parsers)  # type: List[Parser]
@@ -1582,16 +1590,16 @@ class SomeOf(NaryOperator):
     EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
     EBNF-Example:  `set = <letter letter_or_digit>`
     """
-
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         if len(parsers) == 1:
             assert isinstance(parsers[0], Alternative), \
                 "Parser-specification Error: No single arguments other than a Alternative " \
                 "allowed as arguments for SomeOf-Parser !"
-            parsers = parsers[0].parsers
+            alternative = cast(Alternative, parsers[0])
+            parsers = alternative.parsers
         super().__init__(*parsers, name=name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         parsers = list(self.parsers)  # type: List[Parser]
@@ -1644,7 +1652,7 @@ class FlowOperator(UnaryOperator):
 #     """
 #     RX_ARGUMENT = re.compile(r'\s(\S)')
 #
-#     def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+#     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
 #         node, text_ = self.parser(text)
 #         if not node:
 #             m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
@@ -1663,7 +1671,7 @@ class Lookahead(FlowOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Lookahead, self).__init__(parser, name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
         if self.sign(node is not None):
             return Node(self, ''), text
@@ -1695,7 +1703,7 @@ class Lookbehind(FlowOperator):
         self.regexp = cast(RE, p).main.regexp if isinstance(p, RE) else p.regexp
         super(Lookbehind, self).__init__(parser, name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[len(text):]  # self.grammar.document__[-len(text) - 1::-1]
         if self.sign(backwards_text.match(self.regexp)):
             return Node(self, ''), text
@@ -1731,7 +1739,7 @@ class Capture(UnaryOperator):
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Capture, self).__init__(parser, name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
         if node:
             stack = self.grammar.variables__.setdefault(self.name, [])
@@ -1765,27 +1773,27 @@ def accumulate(stack: List[str]) -> str:
 
 class Retrieve(Parser):
     """STILL EXPERIMENTAL!"""
-    def __init__(self, symbol: Parser, filter: RetrieveFilter = None, name: str = '') -> None:
+    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None, name: str = '') -> None:
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
-        self.filter = filter if filter else last_value
+        self.filter = rfilter if rfilter else last_value
 
     def __deepcopy__(self, memo):
         return self.__class__(self.symbol, self.filter, self.name)
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
 
     def __repr__(self):
         return ':' + self.symbol.repr
 
-    def call(self, text: StringView) -> Tuple[Node, StringView]:
+    def call(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         try:
             stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            return Node(self, '').add_error(dsl_error_msg(self, \
-                                                          "'%s' undefined or exhausted." % self.symbol.name)), text
+            return Node(self, '').add_error(dsl_error_msg(self,
+                    "'%s' undefined or exhausted." % self.symbol.name)), text
         if text.startswith(value):
             return Node(self, value), text[len(value):]
         else:
@@ -1795,7 +1803,7 @@ class Retrieve(Parser):
 class Pop(Retrieve):
     """STILL EXPERIMENTAL!!!"""
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         nd, txt = super(Pop, self).call(text)  # call() instead of __call__() to avoid parser guard
         if nd and not nd.error_flag:
             stack = self.grammar.variables__[self.symbol.name]
@@ -1827,7 +1835,7 @@ class Synonym(UnaryOperator):
     class, in which case it would be unclear whether the parser
     RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -1867,7 +1875,7 @@ class Forward(Parser):
         duplicate.set(parser)
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Node, StringView]:
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         return self.parser(text)
 
     def __cycle_guard(self, func, alt_return):
@@ -1885,10 +1893,10 @@ class Forward(Parser):
             return ret
 
     def __repr__(self):
-        return self.__cycle_guard(lambda : repr(self.parser), '...')
+        return self.__cycle_guard(lambda: repr(self.parser), '...')
 
     def __str__(self):
-        return self.__cycle_guard(lambda : str(self.parser), '...')
+        return self.__cycle_guard(lambda: str(self.parser), '...')
 
     def set(self, parser: Parser):
         """
@@ -1897,10 +1905,12 @@ class Forward(Parser):
         """
         self.parser = parser
 
-    def apply(self, func: Parser.ApplyFunc):
+    def apply(self, func: Parser.ApplyFunc) -> bool:
         if super(Forward, self).apply(func):
             assert not self.visited
             self.parser.apply(func)
+            return True
+        return False
 
 
 #######################################################################
@@ -2030,7 +2040,7 @@ class Compiler:
 
 
 def compile_source(source: str,
-                   preprocessor: PreprocessorFunc,  # str -> str
+                   preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
                    compiler: Compiler) -> Tuple[Any, List[Error], Node]:  # Node (AST) -> Any

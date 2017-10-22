@@ -20,7 +20,7 @@ import collections.abc
 import copy
 import os
 from functools import partial
-from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable
+from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable, Optional
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
@@ -60,6 +60,9 @@ class ParserBase:
     def __str__(self):
         return self.name + (' = ' if self.name else '') + repr(self)
 
+    def __call__(self, text: StringView) -> Tuple[Optional['Node'], StringView]:
+        return None, text
+
     @property
     def name(self):
         return self._name
@@ -71,6 +74,15 @@ class ParserBase:
     @property
     def repr(self) -> str:
         return self.name if self.name else repr(self)
+
+    def reset(self):
+        pass
+
+    def grammar(self) -> 'Grammar':
+        return None
+
+    def apply(self, func: Callable) -> bool:
+        return False
 
 
 WHITESPACE_PTYPE = ':Whitespace'
@@ -152,7 +164,7 @@ class Node(collections.abc.Sized):
     """
     Represents a node in the concrete or abstract syntax tree.
 
-    Attributes:
+    Attributes and Properties:
         tag_name (str):  The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name
         result (str or tuple):  The result of the parser which
@@ -319,7 +331,7 @@ class Node(collections.abc.Sized):
         else:
             return []
 
-    def _collect_errors(self, lbreaks: List[int] = [], clear_errors=False) -> List[Error]:
+    def _collect_errors(self, lbreaks: List[int]=[], clear_errors=False) -> List[Error]:
         if self.error_flag:
             errors = self.errors
             if lbreaks:
@@ -509,15 +521,15 @@ def mock_syntax_tree(sxpr):
             if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
             # assert s[0] == '(', s
             level = 1
-            i = 1
+            k = 1
             while level > 0:
-                if s[i] == '(':
+                if s[k] == '(':
                     level += 1
-                elif s[i] == ')':
+                elif s[k] == ')':
                     level -= 1
-                i += 1
-            yield s[:i]
-            s = s[i:].strip()
+                k += 1
+            yield s[:k]
+            s = s[k:].strip()
 
     sxpr = sxpr.strip()
     if sxpr[0] != '(': raise ValueError('"(" expected, not ' + sxpr[:10])

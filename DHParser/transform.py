@@ -207,7 +207,8 @@ def traverse(root_node: Node,
     else:
         # normalize processing_table entries by turning single values
         # into lists with a single value
-        table = {name: smart_list(call) for name, call in list(processing_table.items())}
+        table = {name: cast(Sequence[Callable], smart_list(call))
+                 for name, call in list(processing_table.items())}
         table = expand_table(table)
         cache = table.setdefault('__cache__', cast(TransformationDict, dict()))
         # change processing table in place, so its already expanded and cache filled next time
@@ -247,7 +248,6 @@ def traverse(root_node: Node,
 
     traverse_recursive([root_node])
     # assert processing_table['__cache__']
-
 
 
 # ------------------------------------------------
@@ -293,7 +293,7 @@ def replace_by_single_child(context: List[Node], condition: Callable=TRUE_CONDIT
     node = context[-1]
     if len(node.children) == 1:
         context.append(node.children[0])
-        if  condition(context):
+        if condition(context):
             replace_child(node)
         context.pop()
 
@@ -345,8 +345,8 @@ def replace_parser(context: List[Node], name: str):
     name.
 
     Parameters:
-        name(str): "NAME:PTYPE" of the surogate. The ptype is optional
-        node(Node): The node where the parser shall be replaced
+        context: the context where the parser shall be replaced
+        name: "NAME:PTYPE" of the surogate. The ptype is optional
     """
     node = context[-1]
     name, ptype = (name.split(':') + [''])[:2]
@@ -489,7 +489,7 @@ def keep_children(context: List[Node], section: slice = slice(None)):
 
 
 @transformation_factory(Callable)
-def remove_children_if(context: List[Node], condition: Callable, section: slice = slice(None)):
+def remove_children_if(context: List[Node], condition: Callable):  # , section: slice = slice(None)):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
@@ -506,7 +506,7 @@ def remove_children(context: List[Node], condition: Callable, section: slice = s
         N = len(c)
         rng = range(*section.indices(N))
         node.result = tuple(c[i] for i in range(N)
-                            if not i in rng or not condition(context + [c[i]]))
+                            if i not in rng or not condition(context + [c[i]]))
         # selection = []
         # for i in range(N):
         #     context.append(c[i])

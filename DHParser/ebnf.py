@@ -767,7 +767,7 @@ class EBNFCompiler(Compiler):
                                 'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
             if str(arg) in self.directives['filter']:
-                custom_args = ['filter=%s' % self.directives['filter'][str(arg)]]
+                custom_args = ['rfilter=%s' % self.directives['filter'][str(arg)]]
             self.variables.add(str(arg))  # cast(str, arg.result)
 
         elif len(node.children) > 2:
