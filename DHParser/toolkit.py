@@ -168,7 +168,8 @@ def escape_re(s) -> str:
 def is_filename(s) -> bool:
     """Tries to guess whether string ``s`` is a file name."""
     return s.find('\n') < 0 and s[:1] != " " and s[-1:] != " " \
-           and s.find('*') < 0 and s.find('?') < 0
+           and all(s.find(ch) < 0 for ch in '*?"<>|')
+           # and s.find('*') < 0 and s.find('?') < 0
 
 
 def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
