@@ -425,10 +425,14 @@ class Parser(ParserBase):
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers if any exist. The same function can never
         be applied twice between calls of the ``reset()``-method!
+        Returns `True`, if function has been applied, `False` if function
+        had been applied earlier already and thus has not been applied again.
         """
         if func in self.cycle_detection:
             return False
         else:
+            assert not self.visited, "No calls to Parser.apply() during or " \
+                                     "after ongoing parsing process. (Call Parser.reset() first.)"
             self.cycle_detection.add(func)
             func(self)
             return True
@@ -1147,7 +1151,7 @@ class RE(Parser):
                 self.wspRight = self.grammar.wsp_right_parser__
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super(RE, self).apply(func):
+        if super().apply(func):
             if self.wL:
                 self.wspLeft.apply(func)
             if self.wR:
@@ -1208,7 +1212,7 @@ class UnaryOperator(Parser):
         return self.__class__(parser, self.name)
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super(UnaryOperator, self).apply(func):
+        if super().apply(func):
             self.parser.apply(func)
             return True
         return False
@@ -1235,7 +1239,7 @@ class NaryOperator(Parser):
         return self.__class__(*parsers, name=self.name)
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super(NaryOperator, self).apply(func):
+        if super().apply(func):
             for parser in self.parsers:
                 parser.apply(func)
             return True
@@ -1906,8 +1910,7 @@ class Forward(Parser):
         self.parser = parser
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super(Forward, self).apply(func):
-            assert not self.visited
+        if super().apply(func):
             self.parser.apply(func)
             return True
         return False

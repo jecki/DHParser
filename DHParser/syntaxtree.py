@@ -145,6 +145,7 @@ ZOMBIE_PARSER = ZombieParser()
 
 
 ChildrenType = Tuple['Node', ...]
+NoChildren = cast(ChildrenType, ())  # type: ChildrenType
 StrictResultType = Union[ChildrenType, StringView, str]
 ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
@@ -172,11 +173,11 @@ class Node(collections.abc.Sized):
             tuple of child nodes.
         children (tuple):  The tuple of child nodes or an empty tuple
             if there are no child nodes. READ ONLY!
-        parser (Parser):  The parser which generated this node. 
+        parser (Parser):  The parser which generated this node.
             WARNING: In case you use mock syntax trees for testing or
             parser replacement during the AST-transformation: DO NOT
-            rely on this being a real parser object in any phase after 
-            parsing (i.e. AST-transformation and compiling), for 
+            rely on this being a real parser object in any phase after
+            parsing (i.e. AST-transformation and compiling), for
             example by calling ``isinstance(node.parer, ...)``.
         errors (list):  A list of parser- or compiler-errors:
             tuple(position, string) attached to this node
@@ -190,15 +191,15 @@ class Node(collections.abc.Sized):
             through AST-transformation. READ ONLY!
         pos (int):  the position of the node within the parsed text.
 
-            The value of ``pos`` is -1 meaning invalid by default. 
+            The value of ``pos`` is -1 meaning invalid by default.
             Setting this value will set the positions of all child
-            nodes relative to this value.  
+            nodes relative to this value.
 
             To set the pos values of all nodes in a syntax tree, the
-            pos value of the root node should be set to 0 right 
+            pos value of the root node should be set to 0 right
             after parsing.
 
-            Other than that, this value should be considered READ ONLY. 
+            Other than that, this value should be considered READ ONLY.
             At any rate, it should only be reassigned only during
             parsing stage and never during or after the
             AST-transformation.
@@ -285,7 +286,7 @@ class Node(collections.abc.Sized):
         # self._result = (result,) if isinstance(result, Node) else str(result) \
         #     if isinstance(result, StringView) else result or ''  # type: StrictResultType
         self.children = cast(ChildrenType, self._result) \
-            if isinstance(self._result, tuple) else cast(ChildrenType, ())  # type: ChildrenType
+            if isinstance(self._result, tuple) else NoChildren  # type: ChildrenType
         if self.children:
             self.error_flag = max(self.error_flag,
                                   max(child.error_flag for child in self.children))  # type: bool
