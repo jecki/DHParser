@@ -1055,7 +1055,7 @@ class RegExp(Parser):
             match = text.match(self.regexp)
             if match:
                 end = text.index(match.end())
-                return Node(self, text[:end]), text[end:]
+                return Node(self, text[:end], True), text[end:]
         return None, text
 
     def __repr__(self):

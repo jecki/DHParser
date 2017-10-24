@@ -208,15 +208,19 @@ class Node(collections.abc.Sized):
     __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag']
 
 
-    def __init__(self, parser, result: ResultType) -> None:
+    def __init__(self, parser, result: ResultType, leafhint: bool=False) -> None:
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        # self._result = ''  # type: StrictResultType
-        # self.children = ()  # type: ChildrenType
-        self.error_flag = 0  # type: int
-        self._errors = []  # type: List[Error]
-        self.result = result
+        # self._result = ''             # type: StrictResultType
+        # self.children = ()            # type: ChildrenType
+        self.error_flag = 0             # type: int
+        self._errors = []               # type: List[Error]
+        if leafhint:
+            self._result = result       # type: StrictResultType
+            self.children = NoChildren  # type: ChildrenType
+        else:
+            self.result = result
         self._len = len(self._result) if not self.children else \
             sum(child._len for child in self.children)  # type: int
         # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
@@ -282,14 +286,29 @@ class Node(collections.abc.Sized):
         #         or isinstance(result, str)), str(result)
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
-        self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
-        # self._result = (result,) if isinstance(result, Node) else str(result) \
-        #     if isinstance(result, StringView) else result or ''  # type: StrictResultType
-        self.children = cast(ChildrenType, self._result) \
-            if isinstance(self._result, tuple) else NoChildren  # type: ChildrenType
-        if self.children:
-            self.error_flag = max(self.error_flag,
-                                  max(child.error_flag for child in self.children))  # type: bool
+
+        if isinstance(result, Node):
+            self.children = (result,)
+            self._result = self.children
+            self.error_flag = result.error_flag
+        else:
+            if isinstance(result, tuple):
+                self.children = result
+                self._result = result or ''
+                if self.children and not self.error_flag:
+                    self.error_flag = max(child.error_flag for child in self.children)
+            else:
+                self.children = NoChildren
+                self._result = result
+
+        # # shorter but slower:
+        # self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
+        # self.children = cast(ChildrenType, self._result) \
+        #     if isinstance(self._result, tuple) else NoChildren  # type: ChildrenType
+        # if self.children:
+        #     self.error_flag = max(self.error_flag,
+        #                           max(child.error_flag for child in self.children))  # type: bool
+
 
     @property
     def pos(self) -> int:
@@ -313,10 +332,12 @@ class Node(collections.abc.Sized):
     def errors(self) -> List[Error]:
         return self._errors.copy()
 
+
     def add_error(self, message: str, level: int = Error.ERROR, code: Hashable = 0) -> 'Node':
         self._errors.append(Error(message, level, code))
         self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
+
 
     def collect_errors(self, document: Union[StringView, str] = '', clear_errors=False) \
             -> List[Error]:
