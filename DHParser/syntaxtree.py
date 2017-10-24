@@ -212,12 +212,10 @@ class Node(collections.abc.Sized):
         """Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        # self._result = ''             # type: StrictResultType
-        # self.children = ()            # type: ChildrenType
-        # self._len = -1                # type: int
         self.error_flag = 0             # type: int
         self._errors = []               # type: List[Error]
-        # self.result = result would suffice; if clause is merely an optimization for speed
+        # Assignment to self.result initializes the attributes _result, children and _len
+        # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType
             self.children = NoChildren  # type: ChildrenType

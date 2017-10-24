@@ -19,6 +19,7 @@ save_path = os.getcwd()
 os.chdir("Beispiele")
 for entry in os.listdir():
     if entry.lower().endswith('.mlw'):
+        print('\n Parse: ' + entry)
         raw_name = os.path.splitext(entry)[0]
         with logging(True):
             result, messages, AST = compile_source(entry,
@@ -26,9 +27,9 @@ for entry in os.listdir():
                                                    get_grammar(),
                                                    get_transformer(),
                                                    get_compiler())
-        # if AST:
-        #     with open(raw_name + '.ast', 'w', encoding='utf-8') as f:
-        #         f.write(AST.as_sxpr(compact=False))
+        if AST:
+            with open(raw_name + '.ast', 'w', encoding='utf-8') as f:
+                f.write(AST.as_sxpr(compact=False))
         if messages:
             print("Errors in: " + entry)
             with open(raw_name + '.messages', 'w', encoding='utf-8') as f:

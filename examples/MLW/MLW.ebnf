@@ -13,6 +13,8 @@ Artikel           = [LZ]
                     §LemmaPosition
                     [ArtikelKopf]
                     BedeutungsPosition
+                    [VerweisPosition]
+                    { SubArtikel }+
                     ArtikelVerfasser
                     [LZ]  DATEI_ENDE
 
@@ -22,7 +24,7 @@ Artikel           = [LZ]
 LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
                     GrammatikPosition [EtymologiePosition]
 
-Lemma             = { klassisch | gesichert } LemmaWort
+Lemma             = [< klassisch | gesichert >] LemmaWort
   klassisch       = "*"
   gesichert       = "$"
 
