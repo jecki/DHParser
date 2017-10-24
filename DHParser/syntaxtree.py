@@ -214,15 +214,16 @@ class Node(collections.abc.Sized):
         """
         # self._result = ''             # type: StrictResultType
         # self.children = ()            # type: ChildrenType
+        # self._len = -1                # type: int
         self.error_flag = 0             # type: int
         self._errors = []               # type: List[Error]
+        # self.result = result would suffice; if clause is merely an optimization for speed
         if leafhint:
             self._result = result       # type: StrictResultType
             self.children = NoChildren  # type: ChildrenType
+            self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        self._len = len(self._result) if not self.children else \
-            sum(child._len for child in self.children)  # type: int
         # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
         self._pos = -1  # type: int
         self.parser = parser or ZOMBIE_PARSER
@@ -245,7 +246,11 @@ class Node(collections.abc.Sized):
 
 
     def __len__(self):
+        if self._len < 0:
+            self._len = sum(child._len for child in self.children) \
+                if self.children else len(self._result)
         return self._len
+
 
 
     def __bool__(self):
@@ -286,7 +291,7 @@ class Node(collections.abc.Sized):
         #         or isinstance(result, str)), str(result)
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
-
+        self._len = -1  # lazy evaluation
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
@@ -295,12 +300,12 @@ class Node(collections.abc.Sized):
             if isinstance(result, tuple):
                 self.children = result
                 self._result = result or ''
-                if self.children and not self.error_flag:
-                    self.error_flag = max(child.error_flag for child in self.children)
+                if result:
+                    if self.error_flag == 0:
+                        self.error_flag = max(child.error_flag for child in self.children)
             else:
                 self.children = NoChildren
                 self._result = result
-
         # # shorter but slower:
         # self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
         # self.children = cast(ChildrenType, self._result) \
@@ -308,7 +313,6 @@ class Node(collections.abc.Sized):
         # if self.children:
         #     self.error_flag = max(self.error_flag,
         #                           max(child.error_flag for child in self.children))  # type: bool
-
 
     @property
     def pos(self) -> int:
