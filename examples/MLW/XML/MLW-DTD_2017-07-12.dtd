@@ -17,6 +17,7 @@
 <!-- Lemma-Ansatz -->
 <!-- =========================-->
 <!ELEMENT  lemma-position  (((lemma, lemma-varianten?, grammatik-position) | (lemma-position | zusatz)+), etymologie-position?) >
+<!-- Kann eine Lemma-Position ausschließlich aus Zusätzen bestehen? -->
 <!ATTLIST  lemma-position  nr   CDATA  #IMPLIED >
 
 <!-- Lemma -->

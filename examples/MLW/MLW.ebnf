@@ -10,11 +10,12 @@
 ##############################################################################
 
 Artikel           = [LZ]
-                    §LemmaPosition
+                    §{ LemmaPosition }+
+                    [EtymologiePosition]
                     [ArtikelKopf]
                     BedeutungsPosition
                     [VerweisPosition]
-                    { SubArtikel }+
+                    { SubArtikel }
                     ArtikelVerfasser
                     [LZ]  DATEI_ENDE
 
@@ -22,34 +23,29 @@ Artikel           = [LZ]
 #### LEMMA-POSITION ##########################################################
 
 LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
-                    GrammatikPosition [EtymologiePosition]
+                    GrammatikPosition [Zusatz] [ABS]
 
 Lemma             = [< klassisch | gesichert >] LemmaWort
   klassisch       = "*"
-  gesichert       = "$"
+  gesichert       = "$"  # TODO: Noch fragen: Welches Zeichen?
 
 LemmaVarianten    = [LZ]
-                    { LemmaWort §TR }+
-                    [LemmaZusatz §ABS]
+                    { LemmaVariante §TR }+
+                    [Zusatz]
 
-LemmaWort         = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
-
-LemmaZusatz       = "ZUSATZ" §lzs_typ
-  lzs_typ         = /sim\./
-
+LemmaVariante     = LAT_WORT_TEIL { "-" LAT_WORT_TEIL }
 
 ## GRAMMATIK-POSITION ##
 
-GrammatikPosition = "GRAMMATIK" [LZ] §wortart ABS flexion [genus] ABS
-                    [GrammatikVarianten]
+GrammatikPosition = "GRAMMATIK" [LZ] Grammatik §ABS { GrammatikVariante §ABS }
+
+Grammatik        = §wortart ABS flexion [genus]
 
 wortart          = "nomen"  | "n."
                  | "verb"   | "v."
                  | "adverb" | "adv."
                  | "adjektiv" | "adj."
                  | "praeposition" | "praep."
-
-GrammatikVarianten = { [wortart ABS] flexion [genus]  ":"  Beleg §ABS }+
 
 flexion          = FLEX { "," §FLEX }
 FLEX             = /-?[a-z]+/~
@@ -58,12 +54,15 @@ genus            = "maskulinum" | "m."
                  | "femininum" | "f."
                  | "neutrum" | "n."
 
+GrammatikVariante  = [wortart ABS] flexion [genus] DPP  { Beleg }+
 
-## ETYMOLOGIE-POSITION ##
 
-EtymologiePosition = "ETYMOLOGIE" [LZ] EtymologieVarianten
-EtymologieVarianten = { !SCHLUESSELWORT EtymologieVariante }+
-EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
+#### ETYMOLOGIE-POSITION #####################################################
+
+EtymologiePosition = "ETYMOLOGIE" [LZ] { EtymologieVariante }+
+EtymologieVariante = LAT | GRI [EtymologieBesonderheit] ["ETYM" Etymologie] DPP Beleg
+EtymologieBesonderheit = FREITEXT
+Etymologie         = FREITEXT
 
 
 #### ARTIKEL-KOPF ############################################################
@@ -71,10 +70,10 @@ EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
 ArtikelKopf     = { SchreibweisenPosition | StrukturPosition
                   | GebrauchPosition | MetrikPosition | VerwechselungPosition }+
 
-SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
+SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp DPP [LZ]
                          SWVariante { ABS SWVariante} [LZ]
 SWTyp           = "script. fat-" | "script."
-SWVariante      = Schreibweise ":" Beleg
+SWVariante      = Schreibweise DPP Beleg
 Schreibweise    = ZEICHENFOLGE
 
 
@@ -109,12 +108,20 @@ SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 
+#### ZUSATZ an verschiedenen Stellen der Struktur ############################
+
+Zusatz       = "ZUSATZ" §{ zusatz_typ [TR] }+
+  zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | FREITEXT
+
+
 #### BELEGE ##################################################################
 
-Beleg            = InternerVerweis | ExternerVerweis
+Beleg            = (BelegQuelle BelegText) | BelegText | Verweis
+BelegQuelle      = Autor DPP Werk SEM Stelle [SEM Datierung] [SEM Edition]
+BelegText        = '"' FREITEXT '"'
 
-Verweis          =  ZielName
-VerweisZiel      = "[" ZielName "]"
+Verweis          =  "->" ZielName
+VerweisZiel      = "{" ZielName "}"
 ZielName         = BUCHSTABENFOLGE
 
 
@@ -131,14 +138,19 @@ LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 ZAHL             = /\d+/~
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
+SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+
+FREITEXT         = { DEU_WORT | ZAHL | ROEMISCHE_ZAHL | SATZZEICHEN | /s*/ }+
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
 
-TR               = ABS | LZ                     # (beliebiger) Trenner
-ABS              = /\s*;\s*/ | { ZWW }+         # Abschluss (durch Semikolon oder Zeilenwechsel)
-# ZW               = /\n/~                        # Zeilenwechsel
-LZ               = /\s+/                        # Leerzeichen oder -zeilen
+TR               = ABS | LZ                  # (beliebiger) Trenner
+ABS              = /\s*;;?\s*/ | { ZWW }+    # Abschluss (durch Semikolon oder Zeilenwechsel)
+# ZW               = /\n/~                   # Zeilenwechsel
+LZ               = /\s+/                     # Leerzeichen oder -zeilen
+DPP              = /::?/~                    # Doppelpunkt als Trenner
+SEM              = /;;?/~                    # Semikolon als Trenner
 
 ZW               = !LÜCKE ZEILENSPRUNG       # Zeilenwechsel, aber keine Leerzeile(n)
 ZWW              = ZEILENSPRUNG [ LEERRAUM ] # mindestens ein Zeilenwechsel
