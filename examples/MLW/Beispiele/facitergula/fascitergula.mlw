@@ -17,7 +17,7 @@ GRAMMATIK
 
 SCHREIBWEISE
     script.:
-        vizreg-:       v. ibi
+        vizreg-:       -> ID_0023
         festregel(a):  v. ibi
         fezdregl(a):   v. ibi
 
@@ -34,7 +34,7 @@ BELEGE
 * Catal.:  thes. Germ.; 18,7 "-eterculi  viginti  quatuor".
 * Libri:  confrat.  I;  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
   circumdari  iussit  pontifex."
-* Catal.: thes. Germ.; 76,15 "-rulae II."; 40,5 VI "vizregule."; 129a,5 "-sterculas
+* {ID:0023} Catal.: thes. Germ.; 76,15 "-rulae II."; 40,5 VI "vizregule."; 129a,5 "-sterculas
   II."; 24,8  "-itella X."; 114,8 VIII  "fezdregle.";  6,24  "fasciutercule
   VII."; 92,6 "fascercule tres." 21,20 IIII "festregele."
   ZUSATZ saepe.

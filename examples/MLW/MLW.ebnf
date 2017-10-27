@@ -1,5 +1,7 @@
 # EBNF-Syntax für MLW-Artikel
 
+# TODO: Vervollständigen!!!!
+
 
 @ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
                                       # ohne das Zeilenende zu beinhalten
