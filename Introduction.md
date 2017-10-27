@@ -169,9 +169,9 @@ the poem in the domain specific version into the XML-version, DHParser
 requires a structural description of the domain specific encoding. This
 is a bit similar to a document type definition (DTD) in XML. This 
 structural description uses a slightly enhanced version of the 
-[Extended-Backus-Naur-Form (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form) 
-that is a well-established formalism for the structural description of 
-formal languages in computer sciences. And excerpt of the EBNF-definition
+[Extended-Backus-Naur-Form (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form),
+which is a well-established formalism for the structural description of 
+formal languages in computer sciences. An excerpt of the EBNF-definition
 of our domain-specific encoding for the poem looks like this. (We leave out
 the meta-data here. See 
 [`examples/Tutorial/Lyrik.ebnf`](https://gitlab.lrz.de/badw-it/DHParser/blob/master/examples/Tutorial/Lyrik.ebnf)
@@ -208,7 +208,7 @@ of verses, each of which starts, i.e. is preceeded by a new line.
 Can you figure out the rest? Hint: The angular brackets `[` and `]` mean that and
 item is optional and the `§` sign means that it is obligatory. (Strictly speaking, 
 the §-signs are not necessary, because an item that is not optional is always
-obligatory, but the §-signs help the converter to produce the right error
+obligatory, but the §-signs help the converter to produce more useful error
 messages.)
 
 This should be enough for an introduction to the purpose of DSLs in the
