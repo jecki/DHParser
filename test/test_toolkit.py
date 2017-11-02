@@ -43,6 +43,11 @@ class TestLoggingAndLoading:
 
     def teardown(self):
         os.remove(self.filename)
+        pycachedir = os.path.join(self.dirname,'__pycache__')
+        if os.path.exists(pycachedir):
+            for fname in os.listdir(pycachedir):
+                os.remove(os.path.join(pycachedir, fname))
+            os.rmdir(pycachedir)
         os.rmdir(self.dirname)
         if os.path.exists("TESTLOGS"):
             os.remove("TESTLOGS/info.txt")
