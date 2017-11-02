@@ -90,6 +90,11 @@ class TestCompilerGeneration:
                     flag = True
             if not flag:
                 os.rmdir('LOGS')
+        pycachedir = os.path.join(self.tmp,'__pycache__')
+        if os.path.exists(pycachedir):
+            for fname in os.listdir(pycachedir):
+                os.remove(os.path.join(pycachedir, fname))
+            os.rmdir(pycachedir)
         if os.path.exists(self.tmp):
             os.rmdir(self.tmp)
 
