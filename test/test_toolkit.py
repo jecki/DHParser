@@ -30,16 +30,20 @@ from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, re
 
 
 class TestLoggingAndLoading:
-    filename = "tmp/test.py" if os.path.isdir('tmp') else "test/tmp/test.py"
+    filename = "test/tmp/test.py" if os.path.isdir('test/tmp') else "tmp/test.py"
+    dirname = os.path.dirname(filename)
     code1 = "x = 46"
     code2 = "def f():\n    return 46"
 
     def setup(self):
+        if not os.path.exists(self.dirname):
+            os.mkdir(self.dirname)
         with open(self.filename, 'w') as f:
             f.write(self.code2)
 
     def teardown(self):
         os.remove(self.filename)
+        os.rmdir(self.dirname)
         if os.path.exists("TESTLOGS"):
             os.remove("TESTLOGS/info.txt")
             os.rmdir("TESTLOGS")
