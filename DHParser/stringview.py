@@ -23,7 +23,10 @@ However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 """
+
 import collections
+
+from DHParser.toolkit import typing
 from typing import Optional, Iterable, Tuple
 
 

@@ -20,7 +20,6 @@ compilation of domain specific languages based on an EBNF-grammar.
 """
 
 import os
-from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
 
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -29,7 +28,8 @@ from DHParser.error import Error, is_error, has_errors, only_errors
 from DHParser.parser import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object, \
-    re
+    re, typing
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
 
 __all__ = ('GrammarError',
            'CompilationError',

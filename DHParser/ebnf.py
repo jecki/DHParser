@@ -19,18 +19,18 @@ permissions and limitations under the License.
 import keyword
 from collections import OrderedDict
 from functools import partial
-from typing import Callable, Dict, List, Set, Tuple
 
 from DHParser.error import Error
 from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RegExp, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
     Compiler, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, typing
 from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
+from typing import Callable, Dict, List, Set, Tuple
 
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
