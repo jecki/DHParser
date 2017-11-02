@@ -61,7 +61,7 @@ class TestCompilerGeneration:
         word = /\w+/
         WSPC = /\s+/
         """
-    tmp = 'tmp/' if os.path.isdir('tmp') else ('test/tmp/')
+    tmp = 'test/tmp/' if os.path.isdir('test/tmp/') else ('tmp/')
     trivial_text = u"""Es war ein Koenig in Thule.\n"""
     grammar_name = tmp + "TestCompilerGeneration.ebnf"
     compiler_name = tmp + "TestCompilerGenerationCompiler.py"
@@ -69,6 +69,8 @@ class TestCompilerGeneration:
     result_name = tmp + "TestCompilerGeneration_text.xml"
 
     def setup(self):
+        if not os.path.exists(self.tmp):
+            os.mkdir(self.tmp)
         with open(self.grammar_name, "w") as f:
             f.write(self.trivial_lang)
         with open(self.text_name, "w") as f:
@@ -88,6 +90,8 @@ class TestCompilerGeneration:
                     flag = True
             if not flag:
                 os.rmdir('LOGS')
+        if os.path.exists(self.tmp):
+            os.rmdir(self.tmp)
 
 
     def test_load_compiler_suite(self):
