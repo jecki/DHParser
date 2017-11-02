@@ -15,11 +15,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
+
 import bisect
 import functools
-from typing import Hashable, Iterable, Iterator, Union, Tuple, List
 
 from DHParser.stringview import StringView
+from DHParser.toolkit import typing
+from typing import Hashable, Iterable, Iterator, Union, Tuple, List
+
 
 __all__ = ('Error',
            'is_error',

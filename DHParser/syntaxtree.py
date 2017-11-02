@@ -20,11 +20,12 @@ import collections.abc
 import copy
 import os
 from functools import partial
-from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable, Optional
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_logging, log_dir, identity, re
+from DHParser.toolkit import is_logging, log_dir, identity, re, typing
+from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable, Optional
+
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',

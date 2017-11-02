@@ -37,7 +37,7 @@ def differenz(lemma, variante):
     if l <= 1:  l = 0   # einzelne Buchstaben nicht abtrennen
 
     r -= 1              # beginne 1 Zeichen nach dem letzten Unterschied
-    if r <= 1:  r = 0   # eingelne Buchstaben nicht abtrennen
+    if r <= 1:  r = 0   # einzelne Buchstaben nicht abtrennen
 
     # gib Zeichenkette der Unterschide ab dem letzten gemeinsamen (von links) bzw.
     # ab dem ersten gemeinsamen (von rechts) Buchstaben mit Trennstrichen zurück
