@@ -45,6 +45,7 @@ try:
     import typing
 except ImportError:
     import DHParser.foreign_typing as typing
+    sys.modules['typing'] = typing  # make it possible to import from typing
 
 from typing import Any, Iterable, Sequence, Set, Union
 
