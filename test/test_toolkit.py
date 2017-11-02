@@ -30,7 +30,7 @@ from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, re
 
 
 class TestLoggingAndLoading:
-    filename = "test/tmp/test.py" if os.path.isdir('test/tmp') else "tmp/test.py"
+    filename = "test/tmp/test.py" if os.path.isdir('test') else "tmp/test.py"
     dirname = os.path.dirname(filename)
     code1 = "x = 46"
     code2 = "def f():\n    return 46"
