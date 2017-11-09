@@ -22,6 +22,7 @@ Artikel           = [LZ]
                     [LZ]  DATEI_ENDE
 
 
+
 #### LEMMA-POSITION ##########################################################
 
 LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
@@ -36,6 +37,7 @@ LemmaVarianten    = [LZ]
                     [Zusatz]
 
 LemmaVariante     = LAT_WORT_TEIL { "-" LAT_WORT_TEIL }
+
 
 ## GRAMMATIK-POSITION ##
 
@@ -59,12 +61,14 @@ genus            = "maskulinum" | "m."
 GrammatikVariante  = [wortart ABS] flexion [genus] DPP  { Beleg }+
 
 
+
 #### ETYMOLOGIE-POSITION #####################################################
 
 EtymologiePosition = "ETYMOLOGIE" [LZ] { EtymologieVariante }+
 EtymologieVariante = LAT | GRI [EtymologieBesonderheit] ["ETYM" Etymologie] DPP Beleg
 EtymologieBesonderheit = FREITEXT
 Etymologie         = FREITEXT
+
 
 
 #### ARTIKEL-KOPF ############################################################
@@ -101,6 +105,7 @@ ArtikelVerfasser = ("AUTORIN" | "AUTOR") Name
 Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
 
+
 #### Schlüsselwörter #########################################################
 
 SW_LAT           = "LATEINISCH" | "LAT"
@@ -110,10 +115,12 @@ SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 
+
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
 Zusatz       = "ZUSATZ" §{ zusatz_typ [TR] }+
   zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | FREITEXT
+
 
 
 #### BELEGE ##################################################################
@@ -125,6 +132,7 @@ BelegText        = '"' FREITEXT '"'
 Verweis          =  "->" ZielName
 VerweisZiel      = "{" ZielName "}"
 ZielName         = BUCHSTABENFOLGE
+
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################

@@ -82,12 +82,12 @@ KeyFunc = Callable[[Node], str]
 
 def transformation_factory(t=None):
     """Creates factory functions from transformation-functions that
-    dispatch on the first parameter after the node parameter.
+    dispatch on the first parameter after the context parameter.
 
     Decorating a transformation-function that has more than merely the
     ``node``-parameter with ``transformation_factory`` creates a
     function with the same name, which returns a partial-function that
-    takes just the node-parameter.
+    takes just the context-parameter.
 
     Additionally, there is some some syntactic sugar for
     transformation-functions that receive a collection as their second

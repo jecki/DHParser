@@ -90,8 +90,8 @@ def log_dir() -> str:
         if not dirname:
             raise NameError  # raise a name error if LOGGING evaluates to False
     except NameError:
-        raise NameError("No access to log directory before logging has been turned "
-                        "on within the same thread/process.")
+        raise NameError("No access to log directory before logging has been "
+                        "turned on within the same thread/process.")
     if os.path.exists(dirname) and not os.path.isdir(dirname):
         raise IOError('"' + dirname + '" cannot be used as log directory, '
                                       'because it is not a directory!')
@@ -216,7 +216,7 @@ def load_if_file(text_or_file) -> str:
         return text_or_file
 
 
-def is_python_code(text_or_file) -> bool:
+def is_python_code(text_or_file: str) -> bool:
     """Checks whether 'text_or_file' is python code or the name of a file that
     contains python code.
     """
@@ -228,6 +228,34 @@ def is_python_code(text_or_file) -> bool:
     except (SyntaxError, ValueError, OverflowError):
         pass
     return False
+
+
+def has_fenced_code(text_or_file: str, info_strings = ('ebnf', 'test')) -> bool:
+    """Checks whether `text_or_file` contains fenced code blocks, which are
+    marked by one of the given info strings.
+    See http://spec.commonmark.org/0.28/#fenced-code-blocks for more
+    information on fenced code blocks in common mark documents.
+    """
+    if is_filename(text_or_file):
+        with open(text_or_file, 'r', encoding='utf-8') as f:
+            markdown = f.read()
+    else:
+        markdown = text_or_file
+
+    if markdown.find('\n~~~') < 0 and markdown.find('\n```') < 0:
+        return False
+
+    if isinstance(info_strings, str):  info_strings = (info_strings,)
+    FENCE_TMPL = '\n(?:(?:``[`]*[ ]*(?:%s)(?=[ .\-:\n])[^`\n]*\n)|(?:~~[~]*[ ]*(?:%s)(?=[ .\-:\n])[\n]*\n))'
+    LABEL_RE = '|'.join('(?:%s)' % s for s in info_strings)
+    RX_FENCE = re.compile(FENCE_TMPL % (LABEL_RE, LABEL_RE), flags=re.IGNORECASE)
+
+    for m in RX_FENCE.finditer(markdown):
+        s = re.match('(?:\n`+)|(?:\n~+)', m.group(0)).group(0)
+        if markdown.find(s, m.end()) >= 0:
+            return True
+        else:
+            return False
 
 
 def md5(*txt):

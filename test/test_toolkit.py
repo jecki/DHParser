@@ -26,7 +26,7 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import load_if_file, logging, log_dir, is_logging, re
+from DHParser.toolkit import has_fenced_code, load_if_file, logging, log_dir, is_logging, re
 
 
 class TestLoggingAndLoading:
@@ -77,6 +77,15 @@ class TestLoggingAndLoading:
 
         # file correctly loaded
         assert self.code2 == load_if_file(self.filename)
+
+    def test_has_fenced_code(self):
+        code1="has fenced code block\n~~~ ebnf\nstart = 'start'\n~~~\n"
+        code2="no fenced code block ~~~ ebnf\nstart = 'start'\n~~~\n"
+        code3="\n~~~ ebnd\nstart = 'start'\n~~"
+        assert has_fenced_code(code1)
+        assert not has_fenced_code(code2)
+        assert not has_fenced_code(code3)
+
 
     def test_logging(self):
         try:
