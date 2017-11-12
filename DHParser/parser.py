@@ -661,10 +661,10 @@ class Grammar:
         grammar class!
 
         Attention: If there exists more than one reference to the same
-        parser, only the first one will be chosen for python versions 
+        parser, only the first one will be chosen for python versions
         greater or equal 3.6.  For python version <= 3.5 an arbitrarily
         selected reference will be chosen. See PEP 520
-        (www.python.org/dev/peps/pep-0520/) for an explanation of why. 
+        (www.python.org/dev/peps/pep-0520/) for an explanation of why.
         """
         if cls.parser_initialization__ != "done":
             cdict = cls.__dict__
@@ -677,7 +677,7 @@ class Grammar:
             cls.parser_initialization__ = "done"
 
 
-    def __init__(self, root: Parser=None) -> None:
+    def __init__(self, root: Parser = None) -> None:
         # if not hasattr(self.__class__, 'parser_initialization__'):
         #     self.__class__.parser_initialization__ = "pending"
         # if not hasattr(self.__class__, 'wspL__'):
@@ -891,7 +891,7 @@ class Grammar:
     def log_parsing_history__(self, log_file_name: str = '') -> None:
         """
         Writes a log of the parsing history of the most recently parsed
-        document. 
+        document.
         """
         def prepare_line(record):
             excerpt = self.document__.text.__getitem__(record.extent)[:25].replace('\n', '\\n')
@@ -936,8 +936,8 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
             that this is not necessarily the parser that caused the
             error but only where the error became apparent.
         error_str (str):  A short string describing the error.
-    Returns:  
-        str: An error message including the call stack if history 
+    Returns:
+        str: An error message including the call stack if history
         tacking has been turned in the grammar object.
     """
     msg = ["DSL parser specification error:", error_str, 'Caught by parser "%s".' % str(parser)]
@@ -983,7 +983,7 @@ def nil_preprocessor(text: str) -> str:
 class PreprocessorToken(Parser):
     """
     Parses tokens that have been inserted by a preprocessor.
-    
+
     Preprocessors can generate Tokens with the ``make_token``-function.
     These tokens start and end with magic characters that can only be
     matched by the PreprocessorToken Parser. Such tokens can be used to
@@ -1023,8 +1023,9 @@ class PreprocessorToken(Parser):
 
 
 class RegExp(Parser):
-    """Regular expression parser.
-    
+    r"""
+    Regular expression parser.
+
     The RegExp-parser parses text that matches a regular expression.
     RegExp can also be considered as the "atomic parser", because all
     other parsers delegate part of the parsing job to other parsers,
@@ -1068,13 +1069,13 @@ class Whitespace(RegExp):
 
 
 class RE(Parser):
-    """
+    r"""
     Regular Expressions with optional leading or trailing whitespace.
-    
+
     The RE-parser parses pieces of text that match a given regular
     expression. Other than the ``RegExp``-Parser it can also skip
     "implicit whitespace" before or after the matched text.
-    
+
     The whitespace is in turn defined by a regular expression. It should
     be made sure that this expression also matches the empty string,
     e.g. use r'\s*' or r'[\t ]+', but not r'\s+'. If the respective
@@ -1096,17 +1097,18 @@ class RE(Parser):
     EBNF-Notation:  `/ ... /~`  or  `~/ ... /`  or  `~/ ... /~`
     EBNF-Example:   `word = /\w+/~`
     """
+
     def __init__(self, regexp, wL=None, wR=None, name=''):
         """Constructor for class RE.
-                
+
         Args:
             regexp (str or regex object):  The regular expression to be
-                used for parsing. 
-            wL (str or regexp):  Left whitespace regular expression, 
+                used for parsing.
+            wL (str or regexp):  Left whitespace regular expression,
                 i.e. either ``None``, the empty string or a regular
-                expression (e.g. "\s*") that defines whitespace. An 
+                expression (e.g. "\s*") that defines whitespace. An
                 empty string means no whitespace will be skipped,
-                ``None`` means that the default whitespace will be 
+                ``None`` means that the default whitespace will be
                 used.
             wR (str or regexp):  Right whitespace regular expression.
                 See above.
@@ -1248,7 +1250,7 @@ class NaryOperator(Parser):
 
 
 class Option(UnaryOperator):
-    """
+    r"""
     Parser `Optional` always matches, even if its child-parser
     did not match.
 
@@ -1328,7 +1330,7 @@ class ZeroOrMore(Option):
 
 
 class OneOrMore(UnaryOperator):
-    """
+    r"""
     `OneOrMore` applies a parser repeatedly as long as this parser
     matches. Other than `ZeroOrMore` which always matches, at least
     one match is required by `OneOrMore`.
@@ -1372,7 +1374,7 @@ class OneOrMore(UnaryOperator):
 
 
 class Series(NaryOperator):
-    """
+    r"""
     Matches if each of a series of parsers matches exactly in the order of
     the series.
 
@@ -1394,7 +1396,8 @@ class Series(NaryOperator):
         L = len(self.parsers)
         assert 1 <= L < Series.NOPE, ('Length %i of series exceeds maximum length of %i'
                                       % (L, Series.NOPE))
-        if mandatory < 0:  mandatory += L
+        if mandatory < 0:
+            mandatory += L
         assert 0 <= mandatory < L or mandatory == Series.NOPE
         self.mandatory = mandatory
 

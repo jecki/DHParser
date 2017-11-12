@@ -80,7 +80,7 @@ class ParserBase:
     def repr(self) -> str:
         """Returns the parser's name if it has a name and the parser's
         `ptype` otherwise. Note that for named parsers this is not the
-        same as `repr(parsers)` which always returns the comined name 
+        same as `repr(parsers)` which always returns the comined name
         and ptype, e.g. 'term:OneOrMore'."""
         return self.name if self.name else repr(self)
 
@@ -88,7 +88,7 @@ class ParserBase:
         """Resets any parser variables. (Should be overridden.)"""
         pass
 
-    def grammar(self):
+    def grammar(self) -> Optional['Grammar']:
         """Returns the Grammar object to which the parser belongs. If not
         yet connected to any Grammar object, None is returned."""
         return None
@@ -341,7 +341,9 @@ class Node(collections.abc.Sized):
 
     @property
     def pos(self) -> int:
-        assert self._pos >= 0, "position value not initialized!"
+        """Returns the position of the Node's content in the source text."""
+        if self._pos < 0:
+            raise AssertionError("position value not initialized!")
         return self._pos
 
     @pos.setter
@@ -359,10 +361,24 @@ class Node(collections.abc.Sized):
 
     @property
     def errors(self) -> List[Error]:
+        """
+        Returns the errors that occured at this Node, 
+        not including any errors from child nodes.
+        """
         return self._errors.copy()
 
 
-    def add_error(self, message: str, level: int = Error.ERROR, code: Hashable = 0) -> 'Node':
+    def add_error(self,
+                  message: str,
+                  level: int = Error.ERROR,
+                  code: Hashable = cast(Hashable, 0)) -> 'Node':
+        """
+        Adds an error to this Node.
+        Parameters:
+            message(str):   A string with the error message.abs
+            level(int):     The error level (error or warning)
+            code(Hashable): An error code to identify the kind of error
+        """
         self._errors.append(Error(message, level, code))
         self.error_flag = max(self.error_flag, self._errors[-1].level)
         return self
@@ -382,7 +398,7 @@ class Node(collections.abc.Sized):
         else:
             return []
 
-    def _collect_errors(self, lbreaks: List[int]=[], clear_errors=False) -> List[Error]:
+    def _collect_errors(self, lbreaks: List[int] = [], clear_errors=False) -> List[Error]:
         if self.error_flag:
             errors = self.errors
             if lbreaks:
@@ -400,7 +416,7 @@ class Node(collections.abc.Sized):
             return []
 
 
-    def _tree_repr(self, tab, openF, closeF, dataF=identity, density=0) -> str:
+    def _tree_repr(self, tab, open_fn, close_fn, data_fn=identity, density=0) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -422,31 +438,31 @@ class Node(collections.abc.Sized):
             A string that contains a (serialized) tree representation
             of the node and its children.
         """
-        head = openF(self)
-        tail = closeF(self)
+        head = open_fn(self)
+        tail = close_fn(self)
 
         if not self.result:
             return head.rstrip() + tail.lstrip()
 
-        D = None if density & 2 else ''
+        tail = tail.lstrip(None if density & 2 else '')
 
         if self.children:
             content = []
             for child in self.children:
-                subtree = child._tree_repr(tab, openF, closeF, dataF, density).split('\n')
+                subtree = child._tree_repr(tab, open_fn, close_fn, data_fn, density).split('\n')
                 content.append('\n'.join((tab + s) for s in subtree))
-            return head + '\n'.join(content) + tail.lstrip(D)
+            return head + '\n'.join(content) + tail
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
             gap = ' ' if head.rstrip()[-1] != '>' else ''
-            return head.rstrip() + gap + dataF(self.result) + tail.lstrip()
+            return head.rstrip() + gap + data_fn(self.result) + tail.lstrip()
         else:
-            return head + '\n'.join([tab + dataF(s) for s in res.split('\n')]) + tail.lstrip(D)
+            return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str=None, compact: bool=False) -> str:
+    def as_sxpr(self, src: str = None, compact: bool = False) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -459,27 +475,33 @@ class Node(collections.abc.Sized):
                 tree structure.
         """
 
-        lB, rB, D = ('', '', 1) if compact else ('(', '\n)', 0)
+        left_bracket, right_bracket, density = ('', '', 1) if compact else ('(', '\n)', 0)
 
         def opening(node) -> str:
-            s = lB + node.tag_name
+            """Returns the opening string for the representation of `node`."""
+            txt = left_bracket + node.tag_name
             # s += " '(pos %i)" % node.pos
             if src:
-                s += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
+                txt += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
             if node.errors:
-                s += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
-                                                for err in node.errors)
-            return s + '\n'
+                txt += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
+                                                  for err in node.errors)
+            return txt + '\n'
 
-        def pretty(s):
-            return '"%s"' % s if s.find('"') < 0 \
-                else "'%s'" % s if s.find("'") < 0 \
-                else '"%s"' % s.replace('"', r'\"')
+        def closing(node) -> str:
+            """Returns the closing string for the representation of `node`."""
+            return right_bracket
 
-        return self._tree_repr('    ', opening, lambda node: rB, pretty, density=D)
+        def pretty(strg):
+            """Encloses `strg` with the right kind of quotation marks."""
+            return '"%s"' % strg if strg.find('"') < 0 \
+                else "'%s'" % strg if strg.find("'") < 0 \
+                else '"%s"' % strg.replace('"', r'\"')
+
+        return self._tree_repr('    ', opening, closing, pretty, density=density)
 
 
-    def as_xml(self, src: str=None) -> str:
+    def as_xml(self, src: str = None) -> str:
         """
         Returns content as XML-tree.
 
@@ -490,23 +512,27 @@ class Node(collections.abc.Sized):
         """
 
         def opening(node) -> str:
-            s = '<' + node.tag_name
+            """Returns the opening string for the representation of `node`."""            
+            txt = '<' + node.tag_name
             # s += ' pos="%i"' % node.pos
             if src:
-                s += ' line="%i" col="%i"' % line_col(src, node.pos)
+                txt += ' line="%i" col="%i"' % line_col(src, node.pos)
             if node.errors:
-                s += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
-            return s + ">\n"
+                txt += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
+            return txt + ">\n"
 
         def closing(node):
+            """Returns the closing string for the representation of `node`."""            
             return '\n</' + node.tag_name + '>'
 
         return self._tree_repr('    ', opening, closing, density=1)
 
 
     def structure(self) -> str:
-        """Return structure (and content) as S-expression on a single line
-        without any line breaks."""
+        """
+        Return structure (and content) as S-expression on a single line
+        without any line breaks.
+        """
         return flatten_sxpr(self.as_sxpr())
 
 
@@ -522,33 +548,39 @@ class Node(collections.abc.Sized):
 
 
     def find(self, match_function: Callable) -> Iterator['Node']:
-        """Finds nodes in the tree that match a specific criterion.
-        
+        """
+        Finds nodes in the tree that match a specific criterion.
+
         ``find`` is a generator that yields all nodes for which the
-        given ``match_function`` evaluates to True. The tree is 
+        given ``match_function`` evaluates to True. The tree is
         traversed pre-order.
-        
+
         Args:
             match_function (function): A function  that takes as Node
                 object as argument and returns True or False
         Yields:
-            Node: all nodes of the tree for which 
+            Node: all nodes of the tree for which
             ``match_function(node)`` returns True
         """
         if match_function(self):
             yield self
         else:
             for child in self.children:
-                for nd in child.find(match_function):
-                    yield nd
+                for node in child.find(match_function):
+                    yield node
 
 
     def tree_size(self) -> int:
-        """Recursively counts the number of nodes in the tree including the root node."""
+        """
+        Recursively counts the number of nodes in the tree including the root node.
+        """
         return sum(child.tree_size() for child in self.children) + 1
 
 
     def log(self, log_file_name):
+        """
+        Writes ab S-expressions of the tree with root `self` to a file.
+        """
         if is_logging():
             path = os.path.join(log_dir(), log_file_name)
             if os.path.exists(path):
@@ -567,9 +599,13 @@ def mock_syntax_tree(sxpr):
     """
 
     def next_block(s):
+        """Generator that yields all characters until the next closing bracket
+        that does not match an opening bracket matched earlier within the same
+        package."""
         s = s.strip()
         while s[0] != ')':
-            if s[0] != '(': raise ValueError('"(" expected, not ' + s[:10])
+            if s[0] != '(':
+                raise ValueError('"(" expected, not ' + s[:10])
             # assert s[0] == '(', s
             level = 1
             k = 1
@@ -583,28 +619,29 @@ def mock_syntax_tree(sxpr):
             s = s[k:].strip()
 
     sxpr = sxpr.strip()
-    if sxpr[0] != '(': raise ValueError('"(" expected, not ' + sxpr[:10])
+    if sxpr[0] != '(':
+        raise ValueError('"(" expected, not ' + sxpr[:10])
     # assert sxpr[0] == '(', sxpr
     sxpr = sxpr[1:].strip()
-    m = re.match('[\w:]+', sxpr)
-    name, class_name = (sxpr[:m.end()].split(':') + [''])[:2]
-    sxpr = sxpr[m.end():].strip()
+    match = re.match(r'[\w:]+', sxpr)
+    name, class_name = (sxpr[:match.end()].split(':') + [''])[:2]
+    sxpr = sxpr[match.end():].strip()
     if sxpr[0] == '(':
         result = tuple(mock_syntax_tree(block) for block in next_block(sxpr))
     else:
         lines = []
         while sxpr and sxpr[0] != ')':
-            for qm in ['"""', "'''", '"', "'"]:
-                m = re.match(qm + r'.*?' + qm, sxpr, re.DOTALL)
-                if m:
-                    i = len(qm)
-                    lines.append(sxpr[i:m.end() - i])
-                    sxpr = sxpr[m.end():].strip()
+            for qtmark in ['"""', "'''", '"', "'"]:
+                match = re.match(qtmark + r'.*?' + qtmark, sxpr, re.DOTALL)
+                if match:
+                    i = len(qtmark)
+                    lines.append(sxpr[i:match.end() - i])
+                    sxpr = sxpr[match.end():].strip()
                     break
             else:
-                m = re.match(r'(?:(?!\)).)*', sxpr, re.DOTALL)
-                lines.append(sxpr[:m.end()])
-                sxpr = sxpr[m.end():]
+                match = re.match(r'(?:(?!\)).)*', sxpr, re.DOTALL)
+                lines.append(sxpr[:match.end()])
+                sxpr = sxpr[match.end():]
         result = "\n".join(lines)
     return Node(MockParser(name, ':' + class_name), result)
 
