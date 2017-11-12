@@ -27,33 +27,55 @@ does not work for unicode strings. Hence, the StringView class.
 import collections
 
 from DHParser.toolkit import typing
-from typing import Optional, Iterable, Tuple
+from typing import Optional, Union, Iterable, Tuple
 
 
 __all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
-def first_char(text, begin, end) -> int:
+def first_char(text, begin: int, end: int) -> int:
+    """Returns the index of the first non-whitespace character in string
+     `text` within the bounds [begin, end].
+    """
     while begin < end and text[begin] in ' \n\t':
         begin += 1
     return begin
 
 
-def last_char(text, begin, end) -> int:
+def last_char(text, begin: int, end: int) -> int:
+    """Returns the index of the first non-whitespace character in string
+    `text` within the bounds [begin, end].
+    """
     while end > begin and text[end] in ' \n\t':
         end -= 1
     return end
 
 
-def pack_index(index, len) -> int:
-    index = index if index >= 0 else index + len
-    return 0 if index < 0 else len if index > len else index
+def pack_index(index: int, length: int) -> int:
+    """Transforms `index` into a positive index counting from the beginning
+    of the string, capping it at the boundaries [0, len].
+    Examples:
+    >>> pack_index(-1, 5)
+    4
+    >>> pack_index(6, 5)
+    5
+    >>> pack_index(-7, 5)
+    0
+    """
+    # assert length >= 0
+    index = index if index >= 0 else index + length
+    return 0 if index < 0 else length if index > length else index
 
 
-def real_indices(begin, end, len) -> Tuple[int, int]:
+def real_indices(begin: Optional[int],
+                 end: Optional[int],
+                 length) -> Tuple[int, int]:   # "length: int" fails with cython!?
+    """Returns the tuple of real (i.e. positive) indices from the slice
+    indices `begin`,  `end`, assuming a string of size `length`.
+    """
     cbegin = 0 if begin is None else begin
-    cend = len if end is None else end
-    return pack_index(cbegin, len), pack_index(cend, len)
+    cend = length if end is None else end
+    return pack_index(cbegin, length), pack_index(cend, length)
 
 
 class StringView(collections.abc.Sized):
@@ -91,20 +113,22 @@ class StringView(collections.abc.Sized):
         return self.text
 
     def __eq__(self, other):
-        return len(other) == len(self) and str(self) == str(other)  # PERFORMANCE WARNING: This creates copies of the strings
+        # PERFORMANCE WARNING: This creates copies of the strings
+        return len(other) == len(self) and str(self) == str(other)
 
     def __hash__(self):
-        return hash(str(self))  # PERFORMANCE WARNING: This creates a copy of the string-slice
+        # PERFORMANCE WARNING: This creates a copy of the string-slice
+        return hash(str(self))
 
     def __add__(self, other):
         if isinstance(other, str):
-            return (str(self) + other)
+            return str(self) + other
         else:
             return StringView(str(self) + str(other))
 
     def __radd__(self, other):
         if isinstance(other, str):
-            return (other + str(self))
+            return other + str(self)
         else:
             return StringView(str(other) + str(self))
 
@@ -115,7 +139,11 @@ class StringView(collections.abc.Sized):
         start, stop = real_indices(index.start, index.stop, self.len)
         return StringView(self.text, self.begin + start, self.begin + stop)
 
-    def count(self, sub, start=None, end=None) -> int:
+    def count(self, sub: str, start=None, end=None) -> int:
+        """Returns the number of non-overlapping occurrences of substring
+        `sub` in StringView S[start:end].  Optional arguments start and end
+        are interpreted as in slice notation.
+        """
         if self.fullstring_flag:
             return self.text.count(sub, start, end)
         elif start is None and end is None:
@@ -124,7 +152,12 @@ class StringView(collections.abc.Sized):
             start, end = real_indices(start, end, self.len)
             return self.text.count(sub, self.begin + start, self.begin + end)
 
-    def find(self, sub, start=None, end=None) -> int:
+    def find(self, sub: str, start=None, end=None) -> int:
+        """Returns the lowest index in S where substring `sub` is found,
+        such that `sub` is contained within S[start:end].  Optional
+        arguments `start` and `end` are interpreted as in slice notation.
+        Returns -1 on failure.
+        """
         if self.fullstring_flag:
             return self.text.find(sub, start, end)
         elif start is None and end is None:
@@ -133,7 +166,12 @@ class StringView(collections.abc.Sized):
             start, end = real_indices(start, end, self.len)
             return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
 
-    def rfind(self, sub, start=None, end=None) -> int:
+    def rfind(self, sub: str, start=None, end=None) -> int:
+        """Returns the highest index in S where substring `sub` is found,
+        such that `sub` is contained within S[start:end].  Optional
+        arguments `start` and `end` are interpreted as in slice notation.
+        Returns -1 on failure.
+        """
         if self.fullstring_flag:
             return self.text.rfind(sub, start, end)
         if start is None and end is None:
@@ -142,12 +180,23 @@ class StringView(collections.abc.Sized):
             start, end = real_indices(start, end, self.len)
             return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
 
-    def startswith(self, prefix: str, start: int = 0, end: Optional[int] = None) -> bool:
+    def startswith(self,
+                   prefix: Union[str, Tuple[str, ...]],
+                   start: int = 0,
+                   end: Optional[int] = None) -> bool:
+        """Return True if S starts with the specified prefix, False otherwise.
+        With optional `start`, test S beginning at that position.
+        With optional `end`, stop comparing S at that position.
+        prefix can also be a tuple of strings to try.
+        """
         start += self.begin
         end = self.end if end is None else self.begin + end
         return self.text.startswith(prefix, start, end)
 
     def match(self, regex):
+        """Executes `regex.match` on the StringView object and returns the
+        result, which is either a match-object or None.
+        """
         return regex.match(self.text, pos=self.begin, endpos=self.end)
 
     def index(self, absolute_index: int) -> int:
@@ -171,9 +220,15 @@ class StringView(collections.abc.Sized):
         return tuple(index - self.begin for index in absolute_indices)
 
     def search(self, regex):
+        """Executes regex.search on the StringView object and returns the
+        result, which is either a match-object or None.
+        """
         return regex.search(self.text, pos=self.begin, endpos=self.end)
 
     def strip(self):
+        """Returns a copy of the StringView `self` with leading and trailing
+        whitespace removed.
+        """
         if self.fullstring_flag:
             return self.text.strip()
         else:
@@ -182,6 +237,11 @@ class StringView(collections.abc.Sized):
             return self.text[begin:end]
 
     def split(self, sep=None):
+        """Returns a list of the words in `self`, using `sep` as the
+        delimiter string.  If `sep` is not specified or is None, any
+        whitespace string is a separator and empty strings are
+        removed from the result.
+        """
         if self.fullstring_flag:
             return self.text.split(sep)
         else:

@@ -1294,7 +1294,7 @@ class Option(UnaryOperator):
 
 
 class ZeroOrMore(Option):
-    """
+    r"""
     `ZeroOrMore` applies a parser repeatedly as long as this parser
     matches. Like `Option` the `ZeroOrMore` parser always matches. In
     case of zero repetitions, the empty match `((), text)` is returned.

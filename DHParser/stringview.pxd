@@ -7,7 +7,8 @@ cdef int first_char(text, int begin, int end)
 
 cdef int last_char(text, int begin, int end)
 
-cdef inline int pack_index(int index, int len)
+cdef int pack_index(int index, int length)
 
 @cython.locals(cbegin=cython.int, cend=cython.int)
-cpdef real_indices(begin, end, int len)
+cpdef real_indices(begin, end, int length)
+

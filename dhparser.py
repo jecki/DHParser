@@ -139,11 +139,11 @@ else:
 '''
 
 
-def create_project(path,
-                   ebnf_tmpl=EBNF_TEMPLATE,
-                   readme_tmpl=README_TEMPLATE,
-                   grammar_test_tmpl=GRAMMAR_TEST_TEMPLATE):
+def create_project(path: str):
+    """Creates the a new DHParser-project in the given `path`.
+    """
     def create_file(name, content):
+        """Create a file with `name` and write `content` to file."""
         if not os.path.exists(name):
             print('Creating file "%s".' % name)
             with open(name, 'w') as f:
@@ -177,13 +177,16 @@ def create_project(path,
 
 
 def selftest() -> bool:
+    """Run a simple self-text of DHParser.
+    """
     print("DHParser selftest...")
     print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
     builtin_ebnf_parser = get_ebnf_grammar()
     ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
     ebnf_transformer = get_ebnf_transformer()
     ebnf_compiler = get_ebnf_compiler('EBNF')
-    generated_ebnf_parser, errors, ast = compile_source(ebnf_src, None,
+    generated_ebnf_parser, errors, _ = compile_source(
+        ebnf_src, None,
         builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
 
     if errors:
@@ -191,7 +194,8 @@ def selftest() -> bool:
         print("\n\n".join(str(err) for err in errors))
         return False
     print(generated_ebnf_parser)
-    print("\n\nSTAGE 2: Selfhosting-test: Trying to compile EBNF-Grammar with generated parser...\n")
+    print("\n\nSTAGE 2: Selfhosting-test: "
+          "Trying to compile EBNF-Grammar with generated parser...\n")
     selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
                                         ebnf_transformer, ebnf_compiler)
     ebnf_compiler.gen_transformer_skeleton()
@@ -201,22 +205,27 @@ def selftest() -> bool:
 
 
 def cpu_profile(func, repetitions=1):
-    import cProfile, pstats
-    pr = cProfile.Profile()
-    pr.enable()
-    for i in range(repetitions):
+    """Profile the function `func`.
+    """
+    import cProfile
+    import pstats
+    profile = cProfile.Profile()
+    profile.enable()
+    for _ in range(repetitions):
         success = func()
         if not success:
             break
-    pr.disable()
+    profile.disable()
     # after your program ends
-    st = pstats.Stats(pr)
-    st.strip_dirs()
-    st.sort_stats('time').print_stats(40)
+    stats = pstats.Stats(profile)
+    stats.strip_dirs()
+    stats.sort_stats('time').print_stats(40)
     return success
 
 
-def mem_profile(func, dummy=0):
+def mem_profile(func):
+    """Profile memory usage of `func`.
+    """
     import tracemalloc
     tracemalloc.start()
     success = func()
@@ -228,7 +237,10 @@ def mem_profile(func, dummy=0):
     return success
 
 
-if __name__ == "__main__":
+def main():
+    """Creates a project (if a project name has been passed as command line
+    parameter) or runs a quick self-test.
+    """
     if len(sys.argv) > 1:
         if os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
             _errors = compile_on_disk(sys.argv[1],
@@ -245,3 +257,5 @@ if __name__ == "__main__":
             if not cpu_profile(selftest, 1):
                 sys.exit(1)
 
+if __name__ == "__main__":
+    main()

@@ -66,23 +66,37 @@ class ParserBase:
 
     @property
     def name(self):
+        """Returns the name of the parser or the empty string '' for unnamed
+        parsers."""
         return self._name
 
     @property
     def ptype(self) -> str:
+        """Returns the type of the parser. By default this is the parser's
+        class name preceded by a colon, e.g. ':ZeroOrMore'."""
         return self._ptype
 
     @property
     def repr(self) -> str:
+        """Returns the parser's name if it has a name and the parser's
+        `ptype` otherwise. Note that for named parsers this is not the
+        same as `repr(parsers)` which always returns the comined name 
+        and ptype, e.g. 'term:OneOrMore'."""
         return self.name if self.name else repr(self)
 
     def reset(self):
+        """Resets any parser variables. (Should be overridden.)"""
         pass
 
-    def grammar(self) -> 'Grammar':
+    def grammar(self):
+        """Returns the Grammar object to which the parser belongs. If not
+        yet connected to any Grammar object, None is returned."""
         return None
 
     def apply(self, func: Callable) -> bool:
+        """Applies the function `func` to the parser. Returns False, if 
+        - for whatever reason - the functions has not been applied, True
+        otherwise.""" 
         return False
 
 
@@ -159,7 +173,7 @@ def flatten_sxpr(sxpr: str) -> str:
     >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
     '(a (b c))'
     """
-    return re.sub('\s(?=\))', '', re.sub('\s+', ' ', sxpr)).strip()
+    return re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
 
 
 class Node(collections.abc.Sized):
@@ -209,8 +223,9 @@ class Node(collections.abc.Sized):
     __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag']
 
 
-    def __init__(self, parser, result: ResultType, leafhint: bool=False) -> None:
-        """Initializes the ``Node``-object with the ``Parser``-Instance
+    def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
+        """
+        Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
         self.error_flag = 0             # type: int
@@ -275,11 +290,22 @@ class Node(collections.abc.Sized):
 
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
     def tag_name(self) -> str:
+        """
+        Returns the tage name of Node, i.e. the name for XML or
+        S-expression representation. By default the tag name is the
+        name of the node's parser or, if the node's parser is unnamed, the
+        node's parser's `ptype`.
+        """
         return self.parser.name or self.parser.ptype
 
 
     @property
     def result(self) -> StrictResultType:
+        """
+        Returns the result from the parser that created the node.
+        Error messages are not included in the result. Use `self.content()`
+        if the result plus any error messages is needed.
+        """
         return self._result
 
     @result.setter

@@ -55,10 +55,15 @@ def tst_func():
         files.sort()
         for file in files:
             if file.lower().endswith('.tex') and file.lower().find('error') < 0:
-                with open(os.path.join('testdata', file), 'r', encoding="utf-8") as f:
+                with open(os.path.join('testdata', file), 'r', encoding='utf-8') as f:
                     doc = f.read()
                 print('\n\nParsing document: "%s"\n' % file)
                 result = parser(doc)
+                with open('results/' + file[:-4]+'.cst', 'w', encoding='utf-8') as f:
+                    f.write(result.as_sxpr(compact=False))
+                transformer(result)
+                with open('results/' + file[:-4]+'.ast', 'w', encoding='utf-8') as f:
+                    f.write(result.as_sxpr(compact=False))
                 parser.log_parsing_history__()
                 fail_on_error(doc, result)
                 transformer(result)

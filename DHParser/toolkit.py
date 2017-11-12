@@ -33,7 +33,9 @@ already exists.
 import codecs
 import contextlib
 import hashlib
+import io
 import os
+import parser
 
 try:
     import regex as re
@@ -47,7 +49,7 @@ except ImportError:
     import DHParser.foreign_typing as typing
     sys.modules['typing'] = typing  # make it possible to import from typing
 
-from typing import Any, Iterable, Sequence, Set, Union
+from typing import Any, Iterable, Sequence, Set, Union, cast
 
 __all__ = ('logging',
            'is_logging',
@@ -114,13 +116,14 @@ def log_dir() -> str:
 def logging(dirname="LOGS"):
     """Context manager. Log files within this context will be stored in
     directory ``dirname``. Logging is turned off if name is empty.
-    
+
     Args:
         dirname: the name for the log directory or the empty string to
             turn logging of
     """
     global LOGGING
-    if dirname and not isinstance(dirname, str):  dirname = "LOGS"  # be fail tolerant here...
+    if dirname and not isinstance(dirname, str): 
+        dirname = "LOGS"  # be fail tolerant here...
     try:
         save = LOGGING
     except NameError:
@@ -139,7 +142,7 @@ def is_logging() -> bool:
         return False
 
 
-def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
+def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
     """Removes all logs from the log-directory and removes the
     log-directory if it is empty.
     """
@@ -156,21 +159,21 @@ def clear_logs(logfile_types={'.cst', '.ast', '.log'}):
         os.rmdir(log_dirname)
 
 
-def escape_re(s) -> str:
+def escape_re(strg: str) -> str:
     """Returns `s` with all regular expression special characters escaped.
     """
-    # assert isinstance(s, str)
+    # assert isinstance(strg, str)
     re_chars = r"\.^$*+?{}[]()#<>=|!"
     for esc_ch in re_chars:
-        s = s.replace(esc_ch, '\\' + esc_ch)
-    return s
+        strg = strg.replace(esc_ch, '\\' + esc_ch)
+    return strg
 
 
-def is_filename(s) -> bool:
+def is_filename(strg: str) -> bool:
     """Tries to guess whether string ``s`` is a file name."""
-    return s.find('\n') < 0 and s[:1] != " " and s[-1:] != " " \
-           and all(s.find(ch) < 0 for ch in '*?"<>|')
-           # and s.find('*') < 0 and s.find('?') < 0
+    return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
+           and all(strg.find(ch) < 0 for ch in '*?"<>|')
+           # and strg.find('*') < 0 and strg.find('?') < 0
 
 
 def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
@@ -181,11 +184,11 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
         return os.path.basename(os.path.splitext(filename_or_text)[0])
     else:
         try:
-            s = function_or_class_or_instance.__qualname.__
+            name = function_or_class_or_instance.__qualname.__
         except AttributeError:
-            s = function_or_class_or_instance.__class__.__name__
-        i = s.find('.')
-        return s[:i] + '_out' if i >= 0 else s
+            name = function_or_class_or_instance.__class__.__name__
+        i = name.find('.')
+        return name[:i] + '_out' if i >= 0 else name
 
 
 #######################################################################
@@ -223,14 +226,15 @@ def is_python_code(text_or_file: str) -> bool:
     if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
-        compile(text_or_file, '<string>', 'exec')
+        parser.suite(text_or_file)
+        # compile(text_or_file, '<string>', 'exec')
         return True
     except (SyntaxError, ValueError, OverflowError):
         pass
     return False
 
 
-def has_fenced_code(text_or_file: str, info_strings = ('ebnf', 'test')) -> bool:
+def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
     """Checks whether `text_or_file` contains fenced code blocks, which are
     marked by one of the given info strings.
     See http://spec.commonmark.org/0.28/#fenced-code-blocks for more
@@ -245,17 +249,20 @@ def has_fenced_code(text_or_file: str, info_strings = ('ebnf', 'test')) -> bool:
     if markdown.find('\n~~~') < 0 and markdown.find('\n```') < 0:
         return False
 
-    if isinstance(info_strings, str):  info_strings = (info_strings,)
-    FENCE_TMPL = '\n(?:(?:``[`]*[ ]*(?:%s)(?=[ .\-:\n])[^`\n]*\n)|(?:~~[~]*[ ]*(?:%s)(?=[ .\-:\n])[\n]*\n))'
-    LABEL_RE = '|'.join('(?:%s)' % s for s in info_strings)
-    RX_FENCE = re.compile(FENCE_TMPL % (LABEL_RE, LABEL_RE), flags=re.IGNORECASE)
+    if isinstance(info_strings, str):
+        info_strings = (info_strings,)
+    fence_tmpl = '\n(?:(?:``[`]*[ ]*(?:%s)(?=[ .\-:\n])[^`\n]*\n)' + \
+                 '|(?:~~[~]*[ ]*(?:%s)(?=[ .\-:\n])[\n]*\n))'
+    label_re = '|'.join('(?:%s)' % matched_string for matched_string in info_strings)
+    rx_fence = re.compile(fence_tmpl % (label_re, label_re), flags=re.IGNORECASE)
 
-    for m in RX_FENCE.finditer(markdown):
-        s = re.match('(?:\n`+)|(?:\n~+)', m.group(0)).group(0)
-        if markdown.find(s, m.end()) >= 0:
+    for match in rx_fence.finditer(markdown):
+        matched_string = re.match('(?:\n`+)|(?:\n~+)', match.group(0)).group(0)
+        if markdown.find(matched_string, match.end()) >= 0:
             return True
         else:
-            return False
+            break
+    return False
 
 
 def md5(*txt):
@@ -279,8 +286,8 @@ def compile_python_object(python_src, catch_obj_regex=""):
     namespace = {}
     exec(code, namespace)  # safety risk?
     if catch_obj_regex:
-        matches = [key for key in namespace.keys() if catch_obj_regex.match(key)]
-        if len(matches) == 0:
+        matches = [key for key in namespace if catch_obj_regex.match(key)]
+        if len(matches) < 1:
             raise ValueError("No object matching /%s/ defined in source code." %
                              catch_obj_regex.pattern)
         elif len(matches) > 1:
@@ -301,7 +308,7 @@ def compile_python_object(python_src, catch_obj_regex=""):
 # def smart_list(arg: Union[str, Iterable[T]]) -> Union[Sequence[str], Sequence[T]]:
 def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
     """Returns the argument as list, depending on its type and content.
-    
+
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
     in this order, e.g.
@@ -324,7 +331,7 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
     >>> smart_list(i for i in {1,2,3})
     [1, 2, 3]
 
-    Finally, if none of the above is true, the argument will be 
+    Finally, if none of the above is true, the argument will be
     wrapped in a list and returned, e.g.
     >>> smart_list(125)
     [125]
@@ -377,6 +384,7 @@ def sane_parser_name(name) -> bool:
 
 
 def identity(anything: Any) -> Any:
+    """Identity function for functional programming style."""
     return anything
 
 
@@ -389,9 +397,10 @@ def identity(anything: Any) -> Any:
 
 try:
     if sys.stdout.encoding.upper() != "UTF-8":
-        # make sure that `print()` does not raise an error on 
+        # make sure that `print()` does not raise an error on
         # non-ASCII characters:
-        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+        sys.stdout = cast(io.TextIOWrapper, codecs.getwriter("utf-8")(cast(
+            io.BytesIO, cast(io.TextIOWrapper, sys.stdout).detach())))
 except AttributeError:
     # somebody has already taken care of this !?
     pass

@@ -1,0 +1,13 @@
+Warning: Rule "SW_GRIECH" is not connected to parser root "Artikel" !
+Warning: Rule "VerweisZiel" is not connected to parser root "Artikel" !
+Warning: Rule "DEU_WORT" is not connected to parser root "Artikel" !
+Warning: Rule "DEU_GROSS" is not connected to parser root "Artikel" !
+Warning: Rule "DEU_KLEIN" is not connected to parser root "Artikel" !
+Warning: Rule "LAT_WORT" is not connected to parser root "Artikel" !
+Warning: Rule "GROSSSCHRIFT" is not connected to parser root "Artikel" !
+Warning: Rule "ZW" is not connected to parser root "Artikel" !
+Warning: Rule "LÜCKE" is not connected to parser root "Artikel" !
+Warning: Rule "LEERZEILE" is not connected to parser root "Artikel" !
+Warning: Rule "RZS" is not connected to parser root "Artikel" !
+Warning: Rule "KOMMENTARZEILEN" is not connected to parser root "Artikel" !
+Warning: Rule "NIEMALS" is not connected to parser root "Artikel" !
