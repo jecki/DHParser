@@ -88,15 +88,15 @@ class ParserBase:
         """Resets any parser variables. (Should be overridden.)"""
         pass
 
-    def grammar(self) -> Optional['Grammar']:
+    def grammar(self) -> Optional[object]:
         """Returns the Grammar object to which the parser belongs. If not
         yet connected to any Grammar object, None is returned."""
         return None
 
     def apply(self, func: Callable) -> bool:
-        """Applies the function `func` to the parser. Returns False, if 
+        """Applies the function `func` to the parser. Returns False, if
         - for whatever reason - the functions has not been applied, True
-        otherwise.""" 
+        otherwise."""
         return False
 
 

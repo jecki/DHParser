@@ -956,7 +956,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
 ########################################################################
 
 
-RX_PREPROCESSOR_TOKEN = re.compile('\w+')
+RX_PREPROCESSOR_TOKEN = re.compile(r'\w+')
 BEGIN_TOKEN = '\x1b'
 END_TOKEN = '\x1c'
 
@@ -977,6 +977,7 @@ def make_token(token: str, argument: str = '') -> str:
 
 
 def nil_preprocessor(text: str) -> str:
+    """A preprocessor that does nothing, i.e. just returns the input."""
     return text
 
 
@@ -1065,6 +1066,7 @@ class RegExp(Parser):
 
 
 class Whitespace(RegExp):
+    """A parser class for plain whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
 
