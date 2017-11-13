@@ -362,7 +362,7 @@ class Node(collections.abc.Sized):
     @property
     def errors(self) -> List[Error]:
         """
-        Returns the errors that occured at this Node, 
+        Returns the errors that occured at this Node,
         not including any errors from child nodes.
         """
         return self._errors.copy()
@@ -371,7 +371,7 @@ class Node(collections.abc.Sized):
     def add_error(self,
                   message: str,
                   level: int = Error.ERROR,
-                  code: Hashable = cast(Hashable, 0)) -> 'Node':
+                  code: int = 0) -> 'Node':
         """
         Adds an error to this Node.
         Parameters:

@@ -1066,7 +1066,8 @@ class RegExp(Parser):
 
 
 class Whitespace(RegExp):
-    """A parser class for plain whitespace."""
+    """An variant of RegExp that signifies through its class name that it
+    is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
 
@@ -1101,7 +1102,7 @@ class RE(Parser):
     """
 
     def __init__(self, regexp, wL=None, wR=None, name=''):
-        """Constructor for class RE.
+        r"""Constructor for class RE.
 
         Args:
             regexp (str or regex object):  The regular expression to be
@@ -1117,10 +1118,10 @@ class RE(Parser):
             name:  The optional name of the parser.
         """
         super(RE, self).__init__(name)
-        self.wL = wL
-        self.wR = wR
-        self.wspLeft = Whitespace(wL) if wL else ZOMBIE_PARSER
-        self.wspRight = Whitespace(wR) if wR else ZOMBIE_PARSER
+        self.rx_wsl = wL
+        self.rx_wsr = wR
+        self.wsp_left = Whitespace(wL) if wL else ZOMBIE_PARSER
+        self.wsp_right = Whitespace(wR) if wR else ZOMBIE_PARSER
         self.main = RegExp(regexp)
 
     def __deepcopy__(self, memo={}):
@@ -1128,39 +1129,39 @@ class RE(Parser):
             regexp = copy.deepcopy(self.main.regexp, memo)
         except TypeError:
             regexp = self.main.regexp.pattern
-        return self.__class__(regexp, self.wL, self.wR, self.name)
+        return self.__class__(regexp, self.rx_wsl, self.rx_wsr, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # assert self.main.regexp.pattern != "@"
-        t = text    # type: StringView
-        wL, t = self.wspLeft(t)
-        main, t = self.main(t)
+        txt = text    # type: StringView
+        wsl, txt = self.wsp_left(txt)
+        main, txt = self.main(txt)
         if main:
-            wR, t = self.wspRight(t)
-            result = tuple(nd for nd in (wL, main, wR)
+            wsr, txt = self.wsp_right(txt)
+            result = tuple(nd for nd in (wsl, main, wsr)
                            if nd and nd.result != '')
-            return Node(self, result), t
+            return Node(self, result), txt
         return None, text
 
     def __repr__(self):
-        wL = '~' if self.wspLeft != ZOMBIE_PARSER else ''
-        wR = '~' if self.wspRight != ZOMBIE_PARSER else ''
-        return wL + '/%s/' % self.main.regexp.pattern + wR
+        wsl = '~' if self.wsp_left != ZOMBIE_PARSER else ''
+        wsr = '~' if self.wsp_right != ZOMBIE_PARSER else ''
+        return wsl + '/%s/' % self.main.regexp.pattern + wsr
 
     def _grammar_assigned_notifier(self):
         if self.grammar:
             # use default whitespace parsers if not otherwise specified
-            if self.wL is None:
-                self.wspLeft = self.grammar.wsp_left_parser__
-            if self.wR is None:
-                self.wspRight = self.grammar.wsp_right_parser__
+            if self.rx_wsl is None:
+                self.wsp_left = self.grammar.wsp_left_parser__
+            if self.rx_wsr is None:
+                self.wsp_right = self.grammar.wsp_right_parser__
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
         if super().apply(func):
-            if self.wL:
-                self.wspLeft.apply(func)
-            if self.wR:
-                self.wspRight.apply(func)
+            if self.rx_wsl:
+                self.wsp_left.apply(func)
+            if self.rx_wsr:
+                self.wsp_right.apply(func)
             self.main.apply(func)
             return True
         return False
@@ -1183,7 +1184,7 @@ class Token(RE):
         super(Token, self).__init__(escape_re(token), wL, wR, name)
 
     def __deepcopy__(self, memo={}):
-        return self.__class__(self.token, self.wL, self.wR, self.name)
+        return self.__class__(self.token, self.rx_wsl, self.rx_wsr, self.name)
 
     def __repr__(self):
         return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
@@ -1207,6 +1208,7 @@ class UnaryOperator(Parser):
     to be overwritten, however, if the constructor of a derived class
     has additional parameters.
     """
+
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(UnaryOperator, self).__init__(name)
         assert isinstance(parser, Parser), str(parser)
@@ -1234,6 +1236,7 @@ class NaryOperator(Parser):
     overwritten, however, if the constructor of a derived class has
     additional parameters.
     """
+
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(NaryOperator, self).__init__(name)
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
@@ -1276,6 +1279,7 @@ class Option(UnaryOperator):
     EBNF-Notation: `[ ... ]`
     EBNF-Example:  `number = ["-"]  /\d+/  [ /\.\d+/ ]
     """
+
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(Option, self).__init__(parser, name)
         # assert isinstance(parser, Parser)
@@ -1313,6 +1317,7 @@ class ZeroOrMore(Option):
     EBNF-Notation: `{ ... }`
     EBNF-Example:  `sentence = { /\w+,?/ } "."`
     """
+
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1
@@ -1395,12 +1400,12 @@ class Series(NaryOperator):
 
     def __init__(self, *parsers: Parser, mandatory: int = NOPE, name: str = '') -> None:
         super(Series, self).__init__(*parsers, name=name)
-        L = len(self.parsers)
-        assert 1 <= L < Series.NOPE, ('Length %i of series exceeds maximum length of %i'
-                                      % (L, Series.NOPE))
+        length = len(self.parsers)
+        assert 1 <= length < Series.NOPE, \
+            'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
         if mandatory < 0:
-            mandatory += L
-        assert 0 <= mandatory < L or mandatory == Series.NOPE
+            mandatory += length
+        assert 0 <= mandatory < length or mandatory == Series.NOPE
         self.mandatory = mandatory
 
     def __deepcopy__(self, memo):
@@ -1418,8 +1423,8 @@ class Series(NaryOperator):
                     return None, text
                 else:
                     # Provide useful error messages
-                    m = text.search(Series.RX_ARGUMENT)
-                    i = max(1, text.index(m.regs[1][0])) if m else 1
+                    match = text.search(Series.RX_ARGUMENT)
+                    i = max(1, text.index(match.regs[1][0])) if match else 1
                     node = Node(self, text_[:i])
                     node.add_error('%s expected; "%s" found!' % (str(parser), text_[:10]),
                                    code=Error.MANDATORY_CONTINUATION)
@@ -1441,6 +1446,10 @@ class Series(NaryOperator):
 
     @staticmethod
     def combined_mandatory(left: Parser, right: Parser):
+        """
+        Returns the position of the first mandatory element (if any) when
+        parsers `left` and `right` are joined to a sequence.
+        """
         left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
             if isinstance(left, Series) else (Series.NOPE, 1)
         if left_mandatory != Series.NOPE:
@@ -1471,7 +1480,7 @@ class Series(NaryOperator):
 
 
 class Alternative(NaryOperator):
-    """
+    r"""
     Matches if one of several alternatives matches. Returns
     the first match.
 
@@ -1492,7 +1501,8 @@ class Alternative(NaryOperator):
     EBNF-Notation: `... | ...`
     EBNF-Example:  `sentence = /\d+\.\d+/ | /\d+/`
     """
-    def __init__(self, *parsers: Parser, name: str='') -> None:
+
+    def __init__(self, *parsers: Parser, name: str = '') -> None:
         super(Alternative, self).__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
@@ -1550,6 +1560,7 @@ class AllOf(NaryOperator):
     EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
     EBNF-Example:  `set = <letter letter_or_digit>`
     """
+
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         if len(parsers) == 1 and isinstance(parsers[0], Series):
             assert isinstance(parsers[0], Series), \
@@ -1600,6 +1611,7 @@ class SomeOf(NaryOperator):
     EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
     EBNF-Example:  `set = <letter letter_or_digit>`
     """
+
     def __init__(self, *parsers: Parser, name: str = '') -> None:
         if len(parsers) == 1:
             assert isinstance(parsers[0], Alternative), \
@@ -1634,7 +1646,8 @@ class SomeOf(NaryOperator):
 
 
 def Unordered(parser: NaryOperator, name: str = '') -> NaryOperator:
-    """Returns an AllOf- or SomeOf-parser depending on whether `parser`
+    """
+    Returns an AllOf- or SomeOf-parser depending on whether `parser`
     is a Series (AllOf) or an Alternative (SomeOf).
     """
     if isinstance(parser, Series):
@@ -1653,6 +1666,10 @@ def Unordered(parser: NaryOperator, name: str = '') -> NaryOperator:
 
 
 class FlowOperator(UnaryOperator):
+    """
+    Base class of all flow operators, like lookahead, lookbehing,
+    negative lookahead... 
+    """
     def __init__(self, parser: Parser, name: str = '') -> None:
         super(FlowOperator, self).__init__(parser, name)
 
@@ -1678,11 +1695,11 @@ class FlowOperator(UnaryOperator):
 
 
 class Lookahead(FlowOperator):
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super(Lookahead, self).__init__(parser, name)
+    # def __init__(self, parser: Parser, name: str = '') -> None:
+    #     super(Lookahead, self).__init__(parser, name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text_ = self.parser(text)
+        node, _ = self.parser(text)
         if self.sign(node is not None):
             return Node(self, ''), text
         else:

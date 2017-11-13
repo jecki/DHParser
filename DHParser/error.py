@@ -46,7 +46,7 @@ class Error:
 
     MANDATORY_CONTINUATION = 1001
 
-    def __init__(self, message: str, level: int = ERROR, code: Hashable = 0,
+    def __init__(self, message: str, level: int = ERROR, code: int = 0,
                  pos: int = -1, line: int = -1, column: int = -1) -> None:
         self.message = message
         assert level >= 0
@@ -68,18 +68,22 @@ class Error:
 
     @property
     def level_str(self):
+        """Returns a string representation of the error level, e.g. "warning".
+        """
         return "Warning" if is_warning(self.level) else "Error"
 
 
 def is_warning(level: int) -> bool:
+    """Returns True, if error is merely a warning."""
     return level < Error.ERROR
 
 
-def is_error(level:  int) -> bool:
+def is_error(level: int) -> bool:
+    """Returns True, if error is an error, not just a warning."""
     return level >= Error.ERROR
 
 
-def has_errors(messages: Iterable[Error], level: int=Error.ERROR) -> bool:
+def has_errors(messages: Iterable[Error], level: int = Error.ERROR) -> bool:
     """
     Returns True, if at least one entry in `messages` has at
     least the given error `level`.
@@ -90,7 +94,7 @@ def has_errors(messages: Iterable[Error], level: int=Error.ERROR) -> bool:
     return False
 
 
-def only_errors(messages: Iterable[Error], level: int=Error.ERROR) -> Iterator[Error]:
+def only_errors(messages: Iterable[Error], level: int = Error.ERROR) -> Iterator[Error]:
     """
     Returns an Iterator that yields only those messages that have
     at least the given error level.
@@ -99,18 +103,22 @@ def only_errors(messages: Iterable[Error], level: int=Error.ERROR) -> Iterator[E
 
 
 def linebreaks(text: Union[StringView, str]):
-    lb = [-1]
+    """
+    Returns a list of indices all line breaks in the text.
+    """
+    lbr = [-1]
     i = text.find('\n', 0)
     while i >= 0:
-        lb.append(i)
+        lbr.append(i)
         i = text.find('\n', i + 1)
-    lb.append(len(text))
-    return lb
+    lbr.append(len(text))
+    return lbr
 
 
 @functools.singledispatch
 def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
-    """Returns the position within a text as (line, column)-tuple.
+    """
+    Returns the position within a text as (line, column)-tuple.
     """
     if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
         raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
@@ -121,7 +129,8 @@ def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
 
 @line_col.register(list)
 def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
-    """Returns the position within a text as (line, column)-tuple based
+    """
+    Returns the position within a text as (line, column)-tuple based
     on a list of all line breaks, including -1 and EOF.
     """
     if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
