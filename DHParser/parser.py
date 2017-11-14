@@ -93,8 +93,6 @@ __all__ = ('PreprocessorFunc',
            'AllOf',
            'SomeOf',
            'Unordered',
-           'FlowOperator',
-           # 'Required',
            'Lookahead',
            'NegativeLookahead',
            'Lookbehind',
@@ -454,7 +452,7 @@ def mixin_comment(whitespace: str, comment: str) -> str:
 
 
 class Grammar:
-    """
+    r"""
     Class Grammar directs the parsing process and stores global state
     information of the parsers, i.e. state information that is shared
     accross parsers.
@@ -748,6 +746,11 @@ class Grammar:
 
     @property
     def reversed__(self) -> StringView:
+        """
+        Returns a reversed version of the currently parsed document. As
+        about the only case where this is needed is the Lookbehind-parser,
+        this is done lazily.
+        """
         if not self._reversed__:
             self._reversed__ = StringView(self.document__.text[::-1])
         return self._reversed__
@@ -801,7 +804,7 @@ class Grammar:
         stitches = []  # type: List[Node]
         rest = self.document__
         if not rest:
-            result, ignore = parser(rest)
+            result, _ = parser(rest)
             if result is None:
                 result = Node(None, '')
                 result.add_error('Parser "%s" did not match empty document.' % str(parser))
@@ -1664,14 +1667,13 @@ def Unordered(parser: NaryOperator, name: str = '') -> NaryOperator:
 #
 ########################################################################
 
-
 class FlowOperator(UnaryOperator):
     """
-    Base class of all flow operators, like lookahead, lookbehing,
-    negative lookahead... 
+    Base class for all flow operator parsers like Lookahead and Lookbehind.
     """
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super(FlowOperator, self).__init__(parser, name)
+    def sign(self, bool_value) -> bool:
+        """Returns the value. Can be overriden to return the inverted bool."""
+        return bool_value
 
 
 # class Required(FlowOperator):
@@ -1695,9 +1697,10 @@ class FlowOperator(UnaryOperator):
 
 
 class Lookahead(FlowOperator):
-    # def __init__(self, parser: Parser, name: str = '') -> None:
-    #     super(Lookahead, self).__init__(parser, name)
-
+    """
+    Matches, if the contained parser would match for the following text,
+    but does not consume any text.
+    """
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
@@ -1708,11 +1711,12 @@ class Lookahead(FlowOperator):
     def __repr__(self):
         return '&' + self.parser.repr
 
-    def sign(self, bool_value) -> bool:
-        return bool_value
-
 
 class NegativeLookahead(Lookahead):
+    """
+    Matches, if the contained parser would *not* match for the following
+    text.
+    """
     def __repr__(self):
         return '!' + self.parser.repr
 
@@ -1721,17 +1725,21 @@ class NegativeLookahead(Lookahead):
 
 
 class Lookbehind(FlowOperator):
-    """EXPERIMENTAL!!!"""
+    """
+    Matches, if the contained parser would match backwards. Requires
+    the contained parser to be a RegExp-parser.
+    """
     def __init__(self, parser: Parser, name: str = '') -> None:
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
         assert isinstance(p, RegExp), str(type(p))
         self.regexp = cast(RE, p).main.regexp if isinstance(p, RE) else p.regexp
-        super(Lookbehind, self).__init__(parser, name)
+        super().__init__(parser, name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        backwards_text = self.grammar.reversed__[len(text):]  # self.grammar.document__[-len(text) - 1::-1]
+        # backwards_text = self.grammar.document__[-len(text) - 1::-1]
+        backwards_text = self.grammar.reversed__[len(text):]
         if self.sign(backwards_text.match(self.regexp)):
             return Node(self, ''), text
         else:
@@ -1740,12 +1748,12 @@ class Lookbehind(FlowOperator):
     def __repr__(self):
         return '-&' + self.parser.repr
 
-    def sign(self, bool_value) -> bool:
-        return bool(bool_value)
-
 
 class NegativeLookbehind(Lookbehind):
-    """EXPERIMENTAL AND NEVER TESTED!!!"""
+    """
+    Matches, if the contained parser would *not* match backwards. Requires
+    the contained parser to be a RegExp-parser.
+    """
     def __repr__(self):
         return '-!' + self.parser.repr
 
@@ -1761,19 +1769,20 @@ class NegativeLookbehind(Lookbehind):
 
 
 class Capture(UnaryOperator):
-    """STILL EXPERIMENTAL!"""
-
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super(Capture, self).__init__(parser, name)
-
+    """
+    Applies the contained parser and, in case of a match, saves the result
+    in a variable. A variable is a stack of values associated with the
+    contained parser's name. This requires the contained parser to be named.
+    """
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
         if node:
+            assert self.name, """Tried to apply an unnamed capture-parser!"""
             stack = self.grammar.variables__.setdefault(self.name, [])
             stack.append(str(node))
             self.grammar.push_rollback__(len(text), lambda: stack.pop())
-            # self.grammar.rollback__.append((len(text), lambda : stack.pop()))
-            # block caching, because it would prevent recapturing of rolled back captures
+            # caching will be blocked by parser guard (see way above),
+            # because it would prevent recapturing of rolled back captures
             return Node(self, node), text_
         else:
             return None, text
@@ -1791,7 +1800,7 @@ def last_value(stack: List[str]) -> str:
 
 def counterpart(stack: List[str]) -> str:
     value = stack[-1]
-    return value.replace("(", ")").replace("[", "]").replace("{", "}").replace(">", "<")
+    return value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
 
 
 def accumulate(stack: List[str]) -> str:
@@ -1799,7 +1808,16 @@ def accumulate(stack: List[str]) -> str:
 
 
 class Retrieve(Parser):
-    """STILL EXPERIMENTAL!"""
+    """
+    Matches if the following text starts with the value of a particular
+    variable. As a variable in this context means a stack of values,
+    the last value will be compared with the following text. It will not
+    be removed from the stack! (This is the difference between the
+    `Retrieve` and the `Pop` parser.)
+    The constructor parameter `symbol` determines which variable is
+    used.
+    """
+
     def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None, name: str = '') -> None:
         super(Retrieve, self).__init__(name)
         self.symbol = symbol
@@ -1809,18 +1827,30 @@ class Retrieve(Parser):
         return self.__class__(self.symbol, self.filter, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        return self.call(text)  # allow call method to be called from subclass circumventing the parser guard
+        # the following indirection allows the call() method to be called
+        # from subclass without triggering the parser guard a second time
+        return self.retrieve_and_match(text)
 
     def __repr__(self):
         return ':' + self.symbol.repr
 
-    def call(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def retrieve_and_match(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        """
+        Retrieves variable from stack through the filter function passed to
+        the class' constructor and tries to match the variable's value with
+        the following text. Returns a Node containing the value or `None`
+        accordingly.
+
+        This functionality has been move from the __call__ method to an
+        independent method to allow calling it from a subclasses __call__
+        method without triggering the parser guard a second time.
+        """
         try:
             stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            return Node(self, '').add_error(dsl_error_msg(self,
-                    "'%s' undefined or exhausted." % self.symbol.name)), text
+            return Node(self, '').add_error(
+                dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.name)), text
         if text.startswith(value):
             return Node(self, value), text[len(value):]
         else:
@@ -1828,16 +1858,24 @@ class Retrieve(Parser):
 
 
 class Pop(Retrieve):
-    """STILL EXPERIMENTAL!!!"""
+    """
+    Matches if the following text starts with the value of a particular
+    variable. As a variable in this context means a stack of values,
+    the last value will be compared with the following text. Other
+    than the `Retrieve`-parser, the `Pop`-parser removes the value
+    from the stack in case of a match.
+
+    The constructor parameter `symbol` determines which variable is
+    used.
+    """
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        nd, txt = super(Pop, self).call(text)  # call() instead of __call__() to avoid parser guard
-        if nd and not nd.error_flag:
+        node, txt = super().retrieve_and_match(text)
+        if node and not node.error_flag:
             stack = self.grammar.variables__[self.symbol.name]
             value = stack.pop()
             self.grammar.push_rollback__(len(text), lambda: stack.append(value))
-            # self.grammar.rollback__.append((len(text), lambda : stack.append(value)))
-        return nd, txt
+        return node, txt
 
     def __repr__(self):
         return '::' + self.symbol.repr
@@ -1851,7 +1889,7 @@ class Pop(Retrieve):
 
 
 class Synonym(UnaryOperator):
-    """
+    r"""
     Simply calls another parser and encapsulates the result in
     another node if that parser matches.
 
@@ -1862,6 +1900,7 @@ class Synonym(UnaryOperator):
     class, in which case it would be unclear whether the parser
     RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
+
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
@@ -1873,7 +1912,8 @@ class Synonym(UnaryOperator):
 
 
 class Forward(Parser):
-    """Forward allows to declare a parser before it is actually defined.
+    r"""
+    Forward allows to declare a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
     nested, e.g.:
     class Arithmetic(Grammar):
@@ -1890,6 +1930,7 @@ class Forward(Parser):
         expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
         root__     = expression
     """
+
     def __init__(self):
         Parser.__init__(self)
         self.parser = None
@@ -1976,6 +2017,7 @@ class Compiler:
                 called at least once and that therefore all compilation
                 variables must be reset when it is called again.
     """
+
     def __init__(self, grammar_name="", grammar_source=""):
         self._reset()
         self._dirty_flag = False
@@ -2009,7 +2051,7 @@ class Compiler:
         process. Classes inheriting from `Compiler` can use this
         information to name and annotate its output.
         """
-        assert grammar_name == "" or re.match('\w+\Z', grammar_name)
+        assert grammar_name == "" or re.match(r'\w+\Z', grammar_name)
         if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
         self.grammar_name = grammar_name
@@ -2036,11 +2078,11 @@ class Compiler:
         """
         Calls the compilation method for the given node and returns the
         result of the compilation.
-        
-        The method's name is dreived from either the node's parser 
+
+        The method's name is dreived from either the node's parser
         name or, if the parser is anonymous, the node's parser's class
         name by adding the prefix 'on_'.
-        
+
         Note that ``compile`` does not call any compilation functions
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
@@ -2084,12 +2126,12 @@ def compile_source(source: str,
             file containing the input text.
         preprocessor (function):  text -> text. A preprocessor function
             or None, if no preprocessor is needed.
-        parser (function):  A parsing function or grammar class 
+        parser (function):  A parsing function or grammar class
         transformer (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
         compiler (function): A compiler function or compiler class
-            instance 
+            instance
 
     Returns (tuple):
         The result of the compilation as a 3-tuple
@@ -2112,15 +2154,16 @@ def compile_source(source: str,
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None
-    ef = syntax_tree.error_flag
+    efl = syntax_tree.error_flag
     messages = syntax_tree.collect_errors(source_text, clear_errors=True)
-    if not is_error(ef):
+    if not is_error(efl):
         transformer(syntax_tree)
-        ef = max(ef, syntax_tree.error_flag)
+        efl = max(efl, syntax_tree.error_flag)
         messages.extend(syntax_tree.collect_errors(source_text, clear_errors=True))
-        if is_logging():  syntax_tree.log(log_file_name + '.ast')
+        if is_logging():
+            syntax_tree.log(log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
         messages.extend(syntax_tree.collect_errors(source_text))
-        syntax_tree.error_flag = max(syntax_tree.error_flag, ef)
+        syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
     return result, messages, syntax_tree
