@@ -14,8 +14,9 @@ testdata/*.pdf
 *~
 *.old
 DEBUG*
-LOGS
-external_resources
+LOGS/
+REPORT/
+external_resources/
 tmp/*
 test/tmp*
 build
@@ -26,6 +27,6 @@ DevScripts/DHParser.py
 DHParser/cstringview.c
 *.so
 .mypy_cache
-.vscode
+.vscode/
 DHParser.egg-info
-.noseids
+.noseids/
