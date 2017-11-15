@@ -169,14 +169,15 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
         # read grammar
         grammar_src = load_if_file(grammar_representation)
         if is_python_code(grammar_src):
-            parser_py, messages, AST = grammar_src, [], None  # type: str, List[Error], Node
+            parser_py, messages = grammar_src, []  # type: str, List[Error]
         else:
             with logging(False):
-                parser_py, messages, AST = compile_source(grammar_src, None,
+                parser_py, messages, _ = compile_source(
+                    grammar_src, None,
                     get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
         if has_errors(messages):
             raise GrammarError(only_errors(messages), grammar_src)
-        parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, '\w+Grammar$')()
+        parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
@@ -197,7 +198,7 @@ def compileDSL(text_or_file: str,
     Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
     compilation error.
-    
+
     Raises:
         CompilationError if any errors occurred during compilation
     """
@@ -218,16 +219,16 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
     Compiles an EBNF grammar file and returns the compiler object
     that was used and which can now be queried for the result as well
     as skeleton code for preprocessor, transformer and compiler objects.
-    
+
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
             the EBNF grammar itself as a string.
         branding (str):  Branding name for the compiler suite source
-            code. 
+            code.
     Returns:
         An instance of class ``ebnf.EBNFCompiler``
     Raises:
-        CompilationError if any errors occurred during compilation      
+        CompilationError if any errors occurred during compilation
     """
     grammar = get_ebnf_grammar()
     compiler = get_ebnf_compiler(branding, ebnf_src)
@@ -246,11 +247,11 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
         ebnf_src(str):  Either the file name of an EBNF grammar or
             the EBNF grammar itself as a string.
         branding (str):  Branding name for the compiler suite source
-            code. 
+            code.
     Returns:
         The complete compiler suite skeleton as Python source code.
     Raises:
-        CompilationError if any errors occurred during compilation        
+        CompilationError if any errors occurred during compilation
     """
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
@@ -272,23 +273,23 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
         ebnf_src(str):  Either the file name of an EBNF grammar or
             the EBNF grammar itself as a string.
         branding (str or bool):  Branding name for the compiler
-            suite source code. 
-    
+            suite source code.
+
     Returns:
         A provider function for a grammar object for texts in the
         language defined by ``ebnf_src``.
     """
     grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding))
-    return compile_python_object(DHPARSER_IMPORTS + grammar_src, 'get_(?:\w+_)?grammar$')
+    return compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
 
 
 def load_compiler_suite(compiler_suite: str) -> \
-        Tuple[PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
+    Tuple[PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
     """
     Extracts a compiler suite from file or string ``compiler suite``
     and returns it as a tuple (preprocessor, parser, ast, compiler).
-    
+
     Returns:
         4-tuple (preprocessor function, parser class, ast transformer function, compiler class)
     """
@@ -298,26 +299,27 @@ def load_compiler_suite(compiler_suite: str) -> \
     imports = DHPARSER_IMPORTS
     if is_python_code(compiler_suite):
         try:
-            intro, imports, preprocessor_py, parser_py, ast_py, compiler_py, outro = \
+            _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = \
                 RX_SECTION_MARKER.split(source)
-        except ValueError as error:
+        except ValueError:
             raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
         # TODO: Compile in one step and pick parts from namespace later ?
-        preprocessor = compile_python_object(imports + preprocessor_py, 'get_(?:\w+_)?preprocessor$')
-        parser = compile_python_object(imports + parser_py, 'get_(?:\w+_)?grammar$')
-        ast = compile_python_object(imports + ast_py, 'get_(?:\w+_)?transformer$')
+        preprocessor = compile_python_object(imports + preprocessor_py,
+                                             r'get_(?:\w+_)?preprocessor$')
+        parser = compile_python_object(imports + parser_py, r'get_(?:\w+_)?grammar$')
+        ast = compile_python_object(imports + ast_py, r'get_(?:\w+_)?transformer$')
     else:
         # assume source is an ebnf grammar. Is there really any reasonable application case for this?
         with logging(False):
-            compile_py, messages, AST = compile_source(source, None, get_ebnf_grammar(),
-                                                       get_ebnf_transformer(), get_ebnf_compiler())
+            compiler_py, messages, _ = compile_source(source, None, get_ebnf_grammar(),
+                                                      get_ebnf_transformer(), get_ebnf_compiler())
         if has_errors(messages):
             raise GrammarError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
-    compiler = compile_python_object(imports + compiler_py, 'get_(?:\w+_)?compiler$')
+    compiler = compile_python_object(imports + compiler_py, r'get_(?:\w+_)?compiler$')
 
     return preprocessor, parser, ast, compiler
 
@@ -325,12 +327,12 @@ def load_compiler_suite(compiler_suite: str) -> \
 def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
     """
     Returns ``True``  if the ``compile_suite`` needs to be updated.
-     
-    An update is needed, if either the grammar in the compieler suite 
-    does not reflect the latest changes of ``grammar_source`` or if 
+
+    An update is needed, if either the grammar in the compieler suite
+    does not reflect the latest changes of ``grammar_source`` or if
     sections from the compiler suite have diligently been overwritten
     with whitespace order to trigger their recreation. Note: Do not
-    delete or overwrite the section marker itself. 
+    delete or overwrite the section marker itself.
 
     Args:
         compiler_suite:  the parser class representing the grammar
@@ -342,7 +344,7 @@ def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
         True, if ``compiler_suite`` seems to be out of date.
     """
     try:
-        preprocessor, grammar, ast, compiler = load_compiler_suite(compiler_suite)
+        _, grammar, _, _ = load_compiler_suite(compiler_suite)
         return grammar_changed(grammar(), grammar_source)
     except ValueError:
         return True
@@ -353,17 +355,17 @@ def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
 
     Args:
         text_or_file (str):  Either the file name of the source code or
-            the source code directly. (Which is determined by 
+            the source code directly. (Which is determined by
             heuristics. If ``text_or_file`` contains at least on
             linefeed then it is always assumed to be a source text and
             not a file name.)
         compiler_suite(str):  File name of the compiler suite to be
             used.
-        
+
     Returns:
-        The result of the compilation, the form and type of which 
+        The result of the compilation, the form and type of which
         depends entirely on the compiler.
-        
+
     Raises:
         CompilerError
     """
@@ -398,7 +400,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             is written to a file with the same name but a different
             extension than the source file. This parameter sets the
             extension.
-            
+
     Returns:
         A (potentially empty) list of error or warning messages.
     """

@@ -189,8 +189,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 # write parsing-history log only in case of failure!
                 parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
-                    errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                  (test_name, parser_name, cst.as_sxpr()))
+                errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
+                              (test_name, parser_name, cst.as_sxpr()))
             elif "ast" in tests:
                 compare = mock_syntax_tree(tests["ast"][test_name])
                 if compare != ast:
@@ -245,7 +245,8 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         print("\nScanning test-directory: " + directory)
     save_cwd = os.getcwd()
     os.chdir(directory)
-    if is_logging():    clear_logs()
+    if is_logging():
+        clear_logs()
     for filename in sorted(os.listdir()):
         if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
             try:
@@ -259,7 +260,8 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                     raise e
     os.chdir(save_cwd)
-    error_report = [];  err_N = 0
+    error_report = []
+    err_N = 0
     if all_errors:
         for filename in all_errors:
             error_report.append('Errors found by unit test "%s":' % filename)
@@ -267,16 +269,18 @@ def grammar_suite(directory, parser_factory, transformer_factory,
             for error in all_errors[filename]:
                 error_report.append('\t' + '\n\t'.join(error.split('\n')))
     if error_report:
-        if verbose:  print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
+        if verbose:
+            print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
         return ('Test suite "%s" revealed some errors:\n\n' % directory) + '\n'.join(error_report)
-    if verbose:  print("\nSUCCESS! All tests passed :-)\n")
+    if verbose:
+        print("\nSUCCESS! All tests passed :-)\n")
     return ''
 
 
 def runner(tests, namespace):
     """
     Runs all or some selected Python unit tests found in the
-    namespace. To run all tests in a module, call 
+    namespace. To run all tests in a module, call
     ``runner("", globals())`` from within that module.
 
     Args:
@@ -284,9 +288,9 @@ def runner(tests, namespace):
             names of test or test classes. Each test and, in the case
             of a test class, all tests within the test class will be
             run.
-        namespace: The namespace for running the test, usually 
+        namespace: The namespace for running the test, usually
             ``globals()`` should be used.
-            
+
     Example:
         class TestSomething()
             def setup(self):
@@ -295,10 +299,10 @@ def runner(tests, namespace):
                 pass
             def test_something(self):
                 pass
-                
+
         if __name__ == "__main__":
             from DHParser.testing import runner
-            runner("", globals())        
+            runner("", globals())
     """
     def instantiate(cls_name):
         exec("obj = " + cls_name + "()", namespace)

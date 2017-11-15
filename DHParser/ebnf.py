@@ -430,13 +430,13 @@ class EBNFCompiler(Compiler):
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar']
         transtable.append('    "+": remove_empty,')
         for name in self.rules:
-            tf = '[]'
+            transformations = '[]'
             rule = self.definitions[name]
             if rule.startswith('Alternative'):
-                tf = '[replace_or_reduce]'
+                transformations = '[replace_or_reduce]'
             elif rule.startswith('Synonym'):
-                tf = '[replace_by_single_child]'
-            transtable.append('    "' + name + '": %s,' % tf)
+                transformations = '[replace_by_single_child]'
+            transtable.append('    "' + name + '": %s,' % transformations)
         transtable.append('    ":Token, :RE": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
@@ -459,7 +459,7 @@ class EBNFCompiler(Compiler):
                     self.grammar_name + '", grammar_source=""):',
                     '        super(' + self.grammar_name +
                     'Compiler, self).__init__(grammar_name, grammar_source)',
-                    "        assert re.match('\w+\Z', grammar_name)", '']
+                    r"        assert re.match('\w+\Z', grammar_name)", '']
         for name in self.rules:
             method_name = Compiler.method_name(name)
             if name == self.root_symbol:
@@ -548,6 +548,8 @@ class EBNFCompiler(Compiler):
         defined_symbols.difference_update(self.RESERVED_SYMBOLS)
 
         def remove_connections(symbol):
+            """Recursiviely removes all symbols which appear in the
+            definiens of a particular symbol."""
             if symbol in defined_symbols:
                 defined_symbols.remove(symbol)
                 for related in self.rules[symbol][1:]:
@@ -555,8 +557,9 @@ class EBNFCompiler(Compiler):
 
         remove_connections(self.root_symbol)
         for leftover in defined_symbols:
-            self.rules[leftover][0].add_error(('Rule "%s" is not connected to '
-                'parser root "%s" !') % (leftover, self.root_symbol), Error.WARNING)
+            self.rules[leftover][0].add_error(
+                ('Rule "%s" is not connected to parser root "%s" !') % 
+                (leftover, self.root_symbol), Error.WARNING)
 
         # set root_symbol parser and assemble python grammar definition
 
@@ -572,6 +575,12 @@ class EBNFCompiler(Compiler):
 
     def on_syntax(self, node: Node) -> str:
         definitions = []  # type: List[Tuple[str, str]]
+
+        # transfer directives to re_flags where needed
+        if self.directives['ignorecase']:
+            self.re_flags.add('i')
+        elif 'i' in self.re_flags:
+            self.re_flags.remove('i')
 
         # drop the wrapping sequence node
         if len(node.children) == 1 and not node.children[0].parser.name:
@@ -678,6 +687,8 @@ class EBNFCompiler(Compiler):
             self.directives['ignorecase'] == value
             if value:
                 self.re_flags.add('i')
+            elif 'i' in self.re_flags:
+                self.re_flags.remove('i')
 
         # elif key == 'testing':
         #     value = str(node.children[1])
@@ -685,14 +696,14 @@ class EBNFCompiler(Compiler):
 
         elif key == 'literalws':
             value = {item.lower() for item in self.compile(node.children[1])}
-            if (len(value - {'left', 'right', 'both', 'none'}) > 0
+            if ((value - {'left', 'right', 'both', 'none'})
                     or ('none' in value and len(value) > 1)):
                 node.add_error('Directive "literalws" allows the values '
                                '`left`, `right`, `both` or `none`, '
                                'but not `%s`' % ", ".join(value))
-            ws = {'left', 'right'} if 'both' in value \
+            wsp = {'left', 'right'} if 'both' in value \
                 else {} if 'none' in value else value
-            self.directives[key] = list(ws)
+            self.directives[key] = list(wsp)
 
         elif key in {'tokens', 'preprocessor_tokens'}:
             self.directives['tokens'] |= self.compile(node.children[1])
@@ -747,7 +758,7 @@ class EBNFCompiler(Compiler):
                 i += 1
         saved_result = node.result
         node.result = tuple(filtered_children)
-        custom_args =  ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
+        custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
         compiled = self.non_terminal(node, 'Series', custom_args)
         node.result = saved_result
         return compiled
@@ -832,10 +843,10 @@ class EBNFCompiler(Compiler):
         # return self.non_terminal(node, 'Unordered')
         assert len(node.children) == 1
         nd = node.children[0]
-        for r in nd.children:
-            if r.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
+        for child in nd.children:
+            if child.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
                 node.add_error("Unordered parser lists cannot contain mandatory (§) items.")
-        args = ', '.join(self.compile(r) for r in nd.children)
+        args = ', '.join(self.compile(child) for child in nd.children)
         if nd.parser.name == "term":
             return "AllOf(" + args + ")"
         elif nd.parser.name == "expression":
