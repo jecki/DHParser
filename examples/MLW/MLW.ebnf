@@ -86,8 +86,8 @@ ArtikelKopf     = <   SchreibweisenPosition | StrukturPosition | GebrauchPositio
 
 SchreibweisenPosition =  "SCHREIBWEISE" [LZ] { SWKategorie }+
 
-SWKategorie      = SWTyp DPP [LZ] §(Varianten | { SWKategorie }+) [LZ]
-SWTyp            = scriptfat | scriptform | script | form | gen | abl | OFFEN
+SWKategorie      = SWTyp §DPP [LZ] ( Varianten | { SWKategorie }+ ) [LZ]
+SWTyp            = scriptfat | scriptform | script | form | gen | abl | FREITEXT
 
 scriptfat  = "script." "fat-"
 scriptform = "script. " "form"
@@ -97,34 +97,33 @@ form       = "form"
 gen        = "gen."
 abl        = "abl."
 
-OFFEN      = FREITEXT
-
 
 #### STRUKTUR-POSITION #######################################################
 
-StrukturPosition = "STRUKTUR" [LZ] { STKategorie }+
-STKategorie      = STTyp DPP [LZ] §(Varianten | { STKategorie }+) [LZ]
-STTyp            = "form." ZEICHENFOLGE
+StrukturPosition = "STRUKTUR" [LZ] §{ STKategorie }+
+STKategorie      = STTyp §DPP [LZ] ( Varianten | { STKategorie }+ ) [LZ]
+STTyp            = ZEICHENFOLGE
 
 
 #### GEBRAUCH-POSITION #######################################################
 
-GebrauchPosition = "GEBRAUCH"
+GebrauchPosition = "GEBRAUCH" [LZ] §{ GBKategorie }+
+GBKategorie      = GBTyp §DPP [LZ] ( Varianten | { GBKategorie }+ ) [LZ]
+GBTyp            = ZEICHENFOLGE
 
 
 #### METRIK-POSITION #########################################################
 
-MetrikPosition = "METRIK"
+MetrikPosition = "METRIK" [LZ] §{ MTKategorie }+
+MTKategorie      = MTTyp §DPP [LZ] ( Varianten | { MTKategorie }+ ) [LZ]
+MTTyp            = ZEICHENFOLGE
 
 
 #### VERWECHSLUNGS-POSITION ##################################################
 
-VerwechslungsPosition  = "VERWECHSELBAR" [LZ] [Confunditur]
-                         VerwechselungsVariante { ABS VerwechselungsVariante }+ [LZ]
-Confunditur            = "confunditur c." DPP [LZ]
-VerwechselungsVariante = !KATEGORIENZEILE Verwechselung DPP Beleg
-Verwechselung          = ZEICHENFOLGE
-
+VerwechselungsPosition = "VERWECHSELBAR" [LZ] §{ VWKategorie }+
+VWKategorie      = VWTyp §DPP [LZ] ( Varianten | { VWKategorie }+ ) [LZ]
+VWTyp            = ZEICHENFOLGE
 
 #### ARTIKELKOPF POSITIONEN VARIANTEN ########################################
 

@@ -13,8 +13,10 @@ Match-test "1"
 ### AST
     (Lemma
         (LemmaWort
-            (LAT_WORT_TEIL
-                "facitergula"
+            (LAT_WORT
+                (:RegExp
+                    "facitergula"
+                )
             )
         )
     )
@@ -25,20 +27,30 @@ Match-test "2"
 ### Test-code:
     facitergul|a
 
+### Error:
+Match test "2" for parser "Lemma" failed:
+	Expr.:  facitergul|a
+
+	line:   1, column: 11, Error: Parser stopped before end! trying to recover but stopping history recording at this point.
+	line:   1, column: 11, Error: Parser did not match! Invalid source file?
+		    Most advanced: line 1, column 11:  Lemma->LemmaWort->LAT_WORT->/[a-z]+/  "facitergul"
+		    Last match:    line 1, column 11:  Lemma->LemmaWort->LAT_WORT->:Whitespace  "";
+
+
+
 ### AST
-    (Lemma
-        (LemmaWort
-            (LAT_WORT_TEIL
-                "facitergul"
-            )
-            (:Series
-                (:Token
-                    "|"
-                )
-                (LAT_WORT_TEIL
-                    "a"
+    (__ZOMBIE__
+        (Lemma
+            (LemmaWort
+                (LAT_WORT
+                    (:RegExp
+                        "facitergul"
+                    )
                 )
             )
+        )
+        (__ZOMBIE__
+            "|a"
         )
     )
 
@@ -48,22 +60,35 @@ Match-test "3"
 ### Test-code:
     fasc|itergula
 
+### Error:
+Match test "3" for parser "Lemma" failed:
+	Expr.:  fasc|itergula
+
+	line:   1, column:  5, Error: Parser stopped before end! trying to recover but stopping history recording at this point.
+
+
+
 ### AST
-    (Lemma
-        (LemmaWort
-            (LAT_WORT_TEIL
-                "fasc"
-            )
-            (:Series
-                (:Token
-                    "|"
-                )
-                (LAT_WORT_TEIL
-                    "itergula"
+    (__ZOMBIE__
+        (Lemma
+            (LemmaWort
+                (LAT_WORT
+                    (:RegExp
+                        "fasc"
+                    )
                 )
             )
         )
+        (__ZOMBIE__
+            "|iter"
+        )
     )
+
+Fail-test "99"
+--------------
+
+### Test-code:
+    duo vocabula
 
 
 Test of parser: "LemmaVarianten"
@@ -89,7 +114,7 @@ Match-test "1"
         )
         (:OneOrMore
             (:Series
-                (LemmaWort
+                (LemmaVariante
                     (LAT_WORT_TEIL
                         "fasc"
                     )
@@ -112,7 +137,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (LemmaWort
+                (LemmaVariante
                     (LAT_WORT_TEIL
                         "fac"
                     )
@@ -145,7 +170,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (LemmaWort
+                (LemmaVariante
                     (LAT_WORT_TEIL
                         "fac"
                     )
@@ -178,7 +203,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (LemmaWort
+                (LemmaVariante
                     (LAT_WORT_TEIL
                         "fa"
                     )
@@ -225,7 +250,7 @@ Match-test "2"
             " "
         )
         (:Series
-            (LemmaWort
+            (LemmaVariante
                 (LAT_WORT_TEIL
                     "fasc"
                 )
@@ -258,7 +283,7 @@ Match-test "3"
         )
         (:OneOrMore
             (:Series
-                (LemmaWort
+                (LemmaVariante
                     (LAT_WORT_TEIL
                         "fasc"
                     )
@@ -276,7 +301,7 @@ Match-test "3"
                 )
             )
             (:Series
-                (LemmaWort
+                (LemmaVariante
                     (LAT_WORT_TEIL
                         "fac"
                     )
@@ -304,30 +329,36 @@ Match-test "3"
                 )
             )
         )
-        (:Series
-            (LemmaZusatz
-                (:Token
-                    (:RegExp
-                        "ZUSATZ"
-                    )
-                    (:Whitespace
-                        " "
-                    )
+        (Zusatz
+            (:Token
+                (:RegExp
+                    "ZUSATZ"
                 )
-                (lzs_typ
-                    "sim."
+                (:Whitespace
+                    " "
                 )
             )
-            (ZWW
-                (ZEILENSPRUNG
-                    (:RegExp
-                        ""
-                        ""
+            (:Series
+                (zusatz_typ
+                    "sim."
+                )
+                (ZWW
+                    (ZEILENSPRUNG
+                        (:RegExp
+                            ""
+                            ""
+                        )
                     )
                 )
             )
         )
     )
+
+Fail-test "99"
+--------------
+
+### Test-code:
+    * fascitergula
 
 
 Test of parser: "LemmaPosition"
@@ -351,6 +382,31 @@ Match-test "1"
     nomen; -ae f.
     
 
+### Error:
+Match test "1" for parser "LemmaPosition" failed:
+	Expr.:  LEMMA facitergul|a
+	
+	fasc-itergula
+	fac-iet-ergula
+	fac-ist-ergula
+	fascite-rcu-la
+	
+	ZUSATZ sim.
+	
+	GRAMMATIK
+	nomen; -ae f.
+	
+
+	line:   1, column: 17, Error: TR = (ABS | LZ) expected; "|a
+		
+		fasc-i" found!
+	line:  11, column: 12, Error: "," expected; "f.
+		" found!
+	line:  12, column:  1, Error: FLEX = /-?[a-z]+/~ expected; "" found!
+	line:  12, column:  1, Error: ABS = (/\s*;;?\s*/ | {ZWW}+) expected; "" found!
+
+
+
 ### AST
     (LemmaPosition
         (:Token
@@ -363,39 +419,24 @@ Match-test "1"
         )
         (Lemma
             (LemmaWort
-                (LAT_WORT_TEIL
-                    "facitergul"
-                )
-                (:Series
-                    (:Token
-                        "|"
-                    )
-                    (LAT_WORT_TEIL
-                        "a"
+                (LAT_WORT
+                    (:RegExp
+                        "facitergul"
                     )
                 )
             )
         )
-        (ZWW
-            (ZEILENSPRUNG
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
-            (LEERRAUM
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
+        (LemmaPosition
+            "|a"
+            ""
+            "fa"
         )
         (LemmaVarianten
             (:OneOrMore
                 (:Series
-                    (LemmaWort
+                    (LemmaVariante
                         (LAT_WORT_TEIL
-                            "fasc"
+                            "sc"
                         )
                         (:Series
                             (:Token
@@ -416,7 +457,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (LemmaWort
+                    (LemmaVariante
                         (LAT_WORT_TEIL
                             "fac"
                         )
@@ -449,7 +490,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (LemmaWort
+                    (LemmaVariante
                         (LAT_WORT_TEIL
                             "fac"
                         )
@@ -482,7 +523,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (LemmaWort
+                    (LemmaVariante
                         (LAT_WORT_TEIL
                             "fascite"
                         )
@@ -521,31 +562,31 @@ Match-test "1"
                     )
                 )
             )
-            (:Series
-                (LemmaZusatz
-                    (:Token
-                        (:RegExp
-                            "ZUSATZ"
-                        )
-                        (:Whitespace
-                            " "
-                        )
+            (Zusatz
+                (:Token
+                    (:RegExp
+                        "ZUSATZ"
                     )
-                    (lzs_typ
-                        "sim."
+                    (:Whitespace
+                        " "
                     )
                 )
-                (ZWW
-                    (ZEILENSPRUNG
-                        (:RegExp
-                            ""
-                            ""
-                        )
+                (:Series
+                    (zusatz_typ
+                        "sim."
                     )
-                    (LEERRAUM
-                        (:RegExp
-                            ""
-                            ""
+                    (ZWW
+                        (ZEILENSPRUNG
+                            (:RegExp
+                                ""
+                                ""
+                            )
+                        )
+                        (LEERRAUM
+                            (:RegExp
+                                ""
+                                ""
+                            )
                         )
                     )
                 )
@@ -559,30 +600,27 @@ Match-test "1"
                 ""
                 ""
             )
-            (wortart
-                "nomen"
-            )
-            (ABS
-                "; "
-            )
-            (flexion
-                (FLEX
-                    (:RegExp
-                        "-ae"
-                    )
-                    (:Whitespace
-                        " "
-                    )
+            (Grammatik
+                (wortart
+                    "nomen"
                 )
-            )
-            (genus
-                "f."
-            )
-            (ZWW
-                (ZEILENSPRUNG
-                    (:RegExp
-                        ""
-                        ""
+                (ABS
+                    "; "
+                )
+                (flexion
+                    (deklination
+                        (FLEX
+                            (:RegExp
+                                "-ae"
+                            )
+                            (:Whitespace
+                                " "
+                            )
+                        )
+                        (deklination
+                            "f."
+                            ""
+                        )
                     )
                 )
             )

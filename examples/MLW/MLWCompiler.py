@@ -16,7 +16,7 @@ except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, SomeOf, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
@@ -52,6 +52,8 @@ class MLWGrammar(Grammar):
     
     # EBNF-Syntax für MLW-Artikel
     
+    # TODO: Vervollständigen!!!!
+    
     
     @ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
                                           # ohne das Zeilenende zu beinhalten
@@ -62,36 +64,40 @@ class MLWGrammar(Grammar):
     ##############################################################################
     
     Artikel           = [LZ]
-                        §LemmaPosition
+                        §{ LemmaPosition }+
+                        [EtymologiePosition]
                         [ArtikelKopf]
-                        §BedeutungsPosition
-                        §ArtikelVerfasser
+                        BedeutungsPosition
+                        [VerweisPosition]
+                        { UnterArtikel }
+                        ArtikelVerfasser
                         [LZ]  DATEI_ENDE
+    
     
     
     #### LEMMA-POSITION ##########################################################
     
-    LemmaPosition     = "LEMMA" [LZ] §Lemma §TR [LemmaVarianten]
-                        §GrammatikPosition [EtymologiePosition]
+    LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
+                        GrammatikPosition [Zusatz] [ABS]
     
-    Lemma             = [klassisch] [gesichert] LemmaWort
+    Lemma             = [< klassisch | gesichert >] LemmaWort
       klassisch       = "*"
-      gesichert       = "$"
+      gesichert       = "$"  # TODO: Noch fragen: Welches Zeichen?
+    
+    LemmaWort         = LAT_WORT
     
     LemmaVarianten    = [LZ]
-                        { LemmaWort §TR }+
-                        [LemmaZusatz §ABS]
+                        { LemmaVariante §TR }+
+                        [Zusatz]
     
-    LemmaWort         = LAT_WORT_TEIL { ("|" | "-") LAT_WORT_TEIL }
-    
-    LemmaZusatz       = "ZUSATZ" §lzs_typ
-      lzs_typ         = /sim\./
+    LemmaVariante     = LAT_WORT_TEIL { "-" LAT_WORT_TEIL }
     
     
     ## GRAMMATIK-POSITION ##
     
-    GrammatikPosition = "GRAMMATIK" [LZ] §wortart §ABS §flexion [genus] §ABS
-                        [GrammatikVarianten]
+    GrammatikPosition = "GRAMMATIK" [LZ] §Grammatik ABS { GrammatikVariante §ABS }
+    
+    Grammatik        = wortart §ABS flexion [genus]
     
     wortart          = "nomen"  | "n."
                      | "verb"   | "v."
@@ -99,46 +105,108 @@ class MLWGrammar(Grammar):
                      | "adjektiv" | "adj."
                      | "praeposition" | "praep."
     
-    GrammatikVarianten = { [wortart ABS] flexion [genus]  ":"  Beleg §ABS }+
-    
-    flexion          = FLEX { "," §FLEX }
+    flexion          = deklination | konjugation
+    deklination      = FLEX §"," FLEX
+    konjugation      = FLEX
     FLEX             = /-?[a-z]+/~
     
     genus            = "maskulinum" | "m."
                      | "femininum" | "f."
                      | "neutrum" | "n."
     
+    GrammatikVariante  = [wortart ABS] flexion [genus] DPP { Beleg }+
     
-    ## ETYMOLOGIE-POSITION ##
     
-    EtymologiePosition = "ETYMOLOGIE" [LZ] EtymologieVarianten
-    EtymologieVarianten = { !([LZ] GROSSFOLGE) EtymologieVariante }+
-    EtymologieVariante = /.*/   # NOCH ZU VERFOLLSTÄNDIGEN
+    
+    #### ETYMOLOGIE-POSITION #####################################################
+    
+    EtymologiePosition = "ETYMOLOGIE" [LZ] { EtymologieVariante }+
+    EtymologieVariante = LAT | GRI [EtymologieBesonderheit] ["ETYM" Etymologie] DPP Beleg
+    EtymologieBesonderheit = FREITEXT
+    Etymologie         = FREITEXT
+    
     
     
     #### ARTIKEL-KOPF ############################################################
     
-    ArtikelKopf     = SchreibweisenPosition
-    SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp ":" [LZ]
-                             §SWVariante { ABS SWVariante} [LZ]
-    SWTyp           = "script." | "script. fat-"
-    SWVariante      = Schreibweise ":" Beleg
-    Schreibweise    = ZEICHENFOLGE
+    ArtikelKopf     = <   SchreibweisenPosition | StrukturPosition | GebrauchPosition
+                        | MetrikPosition | VerwechselungsPosition >
+    
+    ## Schreibweisen-Position ##
+    
+    # TODO: Ggf. noch zu ergänzen um: Zusatz, Mehrere Tyen innerhalb der Schreibweisen-Position.
+    
+    SchreibweisenPosition =  "SCHREIBWEISE" [LZ] { SWKategorie }+
+    
+    SWKategorie      = SWTyp §DPP [LZ] ( Varianten | { SWKategorie }+ ) [LZ]
+    SWTyp            = scriptfat | scriptform | script | form | gen | abl | FREITEXT
+    
+    scriptfat  = "script." "fat-"
+    scriptform = "script. " "form"
+    script     = "srcipt."
+    form       = "form"
+    
+    gen        = "gen."
+    abl        = "abl."
+    
+    
+    #### STRUKTUR-POSITION #######################################################
+    
+    StrukturPosition = "STRUKTUR" [LZ] §{ STKategorie }+
+    STKategorie      = STTyp §DPP [LZ] ( Varianten | { STKategorie }+ ) [LZ]
+    STTyp            = ZEICHENFOLGE
+    
+    
+    #### GEBRAUCH-POSITION #######################################################
+    
+    GebrauchPosition = "GEBRAUCH" [LZ] §{ GBKategorie }+
+    GBKategorie      = GBTyp §DPP [LZ] ( Varianten | { GBKategorie }+ ) [LZ]
+    GBTyp            = ZEICHENFOLGE
+    
+    
+    #### METRIK-POSITION #########################################################
+    
+    MetrikPosition = "METRIK" [LZ] §{ MTKategorie }+
+    MTKategorie      = MTTyp §DPP [LZ] ( Varianten | { MTKategorie }+ ) [LZ]
+    MTTyp            = ZEICHENFOLGE
+    
+    
+    #### VERWECHSLUNGS-POSITION ##################################################
+    
+    VerwechselungsPosition = "VERWECHSELBAR" [LZ] §{ VWKategorie }+
+    VWKategorie      = VWTyp §DPP [LZ] ( Varianten | { VWKategorie }+ ) [LZ]
+    VWTyp            = ZEICHENFOLGE
+    
+    #### ARTIKELKOPF POSITIONEN VARIANTEN ########################################
+    
+    Varianten              = Variante { ABS Variante }
+    Variante               = !KATEGORIENZEILE Gegenstand DPP Beleg
+    Gegenstand             = ZEICHENFOLGE
     
     
     #### BEDEUTUNGS-POSITION #####################################################
+    ##############################################################################
     
     BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
     
     Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
     Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
     Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
-    LateinischeBedeutung = SW_LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-    DeutscheBedeutung = SW_DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+    LateinischeBedeutung = LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+    DeutscheBedeutung = DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
     
-    Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg })
-    EinBeleg        = { !([LZ] ("*" | GROSSFOLGE )) /\s*[^\n]*\s*/ }+ [Zusatz]
-    Zusatz          = "ZUSATZ" /\s*.*/ ABS
+    Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg }) ABS
+    EinBeleg        = { !([LZ] "*" | SCHLUESSELWORT) /\s*[^\n]*/~ [ZW] }+ [Zusatz]
+    
+    
+    #### VERWEIS-POSITION #####################################################
+    
+    VerweisPosition = "VERWEISE"
+    
+    
+    #### UNTER-ARTIKEL ########################################################
+    
+    UnterArtikel = "UNTER-ARTIKEL"
     
     
     #### AUTOR/AUTORIN ###########################################################
@@ -147,20 +215,42 @@ class MLWGrammar(Grammar):
     Name             = { NAME | NAMENS_ABKÜRZUNG }+
     
     
+    
     #### Schlüsselwörter #########################################################
     
-    SW_LAT           = "LATEINISCH" | "LAT"
-    SW_DEU           = "DEUTSCH" | "DEUT"
-    SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
+    LAT = "LATEINISCH" | "LAT"
+    DEU = "DEUTSCH" | "DEU"
+    GRI = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
+    
+    SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
+    
+    
+    
+    #### ZUSATZ an verschiedenen Stellen der Struktur ############################
+    
+    Zusatz       = "ZUSATZ" §{ zusatz_typ [TR] }+
+      zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | FREITEXT
+    
+    
+    
+    #### BELEGE ##################################################################
+    
+    Beleg            = (BelegQuelle BelegText) | BelegText | Verweis
+    BelegQuelle      = Autor DPP Werk SEM Stelle [SEM Datierung] [SEM Edition]
+    BelegText        = '"' FREITEXT '"'
+    
+    Verweis          =  "->" ZielName
+    VerweisZiel      = "{" ZielName "}"
+    ZielName         = BUCHSTABENFOLGE
+    
+    Autor     = FREITEXT
+    Werk      = FREITEXT
+    Stelle    = FREITEXT
+    Datierung = FREITEXT
+    Edition   = FREITEXT
     
     
     #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
-    
-    Beleg            = Verweis
-    
-    Verweis          = "->" ZielName
-    VerweisZiel      = "[" ZielName "]"
-    ZielName         = BUCHSTABENFOLGE
     
     NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
     NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
@@ -171,15 +261,24 @@ class MLWGrammar(Grammar):
     LAT_WORT         = /[a-z]+/~
     LAT_WORT_TEIL    = /[a-z]+/
     GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
-    GROSSFOLGE       = /[A-ZÄÖÜ][A-ZÄÖÜ][A-ZÄÖÜ]/   # drei Großbuchstaben in Folge
+    ZAHL             = /\d+/~
+    ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
+    
+    SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+    
+    TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
+    FREITEXT         = { TEXTELEMENT | /[.()\-\s]+/ | /,(?!,)\s*/ }+
+    ERW_FREITEXT     = { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
     
     BUCHSTABENFOLGE  = /\w+/~
     ZEICHENFOLGE     = /[\w()-]+/~
     
-    TR               = ABS | LZ             # (beliebiger) Trenner
-    ABS              = /\s*;\s*/ | { ZWW }+  # Abschluss (durch Semikolon oder Zeilenwechsel)
-    # ZW               = /\n/~                # Zeilenwechsel
-    LZ               = /\s+/                # Leerzeichen oder -zeilen
+    TR               = ABS | LZ                  # (beliebiger) Trenner
+    ABS              = /\s*;;?\s*/ | { ZWW }+    # Abschluss (durch Semikolon oder Zeilenwechsel)
+    # ZW               = /\n/~                   # Zeilenwechsel
+    LZ               = /\s+/                     # Leerzeichen oder -zeilen
+    DPP              = /::?/~                    # Doppelpunkt als Trenner
+    SEM              = /;;?/~                    # Semikolon als Trenner
     
     ZW               = !LÜCKE ZEILENSPRUNG       # Zeilenwechsel, aber keine Leerzeile(n)
     ZWW              = ZEILENSPRUNG [ LEERRAUM ] # mindestens ein Zeilenwechsel
@@ -190,20 +289,37 @@ class MLWGrammar(Grammar):
     
     ZEILENSPRUNG     = /[ \t]*\n/~
     KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
+    KATEGORIENZEILE  = /[^:\n]+[:][ \t]*\n/     # Kategorienzeilen enthalten genau einen Doppelpunkt am Ende der Zeile
     
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
+    
+    DUMMY            = "EBNF-Grammatik an dieser Stelle noch nicht definiert!"
     """
+    DEU_WORT = Forward()
+    GBKategorie = Forward()
+    MTKategorie = Forward()
+    ROEMISCHE_ZAHL = Forward()
+    SATZZEICHEN = Forward()
+    STKategorie = Forward()
+    SWKategorie = Forward()
+    TEXTELEMENT = Forward()
+    VWKategorie = Forward()
+    ZAHL = Forward()
+    flexion = Forward()
+    genus = Forward()
     wortart = Forward()
-    source_hash__ = "86cbd5a83fff876fb99e4920ead1335d"
+    source_hash__ = "1b6cf564c748b80f149503b3650c7ccd"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*'
     WHITESPACE__ = r'[\t ]*'
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
+    DUMMY = Token("EBNF-Grammatik an dieser Stelle noch nicht definiert!")
     NIEMALS = RegExp('(?!.)')
     DATEI_ENDE = NegativeLookahead(RegExp('.'))
+    KATEGORIENZEILE = RegExp('[^:\\n]+[:][ \\t]*\\n')
     KOMMENTARZEILEN = ZeroOrMore(Series(RegExp('[ \\t]*\\n?[ \\t]*'), RegExp(COMMENT__)))
     ZEILENSPRUNG = RE('[ \\t]*\\n')
     RZS = RegExp('\\s*?\\n|$')
@@ -212,61 +328,102 @@ class MLWGrammar(Grammar):
     LÜCKE = Series(KOMMENTARZEILEN, LEERZEILE, Option(LEERRAUM))
     ZWW = Series(ZEILENSPRUNG, Option(LEERRAUM))
     ZW = Series(NegativeLookahead(LÜCKE), ZEILENSPRUNG)
+    SEM = RE(';;?')
+    DPP = RE('::?')
     LZ = RegExp('\\s+')
-    ABS = Alternative(RegExp('\\s*;\\s*'), OneOrMore(ZWW))
+    ABS = Alternative(RegExp('\\s*;;?\\s*'), OneOrMore(ZWW))
     TR = Alternative(ABS, LZ)
     ZEICHENFOLGE = RE('[\\w()-]+')
     BUCHSTABENFOLGE = RE('\\w+')
-    GROSSFOLGE = RegExp('[A-ZÄÖÜ][A-ZÄÖÜ][A-ZÄÖÜ]')
+    ERW_FREITEXT = OneOrMore(Alternative(TEXTELEMENT, SATZZEICHEN, RegExp('\\s+')))
+    FREITEXT = OneOrMore(Alternative(TEXTELEMENT, RegExp('[.()\\-\\s]+'), RegExp(',(?!,)\\s*')))
+    TEXTELEMENT.set(Alternative(DEU_WORT, ZAHL, ROEMISCHE_ZAHL))
+    SATZZEICHEN.set(RE('(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\\-]+'))
+    ROEMISCHE_ZAHL.set(RE('(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)'))
+    ZAHL.set(RE('\\d+'))
     GROSSSCHRIFT = RE('[A-ZÄÖÜ]+')
     LAT_WORT_TEIL = RegExp('[a-z]+')
     LAT_WORT = RE('[a-z]+')
     DEU_KLEIN = RE('[a-zäöüß]+')
     DEU_GROSS = RE('[A-ZÄÖÜ][a-zäöüß]+')
-    DEU_WORT = RE('[A-ZÄÖÜ]?[a-zäöüß]+')
+    DEU_WORT.set(RE('[A-ZÄÖÜ]?[a-zäöüß]+'))
     NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
+    Edition = Synonym(FREITEXT)
+    Datierung = Synonym(FREITEXT)
+    Stelle = Synonym(FREITEXT)
+    Werk = Synonym(FREITEXT)
+    Autor = Synonym(FREITEXT)
     ZielName = Synonym(BUCHSTABENFOLGE)
-    VerweisZiel = Series(Token("["), ZielName, Token("]"))
+    VerweisZiel = Series(Token("{"), ZielName, Token("}"))
     Verweis = Series(Token("->"), ZielName)
-    Beleg = Synonym(Verweis)
-    SW_GRIECH = Alternative(Token("GRIECHISCH"), Token("GRIECH"), Token("GRIE"), Token("GRI"))
-    SW_DEU = Alternative(Token("DEUTSCH"), Token("DEUT"))
-    SW_LAT = Alternative(Token("LATEINISCH"), Token("LAT"))
+    BelegText = Series(Token('"'), FREITEXT, Token('"'))
+    BelegQuelle = Series(Autor, DPP, Werk, SEM, Stelle, Option(Series(SEM, Datierung)), Option(Series(SEM, Edition)))
+    Beleg = Alternative(Series(BelegQuelle, BelegText), BelegText, Verweis)
+    zusatz_typ = Alternative(Token("adde"), Token("al"), Token("sim."), Token("saepe"), Token("vel-rarius"), Token("vel"), FREITEXT)
+    Zusatz = Series(Token("ZUSATZ"), OneOrMore(Series(zusatz_typ, Option(TR))), mandatory=1)
+    SCHLUESSELWORT = Series(OneOrMore(Series(RE(''), RegExp('\\n'))), NegativeLookahead(ROEMISCHE_ZAHL), RegExp('[A-ZÄÖÜ]{3,}\\s+'))
+    GRI = Alternative(Token("GRIECHISCH"), Token("GRIECH"), Token("GRIE"), Token("GRI"))
+    DEU = Alternative(Token("DEUTSCH"), Token("DEU"))
+    LAT = Alternative(Token("LATEINISCH"), Token("LAT"))
     Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG))
     ArtikelVerfasser = Series(Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
-    Zusatz = Series(Token("ZUSATZ"), RegExp('\\s*.*'), ABS)
-    EinBeleg = Series(OneOrMore(Series(NegativeLookahead(Series(Option(LZ), Alternative(Token("*"), GROSSFOLGE))), RegExp('\\s*[^\\n]*\\s*'))), Option(Zusatz))
-    Belege = Series(Token("BELEGE"), Option(LZ), Alternative(EinBeleg, ZeroOrMore(Series(Token("*"), EinBeleg))))
-    DeutscheBedeutung = Series(SW_DEU, RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
-    LateinischeBedeutung = Series(SW_LAT, RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
-    Interpretamente = Series(LateinischeBedeutung, Option(LZ), Required(DeutscheBedeutung), Option(LZ))
+    UnterArtikel = Token("UNTER-ARTIKEL")
+    VerweisPosition = Token("VERWEISE")
+    EinBeleg = Series(OneOrMore(Series(NegativeLookahead(Alternative(Series(Option(LZ), Token("*")), SCHLUESSELWORT)), RE('\\s*[^\\n]*'), Option(ZW))), Option(Zusatz))
+    Belege = Series(Token("BELEGE"), Option(LZ), Alternative(EinBeleg, ZeroOrMore(Series(Token("*"), EinBeleg))), ABS)
+    DeutscheBedeutung = Series(DEU, RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
+    LateinischeBedeutung = Series(LAT, RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'))
+    Interpretamente = Series(LateinischeBedeutung, Option(LZ), DeutscheBedeutung, Option(LZ), mandatory=2)
     Bedeutungskategorie = Series(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'), Option(LZ))
     Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Option(Belege))
-    BedeutungsPosition = OneOrMore(Series(Token("BEDEUTUNG"), Option(LZ), Required(Bedeutung)))
-    Schreibweise = Synonym(ZEICHENFOLGE)
-    SWVariante = Series(Schreibweise, Token(":"), Beleg)
-    SWTyp = Alternative(Token("script."), Token("script. fat-"))
-    SchreibweisenPosition = Series(Token("SCHREIBWEISE"), Option(LZ), Required(SWTyp), Token(":"), Option(LZ), Required(SWVariante), ZeroOrMore(Series(ABS, SWVariante)), Option(LZ))
-    ArtikelKopf = Synonym(SchreibweisenPosition)
-    EtymologieVariante = RegExp('.*')
-    EtymologieVarianten = OneOrMore(Series(NegativeLookahead(Series(Option(LZ), GROSSFOLGE)), EtymologieVariante))
-    EtymologiePosition = Series(Token("ETYMOLOGIE"), Option(LZ), EtymologieVarianten)
-    genus = Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n."))
+    BedeutungsPosition = OneOrMore(Series(Token("BEDEUTUNG"), Option(LZ), Bedeutung, mandatory=2))
+    Gegenstand = Synonym(ZEICHENFOLGE)
+    Variante = Series(NegativeLookahead(KATEGORIENZEILE), Gegenstand, DPP, Beleg)
+    Varianten = Series(Variante, ZeroOrMore(Series(ABS, Variante)))
+    VWTyp = Synonym(ZEICHENFOLGE)
+    VWKategorie.set(Series(VWTyp, DPP, Option(LZ), Alternative(Varianten, OneOrMore(VWKategorie)), Option(LZ), mandatory=1))
+    VerwechselungsPosition = Series(Token("VERWECHSELBAR"), Option(LZ), OneOrMore(VWKategorie), mandatory=2)
+    MTTyp = Synonym(ZEICHENFOLGE)
+    MTKategorie.set(Series(MTTyp, DPP, Option(LZ), Alternative(Varianten, OneOrMore(MTKategorie)), Option(LZ), mandatory=1))
+    MetrikPosition = Series(Token("METRIK"), Option(LZ), OneOrMore(MTKategorie), mandatory=2)
+    GBTyp = Synonym(ZEICHENFOLGE)
+    GBKategorie.set(Series(GBTyp, DPP, Option(LZ), Alternative(Varianten, OneOrMore(GBKategorie)), Option(LZ), mandatory=1))
+    GebrauchPosition = Series(Token("GEBRAUCH"), Option(LZ), OneOrMore(GBKategorie), mandatory=2)
+    STTyp = Synonym(ZEICHENFOLGE)
+    STKategorie.set(Series(STTyp, DPP, Option(LZ), Alternative(Varianten, OneOrMore(STKategorie)), Option(LZ), mandatory=1))
+    StrukturPosition = Series(Token("STRUKTUR"), Option(LZ), OneOrMore(STKategorie), mandatory=2)
+    abl = Token("abl.")
+    gen = Token("gen.")
+    form = Token("form")
+    script = Token("srcipt.")
+    scriptform = Series(Token("script. "), Token("form"))
+    scriptfat = Series(Token("script."), Token("fat-"))
+    SWTyp = Alternative(scriptfat, scriptform, script, form, gen, abl, FREITEXT)
+    SWKategorie.set(Series(SWTyp, DPP, Option(LZ), Alternative(Varianten, OneOrMore(SWKategorie)), Option(LZ), mandatory=1))
+    SchreibweisenPosition = Series(Token("SCHREIBWEISE"), Option(LZ), OneOrMore(SWKategorie))
+    ArtikelKopf = SomeOf(SchreibweisenPosition, StrukturPosition, GebrauchPosition, MetrikPosition, VerwechselungsPosition)
+    Etymologie = Synonym(FREITEXT)
+    EtymologieBesonderheit = Synonym(FREITEXT)
+    EtymologieVariante = Alternative(LAT, Series(GRI, Option(EtymologieBesonderheit), Option(Series(Token("ETYM"), Etymologie)), DPP, Beleg))
+    EtymologiePosition = Series(Token("ETYMOLOGIE"), Option(LZ), OneOrMore(EtymologieVariante))
+    GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(genus), DPP, OneOrMore(Beleg))
+    genus.set(Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n.")))
     FLEX = RE('-?[a-z]+')
-    flexion = Series(FLEX, ZeroOrMore(Series(Token(","), Required(FLEX))))
-    GrammatikVarianten = OneOrMore(Series(Option(Series(wortart, ABS)), flexion, Option(genus), Token(":"), Beleg, Required(ABS)))
+    konjugation = Synonym(FLEX)
+    deklination = Series(FLEX, Token(","), FLEX, mandatory=1)
+    flexion.set(Alternative(deklination, konjugation))
     wortart.set(Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."), Token("praeposition"), Token("praep.")))
-    GrammatikPosition = Series(Token("GRAMMATIK"), Option(LZ), Required(wortart), Required(ABS), Required(flexion), Option(genus), Required(ABS), Option(GrammatikVarianten))
-    lzs_typ = RegExp('sim\\.')
-    LemmaZusatz = Series(Token("ZUSATZ"), Required(lzs_typ))
-    LemmaWort = Series(LAT_WORT_TEIL, ZeroOrMore(Series(Alternative(Token("|"), Token("-")), LAT_WORT_TEIL)))
-    LemmaVarianten = Series(Option(LZ), OneOrMore(Series(LemmaWort, Required(TR))), Option(Series(LemmaZusatz, Required(ABS))))
+    Grammatik = Series(wortart, ABS, flexion, Option(genus), mandatory=1)
+    GrammatikPosition = Series(Token("GRAMMATIK"), Option(LZ), Grammatik, ABS, ZeroOrMore(Series(GrammatikVariante, ABS, mandatory=1)), mandatory=2)
+    LemmaVariante = Series(LAT_WORT_TEIL, ZeroOrMore(Series(Token("-"), LAT_WORT_TEIL)))
+    LemmaVarianten = Series(Option(LZ), OneOrMore(Series(LemmaVariante, TR, mandatory=1)), Option(Zusatz))
+    LemmaWort = Synonym(LAT_WORT)
     gesichert = Token("$")
     klassisch = Token("*")
-    Lemma = Series(Option(klassisch), Option(gesichert), LemmaWort)
-    LemmaPosition = Series(Token("LEMMA"), Option(LZ), Required(Lemma), Required(TR), Option(LemmaVarianten), Required(GrammatikPosition), Option(EtymologiePosition))
-    Artikel = Series(Option(LZ), Required(LemmaPosition), Option(ArtikelKopf), Required(BedeutungsPosition), Required(ArtikelVerfasser), Option(LZ), DATEI_ENDE)
+    Lemma = Series(Option(SomeOf(klassisch, gesichert)), LemmaWort)
+    LemmaPosition = Series(Token("LEMMA"), Option(LZ), Lemma, TR, Option(LemmaVarianten), GrammatikPosition, Option(Zusatz), Option(ABS), mandatory=2)
+    Artikel = Series(Option(LZ), OneOrMore(LemmaPosition), Option(EtymologiePosition), Option(ArtikelKopf), BedeutungsPosition, Option(VerweisPosition), ZeroOrMore(UnterArtikel), ArtikelVerfasser, Option(LZ), DATEI_ENDE, mandatory=1)
     root__ = Artikel
     
 def get_grammar() -> MLWGrammar:

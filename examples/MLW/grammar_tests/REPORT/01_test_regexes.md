@@ -1,11 +1,34 @@
 
 
+Test of parser: "SCHLUESSELWORT"
+================================
+
+
+Match-test "m1"
+---------------
+
+### Test-code:
+    
+    AUTORIN 
+
+### AST
+    (SCHLUESSELWORT
+        (:RegExp
+            ""
+            ""
+        )
+        (:RegExp
+            "AUTORIN "
+        )
+    )
+
+
 Test of parser: "RZS"
 =====================
 
 
-Match-test "1"
---------------
+Match-test "m1"
+---------------
 
 ### Test-code:
     
@@ -22,8 +45,8 @@ Test of parser: "LEERZEILE"
 ===========================
 
 
-Match-test "1"
---------------
+Match-test "m1"
+---------------
 
 ### Test-code:
     
@@ -39,8 +62,8 @@ Match-test "1"
         )
     )
 
-Match-test "2"
---------------
+Match-test "m2"
+---------------
 
 ### Test-code:
     
@@ -59,8 +82,8 @@ Match-test "2"
         )
     )
 
-Match-test "3"
---------------
+Match-test "m3"
+---------------
 
 ### Test-code:
     
@@ -78,13 +101,31 @@ Match-test "3"
         )
     )
 
+Fail-test "f1"
+--------------
+
+### Test-code:
+    
+    
+
+Fail-test "f2"
+--------------
+
+### Test-code:
+    
+    
+    # Kommentar
+    
+    # Kommentar
+    
+
 
 Test of parser: "LÜCKE"
 =======================
 
 
-Match-test "1"
---------------
+Match-test "m1"
+---------------
 
 ### Test-code:
     
@@ -102,8 +143,8 @@ Match-test "1"
         )
     )
 
-Match-test "2"
---------------
+Match-test "m2"
+---------------
 
 ### Test-code:
     
@@ -131,8 +172,8 @@ Match-test "2"
         )
     )
 
-Match-test "3"
---------------
+Match-test "m3"
+---------------
 
 ### Test-code:
     
@@ -152,8 +193,8 @@ Match-test "3"
         )
     )
 
-Match-test "4"
---------------
+Match-test "m4"
+---------------
 
 ### Test-code:
     
@@ -196,8 +237,8 @@ Match-test "4"
         )
     )
 
-Match-test "5"
---------------
+Match-test "m5"
+---------------
 
 ### Test-code:
      #Kommentar
@@ -238,13 +279,41 @@ Match-test "5"
         )
     )
 
+Fail-test "f1"
+--------------
+
+### Test-code:
+     
+
+Fail-test "f2"
+--------------
+
+### Test-code:
+    
+    
+
+Fail-test "f3"
+--------------
+
+### Test-code:
+    
+    # Kommentar
+
+Fail-test "f4"
+--------------
+
+### Test-code:
+     #Kommentar
+    # Kommentar
+    # Kommentar
+
 
 Test of parser: "LEERRAUM"
 ==========================
 
 
-Match-test "1"
---------------
+Match-test "m1"
+---------------
 
 ### Test-code:
      
@@ -256,8 +325,8 @@ Match-test "1"
         )
     )
 
-Match-test "2"
---------------
+Match-test "m2"
+---------------
 
 ### Test-code:
      # Kommentar
@@ -272,8 +341,8 @@ Match-test "2"
         )
     )
 
-Match-test "3"
---------------
+Match-test "m3"
+---------------
 
 ### Test-code:
       
@@ -285,8 +354,8 @@ Match-test "3"
         )
     )
 
-Match-test "4"
---------------
+Match-test "m4"
+---------------
 
 ### Test-code:
     # Kommentar
@@ -298,8 +367,8 @@ Match-test "4"
         )
     )
 
-Match-test "5"
---------------
+Match-test "m5"
+---------------
 
 ### Test-code:
     # Kommentar
@@ -316,8 +385,8 @@ Match-test "5"
         )
     )
 
-Match-test "6"
---------------
+Match-test "m6"
+---------------
 
 ### Test-code:
     
@@ -351,8 +420,8 @@ Match-test "6"
         )
     )
 
-Match-test "7"
---------------
+Match-test "m7"
+---------------
 
 ### Test-code:
     
@@ -369,14 +438,20 @@ Match-test "7"
             ""
         )
     )
+
+Fail-test "f1"
+--------------
+
+### Test-code:
+    X
 
 
 Test of parser: "ZWW"
 =====================
 
 
-Match-test "1"
---------------
+Match-test "m1"
+---------------
 
 ### Test-code:
     
@@ -392,8 +467,8 @@ Match-test "1"
         )
     )
 
-Match-test "2"
---------------
+Match-test "m2"
+---------------
 
 ### Test-code:
     
@@ -412,8 +487,8 @@ Match-test "2"
         )
     )
 
-Match-test "3"
---------------
+Match-test "m3"
+---------------
 
 ### Test-code:
     
@@ -439,8 +514,8 @@ Match-test "3"
         )
     )
 
-Match-test "4"
---------------
+Match-test "m4"
+---------------
 
 ### Test-code:
     
@@ -464,14 +539,20 @@ Match-test "4"
             )
         )
     )
+
+Fail-test "f1"
+--------------
+
+### Test-code:
+     
 
 
 Test of parser: "ZW"
 ====================
 
 
-Match-test "1"
---------------
+Match-test "m1"
+---------------
 
 ### Test-code:
     
@@ -487,8 +568,8 @@ Match-test "1"
         )
     )
 
-Match-test "2"
---------------
+Match-test "m2"
+---------------
 
 ### Test-code:
     
@@ -506,3 +587,11 @@ Match-test "2"
             )
         )
     )
+
+Fail-test "f1"
+--------------
+
+### Test-code:
+    
+    
+    
