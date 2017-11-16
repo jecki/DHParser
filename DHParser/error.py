@@ -66,8 +66,8 @@ class Error:
         return prefix + "%s: %s" % (self.level_str, self.message)
 
     def __repr__(self):
-        return 'Error("%s", %i, %s, %i, %i, %i)' \
-               % (self.message, self.level, repr(self.code), self.pos, self.line, self.column)
+        return 'Error("%s", %s, %i, %i, %i)' \
+               % (self.message, repr(self.code), self.pos, self.line, self.column)
 
     @property
     def level_str(self):

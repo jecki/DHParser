@@ -17,7 +17,7 @@ Artikel           = [LZ]
                     [ArtikelKopf]
                     BedeutungsPosition
                     [VerweisPosition]
-                    { SubArtikel }
+                    { UnterArtikel }
                     ArtikelVerfasser
                     [LZ]  DATEI_ENDE
 
@@ -41,9 +41,9 @@ LemmaVariante     = LAT_WORT_TEIL { "-" LAT_WORT_TEIL }
 
 ## GRAMMATIK-POSITION ##
 
-GrammatikPosition = "GRAMMATIK" [LZ] Grammatik §ABS { GrammatikVariante §ABS }
+GrammatikPosition = "GRAMMATIK" [LZ] §Grammatik ABS { GrammatikVariante §ABS }
 
-Grammatik        = §wortart ABS flexion [genus]
+Grammatik        = wortart §ABS flexion [genus]
 
 wortart          = "nomen"  | "n."
                  | "verb"   | "v."
@@ -51,14 +51,16 @@ wortart          = "nomen"  | "n."
                  | "adjektiv" | "adj."
                  | "praeposition" | "praep."
 
-flexion          = FLEX { "," §FLEX }
+flexion          = deklination | konjugation
+deklination      = FLEX §"," FLEX
+konjugation      = FLEX
 FLEX             = /-?[a-z]+/~
 
 genus            = "maskulinum" | "m."
                  | "femininum" | "f."
                  | "neutrum" | "n."
 
-GrammatikVariante  = [wortart ABS] flexion [genus] DPP  { Beleg }+
+GrammatikVariante  = [wortart ABS] flexion [genus] DPP { Beleg }+
 
 
 
@@ -73,14 +75,32 @@ Etymologie         = FREITEXT
 
 #### ARTIKEL-KOPF ############################################################
 
-ArtikelKopf     = { SchreibweisenPosition | StrukturPosition
-                  | GebrauchPosition | MetrikPosition | VerwechselungPosition }+
+ArtikelKopf     = <   SchreibweisenPosition | StrukturPosition | GebrauchPosition
+                    | MetrikPosition | VerwechselungPosition >
 
-SchreibweisenPosition =  "SCHREIBWEISE" [LZ] §SWTyp DPP [LZ]
-                         SWVariante { ABS SWVariante} [LZ]
-SWTyp           = "script. fat-" | "script."
-SWVariante      = Schreibweise DPP Beleg
-Schreibweise    = ZEICHENFOLGE
+## Schreibweisen-Position ##
+
+# TODO: Ggf. noch zu ergänzen um: Zusatz, Mehrere Tyen innerhalb der Schreibweisen-Position.
+
+SchreibweisenPosition =  "SCHREIBWEISE" [LZ] { SWKategorie }+
+
+SWKategorie      = SWTyp DPP [LZ] §{SWUnterkategorie | SWVariante { ABS SWVariante }}+ [LZ]
+SWUnterkategorie = SWUnterTyp DPP [LZ] §SWVariante { ABS SWVariante }+ [LZ]
+SWTyp            = scriptfat | scriptform | script | form | OFFEN
+SWVariante       = !KATEGORIENZEILE Schreibweise DPP Beleg
+Schreibweise     = ZEICHENFOLGE
+
+scriptfat  = "script." "fat-"
+scriptform = "script. " "form"
+script     = "srcipt."
+form       = "form"
+
+
+#### STRUKTUR-POSITION #######################################################
+
+StrukturPosition = "STRUKTUR" [LZ] { STVariante }+
+
+STVariante = "TODO"
 
 
 
@@ -96,7 +116,16 @@ DeutscheBedeutung = SW_DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 
 Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg }) ABS
 EinBeleg        = { !([LZ] "*" | SCHLUESSELWORT) /\s*[^\n]*/~ [ZW] }+ [Zusatz]
-Zusatz          = "ZUSATZ" /\s*.*/
+
+
+#### VERWEIS-POSITION #####################################################
+
+VerweisPosition = "VERWEISE"
+
+
+#### UNTER-ARTIKEL ########################################################
+
+UnterArtikel = "UNTER-ARTIKEL"
 
 
 #### AUTOR/AUTORIN ###########################################################
@@ -171,6 +200,7 @@ RZS              = /\s*?\n|$/               # Rückwärtiger Zeilensprung oder T
 
 ZEILENSPRUNG     = /[ \t]*\n/~
 KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
+KATEGORIENZEILE  = /[^:\n]+[:][ \t]*\n/     # Kategorienzeilen enthalten genau einen Doppelpunkt am Ende der Zeile
 
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/

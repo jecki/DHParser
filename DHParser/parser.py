@@ -2039,7 +2039,7 @@ class Compiler:
         else:
             self._dirty_flag = True
         result = self.compile(node)
-        self.propagate_error_flags(node)
+        self.propagate_error_flags(node, lazy=True)
         return result
 
     def set_grammar_name(self, grammar_name="", grammar_source=""):
@@ -2058,12 +2058,13 @@ class Compiler:
         self.grammar_source = load_if_file(grammar_source)
 
     @staticmethod
-    def propagate_error_flags(node: Node) -> None:
-        if node.error_flag < Error.HIGHEST:
+    def propagate_error_flags(node: Node, lazy: bool = True) -> None:
+        # See test_parser.TestCompilerClass.test_propagate_error()..
+        if not lazy or node.error_flag < Error.HIGHEST:
             for child in node.children:
                 Compiler.propagate_error_flags(child)
                 node.error_flag = max(node.error_flag, child.error_flag)
-                if node.error_flag >= Error.HIGHEST:
+                if lazy and node.error_flag >= Error.HIGHEST:
                     return
 
     @staticmethod
@@ -2164,6 +2165,7 @@ def compile_source(source: str,
             syntax_tree.log(log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
+        # print(syntax_tree.as_sxpr())
         messages.extend(syntax_tree.collect_errors(source_text))
         syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
     return result, messages, syntax_tree

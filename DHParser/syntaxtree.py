@@ -398,21 +398,25 @@ class Node(collections.abc.Sized):
             return []
 
     def _collect_errors(self, lbreaks: List[int] = [], clear_errors=False) -> List[Error]:
-        if self.error_flag:
-            errors = self.errors
-            if lbreaks:
-                for err in errors:
-                    err.pos = self.pos
-                    err.line, err.column = line_col(lbreaks, err.pos)
-            if clear_errors:
-                self._errors = []
-                self.error_flag = 0
-            if self.children:
-                for child in self.children:
-                    errors.extend(child._collect_errors(lbreaks, clear_errors))
-            return errors
+        errors = self.errors
+        if errors and lbreaks:
+            for err in errors:
+                err.pos = self.pos
+                err.line, err.column = line_col(lbreaks, err.pos)
+        if self.children:
+            for child in self.children:
+                errors.extend(child._collect_errors(lbreaks, clear_errors))
+        if clear_errors:
+            self._errors = []
+            self.error_flag = 0
         else:
-            return []
+            if self._errors:
+                self.error_flag = max(err.code for err in self.errors)
+            if self.children:
+                max_child_error = max(child.error_flag for child in self.children)
+                self.error_flag = max(self.error_flag, max_child_error)
+        return errors
+
 
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=identity, density=0) -> str:
@@ -482,6 +486,8 @@ class Node(collections.abc.Sized):
             # s += " '(pos %i)" % node.pos
             if src:
                 txt += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
+            if node.error_flag:
+                txt += " HAS ERRORS"
             if node.errors:
                 txt += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
                                                   for err in node.errors)

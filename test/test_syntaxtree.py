@@ -23,6 +23,7 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
+from DHParser.error import Error
 from DHParser.syntaxtree import Node, mock_syntax_tree, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
@@ -123,6 +124,23 @@ class TestNode:
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
+
+    def test_collect_errors(self):
+        tree = mock_syntax_tree('(A (B 1) (C (D (E 2) (F 3))))')
+        A = tree
+        B = next(tree.find(lambda node: str(node) == "1"))
+        D = next(tree.find(lambda node: node.parser.name == "D"))
+        F = next(tree.find(lambda node: str(node) == "3"))
+        B.add_error("Error in child node")
+        F.add_error("Error in child's child node")
+        tree.error_flag = Error.ERROR
+        errors = tree.collect_errors()
+        assert len(errors) == 2, str(errors)
+        assert A.error_flag
+        assert D.error_flag
+        errors = tree.collect_errors(clear_errors=True)
+        assert len(errors) == 2
+        assert not D.error_flag
 
 
 class TestErrorHandling:
