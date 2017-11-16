@@ -370,8 +370,7 @@ class Node(collections.abc.Sized):
 
     def add_error(self,
                   message: str,
-                  level: int = Error.ERROR,
-                  code: int = 0) -> 'Node':
+                  code: int = Error.ERROR) -> 'Node':
         """
         Adds an error to this Node.
         Parameters:
@@ -379,8 +378,8 @@ class Node(collections.abc.Sized):
             level(int):     The error level (error or warning)
             code(Hashable): An error code to identify the kind of error
         """
-        self._errors.append(Error(message, level, code))
-        self.error_flag = max(self.error_flag, self._errors[-1].level)
+        self._errors.append(Error(message, code))
+        self.error_flag = max(self.error_flag, self._errors[-1].code)
         return self
 
 

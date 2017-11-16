@@ -375,6 +375,7 @@ class EBNFCompiler(Compiler):
     WHITESPACE = {'horizontal': r'[\t ]*',  # default: horizontal
                   'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
                   'vertical': r'\s*'}
+    REPEATABLE_DIRECTIVES = {'tokens'}
 
 
     def __init__(self, grammar_name="", grammar_source=""):
@@ -393,13 +394,14 @@ class EBNFCompiler(Compiler):
         self.recursive = set()      # type: Set[str]
         self.definitions = {}       # type: Dict[str, str]
         self.deferred_tasks = []    # type: List[Callable]
-        self.root_symbol = ""  # type: str
+        self.root_symbol = ""       # type: str
         self.directives = {'whitespace': self.WHITESPACE['horizontal'],
                            'comment': '',
-                           'literalws': ['right'],
+                           'literalws': {'right'},
                            'tokens': set(),  # alt. 'preprocessor_tokens'
-                           'filter': dict(),  # alt. 'filter'
-                           'ignorecase': False}
+                           'filter': dict()}  # alt. 'filter'
+        # self.directives['ignorecase']: False
+        self.defined_directives = set()  # type: Set[str]
 
     @property
     def result(self) -> str:
@@ -548,7 +550,7 @@ class EBNFCompiler(Compiler):
         defined_symbols.difference_update(self.RESERVED_SYMBOLS)
 
         def remove_connections(symbol):
-            """Recursiviely removes all symbols which appear in the
+            """Recursively removes all symbols which appear in the
             definiens of a particular symbol."""
             if symbol in defined_symbols:
                 defined_symbols.remove(symbol)
@@ -575,12 +577,6 @@ class EBNFCompiler(Compiler):
 
     def on_syntax(self, node: Node) -> str:
         definitions = []  # type: List[Tuple[str, str]]
-
-        # transfer directives to re_flags where needed
-        if self.directives['ignorecase']:
-            self.re_flags.add('i')
-        elif 'i' in self.re_flags:
-            self.re_flags.remove('i')
 
         # drop the wrapping sequence node
         if len(node.children) == 1 and not node.children[0].parser.name:
@@ -658,6 +654,14 @@ class EBNFCompiler(Compiler):
         key = str(node.children[0]).lower()
         assert key not in self.directives['tokens']
 
+        if key not in self.REPEATABLE_DIRECTIVES:
+            if key in self.defined_directives:
+                node.add_error('Directive "%s" has already been defined earlier. ' % key + \
+                               'Later definition will be ignored!',
+                               code=Error.REDEFINED_DIRECTIVE_WARNING)
+                return ""
+            self.defined_directives.add(key)
+
         if key in {'comment', 'whitespace'}:
             if node.children[1].parser.name == "list_":
                 if len(node.children[1].result) != 1:
@@ -683,12 +687,8 @@ class EBNFCompiler(Compiler):
             self.directives[key] = value
 
         elif key == 'ignorecase':
-            value = str(node.children[1]).lower() not in {"off", "false", "no"}
-            self.directives['ignorecase'] == value
-            if value:
+            if str(node.children[1]).lower() not in {"off", "false", "no"}:
                 self.re_flags.add('i')
-            elif 'i' in self.re_flags:
-                self.re_flags.remove('i')
 
         # elif key == 'testing':
         #     value = str(node.children[1])
@@ -706,7 +706,13 @@ class EBNFCompiler(Compiler):
             self.directives[key] = list(wsp)
 
         elif key in {'tokens', 'preprocessor_tokens'}:
-            self.directives['tokens'] |= self.compile(node.children[1])
+            tokens = self.compile(node.children[1])
+            redeclared = self.directives['tokes'] & tokens
+            if redeclared:
+                node.add_error('Tokens %s have already been declared earlier. '
+                               % str(redeclared) + 'Later declaration will be ignored',
+                               code=Error.REDECLARED_TOKEN_WARNING)
+            self.directives['tokens'] |= tokens - redeclared
 
         elif key.endswith('_filter'):
             filter_set = self.compile(node.children[1])

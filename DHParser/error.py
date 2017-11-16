@@ -42,15 +42,18 @@ class Error:
     ERROR     = 1000
     HIGHEST   = ERROR
 
+    # warning codes
+
+    REDEFINED_DIRECTIVE_WARNING = 101
+
     # error codes
 
     MANDATORY_CONTINUATION = 1001
 
-    def __init__(self, message: str, level: int = ERROR, code: int = 0,
+    def __init__(self, message: str, code: int = ERROR,
                  pos: int = -1, line: int = -1, column: int = -1) -> None:
         self.message = message
-        assert level >= 0
-        self.level = level or Error.ERROR
+        assert code >= 0
         self.code = code
         self.pos = pos
         self.line = line
@@ -70,17 +73,17 @@ class Error:
     def level_str(self):
         """Returns a string representation of the error level, e.g. "warning".
         """
-        return "Warning" if is_warning(self.level) else "Error"
+        return "Warning" if is_warning(self.code) else "Error"
 
 
-def is_warning(level: int) -> bool:
+def is_warning(code: int) -> bool:
     """Returns True, if error is merely a warning."""
-    return level < Error.ERROR
+    return code < Error.ERROR
 
 
-def is_error(level: int) -> bool:
+def is_error(code: int) -> bool:
     """Returns True, if error is an error, not just a warning."""
-    return level >= Error.ERROR
+    return code >= Error.ERROR
 
 
 def has_errors(messages: Iterable[Error], level: int = Error.ERROR) -> bool:
@@ -89,7 +92,7 @@ def has_errors(messages: Iterable[Error], level: int = Error.ERROR) -> bool:
     least the given error `level`.
     """
     for err_obj in messages:
-        if err_obj.level >= level:
+        if err_obj.code >= level:
             return True
     return False
 
