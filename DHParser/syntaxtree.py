@@ -486,8 +486,8 @@ class Node(collections.abc.Sized):
             # s += " '(pos %i)" % node.pos
             if src:
                 txt += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
-            if node.error_flag:
-                txt += " HAS ERRORS"
+            # if node.error_flag:   # just for debugging error collecting
+            #     txt += " HAS ERRORS"
             if node.errors:
                 txt += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
                                                   for err in node.errors)
@@ -556,8 +556,8 @@ class Node(collections.abc.Sized):
         """
         Finds nodes in the tree that match a specific criterion.
 
-        ``find`` is a generator that yields all nodes for which the
-        given ``match_function`` evaluates to True. The tree is
+        `find` is a generator that yields all nodes for which the
+        given `match_function` evaluates to True. The tree is
         traversed pre-order.
 
         Args:
@@ -596,7 +596,8 @@ class Node(collections.abc.Sized):
 
 def mock_syntax_tree(sxpr):
     """
-    Generates a tree of nodes from an S-expression.
+    Generates a tree of nodes from an S-expression. The main purpose of this is
+    to generate test data.
 
     Example:
     >>> mock_syntax_tree("(a (b c))").as_sxpr()

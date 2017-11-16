@@ -1,22 +1,14 @@
-line:  31, column: 49, Error: Missing definition for symbol 'LemmaWort'
-line:  70, column: 22, Error: Missing definition for symbol 'LAT'
-line:  70, column: 28, Error: Missing definition for symbol 'GRI'
-line:  78, column: 66, Error: Missing definition for symbol 'GebrauchPosition'
-line:  79, column: 23, Error: Missing definition for symbol 'MetrikPosition'
-line:  79, column: 40, Error: Missing definition for symbol 'VerwechselungPosition'
-line:  88, column: 20, Error: Missing definition for symbol 'SWUnterTyp'
-line:  89, column: 61, Error: Missing definition for symbol 'OFFEN'
-line: 142, column:  1, Warning: Rule "SW_GRIECH" is not connected to parser root "Artikel" !
-line: 158, column: 20, Error: Missing definition for symbol 'Autor'
-line: 158, column: 30, Error: Missing definition for symbol 'Werk'
-line: 158, column: 39, Error: Missing definition for symbol 'Stelle'
-line: 158, column: 51, Error: Missing definition for symbol 'Datierung'
-line: 158, column: 67, Error: Missing definition for symbol 'Edition'
-line: 162, column:  1, Warning: Rule "VerweisZiel" is not connected to parser root "Artikel" !
-line: 173, column:  1, Warning: Rule "DEU_GROSS" is not connected to parser root "Artikel" !
-line: 174, column:  1, Warning: Rule "DEU_KLEIN" is not connected to parser root "Artikel" !
-line: 175, column:  1, Warning: Rule "LAT_WORT" is not connected to parser root "Artikel" !
-line: 177, column:  1, Warning: Rule "GROSSSCHRIFT" is not connected to parser root "Artikel" !
-line: 199, column:  1, Warning: Rule "RZS" is not connected to parser root "Artikel" !
-line: 206, column:  1, Warning: Rule "NIEMALS" is not connected to parser root "Artikel" !
-line: 208, column:  1, Warning: Rule "DUMMY" is not connected to parser root "Artikel" !
+line:  81, column: 40, Error: Missing definition for symbol 'VerwechselungsPosition'
+line: 126, column:  1, Warning: Rule "VerwechslungsPosition" is not connected to parser root "Artikel" !
+line: 128, column:  1, Warning: Rule "Confunditur" is not connected to parser root "Artikel" !
+line: 129, column:  1, Warning: Rule "VerwechselungsVariante" is not connected to parser root "Artikel" !
+line: 130, column:  1, Warning: Rule "Verwechselung" is not connected to parser root "Artikel" !
+line: 188, column:  1, Warning: Rule "VerweisZiel" is not connected to parser root "Artikel" !
+line: 204, column:  1, Warning: Rule "DEU_GROSS" is not connected to parser root "Artikel" !
+line: 205, column:  1, Warning: Rule "DEU_KLEIN" is not connected to parser root "Artikel" !
+line: 208, column:  1, Warning: Rule "GROSSSCHRIFT" is not connected to parser root "Artikel" !
+line: 212, column:  1, Warning: Rule "SATZZEICHEN" is not connected to parser root "Artikel" !
+line: 216, column:  1, Warning: Rule "ERW_FREITEXT" is not connected to parser root "Artikel" !
+line: 233, column:  1, Warning: Rule "RZS" is not connected to parser root "Artikel" !
+line: 240, column:  1, Warning: Rule "NIEMALS" is not connected to parser root "Artikel" !
+line: 242, column:  1, Warning: Rule "DUMMY" is not connected to parser root "Artikel" !

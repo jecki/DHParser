@@ -16,7 +16,7 @@ except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
@@ -26,7 +26,6 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, remove_parser, remove_content, remove_brackets, replace_parser, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
-from DHParser.base import WHITESPACE_PTYPE, TOKEN_PTYPE
 
 
 #######################################################################

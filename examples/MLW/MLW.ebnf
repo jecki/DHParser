@@ -32,6 +32,8 @@ Lemma             = [< klassisch | gesichert >] LemmaWort
   klassisch       = "*"
   gesichert       = "$"  # TODO: Noch fragen: Welches Zeichen?
 
+LemmaWort         = LAT_WORT
+
 LemmaVarianten    = [LZ]
                     { LemmaVariante §TR }+
                     [Zusatz]
@@ -76,7 +78,7 @@ Etymologie         = FREITEXT
 #### ARTIKEL-KOPF ############################################################
 
 ArtikelKopf     = <   SchreibweisenPosition | StrukturPosition | GebrauchPosition
-                    | MetrikPosition | VerwechselungPosition >
+                    | MetrikPosition | VerwechselungsPosition >
 
 ## Schreibweisen-Position ##
 
@@ -84,35 +86,63 @@ ArtikelKopf     = <   SchreibweisenPosition | StrukturPosition | GebrauchPositio
 
 SchreibweisenPosition =  "SCHREIBWEISE" [LZ] { SWKategorie }+
 
-SWKategorie      = SWTyp DPP [LZ] §{SWUnterkategorie | SWVariante { ABS SWVariante }}+ [LZ]
-SWUnterkategorie = SWUnterTyp DPP [LZ] §SWVariante { ABS SWVariante }+ [LZ]
-SWTyp            = scriptfat | scriptform | script | form | OFFEN
-SWVariante       = !KATEGORIENZEILE Schreibweise DPP Beleg
-Schreibweise     = ZEICHENFOLGE
+SWKategorie      = SWTyp DPP [LZ] §(Varianten | { SWKategorie }+) [LZ]
+SWTyp            = scriptfat | scriptform | script | form | gen | abl | OFFEN
 
 scriptfat  = "script." "fat-"
 scriptform = "script. " "form"
 script     = "srcipt."
 form       = "form"
 
+gen        = "gen."
+abl        = "abl."
+
+OFFEN      = FREITEXT
+
 
 #### STRUKTUR-POSITION #######################################################
 
-StrukturPosition = "STRUKTUR" [LZ] { STVariante }+
+StrukturPosition = "STRUKTUR" [LZ] { STKategorie }+
+STKategorie      = STTyp DPP [LZ] §(Varianten | { STKategorie }+) [LZ]
+STTyp            = "form." ZEICHENFOLGE
 
-STVariante = "TODO"
 
+#### GEBRAUCH-POSITION #######################################################
+
+GebrauchPosition = "GEBRAUCH"
+
+
+#### METRIK-POSITION #########################################################
+
+MetrikPosition = "METRIK"
+
+
+#### VERWECHSLUNGS-POSITION ##################################################
+
+VerwechslungsPosition  = "VERWECHSELBAR" [LZ] [Confunditur]
+                         VerwechselungsVariante { ABS VerwechselungsVariante }+ [LZ]
+Confunditur            = "confunditur c." DPP [LZ]
+VerwechselungsVariante = !KATEGORIENZEILE Verwechselung DPP Beleg
+Verwechselung          = ZEICHENFOLGE
+
+
+#### ARTIKELKOPF POSITIONEN VARIANTEN ########################################
+
+Varianten              = Variante { ABS Variante }
+Variante               = !KATEGORIENZEILE Gegenstand DPP Beleg
+Gegenstand             = ZEICHENFOLGE
 
 
 #### BEDEUTUNGS-POSITION #####################################################
+##############################################################################
 
 BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
 
 Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
 Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
 Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
-LateinischeBedeutung = SW_LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-DeutscheBedeutung = SW_DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+LateinischeBedeutung = LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+DeutscheBedeutung = DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 
 Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg }) ABS
 EinBeleg        = { !([LZ] "*" | SCHLUESSELWORT) /\s*[^\n]*/~ [ZW] }+ [Zusatz]
@@ -137,9 +167,9 @@ Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
 #### Schlüsselwörter #########################################################
 
-SW_LAT           = "LATEINISCH" | "LAT"
-SW_DEU           = "DEUTSCH" | "DEU"
-SW_GRIECH        = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
+LAT = "LATEINISCH" | "LAT"
+DEU = "DEUTSCH" | "DEU"
+GRI = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 
 SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
@@ -162,6 +192,11 @@ Verweis          =  "->" ZielName
 VerweisZiel      = "{" ZielName "}"
 ZielName         = BUCHSTABENFOLGE
 
+Autor     = FREITEXT
+Werk      = FREITEXT
+Stelle    = FREITEXT
+Datierung = FREITEXT
+Edition   = FREITEXT
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
@@ -177,9 +212,12 @@ LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 ZAHL             = /\d+/~
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
-SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
 
-FREITEXT         = { DEU_WORT | ZAHL | ROEMISCHE_ZAHL | SATZZEICHEN | /s*/ }+
+SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+
+TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
+FREITEXT         = { TEXTELEMENT | /[.()\-\s]+/ | /,(?!,)\s*/ }+
+ERW_FREITEXT     = { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
