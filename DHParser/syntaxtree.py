@@ -374,9 +374,8 @@ class Node(collections.abc.Sized):
         """
         Adds an error to this Node.
         Parameters:
-            message(str):   A string with the error message.abs
-            level(int):     The error level (error or warning)
-            code(Hashable): An error code to identify the kind of error
+            message(str): A string with the error message.abs
+            code(int):    An error code to identify the kind of error
         """
         self._errors.append(Error(message, code))
         self.error_flag = max(self.error_flag, self._errors[-1].code)
@@ -430,11 +429,11 @@ class Node(collections.abc.Sized):
 
         Args:
             tab (str):  The indentation string, e.g. '\t' or '    '
-            openF:  (Node->str) A function that returns an opening
+            open_fn:   (Node->str) A function that returns an opening
                 string (e.g. an XML-tag_name) for a given node
-            closeF:  (Node->str) A function that returns a closeF
+            close_fn:  (Node->str) A function that returns a closeF
                 string (e.g. an XML-tag_name) for a given node.
-            dataF:  (str->str) A function that filters the data string
+            data_fn:   (str->str) A function that filters the data string
                 before printing, e.g. to add quotation marks
 
         Returns (str):

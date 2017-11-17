@@ -105,7 +105,7 @@ def only_errors(messages: Iterable[Error], level: int = Error.ERROR) -> Iterator
     return (err for err in messages if err.level >= level)
 
 
-def linebreaks(text: Union[StringView, str]):
+def linebreaks(text: Union[StringView, str]) -> List[int]:
     """
     Returns a list of indices all line breaks in the text.
     """
