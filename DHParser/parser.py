@@ -161,7 +161,7 @@ class HistoryRecord:
                (self.line_col[0], self.line_col[1], self.stack, str(self.node))
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(str(e) for e in self.node._errors).replace('\n', '\\')
+        return self.ERROR + ": " + "; ".join(str(e) for e in self.node._errors)  # .replace('\n', '\\')
 
     @property
     def stack(self) -> str:
@@ -899,7 +899,7 @@ class Grammar:
         def prepare_line(record):
             excerpt = self.document__.text.__getitem__(record.extent)[:25].replace('\n', '\\n')
             excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
-            return record.stack, record.status, excerpt
+            return [item for item in (record.stack, record.status, excerpt) if item]
 
         def write_log(history, log_name):
             path = os.path.join(log_dir(), log_name + "_parser.log")
@@ -916,6 +916,8 @@ class Grammar:
             if not log_file_name:
                 name = self.__class__.__name__
                 log_file_name = name[:-7] if name.lower().endswith('grammar') else name
+            elif log_file_name.lower().endswith('.log'):
+                log_file_name = log_file_name[:-4]
             full_history, match_history, errors_only = [], [], []
             for record in self.history__:
                 line = ";  ".join(prepare_line(record))

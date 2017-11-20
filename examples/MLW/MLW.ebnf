@@ -36,7 +36,7 @@ LemmaWort         = LAT_WORT
 
 LemmaVarianten    = [LZ]
                     { LemmaVariante §TR }+
-                    [Zusatz]
+                    [Zusatz §ABS]
 
 LemmaVariante     = LAT_WORT_TEIL { "-" LAT_WORT_TEIL }
 
@@ -54,7 +54,7 @@ wortart          = "nomen"  | "n."
                  | "praeposition" | "praep."
 
 flexion          = deklination | konjugation
-deklination      = FLEX §"," FLEX
+deklination      = FLEX ["," FLEX]
 konjugation      = FLEX
 FLEX             = /-?[a-z]+/~
 
@@ -62,7 +62,7 @@ genus            = "maskulinum" | "m."
                  | "femininum" | "f."
                  | "neutrum" | "n."
 
-GrammatikVariante  = [wortart ABS] flexion [genus] DPP { Beleg }+
+GrammatikVariante  = [wortart ABS] flexion [genus] DPP { Beleg }+   # Beleg { SEM Beleg }
 
 
 
@@ -74,66 +74,31 @@ EtymologieBesonderheit = FREITEXT
 Etymologie         = FREITEXT
 
 
-
 #### ARTIKEL-KOPF ############################################################
 
-ArtikelKopf     = <   SchreibweisenPosition | StrukturPosition | GebrauchPosition
-                    | MetrikPosition | VerwechselungsPosition >
+ArtikelKopf     = <   SchreibweisenPosition
+                    | StrukturPosition
+                    | GebrauchPosition
+                    | MetrikPosition
+                    | VerwechselungPosition >
 
-## Schreibweisen-Position ##
+SchreibweisenPosition = "SCHREIBWEISE"  Position
+StrukturPosition      = "STRUKTUR"      Position
+GebrauchPosition      = "GEBRAUCH"      Position
+MetrikPosition        = "METRIK"        Position
+VerwechselungPosition = "VERWECHSELBAR" Position
 
-# TODO: Ggf. noch zu ergänzen um: Zusatz, Mehrere Tyen innerhalb der Schreibweisen-Position.
+## ARTIKELKOPF POSITIONEN ##
 
-SchreibweisenPosition =  "SCHREIBWEISE" [LZ] { SWKategorie }+
-
-SWKategorie      = SWTyp §DPP [LZ] ( Varianten | { SWKategorie }+ ) [LZ]
-SWTyp            = scriptfat | scriptform | script | form | gen | abl | FREITEXT
-
-scriptfat  = "script." "fat-"
-scriptform = "script. " "form"
-script     = "srcipt."
-form       = "form"
-
-gen        = "gen."
-abl        = "abl."
-
-
-#### STRUKTUR-POSITION #######################################################
-
-StrukturPosition = "STRUKTUR" [LZ] §{ STKategorie }+
-STKategorie      = STTyp §DPP [LZ] ( Varianten | { STKategorie }+ ) [LZ]
-STTyp            = ZEICHENFOLGE
-
-
-#### GEBRAUCH-POSITION #######################################################
-
-GebrauchPosition = "GEBRAUCH" [LZ] §{ GBKategorie }+
-GBKategorie      = GBTyp §DPP [LZ] ( Varianten | { GBKategorie }+ ) [LZ]
-GBTyp            = ZEICHENFOLGE
-
-
-#### METRIK-POSITION #########################################################
-
-MetrikPosition = "METRIK" [LZ] §{ MTKategorie }+
-MTKategorie      = MTTyp §DPP [LZ] ( Varianten | { MTKategorie }+ ) [LZ]
-MTTyp            = ZEICHENFOLGE
-
-
-#### VERWECHSLUNGS-POSITION ##################################################
-
-VerwechselungsPosition = "VERWECHSELBAR" [LZ] §{ VWKategorie }+
-VWKategorie      = VWTyp §DPP [LZ] ( Varianten | { VWKategorie }+ ) [LZ]
-VWTyp            = ZEICHENFOLGE
-
-#### ARTIKELKOPF POSITIONEN VARIANTEN ########################################
-
-Varianten              = Variante { ABS Variante }
-Variante               = !KATEGORIENZEILE Gegenstand DPP Beleg
-Gegenstand             = ZEICHENFOLGE
+Position       = [LZ] §{ Kategorie }+
+Kategorie      = Besonderheit §DPP [LZ] ( Varianten | { Kategorie }+ ) [LZ]
+Besonderheit   = FREITEXT
+Varianten      = Variante { ABS Variante }
+Variante       = !KATEGORIENZEILE Gegenstand DPP Beleg
+Gegenstand     = ZEICHENFOLGE
 
 
 #### BEDEUTUNGS-POSITION #####################################################
-##############################################################################
 
 BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
 
@@ -143,8 +108,7 @@ Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
 LateinischeBedeutung = LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 DeutscheBedeutung = DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
 
-Belege          = "BELEGE" [LZ] (EinBeleg | { "*" EinBeleg }) ABS
-EinBeleg        = { !([LZ] "*" | SCHLUESSELWORT) /\s*[^\n]*/~ [ZW] }+ [Zusatz]
+Belege          = "BELEGE" { ZWW "*" Beleg }+ ABS
 
 
 #### VERWEIS-POSITION #####################################################
@@ -176,16 +140,17 @@ SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
-Zusatz       = "ZUSATZ" §{ zusatz_typ [TR] }+
+Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ ["."] }+
   zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | FREITEXT
 
 
 
 #### BELEGE ##################################################################
 
-Beleg            = (BelegQuelle BelegText) | BelegText | Verweis
-BelegQuelle      = Autor DPP Werk SEM Stelle [SEM Datierung] [SEM Edition]
-BelegText        = '"' FREITEXT '"'
+Beleg            = Verweis | Zitat
+Zitat            = BelegQuelle { SEM Stelle BelegText } [[TR] Zusatz]
+BelegQuelle      = Autor DPP Werk
+BelegText        = ~/"/ FREITEXT /"/~ ["."]
 
 Verweis          =  "->" ZielName
 VerweisZiel      = "{" ZielName "}"
@@ -203,20 +168,21 @@ Edition   = FREITEXT
 NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
-DEU_WORT         = /[A-ZÄÖÜ]?[a-zäöüß]+/~
-DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüß]+/~
-DEU_KLEIN        = /[a-zäöüß]+/~
+DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
+DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę]+/~
+GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
+DEU_KLEIN        = /[a-zäöüßę]+/~
 LAT_WORT         = /[a-z]+/~
 LAT_WORT_TEIL    = /[a-z]+/
 GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
 ZAHL             = /\d+/~
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
 
-SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\[\]\-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
 
 TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
-FREITEXT         = { TEXTELEMENT | /[.()\-\s]+/ | /,(?!,)\s*/ }+
-ERW_FREITEXT     = { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
+FREITEXT         = !ZEILENSPRUNG { TEXTELEMENT | /[.()\[\]\-\s]+/ | /,(?!,)\s*/ }+
+ERW_FREITEXT     = !ZEILENSPRUNG { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
