@@ -1431,7 +1431,8 @@ class Series(NaryOperator):
                     match = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(match.regs[1][0])) if match else 1
                     node = Node(self, text_[:i])
-                    node.add_error('%s expected; "%s" found!' % (str(parser), text_[:10]),
+                    node.add_error('%s expected; "%s" found!'
+                                   % (str(parser), text_[:10].replace('\n', '\\n ')),
                                    code=Error.MANDATORY_CONTINUATION)
                     text_ = text_[i:]
             results += (node,)

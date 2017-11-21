@@ -256,5 +256,9 @@ class StringView(collections.abc.Sized):
             pieces.append(self.text[self.begin + k : self.end])
             return pieces
 
+    def replace(self, old, new):
+        """Returns a string where `old` is replaced by `new`."""
+        return str(self).replace(old, new)
+
 
 EMPTY_STRING_VIEW = StringView('')

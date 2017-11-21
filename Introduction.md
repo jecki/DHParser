@@ -333,7 +333,7 @@ strictly separated steps:
    what you like.
 
 DHParser automatically only generates a parser for the very first step.
-The other steps have to be programmed by hand, though DHParser makes
+The other steps have to be programmed by hand, though DHParser
 tries to make those parts as easy as possible. What you have just seen
 in your editor is a Pseudo-XML-representation of the concrete syntax
 tree. (The output of a parser is always a tree structure, just like

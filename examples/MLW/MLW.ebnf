@@ -38,7 +38,7 @@ LemmaVarianten    = [LZ]
                     { LemmaVariante §TR }+
                     [Zusatz §ABS]
 
-LemmaVariante     = LAT_WORT_TEIL { "-" LAT_WORT_TEIL }
+LemmaVariante     = LAT_WORT
 
 
 ## GRAMMATIK-POSITION ##
@@ -62,7 +62,7 @@ genus            = "maskulinum" | "m."
                  | "femininum" | "f."
                  | "neutrum" | "n."
 
-GrammatikVariante  = [wortart ABS] flexion [genus] DPP { Beleg }+   # Beleg { SEM Beleg }
+GrammatikVariante  = [wortart ABS] flexion [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
 
 
 
@@ -91,7 +91,7 @@ VerwechselungPosition = "VERWECHSELBAR" Position
 ## ARTIKELKOPF POSITIONEN ##
 
 Position       = [LZ] §{ Kategorie }+
-Kategorie      = Besonderheit §DPP [LZ] ( Varianten | { Kategorie }+ ) [LZ]
+Kategorie      = Besonderheit §DPP [LZ] ( Varianten | { Kategorie }+ ) ZWW
 Besonderheit   = FREITEXT
 Varianten      = Variante { ABS Variante }
 Variante       = !KATEGORIENZEILE Gegenstand DPP Beleg
@@ -100,15 +100,20 @@ Gegenstand     = ZEICHENFOLGE
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition = { "BEDEUTUNG" [LZ] §Bedeutung }+
+BedeutungsPosition   = { "BEDEUTUNG" [LZ] §Bedeutung }+
 
-Bedeutung       = (Interpretamente | Bedeutungskategorie) [Belege]
-Bedeutungskategorie = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
-Interpretamente = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
-LateinischeBedeutung = LAT /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
-DeutscheBedeutung = DEU /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~
+Bedeutung            = (Interpretamente | Bedeutungskategorie) [Belege]
+Bedeutungskategorie  = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
+Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
+LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
+DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
 
-Belege          = "BELEGE" { ZWW "*" Beleg }+ ABS
+LateinischerAusdruck = LAT_WORT { //~ LAT_WORT } [/\s*/ BedeutungsQualifikation]
+DeutscherAusdruck    = DEU_WORT { //~ DEU_WORT } [/\s*/ BedeutungsQualifikation]
+
+BedeutungsQualifikation = "[" EINZEILER { <SEM|ZW> EINZEILER } §"]"
+
+Belege = "BELEGE" { ZWW "*" Beleg }+ ABS
 
 
 #### VERWEIS-POSITION #####################################################
@@ -150,11 +155,11 @@ Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ ["."] }+
 Beleg            = Verweis | Zitat
 Zitat            = BelegQuelle { SEM Stelle BelegText } [[TR] Zusatz]
 BelegQuelle      = Autor DPP Werk
-BelegText        = ~/"/ FREITEXT /"/~ ["."]
+BelegText        = ~/"/ FREITEXT §/"/~ ["."]
 
-Verweis          =  "->" ZielName
+Verweis          =  "->" §ZielName
 VerweisZiel      = "{" ZielName "}"
-ZielName         = BUCHSTABENFOLGE
+ZielName         = EINZEILER
 
 Autor     = FREITEXT
 Werk      = FREITEXT
@@ -169,23 +174,22 @@ NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
 DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
-DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę]+/~
-GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
-DEU_KLEIN        = /[a-zäöüßę]+/~
-LAT_WORT         = /[a-z]+/~
-LAT_WORT_TEIL    = /[a-z]+/
-GROSSSCHRIFT     = /[A-ZÄÖÜ]+/~
+DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę\-]+/
+GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/
+DEU_KLEIN        = /[a-zäöüßę\-]+/
+LAT_WORT         = /[a-z|\-]+/
+GROSSSCHRIFT     = /[A-ZÄÖÜ]+/
 ZAHL             = /\d+/~
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
 
 SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\[\]\-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
 
-TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
-FREITEXT         = !ZEILENSPRUNG { TEXTELEMENT | /[.()\[\]\-\s]+/ | /,(?!,)\s*/ }+
-ERW_FREITEXT     = !ZEILENSPRUNG { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
-
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
+EINZEILER        = /[\w()-. \t]+/~
+TEXTELEMENT      = (DEU_WORT //~) | ZAHL | ROEMISCHE_ZAHL
+FREITEXT         = { TEXTELEMENT | /[.()\[\]\-\s]+/ | /,(?!,)\s*/ }+
+ERW_FREITEXT     = { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
 
 TR               = ABS | LZ                  # (beliebiger) Trenner
 ABS              = /\s*;;?\s*/ | { ZWW }+    # Abschluss (durch Semikolon oder Zeilenwechsel)
@@ -204,6 +208,7 @@ RZS              = /\s*?\n|$/               # Rückwärtiger Zeilensprung oder T
 ZEILENSPRUNG     = /[ \t]*\n/~
 KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
 KATEGORIENZEILE  = /[^:\n]+[:][ \t]*\n/     # Kategorienzeilen enthalten genau einen Doppelpunkt am Ende der Zeile
+FORTSETZUNG      = !(ZWW /[^:\n]+[:]/)
 
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/

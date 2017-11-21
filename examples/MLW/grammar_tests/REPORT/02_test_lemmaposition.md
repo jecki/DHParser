@@ -14,9 +14,7 @@ Match-test "1"
     (Lemma
         (LemmaWort
             (LAT_WORT
-                (:RegExp
-                    "facitergula"
-                )
+                "facitergula"
             )
         )
     )
@@ -51,7 +49,7 @@ Match-test "1"
         )
         (:OneOrMore
             (:Series
-                (LAT_WORT_TEIL
+                (LAT_WORT
                     "fascitergula"
                 )
                 (ZWW
@@ -64,7 +62,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (LAT_WORT_TEIL
+                (LAT_WORT
                     "facietergula"
                 )
                 (ZWW
@@ -77,7 +75,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (LAT_WORT_TEIL
+                (LAT_WORT
                     "facistergula"
                 )
                 (ZWW
@@ -90,7 +88,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (LAT_WORT_TEIL
+                (LAT_WORT
                     "farcutergula"
                 )
                 (ZWW
@@ -117,7 +115,7 @@ Match-test "2"
             " "
         )
         (:Series
-            (LAT_WORT_TEIL
+            (LAT_WORT
                 "fascitergula"
             )
             (ABS
@@ -140,7 +138,7 @@ Match-test "3"
         )
         (:OneOrMore
             (:Series
-                (LAT_WORT_TEIL
+                (LAT_WORT
                     "fascitergula"
                 )
                 (LZ
@@ -148,7 +146,7 @@ Match-test "3"
                 )
             )
             (:Series
-                (LAT_WORT_TEIL
+                (LAT_WORT
                     "facietergula"
                 )
                 (LZ
@@ -222,9 +220,7 @@ Match-test "1"
         (Lemma
             (LemmaWort
                 (LAT_WORT
-                    (:RegExp
-                        "facitergula"
-                    )
+                    "facitergula"
                 )
             )
         )
@@ -245,7 +241,7 @@ Match-test "1"
         (LemmaVarianten
             (:OneOrMore
                 (:Series
-                    (LAT_WORT_TEIL
+                    (LAT_WORT
                         "fascitergula"
                     )
                     (ZWW
@@ -258,7 +254,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (LAT_WORT_TEIL
+                    (LAT_WORT
                         "facietergula"
                     )
                     (ZWW
@@ -271,7 +267,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (LAT_WORT_TEIL
+                    (LAT_WORT
                         "facistergula"
                     )
                     (ZWW
@@ -284,7 +280,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (LAT_WORT_TEIL
+                    (LAT_WORT
                         "fascitercula"
                     )
                     (ZWW
