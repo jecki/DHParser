@@ -32,14 +32,9 @@ LATEINISCH	iussum, praeceptum, mandatum
 DEUTSCH		Befehl, Anweisung, Auftrag
 
 
-UNTERBEDEUTUNG1
+U1_BEDEUTUNG proprie:
 
-LATEINISCH	proprie
-
-
-UNTERBEDEUTUNG2
-
-LATEINISCH	in univ.
+U2_BEDEUTUNG in univ.:
 
 BELEGE
 * Leg.: Burgund. Rom. 38,1 si quis ... nullo metu aut imperio ad pacta venire conpellitur, sed libera voluntate pactum inisse cognuscitur eqs.
@@ -47,8 +42,7 @@ BELEGE
 * Lex: Baiuv. 1,10 hoc (sc. lex) per inperium regis vel iudicis fiat.
 * Arbeo: Emm. 16 p. 49,17 ex imperio principis ... in ospiti sui scuriam ... deductus est episcopus. persaepe. v. et p. 1407, 57.
 
-
-UNTERBEDEUTUNG2
+U2_BEDEUTUNG
 
 LATEINISCH	voluntas, arbitrium
 DEUTSCH		Wille, (willkürlicher) Beschluss
@@ -57,7 +51,7 @@ BELEGE
 * Vita: Euch. Val. Mat. 22 quamvis esset Maternus magnae vir auctoritatis ..., nihil tamen ex proprio imperio quasi libera utens potestate exercuit.
 
 
-UNTERBEDEUTUNG1
+U1_BEDEUTUNG
 
 LATEINISCH	in imag. vel translate
 
@@ -71,12 +65,12 @@ LATEINISCH	potestas, dominatio, dicio
 DEUTSCH		Macht, Herrschaft(sgewalt; plur. sensu sing. : v. ibi. al.)
 
 
-UNTERBEDEUTUNG1
+UNTER_BEDEUTUNG
 
 LATEINISCH	proprie
 
 
-UNTERBEDEUTUNG2
+UNTER_UNTER_BEDEUTUNG
 
 LATEINISCH	in univ.
 

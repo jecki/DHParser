@@ -151,10 +151,16 @@ class MLWGrammar(Grammar):
     
     #### BEDEUTUNGS-POSITION #####################################################
     
-    BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung }+
+    BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung [U1Bedeutung] }+
+    U1Bedeutung          = { ZWW "U1_BEDEUTUNG" [LZ] §Bedeutung [U2Bedeutung] }+
+    U2Bedeutung          = { ZWW "U2_BEDEUTUNG" [LZ] §Bedeutung [U3Bedeutung] }+
+    U3Bedeutung          = { ZWW "U3_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
+    U4Bedeutung          = { ZWW "U4_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
+    U5Bedeutung          = { ZWW "U5_BEDEUTUNG" [LZ] §UntersteBedeutung }+
     
     Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
-    Bedeutungskategorie  = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
+    UntersteBedeutung    = Interpretamente [BelegPosition]
+    Bedeutungskategorie  = EINZEILER §":" [LZ]
     Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung
     LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
     DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
@@ -230,6 +236,7 @@ class MLWGrammar(Grammar):
     DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-]+/~
     GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
     KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
+    GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
     DEU_KLEIN        = /(?!-)[a-zäöüßę_\-]+/~
     LAT_WORT         = /(?!-)[a-z|\-_]+/~
     GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
@@ -283,7 +290,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "7ff4250e122c3a05f3c28e3724c7522d"
+    source_hash__ = "d6cf6c84b25523a02c115ead270afae4"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*'
     WHITESPACE__ = r'[\t ]*'
@@ -320,6 +327,7 @@ class MLWGrammar(Grammar):
     GROSSSCHRIFT.set(RE('(?!-)[A-ZÄÖÜ_\\-]+'))
     LAT_WORT = RE('(?!-)[a-z|\\-_]+')
     DEU_KLEIN = RE('(?!-)[a-zäöüßę_\\-]+')
+    GRI_BUCHSTABE = RegExp('[αβγδεζηθικλμνξοπρςστυφχψω]')
     KLEINBUCHSTABE = RE('[a-zäöü](?=[ \\t\\n])')
     GROSSBUCHSTABE = RE('[A-ZÄÖÜ](?=[ \\t\\n])')
     DEU_GROSS = RE('[A-ZÄÖÜ][a-zäöüßę_\\-]+')
@@ -357,9 +365,15 @@ class MLWGrammar(Grammar):
     DeutscheBedeutung = Series(DEU, Option(LZ), DeutscherAusdruck, ZeroOrMore(Series(SomeOf(Token(","), ZW), DeutscherAusdruck)))
     LateinischeBedeutung = Series(LAT, Option(LZ), LateinischerAusdruck, ZeroOrMore(Series(SomeOf(Token(","), ZW), LateinischerAusdruck)))
     Interpretamente = Series(LateinischeBedeutung, Option(LZ), DeutscheBedeutung, mandatory=2)
-    Bedeutungskategorie = Series(RE('(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+'), Option(LZ))
+    Bedeutungskategorie = Series(EINZEILER, Token(":"), Option(LZ), mandatory=1)
+    UntersteBedeutung = Series(Interpretamente, Option(BelegPosition))
     Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Option(BelegPosition))
-    BedeutungsPosition = OneOrMore(Series(ZWW, Token("BEDEUTUNG"), Option(LZ), Bedeutung, mandatory=3))
+    U5Bedeutung = OneOrMore(Series(ZWW, Token("U5_BEDEUTUNG"), Option(LZ), UntersteBedeutung, mandatory=3))
+    U4Bedeutung = OneOrMore(Series(ZWW, Token("U4_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U5Bedeutung), mandatory=3))
+    U3Bedeutung = OneOrMore(Series(ZWW, Token("U3_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U4Bedeutung), mandatory=3))
+    U2Bedeutung = OneOrMore(Series(ZWW, Token("U2_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U3Bedeutung), mandatory=3))
+    U1Bedeutung = OneOrMore(Series(ZWW, Token("U1_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U2Bedeutung), mandatory=3))
+    BedeutungsPosition = OneOrMore(Series(ZWW, Token("BEDEUTUNG"), Option(LZ), Bedeutung, Option(U1Bedeutung), mandatory=3))
     Gegenstand = Synonym(EINZEILER)
     Variante = Series(NegativeLookahead(KATEGORIENZEILE), Gegenstand, DPP, Belege)
     Varianten = Series(Variante, ZeroOrMore(Series(ZWW, Variante)))

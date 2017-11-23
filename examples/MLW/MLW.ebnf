@@ -99,10 +99,16 @@ Gegenstand     = EINZEILER
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung }+
+BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung [U1Bedeutung] }+
+U1Bedeutung          = { ZWW "U1_BEDEUTUNG" [LZ] §Bedeutung [U2Bedeutung] }+
+U2Bedeutung          = { ZWW "U2_BEDEUTUNG" [LZ] §Bedeutung [U3Bedeutung] }+
+U3Bedeutung          = { ZWW "U3_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
+U4Bedeutung          = { ZWW "U4_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
+U5Bedeutung          = { ZWW "U5_BEDEUTUNG" [LZ] §UntersteBedeutung }+
 
 Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
-Bedeutungskategorie  = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
+UntersteBedeutung    = Interpretamente [BelegPosition]
+Bedeutungskategorie  = EINZEILER §":" [LZ]
 Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung
 LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
 DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
@@ -178,6 +184,7 @@ DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
 DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-]+/~
 GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
 KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
+GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
 DEU_KLEIN        = /(?!-)[a-zäöüßę_\-]+/~
 LAT_WORT         = /(?!-)[a-z|\-_]+/~
 GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
