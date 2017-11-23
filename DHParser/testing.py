@@ -269,9 +269,10 @@ def grammar_suite(directory, parser_factory, transformer_factory,
             for error in all_errors[filename]:
                 error_report.append('\t' + '\n\t'.join(error.split('\n')))
     if error_report:
-        if verbose:
-            print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
-        return ('Test suite "%s" revealed some errors:\n\n' % directory) + '\n'.join(error_report)
+        # if verbose:
+        #     print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
+        return ('Test suite "%s" revealed %s error%s:\n\n'
+                % (directory, err_N, 's' if err_N > 1 else '') + '\n'.join(error_report))
     if verbose:
         print("\nSUCCESS! All tests passed :-)\n")
     return ''

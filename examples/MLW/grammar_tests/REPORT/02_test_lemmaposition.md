@@ -14,7 +14,9 @@ Match-test "1"
     (Lemma
         (LemmaWort
             (LAT_WORT
-                "facitergula"
+                (:RegExp
+                    "facitergula"
+                )
             )
         )
     )
@@ -34,24 +36,20 @@ Match-test "1"
 --------------
 
 ### Test-code:
-    
     fascitergula
     facietergula
     facistergula
     farcutergula
-    
 
 ### AST
     (LemmaVarianten
-        (LZ
-            ""
-            ""
+        (LAT_WORT
+            (:RegExp
+                "fascitergula"
+            )
         )
-        (:OneOrMore
+        (:ZeroOrMore
             (:Series
-                (LAT_WORT
-                    "fascitergula"
-                )
                 (ZWW
                     (ZEILENSPRUNG
                         (:RegExp
@@ -60,11 +58,13 @@ Match-test "1"
                         )
                     )
                 )
+                (LAT_WORT
+                    (:RegExp
+                        "facietergula"
+                    )
+                )
             )
             (:Series
-                (LAT_WORT
-                    "facietergula"
-                )
                 (ZWW
                     (ZEILENSPRUNG
                         (:RegExp
@@ -73,11 +73,13 @@ Match-test "1"
                         )
                     )
                 )
+                (LAT_WORT
+                    (:RegExp
+                        "facistergula"
+                    )
+                )
             )
             (:Series
-                (LAT_WORT
-                    "facistergula"
-                )
                 (ZWW
                     (ZEILENSPRUNG
                         (:RegExp
@@ -86,17 +88,9 @@ Match-test "1"
                         )
                     )
                 )
-            )
-            (:Series
                 (LAT_WORT
-                    "farcutergula"
-                )
-                (ZWW
-                    (ZEILENSPRUNG
-                        (:RegExp
-                            ""
-                            ""
-                        )
+                    (:RegExp
+                        "farcutergula"
                     )
                 )
             )
@@ -107,19 +101,13 @@ Match-test "2"
 --------------
 
 ### Test-code:
-     fascitergula;
+    fascitergula
 
 ### AST
     (LemmaVarianten
-        (LZ
-            " "
-        )
-        (:Series
-            (LAT_WORT
+        (LAT_WORT
+            (:RegExp
                 "fascitergula"
-            )
-            (ABS
-                ";"
             )
         )
     )
@@ -128,53 +116,37 @@ Match-test "3"
 --------------
 
 ### Test-code:
-     fascitergula facietergula ZUSATZ sim.
-    
+    fascitergula facietergula ZUSATZ sim.
 
 ### AST
     (LemmaVarianten
-        (LZ
-            " "
+        (LAT_WORT
+            (:RegExp
+                "fascitergula"
+            )
+            (:Whitespace
+                " "
+            )
         )
-        (:OneOrMore
-            (:Series
-                (LAT_WORT
-                    "fascitergula"
+        (LAT_WORT
+            (:RegExp
+                "facietergula"
+            )
+            (:Whitespace
+                " "
+            )
+        )
+        (Zusatz
+            (:Token
+                (:RegExp
+                    "ZUSATZ"
                 )
-                (LZ
+                (:Whitespace
                     " "
                 )
             )
-            (:Series
-                (LAT_WORT
-                    "facietergula"
-                )
-                (LZ
-                    " "
-                )
-            )
-        )
-        (:Series
-            (Zusatz
-                (:Token
-                    (:RegExp
-                        "ZUSATZ"
-                    )
-                    (:Whitespace
-                        " "
-                    )
-                )
-                (zusatz_typ
-                    "sim."
-                )
-            )
-            (ZWW
-                (ZEILENSPRUNG
-                    (:RegExp
-                        ""
-                        ""
-                    )
-                )
+            (zusatz_typ
+                "sim."
             )
         )
     )
@@ -205,7 +177,6 @@ Match-test "1"
     
     GRAMMATIK
     nomen; -ae f.
-    
 
 ### AST
     (LemmaPosition
@@ -220,7 +191,9 @@ Match-test "1"
         (Lemma
             (LemmaWort
                 (LAT_WORT
-                    "facitergula"
+                    (:RegExp
+                        "facitergula"
+                    )
                 )
             )
         )
@@ -239,37 +212,43 @@ Match-test "1"
             )
         )
         (LemmaVarianten
-            (:OneOrMore
+            (LAT_WORT
+                (:RegExp
+                    "fascitergula"
+                )
+            )
+            (:ZeroOrMore
                 (:Series
-                    (LAT_WORT
-                        "fascitergula"
-                    )
                     (ZWW
                         (ZEILENSPRUNG
                             (:RegExp
                                 ""
                                 ""
                             )
+                        )
+                    )
+                    (LAT_WORT
+                        (:RegExp
+                            "facietergula"
                         )
                     )
                 )
                 (:Series
-                    (LAT_WORT
-                        "facietergula"
-                    )
                     (ZWW
                         (ZEILENSPRUNG
                             (:RegExp
                                 ""
                                 ""
                             )
+                        )
+                    )
+                    (LAT_WORT
+                        (:RegExp
+                            "facistergula"
                         )
                     )
                 )
                 (:Series
-                    (LAT_WORT
-                        "facistergula"
-                    )
                     (ZWW
                         (ZEILENSPRUNG
                             (:RegExp
@@ -278,41 +257,14 @@ Match-test "1"
                             )
                         )
                     )
-                )
-                (:Series
                     (LAT_WORT
-                        "fascitercula"
-                    )
-                    (ZWW
-                        (ZEILENSPRUNG
-                            (:RegExp
-                                ""
-                                ""
-                            )
-                        )
-                        (LEERRAUM
-                            (:RegExp
-                                ""
-                                ""
-                            )
+                        (:RegExp
+                            "fascitercula"
                         )
                     )
                 )
             )
             (:Series
-                (Zusatz
-                    (:Token
-                        (:RegExp
-                            "ZUSATZ"
-                        )
-                        (:Whitespace
-                            " "
-                        )
-                    )
-                    (zusatz_typ
-                        "sim."
-                    )
-                )
                 (ZWW
                     (ZEILENSPRUNG
                         (:RegExp
@@ -327,9 +279,36 @@ Match-test "1"
                         )
                     )
                 )
+                (Zusatz
+                    (:Token
+                        (:RegExp
+                            "ZUSATZ"
+                        )
+                        (:Whitespace
+                            " "
+                        )
+                    )
+                    (zusatz_typ
+                        "sim."
+                    )
+                )
             )
         )
         (GrammatikPosition
+            (ZWW
+                (ZEILENSPRUNG
+                    (:RegExp
+                        ""
+                        ""
+                    )
+                )
+                (LEERRAUM
+                    (:RegExp
+                        ""
+                        ""
+                    )
+                )
+            )
             (:Token
                 "GRAMMATIK"
             )
@@ -356,14 +335,6 @@ Match-test "1"
                 )
                 (genus
                     "f."
-                )
-            )
-            (ZWW
-                (ZEILENSPRUNG
-                    (:RegExp
-                        ""
-                        ""
-                    )
                 )
             )
         )

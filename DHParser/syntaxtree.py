@@ -261,7 +261,7 @@ class Node(collections.abc.Sized):
 
     def __len__(self):
         if self._len < 0:
-            self._len = sum(child._len for child in self.children) \
+            self._len = sum(len(child) for child in self.children) \
                 if self.children else len(self._result)
         return self._len
 

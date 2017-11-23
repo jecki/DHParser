@@ -1,5 +1,6 @@
-LEMMA imperi|um
+LEMMA imperium
 
+    inperium
 
 GRAMMATIK
     nomen; -i n.
@@ -7,22 +8,22 @@ GRAMMATIK
 	
 SCHREIBWEISE
     script.:
-		hym-: v. ibi.
-		em-: Chron. Fred. 2,35sqq. capit. p. 43. 2,36 p. 60,10.    
-		ym-: Chart. Sangall. A 194.
-		impir-: v. ibi.
+		hym-: -> {ibi 1}
+		em-: Chron.: Fred. 2,35sqq. capit. p. 43. 2,36 p. 60,10.
+		ym-: Chart.: Sangall. A 194.
+		impir-: -> {v. ibi.}
 
 STRUKTUR
     form. sing.:
         gen.:
-            -ri: v. ibi. adde Annal. Plac. a. 1266 p. 516,21.
-            -iae: Chron. Fred. 2,33. p. 56,22. 2,35.
+            -ri: {v. ibi.} adde Annal.: Plac. a. 1266 p. 516,21.
+            -iae: Chron.: Fred. 2,33. p. 56,22. 2,35.
         abl.:
-            -um: Chron. Fred. 2,15. 2,35sqq. capit. p. 43.
+            -um: Chron.: Fred. 2,15. 2,35sqq. capit. p. 43.
 
 VERWECHSELBAR
     confunditur c.:
-        imperitus: v. ibi.
+        imperitus: -> { v. ibi. }
 
 
 BEDEUTUNG

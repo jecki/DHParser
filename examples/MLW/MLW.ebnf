@@ -22,11 +22,10 @@ Artikel           = [LZ]
                     [LZ]  DATEI_ENDE
 
 
-
 #### LEMMA-POSITION ##########################################################
 
-LemmaPosition     = "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
-                    GrammatikPosition [Zusatz] [ABS]
+LemmaPosition     = [ABS] "LEMMA" [LZ] §Lemma TR [LemmaVarianten]
+                    GrammatikPosition [Zusatz]
 
 Lemma             = [< klassisch | gesichert >] LemmaWort
   klassisch       = "*"
@@ -34,16 +33,15 @@ Lemma             = [< klassisch | gesichert >] LemmaWort
 
 LemmaWort         = LAT_WORT
 
-LemmaVarianten    = [LZ]
-                    { LemmaVariante §TR }+
-                    [Zusatz §ABS]
+LemmaVarianten    = LemmaVariante { [TR] LemmaVariante }
+                    [[TR] Zusatz]
 
 LemmaVariante     = LAT_WORT
 
 
 ## GRAMMATIK-POSITION ##
 
-GrammatikPosition = "GRAMMATIK" [LZ] §Grammatik ABS { GrammatikVariante §ABS }
+GrammatikPosition = ZWW "GRAMMATIK" [LZ] §Grammatik { ABS GrammatikVariante }
 
 Grammatik        = wortart §ABS flexion [genus]
 
@@ -68,10 +66,10 @@ GrammatikVariante  = [wortart ABS] flexion [genus] DPP Beleg { FORTSETZUNG Beleg
 
 #### ETYMOLOGIE-POSITION #####################################################
 
-EtymologiePosition = "ETYMOLOGIE" [LZ] { EtymologieVariante }+
+EtymologiePosition = ZWW "ETYMOLOGIE" [LZ] { EtymologieVariante }+
 EtymologieVariante = LAT | GRI [EtymologieBesonderheit] ["ETYM" Etymologie] DPP Beleg
-EtymologieBesonderheit = FREITEXT
-Etymologie         = FREITEXT
+EtymologieBesonderheit = EINZEILER
+Etymologie         = EINZEILER
 
 
 #### ARTIKEL-KOPF ############################################################
@@ -82,29 +80,30 @@ ArtikelKopf     = <   SchreibweisenPosition
                     | MetrikPosition
                     | VerwechselungPosition >
 
-SchreibweisenPosition = "SCHREIBWEISE"  Position
-StrukturPosition      = "STRUKTUR"      Position
-GebrauchPosition      = "GEBRAUCH"      Position
-MetrikPosition        = "METRIK"        Position
-VerwechselungPosition = "VERWECHSELBAR" Position
+SchreibweisenPosition = ZWW "SCHREIBWEISE"  Position
+StrukturPosition      = ZWW "STRUKTUR"      Position
+GebrauchPosition      = ZWW "GEBRAUCH"      Position
+MetrikPosition        = ZWW "METRIK"        Position
+VerwechselungPosition = ZWW "VERWECHSELBAR" Position
 
 ## ARTIKELKOPF POSITIONEN ##
 
-Position       = [LZ] §{ Kategorie }+
-Kategorie      = Besonderheit §DPP [LZ] ( Varianten | { Kategorie }+ ) ZWW
-Besonderheit   = FREITEXT
-Varianten      = Variante { ABS Variante }
-Variante       = !KATEGORIENZEILE Gegenstand DPP Beleg
-Gegenstand     = ZEICHENFOLGE
+Position       = [LZ] §Kategorien
+Kategorien     = Kategorie { ZWW Kategorie }
+Kategorie      = Besonderheit §DPP [LZ] ( Varianten | Kategorien )
+Besonderheit   = EINZEILER
+Varianten      = Variante { ZWW Variante }
+Variante       = !KATEGORIENZEILE Gegenstand DPP Belege
+Gegenstand     = EINZEILER
 
 
 #### BEDEUTUNGS-POSITION #####################################################
 
-BedeutungsPosition   = { "BEDEUTUNG" [LZ] §Bedeutung }+
+BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung }+
 
-Bedeutung            = (Interpretamente | Bedeutungskategorie) [Belege]
+Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 Bedeutungskategorie  = /(?:(?![A-ZÄÖÜ][A-ZÄÖÜ]).)+/~ [LZ]
-Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung [LZ]
+Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung
 LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
 DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
 
@@ -113,22 +112,22 @@ DeutscherAusdruck    = DEU_WORT { //~ DEU_WORT } [/\s*/ BedeutungsQualifikation]
 
 BedeutungsQualifikation = "[" EINZEILER { <SEM|ZW> EINZEILER } §"]"
 
-Belege = "BELEGE" { ZWW "*" Beleg }+ ABS
+BelegPosition = ZWW "BELEGE" ZWW Belege
 
 
 #### VERWEIS-POSITION #####################################################
 
-VerweisPosition = "VERWEISE"
+VerweisPosition = ZWW "VERWEISE"
 
 
 #### UNTER-ARTIKEL ########################################################
 
-UnterArtikel = "UNTER-ARTIKEL"
+UnterArtikel = ZWW "UNTER-ARTIKEL"
 
 
 #### AUTOR/AUTORIN ###########################################################
 
-ArtikelVerfasser = ("AUTORIN" | "AUTOR") Name
+ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") Name
 Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
 
@@ -145,27 +144,29 @@ SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
-Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ ["."] }+
-  zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | FREITEXT
+Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ }+
+  zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | EINZEILER
 
 
 
 #### BELEGE ##################################################################
 
-Beleg            = Verweis | Zitat
-Zitat            = BelegQuelle { SEM Stelle BelegText } [[TR] Zusatz]
+Belege           = ["*"] Beleg { [LZ] "*" Beleg }
+Beleg            = (Verweis [Zitat]) | Zitat
+Zitat            = Quellenangabe { SEM [ZW] [Anker] <Stelle | Verweis> [[ZW] BelegText] } [[TR] Zusatz]
+Quellenangabe    = [Anker] < BelegQuelle | Verweis >
 BelegQuelle      = Autor DPP Werk
-BelegText        = ~/"/ FREITEXT §/"/~ ["."]
+BelegText        = /"/ MEHRZEILER §/"/~ ["."]
 
-Verweis          =  "->" §ZielName
-VerweisZiel      = "{" ZielName "}"
-ZielName         = EINZEILER
+Verweis          = "->" §Anker
+Anker            = "{" ZielID §"}"
+ZielID           = FREITEXT
 
-Autor     = FREITEXT
-Werk      = FREITEXT
-Stelle    = FREITEXT
-Datierung = FREITEXT
-Edition   = FREITEXT
+Autor     = EINZEILER
+Werk      = EINZEILER
+Stelle    = EINZEILER
+Datierung = EINZEILER
+Edition   = EINZEILER
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
@@ -174,25 +175,27 @@ NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
 DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
-DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę\-]+/
-GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/
-DEU_KLEIN        = /[a-zäöüßę\-]+/
-LAT_WORT         = /[a-z|\-]+/
-GROSSSCHRIFT     = /[A-ZÄÖÜ]+/
-ZAHL             = /\d+/~
-ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)/~
+DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-]+/~
+GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
+KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
+DEU_KLEIN        = /(?!-)[a-zäöüßę_\-]+/~
+LAT_WORT         = /(?!-)[a-z|\-_]+/~
+GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
+ZAHL             = /[\d_]+/~
+ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
 
-SATZZEICHEN      = /(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\[\]\-]+/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\[\]\-]+)/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
-EINZEILER        = /[\w()-. \t]+/~
-TEXTELEMENT      = (DEU_WORT //~) | ZAHL | ROEMISCHE_ZAHL
-FREITEXT         = { TEXTELEMENT | /[.()\[\]\-\s]+/ | /,(?!,)\s*/ }+
-ERW_FREITEXT     = { TEXTELEMENT | SATZZEICHEN | /\s+/ }+
+# EINZEILER        = /[\w()-. \t]+/~
+TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
+EINZEILER        = { TEXTELEMENT | /(?!->)[.()\-]+/~ | /,(?!,)/~ }+
+FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+
+MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ }+
 
 TR               = ABS | LZ                  # (beliebiger) Trenner
-ABS              = /\s*;;?\s*/ | { ZWW }+    # Abschluss (durch Semikolon oder Zeilenwechsel)
+ABS              = /\s*;;?\s*/ | ZWW         # Abschluss (durch Semikolon oder Zeilenwechsel)
 # ZW               = /\n/~                   # Zeilenwechsel
 LZ               = /\s+/                     # Leerzeichen oder -zeilen
 DPP              = /::?/~                    # Doppelpunkt als Trenner
