@@ -51,13 +51,9 @@ Match-test "1"
     \command
 
 ### AST
-    (text_element
-        (command
-            (generic_command
-                (CMDNAME
-                    "\command"
-                )
-            )
+    (generic_command
+        (CMDNAME
+            "\command"
         )
     )
 
@@ -68,13 +64,9 @@ Match-test "2"
     \textbackslash
 
 ### AST
-    (text_element
-        (command
-            (text_command
-                (TXTCOMMAND
-                    "\textbackslash"
-                )
-            )
+    (text_command
+        (TXTCOMMAND
+            "\textbackslash"
         )
     )
 
@@ -85,37 +77,23 @@ Match-test "3"
     \footnote{footnote}
 
 ### AST
-    (text_element
-        (command
-            (known_command
-                (footnote
-                    (:Token
-                        (:RegExp
-                            "\footnote"
-                        )
-                    )
-                    (block_of_paragraphs
-                        (:Token
-                            (:RegExp
-                                "{"
-                            )
-                        )
-                        (sequence
-                            (paragraph
-                                (text_element
-                                    (text
-                                        "footnote"
-                                    )
-                                )
-                            )
-                        )
-                        (:Token
-                            (:RegExp
-                                "}"
-                            )
-                        )
+    (footnote
+        (:Token
+            "\footnote"
+        )
+        (block_of_paragraphs
+            (:Token
+                "{"
+            )
+            (sequence
+                (paragraph
+                    (text
+                        "footnote"
                     )
                 )
+            )
+            (:Token
+                "}"
             )
         )
     )
@@ -127,13 +105,9 @@ Match-test "4"
     [
 
 ### AST
-    (text_element
-        (command
-            (text_command
-                (BRACKETS
-                    "["
-                )
-            )
+    (text_command
+        (BRACKETS
+            "["
         )
     )
 
@@ -144,27 +118,23 @@ Match-test "5"
     \begin{generic} unknown inline environment \end{generic}
 
 ### AST
-    (text_element
-        (generic_inline_env
-            (begin_environment
-                "generic"
+    (generic_inline_env
+        (begin_environment
+            "generic"
+        )
+        (:Whitespace
+            " "
+        )
+        (paragraph
+            (text
+                "unknown inline environment"
             )
             (:Whitespace
                 " "
             )
-            (paragraph
-                (text_element
-                    (text
-                        "unknown inline environment"
-                    )
-                )
-                (:Whitespace
-                    " "
-                )
-            )
-            (end_environment
-                "generic"
-            )
+        )
+        (end_environment
+            "generic"
         )
     )
 
@@ -175,27 +145,23 @@ Match-test "6"
     \begin{small} known inline environment \end{small}
 
 ### AST
-    (text_element
-        (generic_inline_env
-            (begin_environment
-                "small"
+    (generic_inline_env
+        (begin_environment
+            "small"
+        )
+        (:Whitespace
+            " "
+        )
+        (paragraph
+            (text
+                "known inline environment"
             )
             (:Whitespace
                 " "
             )
-            (paragraph
-                (text_element
-                    (text
-                        "known inline environment"
-                    )
-                )
-                (:Whitespace
-                    " "
-                )
-            )
-            (end_environment
-                "small"
-            )
+        )
+        (end_environment
+            "small"
         )
     )
 
@@ -206,21 +172,13 @@ Match-test "7"
     {\em block}
 
 ### AST
-    (text_element
-        (block
-            (text_element
-                (command
-                    (generic_command
-                        (CMDNAME
-                            "\em"
-                        )
-                    )
-                )
+    (block
+        (generic_command
+            (CMDNAME
+                "\em"
             )
-            (text_element
-                (text
-                    "block"
-                )
-            )
+        )
+        (text
+            "block"
         )
     )

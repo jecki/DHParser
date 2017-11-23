@@ -14,12 +14,10 @@ Match-test "1"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "Im allgemeinen werden die Bewohner Göttingens eingeteilt in Studenten,"
-                "Professoren, Philister und Vieh; welche vier Stände doch nichts weniger"
-                "als streng geschieden sind. Der Viehstand ist der bedeutendste."
-            )
+        (text
+            "Im allgemeinen werden die Bewohner Göttingens eingeteilt in Studenten,"
+            "Professoren, Philister und Vieh; welche vier Stände doch nichts weniger"
+            "als streng geschieden sind. Der Viehstand ist der bedeutendste."
         )
     )
 
@@ -32,56 +30,38 @@ Match-test "2"
 
 ### AST
     (paragraph
-        (text_element
+        (text
+            "Paragraphs may contain"
+        )
+        (:Whitespace
+            " "
+        )
+        (block
+            (generic_command
+                (CMDNAME
+                    "\em"
+                )
+            )
             (text
-                "Paragraphs may contain"
+                "inline blocks"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
+        (text
+            "as well as"
+        )
+        (:Whitespace
+            " "
+        )
+        (generic_command
+            (CMDNAME
+                "\emph"
+            )
             (block
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\em"
-                            )
-                        )
-                    )
-                )
-                (text_element
-                    (text
-                        "inline blocks"
-                    )
-                )
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (text
-                "as well as"
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (command
-                (generic_command
-                    (CMDNAME
-                        "\emph"
-                    )
-                    (block
-                        (text_element
-                            (text
-                                "inline commands"
-                            )
-                        )
-                    )
+                (text
+                    "inline commands"
                 )
             )
         )
@@ -89,30 +69,22 @@ Match-test "2"
             ""
             ""
         )
-        (text_element
-            (text
-                "and also special"
+        (text
+            "and also special"
+        )
+        (:Whitespace
+            " "
+        )
+        (text_command
+            (ESCAPED
+                "&"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (text_command
-                    (ESCAPED
-                        "&"
-                    )
-                )
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (text
-                "characters."
-            )
+        (text
+            "characters."
         )
     )
 
@@ -126,12 +98,10 @@ Match-test "3"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "Paragraphs are separated only by at least one blank line."
-                "Therefore,"
-                "this line still belongs to the same paragraph."
-            )
+        (text
+            "Paragraphs are separated only by at least one blank line."
+            "Therefore,"
+            "this line still belongs to the same paragraph."
         )
     )
 
@@ -149,13 +119,11 @@ Match-test "4"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "Paragraphs"
-                "like the comment above"
-                "Comment lines do not break paragraphs."
-                "in sequence."
-            )
+        (text
+            "Paragraphs"
+            "like the comment above"
+            "Comment lines do not break paragraphs."
+            "in sequence."
         )
     )
 
@@ -169,130 +137,92 @@ Match-test "5"
 
 ### AST
     (paragraph
-        (text_element
+        (text
+            "Paragraphs may contain"
+        )
+        (:Whitespace
+            " "
+        )
+        (block
+            (generic_command
+                (CMDNAME
+                    "\em"
+                )
+            )
             (text
-                "Paragraphs may contain"
+                "emphasized"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (block
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\em"
-                            )
-                        )
-                    )
-                )
-                (text_element
-                    (text
-                        "emphasized"
-                    )
-                )
-            )
+        (text
+            "or"
         )
         (:Whitespace
             " "
         )
-        (text_element
+        (block
+            (generic_command
+                (CMDNAME
+                    "\bf"
+                )
+            )
             (text
-                "or"
+                "bold"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (block
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\bf"
-                            )
-                        )
-                    )
-                )
-                (text_element
-                    (text
-                        "bold"
-                    )
-                )
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (text
-                "text."
-                "Most of these commands can have different forms as, for example:"
-            )
+        (text
+            "text."
+            "Most of these commands can have different forms as, for example:"
         )
         (:Whitespace
             ""
             ""
         )
-        (text_element
-            (generic_inline_env
-                (begin_environment
+        (generic_inline_env
+            (begin_environment
+                "small"
+            )
+            (:Whitespace
+                " "
+            )
+            (paragraph
+                (text
                     "small"
                 )
                 (:Whitespace
                     " "
                 )
-                (paragraph
-                    (text_element
-                        (text
-                            "small"
-                        )
-                    )
-                    (:Whitespace
-                        " "
-                    )
-                )
-                (end_environment
-                    "small"
-                )
+            )
+            (end_environment
+                "small"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (text
-                "or"
-            )
+        (text
+            "or"
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (block
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\large"
-                            )
-                        )
-                    )
+        (block
+            (generic_command
+                (CMDNAME
+                    "\large"
                 )
-                (text_element
-                    (text
-                        "large"
-                    )
-                )
+            )
+            (text
+                "large"
             )
         )
-        (text_element
-            (text
-                "."
-            )
+        (text
+            "."
         )
     )
 
@@ -304,39 +234,27 @@ Match-test "6"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "Paragraphs may also contain"
-            )
+        (text
+            "Paragraphs may also contain"
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (block
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\xy"
-                            )
-                        )
-                    )
+        (block
+            (generic_command
+                (CMDNAME
+                    "\xy"
                 )
-                (text_element
-                    (text
-                        "unknown blocks"
-                    )
-                )
-                (:Whitespace
-                    " "
-                )
+            )
+            (text
+                "unknown blocks"
+            )
+            (:Whitespace
+                " "
             )
         )
-        (text_element
-            (text
-                "."
-            )
+        (text
+            "."
         )
     )
 
@@ -348,52 +266,36 @@ Match-test "7"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "Paragraphs may contain"
-            )
+        (text
+            "Paragraphs may contain"
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (generic_command
-                    (CMDNAME
-                        "\xy"
-                    )
-                    (config
-                        (text
-                            "xycgf"
+        (generic_command
+            (CMDNAME
+                "\xy"
+            )
+            (config
+                (text
+                    "xycgf"
+                )
+            )
+            (block
+                (text
+                    "some"
+                )
+                (:Whitespace
+                    " "
+                )
+                (block
+                    (generic_command
+                        (CMDNAME
+                            "\em"
                         )
                     )
-                    (block
-                        (text_element
-                            (text
-                                "some"
-                            )
-                        )
-                        (:Whitespace
-                            " "
-                        )
-                        (text_element
-                            (block
-                                (text_element
-                                    (command
-                                        (generic_command
-                                            (CMDNAME
-                                                "\em"
-                                            )
-                                        )
-                                    )
-                                )
-                                (text_element
-                                    (text
-                                        "unbknown"
-                                    )
-                                )
-                            )
-                        )
+                    (text
+                        "unbknown"
                     )
                 )
             )
@@ -401,10 +303,8 @@ Match-test "7"
         (:Whitespace
             " "
         )
-        (text_element
-            (text
-                "commands."
-            )
+        (text
+            "commands."
         )
     )
 
@@ -417,52 +317,36 @@ Match-test "8"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "Unknwon"
-            )
+        (text
+            "Unknwon"
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (generic_command
-                    (CMDNAME
-                        "\xy"
-                    )
-                )
+        (generic_command
+            (CMDNAME
+                "\xy"
             )
         )
-        (text_element
-            (text
-                "commands within paragraphs may be simple"
-                "or"
-            )
+        (text
+            "commands within paragraphs may be simple"
+            "or"
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (generic_command
-                    (CMDNAME
-                        "\xy"
-                    )
-                    (block
-                        (text_element
-                            (text
-                                "complex"
-                            )
-                        )
-                    )
+        (generic_command
+            (CMDNAME
+                "\xy"
+            )
+            (block
+                (text
+                    "complex"
                 )
             )
         )
-        (text_element
-            (text
-                "."
-            )
+        (text
+            "."
         )
     )
 
@@ -477,205 +361,143 @@ Match-test "9"
 
 ### AST
     (paragraph
-        (text_element
-            (text
-                "paragraphs may contain all of these:"
+        (text
+            "paragraphs may contain all of these:"
+        )
+        (:Whitespace
+            " "
+        )
+        (text_command
+            (ESCAPED
+                "{"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (text_command
-                    (ESCAPED
-                        "{"
-                    )
-                )
+        (text
+            "escaped"
+        )
+        (:Whitespace
+            " "
+        )
+        (text_command
+            (ESCAPED
+                "}"
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (text
-                "escaped"
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (command
-                (text_command
-                    (ESCAPED
-                        "}"
-                    )
-                )
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (text
-                "characters,"
-            )
+        (text
+            "characters,"
         )
         (:Whitespace
             ""
             ""
         )
-        (text_element
-            (block
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\bf"
-                            )
-                        )
-                    )
-                )
-                (text_element
-                    (text
-                        "blocks"
-                    )
+        (block
+            (generic_command
+                (CMDNAME
+                    "\bf"
                 )
             )
-        )
-        (text_element
             (text
-                ","
+                "blocks"
+            )
+        )
+        (text
+            ","
+        )
+        (:Whitespace
+            " "
+        )
+        (text_command
+            (BRACKETS
+                "["
             )
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (text_command
-                    (BRACKETS
-                        "["
-                    )
-                )
-            )
+        (text
+            "brackets"
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (text
-                "brackets"
+        (text_command
+            (BRACKETS
+                "]"
             )
+        )
+        (text
+            ","
         )
         (:Whitespace
             " "
         )
-        (text_element
-            (command
-                (text_command
-                    (BRACKETS
-                        "]"
-                    )
-                )
+        (generic_inline_env
+            (begin_environment
+                "tiny"
             )
-        )
-        (text_element
-            (text
-                ","
+            (:Whitespace
+                " "
             )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (generic_inline_env
-                (begin_environment
-                    "tiny"
+            (paragraph
+                (text
+                    "environments"
                 )
                 (:Whitespace
                     " "
                 )
-                (paragraph
-                    (text_element
+            )
+            (end_environment
+                "tiny"
+            )
+        )
+        (:Whitespace
+            ""
+            ""
+        )
+        (text
+            "and"
+        )
+        (:Whitespace
+            " "
+        )
+        (text_command
+            (TXTCOMMAND
+                "\textbackslash"
+            )
+        )
+        (:Whitespace
+            " "
+        )
+        (text
+            "text-commands or other commands like this"
+        )
+        (:Whitespace
+            ""
+            ""
+        )
+        (footnote
+            (:Token
+                "\footnote"
+            )
+            (block_of_paragraphs
+                (:Token
+                    "{"
+                )
+                (sequence
+                    (paragraph
                         (text
-                            "environments"
+                            "footnote"
                         )
                     )
-                    (:Whitespace
-                        " "
-                    )
                 )
-                (end_environment
-                    "tiny"
-                )
-            )
-        )
-        (:Whitespace
-            ""
-            ""
-        )
-        (text_element
-            (text
-                "and"
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (command
-                (text_command
-                    (TXTCOMMAND
-                        "\textbackslash"
-                    )
-                )
-            )
-        )
-        (:Whitespace
-            " "
-        )
-        (text_element
-            (text
-                "text-commands or other commands like this"
-            )
-        )
-        (:Whitespace
-            ""
-            ""
-        )
-        (text_element
-            (command
-                (known_command
-                    (footnote
-                        (:Token
-                            (:RegExp
-                                "\footnote"
-                            )
-                        )
-                        (block_of_paragraphs
-                            (:Token
-                                (:RegExp
-                                    "{"
-                                )
-                            )
-                            (sequence
-                                (paragraph
-                                    (text_element
-                                        (text
-                                            "footnote"
-                                        )
-                                    )
-                                )
-                            )
-                            (:Token
-                                (:RegExp
-                                    "}"
-                                )
-                            )
-                        )
-                    )
+                (:Token
+                    "}"
                 )
             )
         )
@@ -690,21 +512,17 @@ Match-test "10"
 
 ### AST
     (paragraph
-        (text_element
-            (generic_inline_env
-                (begin_environment
-                    "generic"
+        (generic_inline_env
+            (begin_environment
+                "generic"
+            )
+            (paragraph
+                (text
+                    "inline environment"
                 )
-                (paragraph
-                    (text_element
-                        (text
-                            "inline environment"
-                        )
-                    )
-                )
-                (end_environment
-                    "generic"
-                )
+            )
+            (end_environment
+                "generic"
             )
         )
         (:Whitespace
@@ -723,25 +541,21 @@ Match-test "11"
 
 ### AST
     (paragraph
-        (text_element
-            (generic_inline_env
-                (begin_environment
-                    "generic"
+        (generic_inline_env
+            (begin_environment
+                "generic"
+            )
+            (paragraph
+                (text
+                    "inline environment"
                 )
-                (paragraph
-                    (text_element
-                        (text
-                            "inline environment"
-                        )
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
+                (:Whitespace
+                    ""
+                    ""
                 )
-                (end_environment
-                    "generic"
-                )
+            )
+            (end_environment
+                "generic"
             )
         )
         (:Whitespace
@@ -802,17 +616,13 @@ Match-test "1"
 ### AST
     (sequence
         (paragraph
-            (text_element
-                (text
-                    "Paragraphs are separated by gaps."
-                )
+            (text
+                "Paragraphs are separated by gaps."
             )
         )
         (paragraph
-            (text_element
-                (text
-                    "Like this one."
-                )
+            (text
+                "Like this one."
             )
         )
     )
@@ -829,17 +639,13 @@ Match-test "2"
 ### AST
     (sequence
         (paragraph
-            (text_element
-                (text
-                    "The second paragraph follows after a long gap."
-                )
+            (text
+                "The second paragraph follows after a long gap."
             )
         )
         (paragraph
-            (text_element
-                (text
-                    "The parser should accept this, too."
-                )
+            (text
+                "The parser should accept this, too."
             )
         )
     )
@@ -861,10 +667,8 @@ Match-test "3"
 ### AST
     (sequence
         (paragraph
-            (text_element
-                (text
-                    "Paragraphs can be delimited by"
-                )
+            (text
+                "Paragraphs can be delimited by"
             )
             (:Whitespace
                 ""
@@ -872,10 +676,8 @@ Match-test "3"
             )
         )
         (paragraph
-            (text_element
-                (text
-                    "In the end such a sequence counts"
-                )
+            (text
+                "In the end such a sequence counts"
             )
             (:Whitespace
                 ""
@@ -897,10 +699,8 @@ Match-test "4"
 ### AST
     (sequence
         (paragraph
-            (text_element
-                (text
-                    "Sequences of paragraphs may"
-                )
+            (text
+                "Sequences of paragraphs may"
             )
             (:Whitespace
                 ""
@@ -910,10 +710,8 @@ Match-test "4"
         (quotation
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "include block environments"
-                        )
+                    (text
+                        "include block environments"
                     )
                     (:Whitespace
                         ""
@@ -923,10 +721,8 @@ Match-test "4"
             )
         )
         (paragraph
-            (text_element
-                (text
-                    "like block quotes."
-                )
+            (text
+                "like block quotes."
             )
         )
     )

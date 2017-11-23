@@ -374,14 +374,9 @@ Match-test "2"
     % Comment
 
 ### AST
-    (LFF
-        (NEW_LINE
-            ""
-            ""
-        )
-        (WSPC
-            "% Comment"
-        )
+    (NEW_LINE
+        ""
+        ""
     )
 
 Match-test "3"
@@ -393,20 +388,9 @@ Match-test "3"
     
 
 ### AST
-    (LFF
-        (NEW_LINE
-            ""
-            ""
-        )
-        (WSPC
-            (:RegExp
-                "% Comment"
-            )
-            (:RegExp
-                ""
-                ""
-            )
-        )
+    (NEW_LINE
+        ""
+        ""
     )
 
 Match-test "4"
@@ -419,16 +403,9 @@ Match-test "4"
     
 
 ### AST
-    (LFF
-        (NEW_LINE
-            ""
-            ""
-        )
-        (WSPC
-            ""
-            ""
-            ""
-        )
+    (NEW_LINE
+        ""
+        ""
     )
 
 Fail-test "10"

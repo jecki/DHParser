@@ -246,9 +246,9 @@ class Node(collections.abc.Sized):
     def __str__(self):
         if self.children:
             return "".join(str(child) for child in self.children)
-        elif isinstance(self.result, StringView):
-            self.result = str(self.result)
-        return self.result
+        elif isinstance(self._result, StringView):
+            self.result = str(self._result)
+        return self._result
 
 
     def __repr__(self):

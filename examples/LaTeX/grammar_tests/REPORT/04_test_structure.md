@@ -17,40 +17,27 @@ Match-test "1"
 ### AST
     (SubParagraph
         (:Token
-            (:RegExp
-                "\subparagraph"
-            )
+            "\subparagraph"
         )
         (block
-            (text_element
-                (text
-                    "A subparagraph"
-                )
+            (text
+                "A subparagraph"
             )
-        )
-        (WSPC
-            " "
         )
         (sequence
             (paragraph
-                (text_element
-                    (text
-                        "with some text"
-                    )
+                (text
+                    "with some text"
                 )
             )
             (paragraph
-                (text_element
-                    (text
-                        "and consisting of several"
-                    )
+                (text
+                    "and consisting of several"
                 )
             )
             (paragraph
-                (text_element
-                    (text
-                        "real paragraphs"
-                    )
+                (text
+                    "real paragraphs"
                 )
             )
         )
@@ -80,85 +67,52 @@ Match-test "1"
 ### AST
     (Paragraph
         (:Token
-            (:RegExp
-                "\paragraph"
-            )
+            "\paragraph"
         )
         (block
-            (text_element
-                (text
-                    "A paragraph consisting of several subparagraphs"
-                )
+            (text
+                "A paragraph consisting of several subparagraphs"
             )
-        )
-        (WSPC
-            ""
-            ""
-            ""
         )
         (:ZeroOrMore
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Some text ahead"
-                        )
+                    (text
+                        "Some text ahead"
                     )
                 )
             )
             (SubParagraphs
                 (SubParagraph
                     (:Token
-                        (:RegExp
-                            "\subparagraph"
-                        )
+                        "\subparagraph"
                     )
                     (block
-                        (text_element
-                            (text
-                                "subparagraph 1"
-                            )
+                        (text
+                            "subparagraph 1"
                         )
-                    )
-                    (WSPC
-                        ""
-                        ""
-                        ""
                     )
                     (sequence
                         (paragraph
-                            (text_element
-                                (text
-                                    "First subparagraph"
-                                )
+                            (text
+                                "First subparagraph"
                             )
                         )
                     )
                 )
                 (SubParagraph
                     (:Token
-                        (:RegExp
-                            "\subparagraph"
-                        )
+                        "\subparagraph"
                     )
                     (block
-                        (text_element
-                            (text
-                                "subparagraph 2"
-                            )
+                        (text
+                            "subparagraph 2"
                         )
-                    )
-                    (WSPC
-                        ""
-                        ""
-                        ""
                     )
                     (sequence
                         (paragraph
-                            (text_element
-                                (text
-                                    "Second subparagraph"
-                                )
+                            (text
+                                "Second subparagraph"
                             )
                         )
                     )
@@ -201,109 +155,64 @@ Match-test "1"
     (Chapters
         (Chapter
             (:Token
-                (:RegExp
-                    "\chapter"
-                )
+                "\chapter"
             )
             (block
-                (text_element
-                    (text
-                        "Chapter 1"
-                    )
+                (text
+                    "Chapter 1"
                 )
-            )
-            (WSPC
-                ""
-                ""
             )
             (Sections
                 (Section
                     (:Token
-                        (:RegExp
-                            "\section"
-                        )
+                        "\section"
                     )
                     (block
-                        (text_element
-                            (text
-                                "Section 1"
-                            )
+                        (text
+                            "Section 1"
                         )
-                    )
-                    (WSPC
-                        ""
-                        ""
                     )
                 )
                 (Section
                     (:Token
-                        (:RegExp
-                            "\section"
-                        )
+                        "\section"
                     )
                     (block
-                        (text_element
-                            (text
-                                "Section 2"
-                            )
+                        (text
+                            "Section 2"
                         )
-                    )
-                    (WSPC
-                        ""
-                        ""
-                        ""
                     )
                     (sequence
                         (paragraph
-                            (text_element
-                                (text
-                                    "Section 2 contains some text"
-                                )
+                            (text
+                                "Section 2 contains some text"
                             )
                         )
                     )
                 )
                 (Section
                     (:Token
-                        (:RegExp
-                            "\section"
-                        )
+                        "\section"
                     )
                     (block
-                        (text_element
-                            (text
-                                "Section 3"
-                            )
+                        (text
+                            "Section 3"
                         )
-                    )
-                    (WSPC
-                        ""
-                        ""
                     )
                     (SubSections
                         (SubSection
                             (:Token
-                                (:RegExp
-                                    "\subsection"
-                                )
+                                "\subsection"
                             )
                             (block
-                                (text_element
-                                    (text
-                                        "SubSection 1"
-                                    )
+                                (text
+                                    "SubSection 1"
                                 )
-                            )
-                            (WSPC
-                                ""
-                                ""
                             )
                             (sequence
                                 (paragraph
-                                    (text_element
-                                        (text
-                                            "Text for subsection 1"
-                                        )
+                                    (text
+                                        "Text for subsection 1"
                                     )
                                     (:Whitespace
                                         ""
@@ -314,55 +223,35 @@ Match-test "1"
                         )
                         (SubSection
                             (:Token
-                                (:RegExp
-                                    "\subsection"
-                                )
+                                "\subsection"
                             )
                             (block
-                                (text_element
-                                    (text
-                                        "SubSection 2"
-                                    )
+                                (text
+                                    "SubSection 2"
                                 )
-                            )
-                            (WSPC
-                                ""
-                                ""
                             )
                             (:ZeroOrMore
                                 (sequence
                                     (paragraph
-                                        (text_element
-                                            (text
-                                                "Text for subsection 2"
-                                            )
+                                        (text
+                                            "Text for subsection 2"
                                         )
                                     )
                                 )
                                 (SubSubSections
                                     (SubSubSection
                                         (:Token
-                                            (:RegExp
-                                                "\subsubsection"
-                                            )
+                                            "\subsubsection"
                                         )
                                         (block
-                                            (text_element
-                                                (text
-                                                    "A subsubsection"
-                                                )
+                                            (text
+                                                "A subsubsection"
                                             )
-                                        )
-                                        (WSPC
-                                            ""
-                                            ""
                                         )
                                         (sequence
                                             (paragraph
-                                                (text_element
-                                                    (text
-                                                        "Text for subsubsecion"
-                                                    )
+                                                (text
+                                                    "Text for subsubsecion"
                                                 )
                                             )
                                         )
@@ -374,49 +263,29 @@ Match-test "1"
                 )
                 (Section
                     (:Token
-                        (:RegExp
-                            "\section"
-                        )
+                        "\section"
                     )
                     (block
-                        (text_element
-                            (text
-                                "Section 4"
-                            )
+                        (text
+                            "Section 4"
                         )
-                    )
-                    (WSPC
-                        ""
-                        ""
-                        ""
                     )
                 )
             )
         )
         (Chapter
             (:Token
-                (:RegExp
-                    "\chapter"
-                )
+                "\chapter"
             )
             (block
-                (text_element
-                    (text
-                        "Chapter 2"
-                    )
+                (text
+                    "Chapter 2"
                 )
-            )
-            (WSPC
-                ""
-                ""
-                ""
             )
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Some text for chapter 2"
-                        )
+                    (text
+                        "Some text for chapter 2"
                     )
                 )
             )

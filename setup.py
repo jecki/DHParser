@@ -3,7 +3,7 @@ from setuptools import setup
 try:
     from Cython.Build import cythonize
 except ImportError:
-    def cythonize(filename):
+    def cythonize(filename, **options):
         return []
 from DHParser.versionnumber import __version__
 

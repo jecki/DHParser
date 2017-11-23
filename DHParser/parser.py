@@ -161,7 +161,9 @@ class HistoryRecord:
                (self.line_col[0], self.line_col[1], self.stack, str(self.node))
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(str(e) for e in self.node._errors)  # .replace('\n', '\\')
+        return self.ERROR + ": " + "; ".join(
+            str(e) for e in (self.node._errors if self.node._errors else
+                             self.node.collect_errors()[:1]))
 
     @property
     def stack(self) -> str:
@@ -171,7 +173,7 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            self.err_msg() if has_errors(self.node._errors) else self.MATCH
+            self.err_msg() if self.node.error_flag else self.MATCH  # has_errors(self.node._errors)
 
     @property
     def extent(self) -> slice:
@@ -273,7 +275,7 @@ def add_parser_guard(parser_func):
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 remaining = len(rest)
-                if grammar.moving_forward__ or (node and node._errors):
+                if grammar.moving_forward__ or (node and node.error_flag):  # node._errors
                     record = HistoryRecord(grammar.call_stack__, node, remaining)
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
@@ -838,7 +840,7 @@ class Grammar:
                             record.node.pos = 0
                     record = HistoryRecord(self.call_stack__.copy(), stitches[-1], len(rest))
                     self.history__.append(record)
-                    self.history_tracking__ = False
+                    self.history_tracking__ = False  # TODO: add an explanation here
         if stitches:
             if rest:
                 stitches.append(Node(None, rest))

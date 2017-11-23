@@ -31,20 +31,16 @@ Match-test "1"
         )
         (sequence
             (paragraph
-                (text_element
-                    (text
-                        "A generic block element is a block element"
-                        "that is unknown to DHParser."
-                    )
+                (text
+                    "A generic block element is a block element"
+                    "that is unknown to DHParser."
                 )
             )
             (paragraph
-                (text_element
-                    (text
-                        "Unknown begin-end-structures are always"
-                        "considered as block elements and not"
-                        "as inline elements."
-                    )
+                (text
+                    "Unknown begin-end-structures are always"
+                    "considered as block elements and not"
+                    "as inline elements."
                 )
                 (:Whitespace
                     ""
@@ -86,10 +82,8 @@ Match-test "2"
         )
         (sequence
             (paragraph
-                (text_element
-                    (text
-                        "a single block paragraph"
-                    )
+                (text
+                    "a single block paragraph"
                 )
                 (:Whitespace
                     ""
@@ -101,27 +95,16 @@ Match-test "2"
             (end_environment
                 "generic"
             )
-            (LFF
-                (NEW_LINE
-                    (:RegExp
-                        " "
-                    )
-                    (:RegExp
-                        "% ending with"
-                    )
-                    (:RegExp
-                        ""
-                        ""
-                    )
+            (NEW_LINE
+                (:RegExp
+                    " "
                 )
-                (WSPC
-                    (:RegExp
-                        "% a comment"
-                    )
-                    (:RegExp
-                        ""
-                        ""
-                    )
+                (:RegExp
+                    "% ending with"
+                )
+                (:RegExp
+                    ""
+                    ""
                 )
             )
         )
@@ -139,10 +122,8 @@ Match-test "3"
     (quotation
         (sequence
             (paragraph
-                (text_element
-                    (text
-                        "a known block element"
-                    )
+                (text
+                    "a known block element"
                 )
                 (:Whitespace
                     ""
@@ -192,10 +173,8 @@ Match-test "1"
             "generic"
         )
         (paragraph
-            (text_element
-                (text
-                    "inline environment"
-                )
+            (text
+                "inline environment"
             )
         )
         (end_environment
@@ -216,10 +195,8 @@ Match-test "2"
             "generic"
         )
         (paragraph
-            (text_element
-                (text
-                    "inline environment"
-                )
+            (text
+                "inline environment"
             )
             (:Whitespace
                 ""
@@ -269,10 +246,8 @@ Match-test "1"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Items doe not need to be"
-                        )
+                    (text
+                        "Items doe not need to be"
                     )
                     (:Whitespace
                         ""
@@ -284,10 +259,8 @@ Match-test "1"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "separated by empty lines."
-                        )
+                    (text
+                        "separated by empty lines."
                     )
                     (:Whitespace
                         ""
@@ -316,18 +289,11 @@ Match-test "2"
 
 ### AST
     (itemize
-        (WSPC
-            ""
-            ""
-            ""
-        )
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "But items may be"
-                        )
+                    (text
+                        "But items may be"
                     )
                 )
             )
@@ -335,26 +301,17 @@ Match-test "2"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "separated by blank lines."
-                        )
+                    (text
+                        "separated by blank lines."
                     )
                 )
             )
         )
         (item
-            (WSPC
-                ""
-                ""
-                ""
-            )
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Empty lines at the beginning of an item will be ignored."
-                        )
+                    (text
+                        "Empty lines at the beginning of an item will be ignored."
                     )
                 )
             )
@@ -377,17 +334,13 @@ Match-test "3"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Items can consist of"
-                        )
+                    (text
+                        "Items can consist of"
                     )
                 )
                 (paragraph
-                    (text_element
-                        (text
-                            "several paragraphs."
-                        )
+                    (text
+                        "several paragraphs."
                     )
                     (:Whitespace
                         ""
@@ -399,10 +352,8 @@ Match-test "3"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Or of one paragraph"
-                        )
+                    (text
+                        "Or of one paragraph"
                     )
                     (:Whitespace
                         ""
@@ -432,10 +383,8 @@ Match-test "4"
                     (item
                         (sequence
                             (paragraph
-                                (text_element
-                                    (text
-                                        "Item-lists can be nested!"
-                                    )
+                                (text
+                                    "Item-lists can be nested!"
                                 )
                                 (:Whitespace
                                     ""
@@ -462,10 +411,8 @@ Match-test "5"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Item-lists may consist of just one item."
-                        )
+                    (text
+                        "Item-lists may consist of just one item."
                     )
                     (:Whitespace
                         ""
@@ -503,10 +450,8 @@ Match-test "1"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Enumerations work just like item-lists."
-                        )
+                    (text
+                        "Enumerations work just like item-lists."
                     )
                     (:Whitespace
                         ""
@@ -518,10 +463,8 @@ Match-test "1"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Only that the bullets are numbers."
-                        )
+                    (text
+                        "Only that the bullets are numbers."
                     )
                     (:Whitespace
                         ""
@@ -557,10 +500,8 @@ Match-test "2"
                     (item
                         (sequence
                             (paragraph
-                                (text_element
-                                    (text
-                                        "Item-lists and"
-                                    )
+                                (text
+                                    "Item-lists and"
                                 )
                                 (:Whitespace
                                     ""
@@ -572,10 +513,8 @@ Match-test "2"
                     (item
                         (sequence
                             (paragraph
-                                (text_element
-                                    (text
-                                        "Enumeration-lists"
-                                    )
+                                (text
+                                    "Enumeration-lists"
                                 )
                                 (:Whitespace
                                     ""
@@ -586,10 +525,8 @@ Match-test "2"
                                 (item
                                     (sequence
                                         (paragraph
-                                            (text_element
-                                                (text
-                                                    "can be nested"
-                                                )
+                                            (text
+                                                "can be nested"
                                             )
                                             (:Whitespace
                                                 ""
@@ -601,10 +538,8 @@ Match-test "2"
                                 (item
                                     (sequence
                                         (paragraph
-                                            (text_element
-                                                (text
-                                                    "arbitrarily"
-                                                )
+                                            (text
+                                                "arbitrarily"
                                             )
                                             (:Whitespace
                                                 ""
@@ -619,10 +554,8 @@ Match-test "2"
                     (item
                         (sequence
                             (paragraph
-                                (text_element
-                                    (text
-                                        "Another item"
-                                    )
+                                (text
+                                    "Another item"
                                 )
                                 (:Whitespace
                                     ""
@@ -637,10 +570,8 @@ Match-test "2"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "Plain numerated item."
-                        )
+                    (text
+                        "Plain numerated item."
                     )
                     (:Whitespace
                         ""
@@ -673,37 +604,11 @@ Match-test "3"
 
 ### AST
     (enumerate
-        (WSPC
-            (:RegExp
-                ""
-                ""
-                ""
-                ""
-            )
-            (:RegExp
-                "% more comments and paragraph separators"
-            )
-            (:RegExp
-                ""
-                ""
-            )
-            (:RegExp
-                "% yet some more"
-            )
-            (:RegExp
-                ""
-                ""
-                ""
-                ""
-            )
-        )
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "finally, the first item"
-                        )
+                    (text
+                        "finally, the first item"
                     )
                 )
             )
@@ -728,20 +633,16 @@ Match-test "4"
         (item
             (sequence
                 (paragraph
-                    (text_element
-                        (text
-                            "An item"
-                        )
+                    (text
+                        "An item"
                     )
                 )
                 (itemize
                     (item
                         (sequence
                             (paragraph
-                                (text_element
-                                    (text
-                                        "with an enumeration"
-                                    )
+                                (text
+                                    "with an enumeration"
                                 )
                                 (:Whitespace
                                     ""
@@ -752,10 +653,8 @@ Match-test "4"
                     )
                 )
                 (paragraph
-                    (text_element
-                        (text
-                            "as a separate paragraph"
-                        )
+                    (text
+                        "as a separate paragraph"
                     )
                     (:Whitespace
                         ""

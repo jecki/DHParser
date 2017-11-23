@@ -17,15 +17,11 @@ Match-test "1"
 ### AST
     (tabular
         (:Token
-            (:RegExp
-                "\begin{tabular}"
-            )
+            "\begin{tabular}"
         )
         (tabular_config
             (:Token
-                (:RegExp
-                    "{"
-                )
+                "{"
             )
             (:RegExp
                 "c|c|"
@@ -70,17 +66,13 @@ Match-test "1"
                 )
                 (cline
                     (:Token
-                        (:RegExp
-                            "\cline{"
-                        )
+                        "\cline{"
                     )
                     (INTEGER
                         "1"
                     )
                     (:Token
-                        (:RegExp
-                            "-"
-                        )
+                        "-"
                     )
                     (INTEGER
                         "2"
@@ -133,17 +125,13 @@ Match-test "1"
                 )
                 (cline
                     (:Token
-                        (:RegExp
-                            "\cline{"
-                        )
+                        "\cline{"
                     )
                     (INTEGER
                         "1"
                     )
                     (:Token
-                        (:RegExp
-                            "-"
-                        )
+                        "-"
                     )
                     (INTEGER
                         "2"
@@ -196,17 +184,13 @@ Match-test "1"
                 )
                 (cline
                     (:Token
-                        (:RegExp
-                            "\cline{"
-                        )
+                        "\cline{"
                     )
                     (INTEGER
                         "1"
                     )
                     (:Token
-                        (:RegExp
-                            "-"
-                        )
+                        "-"
                     )
                     (INTEGER
                         "2"
@@ -224,9 +208,7 @@ Match-test "1"
             )
         )
         (:Token
-            (:RegExp
-                "\end{tabular}"
-            )
+            "\end{tabular}"
         )
     )
 
@@ -250,15 +232,11 @@ Match-test "2"
 ### AST
     (tabular
         (:Token
-            (:RegExp
-                "\begin{tabular}"
-            )
+            "\begin{tabular}"
         )
         (tabular_config
             (:Token
-                (:RegExp
-                    "{"
-                )
+                "{"
             )
             (:RegExp
                 "c|c|c|c|cc|c|c|c|"
@@ -277,43 +255,31 @@ Match-test "2"
             (tabular_row
                 (multicolumn
                     (:Token
-                        (:RegExp
-                            "\multicolumn"
-                        )
+                        "\multicolumn"
                     )
                     (:Token
-                        (:RegExp
-                            "{"
-                        )
+                        "{"
                     )
                     (INTEGER
                         "1"
                     )
                     (:Token
-                        (:RegExp
-                            "}"
-                        )
+                        "}"
                     )
                     (tabular_config
                         (:Token
-                            (:RegExp
-                                "{"
-                            )
+                            "{"
                         )
                         (:RegExp
                             "c"
                         )
                         (:Token
-                            (:RegExp
-                                "}"
-                            )
+                            "}"
                         )
                     )
                     (block_of_paragraphs
                         (:Token
-                            (:RegExp
-                                "{"
-                            )
+                            "{"
                         )
                         (:Token
                             (:RegExp
@@ -337,50 +303,36 @@ Match-test "2"
                         )
                         (multicolumn
                             (:Token
-                                (:RegExp
-                                    "\multicolumn"
-                                )
+                                "\multicolumn"
                             )
                             (:Token
-                                (:RegExp
-                                    "{"
-                                )
+                                "{"
                             )
                             (INTEGER
                                 "3"
                             )
                             (:Token
-                                (:RegExp
-                                    "}"
-                                )
+                                "}"
                             )
                             (tabular_config
                                 (:Token
-                                    (:RegExp
-                                        "{"
-                                    )
+                                    "{"
                                 )
                                 (:RegExp
                                     "c"
                                 )
                                 (:Token
-                                    (:RegExp
-                                        "}"
-                                    )
+                                    "}"
                                 )
                             )
                             (block_of_paragraphs
                                 (:Token
-                                    (:RegExp
-                                        "{"
-                                    )
+                                    "{"
                                 )
                                 (sequence
                                     (paragraph
-                                        (text_element
-                                            (text
-                                                "Tabelle 1:"
-                                            )
+                                        (text
+                                            "Tabelle 1:"
                                         )
                                     )
                                 )
@@ -407,43 +359,31 @@ Match-test "2"
                         )
                         (multicolumn
                             (:Token
-                                (:RegExp
-                                    "\multicolumn"
-                                )
+                                "\multicolumn"
                             )
                             (:Token
-                                (:RegExp
-                                    "{"
-                                )
+                                "{"
                             )
                             (INTEGER
                                 "2"
                             )
                             (:Token
-                                (:RegExp
-                                    "}"
-                                )
+                                "}"
                             )
                             (tabular_config
                                 (:Token
-                                    (:RegExp
-                                        "{"
-                                    )
+                                    "{"
                                 )
                                 (:RegExp
                                     "c"
                                 )
                                 (:Token
-                                    (:RegExp
-                                        "}"
-                                    )
+                                    "}"
                                 )
                             )
                             (block_of_paragraphs
                                 (:Token
-                                    (:RegExp
-                                        "{"
-                                    )
+                                    "{"
                                 )
                                 (:Token
                                     (:RegExp
@@ -467,50 +407,36 @@ Match-test "2"
                         )
                         (multicolumn
                             (:Token
-                                (:RegExp
-                                    "\multicolumn"
-                                )
+                                "\multicolumn"
                             )
                             (:Token
-                                (:RegExp
-                                    "{"
-                                )
+                                "{"
                             )
                             (INTEGER
                                 "3"
                             )
                             (:Token
-                                (:RegExp
-                                    "}"
-                                )
+                                "}"
                             )
                             (tabular_config
                                 (:Token
-                                    (:RegExp
-                                        "{"
-                                    )
+                                    "{"
                                 )
                                 (:RegExp
                                     "c"
                                 )
                                 (:Token
-                                    (:RegExp
-                                        "}"
-                                    )
+                                    "}"
                                 )
                             )
                             (block_of_paragraphs
                                 (:Token
-                                    (:RegExp
-                                        "{"
-                                    )
+                                    "{"
                                 )
                                 (sequence
                                     (paragraph
-                                        (text_element
-                                            (text
-                                                "Tabelle 2:"
-                                            )
+                                        (text
+                                            "Tabelle 2:"
                                         )
                                     )
                                 )
@@ -539,17 +465,13 @@ Match-test "2"
                 (:ZeroOrMore
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "2"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "4"
@@ -565,17 +487,13 @@ Match-test "2"
                     )
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "7"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "9"
@@ -749,17 +667,13 @@ Match-test "2"
                 (:ZeroOrMore
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "2"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "4"
@@ -775,17 +689,13 @@ Match-test "2"
                     )
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "7"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "9"
@@ -959,17 +869,13 @@ Match-test "2"
                 (:ZeroOrMore
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "2"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "4"
@@ -985,17 +891,13 @@ Match-test "2"
                     )
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "7"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "9"
@@ -1169,17 +1071,13 @@ Match-test "2"
                 (:ZeroOrMore
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "2"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "4"
@@ -1195,17 +1093,13 @@ Match-test "2"
                     )
                     (cline
                         (:Token
-                            (:RegExp
-                                "\cline{"
-                            )
+                            "\cline{"
                         )
                         (INTEGER
                             "7"
                         )
                         (:Token
-                            (:RegExp
-                                "-"
-                            )
+                            "-"
                         )
                         (INTEGER
                             "9"
@@ -1224,9 +1118,7 @@ Match-test "2"
             )
         )
         (:Token
-            (:RegExp
-                "\end{tabular}"
-            )
+            "\end{tabular}"
         )
     )
 
@@ -1268,13 +1160,9 @@ Match-test "1"
         )
         (sequence
             (paragraph
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\doublespacing"
-                            )
-                        )
+                (generic_command
+                    (CMDNAME
+                        "\doublespacing"
                     )
                 )
             )
@@ -1291,15 +1179,11 @@ Match-test "1"
                 (sequence
                     (tabular
                         (:Token
-                            (:RegExp
-                                "\begin{tabular}"
-                            )
+                            "\begin{tabular}"
                         )
                         (tabular_config
                             (:Token
-                                (:RegExp
-                                    "{"
-                                )
+                                "{"
                             )
                             (:RegExp
                                 "l|c|c|c|"
@@ -1318,36 +1202,26 @@ Match-test "1"
                             (tabular_row
                                 (multicolumn
                                     (:Token
-                                        (:RegExp
-                                            "\multicolumn"
-                                        )
+                                        "\multicolumn"
                                     )
                                     (:Token
-                                        (:RegExp
-                                            "{"
-                                        )
+                                        "{"
                                     )
                                     (INTEGER
                                         "1"
                                     )
                                     (:Token
-                                        (:RegExp
-                                            "}"
-                                        )
+                                        "}"
                                     )
                                     (tabular_config
                                         (:Token
-                                            (:RegExp
-                                                "{"
-                                            )
+                                            "{"
                                         )
                                         (:RegExp
                                             "c"
                                         )
                                         (:Token
-                                            (:RegExp
-                                                "}"
-                                            )
+                                            "}"
                                         )
                                     )
                                     (block_of_paragraphs
@@ -1381,36 +1255,26 @@ Match-test "1"
                                         )
                                         (multicolumn
                                             (:Token
-                                                (:RegExp
-                                                    "\multicolumn"
-                                                )
+                                                "\multicolumn"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "{"
-                                                )
+                                                "{"
                                             )
                                             (INTEGER
                                                 "1"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "}"
-                                                )
+                                                "}"
                                             )
                                             (tabular_config
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (:RegExp
                                                     "c"
                                                 )
                                                 (:Token
-                                                    (:RegExp
-                                                        "}"
-                                                    )
+                                                    "}"
                                                 )
                                             )
                                             (block_of_paragraphs
@@ -1444,50 +1308,36 @@ Match-test "1"
                                         )
                                         (multicolumn
                                             (:Token
-                                                (:RegExp
-                                                    "\multicolumn"
-                                                )
+                                                "\multicolumn"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "{"
-                                                )
+                                                "{"
                                             )
                                             (INTEGER
                                                 "2"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "}"
-                                                )
+                                                "}"
                                             )
                                             (tabular_config
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (:RegExp
                                                     "c"
                                                 )
                                                 (:Token
-                                                    (:RegExp
-                                                        "}"
-                                                    )
+                                                    "}"
                                                 )
                                             )
                                             (block_of_paragraphs
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (sequence
                                                     (paragraph
-                                                        (text_element
-                                                            (inline_math
-                                                                "\overbrace{\hspace{7cm}}^{Experiments}"
-                                                            )
+                                                        (inline_math
+                                                            "\overbrace{\hspace{7cm}}^{Experiments}"
                                                         )
                                                     )
                                                 )
@@ -1513,17 +1363,13 @@ Match-test "1"
                                 )
                                 (cline
                                     (:Token
-                                        (:RegExp
-                                            "\cline{"
-                                        )
+                                        "\cline{"
                                     )
                                     (INTEGER
                                         "2"
                                     )
                                     (:Token
-                                        (:RegExp
-                                            "-"
-                                        )
+                                        "-"
                                     )
                                     (INTEGER
                                         "4"
@@ -1552,19 +1398,13 @@ Match-test "1"
                                         )
                                         (tabular_cell
                                             (block
-                                                (text_element
-                                                    (command
-                                                        (generic_command
-                                                            (CMDNAME
-                                                                "\bf"
-                                                            )
-                                                        )
+                                                (generic_command
+                                                    (CMDNAME
+                                                        "\bf"
                                                     )
                                                 )
-                                                (text_element
-                                                    (text
-                                                        "computer simulation"
-                                                    )
+                                                (text
+                                                    "computer simulation"
                                                 )
                                             )
                                             (:Whitespace
@@ -1583,19 +1423,13 @@ Match-test "1"
                                         )
                                         (tabular_cell
                                             (block
-                                                (text_element
-                                                    (command
-                                                        (generic_command
-                                                            (CMDNAME
-                                                                "\bf"
-                                                            )
-                                                        )
+                                                (generic_command
+                                                    (CMDNAME
+                                                        "\bf"
                                                     )
                                                 )
-                                                (text_element
-                                                    (text
-                                                        "analog simulation"
-                                                    )
+                                                (text
+                                                    "analog simulation"
                                                 )
                                             )
                                             (:Whitespace
@@ -1614,19 +1448,13 @@ Match-test "1"
                                         )
                                         (tabular_cell
                                             (block
-                                                (text_element
-                                                    (command
-                                                        (generic_command
-                                                            (CMDNAME
-                                                                "\bf"
-                                                            )
-                                                        )
+                                                (generic_command
+                                                    (CMDNAME
+                                                        "\bf"
                                                     )
                                                 )
-                                                (text_element
-                                                    (text
-                                                        "plain experiment"
-                                                    )
+                                                (text
+                                                    "plain experiment"
                                                 )
                                             )
                                             (:Whitespace
@@ -1693,50 +1521,36 @@ Match-test "1"
                                         )
                                         (multicolumn
                                             (:Token
-                                                (:RegExp
-                                                    "\multicolumn"
-                                                )
+                                                "\multicolumn"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "{"
-                                                )
+                                                "{"
                                             )
                                             (INTEGER
                                                 "2"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "}"
-                                                )
+                                                "}"
                                             )
                                             (tabular_config
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (:RegExp
                                                     "c|"
                                                 )
                                                 (:Token
-                                                    (:RegExp
-                                                        "}"
-                                                    )
+                                                    "}"
                                                 )
                                             )
                                             (block_of_paragraphs
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (sequence
                                                     (paragraph
-                                                        (text_element
-                                                            (text
-                                                                "material"
-                                                            )
+                                                        (text
+                                                            "material"
                                                         )
                                                     )
                                                 )
@@ -1792,50 +1606,36 @@ Match-test "1"
                                         )
                                         (multicolumn
                                             (:Token
-                                                (:RegExp
-                                                    "\multicolumn"
-                                                )
+                                                "\multicolumn"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "{"
-                                                )
+                                                "{"
                                             )
                                             (INTEGER
                                                 "2"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "}"
-                                                )
+                                                "}"
                                             )
                                             (tabular_config
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (:RegExp
                                                     "c|"
                                                 )
                                                 (:Token
-                                                    (:RegExp
-                                                        "}"
-                                                    )
+                                                    "}"
                                                 )
                                             )
                                             (block_of_paragraphs
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (sequence
                                                     (paragraph
-                                                        (text_element
-                                                            (text
-                                                                "representation"
-                                                            )
+                                                        (text
+                                                            "representation"
                                                         )
                                                     )
                                                 )
@@ -1890,36 +1690,26 @@ Match-test "1"
                             (tabular_row
                                 (multicolumn
                                     (:Token
-                                        (:RegExp
-                                            "\multicolumn"
-                                        )
+                                        "\multicolumn"
                                     )
                                     (:Token
-                                        (:RegExp
-                                            "{"
-                                        )
+                                        "{"
                                     )
                                     (INTEGER
                                         "1"
                                     )
                                     (:Token
-                                        (:RegExp
-                                            "}"
-                                        )
+                                        "}"
                                     )
                                     (tabular_config
                                         (:Token
-                                            (:RegExp
-                                                "{"
-                                            )
+                                            "{"
                                         )
                                         (:RegExp
                                             "c"
                                         )
                                         (:Token
-                                            (:RegExp
-                                                "}"
-                                            )
+                                            "}"
                                         )
                                     )
                                     (block_of_paragraphs
@@ -1953,50 +1743,36 @@ Match-test "1"
                                         )
                                         (multicolumn
                                             (:Token
-                                                (:RegExp
-                                                    "\multicolumn"
-                                                )
+                                                "\multicolumn"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "{"
-                                                )
+                                                "{"
                                             )
                                             (INTEGER
                                                 "2"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "}"
-                                                )
+                                                "}"
                                             )
                                             (tabular_config
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (:RegExp
                                                     "c"
                                                 )
                                                 (:Token
-                                                    (:RegExp
-                                                        "}"
-                                                    )
+                                                    "}"
                                                 )
                                             )
                                             (block_of_paragraphs
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (sequence
                                                     (paragraph
-                                                        (text_element
-                                                            (inline_math
-                                                                "\underbrace{\hspace{7cm}}_{Simulations}"
-                                                            )
+                                                        (inline_math
+                                                            "\underbrace{\hspace{7cm}}_{Simulations}"
                                                         )
                                                     )
                                                 )
@@ -2022,36 +1798,26 @@ Match-test "1"
                                         )
                                         (multicolumn
                                             (:Token
-                                                (:RegExp
-                                                    "\multicolumn"
-                                                )
+                                                "\multicolumn"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "{"
-                                                )
+                                                "{"
                                             )
                                             (INTEGER
                                                 "1"
                                             )
                                             (:Token
-                                                (:RegExp
-                                                    "}"
-                                                )
+                                                "}"
                                             )
                                             (tabular_config
                                                 (:Token
-                                                    (:RegExp
-                                                        "{"
-                                                    )
+                                                    "{"
                                                 )
                                                 (:RegExp
                                                     "c"
                                                 )
                                                 (:Token
-                                                    (:RegExp
-                                                        "}"
-                                                    )
+                                                    "}"
                                                 )
                                             )
                                             (block_of_paragraphs
@@ -2108,39 +1874,23 @@ Match-test "1"
                 )
             )
             (paragraph
-                (text_element
-                    (command
-                        (known_command
-                            (caption
-                                (:Token
-                                    (:RegExp
-                                        "\caption"
-                                    )
-                                )
-                                (block
-                                    (text_element
-                                        (text
-                                            "Conceptual relation of simulations and experiments"
-                                        )
-                                    )
-                                )
-                            )
+                (caption
+                    (:Token
+                        "\caption"
+                    )
+                    (block
+                        (text
+                            "Conceptual relation of simulations and experiments"
                         )
                     )
                 )
-                (text_element
-                    (command
-                        (generic_command
-                            (CMDNAME
-                                "\label"
-                            )
-                            (block
-                                (text_element
-                                    (text
-                                        "SimulationExperimentsScheme"
-                                    )
-                                )
-                            )
+                (generic_command
+                    (CMDNAME
+                        "\label"
+                    )
+                    (block
+                        (text
+                            "SimulationExperimentsScheme"
                         )
                     )
                 )
@@ -2151,8 +1901,6 @@ Match-test "1"
             )
         )
         (:Token
-            (:RegExp
-                "\end{figure}"
-            )
+            "\end{figure}"
         )
     )

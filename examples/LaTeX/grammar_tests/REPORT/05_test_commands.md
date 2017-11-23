@@ -11,31 +11,23 @@ Match-test "1"
     \includegraphics[width=\textwidth]{Graph.eps}
 
 ### AST
-    (command
-        (known_command
-            (includegraphics
-                (:Token
-                    (:RegExp
-                        "\includegraphics"
-                    )
+    (includegraphics
+        (:Token
+            "\includegraphics"
+        )
+        (config
+            (cfg_text
+                (text
+                    "width="
                 )
-                (config
-                    (cfg_text
-                        (text
-                            "width="
-                        )
-                        (CMDNAME
-                            "\textwidth"
-                        )
-                    )
+                (CMDNAME
+                    "\textwidth"
                 )
-                (block
-                    (text_element
-                        (text
-                            "Graph.eps"
-                        )
-                    )
-                )
+            )
+        )
+        (block
+            (text
+                "Graph.eps"
             )
         )
     )
@@ -47,57 +39,41 @@ Match-test "2"
     \multicolumn{1}{c}{ }
 
 ### AST
-    (command
-        (known_command
-            (multicolumn
-                (:Token
-                    (:RegExp
-                        "\multicolumn"
-                    )
+    (multicolumn
+        (:Token
+            "\multicolumn"
+        )
+        (:Token
+            "{"
+        )
+        (INTEGER
+            "1"
+        )
+        (:Token
+            "}"
+        )
+        (tabular_config
+            (:Token
+                "{"
+            )
+            (:RegExp
+                "c"
+            )
+            (:Token
+                "}"
+            )
+        )
+        (block_of_paragraphs
+            (:Token
+                (:RegExp
+                    "{"
                 )
-                (:Token
-                    (:RegExp
-                        "{"
-                    )
+                (:Whitespace
+                    " "
                 )
-                (INTEGER
-                    "1"
-                )
-                (:Token
-                    (:RegExp
-                        "}"
-                    )
-                )
-                (tabular_config
-                    (:Token
-                        (:RegExp
-                            "{"
-                        )
-                    )
-                    (:RegExp
-                        "c"
-                    )
-                    (:Token
-                        (:RegExp
-                            "}"
-                        )
-                    )
-                )
-                (block_of_paragraphs
-                    (:Token
-                        (:RegExp
-                            "{"
-                        )
-                        (:Whitespace
-                            " "
-                        )
-                    )
-                    (:Token
-                        (:RegExp
-                            "}"
-                        )
-                    )
-                )
+            )
+            (:Token
+                "}"
             )
         )
     )
@@ -109,63 +85,43 @@ Match-test "3"
     \multicolumn{2}{c|}{material}
 
 ### AST
-    (command
-        (known_command
-            (multicolumn
-                (:Token
-                    (:RegExp
-                        "\multicolumn"
+    (multicolumn
+        (:Token
+            "\multicolumn"
+        )
+        (:Token
+            "{"
+        )
+        (INTEGER
+            "2"
+        )
+        (:Token
+            "}"
+        )
+        (tabular_config
+            (:Token
+                "{"
+            )
+            (:RegExp
+                "c|"
+            )
+            (:Token
+                "}"
+            )
+        )
+        (block_of_paragraphs
+            (:Token
+                "{"
+            )
+            (sequence
+                (paragraph
+                    (text
+                        "material"
                     )
                 )
-                (:Token
-                    (:RegExp
-                        "{"
-                    )
-                )
-                (INTEGER
-                    "2"
-                )
-                (:Token
-                    (:RegExp
-                        "}"
-                    )
-                )
-                (tabular_config
-                    (:Token
-                        (:RegExp
-                            "{"
-                        )
-                    )
-                    (:RegExp
-                        "c|"
-                    )
-                    (:Token
-                        (:RegExp
-                            "}"
-                        )
-                    )
-                )
-                (block_of_paragraphs
-                    (:Token
-                        (:RegExp
-                            "{"
-                        )
-                    )
-                    (sequence
-                        (paragraph
-                            (text_element
-                                (text
-                                    "material"
-                                )
-                            )
-                        )
-                    )
-                    (:Token
-                        (:RegExp
-                            "}"
-                        )
-                    )
-                )
+            )
+            (:Token
+                "}"
             )
         )
     )
@@ -177,63 +133,43 @@ Match-test "4"
     \multicolumn{2}{c}{$\underbrace{\hspace{7cm}}_{Simulations}$}
 
 ### AST
-    (command
-        (known_command
-            (multicolumn
-                (:Token
-                    (:RegExp
-                        "\multicolumn"
+    (multicolumn
+        (:Token
+            "\multicolumn"
+        )
+        (:Token
+            "{"
+        )
+        (INTEGER
+            "2"
+        )
+        (:Token
+            "}"
+        )
+        (tabular_config
+            (:Token
+                "{"
+            )
+            (:RegExp
+                "c"
+            )
+            (:Token
+                "}"
+            )
+        )
+        (block_of_paragraphs
+            (:Token
+                "{"
+            )
+            (sequence
+                (paragraph
+                    (inline_math
+                        "\underbrace{\hspace{7cm}}_{Simulations}"
                     )
                 )
-                (:Token
-                    (:RegExp
-                        "{"
-                    )
-                )
-                (INTEGER
-                    "2"
-                )
-                (:Token
-                    (:RegExp
-                        "}"
-                    )
-                )
-                (tabular_config
-                    (:Token
-                        (:RegExp
-                            "{"
-                        )
-                    )
-                    (:RegExp
-                        "c"
-                    )
-                    (:Token
-                        (:RegExp
-                            "}"
-                        )
-                    )
-                )
-                (block_of_paragraphs
-                    (:Token
-                        (:RegExp
-                            "{"
-                        )
-                    )
-                    (sequence
-                        (paragraph
-                            (text_element
-                                (inline_math
-                                    "\underbrace{\hspace{7cm}}_{Simulations}"
-                                )
-                            )
-                        )
-                    )
-                    (:Token
-                        (:RegExp
-                            "}"
-                        )
-                    )
-                )
+            )
+            (:Token
+                "}"
             )
         )
     )
