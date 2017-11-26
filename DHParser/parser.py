@@ -55,7 +55,9 @@ Vegard Øye: General Parser Combinators in Racket, 2012,
 https://epsil.github.io/gll/
 """
 
+import collections
 import copy
+import html
 import os
 from functools import partial
 
@@ -143,6 +145,7 @@ class HistoryRecord:
     MATCH = "MATCH"
     ERROR = "ERROR"
     FAIL = "FAIL"
+    Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
 
     def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
@@ -157,13 +160,19 @@ class HistoryRecord:
             self.line_col = line_col(lbreaks, len(document) - len(text))
 
     def __str__(self):
+        return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
+
+    def as_tuple(self) -> Snapshot:
         if self.node:
             excerpt = self.text[:len(self.node)]
         else:
             excerpt = str(self.text[:25]) + '...'
         excerpt = excerpt.replace('\n', '\\n')
-        return '%5i, %5i, %s, %s, "%s"' % \
-               (self.line_col[0], self.line_col[1], self.stack, self.status, excerpt)
+        return self.Snapshot(self.line_col[0], self.line_col[1], self.stack, self.status, excerpt)
+
+    def as_html_table_row(self) -> str:
+        escaped = tuple(html.escape(str(item)) for item in self.as_tuple())
+        return "<td>%i</td><td>%i</td> <td>%s</td> <td>%s</td> <td>%s</td>" % escaped
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(
