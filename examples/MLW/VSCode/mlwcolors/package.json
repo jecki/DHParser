@@ -1,0 +1,22 @@
+{
+    "name": "mlwcolors",
+    "displayName": "MLWColors",
+    "description": "Mittellateinisches Wörterbuch Farben für Syntaxhervorhebung",
+    "version": "0.0.1",
+    "publisher": "jecki",
+    "engines": {
+        "vscode": "^1.18.0"
+    },
+    "categories": [
+        "Themes"
+    ],
+    "contributes": {
+        "themes": [
+            {
+                "label": "MLWColors",
+                "uiTheme": "vs",
+                "path": "./themes/MLWColors-color-theme.json"
+            }
+        ]
+    }
+}

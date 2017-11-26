@@ -1,0 +1,36 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "MLWQuelle",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.secondary.mlw",
+				"match": "\\b(LATEINISCH|DEUTSCH|LAT|DEU|VERWECHSELBAR|BELEGE|AUTOR)\\b"
+			},
+			{
+				"name": "keyword.mlw",
+				"match": "\\b(DEUTSCH|LEMMA|GRAMMATIK|SCHREIBWEISE|STRUKTUR|VERWECHSELBAR|BEDEUTUNG|BELEGE|AUTORIN|AUTOR)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.mlw",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.mlw",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.mlw"
+}

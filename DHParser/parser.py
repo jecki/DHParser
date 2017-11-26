@@ -128,7 +128,7 @@ MAX_DROPOUTS = 3  # type: int
 class HistoryRecord:
     """
     Stores debugging information about one completed step in the
-    parsing history. 
+    parsing history.
 
     A parsing step is "completed" when the last one of a nested
     sequence of parser-calls returns. The call stack including
@@ -163,7 +163,7 @@ class HistoryRecord:
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(
             str(e) for e in (self.node._errors if self.node._errors else
-                             self.node.collect_errors()[:1]))
+                             self.node.collect_errors()[:2]))
 
     @property
     def stack(self) -> str:
@@ -840,7 +840,8 @@ class Grammar:
                             record.node.pos = 0
                     record = HistoryRecord(self.call_stack__.copy(), stitches[-1], len(rest))
                     self.history__.append(record)
-                    self.history_tracking__ = False  # TODO: add an explanation here
+                    # stop history tracking when parser returned too early
+                    self.history_tracking__ = False
         if stitches:
             if rest:
                 stitches.append(Node(None, rest))
@@ -871,7 +872,6 @@ class Grammar:
         which have been dismissed.
         """
         self.rollback__.append((location, func))
-        # print("push:  line %i, col %i" % line_col(self.document__, len(self.document__) - location))
         self.last_rb__loc__ = location
 
 
@@ -880,15 +880,13 @@ class Grammar:
         Rolls back the variable stacks (`self.variables`) to its
         state at an earlier location in the parsed document.
         """
-        # print("rollback:  line %i, col %i" % line_col(self.document__, len(self.document__) - location))
         while self.rollback__ and self.rollback__[-1][0] <= location:
-            loc, rollback_func = self.rollback__.pop()
+            _, rollback_func = self.rollback__.pop()
             # assert not loc > self.last_rb__loc__, \
             #     "Rollback confusion: line %i, col %i < line %i, col %i" % \
             #     (*line_col(self.document__, len(self.document__) - loc),
             #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
-            # print("rb to:  line %i, col %i" % line_col(self.document__, len(self.document__) - loc))
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
             else (len(self.document__) + 1)
 

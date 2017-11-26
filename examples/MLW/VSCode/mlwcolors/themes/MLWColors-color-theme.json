@@ -1,0 +1,13 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "MLWColors",
+	"include": "./light_vs.json",
+	"tokenColors": [
+		{
+			"scope": "keyword.secondary.mlw",
+			"settings": {
+				"foreground": "#a000ff"
+			}
+		}
+	]
+}

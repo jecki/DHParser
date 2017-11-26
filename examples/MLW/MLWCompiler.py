@@ -152,11 +152,11 @@ class MLWGrammar(Grammar):
     #### BEDEUTUNGS-POSITION #####################################################
     
     BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung [U1Bedeutung] }+
-    U1Bedeutung          = { ZWW "U1_BEDEUTUNG" [LZ] §Bedeutung [U2Bedeutung] }+
-    U2Bedeutung          = { ZWW "U2_BEDEUTUNG" [LZ] §Bedeutung [U3Bedeutung] }+
-    U3Bedeutung          = { ZWW "U3_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
-    U4Bedeutung          = { ZWW "U4_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
-    U5Bedeutung          = { ZWW "U5_BEDEUTUNG" [LZ] §UntersteBedeutung }+
+    U1Bedeutung          = { ZWW ("U_BEDEUTUNG" | "UNTERBEDEUTUNG") [LZ] §Bedeutung [U2Bedeutung] }+
+    U2Bedeutung          = { ZWW ("UU_BEDEUTUNG" | "UNTERUNTERBEDEUTUNG") [LZ] §Bedeutung [U3Bedeutung] }+
+    U3Bedeutung          = { ZWW "UUU_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
+    U4Bedeutung          = { ZWW "UUUU_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
+    U5Bedeutung          = { ZWW "UUUUU_BEDEUTUNG" [LZ] §UntersteBedeutung }+
     
     Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
     UntersteBedeutung    = Interpretamente [BelegPosition]
@@ -290,7 +290,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d6cf6c84b25523a02c115ead270afae4"
+    source_hash__ = "3791f32280610295f3748a8a0ed0aa4b"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*'
     WHITESPACE__ = r'[\t ]*'
@@ -368,11 +368,11 @@ class MLWGrammar(Grammar):
     Bedeutungskategorie = Series(EINZEILER, Token(":"), Option(LZ), mandatory=1)
     UntersteBedeutung = Series(Interpretamente, Option(BelegPosition))
     Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Option(BelegPosition))
-    U5Bedeutung = OneOrMore(Series(ZWW, Token("U5_BEDEUTUNG"), Option(LZ), UntersteBedeutung, mandatory=3))
-    U4Bedeutung = OneOrMore(Series(ZWW, Token("U4_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U5Bedeutung), mandatory=3))
-    U3Bedeutung = OneOrMore(Series(ZWW, Token("U3_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U4Bedeutung), mandatory=3))
-    U2Bedeutung = OneOrMore(Series(ZWW, Token("U2_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U3Bedeutung), mandatory=3))
-    U1Bedeutung = OneOrMore(Series(ZWW, Token("U1_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U2Bedeutung), mandatory=3))
+    U5Bedeutung = OneOrMore(Series(ZWW, Token("UUUUU_BEDEUTUNG"), Option(LZ), UntersteBedeutung, mandatory=3))
+    U4Bedeutung = OneOrMore(Series(ZWW, Token("UUUU_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U5Bedeutung), mandatory=3))
+    U3Bedeutung = OneOrMore(Series(ZWW, Token("UUU_BEDEUTUNG"), Option(LZ), Bedeutung, Option(U4Bedeutung), mandatory=3))
+    U2Bedeutung = OneOrMore(Series(ZWW, Alternative(Token("UU_BEDEUTUNG"), Token("UNTERUNTERBEDEUTUNG")), Option(LZ), Bedeutung, Option(U3Bedeutung), mandatory=3))
+    U1Bedeutung = OneOrMore(Series(ZWW, Alternative(Token("U_BEDEUTUNG"), Token("UNTERBEDEUTUNG")), Option(LZ), Bedeutung, Option(U2Bedeutung), mandatory=3))
     BedeutungsPosition = OneOrMore(Series(ZWW, Token("BEDEUTUNG"), Option(LZ), Bedeutung, Option(U1Bedeutung), mandatory=3))
     Gegenstand = Synonym(EINZEILER)
     Variante = Series(NegativeLookahead(KATEGORIENZEILE), Gegenstand, DPP, Belege)

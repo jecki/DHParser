@@ -1,0 +1,26 @@
+{
+    "name": "mlwquelle",
+    "displayName": "MLWQuelle",
+    "description": "Mittellateinisches Wörterbuch Artikel-Quelltext",
+    "version": "0.0.1",
+    "publisher": "jecki",
+    "engines": {
+        "vscode": "^1.18.0"
+    },
+    "categories": [
+        "Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "mlw",
+            "aliases": ["MLWQuelle", "mlw"],
+            "extensions": [".mlw"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "mlw",
+            "scopeName": "source.mlw",
+            "path": "./syntaxes/mlw.tmLanguage.json"
+        }]
+    }
+}

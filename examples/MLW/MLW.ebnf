@@ -100,11 +100,11 @@ Gegenstand     = EINZEILER
 #### BEDEUTUNGS-POSITION #####################################################
 
 BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung [U1Bedeutung] }+
-U1Bedeutung          = { ZWW "U1_BEDEUTUNG" [LZ] §Bedeutung [U2Bedeutung] }+
-U2Bedeutung          = { ZWW "U2_BEDEUTUNG" [LZ] §Bedeutung [U3Bedeutung] }+
-U3Bedeutung          = { ZWW "U3_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
-U4Bedeutung          = { ZWW "U4_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
-U5Bedeutung          = { ZWW "U5_BEDEUTUNG" [LZ] §UntersteBedeutung }+
+U1Bedeutung          = { ZWW ("U_BEDEUTUNG" | "UNTERBEDEUTUNG") [LZ] §Bedeutung [U2Bedeutung] }+
+U2Bedeutung          = { ZWW ("UU_BEDEUTUNG" | "UNTERUNTERBEDEUTUNG") [LZ] §Bedeutung [U3Bedeutung] }+
+U3Bedeutung          = { ZWW "UUU_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
+U4Bedeutung          = { ZWW "UUUU_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
+U5Bedeutung          = { ZWW "UUUUU_BEDEUTUNG" [LZ] §UntersteBedeutung }+
 
 Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 UntersteBedeutung    = Interpretamente [BelegPosition]
