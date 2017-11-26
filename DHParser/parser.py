@@ -138,27 +138,32 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'remaining', 'line_col')
+    __slots__ = ('call_stack', 'node', 'text', 'line_col')
 
     MATCH = "MATCH"
     ERROR = "ERROR"
     FAIL = "FAIL"
 
-    def __init__(self, call_stack: List['Parser'], node: Node, remaining: int) -> None:
+    def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['Parser']
         self.node = node                # type: Node
-        self.remaining = remaining      # type: int
+        self.text = text                # type: StringView
         self.line_col = (1, 1)          # type: Tuple[int, int]
         if call_stack:
             grammar = call_stack[-1].grammar
             document = grammar.document__
             lbreaks = grammar.document_lbreaks__
-            self.line_col = line_col(lbreaks, len(document) - remaining)
+            self.line_col = line_col(lbreaks, len(document) - len(text))
 
     def __str__(self):
-        return 'line %i, column %i:  %s  "%s"' % \
-               (self.line_col[0], self.line_col[1], self.stack, str(self.node))
+        if self.node:
+            excerpt = self.text[:len(self.node)]
+        else:
+            excerpt = str(self.text[:25]) + '...'
+        excerpt = excerpt.replace('\n', '\\n')
+        return '%5i, %5i, %s, %s, "%s"' % \
+               (self.line_col[0], self.line_col[1], self.stack, self.status, excerpt)
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(
@@ -173,12 +178,16 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            self.err_msg() if self.node.error_flag else self.MATCH  # has_errors(self.node._errors)
+            ('"%s"' % self.err_msg()) if self.node.error_flag else self.MATCH  # has_errors(self.node._errors)
+
+    # @property
+    # def extent(self) -> slice:
+    #     return (slice(-self.remaining - len(self.node), -self.remaining) if self.node
+    #             else slice(-self.remaining, None))
 
     @property
-    def extent(self) -> slice:
-        return (slice(-self.remaining - len(self.node), -self.remaining) if self.node
-                else slice(-self.remaining, None))
+    def remaining(self) -> int:
+        return len(self.text) - (len(self.node) if self.node else 0)
 
     @staticmethod
     def last_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
@@ -276,7 +285,7 @@ def add_parser_guard(parser_func):
                 # don't track returning parsers except in case an error has occurred
                 remaining = len(rest)
                 if grammar.moving_forward__ or (node and node.error_flag):  # node._errors
-                    record = HistoryRecord(grammar.call_stack__, node, remaining)
+                    record = HistoryRecord(grammar.call_stack__, node, text)
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
                 grammar.moving_forward__ = False
@@ -838,7 +847,7 @@ class Grammar:
                     for record in self.history__:
                         if record.node and record.node._pos < 0:
                             record.node.pos = 0
-                    record = HistoryRecord(self.call_stack__.copy(), stitches[-1], len(rest))
+                    record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest)
                     self.history__.append(record)
                     # stop history tracking when parser returned too early
                     self.history_tracking__ = False
@@ -896,11 +905,6 @@ class Grammar:
         Writes a log of the parsing history of the most recently parsed
         document.
         """
-        def prepare_line(record):
-            excerpt = self.document__.text.__getitem__(record.extent)[:25].replace('\n', '\\n')
-            excerpt = "'%s'" % excerpt if len(excerpt) < 25 else "'%s...'" % excerpt
-            return [item for item in (record.stack, record.status, excerpt) if item]
-
         def write_log(history, log_name):
             path = os.path.join(log_dir(), log_name + "_parser.log")
             if os.path.exists(path):
@@ -920,7 +924,7 @@ class Grammar:
                 log_file_name = log_file_name[:-4]
             full_history, match_history, errors_only = [], [], []
             for record in self.history__:
-                line = ";  ".join(prepare_line(record))
+                line = str(record)
                 full_history.append(line)
                 if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
                     match_history.append(line)
