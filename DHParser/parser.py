@@ -146,11 +146,17 @@ class HistoryRecord:
     ERROR = "ERROR"
     FAIL = "FAIL"
     Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
-    HTML_LEAD_IN  = ('<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
-                     'td.line, td.column {font-family:mono;color:darkgrey}\n'
-                     'td.stack{font-family:serif}\ntd.status{font-weight:bold}\n'
-                     'ts.text{font-family:mono;color:darkblue}'
-                     '\n</style>\n</head>\n<body>\n')
+    HTML_LEAD_IN  = (
+        '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
+        'td.line, td.column {font-family:monospace;color:darkgrey; width:2%}\n'
+        'td.stack{font-family:monospace;width:75%}\n'
+        'td.status{font-family:monospace;font-weight:bold;width:5%}\n'
+        'td.text{font-family:monospace;color:darkblue;width:16%}\n'
+        'table{border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
+        'td{border-right: thin solid grey; border-bottom: thin solid grey;}\n'
+        'span.delimiter{color:darkred;}\nspan.match{color:darkgreen}\n'
+        'span.fail{color:darkgrey}\nspan.error{color:red};n'
+        '\n</style>\n</head>\n<body>\n<table>\n')
     HTML_LEAD_OUT = '\n</table>\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
@@ -169,16 +175,23 @@ class HistoryRecord:
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
 
     def as_tuple(self) -> Snapshot:
-        if self.node:
-            excerpt = self.text[:len(self.node)]
-        else:
-            excerpt = str(self.text[:25]) + '...'
-        excerpt = excerpt.replace('\n', '\\n')
-        return self.Snapshot(self.line_col[0], self.line_col[1], self.stack, self.status, excerpt)
+        return self.Snapshot(self.line_col[0], self.line_col[1],
+                             self.stack, self.status, self.excerpt)
 
     def as_html_tr(self) -> str:
-        tpl = self.as_tuple()
-        return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, html.escape(str(item))))
+        stack = html.escape(self.stack).replace(
+            '-&gt;', '<span class="delimiter">&shy;-&gt;</span>')
+        status = html.escape(self.status)
+        excerpt = html.escape(self.excerpt)
+        if status == self.MATCH:
+            status = '<span class="match">' + status + '</span>'
+        elif status == self.FAIL:
+            status = '<span class="fail">' + status + '</span>'
+        else:
+            stack += '<br/>\n' + status
+            status = '<span class="error">ERROR</span>'
+        tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
+        return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
                                    for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
 
     def err_msg(self) -> str:
@@ -195,6 +208,15 @@ class HistoryRecord:
     def status(self) -> str:
         return self.FAIL if self.node is None else \
             ('"%s"' % self.err_msg()) if self.node.error_flag else self.MATCH  # has_errors(self.node._errors)
+
+    @property
+    def excerpt(self):
+        length = len(self.node) if self.node else len(self.text)
+        excerpt = str(self.node)[:max(length, 20)] if self.node else self.text[:20]
+        excerpt = excerpt.replace('\n', '\\n')
+        if length > 20:
+            excerpt += '...'
+        return excerpt
 
     # @property
     # def extent(self) -> slice:
@@ -916,7 +938,7 @@ class Grammar:
             else (len(self.document__) + 1)
 
 
-    def log_parsing_history__(self, log_file_name: str = '', html: bool=True) -> None:
+    def log_parsing_history__(self, log_file_name: str = '', html: bool=False) -> None:
         """
         Writes a log of the parsing history of the most recently parsed
         document.
