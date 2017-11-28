@@ -146,6 +146,12 @@ class HistoryRecord:
     ERROR = "ERROR"
     FAIL = "FAIL"
     Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
+    HTML_LEAD_IN  = ('<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
+                     'td.line, td.column {font-family:mono;color:darkgrey}\n'
+                     'td.stack{font-family:serif}\ntd.status{font-weight:bold}\n'
+                     'ts.text{font-family:mono;color:darkblue}'
+                     '\n</style>\n</head>\n<body>\n')
+    HTML_LEAD_OUT = '\n</table>\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
@@ -170,9 +176,10 @@ class HistoryRecord:
         excerpt = excerpt.replace('\n', '\\n')
         return self.Snapshot(self.line_col[0], self.line_col[1], self.stack, self.status, excerpt)
 
-    def as_html_table_row(self) -> str:
-        escaped = tuple(html.escape(str(item)) for item in self.as_tuple())
-        return "<td>%i</td><td>%i</td> <td>%s</td> <td>%s</td> <td>%s</td>" % escaped
+    def as_html_tr(self) -> str:
+        tpl = self.as_tuple()
+        return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, html.escape(str(item))))
+                                   for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(
@@ -909,19 +916,25 @@ class Grammar:
             else (len(self.document__) + 1)
 
 
-    def log_parsing_history__(self, log_file_name: str = '') -> None:
+    def log_parsing_history__(self, log_file_name: str = '', html: bool=True) -> None:
         """
         Writes a log of the parsing history of the most recently parsed
         document.
         """
         def write_log(history, log_name):
-            path = os.path.join(log_dir(), log_name + "_parser.log")
+            htm = '.html' if html else ''
+            path = os.path.join(log_dir(), log_name + "_parser.log" + htm)
             if os.path.exists(path):
                 os.remove(path)
                 print('WARNING: Log-file "%s" already existed and was deleted.' % path)
             if history:
                 with open(path, "w", encoding="utf-8") as f:
-                    f.write("\n".join(history))
+                    if html:
+                        f.write(HistoryRecord.HTML_LEAD_IN)
+                        f.write("\n".join(history))
+                        f.write(HistoryRecord.HTML_LEAD_OUT)
+                    else:
+                        f.write("\n".join(history))
 
         if is_logging():
             assert self.history__, \
@@ -933,7 +946,7 @@ class Grammar:
                 log_file_name = log_file_name[:-4]
             full_history, match_history, errors_only = [], [], []
             for record in self.history__:
-                line = str(record)
+                line = record.as_html_tr() if html else str(record)
                 full_history.append(line)
                 if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
                     match_history.append(line)
