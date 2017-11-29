@@ -146,17 +146,20 @@ class HistoryRecord:
     ERROR = "ERROR"
     FAIL = "FAIL"
     Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
+    COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col style="width:75"/>' \
+               '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>\n'
     HTML_LEAD_IN  = (
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
-        'td.line, td.column {font-family:monospace;color:darkgrey; width:2%}\n'
-        'td.stack{font-family:monospace;width:75%}\n'
-        'td.status{font-family:monospace;font-weight:bold;width:5%}\n'
-        'td.text{font-family:monospace;color:darkblue;width:16%}\n'
+        'td.line, td.column {font-family:monospace;color:darkgrey}\n'
+        'td.stack{font-family:monospace}\n'
+        'td.status{font-family:monospace;font-weight:bold}\n'
+        'td.text{font-family:monospace;color:darkblue}\n'
         'table{border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
-        'td{border-right: thin solid grey; border-bottom: thin solid grey;}\n'
-        'span.delimiter{color:darkred;}\nspan.match{color:darkgreen}\n'
-        'span.fail{color:darkgrey}\nspan.error{color:red};n'
-        '\n</style>\n</head>\n<body>\n<table>\n')
+        'td{border-right: thin solid grey; border-bottom: thin solid grey}\n'
+        'span.delimiter{color:grey;}\nspan.match{color:darkgreen}\n'
+        'span.fail{color:darkgrey}\nspan.error{color:red}\n'
+        'span.matchstack{font-weight:bold;color:darkred}'
+        '\n</style>\n</head>\n<body>\n<table>\n' + COLGROUP)
     HTML_LEAD_OUT = '\n</table>\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
@@ -185,12 +188,26 @@ class HistoryRecord:
         excerpt = html.escape(self.excerpt)
         if status == self.MATCH:
             status = '<span class="match">' + status + '</span>'
+            i = stack.rfind('-&gt;')
+            chr = stack[i+12:i+13]
+            while not chr.isidentifier() and i >= 0:
+                i = stack.rfind('-&gt;', 0, i)
+                chr = stack[i+12:i+13]
+            if i >= 0:
+                i += 12
+                k = stack.find('<', i)
+                if k < 0:
+                    stack = stack[:i] + '<span class="matchstack">' + stack[i:]
+                else:
+                    stack = stack[:i] + '<span class="matchstack">' + stack[i:k] \
+                            + '</span>' + stack[k:]
         elif status == self.FAIL:
             status = '<span class="fail">' + status + '</span>'
         else:
             stack += '<br/>\n' + status
             status = '<span class="error">ERROR</span>'
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
+        # return ''.join(['<tr>'] + [('<td>%s</td>' % item) for item in tpl] + ['</tr>'])
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
                                    for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
 
@@ -212,7 +229,7 @@ class HistoryRecord:
     @property
     def excerpt(self):
         length = len(self.node) if self.node else len(self.text)
-        excerpt = str(self.node)[:max(length, 20)] if self.node else self.text[:20]
+        excerpt = str(self.node)[:min(length, 20)] if self.node else self.text[:20]
         excerpt = excerpt.replace('\n', '\\n')
         if length > 20:
             excerpt += '...'
@@ -938,7 +955,7 @@ class Grammar:
             else (len(self.document__) + 1)
 
 
-    def log_parsing_history__(self, log_file_name: str = '', html: bool=False) -> None:
+    def log_parsing_history__(self, log_file_name: str = '', html: bool=True) -> None:
         """
         Writes a log of the parsing history of the most recently parsed
         document.
@@ -958,6 +975,14 @@ class Grammar:
                     else:
                         f.write("\n".join(history))
 
+        def append_line(log, line):
+            """Appends a line to a list of HTML table rows. Starts a new
+            table every 100 rows to allow browser to speed up rendering.
+            Does this really work...?"""
+            log.append(line)
+            if html and len(log) % 100 == 0:
+                log.append('\n</table>\n<table>\n' + HistoryRecord.COLGROUP)
+
         if is_logging():
             assert self.history__, \
                 "Parser did not yet run or logging was turned off when running parser!"
@@ -969,11 +994,11 @@ class Grammar:
             full_history, match_history, errors_only = [], [], []
             for record in self.history__:
                 line = record.as_html_tr() if html else str(record)
-                full_history.append(line)
+                append_line(full_history, line)
                 if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
-                    match_history.append(line)
+                    append_line(match_history, line)
                     if record.node.error_flag:
-                        errors_only.append(line)
+                        append_line(errors_only, line)
             write_log(full_history, log_file_name + '_full')
             write_log(match_history, log_file_name + '_match')
             write_log(errors_only, log_file_name + '_errors')
