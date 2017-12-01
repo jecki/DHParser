@@ -1,6 +1,6 @@
 # EBNF-Syntax für MLW-Artikel
 
-# TODO: Vervollständigen!!!!
+# Version 1, obsolet seit 30.11.2017
 
 
 @ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
@@ -110,8 +110,8 @@ Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 UntersteBedeutung    = Interpretamente [BelegPosition]
 Bedeutungskategorie  = EINZEILER §":" [LZ]
 Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung
-LateinischeBedeutung = [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
-DeutscheBedeutung    = [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
+LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
+DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
 
 LateinischerAusdruck = LAT_WORT { //~ LAT_WORT } [/\s*/ BedeutungsQualifikation]
 DeutscherAusdruck    = DEU_WORT { //~ DEU_WORT } [/\s*/ BedeutungsQualifikation]
