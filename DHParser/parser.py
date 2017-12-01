@@ -146,6 +146,7 @@ class HistoryRecord:
     ERROR = "ERROR"
     FAIL = "FAIL"
     Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
+
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col style="width:75"/>' \
                '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>\n'
     HTML_LEAD_IN  = (
