@@ -50,7 +50,7 @@ Match-test "1"
         )
         (:ZeroOrMore
             (:Series
-                (ZWW
+                (ZW
                     (ZEILENSPRUNG
                         (:RegExp
                             ""
@@ -65,7 +65,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (ZWW
+                (ZW
                     (ZEILENSPRUNG
                         (:RegExp
                             ""
@@ -80,7 +80,7 @@ Match-test "1"
                 )
             )
             (:Series
-                (ZWW
+                (ZW
                     (ZEILENSPRUNG
                         (:RegExp
                             ""
@@ -151,6 +151,69 @@ Match-test "3"
         )
     )
 
+Match-test "4"
+--------------
+
+### Test-code:
+    fascitergula, facietergula, fascistergula ZUSATZ sim.
+
+### AST
+    (LemmaVarianten
+        (LAT_WORT
+            (:RegExp
+                "fascitergula"
+            )
+        )
+        (:ZeroOrMore
+            (:Series
+                (:Token
+                    (:RegExp
+                        ","
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+                (LAT_WORT
+                    (:RegExp
+                        "facietergula"
+                    )
+                )
+            )
+            (:Series
+                (:Token
+                    (:RegExp
+                        ","
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+                (LAT_WORT
+                    (:RegExp
+                        "fascistergula"
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+            )
+        )
+        (Zusatz
+            (:Token
+                (:RegExp
+                    "ZUSATZ"
+                )
+                (:Whitespace
+                    " "
+                )
+            )
+            (zusatz_typ
+                "sim."
+            )
+        )
+    )
+
 Fail-test "99"
 --------------
 
@@ -204,7 +267,7 @@ Match-test "1"
                     ""
                 )
             )
-            (LEERRAUM
+            (LZ
                 (:RegExp
                     ""
                     ""
@@ -219,7 +282,7 @@ Match-test "1"
             )
             (:ZeroOrMore
                 (:Series
-                    (ZWW
+                    (ZW
                         (ZEILENSPRUNG
                             (:RegExp
                                 ""
@@ -234,7 +297,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (ZWW
+                    (ZW
                         (ZEILENSPRUNG
                             (:RegExp
                                 ""
@@ -249,7 +312,7 @@ Match-test "1"
                     )
                 )
                 (:Series
-                    (ZWW
+                    (ZW
                         (ZEILENSPRUNG
                             (:RegExp
                                 ""
@@ -272,7 +335,7 @@ Match-test "1"
                             ""
                         )
                     )
-                    (LEERRAUM
+                    (LZ
                         (:RegExp
                             ""
                             ""
@@ -302,7 +365,7 @@ Match-test "1"
                         ""
                     )
                 )
-                (LEERRAUM
+                (LZ
                     (:RegExp
                         ""
                         ""
@@ -313,8 +376,10 @@ Match-test "1"
                 "GRAMMATIK"
             )
             (LZ
-                ""
-                ""
+                (:RegExp
+                    ""
+                    ""
+                )
             )
             (Grammatik
                 (wortart

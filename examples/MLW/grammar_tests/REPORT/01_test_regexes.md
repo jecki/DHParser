@@ -222,7 +222,7 @@ Match-test "m4"
                 )
             )
         )
-        (LEERRAUM
+        (LZ
             (:RegExp
                 ""
                 ""
@@ -308,8 +308,8 @@ Fail-test "f4"
     # Kommentar
 
 
-Test of parser: "LEERRAUM"
-==========================
+Test of parser: "LZ"
+====================
 
 
 Match-test "m1"
@@ -319,7 +319,7 @@ Match-test "m1"
      
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             " "
         )
@@ -332,7 +332,7 @@ Match-test "m2"
      # Kommentar
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             " "
         )
@@ -348,7 +348,7 @@ Match-test "m3"
       
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             "  "
         )
@@ -361,7 +361,7 @@ Match-test "m4"
     # Kommentar
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             "# Kommentar"
         )
@@ -375,7 +375,7 @@ Match-test "m5"
     
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             "# Kommentar"
         )
@@ -397,7 +397,7 @@ Match-test "m6"
     
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             ""
             ""
@@ -430,7 +430,7 @@ Match-test "m7"
     
 
 ### AST
-    (LEERRAUM
+    (LZ
         (:RegExp
             ""
             ""
@@ -506,7 +506,7 @@ Match-test "m3"
                 "# Kommentar"
             )
         )
-        (LEERRAUM
+        (LZ
             (:RegExp
                 ""
                 ""
@@ -531,7 +531,7 @@ Match-test "m4"
                 ""
             )
         )
-        (LEERRAUM
+        (LZ
             (:RegExp
                 ""
                 ""

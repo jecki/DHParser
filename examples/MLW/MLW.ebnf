@@ -33,7 +33,7 @@ Lemma             = [< klassisch | gesichert >] LemmaWort
 
 LemmaWort         = LAT_WORT
 
-LemmaVarianten    = LemmaVariante { [TR] LemmaVariante }
+LemmaVarianten    = LemmaVariante { [","] [ZW] LemmaVariante }
                     [[TR] Zusatz]
 
 LemmaVariante     = LAT_WORT
@@ -100,25 +100,25 @@ Gegenstand     = EINZEILER
 #### BEDEUTUNGS-POSITION #####################################################
 
 BedeutungsPosition   = { ZWW "BEDEUTUNG" [LZ] §Bedeutung [U1Bedeutung] }+
-U1Bedeutung          = { ZWW ("U_BEDEUTUNG" | "UNTERBEDEUTUNG") [LZ] §Bedeutung [U2Bedeutung] }+
-U2Bedeutung          = { ZWW ("UU_BEDEUTUNG" | "UNTERUNTERBEDEUTUNG") [LZ] §Bedeutung [U3Bedeutung] }+
+U1Bedeutung          = { ZWW ("U_BEDEUTUNG" | "UNTER_BEDEUTUNG") [LZ] §Bedeutung [U2Bedeutung] }+
+U2Bedeutung          = { ZWW ("UU_BEDEUTUNG" | "UNTER_UNTER_BEDEUTUNG") [LZ] §Bedeutung [U3Bedeutung] }+
 U3Bedeutung          = { ZWW "UUU_BEDEUTUNG" [LZ] §Bedeutung [U4Bedeutung] }+
 U4Bedeutung          = { ZWW "UUUU_BEDEUTUNG" [LZ] §Bedeutung [U5Bedeutung] }+
 U5Bedeutung          = { ZWW "UUUUU_BEDEUTUNG" [LZ] §UntersteBedeutung }+
 
 Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 UntersteBedeutung    = Interpretamente [BelegPosition]
-Bedeutungskategorie  = EINZEILER §":" [LZ]
-Interpretamente      = LateinischeBedeutung [LZ] §DeutscheBedeutung
-LateinischeBedeutung = [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
-DeutscheBedeutung    = [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
+Bedeutungskategorie  = EINZEILER [[LZ] BedeutungsQualifikation] §":"
+Interpretamente      = LateinischeBedeutung ("--"| LZ) §DeutscheBedeutung [":"]
+LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
+DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
 
-LateinischerAusdruck = LAT_WORT { //~ LAT_WORT } [/\s*/ BedeutungsQualifikation]
-DeutscherAusdruck    = DEU_WORT { //~ DEU_WORT } [/\s*/ BedeutungsQualifikation]
+LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
+DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
 
-BedeutungsQualifikation = "[" EINZEILER { <SEM|ZW> EINZEILER } §"]"
+BedeutungsQualifikation = "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
 
-BelegPosition = ZWW "BELEGE" ZWW Belege
+BelegPosition = ZWW ["BELEGE" [LZ]] Belege
 
 
 #### VERWEIS-POSITION #####################################################
@@ -181,37 +181,39 @@ NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
 DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
+DEU_WORT_ERW     = DEU_WORT | ( "(" DEU_WORT ")" )
 DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-]+/~
 GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
 KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
 GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
 DEU_KLEIN        = /(?!-)[a-zäöüßę_\-]+/~
 LAT_WORT         = /(?!-)[a-z|\-_]+/~
+LAT_WORT_ERW     = LAT_WORT | ( "(" LAT_WORT ")" )
 GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
 ZAHL             = /[\d_]+/~
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
 
-SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|[.()\[\]\-]+)/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
 # EINZEILER        = /[\w()-. \t]+/~
 TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
-EINZEILER        = { TEXTELEMENT | /(?!->)[.()\-]+/~ | /,(?!,)/~ }+
+EINZEILER        = { TEXTELEMENT | TEIL_SATZZEICHEN }+
 FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+
 MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ }+
 
 TR               = ABS | LZ                  # (beliebiger) Trenner
 ABS              = /\s*;;?\s*/ | ZWW         # Abschluss (durch Semikolon oder Zeilenwechsel)
 # ZW               = /\n/~                   # Zeilenwechsel
-LZ               = /\s+/                     # Leerzeichen oder -zeilen
+LZ               = { COMMENT__ | /\s+/ }+    # Leerzeichen oder -zeilen
 DPP              = /::?/~                    # Doppelpunkt als Trenner
 SEM              = /;;?/~                    # Semikolon als Trenner
 
 ZW               = !LÜCKE ZEILENSPRUNG       # Zeilenwechsel, aber keine Leerzeile(n)
-ZWW              = ZEILENSPRUNG [ LEERRAUM ] # mindestens ein Zeilenwechsel
-LÜCKE            = KOMMENTARZEILEN LEERZEILE [LEERRAUM] # Leerraum mit mindestens einer echten Leerzeile
-LEERRAUM         = { COMMENT__ | /\s+/ }+   # beliebiger horizontaler oder vertikaler Leerraum
+ZWW              = ZEILENSPRUNG [ LZ ]       # mindestens ein Zeilenwechsel
+LÜCKE            = KOMMENTARZEILEN LEERZEILE [LZ] # Leerraum mit mindestens einer echten Leerzeile
 LEERZEILE        = /[ \t]*(?:\n[ \t]*)+\n/ ~/\n?/ # eine oder mehrere echte LEERZEILEN
 RZS              = /\s*?\n|$/               # Rückwärtiger Zeilensprung oder Textanfang
 
