@@ -153,13 +153,17 @@ SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ }+
   zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | EINZEILER
 
-
+Präfix       = "PRÄFIX" §{ [TR] präfix_typ }+ ":"
+  präfix_typ = EINZEILER
 
 #### BELEGE ##################################################################
 
 Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-Beleg            = (Verweis [Zitat]) | Zitat
-Zitat            = Quellenangabe { SEM [ZW] [Anker] <Stelle | Verweis> [[ZW] BelegText] } [[TR] Zusatz]
+Beleg            = [Präfix] (Verweis [Zitat]) | Zitat
+Zitat            = Quellenangabe
+                   { SEM [ZW] [Anker] [Präfix] <Stelle | Verweis>
+                     [[ZW] BelegText] [[TR] Zusatz] }
+
 Quellenangabe    = [Anker] < BelegQuelle | Verweis >
 BelegQuelle      = Autor DPP Werk
 BelegText        = /"/ MEHRZEILER §/"/~ ["."]
