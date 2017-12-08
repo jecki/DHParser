@@ -55,7 +55,7 @@ class MLWGrammar(Grammar):
     # TODO: Vervollständigen!!!!
     
     
-    @ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+    @ comment         =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # Kommentare im C++ Stil
                                           # ohne das Zeilenende zu beinhalten
     @ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
     @ literalws       =  right            # Leerraum vor und nach Literalen wird automatisch entfernt
@@ -202,29 +202,43 @@ class MLWGrammar(Grammar):
     
     #### ZUSATZ an verschiedenen Stellen der Struktur ############################
     
-    Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ }+
-      zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | EINZEILER
-    
+    Zusatz       = "{" §(FesterZusatz | GemischterZusatz | FreierZusatz) "}"
+      FesterZusatz     = "adde" | "sape" | "persaepe"
+      GemischterZusatz = ( "usu" | "plur. sensu sing." ) FreierZusatz
+      FreierZusatz     = { FREITEXT | VerweisKern | Verweis }+
     
     
     #### BELEGE ##################################################################
     
     Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-    Beleg            = (Verweis [Zitat]) | Zitat
-    Zitat            = Quellenangabe { SEM [ZW] [Anker] <Stelle | Verweis> [[ZW] BelegText] } [[TR] Zusatz]
+    Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat
+    Zitat            = Quellenangabe
+                       { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
+                         [[ZW] BelegText] [[TR] Zusatz] }
+    
     Quellenangabe    = [Anker] < BelegQuelle | Verweis >
     BelegQuelle      = Autor DPP Werk
     BelegText        = /"/ MEHRZEILER §/"/~ ["."]
-    
-    Verweis          = "->" §Anker
-    Anker            = "{" ZielID §"}"
-    ZielID           = FREITEXT
     
     Autor     = EINZEILER
     Werk      = EINZEILER
     Stelle    = EINZEILER
     Datierung = EINZEILER
     Edition   = EINZEILER
+    
+    
+    #### VERWEISE (LINKS) ########################################################
+    
+    Verweis          = "{" VerweisKern "}"
+    VerweisKern      = "->" §((alias "|" ("-" | URL)) | URL)
+    Anker            = "{" "#" §ziel "}"
+    URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
+    
+    alias            = FREITEXT
+    protokoll        = /\w+:\/\//
+    domäne           = /\w+\.\w+(?:\.\w+)*/
+    pfad             = /\w+/
+    ziel             = /[\w=?.%&\[\] ]+/
     
     
     #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
@@ -296,9 +310,9 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "ddde3c1be13790163321ea72d6d5cf14"
+    source_hash__ = "d65adeb82b1c7685fe0dd447f2800dfb"
     parser_initialization__ = "upon instantiation"
-    COMMENT__ = r'#.*'
+    COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
@@ -342,22 +356,30 @@ class MLWGrammar(Grammar):
     DEU_WORT.set(Alternative(DEU_GROSS, DEU_KLEIN, GROSSBUCHSTABE))
     NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
+    ziel = RegExp('[\\w=?.%&\\[\\] ]+')
+    pfad = RegExp('\\w+')
+    domäne = RegExp('\\w+\\.\\w+(?:\\.\\w+)*')
+    protokoll = RegExp('\\w+://')
+    alias = Synonym(FREITEXT)
+    URL = Series(Option(Alternative(Series(Option(protokoll), domäne, RegExp('/')), RegExp('/'))), ZeroOrMore(Series(pfad, RegExp('/'))), ziel)
+    Anker = Series(Token("{"), Token("#"), ziel, Token("}"), mandatory=2)
+    VerweisKern = Series(Token("->"), Alternative(Series(alias, Token("|"), Alternative(Token("-"), URL)), URL), mandatory=1)
+    Verweis = Series(Token("{"), VerweisKern, Token("}"))
     Edition = Synonym(EINZEILER)
     Datierung = Synonym(EINZEILER)
     Stelle = Synonym(EINZEILER)
     Werk = Synonym(EINZEILER)
     Autor = Synonym(EINZEILER)
-    ZielID = Synonym(FREITEXT)
-    Anker = Series(Token("{"), ZielID, Token("}"), mandatory=2)
-    Verweis = Series(Token("->"), Anker, mandatory=1)
     BelegText = Series(RegExp('"'), MEHRZEILER, RE('"'), Option(Token(".")), mandatory=2)
     BelegQuelle = Series(Autor, DPP, Werk)
     Quellenangabe = Series(Option(Anker), SomeOf(BelegQuelle, Verweis))
-    Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), Option(Anker), SomeOf(Stelle, Verweis), Option(Series(Option(ZW), BelegText)))), Option(Series(Option(TR), Zusatz)))
-    Beleg = Alternative(Series(Verweis, Option(Zitat)), Zitat)
+    Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), Option(Anker), Option(Zusatz), SomeOf(Stelle, Verweis), Option(Series(Option(ZW), BelegText)), Option(Series(Option(TR), Zusatz)))))
+    Beleg = Alternative(Series(Option(Zusatz), Series(Verweis, Option(Zitat))), Zitat)
     Belege = Series(Option(Token("*")), Beleg, ZeroOrMore(Series(Option(LZ), Token("*"), Beleg)))
-    zusatz_typ = Alternative(Token("adde"), Token("al"), Token("sim."), Token("saepe"), Token("vel-rarius"), Token("vel"), EINZEILER)
-    Zusatz.set(Series(Token("ZUSATZ"), OneOrMore(Series(Option(TR), zusatz_typ)), mandatory=1))
+    FreierZusatz = OneOrMore(Alternative(FREITEXT, VerweisKern, Verweis))
+    GemischterZusatz = Series(Alternative(Token("usu"), Token("plur. sensu sing.")), FreierZusatz)
+    FesterZusatz = Alternative(Token("adde"), Token("sape"), Token("persaepe"))
+    Zusatz.set(Series(Token("{"), Alternative(FesterZusatz, GemischterZusatz, FreierZusatz), Token("}"), mandatory=1))
     SCHLUESSELWORT = Series(OneOrMore(Series(RE(''), RegExp('\\n'))), NegativeLookahead(ROEMISCHE_ZAHL), RegExp('[A-ZÄÖÜ]{3,}\\s+'))
     GRI = Alternative(Token("GRIECHISCH"), Token("GRIECH"), Token("GRIE"), Token("GRI"))
     DEU = Alternative(Token("DEUTSCH"), Token("DEU"))

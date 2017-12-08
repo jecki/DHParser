@@ -3,7 +3,7 @@
 # TODO: Vervollständigen!!!!
 
 
-@ comment         =  /#.*/            # Kommentare beginnen mit '#' und reichen bis zum Zeilenende
+@ comment         =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # Kommentare im C++ Stil
                                       # ohne das Zeilenende zu beinhalten
 @ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
 @ literalws       =  right            # Leerraum vor und nach Literalen wird automatisch entfernt
@@ -150,33 +150,43 @@ SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
-Zusatz       = "ZUSATZ" §{ [TR] zusatz_typ }+
-  zusatz_typ = "adde" | "al" | "sim." | "saepe" | "vel-rarius" | "vel" | EINZEILER
+Zusatz       = "{" §(FesterZusatz | GemischterZusatz | FreierZusatz) "}"
+  FesterZusatz     = "adde" | "sape" | "persaepe"
+  GemischterZusatz = ( "usu" | "plur. sensu sing." ) FreierZusatz
+  FreierZusatz     = { FREITEXT | VerweisKern | Verweis }+
 
-Präfix       = "PRÄFIX" §{ [TR] präfix_typ }+ ":"
-  präfix_typ = EINZEILER
 
 #### BELEGE ##################################################################
 
 Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-Beleg            = [Präfix] (Verweis [Zitat]) | Zitat
+Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat
 Zitat            = Quellenangabe
-                   { SEM [ZW] [Anker] [Präfix] <Stelle | Verweis>
+                   { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
                      [[ZW] BelegText] [[TR] Zusatz] }
 
 Quellenangabe    = [Anker] < BelegQuelle | Verweis >
 BelegQuelle      = Autor DPP Werk
 BelegText        = /"/ MEHRZEILER §/"/~ ["."]
 
-Verweis          = "->" §Anker
-Anker            = "{" ZielID §"}"
-ZielID           = FREITEXT
-
 Autor     = EINZEILER
 Werk      = EINZEILER
 Stelle    = EINZEILER
 Datierung = EINZEILER
 Edition   = EINZEILER
+
+
+#### VERWEISE (LINKS) ########################################################
+
+Verweis          = "{" VerweisKern "}"
+VerweisKern      = "->" §((alias "|" ("-" | URL)) | URL)
+Anker            = "{" "#" §ziel "}"
+URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
+
+alias            = FREITEXT
+protokoll        = /\w+:\/\//
+domäne           = /\w+\.\w+(?:\.\w+)*/
+pfad             = /\w+/
+ziel             = /[\w=?.%&\[\] ]+/
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################

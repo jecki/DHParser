@@ -8,29 +8,29 @@ LEMMA facitergula
 GRAMMATIK
     nomen; -ae f.
 
-    -us, -i m.:  -> { ibi 1}
-    -um, -i n.:  -> { ibi 2}
+    -us, -i m.:  {-> ibi 1}
+    -um, -i n.:  {-> ibi 2}
 
 
 SCHREIBWEISE
     script.:
-        vizreg-:       -> {ibi 3}
-        festregel(a):  -> {ibi 4}
-        fezdregl(a):   -> {ibi 5}
+        vizreg-:       {-> ibi 3}
+        festregel(a):  {-> ibi 4}
+        fezdregl(a):   {-> ibi 5}
 
 
 BEDEUTUNG
-LAT pannus, faciale, sudarium -- DEU Gesichts-, Schweißtuch [usu liturg.: de re v. p. 32, 63]:
+LAT pannus, faciale, sudarium -- DEU Gesichts-, Schweißtuch {usu liturg.: de re {-> eintrag/ibi X}}:
 
 * Catal.: thes. Germ.; 28,11 (post 851) "-um III."
-* Form.: Sangall.; {ibi 2} 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
+* Form.: Sangall.; {#ibi 2} 39 p. 421,16 "munuscula ... direximus, hoc est palliolum ... ,
   -as duas."
 * Catal.:  thes. Germ.; 18,7 "-eterculi  viginti  quatuor".
-* Libri:  confrat.  I; {ibi 1}  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
+* Libri:  confrat.  I; {#ibi 1}  app. A  6  p.  137,30 "pulpitum  ...  -a  cocco imaginata
   circumdari  iussit  pontifex."
-* Catal.: thes. Germ. -> {ID extern}; {ibi 3} 76,15 "-rulae II"; 40,5 VI "vizregule"; 129a,5 "-sterculas
-  II."; {ibi 5} 24,8  "-itella X"; 114,8 VIII  "fezdreglę";  6,24  "fasciutercule VII";
-  {ibi 4} 92,6 "fascerculę tres"; 21,20 IIII "festregelę"
+* Catal.: thes. Germ. {-> ID extern}; {#ibi 3} 76,15 "-rulae II"; 40,5 VI "vizregule"; 129a,5 "-sterculas
+  II."; {#ibi 5} 24,8  "-itella X"; 114,8 VIII  "fezdreglę";  6,24  "fasciutercule VII";
+  {#ibi 4} 92,6 "fascerculę tres"; 21,20 IIII "festregelę"
   ZUSATZ saepe.
 
 

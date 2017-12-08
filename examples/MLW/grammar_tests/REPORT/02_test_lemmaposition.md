@@ -116,7 +116,7 @@ Match-test "3"
 --------------
 
 ### Test-code:
-    fascitergula facietergula ZUSATZ sim.
+    fascitergula facietergula {sim.}
 
 ### AST
     (LemmaVarianten
@@ -138,15 +138,22 @@ Match-test "3"
         )
         (Zusatz
             (:Token
-                (:RegExp
-                    "ZUSATZ"
+                "{"
+            )
+            (FREITEXT
+                (DEU_WORT
+                    (DEU_KLEIN
+                        (:RegExp
+                            "sim"
+                        )
+                    )
                 )
-                (:Whitespace
-                    " "
+                (SATZZEICHEN
+                    "."
                 )
             )
-            (zusatz_typ
-                "sim."
+            (:Token
+                "}"
             )
         )
     )
@@ -155,7 +162,7 @@ Match-test "4"
 --------------
 
 ### Test-code:
-    fascitergula, facietergula, fascistergula ZUSATZ sim.
+    fascitergula, facietergula, fascistergula {sim.}
 
 ### AST
     (LemmaVarianten
@@ -201,15 +208,22 @@ Match-test "4"
         )
         (Zusatz
             (:Token
-                (:RegExp
-                    "ZUSATZ"
+                "{"
+            )
+            (FREITEXT
+                (DEU_WORT
+                    (DEU_KLEIN
+                        (:RegExp
+                            "sim"
+                        )
+                    )
                 )
-                (:Whitespace
-                    " "
+                (SATZZEICHEN
+                    "."
                 )
             )
-            (zusatz_typ
-                "sim."
+            (:Token
+                "}"
             )
         )
     )
@@ -235,8 +249,7 @@ Match-test "1"
     facietergula
     facistergula
     fascitercula
-    
-    ZUSATZ sim.
+    {sim.}
     
     GRAMMATIK
     nomen; -ae f.
@@ -335,24 +348,25 @@ Match-test "1"
                             ""
                         )
                     )
-                    (LZ
-                        (:RegExp
-                            ""
-                            ""
-                        )
-                    )
                 )
                 (Zusatz
                     (:Token
-                        (:RegExp
-                            "ZUSATZ"
+                        "{"
+                    )
+                    (FREITEXT
+                        (DEU_WORT
+                            (DEU_KLEIN
+                                (:RegExp
+                                    "sim"
+                                )
+                            )
                         )
-                        (:Whitespace
-                            " "
+                        (SATZZEICHEN
+                            "."
                         )
                     )
-                    (zusatz_typ
-                        "sim."
+                    (:Token
+                        "}"
                     )
                 )
             )

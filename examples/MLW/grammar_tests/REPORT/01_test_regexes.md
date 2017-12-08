@@ -68,7 +68,7 @@ Match-test "m2"
 ### Test-code:
     
     
-    # Kommentar
+    // Kommentar
 
 ### AST
     (LEERZEILE
@@ -78,7 +78,7 @@ Match-test "m2"
             ""
         )
         (:RE
-            "# Kommentar"
+            "// Kommentar"
         )
     )
 
@@ -101,6 +101,37 @@ Match-test "m3"
         )
     )
 
+Match-test "m4"
+---------------
+
+### Test-code:
+    
+    
+    /* Kommentar
+    
+    Kommentar fortsetzung */
+    
+
+### CST
+    (LEERZEILE
+        (:RegExp
+            ""
+            ""
+            ""
+        )
+        (:RE
+            (:Whitespace
+                "/* Kommentar"
+                ""
+                "Kommentar fortsetzung */"
+            )
+            (:RegExp
+                ""
+                ""
+            )
+        )
+    )
+
 Fail-test "f1"
 --------------
 
@@ -114,9 +145,9 @@ Fail-test "f2"
 ### Test-code:
     
     
-    # Kommentar
+    // Kommentar
     
-    # Kommentar
+    // Kommentar
     
 
 
@@ -149,7 +180,7 @@ Match-test "m2"
 ### Test-code:
     
     
-    # Kommentar
+    // Kommentar
     
 
 ### AST
@@ -162,7 +193,7 @@ Match-test "m2"
             )
             (:RE
                 (:Whitespace
-                    "# Kommentar"
+                    "// Kommentar"
                 )
                 (:RegExp
                     ""
@@ -199,9 +230,9 @@ Match-test "m4"
 ### Test-code:
     
     
-    # Kommentar
+    // Kommentar
     
-    # Kommentar
+    // Kommentar
     
 
 ### AST
@@ -214,7 +245,7 @@ Match-test "m4"
             )
             (:RE
                 (:Whitespace
-                    "# Kommentar"
+                    "// Kommentar"
                 )
                 (:RegExp
                     ""
@@ -228,7 +259,7 @@ Match-test "m4"
                 ""
             )
             (:RegExp
-                "# Kommentar"
+                "// Kommentar"
             )
             (:RegExp
                 ""
@@ -241,10 +272,10 @@ Match-test "m5"
 ---------------
 
 ### Test-code:
-     #Kommentar
-    # Kommentar
+     //Kommentar
+    //Kommentar
     
-    # Kommentar
+    // Kommentar
 
 ### AST
     (LÜCKE
@@ -254,7 +285,7 @@ Match-test "m5"
                     " "
                 )
                 (:RegExp
-                    "#Kommentar"
+                    "//Kommentar"
                 )
             )
             (:Series
@@ -263,7 +294,7 @@ Match-test "m5"
                     ""
                 )
                 (:RegExp
-                    "# Kommentar"
+                    "//Kommentar"
                 )
             )
         )
@@ -274,7 +305,7 @@ Match-test "m5"
                 ""
             )
             (:RE
-                "# Kommentar"
+                "// Kommentar"
             )
         )
     )
@@ -297,15 +328,24 @@ Fail-test "f3"
 
 ### Test-code:
     
-    # Kommentar
+    // Kommentar
 
 Fail-test "f4"
 --------------
 
 ### Test-code:
-     #Kommentar
-    # Kommentar
-    # Kommentar
+     //Kommentar
+    // Kommentar
+    // Kommentar
+
+Fail-test "f5"
+--------------
+
+### Test-code:
+     //Kommentar
+    /* Kommentar
+    
+    Kommentar */
 
 
 Test of parser: "LZ"
@@ -329,7 +369,7 @@ Match-test "m2"
 ---------------
 
 ### Test-code:
-     # Kommentar
+     // Kommentar
 
 ### AST
     (LZ
@@ -337,7 +377,7 @@ Match-test "m2"
             " "
         )
         (:RegExp
-            "# Kommentar"
+            "// Kommentar"
         )
     )
 
@@ -358,12 +398,12 @@ Match-test "m4"
 ---------------
 
 ### Test-code:
-    # Kommentar
+    // Kommentar
 
 ### AST
     (LZ
         (:RegExp
-            "# Kommentar"
+            "// Kommentar"
         )
     )
 
@@ -371,13 +411,13 @@ Match-test "m5"
 ---------------
 
 ### Test-code:
-    # Kommentar
+    // Kommentar
     
 
 ### AST
     (LZ
         (:RegExp
-            "# Kommentar"
+            "// Kommentar"
         )
         (:RegExp
             ""
@@ -390,9 +430,9 @@ Match-test "m6"
 
 ### Test-code:
     
-    # Kommentar
+    // Kommentar
     
-    # Kommentar
+    // Kommentar
     
     
 
@@ -403,7 +443,7 @@ Match-test "m6"
             ""
         )
         (:RegExp
-            "# Kommentar"
+            "// Kommentar"
         )
         (:RegExp
             ""
@@ -411,7 +451,7 @@ Match-test "m6"
             ""
         )
         (:RegExp
-            "# Kommentar"
+            "// Kommentar"
         )
         (:RegExp
             ""
@@ -472,7 +512,7 @@ Match-test "m2"
 
 ### Test-code:
     
-    # Kommentar
+    // Kommentar
 
 ### AST
     (ZWW
@@ -482,7 +522,7 @@ Match-test "m2"
                 ""
             )
             (:Whitespace
-                "# Kommentar"
+                "// Kommentar"
             )
         )
     )
@@ -492,7 +532,7 @@ Match-test "m3"
 
 ### Test-code:
     
-    # Kommentar
+    // Kommentar
     
 
 ### AST
@@ -503,7 +543,7 @@ Match-test "m3"
                 ""
             )
             (:Whitespace
-                "# Kommentar"
+                "// Kommentar"
             )
         )
         (LZ
@@ -573,7 +613,7 @@ Match-test "m2"
 
 ### Test-code:
     
-    # Kommentar
+    // Kommentar
 
 ### AST
     (ZW
@@ -583,7 +623,7 @@ Match-test "m2"
                 ""
             )
             (:Whitespace
-                "# Kommentar"
+                "// Kommentar"
             )
         )
     )
@@ -595,3 +635,14 @@ Fail-test "f1"
     
     
     
+
+
+Test of parser: "FREITEXT"
+==========================
+
+
+Fail-test "f1"
+--------------
+
+### Test-code:
+    Text -> Verweis
