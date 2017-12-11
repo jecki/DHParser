@@ -179,10 +179,21 @@ class HistoryRecord:
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
 
     def as_tuple(self) -> Snapshot:
+        """
+        Returns history record formatted as a snapshot tuple.
+        """
         return self.Snapshot(self.line_col[0], self.line_col[1],
                              self.stack, self.status, self.excerpt)
+    def as_csv_line(self) -> str:
+        """
+        Returns history record formatted as a csv table row.
+        """
+        return '"{}", "{}", "{}", "{}", "{}"'.format(*self.as_tuple())
 
     def as_html_tr(self) -> str:
+        """
+        Returns history record formatted as an html table row.
+        """
         stack = html.escape(self.stack).replace(
             '-&gt;', '<span class="delimiter">&shy;-&gt;</span>')
         status = html.escape(self.status)
