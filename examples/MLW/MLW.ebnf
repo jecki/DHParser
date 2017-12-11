@@ -116,7 +116,7 @@ DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
 LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
 DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
 
-BedeutungsQualifikation = "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
+BedeutungsQualifikation = Zusatz # "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
 
 BelegPosition = ZWW ["BELEGE" [LZ]] Belege
 
@@ -126,7 +126,7 @@ BelegPosition = ZWW ["BELEGE" [LZ]] Belege
 VerweisPosition = ZWW "VERWEISE"
 
 
-#### UNTER-ARTIKEL ########################################################
+#### UNTER-ARTIKEL ###########################################################
 
 UnterArtikel = ZWW "UNTER-ARTIKEL"
 
@@ -136,6 +136,10 @@ UnterArtikel = ZWW "UNTER-ARTIKEL"
 ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") Name
 Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
+
+#### STELLENVERWEISE #########################################################
+
+# TODO: Syntax für Stellenverweise
 
 
 #### Schlüsselwörter #########################################################
@@ -150,7 +154,8 @@ SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
-Zusatz       = "{" §(FesterZusatz | GemischterZusatz | FreierZusatz) "}"
+Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
+  EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
   FesterZusatz     = "adde" | "sape" | "persaepe"
   GemischterZusatz = ( "usu" | "plur. sensu sing." ) FreierZusatz
   FreierZusatz     = { FREITEXT | VerweisKern | Verweis }+
@@ -159,14 +164,14 @@ Zusatz       = "{" §(FesterZusatz | GemischterZusatz | FreierZusatz) "}"
 #### BELEGE ##################################################################
 
 Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat
+Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat ["."]
 Zitat            = Quellenangabe
                    { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
                      [[ZW] BelegText] [[TR] Zusatz] }
 
 Quellenangabe    = [Anker] < BelegQuelle | Verweis >
 BelegQuelle      = Autor DPP Werk
-BelegText        = /"/ MEHRZEILER §/"/~ ["."]
+BelegText        = /"/ { MEHRZEILER | Zusatz } §/"/~ ["."]
 
 Autor     = EINZEILER
 Werk      = EINZEILER
@@ -178,7 +183,7 @@ Edition   = EINZEILER
 #### VERWEISE (LINKS) ########################################################
 
 Verweis          = "{" VerweisKern "}"
-VerweisKern      = "->" §((alias "|" ("-" | URL)) | URL)
+VerweisKern      = "=>" §((alias "|" ("-" | URL)) | URL)
 Anker            = "{" "#" §ziel "}"
 URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
 

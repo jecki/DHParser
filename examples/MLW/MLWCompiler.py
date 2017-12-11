@@ -168,7 +168,7 @@ class MLWGrammar(Grammar):
     LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
     DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
     
-    BedeutungsQualifikation = "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
+    BedeutungsQualifikation = Zusatz # "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
     
     BelegPosition = ZWW ["BELEGE" [LZ]] Belege
     
@@ -178,7 +178,7 @@ class MLWGrammar(Grammar):
     VerweisPosition = ZWW "VERWEISE"
     
     
-    #### UNTER-ARTIKEL ########################################################
+    #### UNTER-ARTIKEL ###########################################################
     
     UnterArtikel = ZWW "UNTER-ARTIKEL"
     
@@ -188,6 +188,10 @@ class MLWGrammar(Grammar):
     ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") Name
     Name             = { NAME | NAMENS_ABKÜRZUNG }+
     
+    
+    #### STELLENVERWEISE #########################################################
+    
+    # TODO: Syntax für Stellenverweise
     
     
     #### Schlüsselwörter #########################################################
@@ -202,7 +206,8 @@ class MLWGrammar(Grammar):
     
     #### ZUSATZ an verschiedenen Stellen der Struktur ############################
     
-    Zusatz       = "{" §(FesterZusatz | GemischterZusatz | FreierZusatz) "}"
+    Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
+      EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
       FesterZusatz     = "adde" | "sape" | "persaepe"
       GemischterZusatz = ( "usu" | "plur. sensu sing." ) FreierZusatz
       FreierZusatz     = { FREITEXT | VerweisKern | Verweis }+
@@ -211,14 +216,14 @@ class MLWGrammar(Grammar):
     #### BELEGE ##################################################################
     
     Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-    Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat
+    Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat ["."]
     Zitat            = Quellenangabe
                        { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
                          [[ZW] BelegText] [[TR] Zusatz] }
     
     Quellenangabe    = [Anker] < BelegQuelle | Verweis >
     BelegQuelle      = Autor DPP Werk
-    BelegText        = /"/ MEHRZEILER §/"/~ ["."]
+    BelegText        = /"/ { MEHRZEILER | Zusatz } §/"/~ ["."]
     
     Autor     = EINZEILER
     Werk      = EINZEILER
@@ -230,7 +235,7 @@ class MLWGrammar(Grammar):
     #### VERWEISE (LINKS) ########################################################
     
     Verweis          = "{" VerweisKern "}"
-    VerweisKern      = "->" §((alias "|" ("-" | URL)) | URL)
+    VerweisKern      = "=>" §((alias "|" ("-" | URL)) | URL)
     Anker            = "{" "#" §ziel "}"
     URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
     
@@ -296,7 +301,6 @@ class MLWGrammar(Grammar):
     DEU_WORT = Forward()
     FREITEXT = Forward()
     GROSSSCHRIFT = Forward()
-    Gegenstand = Forward()
     Kategorien = Forward()
     LAT_WORT = Forward()
     LZ = Forward()
@@ -310,7 +314,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d65adeb82b1c7685fe0dd447f2800dfb"
+    source_hash__ = "99f1201bf75fcfa59078da911b51898a"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -363,23 +367,24 @@ class MLWGrammar(Grammar):
     alias = Synonym(FREITEXT)
     URL = Series(Option(Alternative(Series(Option(protokoll), domäne, RegExp('/')), RegExp('/'))), ZeroOrMore(Series(pfad, RegExp('/'))), ziel)
     Anker = Series(Token("{"), Token("#"), ziel, Token("}"), mandatory=2)
-    VerweisKern = Series(Token("->"), Alternative(Series(alias, Token("|"), Alternative(Token("-"), URL)), URL), mandatory=1)
+    VerweisKern = Series(Token("=>"), Alternative(Series(alias, Token("|"), Alternative(Token("-"), URL)), URL), mandatory=1)
     Verweis = Series(Token("{"), VerweisKern, Token("}"))
     Edition = Synonym(EINZEILER)
     Datierung = Synonym(EINZEILER)
     Stelle = Synonym(EINZEILER)
     Werk = Synonym(EINZEILER)
     Autor = Synonym(EINZEILER)
-    BelegText = Series(RegExp('"'), MEHRZEILER, RE('"'), Option(Token(".")), mandatory=2)
+    BelegText = Series(RegExp('"'), ZeroOrMore(Alternative(MEHRZEILER, Zusatz)), RE('"'), Option(Token(".")), mandatory=2)
     BelegQuelle = Series(Autor, DPP, Werk)
     Quellenangabe = Series(Option(Anker), SomeOf(BelegQuelle, Verweis))
     Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), Option(Anker), Option(Zusatz), SomeOf(Stelle, Verweis), Option(Series(Option(ZW), BelegText)), Option(Series(Option(TR), Zusatz)))))
-    Beleg = Alternative(Series(Option(Zusatz), Series(Verweis, Option(Zitat))), Zitat)
+    Beleg = Alternative(Series(Option(Zusatz), Series(Verweis, Option(Zitat))), Series(Zitat, Option(Token("."))))
     Belege = Series(Option(Token("*")), Beleg, ZeroOrMore(Series(Option(LZ), Token("*"), Beleg)))
     FreierZusatz = OneOrMore(Alternative(FREITEXT, VerweisKern, Verweis))
     GemischterZusatz = Series(Alternative(Token("usu"), Token("plur. sensu sing.")), FreierZusatz)
     FesterZusatz = Alternative(Token("adde"), Token("sape"), Token("persaepe"))
-    Zusatz.set(Series(Token("{"), Alternative(FesterZusatz, GemischterZusatz, FreierZusatz), Token("}"), mandatory=1))
+    EinzelnerZusatz = Alternative(FesterZusatz, GemischterZusatz, FreierZusatz)
+    Zusatz.set(OneOrMore(Series(Token("{"), NegativeLookahead(Alternative(Token("=>"), Token("#"))), EinzelnerZusatz, ZeroOrMore(Series(Token(";;"), EinzelnerZusatz)), Token("}"), mandatory=2)))
     SCHLUESSELWORT = Series(OneOrMore(Series(RE(''), RegExp('\\n'))), NegativeLookahead(ROEMISCHE_ZAHL), RegExp('[A-ZÄÖÜ]{3,}\\s+'))
     GRI = Alternative(Token("GRIECHISCH"), Token("GRIECH"), Token("GRIE"), Token("GRI"))
     DEU = Alternative(Token("DEUTSCH"), Token("DEU"))
@@ -389,7 +394,7 @@ class MLWGrammar(Grammar):
     UnterArtikel = Series(ZWW, Token("UNTER-ARTIKEL"))
     VerweisPosition = Series(ZWW, Token("VERWEISE"))
     BelegPosition = Series(ZWW, Option(Series(Token("BELEGE"), Option(LZ))), Belege)
-    BedeutungsQualifikation = Series(Token("["), Gegenstand, DPP, Alternative(Verweis, EINZEILER), Token("]"), mandatory=4)
+    BedeutungsQualifikation = Synonym(Zusatz)
     DeutscherAusdruck = Series(DEU_WORT_ERW, ZeroOrMore(Series(RE(''), DEU_WORT_ERW)), Option(Series(Option(LZ), BedeutungsQualifikation)))
     LateinischerAusdruck = Series(LAT_WORT_ERW, ZeroOrMore(Series(RE(''), LAT_WORT_ERW)), Option(Series(Option(LZ), BedeutungsQualifikation)))
     DeutscheBedeutung = Series(DEU, Option(LZ), DeutscherAusdruck, ZeroOrMore(Series(SomeOf(Token(","), ZW), DeutscherAusdruck)))
@@ -404,7 +409,7 @@ class MLWGrammar(Grammar):
     U2Bedeutung = OneOrMore(Series(ZWW, Alternative(Token("UU_BEDEUTUNG"), Token("UNTER_UNTER_BEDEUTUNG")), Option(LZ), Bedeutung, Option(U3Bedeutung), mandatory=3))
     U1Bedeutung = OneOrMore(Series(ZWW, Alternative(Token("U_BEDEUTUNG"), Token("UNTER_BEDEUTUNG")), Option(LZ), Bedeutung, Option(U2Bedeutung), mandatory=3))
     BedeutungsPosition = OneOrMore(Series(ZWW, Token("BEDEUTUNG"), Option(LZ), Bedeutung, Option(U1Bedeutung), mandatory=3))
-    Gegenstand.set(Synonym(EINZEILER))
+    Gegenstand = Synonym(EINZEILER)
     Variante = Series(NegativeLookahead(KATEGORIENZEILE), Gegenstand, DPP, Belege)
     Varianten = Series(Variante, ZeroOrMore(Series(ZWW, Variante)))
     Besonderheit = Synonym(EINZEILER)
@@ -459,6 +464,7 @@ def get_grammar() -> MLWGrammar:
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
     "+": remove_empty,
+    "Autor": [reduce_single_child],
     "Artikel": [],
     "LemmaPosition": [],
     "Lemma": [],
@@ -499,6 +505,7 @@ MLW_AST_transformation_table = {
     "Beleg": [replace_by_single_child],
     "Verweis": [],
     "VerweisZiel": [],
+    "Werk": [reduce_single_child],
     "ZielName": [replace_by_single_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],

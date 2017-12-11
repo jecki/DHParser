@@ -8,22 +8,22 @@ GRAMMATIK
 	
 SCHREIBWEISE
     script.:
-		hym-: -> {ibi 1}
-		em-: Chron.: Fred. 2,35sqq. capit. p. 43. 2,36 p. 60,10.
-		ym-: Chart.: Sangall. A 194.
-		impir-: -> {v. ibi.}
+		hym-: {=> imperator37m_1}
+		em-: Chron.: Fred.; 2,35sqq. capit.; p. 43.; 2,36 p. 60,10.
+		ym-: Chart.: Sangall.; A 194.
+		impir-: {=> impoerator38m_1}
 
 STRUKTUR
     form. sing.:
         gen.:
-            -ri: {v. ibi.} adde Annal.: Plac. a. 1266 p. 516,21.
-            -iae: Chron.: Fred. 2,33. p. 56,22. 2,35.
+            -ri: {=> imperator39m_1} * {adde} Annal.: Plac. a.; 1266; p. 516,21.
+            -iae: Chron.: Fred.; 2,33.; p. 56,22. 2,35.
         abl.:
-            -um: Chron.: Fred. 2,15. 2,35sqq. capit. p. 43.
+            -um: Chron.: Fred.; 2,15. 2,35sqq. capit.; p. 43.
 
 VERWECHSELBAR
     confunditur c.:
-        imperitus: -> { v. ibi. }
+        imperitus: -> {=> impoerator80m_1}
 
 
 BEDEUTUNG
@@ -34,27 +34,27 @@ BEDEUTUNG
 
         UNTER_UNTER_BEDEUTUNG  in univ.:
             BELEGE
-            * Leg.: Burgund. Rom. 38,1 si quis ... nullo metu aut imperio ad pacta venire conpellitur, sed libera voluntate pactum inisse cognuscitur eqs.
-            * Ionas: Bob. Columb. 1,17 p. 185,9 quae (sc. ferae) ad imperium eius statim veniebant.
-            * Lex: Baiuv. 1,10 hoc (sc. lex) per inperium regis vel iudicis fiat.
-            * Arbeo: Emm. 16 p. 49,17 ex imperio principis ... in ospiti sui scuriam ... deductus est episcopus. ~persaepe.; ~v. et p. 1407, 57.
+            * Leg.: Burgund. Rom.; 38,1 "si quis ... nullo metu aut imperio ad pacta venire conpellitur, sed libera voluntate pactum inisse cognuscitur {eqs.}"
+            * Ionas: Bob. Columb.; 1,17 p. 185,9 "quae {sc. ferae} ad imperium eius statim veniebant"
+            * Lex: Baiuv.; 1,10 "hoc {sc. lex} per inperium regis vel iudicis fiat"
+            * Arbeo: Emm.; 16 p. 49,17 "ex imperio principis ... in ospiti sui scuriam ... deductus est" {episcopus} {persaepe} {v. et {=> p. 1407, 57|ziel}}
 
         UNTER_UNTER_BEDEUTUNG
             LATEINISCH	voluntas, arbitrium
             DEUTSCH		Wille, (willkürlicher) Beschluss
 
             BELEGE
-            * Vita: Euch. Val. Mat. 22 quamvis esset Maternus magnae vir auctoritatis ..., nihil tamen ex proprio imperio quasi libera utens potestate exercuit.
+            * Vita: Euch. Val. Mat. 22 "quamvis esset Maternus magnae vir auctoritatis ..., nihil tamen ex proprio imperio quasi libera utens potestate exercuit"
 
 
     UNTER_BEDEUTUNG  in imag. vel translate:
         BELEGE
-        * Petr. Dam.: epist. 10 p. 131,10 qui (lapides intus calidi) eatenus erant frigidi, post nostri (sc. aquae) tactus imperium ad calorem pristinum sunt redacti.
+        * Petr. Dam.: epist. 10 p. 131,10 "qui {lapides intus calidi} eatenus erant frigidi, post nostri (sc. aquae) tactus imperium ad calorem pristinum sunt redacti"
 
 
 BEDEUTUNG
     LATEINISCH	potestas, dominatio, dicio
-    DEUTSCH		Macht, Herrschaft, Herrschaftsgewalt [plur. sensu sing. : -> { v. ibi. al. }]
+    DEUTSCH		Macht, Herrschaft, Herrschaftsgewalt {plur. sensu sing. : {=> v. ibi. al.|imperator40m_2}}
 
     UNTER_BEDEUTUNG  proprie:
 
@@ -72,11 +72,11 @@ BEDEUTUNG
 
             UUU_BEDEUTUNG  usu communi:
                 BELEGE
-                * Willib.: Bonif. 5 p. 24,1 cum ... Carli ... ducis ... super Fresones roboratum esset imperium eqs.
+                * Willib.: Bonif. 5 p. 24,1 cum ... Carli ... ducis ... super Fresones roboratum esset imperium {eqs.}
                 * Einh.: Karol. 1 p. 3,7 ad quos (maiores domus) summa imperii pertinebat.
                 * Albert. Mett.: div. temp. 1,1 cuius (Wicmanni) maiores magnam partem Germanie et maxime circa littora Oceani imperio (imperia var. l.) tenebant.
                 * Dipl.: Conr. II. 64 p. 78,17 Chõnradus ... ad imperium designatus Romanorum.
-                * Const.: imp. II 423,10 p. 557,43 si rex ... in imperatorem electus ... ad imperium transire voluerit eqs. ZUSATZ persaepe. v. et p. 1395, 32.
+                * Const.: imp. II 423,10 p. 557,43 si rex ... in imperatorem electus ... ad imperium transire voluerit {eqs.} ZUSATZ persaepe. v. et p. 1395, 32.
                 * Alcuin.: epist. 129 p. 191,22 a vobis (sc. Cantuariensibus) imperii (imperi S1) potestas prima processit, et fidei catholicae origo exorta est.
 
             UUU_BEDEUTUNG  in indicatione temporis:
@@ -118,7 +118,7 @@ BEDEUTUNG
         UNTER_UNTER_BEDEUTUNG  in univ.:
             BELEGE
             * Alcuin.: carm. 30,2,6 regit pupilla oculi imperio vivacis corporis actus.
-            * Theod. Trev.: transl. Celsi 9 adeo ... virtutum paedagoga, caritas, in eius pectore vigorabili imperio sceptrum obtinuit, quatenus eqs.
+            * Theod. Trev.: transl. Celsi 9 adeo ... virtutum paedagoga, caritas, in eius pectore vigorabili imperio sceptrum obtinuit, quatenus {eqs.}
             * Carm.: var. Walther 1,70,2 quibus (zonis orbis) duo sat expresse patescunt imperia : mee (sc. hiemis) due terminales, tua (sc. aestatis) sola media.
             * Anon.: mus. plan. Coussemaker p. 488b tetra reges maximum huius (sc. harmoniae) tenent imperium. al.
 
@@ -141,7 +141,7 @@ BEDEUTUNG
             DEUTSCH Lauf
 
             BELEGE
-            * Meginfr.: Emm. 5 p. 976A cum defluentis Histri fluminis imperium sequeretur Emmerammus eqs.
+            * Meginfr.: Emm. 5 p. 976A cum defluentis Histri fluminis imperium sequeretur Emmerammus {eqs.}
 
 
     UNTER_BEDEUTUNG  meton:
@@ -154,7 +154,7 @@ BEDEUTUNG
                 BELEGE
                 * Chron.: Fred. 2,15 Assiriorum impirium (imperium p. corr. 1) deletum est.
                 * Widuk.: gest. 1,28 Hluthowico ... usque ad fines Illirici ... et terminos Danorum imperium erat.
-                * Otto Frising.: gest. p. 4,26 (epist. Frid. I. imp.) ut ... hostem utriusque (sc. orientalis et occidentalis) imperii Willehelmum potentia virtutis nostrae conterere vellemus. 1,24 p. 37,12 Romanorum principem adeunt apocrisiarii imperatoris Constantinopolitani tam confederationis vinculum ... inter duo imperia, Hesperiae videlicet et orientis, renovare cupientes quam eqs. ZUSATZ al.
+                * Otto Frising.: gest. p. 4,26 (epist. Frid. I. imp.) ut ... hostem utriusque (sc. orientalis et occidentalis) imperii Willehelmum potentia virtutis nostrae conterere vellemus. 1,24 p. 37,12 Romanorum principem adeunt apocrisiarii imperatoris Constantinopolitani tam confederationis vinculum ... inter duo imperia, Hesperiae videlicet et orientis, renovare cupientes quam {eqs.} ZUSATZ al.
 
             UUU_BEDEUTUNG
                 de Karolinorum vel Francorum sive sacro Romano(rum) imperio q. d.
@@ -166,7 +166,7 @@ BEDEUTUNG
                     * Dipl.: Karoli M. 197 p. 265,14 Karolus ... imperator Romanum gubernans imperium.
                     * Poeta Saxo: 4,172 cunctos ... fines imperii servans (sc. augustus).
                     * Dipl.: Ludow. Iun. 28 (spur.) Ludowicus ... rector imperii Francorum.
-                    * Annal.: Quedl. a. 1014 p. 543,7 plures illorum (fratrum Corbeiensium) ... plus iusto contra ius imperii saevientes eqs.
+                    * Annal.: Quedl. a. 1014 p. 543,7 plures illorum (fratrum Corbeiensium) ... plus iusto contra ius imperii saevientes {eqs.}
                     * Dipl.: Frid. I. 163 sacro imperio et divae rei publicae consulere dememus.
                     * Const.: imp. II 72 p. 85,22 ut tollatur ... rancoris occasio inter ecclesiam et imperium. ZUSATZ persaepe.
                     * PRÄFIX fort. add.: Conc.: Karol. A 16B ut ... gentis suae institutiones legum per primatos inperitos (imperii L) ..., quae repperit diuturna vitiata ..., evelleret ZUSATZ Tassilo dux.
@@ -177,9 +177,9 @@ BEDEUTUNG
 
                 UUUU_BEDEUTUNG  spectat ad cives:
                     BELEGE
-                    * Otto Frising.: gest. 1,1 p. 13,7 cuius rei novitatem (i. imperatorem a papa excommunicatum esse) eo vehementius indignatione motum suscepit imperium, quo eqs.
+                    * Otto Frising.: gest. 1,1 p. 13,7 cuius rei novitatem (i. imperatorem a papa excommunicatum esse) eo vehementius indignatione motum suscepit imperium, quo {eqs.}
                     * Annal.: Magd. a. 1188 episcopus ... in gratiam imperatoris ... se et civitatem suam coram omni imperio dedit; imperator ... in presentia ... tocius imperii ... crucem accepit.
-                    * Arnold. Lub.: chron. 2,18 p. 138,8 cum ... imperator propter nimiam superbiam suam non solum Saxonibus, sed etiam sedi apostolice et omni fere imperio exosus fuisset eqs.
+                    * Arnold. Lub.: chron. 2,18 p. 138,8 cum ... imperator propter nimiam superbiam suam non solum Saxonibus, sed etiam sedi apostolice et omni fere imperio exosus fuisset {eqs.}
 
 
         UNTER_UNTER_BEDEUTUNG
@@ -190,9 +190,9 @@ BEDEUTUNG
                 LATEINISCH	in univ.
 
                 BELEGE
-                * Chron.: Fred. 2,62 p. 86,32 quare ... veniens de imperio non laeteris (sc. Belisarius)? 3,18 p. 100,18 Chlotechildis cum ... conperisset adventum Aridio revertentem ab imperio eqs.
+                * Chron.: Fred. 2,62 p. 86,32 quare ... veniens de imperio non laeteris (sc. Belisarius)? 3,18 p. 100,18 Chlotechildis cum ... conperisset adventum Aridio revertentem ab imperio {eqs.}
                 * Rhythm.: 51,9,1 imperii filia. al.
-                * Ludus: de Antichr. p. 12med. eos (legatos) ... dimittens ipsemet (rex Graecorum) ascendet ad imperium cantans : ‘eqs.’    adde (cf. Wett. Gall. 15sq.) :
+                * Ludus: de Antichr. p. 12med. eos (legatos) ... dimittens ipsemet (rex Graecorum) ascendet ad imperium cantans : ‘{eqs.}’    adde (cf. Wett. Gall. 15sq.) :
                 * Ekkeh.: IV. pict. Sangall. 67 imperii (gloss. : regis) sponsam vexat satan aere tensam : hunc abigat nullus, rebachatur hians, nisi Gallus.
 
             UUU_BEDEUTUNG
@@ -200,7 +200,7 @@ BEDEUTUNG
 
                 BELEGE
                 * Wibald.: epist. I 219 p. 465,26 ad gloriosam maiestatem vestram, ad sanctum et terribile imperium vestrum (i. imperatorem Graecorum) scribere audeo (sim. 387 p. 817,11).
-                * Epist.: Wibald. I 316 imperium meum (i. imperator Graecorum) ... magnam devotionem ... erga tuam preciositatem (i. Wibaldum) obtinet eqs.
+                * Epist.: Wibald. I 316 imperium meum (i. imperator Graecorum) ... magnam devotionem ... erga tuam preciositatem (i. Wibaldum) obtinet {eqs.}
                 * Const.: imp. I 212,1 quia vos consules ... in sacratissimi imperii nostri (i. Friderici) servitio excellenter enituistis. al.
 
 
@@ -218,7 +218,7 @@ BEDEUTUNG
 
             BELEGE
             * Ekkeh.: IV. bened. I 31,57 sceptra, redimicla, florea serta, imperium (gloss. : gestamen rotundum), trabea, strophium.
-            * Ludus: de Antichr. p. 16ex. (c. 1160) imperator ... tollens coronam de capite et tenens eam cum sceptro et imperio ante altare cantet : ‘eqs.’
+            * Ludus: de Antichr. p. 16ex. (c. 1160) imperator ... tollens coronam de capite et tenens eam cum sceptro et imperio ante altare cantet : ‘{eqs.}’
 
 
         UNTER_UNTER_BEDEUTUNG
