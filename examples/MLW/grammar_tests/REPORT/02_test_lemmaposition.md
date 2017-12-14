@@ -128,32 +128,36 @@ Match-test "3"
                 " "
             )
         )
-        (LAT_WORT
-            (:RegExp
-                "facietergula"
+        (LemmaVariante
+            (LAT_WORT
+                (:RegExp
+                    "facietergula"
+                )
+                (:Whitespace
+                    " "
+                )
             )
-            (:Whitespace
-                " "
-            )
-        )
-        (Zusatz
-            (:Token
-                "{"
-            )
-            (FREITEXT
-                (DEU_WORT
-                    (DEU_KLEIN
-                        (:RegExp
-                            "sim"
+            (Zusatz
+                (:Series
+                    (:Token
+                        "{"
+                    )
+                    (FREITEXT
+                        (DEU_WORT
+                            (DEU_KLEIN
+                                (:RegExp
+                                    "sim"
+                                )
+                            )
+                        )
+                        (SATZZEICHEN
+                            "."
                         )
                     )
+                    (:Token
+                        "}"
+                    )
                 )
-                (SATZZEICHEN
-                    "."
-                )
-            )
-            (:Token
-                "}"
             )
         )
     )
@@ -196,34 +200,38 @@ Match-test "4"
                         " "
                     )
                 )
-                (LAT_WORT
-                    (:RegExp
-                        "fascistergula"
-                    )
-                    (:Whitespace
-                        " "
-                    )
-                )
-            )
-        )
-        (Zusatz
-            (:Token
-                "{"
-            )
-            (FREITEXT
-                (DEU_WORT
-                    (DEU_KLEIN
+                (LemmaVariante
+                    (LAT_WORT
                         (:RegExp
-                            "sim"
+                            "fascistergula"
+                        )
+                        (:Whitespace
+                            " "
+                        )
+                    )
+                    (Zusatz
+                        (:Series
+                            (:Token
+                                "{"
+                            )
+                            (FREITEXT
+                                (DEU_WORT
+                                    (DEU_KLEIN
+                                        (:RegExp
+                                            "sim"
+                                        )
+                                    )
+                                )
+                                (SATZZEICHEN
+                                    "."
+                                )
+                            )
+                            (:Token
+                                "}"
+                            )
                         )
                     )
                 )
-                (SATZZEICHEN
-                    "."
-                )
-            )
-            (:Token
-                "}"
             )
         )
     )
@@ -248,8 +256,7 @@ Match-test "1"
     fascitergula
     facietergula
     facistergula
-    fascitercula
-    {sim.}
+    fascitercula {sim.}
     
     GRAMMATIK
     nomen; -ae f.
@@ -333,40 +340,37 @@ Match-test "1"
                             )
                         )
                     )
-                    (LAT_WORT
-                        (:RegExp
-                            "fascitercula"
+                    (LemmaVariante
+                        (LAT_WORT
+                            (:RegExp
+                                "fascitercula"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
-                    )
-                )
-            )
-            (:Series
-                (ZWW
-                    (ZEILENSPRUNG
-                        (:RegExp
-                            ""
-                            ""
-                        )
-                    )
-                )
-                (Zusatz
-                    (:Token
-                        "{"
-                    )
-                    (FREITEXT
-                        (DEU_WORT
-                            (DEU_KLEIN
-                                (:RegExp
-                                    "sim"
+                        (Zusatz
+                            (:Series
+                                (:Token
+                                    "{"
+                                )
+                                (FREITEXT
+                                    (DEU_WORT
+                                        (DEU_KLEIN
+                                            (:RegExp
+                                                "sim"
+                                            )
+                                        )
+                                    )
+                                    (SATZZEICHEN
+                                        "."
+                                    )
+                                )
+                                (:Token
+                                    "}"
                                 )
                             )
                         )
-                        (SATZZEICHEN
-                            "."
-                        )
-                    )
-                    (:Token
-                        "}"
                     )
                 )
             )

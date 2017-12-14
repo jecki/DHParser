@@ -86,9 +86,8 @@ class MLWGrammar(Grammar):
     LemmaWort         = LAT_WORT
     
     LemmaVarianten    = LemmaVariante { [","] [ZW] LemmaVariante }
-                        [[TR] Zusatz]
     
-    LemmaVariante     = LAT_WORT
+    LemmaVariante     = LAT_WORT [Zusatz]
     
     
     ## GRAMMATIK-POSITION ##
@@ -314,7 +313,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "99f1201bf75fcfa59078da911b51898a"
+    source_hash__ = "cf6864469af6da5c73aae7ea82cdceef"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -435,8 +434,8 @@ class MLWGrammar(Grammar):
     wortart.set(Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."), Token("praeposition"), Token("praep.")))
     Grammatik = Series(wortart, ABS, flexion, Option(genus), mandatory=1)
     GrammatikPosition = Series(ZWW, Token("GRAMMATIK"), Option(LZ), Grammatik, ZeroOrMore(Series(ABS, GrammatikVariante)), mandatory=3)
-    LemmaVariante = Synonym(LAT_WORT)
-    LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Token(",")), Option(ZW), LemmaVariante)), Option(Series(Option(TR), Zusatz)))
+    LemmaVariante = Series(LAT_WORT, Option(Zusatz))
+    LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Token(",")), Option(ZW), LemmaVariante)))
     LemmaWort = Synonym(LAT_WORT)
     gesichert = Token("$")
     klassisch = Token("*")

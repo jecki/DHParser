@@ -34,9 +34,8 @@ Lemma             = [< klassisch | gesichert >] LemmaWort
 LemmaWort         = LAT_WORT
 
 LemmaVarianten    = LemmaVariante { [","] [ZW] LemmaVariante }
-                    [[TR] Zusatz]
 
-LemmaVariante     = LAT_WORT
+LemmaVariante     = LAT_WORT [Zusatz]
 
 
 ## GRAMMATIK-POSITION ##
