@@ -1,6 +1,9 @@
 LEMMA *facitergula
 
-    fascitergula, facietergula, facistergula, facitercula {sim.}
+    fascitergula
+    facietergula
+    facistergula
+    facitercula {sim.}
 
 
 GRAMMATIK
@@ -18,8 +21,8 @@ SCHREIBWEISE
 
 
 BEDEUTUNG
-LAT pannus, faciale, sudarium --
-DEU Gesichts-, Schweißtuch {usu liturg.; de re v. {=> eintrag/ibi_X}}:
+LAT pannus, faciale, sudarium
+DEU Gesichts-, Schweißtuch {usu liturg.; de re v. {=> eintrag/ibi_X}}
 
 * Catal.: thes. Germ.; 28,11 (post 851) "-um III".
 * Form.: Sangall.; {#ibi_2} 39 p. 421,16
@@ -34,7 +37,8 @@ DEU Gesichts-, Schweißtuch {usu liturg.; de re v. {=> eintrag/ibi_X}}:
 
 
 BEDEUTUNG
-LAT capital, rica -- DEU Kopftuch:
+LAT capital, rica
+DEU Kopftuch
 
 * Transl.: Libor.  I; 32
   "raptis  feminarum -is  (fa[s]citergiis  {var.  l.})."
@@ -42,3 +46,24 @@ LAT capital, rica -- DEU Kopftuch:
   "nuditatem  membrorum  illius {puellae}  tegere  festinarunt  fideles clerici et  laici  inprimis cum eorum -cula, dein vestibus solitis."
 
 AUTORIN Weber
+
+
+// Der folgende Teil wird bis auf die URLs automatisch generiert!
+// Kann auch in eine eigene Datei ausgelagert werden.
+
+
+STELLENVERZEICHNIS fascitergula
+
+* Form.: Sangall.; 39 p. 421,16  {=> URL_1}
+* Libri: confrat. I; app. A  6  p.  137,30 {-}   // {-} bedeutet: keine URL vorhanden
+* Catal.: thes. Germ.;
+     18,7   {=> URL_3}
+     28,11 (post 851) {=> URL_4}
+     76,15  {=> URL_5}
+     40,5   {=> URL_6}
+     129a,5 {=> URL_7}
+     24,8   {=> URL_8}
+     114,8  {=> URL_9}
+     6,24   {-}
+     92,6   {-}
+     21,20 IIII {=> URL_10}

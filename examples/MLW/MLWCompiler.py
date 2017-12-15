@@ -71,7 +71,8 @@ class MLWGrammar(Grammar):
                         [VerweisPosition]
                         { UnterArtikel }
                         ArtikelVerfasser
-                        [LZ]  DATEI_ENDE
+                        [Stellenverzeichnis]
+                        [LZ] DATEI_ENDE
     
     
     #### LEMMA-POSITION ##########################################################
@@ -85,7 +86,7 @@ class MLWGrammar(Grammar):
     
     LemmaWort         = LAT_WORT
     
-    LemmaVarianten    = LemmaVariante { [","] [ZW] LemmaVariante }
+    LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
     
     LemmaVariante     = LAT_WORT [Zusatz]
     
@@ -172,7 +173,7 @@ class MLWGrammar(Grammar):
     BelegPosition = ZWW ["BELEGE" [LZ]] Belege
     
     
-    #### VERWEIS-POSITION #####################################################
+    #### VERWEIS-POSITION ########################################################
     
     VerweisPosition = ZWW "VERWEISE"
     
@@ -188,9 +189,12 @@ class MLWGrammar(Grammar):
     Name             = { NAME | NAMENS_ABKÜRZUNG }+
     
     
-    #### STELLENVERWEISE #########################################################
+    #### STELLENVERZEICHNIS ######################################################
     
-    # TODO: Syntax für Stellenverweise
+    Stellenverzeichnis = ZWW "STELLENVERZEICHNIS" [LemmaWort] ZWW Verweisliste
+    Verweisliste       = { [LZ] "*" Stellenverweis }
+    Stellenverweis     = BelegQuelle { [ABS] Stelle (NullVerweis | Verweis) }
+    NullVerweis        = "{" "-" "}"
     
     
     #### Schlüsselwörter #########################################################
@@ -200,7 +204,6 @@ class MLWGrammar(Grammar):
     GRI = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
     
     SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
-    
     
     
     #### ZUSATZ an verschiedenen Stellen der Struktur ############################
@@ -215,10 +218,10 @@ class MLWGrammar(Grammar):
     #### BELEGE ##################################################################
     
     Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-    Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat ["."]
+    Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
     Zitat            = Quellenangabe
                        { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
-                         [[ZW] BelegText] [[TR] Zusatz] }
+                         [[ZW] BelegText] [[LZ] Zusatz] }
     
     Quellenangabe    = [Anker] < BelegQuelle | Verweis >
     BelegQuelle      = Autor DPP Werk
@@ -260,7 +263,8 @@ class MLWGrammar(Grammar):
     LAT_WORT         = /(?!-)[a-z|\-_]+/~
     LAT_WORT_ERW     = LAT_WORT | ( "(" LAT_WORT ")" )
     GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
-    ZAHL             = /[\d_]+/~
+    ZAHL             = /[\d]+/~
+    SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
     ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
     
     SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
@@ -269,7 +273,7 @@ class MLWGrammar(Grammar):
     BUCHSTABENFOLGE  = /\w+/~
     ZEICHENFOLGE     = /[\w()-]+/~
     # EINZEILER        = /[\w()-. \t]+/~
-    TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
+    TEXTELEMENT      = DEU_WORT | SEITENZAHL | ROEMISCHE_ZAHL
     EINZEILER        = { TEXTELEMENT | TEIL_SATZZEICHEN }+
     FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+
     MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ }+
@@ -294,8 +298,6 @@ class MLWGrammar(Grammar):
     
     DATEI_ENDE       = !/./
     NIEMALS          = /(?!.)/
-    
-    DUMMY            = "EBNF-Grammatik an dieser Stelle noch nicht definiert!"
     """
     DEU_WORT = Forward()
     FREITEXT = Forward()
@@ -303,24 +305,24 @@ class MLWGrammar(Grammar):
     Kategorien = Forward()
     LAT_WORT = Forward()
     LZ = Forward()
+    LemmaWort = Forward()
     ROEMISCHE_ZAHL = Forward()
     SATZZEICHEN = Forward()
+    SEITENZAHL = Forward()
     TEIL_SATZZEICHEN = Forward()
     TEXTELEMENT = Forward()
-    ZAHL = Forward()
     ZWW = Forward()
     Zusatz = Forward()
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "cf6864469af6da5c73aae7ea82cdceef"
+    source_hash__ = "5acd793ecc09621740b44d8005c673d0"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
-    DUMMY = Token("EBNF-Grammatik an dieser Stelle noch nicht definiert!")
     NIEMALS = RegExp('(?!.)')
     DATEI_ENDE = NegativeLookahead(RegExp('.'))
     FORTSETZUNG = NegativeLookahead(Series(ZWW, RegExp('[^:\\n]+[:]')))
@@ -340,13 +342,14 @@ class MLWGrammar(Grammar):
     MEHRZEILER = OneOrMore(Alternative(FREITEXT, RegExp('\\s+(?=[\\w,;:.\\(\\)\\-])')))
     FREITEXT.set(OneOrMore(Alternative(TEXTELEMENT, SATZZEICHEN, GROSSSCHRIFT)))
     EINZEILER = OneOrMore(Alternative(TEXTELEMENT, TEIL_SATZZEICHEN))
-    TEXTELEMENT.set(Alternative(DEU_WORT, ZAHL, ROEMISCHE_ZAHL))
+    TEXTELEMENT.set(Alternative(DEU_WORT, SEITENZAHL, ROEMISCHE_ZAHL))
     ZEICHENFOLGE = RE('[\\w()-]+')
     BUCHSTABENFOLGE = RE('\\w+')
     TEIL_SATZZEICHEN.set(RE('(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)'))
     SATZZEICHEN.set(RE('(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\\[\\]]+)'))
     ROEMISCHE_ZAHL.set(RE('(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\\w])'))
-    ZAHL.set(RE('[\\d_]+'))
+    SEITENZAHL.set(RE('[\\d]+(?:\\^(?:(?:\\{[\\d\\w.]+\\})|\\w))?'))
+    ZAHL = RE('[\\d]+')
     GROSSSCHRIFT.set(RE('(?!-)[A-ZÄÖÜ_\\-]+'))
     LAT_WORT_ERW = Alternative(LAT_WORT, Series(Token("("), LAT_WORT, Token(")")))
     LAT_WORT.set(RE('(?!-)[a-z|\\-_]+'))
@@ -376,8 +379,8 @@ class MLWGrammar(Grammar):
     BelegText = Series(RegExp('"'), ZeroOrMore(Alternative(MEHRZEILER, Zusatz)), RE('"'), Option(Token(".")), mandatory=2)
     BelegQuelle = Series(Autor, DPP, Werk)
     Quellenangabe = Series(Option(Anker), SomeOf(BelegQuelle, Verweis))
-    Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), Option(Anker), Option(Zusatz), SomeOf(Stelle, Verweis), Option(Series(Option(ZW), BelegText)), Option(Series(Option(TR), Zusatz)))))
-    Beleg = Alternative(Series(Option(Zusatz), Series(Verweis, Option(Zitat))), Series(Zitat, Option(Token("."))))
+    Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), Option(Anker), Option(Zusatz), SomeOf(Stelle, Verweis), Option(Series(Option(ZW), BelegText)), Option(Series(Option(LZ), Zusatz)))))
+    Beleg = Series(Option(Zusatz), Alternative(Series(Verweis, Option(Zitat)), Zitat), Option(Series(ABS, Zusatz)), Option(Token(".")))
     Belege = Series(Option(Token("*")), Beleg, ZeroOrMore(Series(Option(LZ), Token("*"), Beleg)))
     FreierZusatz = OneOrMore(Alternative(FREITEXT, VerweisKern, Verweis))
     GemischterZusatz = Series(Alternative(Token("usu"), Token("plur. sensu sing.")), FreierZusatz)
@@ -388,6 +391,10 @@ class MLWGrammar(Grammar):
     GRI = Alternative(Token("GRIECHISCH"), Token("GRIECH"), Token("GRIE"), Token("GRI"))
     DEU = Alternative(Token("DEUTSCH"), Token("DEU"))
     LAT = Alternative(Token("LATEINISCH"), Token("LAT"))
+    NullVerweis = Series(Token("{"), Token("-"), Token("}"))
+    Stellenverweis = Series(BelegQuelle, ZeroOrMore(Series(Option(ABS), Stelle, Alternative(NullVerweis, Verweis))))
+    Verweisliste = ZeroOrMore(Series(Option(LZ), Token("*"), Stellenverweis))
+    Stellenverzeichnis = Series(ZWW, Token("STELLENVERZEICHNIS"), Option(LemmaWort), ZWW, Verweisliste)
     Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG))
     ArtikelVerfasser = Series(ZWW, Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
     UnterArtikel = Series(ZWW, Token("UNTER-ARTIKEL"))
@@ -435,13 +442,13 @@ class MLWGrammar(Grammar):
     Grammatik = Series(wortart, ABS, flexion, Option(genus), mandatory=1)
     GrammatikPosition = Series(ZWW, Token("GRAMMATIK"), Option(LZ), Grammatik, ZeroOrMore(Series(ABS, GrammatikVariante)), mandatory=3)
     LemmaVariante = Series(LAT_WORT, Option(Zusatz))
-    LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Token(",")), Option(ZW), LemmaVariante)))
-    LemmaWort = Synonym(LAT_WORT)
+    LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Alternative(Token(";"), Token(","))), Option(ZW), LemmaVariante)), Option(Series(ABS, Zusatz)))
+    LemmaWort.set(Synonym(LAT_WORT))
     gesichert = Token("$")
     klassisch = Token("*")
     Lemma = Series(Option(SomeOf(klassisch, gesichert)), LemmaWort)
     LemmaPosition = Series(Option(ABS), Token("LEMMA"), Option(LZ), Lemma, TR, Option(LemmaVarianten), GrammatikPosition, Option(Zusatz), mandatory=3)
-    Artikel = Series(Option(LZ), OneOrMore(LemmaPosition), Option(EtymologiePosition), Option(ArtikelKopf), BedeutungsPosition, Option(VerweisPosition), ZeroOrMore(UnterArtikel), ArtikelVerfasser, Option(LZ), DATEI_ENDE, mandatory=1)
+    Artikel = Series(Option(LZ), OneOrMore(LemmaPosition), Option(EtymologiePosition), Option(ArtikelKopf), BedeutungsPosition, Option(VerweisPosition), ZeroOrMore(UnterArtikel), ArtikelVerfasser, Option(Stellenverzeichnis), Option(LZ), DATEI_ENDE, mandatory=1)
     root__ = Artikel
     
 def get_grammar() -> MLWGrammar:
@@ -498,6 +505,7 @@ MLW_AST_transformation_table = {
     "Zusatz": [],
     "ArtikelVerfasser": [],
     "Name": [],
+    "Stelle": [reduce_single_child],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],

@@ -19,7 +19,8 @@ Artikel           = [LZ]
                     [VerweisPosition]
                     { UnterArtikel }
                     ArtikelVerfasser
-                    [LZ]  DATEI_ENDE
+                    [Stellenverzeichnis]
+                    [LZ] DATEI_ENDE
 
 
 #### LEMMA-POSITION ##########################################################
@@ -33,7 +34,7 @@ Lemma             = [< klassisch | gesichert >] LemmaWort
 
 LemmaWort         = LAT_WORT
 
-LemmaVarianten    = LemmaVariante { [","] [ZW] LemmaVariante }
+LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
 
 LemmaVariante     = LAT_WORT [Zusatz]
 
@@ -120,7 +121,7 @@ BedeutungsQualifikation = Zusatz # "[" Gegenstand DPP (Verweis | EINZEILER) §"]
 BelegPosition = ZWW ["BELEGE" [LZ]] Belege
 
 
-#### VERWEIS-POSITION #####################################################
+#### VERWEIS-POSITION ########################################################
 
 VerweisPosition = ZWW "VERWEISE"
 
@@ -136,9 +137,12 @@ ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") Name
 Name             = { NAME | NAMENS_ABKÜRZUNG }+
 
 
-#### STELLENVERWEISE #########################################################
+#### STELLENVERZEICHNIS ######################################################
 
-# TODO: Syntax für Stellenverweise
+Stellenverzeichnis = ZWW "STELLENVERZEICHNIS" [LemmaWort] ZWW Verweisliste
+Verweisliste       = { [LZ] "*" Stellenverweis }
+Stellenverweis     = BelegQuelle { [ABS] Stelle (NullVerweis | Verweis) }
+NullVerweis        = "{" "-" "}"
 
 
 #### Schlüsselwörter #########################################################
@@ -148,7 +152,6 @@ DEU = "DEUTSCH" | "DEU"
 GRI = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
 
 SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
-
 
 
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
@@ -163,10 +166,10 @@ Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}
 #### BELEGE ##################################################################
 
 Belege           = ["*"] Beleg { [LZ] "*" Beleg }
-Beleg            = [Zusatz] (Verweis [Zitat]) | Zitat ["."]
+Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
 Zitat            = Quellenangabe
                    { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
-                     [[ZW] BelegText] [[TR] Zusatz] }
+                     [[ZW] BelegText] [[LZ] Zusatz] }
 
 Quellenangabe    = [Anker] < BelegQuelle | Verweis >
 BelegQuelle      = Autor DPP Werk
@@ -208,7 +211,8 @@ DEU_KLEIN        = /(?!-)[a-zäöüßę_\-]+/~
 LAT_WORT         = /(?!-)[a-z|\-_]+/~
 LAT_WORT_ERW     = LAT_WORT | ( "(" LAT_WORT ")" )
 GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
-ZAHL             = /[\d_]+/~
+ZAHL             = /[\d]+/~
+SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
 
 SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
@@ -217,7 +221,7 @@ TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)/~ # Satzeichen bis au
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
 # EINZEILER        = /[\w()-. \t]+/~
-TEXTELEMENT      = DEU_WORT | ZAHL | ROEMISCHE_ZAHL
+TEXTELEMENT      = DEU_WORT | SEITENZAHL | ROEMISCHE_ZAHL
 EINZEILER        = { TEXTELEMENT | TEIL_SATZZEICHEN }+
 FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+
 MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ }+
@@ -243,4 +247,3 @@ FORTSETZUNG      = !(ZWW /[^:\n]+[:]/)
 DATEI_ENDE       = !/./
 NIEMALS          = /(?!.)/
 
-DUMMY            = "EBNF-Grammatik an dieser Stelle noch nicht definiert!"

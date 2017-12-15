@@ -646,3 +646,41 @@ Fail-test "f1"
 
 ### Test-code:
     Text -> Verweis
+
+
+Test of parser: "SEITENZAHL"
+============================
+
+
+Match-test "m1"
+---------------
+
+### Test-code:
+    123
+
+### AST
+    (SEITENZAHL
+        "123"
+    )
+
+Match-test "m2"
+---------------
+
+### Test-code:
+    123^b
+
+### AST
+    (SEITENZAHL
+        "123^b"
+    )
+
+Match-test "m3"
+---------------
+
+### Test-code:
+    4^{capit.}
+
+### AST
+    (SEITENZAHL
+        "4^{capit.}"
+    )
