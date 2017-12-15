@@ -384,7 +384,7 @@ class Parser(ParserBase):
 
     There are two different types of parsers:
 
-    1. *Named parsers* for which a name is set in field parser.name.
+    1. *Named parsers* for which a name is set in field `parser.name`.
        The results produced by these parsers can later be retrieved in
        the AST by the parser name.
 

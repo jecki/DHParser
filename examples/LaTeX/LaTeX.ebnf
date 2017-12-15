@@ -28,26 +28,27 @@ frontpages     = sequence
 #######################################################################
 
 Chapters       = { Chapter [WSPC] }+
-Chapter        = "\chapter" block [WSPC] { sequence | Sections }
+Chapter        = "\chapter" heading [WSPC] { sequence | Sections }
 
 Sections       = { Section [WSPC] }+
-Section        = "\section" block [WSPC] { sequence | SubSections }
+Section        = "\section" heading [WSPC] { sequence | SubSections }
 
 SubSections    = { SubSection [WSPC] }+
-SubSection     = "\subsection" block [WSPC] { sequence | SubSubSections }
+SubSection     = "\subsection" heading [WSPC] { sequence | SubSubSections }
 
 SubSubSections = { SubSubSection [WSPC] }+
-SubSubSection  = "\subsubsection" block [WSPC] { sequence | Paragraphs }
+SubSubSection  = "\subsubsection" heading [WSPC] { sequence | Paragraphs }
 
 Paragraphs     = { Paragraph [WSPC] }+
-Paragraph      = "\paragraph" block [WSPC] { sequence | SubParagraphs }
+Paragraph      = "\paragraph" heading [WSPC] { sequence | SubParagraphs }
 
 SubParagraphs  = { SubParagraph [WSPC] }+
-SubParagraph   = "\subparagraph" block [WSPC] [ sequence ]
+SubParagraph   = "\subparagraph" heading [WSPC] [ sequence ]
 
-Bibliography   = "\bibliography" block [WSPC]
+Bibliography   = "\bibliography" heading [WSPC]
 Index          = "\printindex" [WSPC]
 
+heading        = block
 
 #######################################################################
 #

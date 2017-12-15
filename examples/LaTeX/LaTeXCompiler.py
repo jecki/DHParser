@@ -22,7 +22,8 @@ from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Altern
     PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
-    flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first
+    flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first, \
+    remove_parser
 
 
 #######################################################################
@@ -77,26 +78,27 @@ class LaTeXGrammar(Grammar):
     #######################################################################
     
     Chapters       = { Chapter [WSPC] }+
-    Chapter        = "\chapter" block [WSPC] { sequence | Sections }
+    Chapter        = "\chapter" heading [WSPC] { sequence | Sections }
     
     Sections       = { Section [WSPC] }+
-    Section        = "\section" block [WSPC] { sequence | SubSections }
+    Section        = "\section" heading [WSPC] { sequence | SubSections }
     
     SubSections    = { SubSection [WSPC] }+
-    SubSection     = "\subsection" block [WSPC] { sequence | SubSubSections }
+    SubSection     = "\subsection" heading [WSPC] { sequence | SubSubSections }
     
     SubSubSections = { SubSubSection [WSPC] }+
-    SubSubSection  = "\subsubsection" block [WSPC] { sequence | Paragraphs }
+    SubSubSection  = "\subsubsection" heading [WSPC] { sequence | Paragraphs }
     
     Paragraphs     = { Paragraph [WSPC] }+
-    Paragraph      = "\paragraph" block [WSPC] { sequence | SubParagraphs }
+    Paragraph      = "\paragraph" heading [WSPC] { sequence | SubParagraphs }
     
     SubParagraphs  = { SubParagraph [WSPC] }+
-    SubParagraph   = "\subparagraph" block [WSPC] [ sequence ]
+    SubParagraph   = "\subparagraph" heading [WSPC] [ sequence ]
     
-    Bibliography   = "\bibliography" block [WSPC]
+    Bibliography   = "\bibliography" heading [WSPC]
     Index          = "\printindex" [WSPC]
     
+    heading        = block
     
     #######################################################################
     #
@@ -228,7 +230,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "70184539c7bcb0d72fcd390a8aade40b"
+    source_hash__ = "fafffa29d26d712fde61c15c1a92dce8"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
@@ -298,19 +300,20 @@ class LaTeXGrammar(Grammar):
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))
+    heading = Synonym(block)
     Index = Series(Token("\\printindex"), Option(WSPC))
-    Bibliography = Series(Token("\\bibliography"), block, Option(WSPC))
-    SubParagraph = Series(Token("\\subparagraph"), block, Option(WSPC), Option(sequence))
+    Bibliography = Series(Token("\\bibliography"), heading, Option(WSPC))
+    SubParagraph = Series(Token("\\subparagraph"), heading, Option(WSPC), Option(sequence))
     SubParagraphs = OneOrMore(Series(SubParagraph, Option(WSPC)))
-    Paragraph = Series(Token("\\paragraph"), block, Option(WSPC), ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraph = Series(Token("\\paragraph"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, SubParagraphs)))
     Paragraphs = OneOrMore(Series(Paragraph, Option(WSPC)))
-    SubSubSection = Series(Token("\\subsubsection"), block, Option(WSPC), ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSection = Series(Token("\\subsubsection"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, Paragraphs)))
     SubSubSections = OneOrMore(Series(SubSubSection, Option(WSPC)))
-    SubSection = Series(Token("\\subsection"), block, Option(WSPC), ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSection = Series(Token("\\subsection"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, SubSubSections)))
     SubSections = OneOrMore(Series(SubSection, Option(WSPC)))
-    Section = Series(Token("\\section"), block, Option(WSPC), ZeroOrMore(Alternative(sequence, SubSections)))
+    Section = Series(Token("\\section"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, SubSections)))
     Sections = OneOrMore(Series(Section, Option(WSPC)))
-    Chapter = Series(Token("\\chapter"), block, Option(WSPC), ZeroOrMore(Alternative(sequence, Sections)))
+    Chapter = Series(Token("\\chapter"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Chapter, Option(WSPC)))
     frontpages = Synonym(sequence)
     document = Series(Option(WSPC), Token("\\begin{document}"), Option(WSPC), frontpages, Option(WSPC), Alternative(Chapters, Sections), Option(WSPC), Option(Bibliography), Option(Index), Option(WSPC), Token("\\end{document}"), Option(WSPC), EOF, mandatory=12)
@@ -362,24 +365,16 @@ LaTeX_AST_transformation_table = {
     "preamble": [],
     "document": [],
     "frontpages": reduce_single_child,
-    "Chapters": [],
-    "Chapter": [],
-    "Sections": [],
-    "Section": [],
-    "SubSections": [],
-    "SubSection": [],
-    "SubSubSections": [],
-    "SubSubSection": [],
-    "Paragraphs": [],
-    "Paragraph": [],
-    "SubParagraphs": [],
-    "SubParagraph": [],
+    "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
+    "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph":
+        [remove_first, flatten(is_anonymous, False)],
+    "heading": reduce_single_child,
     "Bibliography": [],
     "Index": [],
     "block_environment": replace_by_single_child,
     "known_environment": replace_by_single_child,
     "generic_block": [],
-    "begin_generic_block, end_generic_block": replace_by_single_child,
+    "begin_generic_block, end_generic_block": [remove_parser('NEW_LINE'), replace_by_single_child],
     "itemize, enumerate": [remove_brackets, flatten],
     "item": [remove_first],
     "figure": [],
@@ -405,8 +400,8 @@ LaTeX_AST_transformation_table = {
     "footnote": [],
     "includegraphics": [],
     "caption": [],
-    "config": [remove_brackets],
-    "block": [remove_brackets, flatten],
+    "config": [remove_brackets, reduce_single_child],
+    "block": [remove_brackets, flatten, replace_by_single_child],
     "text": collapse,
     "no_command, blockcmd": [],
     "structural": [],

@@ -437,7 +437,7 @@ class EBNFCompiler(Compiler):
             if rule.startswith('Alternative'):
                 transformations = '[replace_or_reduce]'
             elif rule.startswith('Synonym'):
-                transformations = '[replace_by_single_child]'
+                transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
         transtable.append('    ":Token, :RE": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
