@@ -52,6 +52,7 @@ __all__ = ('TransformationDict',
            'is_one_of',
            'has_content',
            'remove_children_if',
+           'remove_children',
            'remove_parser',
            'remove_content',
            'remove_first',
@@ -497,7 +498,9 @@ def remove_children_if(context: List[Node], condition: Callable):  # , section: 
 
 
 @transformation_factory(Callable)
-def remove_children(context: List[Node], condition: Callable, section: slice = slice(None)):
+def remove_children(context: List[Node],
+                    condition: Callable = TRUE_CONDITION,
+                    section: slice = slice(None)):
     """Removes all nodes from a slice of the result field if the function
     `condition(child_node)` evaluates to `True`."""
     node = context[-1]

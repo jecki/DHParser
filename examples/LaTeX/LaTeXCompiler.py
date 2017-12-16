@@ -23,7 +23,7 @@ from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Altern
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first, \
-    remove_parser
+    remove_tokens, remove_parser, TOKEN_PTYPE
 
 
 #######################################################################
@@ -339,6 +339,8 @@ def get_grammar() -> LaTeXGrammar:
 
 
 def streamline_whitespace(context):
+    if context[-2].parser.ptype == ":Token":
+        return
     node = context[-1]
     assert node.tag_name in ['WSPC', ':Whitespace']
     s = str(node)
@@ -357,17 +359,39 @@ def streamline_whitespace(context):
 def watch(node):
     print(node.as_sxpr())
 
+flatten_structure = flatten(lambda context: is_anonymous(context) or is_one_of(
+    context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
+              "SubParagraphs", "sequence"}), True)
+
+
+def is_commandname(context):
+    node = context[-1]
+    if node.parser.ptype == TOKEN_PTYPE:
+        parent = context[-2]
+        if len(parent.children) > 1:
+            parent_name = parent.tag_name.lower()
+            content = str(node)
+            if (content == '\\' + parent_name
+                or content == '\\begin{' + parent_name + '}'
+                or content == '\\end{' + parent_name + '}'):
+                return True
+    return False
+
+
+drop_expendables = remove_children_if(lambda context: is_empty(context) or
+                                                      is_one_of(context, {'PARSEP', 'WSPC'}) or
+                                                      is_commandname(context))
+
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "+": remove_children_if(lambda node: is_empty(node) or is_one_of(node, {'PARSEP', 'WSPC'})),
+    "+": [drop_expendables, flatten_structure],
     "latexdoc": [],
     "preamble": [],
-    "document": [],
+    "document": [flatten_structure],
     "frontpages": reduce_single_child,
     "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
-    "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph":
-        [remove_first, flatten(is_anonymous, False)],
+    "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph": [],
     "heading": reduce_single_child,
     "Bibliography": [],
     "Index": [],
@@ -376,13 +400,16 @@ LaTeX_AST_transformation_table = {
     "generic_block": [],
     "begin_generic_block, end_generic_block": [remove_parser('NEW_LINE'), replace_by_single_child],
     "itemize, enumerate": [remove_brackets, flatten],
-    "item": [remove_first],
+    "item": [],
     "figure": [],
     "quotation": [reduce_single_child, remove_brackets],
     "verbatim": [],
-    "table": [],
-    "table_config": [],
-    "block_of_paragraphs": [],
+    "tabular": [],
+    "tabular_config, block_of_paragraphs": [remove_brackets, reduce_single_child],
+    "tabular_row": [flatten, remove_tokens('&', '\\')],
+    "tabular_cell": [flatten, remove_whitespace],
+    "multicolumn": [remove_tokens('{', '}')],
+    "hline": [remove_whitespace, reduce_single_child],
     "sequence": [flatten],
     "paragraph": [flatten],
     "text_element": replace_by_single_child,
@@ -417,7 +444,8 @@ LaTeX_AST_transformation_table = {
     "LB": [],
     "BACKSLASH": [],
     "EOF": [],
-    ":Token": reduce_single_child,
+    ":Token":
+        [remove_whitespace, reduce_single_child],
     ":RE": replace_by_single_child,
     ":Whitespace": streamline_whitespace,
     "*": replace_by_single_child
