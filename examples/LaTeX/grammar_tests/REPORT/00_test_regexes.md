@@ -467,25 +467,19 @@ Match-test "3"
             ""
             ""
         )
-        (:ZeroOrMore
-            (:Series
-                (:RegExp
-                    "% Comment"
-                )
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
-            (:Series
-                (:RegExp
-                    "% Comment"
-                )
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
+        (:RegExp
+            "% Comment"
+        )
+        (:RegExp
+            ""
+            ""
+        )
+        (:RegExp
+            "% Comment"
+        )
+        (:RegExp
+            ""
+            ""
         )
     )
 

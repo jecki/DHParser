@@ -59,10 +59,8 @@ Match-test "2"
             (CMDNAME
                 "\emph"
             )
-            (block
-                (text
-                    "inline commands"
-                )
+            (text
+                "inline commands"
             )
         )
         (:Whitespace
@@ -277,9 +275,7 @@ Match-test "7"
                 "\xy"
             )
             (config
-                (text
-                    "xycgf"
-                )
+                "xycgf"
             )
             (block
                 (text
@@ -339,10 +335,8 @@ Match-test "8"
             (CMDNAME
                 "\xy"
             )
-            (block
-                (text
-                    "complex"
-                )
+            (text
+                "complex"
             )
         )
         (text
@@ -482,22 +476,9 @@ Match-test "9"
             ""
         )
         (footnote
-            (:Token
-                "\footnote"
-            )
             (block_of_paragraphs
-                (:Token
-                    "{"
-                )
-                (sequence
-                    (paragraph
-                        (text
-                            "footnote"
-                        )
-                    )
-                )
-                (:Token
-                    "}"
+                (text
+                    "footnote"
                 )
             )
         )
@@ -708,15 +689,13 @@ Match-test "4"
             )
         )
         (quotation
-            (sequence
-                (paragraph
-                    (text
-                        "include block environments"
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
+            (paragraph
+                (text
+                    "include block environments"
+                )
+                (:Whitespace
+                    ""
+                    ""
                 )
             )
         )

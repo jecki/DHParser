@@ -20,42 +20,28 @@ Match-test "1"
 
 ### AST
     (generic_block
-        (begin_generic_block
-            (begin_environment
-                "generic"
+        (begin_environment
+            "generic"
+        )
+        (paragraph
+            (text
+                "A generic block element is a block element"
+                "that is unknown to DHParser."
             )
-            (NEW_LINE
+        )
+        (paragraph
+            (text
+                "Unknown begin-end-structures are always"
+                "considered as block elements and not"
+                "as inline elements."
+            )
+            (:Whitespace
                 ""
                 ""
             )
         )
-        (sequence
-            (paragraph
-                (text
-                    "A generic block element is a block element"
-                    "that is unknown to DHParser."
-                )
-            )
-            (paragraph
-                (text
-                    "Unknown begin-end-structures are always"
-                    "considered as block elements and not"
-                    "as inline elements."
-                )
-                (:Whitespace
-                    ""
-                    ""
-                )
-            )
-        )
-        (end_generic_block
-            (end_environment
-                "generic"
-            )
-            (NEW_LINE
-                ""
-                ""
-            )
+        (end_environment
+            "generic"
         )
     )
 
@@ -71,42 +57,20 @@ Match-test "2"
 
 ### AST
     (generic_block
-        (begin_generic_block
-            (begin_environment
-                "generic"
+        (begin_environment
+            "generic"
+        )
+        (paragraph
+            (text
+                "a single block paragraph"
             )
-            (NEW_LINE
+            (:Whitespace
                 ""
                 ""
             )
         )
-        (sequence
-            (paragraph
-                (text
-                    "a single block paragraph"
-                )
-                (:Whitespace
-                    ""
-                    ""
-                )
-            )
-        )
-        (end_generic_block
-            (end_environment
-                "generic"
-            )
-            (NEW_LINE
-                (:RegExp
-                    " "
-                )
-                (:RegExp
-                    "% ending with"
-                )
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
+        (end_environment
+            "generic"
         )
     )
 
@@ -120,15 +84,13 @@ Match-test "3"
 
 ### AST
     (quotation
-        (sequence
-            (paragraph
-                (text
-                    "a known block element"
-                )
-                (:Whitespace
-                    ""
-                    ""
-                )
+        (paragraph
+            (text
+                "a known block element"
+            )
+            (:Whitespace
+                ""
+                ""
             )
         )
     )
@@ -242,34 +204,7 @@ Match-test "1"
     \end{itemize}
 
 ### AST
-    (itemize
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Items doe not need to be"
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "separated by empty lines."
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-    )
+    (itemize)
 
 Match-test "2"
 --------------
@@ -290,29 +225,9 @@ Match-test "2"
 ### AST
     (itemize
         (item
-            (sequence
-                (paragraph
-                    (text
-                        "But items may be"
-                    )
-                )
-            )
-        )
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "separated by blank lines."
-                    )
-                )
-            )
-        )
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Empty lines at the beginning of an item will be ignored."
-                    )
+            (paragraph
+                (text
+                    "separated by blank lines."
                 )
             )
         )
@@ -330,39 +245,7 @@ Match-test "3"
     \end{itemize}
 
 ### AST
-    (itemize
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Items can consist of"
-                    )
-                )
-                (paragraph
-                    (text
-                        "several paragraphs."
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Or of one paragraph"
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-    )
+    (itemize)
 
 Match-test "4"
 --------------
@@ -378,19 +261,15 @@ Match-test "4"
 ### AST
     (itemize
         (item
-            (sequence
-                (itemize
-                    (item
-                        (sequence
-                            (paragraph
-                                (text
-                                    "Item-lists can be nested!"
-                                )
-                                (:Whitespace
-                                    ""
-                                    ""
-                                )
-                            )
+            (itemize
+                (item
+                    (paragraph
+                        (text
+                            "Item-lists can be nested!"
+                        )
+                        (:Whitespace
+                            ""
+                            ""
                         )
                     )
                 )
@@ -409,15 +288,13 @@ Match-test "5"
 ### AST
     (itemize
         (item
-            (sequence
-                (paragraph
-                    (text
-                        "Item-lists may consist of just one item."
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
+            (paragraph
+                (text
+                    "Item-lists may consist of just one item."
+                )
+                (:Whitespace
+                    ""
+                    ""
                 )
             )
         )
@@ -446,34 +323,7 @@ Match-test "1"
     \end{enumerate}
 
 ### AST
-    (enumerate
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Enumerations work just like item-lists."
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Only that the bullets are numbers."
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-    )
+    (enumerate)
 
 Match-test "2"
 --------------
@@ -493,94 +343,7 @@ Match-test "2"
     \end{enumerate}
 
 ### AST
-    (enumerate
-        (item
-            (sequence
-                (itemize
-                    (item
-                        (sequence
-                            (paragraph
-                                (text
-                                    "Item-lists and"
-                                )
-                                (:Whitespace
-                                    ""
-                                    ""
-                                )
-                            )
-                        )
-                    )
-                    (item
-                        (sequence
-                            (paragraph
-                                (text
-                                    "Enumeration-lists"
-                                )
-                                (:Whitespace
-                                    ""
-                                    ""
-                                )
-                            )
-                            (enumerate
-                                (item
-                                    (sequence
-                                        (paragraph
-                                            (text
-                                                "can be nested"
-                                            )
-                                            (:Whitespace
-                                                ""
-                                                ""
-                                            )
-                                        )
-                                    )
-                                )
-                                (item
-                                    (sequence
-                                        (paragraph
-                                            (text
-                                                "arbitrarily"
-                                            )
-                                            (:Whitespace
-                                                ""
-                                                ""
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                    (item
-                        (sequence
-                            (paragraph
-                                (text
-                                    "Another item"
-                                )
-                                (:Whitespace
-                                    ""
-                                    ""
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-        (item
-            (sequence
-                (paragraph
-                    (text
-                        "Plain numerated item."
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
-                )
-            )
-        )
-    )
+    (enumerate)
 
 Match-test "3"
 --------------
@@ -605,11 +368,9 @@ Match-test "3"
 ### AST
     (enumerate
         (item
-            (sequence
-                (paragraph
-                    (text
-                        "finally, the first item"
-                    )
+            (paragraph
+                (text
+                    "finally, the first item"
                 )
             )
         )
@@ -631,35 +392,31 @@ Match-test "4"
 ### AST
     (enumerate
         (item
-            (sequence
-                (paragraph
-                    (text
-                        "An item"
-                    )
+            (paragraph
+                (text
+                    "An item"
                 )
-                (itemize
-                    (item
-                        (sequence
-                            (paragraph
-                                (text
-                                    "with an enumeration"
-                                )
-                                (:Whitespace
-                                    ""
-                                    ""
-                                )
-                            )
+            )
+            (itemize
+                (item
+                    (paragraph
+                        (text
+                            "with an enumeration"
+                        )
+                        (:Whitespace
+                            ""
+                            ""
                         )
                     )
                 )
-                (paragraph
-                    (text
-                        "as a separate paragraph"
-                    )
-                    (:Whitespace
-                        ""
-                        ""
-                    )
+            )
+            (paragraph
+                (text
+                    "as a separate paragraph"
+                )
+                (:Whitespace
+                    ""
+                    ""
                 )
             )
         )

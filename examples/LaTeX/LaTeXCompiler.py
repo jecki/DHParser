@@ -63,9 +63,9 @@ class LaTeXGrammar(Grammar):
     latexdoc       = preamble document
     preamble       = { [WSPC] command }+
     
-    document       = [WSPC] "\begin{document}" [WSPC]
-                     frontpages [WSPC]
-                     (Chapters | Sections) [WSPC]
+    document       = [WSPC] "\begin{document}"
+                     frontpages
+                     (Chapters | Sections)
                      [Bibliography] [Index] [WSPC]
                      "\end{document}" [WSPC] §EOF
     frontpages     = sequence
@@ -77,26 +77,26 @@ class LaTeXGrammar(Grammar):
     #
     #######################################################################
     
-    Chapters       = { Chapter [WSPC] }+
-    Chapter        = "\chapter" heading [WSPC] { sequence | Sections }
+    Chapters       = { [WSPC] Chapter }+
+    Chapter        = "\chapter" heading { sequence | Sections }
     
-    Sections       = { Section [WSPC] }+
-    Section        = "\section" heading [WSPC] { sequence | SubSections }
+    Sections       = { [WSPC] Section }+
+    Section        = "\section" heading { sequence | SubSections }
     
-    SubSections    = { SubSection [WSPC] }+
-    SubSection     = "\subsection" heading [WSPC] { sequence | SubSubSections }
+    SubSections    = { [WSPC] SubSection }+
+    SubSection     = "\subsection" heading { sequence | SubSubSections }
     
-    SubSubSections = { SubSubSection [WSPC] }+
-    SubSubSection  = "\subsubsection" heading [WSPC] { sequence | Paragraphs }
+    SubSubSections = { [WSPC] SubSubSection }+
+    SubSubSection  = "\subsubsection" heading { sequence | Paragraphs }
     
-    Paragraphs     = { Paragraph [WSPC] }+
-    Paragraph      = "\paragraph" heading [WSPC] { sequence | SubParagraphs }
+    Paragraphs     = { [WSPC] Paragraph  }+
+    Paragraph      = "\paragraph" heading { sequence | SubParagraphs }
     
-    SubParagraphs  = { SubParagraph [WSPC] }+
-    SubParagraph   = "\subparagraph" heading [WSPC] [ sequence ]
+    SubParagraphs  = { [WSPC] SubParagraph }+
+    SubParagraph   = "\subparagraph" heading [ sequence ]
     
-    Bibliography   = "\bibliography" heading [WSPC]
-    Index          = "\printindex" [WSPC]
+    Bibliography   = [WSPC] "\bibliography" heading
+    Index          = [WSPC] "\printindex"
     
     heading        = block
     
@@ -118,7 +118,7 @@ class LaTeXGrammar(Grammar):
     
     itemize             = "\begin{itemize}" [WSPC] { item } §"\end{itemize}"
     enumerate           = "\begin{enumerate}" [WSPC] {item } §"\end{enumerate}"
-    item                = "\item" [WSPC] sequence
+    item                = "\item" sequence
     
     figure              = "\begin{figure}" sequence §"\end{figure}"
     quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
@@ -134,7 +134,7 @@ class LaTeXGrammar(Grammar):
     #### paragraphs and sequences of paragraphs ####
     
     block_of_paragraphs = "{" [sequence] §"}"
-    sequence            = { (paragraph | block_environment ) [PARSEP] }+
+    sequence            = [WSPC] { (paragraph | block_environment ) [PARSEP] }+
     paragraph           = { !blockcmd text_element //~ }+
     text_element        = line_element | LINEFEED
     line_element        = text | block | inline_environment | command
@@ -230,7 +230,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "fafffa29d26d712fde61c15c1a92dce8"
+    source_hash__ = "a4c1da340e03a51e46030c64f671f1d6"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
@@ -283,7 +283,7 @@ class LaTeXGrammar(Grammar):
     line_element = Alternative(text, block, inline_environment, command)
     text_element.set(Alternative(line_element, LINEFEED))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))))
-    sequence = OneOrMore(Series(Alternative(paragraph, block_environment), Option(PARSEP)))
+    sequence = Series(Option(WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(PARSEP))))
     block_of_paragraphs.set(Series(Token("{"), Option(sequence), Token("}"), mandatory=2))
     tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Token("}"), mandatory=2))
     tabular_cell = ZeroOrMore(Series(line_element, RE('')))
@@ -292,7 +292,7 @@ class LaTeXGrammar(Grammar):
     verbatim = Series(Token("\\begin{verbatim}"), sequence, Token("\\end{verbatim}"), mandatory=2)
     quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Token("\\end{quotation}"), mandatory=2), Series(Token("\\begin{quote}"), sequence, Token("\\end{quote}"), mandatory=2))
     figure = Series(Token("\\begin{figure}"), sequence, Token("\\end{figure}"), mandatory=2)
-    item = Series(Token("\\item"), Option(WSPC), sequence)
+    item = Series(Token("\\item"), sequence)
     enumerate = Series(Token("\\begin{enumerate}"), Option(WSPC), ZeroOrMore(item), Token("\\end{enumerate}"), mandatory=3)
     itemize = Series(Token("\\begin{itemize}"), Option(WSPC), ZeroOrMore(item), Token("\\end{itemize}"), mandatory=3)
     end_generic_block.set(Series(Lookbehind(LB), end_environment, LFF))
@@ -301,22 +301,22 @@ class LaTeXGrammar(Grammar):
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))
     heading = Synonym(block)
-    Index = Series(Token("\\printindex"), Option(WSPC))
-    Bibliography = Series(Token("\\bibliography"), heading, Option(WSPC))
-    SubParagraph = Series(Token("\\subparagraph"), heading, Option(WSPC), Option(sequence))
-    SubParagraphs = OneOrMore(Series(SubParagraph, Option(WSPC)))
-    Paragraph = Series(Token("\\paragraph"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, SubParagraphs)))
-    Paragraphs = OneOrMore(Series(Paragraph, Option(WSPC)))
-    SubSubSection = Series(Token("\\subsubsection"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, Paragraphs)))
-    SubSubSections = OneOrMore(Series(SubSubSection, Option(WSPC)))
-    SubSection = Series(Token("\\subsection"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, SubSubSections)))
-    SubSections = OneOrMore(Series(SubSection, Option(WSPC)))
-    Section = Series(Token("\\section"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, SubSections)))
-    Sections = OneOrMore(Series(Section, Option(WSPC)))
-    Chapter = Series(Token("\\chapter"), heading, Option(WSPC), ZeroOrMore(Alternative(sequence, Sections)))
-    Chapters = OneOrMore(Series(Chapter, Option(WSPC)))
+    Index = Series(Option(WSPC), Token("\\printindex"))
+    Bibliography = Series(Option(WSPC), Token("\\bibliography"), heading)
+    SubParagraph = Series(Token("\\subparagraph"), heading, Option(sequence))
+    SubParagraphs = OneOrMore(Series(Option(WSPC), SubParagraph))
+    Paragraph = Series(Token("\\paragraph"), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraphs = OneOrMore(Series(Option(WSPC), Paragraph))
+    SubSubSection = Series(Token("\\subsubsection"), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSections = OneOrMore(Series(Option(WSPC), SubSubSection))
+    SubSection = Series(Token("\\subsection"), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSections = OneOrMore(Series(Option(WSPC), SubSection))
+    Section = Series(Token("\\section"), heading, ZeroOrMore(Alternative(sequence, SubSections)))
+    Sections = OneOrMore(Series(Option(WSPC), Section))
+    Chapter = Series(Token("\\chapter"), heading, ZeroOrMore(Alternative(sequence, Sections)))
+    Chapters = OneOrMore(Series(Option(WSPC), Chapter))
     frontpages = Synonym(sequence)
-    document = Series(Option(WSPC), Token("\\begin{document}"), Option(WSPC), frontpages, Option(WSPC), Alternative(Chapters, Sections), Option(WSPC), Option(Bibliography), Option(Index), Option(WSPC), Token("\\end{document}"), Option(WSPC), EOF, mandatory=12)
+    document = Series(Option(WSPC), Token("\\begin{document}"), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(WSPC), Token("\\end{document}"), Option(WSPC), EOF, mandatory=9)
     preamble = OneOrMore(Series(Option(WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc

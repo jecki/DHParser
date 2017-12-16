@@ -78,22 +78,9 @@ Match-test "3"
 
 ### AST
     (footnote
-        (:Token
-            "\footnote"
-        )
         (block_of_paragraphs
-            (:Token
-                "{"
-            )
-            (sequence
-                (paragraph
-                    (text
-                        "footnote"
-                    )
-                )
-            )
-            (:Token
-                "}"
+            (text
+                "footnote"
             )
         )
     )

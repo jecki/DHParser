@@ -12,23 +12,16 @@ Match-test "1"
 
 ### AST
     (includegraphics
-        (:Token
-            "\includegraphics"
-        )
         (config
-            (cfg_text
-                (text
-                    "width="
-                )
-                (CMDNAME
-                    "\textwidth"
-                )
+            (text
+                "width="
+            )
+            (CMDNAME
+                "\textwidth"
             )
         )
-        (block
-            (text
-                "Graph.eps"
-            )
+        (text
+            "Graph.eps"
         )
     )
 
@@ -40,41 +33,11 @@ Match-test "2"
 
 ### AST
     (multicolumn
-        (:Token
-            "\multicolumn"
-        )
-        (:Token
-            "{"
-        )
         (INTEGER
             "1"
         )
-        (:Token
-            "}"
-        )
         (tabular_config
-            (:Token
-                "{"
-            )
-            (:RegExp
-                "c"
-            )
-            (:Token
-                "}"
-            )
-        )
-        (block_of_paragraphs
-            (:Token
-                (:RegExp
-                    "{"
-                )
-                (:Whitespace
-                    " "
-                )
-            )
-            (:Token
-                "}"
-            )
+            "c"
         )
     )
 
@@ -86,42 +49,15 @@ Match-test "3"
 
 ### AST
     (multicolumn
-        (:Token
-            "\multicolumn"
-        )
-        (:Token
-            "{"
-        )
         (INTEGER
             "2"
         )
-        (:Token
-            "}"
-        )
         (tabular_config
-            (:Token
-                "{"
-            )
-            (:RegExp
-                "c|"
-            )
-            (:Token
-                "}"
-            )
+            "c|"
         )
         (block_of_paragraphs
-            (:Token
-                "{"
-            )
-            (sequence
-                (paragraph
-                    (text
-                        "material"
-                    )
-                )
-            )
-            (:Token
-                "}"
+            (text
+                "material"
             )
         )
     )
@@ -134,42 +70,15 @@ Match-test "4"
 
 ### AST
     (multicolumn
-        (:Token
-            "\multicolumn"
-        )
-        (:Token
-            "{"
-        )
         (INTEGER
             "2"
         )
-        (:Token
-            "}"
-        )
         (tabular_config
-            (:Token
-                "{"
-            )
-            (:RegExp
-                "c"
-            )
-            (:Token
-                "}"
-            )
+            "c"
         )
         (block_of_paragraphs
-            (:Token
-                "{"
-            )
-            (sequence
-                (paragraph
-                    (inline_math
-                        "\underbrace{\hspace{7cm}}_{Simulations}"
-                    )
-                )
-            )
-            (:Token
-                "}"
+            (inline_math
+                "\underbrace{\hspace{7cm}}_{Simulations}"
             )
         )
     )

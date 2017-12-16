@@ -13,9 +13,9 @@
 latexdoc       = preamble document
 preamble       = { [WSPC] command }+
 
-document       = [WSPC] "\begin{document}" [WSPC]
-                 frontpages [WSPC]
-                 (Chapters | Sections) [WSPC]
+document       = [WSPC] "\begin{document}"
+                 frontpages
+                 (Chapters | Sections)
                  [Bibliography] [Index] [WSPC]
                  "\end{document}" [WSPC] §EOF
 frontpages     = sequence
@@ -27,26 +27,26 @@ frontpages     = sequence
 #
 #######################################################################
 
-Chapters       = { Chapter [WSPC] }+
-Chapter        = "\chapter" heading [WSPC] { sequence | Sections }
+Chapters       = { [WSPC] Chapter }+
+Chapter        = "\chapter" heading { sequence | Sections }
 
-Sections       = { Section [WSPC] }+
-Section        = "\section" heading [WSPC] { sequence | SubSections }
+Sections       = { [WSPC] Section }+
+Section        = "\section" heading { sequence | SubSections }
 
-SubSections    = { SubSection [WSPC] }+
-SubSection     = "\subsection" heading [WSPC] { sequence | SubSubSections }
+SubSections    = { [WSPC] SubSection }+
+SubSection     = "\subsection" heading { sequence | SubSubSections }
 
-SubSubSections = { SubSubSection [WSPC] }+
-SubSubSection  = "\subsubsection" heading [WSPC] { sequence | Paragraphs }
+SubSubSections = { [WSPC] SubSubSection }+
+SubSubSection  = "\subsubsection" heading { sequence | Paragraphs }
 
-Paragraphs     = { Paragraph [WSPC] }+
-Paragraph      = "\paragraph" heading [WSPC] { sequence | SubParagraphs }
+Paragraphs     = { [WSPC] Paragraph  }+
+Paragraph      = "\paragraph" heading { sequence | SubParagraphs }
 
-SubParagraphs  = { SubParagraph [WSPC] }+
-SubParagraph   = "\subparagraph" heading [WSPC] [ sequence ]
+SubParagraphs  = { [WSPC] SubParagraph }+
+SubParagraph   = "\subparagraph" heading [ sequence ]
 
-Bibliography   = "\bibliography" heading [WSPC]
-Index          = "\printindex" [WSPC]
+Bibliography   = [WSPC] "\bibliography" heading
+Index          = [WSPC] "\printindex"
 
 heading        = block
 
@@ -68,7 +68,7 @@ end_generic_block   = -&LB  end_environment LFF
 
 itemize             = "\begin{itemize}" [WSPC] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [WSPC] {item } §"\end{enumerate}"
-item                = "\item" [WSPC] sequence
+item                = "\item" sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
@@ -84,7 +84,7 @@ tabular_config      = "{" /[lcr|]+/~ §"}"
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
-sequence            = { (paragraph | block_environment ) [PARSEP] }+
+sequence            = [WSPC] { (paragraph | block_environment ) [PARSEP] }+
 paragraph           = { !blockcmd text_element //~ }+
 text_element        = line_element | LINEFEED
 line_element        = text | block | inline_environment | command
