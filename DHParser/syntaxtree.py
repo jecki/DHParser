@@ -583,7 +583,7 @@ class Node(collections.abc.Sized):
 
     def log(self, log_file_name):
         """
-        Writes ab S-expressions of the tree with root `self` to a file.
+        Writes an S-expression-representation of the tree with root `self` to a file.
         """
         if is_logging():
             path = os.path.join(log_dir(), log_file_name)

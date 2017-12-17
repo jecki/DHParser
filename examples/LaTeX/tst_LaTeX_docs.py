@@ -55,7 +55,7 @@ def tst_func():
         files = os.listdir('testdata')
         files.sort()
         for file in files:
-            if fnmatch.fnmatch(file, '*1.tex') and file.lower().find('error') < 0:
+            if fnmatch.fnmatch(file, '*2.tex') and file.lower().find('error') < 0:
                 with open(os.path.join('testdata', file), 'r', encoding='utf-8') as f:
                     doc = f.read()
                 print('\n\nParsing document: "%s"\n' % file)

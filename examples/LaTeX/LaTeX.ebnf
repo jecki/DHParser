@@ -98,8 +98,8 @@ generic_inline_env  = begin_inline_env //~ paragraph §end_inline_env
 begin_inline_env    = (-!LB begin_environment) | (begin_environment !LFF)
 end_inline_env      = end_environment
                       ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with genric_block when EOF
-begin_environment   = /\\begin{/ §NAME §/}/
-end_environment     = /\\end{/ §::NAME §/}/
+begin_environment   = /\\begin{/ §NAME /}/
+end_environment     = /\\end{/ §::NAME /}/
 
 inline_math         = /\$/ /[^$]*/ §/\$/
 

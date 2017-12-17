@@ -145,7 +145,8 @@ class EBNFGrammar(Grammar):
 
 
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
-    """Returns ``True`` if ``grammar_class`` does not reflect the latest
+    """
+    Returns ``True`` if ``grammar_class`` does not reflect the latest
     changes of ``grammar_source``
 
     Parameters:

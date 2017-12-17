@@ -66,8 +66,9 @@ class EBNFGrammar(Grammar):
     factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
                 | [flowmarker] literal
                 | [flowmarker] regexp
-                | [flowmarker] group
                 | [flowmarker] oneormore
+                | [flowmarker] group
+                | [flowmarker] unordered
                 | repetition
                 | option
     
@@ -76,6 +77,7 @@ class EBNFGrammar(Grammar):
     retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
     
     group      =  "(" §expression ")"
+    unordered  =  "<" §expression ">"                # elements of expression in arbitrary order
     oneormore  =  "{" expression "}+"
     repetition =  "{" §expression "}"
     option     =  "[" §expression "]"
@@ -91,7 +93,7 @@ class EBNFGrammar(Grammar):
     EOF =  !/./
     """
     expression = Forward()
-    source_hash__ = "3c472b3a5d1039680c751fd2dd3f3e24"
+    source_hash__ = "084a572ffab147ee44ac8f2268793f63"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
@@ -106,10 +108,11 @@ class EBNFGrammar(Grammar):
     option = Series(Token("["), expression, Token("]"), mandatory=1)
     repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
     oneormore = Series(Token("{"), expression, Token("}+"))
+    unordered = Series(Token("<"), expression, Token(">"), mandatory=1)
     group = Series(Token("("), expression, Token(")"), mandatory=1)
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp), Series(Option(flowmarker), group), Series(Option(flowmarker), oneormore), repetition, option)
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Token("§")), factor))
     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
     directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)

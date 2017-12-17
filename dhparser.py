@@ -36,9 +36,8 @@ EBNF_TEMPLATE = r"""-grammar
 #
 #######################################################################
 
-@ testing     = True            # testing supresses error messages for unconnected symbols
 @ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
-@ literalws   = right           # literals have implicit whitespace on the right hand side 
+@ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /#.*/           # comments range from a '#'-character to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 
@@ -49,7 +48,7 @@ EBNF_TEMPLATE = r"""-grammar
 #
 #######################################################################
 
-document = //~ { WORD } §EOF    # root parser: optional whitespace followed by a sequence of words
+document = //~ { WORD } §EOF    # root parser: a sequence of words preceded by whitespace
                                 # until the end of file
 
 #######################################################################
@@ -58,25 +57,25 @@ document = //~ { WORD } §EOF    # root parser: optional whitespace followed by 
 #
 #######################################################################
 
-WORD     =  /\w+/~              # a sequence of letters, possibly followed by implicit whitespace
-EOF      =  !/./                # no more characters ahead, end of file reached
+WORD     =  /\w+/~      # a sequence of letters, optional trailing whitespace
+EOF      =  !/./        # no more characters ahead, end of file reached
 """
 
 TEST_WORD_TEMPLATE = r'''[match:WORD]
-1  : word
-2  : one_word_with_underscores
+M1: word
+M2: one_word_with_underscores
 
 [fail:WORD]
-1  : two words
+F1: two words
 '''
 
 TEST_DOCUMENT_TEMPLATE = r'''[match:document]
-1  : """This is a sequence of words
-     extending over several lines"""
-     
+M1: """This is a sequence of words
+    extending over several lines"""
+
 [fail:document]
-1  : """This test should fail, because neither
-     comma nor full have been defined anywhere."""
+F1: """This test should fail, because neither
+    comma nor full have been defined anywhere."""
 '''
 
 README_TEMPLATE = """# {name}
@@ -117,14 +116,16 @@ import DHParser.dsl
 from DHParser import testing
 from DHParser import toolkit
 
-if not DHParser.dsl.recompile_grammar('{name}.ebnf', force=False):  # recompiles Grammar only if it has changed
+# recompiles Grammar only if it has changed
+if not DHParser.dsl.recompile_grammar('{name}.ebnf', force=False):
     print('\nErrors while recompiling "{name}.ebnf":\n--------------------------------------\n\n')
     with open('{name}_ebnf_ERRORS.txt') as f:
         print(f.read())
     sys.exit(1)
 
 sys.path.append('./')
-# must be appended after module creation, because otherwise an ImportError is raised under Windows
+# must be appended after module creation, because
+# otherwise an ImportError is raised under Windows
 from {name}Compiler import get_grammar, get_transformer
 
 with toolkit.logging(True):
@@ -135,7 +136,7 @@ if error_report:
     print(error_report)
     sys.exit(1)
 else:
-    print('\nSUCCESS! All tests passed :-)')
+    print('ready.')
 '''
 
 
@@ -152,7 +153,7 @@ def create_project(path: str):
             print('"%s" already exists! Not overwritten.' % name)
 
     if os.path.exists(path) and not os.path.isdir(path):
-        print('Cannot create new project, because a file named "%s" alread exists!' % path)
+        print('Cannot create new project, because a file named "%s" already exists!' % path)
         sys.exit(1)
     name = os.path.basename(path)
     print('Creating new DHParser-project "%s".' % name)
@@ -172,6 +173,7 @@ def create_project(path: str):
     create_file(name + '.ebnf', '# ' + name + EBNF_TEMPLATE)
     create_file('README.md', README_TEMPLATE.format(name=name))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(name=name))
+    os.chmod('tst_%s_grammar.py' % name, 0o755)
     os.chdir(curr_dir)
     print('ready.')
 
@@ -256,6 +258,7 @@ def main():
         with logging(False):
             if not cpu_profile(selftest, 1):
                 sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

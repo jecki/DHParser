@@ -148,8 +148,8 @@ class LaTeXGrammar(Grammar):
     begin_inline_env    = (-!LB begin_environment) | (begin_environment !LFF)
     end_inline_env      = end_environment
                           ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with genric_block when EOF
-    begin_environment   = /\\begin{/ §NAME §/}/
-    end_environment     = /\\end{/ §::NAME §/}/
+    begin_environment   = /\\begin{/ §NAME /}/
+    end_environment     = /\\end{/ §::NAME /}/
     
     inline_math         = /\$/ /[^$]*/ §/\$/
     
@@ -230,7 +230,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "a4c1da340e03a51e46030c64f671f1d6"
+    source_hash__ = "1ded00ed838b03fcffcc6cd4333d4ae0"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

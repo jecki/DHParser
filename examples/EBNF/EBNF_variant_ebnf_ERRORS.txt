@@ -1,3 +1,0 @@
-line:   8, column: 27, Warning: One mandatory marker (§) sufficient to declare the rest of the series as mandatory.
-line:   9, column: 27, Warning: One mandatory marker (§) sufficient to declare the rest of the series as mandatory.
-line:   9, column: 32, Warning: One mandatory marker (§) sufficient to declare the rest of the series as mandatory.

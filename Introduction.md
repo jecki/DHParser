@@ -5,9 +5,8 @@ Introduction to [DHParser](https://gitlab.lrz.de/badw-it/DHParser)
 
 Motto: **Computers enjoy XML, humans don't.**
 
-
-Why use domain specific languages in the humanities?
-----------------------------------------------------
+Why use domain specific languages in the humanities
+---------------------------------------------------
 
 Suppose you are a literary scientist and you would like to edit a poem
 like Heinrich Heine's "Lyrisches Intermezzo". Usually, the technology of
@@ -47,9 +46,9 @@ Now, while you might think that this all works well enough, there are
 a few drawbacks to this approach:
 
 - The syntax is cumbersome and the encoding not very legible to humans
-  working with it. (And I did not even use 
+  working with it. (And I did not even use
   [TEI-XML](http://www.tei-c.org/index.xml), yet...)
-  Editing and revising XML-encoded text is a pain. Just ask the 
+  Editing and revising XML-encoded text is a pain. Just ask the
   literary scientists who have to work with it.
 
 - The XML encoding, especially TEI-XML, is often not intuitive. Only
@@ -57,15 +56,15 @@ a few drawbacks to this approach:
   friend, who is not into digital technologies, might help you with
   proof-reading, you better think about it again.
 
-- There is an awful lot of typing to do: All those lengthy opening 
+- There is an awful lot of typing to do: All those lengthy opening
   and closing tags. This takes time...
-  
+
 - While looking for a good XML-Editor, you find that there hardly exist
-  any XML-Editors any more. (And for a reason, actually...) In 
+  any XML-Editors any more. (And for a reason, actually...) In
   particular, there are no good open source XML-Editors.
 
 On the other hand, there are good reasons why XML is used in the
-humanities: Important encoding standards like 
+humanities: Important encoding standards like
 [TEI-XML](http://www.tei-c.org/index.xml) are defined in
 XML. Its strict syntax and the possibility to check data against
 schema help to detect and avoiding encoding errors. If the schema is
@@ -81,29 +80,29 @@ provides an infrastructure that - if you know a little
 Python-programming - makes it very easy to convert your annotated text
 into an XML-encoding of your choice. With DHParser, the same poem above
 can be simply encoded like this:
- 
+
     Heinrich Heine <gnd:118548018>,
     Buch der Lieder <urn:nbn:de:kobv:b4-200905192211>,
     Hamburg <gnd:4023118-5>, 1927.
-    
+
         Lyrisches Intermezzo
-    
+
                  IV.
-    
+
     Wenn ich in deine Augen seh',
     so schwindet all' mein Leid und Weh!
     Doch wenn ich küsse deinen Mund,
     so werd' ich ganz und gar gesund.
-    
+
     Wenn ich mich lehn' an deine Brust,
     kommt's über mich wie Himmelslust,
     doch wenn du sprichst: Ich liebe dich!
     so muß ich weinen bitterlich.
 
 Yes, that's right. It is as simple as that. Observe, how much more
-effacious a verse like "Wenn ich mich lehn' an deine Brust, / kommt's
+efficacious a verse like "Wenn ich mich lehn' an deine Brust, / kommt's
 über mich wie Himmelslust," can be if it is not cluttered with XML tags
-;-) 
+;-)
 
 You might now wonder whether the second version really does encode the
 same information as the XML version. How, for example, would the
@@ -114,13 +113,13 @@ example, a verse always starts and ends on the same line. There
 is always a gap between stanzas. And the title is always written above
 the poem and not in the middle of it. So, if there is a title at all, we
 can be sure that what is written in the first line is the title and not
-a stanza. 
+a stanza.
 
 DHParser is able to exploit all those hints in order to gather much the
 same information as was encoded in the XML-Version. Don't believe it?
-You can try: Download DHParser from the 
+You can try: Download DHParser from the
 [gitlab-repository](https://gitlab.lrz.de/badw-it/DHParser) and enter
-the directory `examples/Tutorial` on the command line interface (shell). 
+the directory `examples/Tutorial` on the command line interface (shell).
 Just run `python LyrikCompiler_example.py` (you need to have installed
 [Python](https://www.python.org/) Version 3.4 or higher on your computer).
 The output will be something like this:
@@ -165,36 +164,36 @@ without further proof that it can easily be converted into the other
 version and contains all the information that the other version contains.
 
 How does DHParser achieve this? Well, there is the rub. In order to convert
-the poem in the domain specific version into the XML-version, DHParser 
+the poem in the domain specific version into the XML-version, DHParser
 requires a structural description of the domain specific encoding. This
-is a bit similar to a document type definition (DTD) in XML. This 
-structural description uses a slightly enhanced version of the 
+is a bit similar to a document type definition (DTD) in XML. This
+structural description uses a slightly enhanced version of the
 [Extended-Backus-Naur-Form (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form),
-which is a well-established formalism for the structural description of 
+which is a well-established formalism for the structural description of
 formal languages in computer sciences. An excerpt of the EBNF-definition
 of our domain-specific encoding for the poem looks like this. (We leave out
-the meta-data here. See 
+the meta-data here. See
 [`examples/Tutorial/Lyrik.ebnf`](https://gitlab.lrz.de/badw-it/DHParser/blob/master/examples/Tutorial/Lyrik.ebnf)
 for the full EBNF):
 
     gedicht           = { LEERZEILE }+ [serie] §titel §text /\s*/ §ENDE
-    serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+   
+    serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
     titel             = { NZ zeile}+ { LEERZEILE }+
     zeile             = { ZEICHENFOLGE }+
-    
+
     text              = { strophe {LEERZEILE} }+
     strophe           = { NZ vers }+
     vers              = { ZEICHENFOLGE }+
-    
+
     ZEICHENFOLGE      = /[^ \n<>]+/~
     NZ                = /\n/~
     LEERZEILE         = /\n[ \t]*(?=\n)/~
     ENDE              = !/./
 
-Without going into too much detail here, let me just explain a few basics of 
+Without going into too much detail here, let me just explain a few basics of
 this formal description: The slashes `/` enclose ordinary regular expressions.
 Thus, `NZ` for ("Neue Zeile", German for: "new line") is defined as `/\n/~` which
-is the newline-token `\n` in a regular expression, plus further horizontal 
+is the newline-token `\n` in a regular expression, plus further horizontal
 whitespace (signified by the tilde `~`), if there is any.
 
 The braces `{` `}` enclose items that can be repeated zero or more times; with a
@@ -203,10 +202,10 @@ definition of `text` in the 6th line: `{ strophe {LEERZEILE} }+`. This reads as
 follows: The text of the poem consists of a sequence of stanzas, each of which
 is followed by a sequence of empty lines (German: "Leerzeilen"). If you now look
 at the structural definition of a stanza, you find that it consists of a sequence
-of verses, each of which starts, i.e. is preceeded by a new line.
+of verses, each of which starts, i.e. is preceded by a new line.
 
 Can you figure out the rest? Hint: The angular brackets `[` and `]` mean that and
-item is optional and the `§` sign means that it is obligatory. (Strictly speaking, 
+item is optional and the `§` sign means that it is obligatory. (Strictly speaking,
 the §-signs are not necessary, because an item that is not optional is always
 obligatory, but the §-signs help the converter to produce more useful error
 messages.)
@@ -215,7 +214,7 @@ This should be enough for an introduction to the purpose of DSLs in the
 humanities. It has shown the probably most important use case of
 DHParser, i.e. as a frontend-technology form XML-encodings. Of course,
 it can just as well be used as a frontend for any other kind of
-structured data, like SQL or graph-strcutured data. The latter is by the
+structured data, like SQL or graph-structured data. The latter is by the
 way is a very reasonable alternative to XML for edition projects with a
 complex transmission history. See Andreas Kuczera's Blog-entry on
 ["Graphdatenbanken für Historiker"](http://mittelalter.hypotheses.org/5995).
@@ -237,19 +236,19 @@ Now, if you enter the repo, you'll find three subdirectories:
     DHParser
     examples
     test
-    
+
 The directory `DHParser` contains the Python modules of the
 DHParser-package, `test` - as you can guess - contains the unit-tests
 for DHParser. Now, enter the `examples/Tutorial`-directory. Presently,
 most other examples are pretty rudimentary. So, don't worry about them.
- 
+
 In this directory, you'll find a simple EBNF Grammar for poetry in the
 file `Lyrik.ebnf`. Have a look at it. You'll find that is the same
 grammar (plus a few additions) that has been mentioned just before.
 You'll also find a little script `recompile_grammar.py` that is used to
 compile an EBNF-Grammar into an executable Python-module that can be
 used to parse any piece of text that this grammar is meant for; in this
-case poetry. 
+case poetry.
 
 Any DHParser-Project needs such a script. The content of the script is
 pretty self-explanatory:
@@ -259,7 +258,7 @@ pretty self-explanatory:
         with open('Lyrik_ebnf_ERRORS.txt') as f:
             print(f.read())
         sys.exit(1)
-        
+
 The script simply (re-)compiles any EBNF grammar that it finds in the
 current directory. "Recompiling" means that DHParser notices if a
 grammar has already been compiled and overwrites only that part of the
@@ -268,7 +267,7 @@ will come to that later what these are - can safely be edited by you.
 Now just run `recompile_grammar.py` from the command line:
 
     $ python3 recompile_grammar.py
-    
+
 You'll find that `recompile_grammar.py` has generated a new script with
 the name `LyrikCompiler.py`. This script contains the Parser for the
 `Lyrik.ebnf`-grammar and some skeleton-code for a DSL->XML-Compiler (or
@@ -276,7 +275,7 @@ rather, a DSL-whatever compiler), which you can later fill in. Now let's
 see how this script works:
 
     $ python3 LyrikCompiler.py Lyrisches_Intermezzo_IV.txt >result.xml
-    
+
 The file `Lyrisches_Intermezzo_IV.txt` contains the fourth part of
 Heinrich Heine's Lyrisches Intermezzo encoded in our own human-readable
 poetry-DSL that has been shown above. Since we have redirected the
@@ -317,7 +316,7 @@ recognizable!) first verse of the poem:
     </vers>
     ...
 
-    
+
 How come it is so obfuscated, and where do all those pseudo-tags like
 `<:RegExp>` and `<:Whitespace>` come from? Well, this is probably the
 right time to explain a bit about parsing and compilation in general.
@@ -354,7 +353,7 @@ as the grammar has to be specified for each application domain.
 Before I'll explain how to specify an AST-transformation for DHParser,
 you may want to know what difference it makes. There is a script
 `LyrikCompiler_example.py` in the directory where the
-AST-transformations are already included. Running the script 
+AST-transformations are already included. Running the script
 
     $ python LyrikCompiler_example.py Lyrisches_Intermezzo_IV.txt
 
@@ -362,7 +361,7 @@ yields the fairly clean Pseudo-XML-representation of the DSL-encoded
 poem that we have seen above. Just as a teaser, you might want to look
 up, how the AST-transformation is specified with DHParser. For this
 purpose, you can have a look in file `LyrikCompiler_example.py`. If you
-scrool down to the AST section, you'll see something like this:
+scroll down to the AST section, you'll see something like this:
 
     Lyrik_AST_transformation_table = {
         # AST Transformations for the Lyrik-grammar
@@ -389,8 +388,8 @@ As you can see, AST-transformations a specified declaratively (with the
 option to add your own Python-programmed transformation rules). This
 keeps the specification of the AST-transformation simple and concise. At
 the same, we avoid adding hints for the AST-transformation in the
-grammar specification, which would render the grammar less readable. 
- 
+grammar specification, which would render the grammar less readable.
+
 Next, I am going to explain step by step, how a domain specific language
 for poems like Heine's Lyrisches Intermezzo can be designed, specified,
 compiled and tested.
