@@ -366,22 +366,22 @@ scroll down to the AST section, you'll see something like this:
     Lyrik_AST_transformation_table = {
         # AST Transformations for the Lyrik-grammar
         "+": remove_empty,
-        "bibliographisches": [remove_parser('NZ'), remove_tokens],
+        "bibliographisches": [remove_nodes('NZ'), remove_tokens],
         "autor, werk, untertitel, ort": [],
-        "jahr": [reduce_single_child],
+        "jahr": [content_from_child],
         "wortfolge": [flatten(is_one_of('WORT'), recursive=False), remove_last(is_whitespace), collapse],
         "namenfolge": [flatten(is_one_of('NAME'), recursive=False), remove_last(is_whitespace), collapse],
-        "verknüpfung": [remove_tokens('<', '>'), reduce_single_child],
-        "ziel": reduce_single_child,
-        "gedicht, strophe, text": [flatten, remove_parser('LEERZEILE'), remove_parser('NZ')],
-        "titel, serie": [flatten, remove_parser('LEERZEILE'), remove_parser('NZ'), collapse],
+        "verknüpfung": [remove_tokens('<', '>'), content_from_child],
+        "ziel": content_from_child,
+        "gedicht, strophe, text": [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
+        "titel, serie": [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'), collapse],
         "vers": collapse,
         "zeile": [],
-        "ZEICHENFOLGE, NZ, JAHRESZAHL": reduce_single_child,
+        "ZEICHENFOLGE, NZ, JAHRESZAHL": content_from_child,
         "WORT, NAME, LEERZEILE, ENDE": [],
         ":Whitespace": replace_content(lambda node : " "),
-        ":Token, :RE": reduce_single_child,
-        "*": replace_by_single_child
+        ":Token, :RE": content_from_child,
+        "*": replace_by_child
     }
 
 As you can see, AST-transformations a specified declaratively (with the

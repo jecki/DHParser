@@ -36,8 +36,8 @@ __all__ = ('TransformationDict',
            'key_tag_name',
            'traverse',
            'is_named',
-           'replace_by_single_child',
-           'reduce_single_child',
+           'replace_by_child',
+           'content_from_child',
            'replace_or_reduce',
            'replace_parser',
            'collapse',
@@ -52,8 +52,7 @@ __all__ = ('TransformationDict',
            'is_one_of',
            'has_content',
            'remove_children_if',
-           'remove_children',
-           'remove_parser',
+           'remove_nodes',
            'remove_content',
            'remove_first',
            'remove_last',
@@ -70,8 +69,7 @@ __all__ = ('TransformationDict',
            'require',
            'assert_content',
            'assert_condition',
-           'assert_has_children',
-           'TRUE_CONDITION')
+           'assert_has_children')
 
 
 TransformationProc = Callable[[List[Node]], None]
@@ -79,8 +77,10 @@ TransformationDict = Dict[str, Sequence[Callable]]
 ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[List[Node]], bool]
 KeyFunc = Callable[[Node], str]
+CriteriaType = Union[int, str, Callable]
 
 
+# TODO: Add more optional type dispatch paramters, e.g. t2=None, t3=None, t4=None
 def transformation_factory(t=None):
     """Creates factory functions from transformation-functions that
     dispatch on the first parameter after the context parameter.
@@ -99,7 +99,7 @@ def transformation_factory(t=None):
     Main benefit is readability of processing tables.
 
     Usage:
-        @transformation_factory(AbtractSet[str])
+        @transformation_factory(AbstractSet[str])
         def remove_tokens(context, tokens):
             ...
       or, alternatively:
@@ -128,15 +128,18 @@ def transformation_factory(t=None):
             "annotation or provide the type information via transfomer-decorator."
         p1type = t or params[0].annotation
         f = singledispatch(f)
-        if len(params) == 1 and issubclass(p1type, Container) and not issubclass(p1type, Text) \
-                and not issubclass(p1type, ByteString):
-            def gen_special(*args):
-                c = set(args) if issubclass(p1type, AbstractSet) else \
-                    list(args) if issubclass(p1type, Sequence) else args
-                d = {params[0].name: c}
-                return partial(f, **d)
+        try:
+            if len(params) == 1 and issubclass(p1type, Container) \
+                    and not issubclass(p1type, Text) and not issubclass(p1type, ByteString):
+                def gen_special(*args):
+                    c = set(args) if issubclass(p1type, AbstractSet) else \
+                        list(args) if issubclass(p1type, Sequence) else args
+                    d = {params[0].name: c}
+                    return partial(f, **d)
 
-            f.register(p1type.__args__[0], gen_special)
+                f.register(p1type.__args__[0], gen_special)
+        except AttributeError:
+            pass  # Union Type does not allow subclassing, but is not needed here
 
         def gen_partial(*args, **kwargs):
             d = {p.name: arg for p, arg in zip(params, args)}
@@ -196,8 +199,8 @@ def traverse(root_node: Node,
             key_func yields node.parser.name.
 
     Example:
-        table = { "term": [replace_by_single_child, flatten],
-            "factor, flowmarker, retrieveop": replace_by_single_child }
+        table = { "term": [replace_by_child, flatten],
+            "factor, flowmarker, retrieveop": replace_by_child }
         traverse(node, table)
     """
     # Is this optimazation really needed?
@@ -262,13 +265,29 @@ def traverse(root_node: Node,
 # ------------------------------------------------
 
 
-def TRUE_CONDITION(context: List[Node]) -> bool:
-    return True
+def pick_child(context: List[Node], criteria: CriteriaType):
+    """Returns the first child that meets the criteria."""
+    if isinstance(criteria, int):
+        try:
+            return context[-1].children[criteria]
+        except IndexError:
+            return None
+    elif isinstance(criteria, str):
+        for child in context[-1].children:
+            if child.tag_name == criteria:
+                return child
+        return None
+    else:  # assume criteria has type ConditionFunc
+        for child in context[-1].children:
+            context.append(child)
+            evaluation = criteria(context)
+            context.pop()
+            if evaluation:
+                return child
+        return None
 
 
-def replace_child(node: Node):
-    assert len(node.children) == 1
-    child = node.children[0]
+def replace_by(node: Node, child: Node):
     if not child.parser.name:
         child.parser = MockParser(node.parser.name, child.parser.ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
@@ -277,30 +296,56 @@ def replace_child(node: Node):
     node.result = child.result
 
 
-def reduce_child(node: Node):
-    assert len(node.children) == 1
-    node._errors.extend(node.children[0]._errors)
-    node.result = node.children[0].result
+def reduce_child(node: Node, child: Node):
+    node._errors.extend(child._errors)
+    node.result = child.result
 
 
-@transformation_factory(Callable)
-def replace_by_single_child(context: List[Node], condition: Callable=TRUE_CONDITION):
+# TODO: default value = lambda context: len(context[-1].children) == 1
+# @transformation_factory(int, str, Callable)
+# def replace_by_child(context: List[Node], criteria: CriteriaType=0):
+#     """
+#     Replace a node by the first of its immediate descendants
+#     that meets the `criteria`. The criteria can either be the
+#     index of the child (counting from zero), or the tag name or
+#     a boolean-valued function on the context of the child.
+#     If no child matching the criteria is found, the node will
+#     not be replaced.
+#     """
+#     child = pick_child(context, criteria)
+#     if child:
+#         print(child)
+#         replace_by(context[-1], child)
+
+
+# @transformation_factory(int, str, Callable)
+# def content_from_child(context: List[None], criteria: CriteriaType=0):
+#     """
+#     Reduce a node, by transferring the result of the first of its
+#     immediate descendants that meets the `criteria` to this node,
+#     but keeping this node's parser entry. The criteria can either
+#     be the index of the child (counting from zero), or the tag
+#     name or a boolean-valued function on the context of the child.
+#     If no child matching the criteria is found, the node will
+#     not be replaced.
+#     """
+#     child = pick_child(context, criteria)
+#     if child:
+#         reduce_child(context[-1], child)
+
+
+
+def replace_by_child(context: List[Node]):
     """
     Remove single branch node, replacing it by its immediate descendant
-    if and only if the condision on the descendant is true.
-    (In case the descendant's name is empty (i.e. anonymous) the
-    name of this node's parser is kept.)
+    if and only if the condition on the descendant is true.
     """
     node = context[-1]
     if len(node.children) == 1:
-        context.append(node.children[0])
-        if condition(context):
-            replace_child(node)
-        context.pop()
+        replace_by(node, node.children[0])
 
 
-@transformation_factory(Callable)
-def reduce_single_child(context: List[Node], condition: Callable=TRUE_CONDITION):
+def content_from_child(context: List[Node]):
     """
     Reduce a single branch node, by transferring the result of its
     immediate descendant to this node, but keeping this node's parser entry.
@@ -309,10 +354,7 @@ def reduce_single_child(context: List[Node], condition: Callable=TRUE_CONDITION)
     """
     node = context[-1]
     if len(node.children) == 1:
-        context.append(node.children[0])
-        if condition(context):
-            reduce_child(node)
-        context.pop()
+        reduce_child(node, node.children[0])
 
 
 def is_named(context: List[Node]) -> bool:
@@ -333,7 +375,7 @@ def replace_or_reduce(context: List[Node], condition: Callable=is_named):
     if len(node.children) == 1:
         context.append(node.children[0])
         if condition(context):
-            replace_child(node)
+            replace_by(node)
         else:
             reduce_child(node)
         context.pop()
@@ -497,27 +539,27 @@ def remove_children_if(context: List[Node], condition: Callable):  # , section: 
         node.result = tuple(c for c in node.children if not condition(context + [c]))
 
 
-@transformation_factory(Callable)
-def remove_children(context: List[Node],
-                    condition: Callable = TRUE_CONDITION,
-                    section: slice = slice(None)):
-    """Removes all nodes from a slice of the result field if the function
-    `condition(child_node)` evaluates to `True`."""
-    node = context[-1]
-    if node.children:
-        c = node.children
-        N = len(c)
-        rng = range(*section.indices(N))
-        node.result = tuple(c[i] for i in range(N)
-                            if i not in rng or not condition(context + [c[i]]))
-        # selection = []
-        # for i in range(N):
-        #     context.append(c[i])
-        #     if not i in rng or not condition(context):
-        #         selection.append(c[i])
-        #     context.pop()
-        # if len(selection) != c:
-        #     node.result = tuple(selection)
+# @transformation_factory(Callable)
+# def remove_children(context: List[Node],
+#                     condition: Callable = TRUE_CONDITION,
+#                     section: slice = slice(None)):
+#     """Removes all nodes from a slice of the result field if the function
+#     `condition(child_node)` evaluates to `True`."""
+#     node = context[-1]
+#     if node.children:
+#         c = node.children
+#         N = len(c)
+#         rng = range(*section.indices(N))
+#         node.result = tuple(c[i] for i in range(N)
+#                             if i not in rng or not condition(context + [c[i]]))
+#         # selection = []
+#         # for i in range(N):
+#         #     context.append(c[i])
+#         #     if not i in rng or not condition(context):
+#         #         selection.append(c[i])
+#         #     context.pop()
+#         # if len(selection) != c:
+#         #     node.result = tuple(selection)
 
 
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
@@ -539,7 +581,7 @@ def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory
-def remove_parser(context: List[Node], tag_names: AbstractSet[str]):
+def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):
     """Removes children by tag name."""
     remove_children_if(context, partial(is_one_of, tag_name_set=tag_names))
 

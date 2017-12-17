@@ -22,9 +22,9 @@ from DHParser import logging, is_filename, load_if_file, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \
     traverse, remove_children_if, merge_children, is_anonymous, \
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
+    content_from_child, replace_by_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, remove_parser, remove_content, remove_brackets, replace_parser, \
+    is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, replace_parser, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
 
 
@@ -470,7 +470,7 @@ def get_grammar() -> MLWGrammar:
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
     "+": remove_empty,
-    "Autor": [reduce_single_child],
+    "Autor": [content_from_child],
     "Artikel": [],
     "LemmaPosition": [],
     "Lemma": [],
@@ -489,11 +489,11 @@ MLW_AST_transformation_table = {
     "EtymologiePosition": [],
     "EtymologieVarianten": [],
     "EtymologieVariante": [],
-    "ArtikelKopf": [replace_by_single_child],
+    "ArtikelKopf": [replace_by_child],
     "SchreibweisenPosition": [],
     "SWTyp": [replace_or_reduce],
     "SWVariante": [],
-    "Schreibweise": [replace_by_single_child],
+    "Schreibweise": [replace_by_child],
     "BedeutungsPosition": [],
     "Bedeutung": [],
     "Bedeutungskategorie": [],
@@ -505,15 +505,15 @@ MLW_AST_transformation_table = {
     "Zusatz": [],
     "ArtikelVerfasser": [],
     "Name": [],
-    "Stelle": [reduce_single_child],
+    "Stelle": [content_from_child],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
-    "Beleg": [replace_by_single_child],
+    "Beleg": [replace_by_child],
     "Verweis": [],
     "VerweisZiel": [],
-    "Werk": [reduce_single_child],
-    "ZielName": [replace_by_single_child],
+    "Werk": [content_from_child],
+    "ZielName": [replace_by_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
     "DEU_WORT": [],
@@ -538,8 +538,8 @@ MLW_AST_transformation_table = {
     "KOMMENTARZEILEN": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    ":Token, :RE": reduce_single_child,
-    "*": replace_by_single_child
+    ":Token, :RE": content_from_child,
+    "*": replace_by_child
 }
 
 

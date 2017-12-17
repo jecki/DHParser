@@ -1185,7 +1185,7 @@ class RE(Parser):
     >>> result.structure()
     '(:RE (:RegExp "Haus") (:Whitespace " "))'
     >>> parser(' Haus').content()
-    ' <<< Error on " Haus" | Parser did not match! Invalid source file?\\n    Most advanced: None\\n    Last match:    None; >>> '
+    ' <<< Error on " Haus" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation:  `/ ... /~`  or  `~/ ... /`  or  `~/ ... /~`
     EBNF-Example:   `word = /\w+/~`
@@ -1437,7 +1437,7 @@ class OneOrMore(UnaryOperator):
     >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content()
     'Wo viel der Weisheit, da auch viel des Grämens.'
     >>> Grammar(sentence)('.').content()  # an empty sentence also matches
-    ' <<< Error on "." | Parser did not match! Invalid source file?\\n    Most advanced: None\\n    Last match:    None; >>> '
+    ' <<< Error on "." | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation: `{ ... }+`
     EBNF-Example:  `sentence = { /\w+,?/ }+`
@@ -1480,7 +1480,7 @@ class Series(NaryOperator):
     >>> Grammar(variable_name)('variable_1').content()
     'variable_1'
     >>> Grammar(variable_name)('1_variable').content()
-    ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\\n    Most advanced: None\\n    Last match:    None; >>> '
+    ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation: `... ...`    (sequence of parsers separated by a blank or new line)
     EBNF-Example:  `series = letter letter_or_digit`
