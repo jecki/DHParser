@@ -160,10 +160,10 @@ class MLWGrammar(Grammar):
     
     Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
     UntersteBedeutung    = Interpretamente [BelegPosition]
-    Bedeutungskategorie  = { EINZEILER [LZ] } [BedeutungsQualifikation] §":"
+    Bedeutungskategorie  = { EINZEILER [LZ] [BedeutungsQualifikation] [LZ] } §":"
     Interpretamente      = LateinischeBedeutung ("--"| LZ) §DeutscheBedeutung [":"]
-    LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
-    DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
+    LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|";"|ZW> LateinischerAusdruck }
+    DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|";"|ZW> DeutscherAusdruck }
     
     LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
     DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
@@ -254,21 +254,21 @@ class MLWGrammar(Grammar):
     NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
     
     DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
-    DEU_WORT_ERW     = DEU_WORT | ("(" DEU_WORT §")")
+    DEU_WORT_ERW     = DEU_WORT | (["("] DEU_WORT [")"])
     DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-.]+/~
     GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
     KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
     GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
     DEU_KLEIN        = /(?!--)[a-zäöüßęõ_\-.]+/~
     LAT_WORT         = /(?!--)[a-z|\-_.]+/~
-    LAT_WORT_ERW     = LAT_WORT | ("(" LAT_WORT §")")
+    LAT_WORT_ERW     = LAT_WORT | (["("] LAT_WORT [")"])
     GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
     ZAHL             = /[\d]+/~
     SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
     ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
     
-    SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)|[`‘]/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
-    TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`‘]/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
+    SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)|[`''‘’?]/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+    TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`''‘’?]/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
     
     BUCHSTABENFOLGE  = /\w+/~
     ZEICHENFOLGE     = /[\w()-]+/~
@@ -315,7 +315,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "2c0516a46fa68896294ceaaf72917ded"
+    source_hash__ = "281baae30880effd61f69fe6920192f8"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -344,20 +344,20 @@ class MLWGrammar(Grammar):
     TEXTELEMENT.set(Alternative(DEU_WORT, SEITENZAHL, ROEMISCHE_ZAHL))
     ZEICHENFOLGE = RE('[\\w()-]+')
     BUCHSTABENFOLGE = RE('\\w+')
-    TEIL_SATZZEICHEN.set(RE('(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`‘]'))
-    SATZZEICHEN.set(RE('(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\\[\\]]+)|[`‘]'))
+    TEIL_SATZZEICHEN.set(RE("(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`''‘’?]"))
+    SATZZEICHEN.set(RE("(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\\[\\]]+)|[`''‘’?]"))
     ROEMISCHE_ZAHL.set(RE('(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\\w])'))
     SEITENZAHL.set(RE('[\\d]+(?:\\^(?:(?:\\{[\\d\\w.]+\\})|\\w))?'))
     ZAHL = RE('[\\d]+')
     GROSSSCHRIFT.set(RE('(?!--)[A-ZÄÖÜ_\\-]+'))
-    LAT_WORT_ERW = Alternative(LAT_WORT, Series(Token("("), LAT_WORT, Token(")"), mandatory=2))
+    LAT_WORT_ERW = Alternative(LAT_WORT, Series(Option(Token("(")), LAT_WORT, Option(Token(")"))))
     LAT_WORT.set(RE('(?!--)[a-z|\\-_.]+'))
     DEU_KLEIN = RE('(?!--)[a-zäöüßęõ_\\-.]+')
     GRI_BUCHSTABE = RegExp('[αβγδεζηθικλμνξοπρςστυφχψω]')
     KLEINBUCHSTABE = RE('[a-zäöü](?=[ \\t\\n])')
     GROSSBUCHSTABE = RE('[A-ZÄÖÜ](?=[ \\t\\n])')
     DEU_GROSS = RE('[A-ZÄÖÜ][a-zäöüßę_\\-.]+')
-    DEU_WORT_ERW = Alternative(DEU_WORT, Series(Token("("), DEU_WORT, Token(")"), mandatory=2))
+    DEU_WORT_ERW = Alternative(DEU_WORT, Series(Option(Token("(")), DEU_WORT, Option(Token(")"))))
     DEU_WORT.set(Alternative(DEU_GROSS, DEU_KLEIN, GROSSBUCHSTABE))
     NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
@@ -402,10 +402,10 @@ class MLWGrammar(Grammar):
     BedeutungsQualifikation = Synonym(Zusatz)
     DeutscherAusdruck = Series(DEU_WORT_ERW, ZeroOrMore(Series(RE(''), DEU_WORT_ERW)), Option(Series(Option(LZ), BedeutungsQualifikation)))
     LateinischerAusdruck = Series(LAT_WORT_ERW, ZeroOrMore(Series(RE(''), LAT_WORT_ERW)), Option(Series(Option(LZ), BedeutungsQualifikation)))
-    DeutscheBedeutung = Series(DEU, Option(LZ), DeutscherAusdruck, ZeroOrMore(Series(SomeOf(Token(","), ZW), DeutscherAusdruck)))
-    LateinischeBedeutung = Series(LAT, Option(LZ), LateinischerAusdruck, ZeroOrMore(Series(SomeOf(Token(","), ZW), LateinischerAusdruck)))
+    DeutscheBedeutung = Series(DEU, Option(LZ), DeutscherAusdruck, ZeroOrMore(Series(SomeOf(Token(","), Token(";"), ZW), DeutscherAusdruck)))
+    LateinischeBedeutung = Series(LAT, Option(LZ), LateinischerAusdruck, ZeroOrMore(Series(SomeOf(Token(","), Token(";"), ZW), LateinischerAusdruck)))
     Interpretamente = Series(LateinischeBedeutung, Alternative(Token("--"), LZ), DeutscheBedeutung, Option(Token(":")), mandatory=2)
-    Bedeutungskategorie = Series(ZeroOrMore(Series(EINZEILER, Option(LZ))), Option(BedeutungsQualifikation), Token(":"), mandatory=2)
+    Bedeutungskategorie = Series(ZeroOrMore(Series(EINZEILER, Option(LZ), Option(BedeutungsQualifikation), Option(LZ))), Token(":"), mandatory=1)
     UntersteBedeutung = Series(Interpretamente, Option(BelegPosition))
     Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Option(BelegPosition))
     U5Bedeutung = OneOrMore(Series(ZWW, Token("UUUUU_BEDEUTUNG"), Option(LZ), UntersteBedeutung, mandatory=3))
