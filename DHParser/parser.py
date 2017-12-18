@@ -1012,6 +1012,8 @@ class Grammar:
                     if record.node.error_flag:
                         append_line(errors_only, line)
             write_log(full_history, log_file_name + '_full')
+            if len(full_history) > 250:
+                write_log(full_history[-200:], log_file_name + '_full.tail')
             write_log(match_history, log_file_name + '_match')
             write_log(errors_only, log_file_name + '_errors')
 

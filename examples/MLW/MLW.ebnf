@@ -108,7 +108,7 @@ U5Bedeutung          = { ZWW "UUUUU_BEDEUTUNG" [LZ] §UntersteBedeutung }+
 
 Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 UntersteBedeutung    = Interpretamente [BelegPosition]
-Bedeutungskategorie  = EINZEILER [[LZ] BedeutungsQualifikation] §":"
+Bedeutungskategorie  = { EINZEILER [LZ] } [BedeutungsQualifikation] §":"
 Interpretamente      = LateinischeBedeutung ("--"| LZ) §DeutscheBedeutung [":"]
 LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|ZW> LateinischerAusdruck }
 DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|ZW> DeutscherAusdruck }
@@ -171,12 +171,12 @@ Zitat            = Quellenangabe
                    { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
                      [[ZW] BelegText] [[LZ] Zusatz] }
 
-Quellenangabe    = [Anker] < BelegQuelle | Verweis >
-BelegQuelle      = Autor DPP Werk
+Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
+BelegQuelle      = Autor §DPP [Werk] &SEM
 BelegText        = /"/ { MEHRZEILER | Zusatz } §/"/~ ["."]
 
-Autor     = EINZEILER
-Werk      = EINZEILER
+Autor     = EINZEILER [<Anker | Verweis | Zusatz>]
+Werk      = <EINZEILER [<Anker | Verweis | Zusatz>]>
 Stelle    = EINZEILER
 Datierung = EINZEILER
 Edition   = EINZEILER
@@ -202,25 +202,24 @@ NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
 DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
-DEU_WORT_ERW     = DEU_WORT | ( "(" DEU_WORT ")" )
-DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-]+/~
+DEU_WORT_ERW     = DEU_WORT | ("(" DEU_WORT §")")
+DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-.]+/~
 GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
 KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
 GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
-DEU_KLEIN        = /(?!-)[a-zäöüßę_\-]+/~
-LAT_WORT         = /(?!-)[a-z|\-_]+/~
-LAT_WORT_ERW     = LAT_WORT | ( "(" LAT_WORT ")" )
-GROSSSCHRIFT     = /(?!-)[A-ZÄÖÜ_\-]+/~
+DEU_KLEIN        = /(?!--)[a-zäöüßęõ_\-.]+/~
+LAT_WORT         = /(?!--)[a-z|\-_.]+/~
+LAT_WORT_ERW     = LAT_WORT | ("(" LAT_WORT §")")
+GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
 ZAHL             = /[\d]+/~
 SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
 
-SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
-TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
+SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)|[`‘]/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`‘]/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
 
 BUCHSTABENFOLGE  = /\w+/~
 ZEICHENFOLGE     = /[\w()-]+/~
-# EINZEILER        = /[\w()-. \t]+/~
 TEXTELEMENT      = DEU_WORT | SEITENZAHL | ROEMISCHE_ZAHL
 EINZEILER        = { TEXTELEMENT | TEIL_SATZZEICHEN }+
 FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+

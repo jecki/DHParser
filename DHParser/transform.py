@@ -373,12 +373,11 @@ def replace_or_reduce(context: List[Node], condition: Callable=is_named):
     """
     node = context[-1]
     if len(node.children) == 1:
-        context.append(node.children[0])
+        child = node.children[0]
         if condition(context):
-            replace_by(node)
+            replace_by(node, child)
         else:
-            reduce_child(node)
-        context.pop()
+            reduce_child(node, child)
 
 
 @transformation_factory

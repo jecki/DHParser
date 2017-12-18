@@ -21,7 +21,7 @@ from MLWCompiler import get_preprocessor, get_grammar, get_transformer, get_comp
 for root, dirs, files in os.walk('Beispiele'):
     for fname in files:
         entry = os.path.join(root, fname)
-        if fnmatch.fnmatch(entry, '*fascitergula.mlw'):
+        if fnmatch.fnmatch(entry, '*imperium.mlw'):
             print('\n Parse: ' + entry)
             raw_name = os.path.splitext(entry)[0]
             with logging(True):
