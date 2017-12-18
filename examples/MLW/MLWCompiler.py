@@ -160,15 +160,19 @@ class MLWGrammar(Grammar):
     
     Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
     UntersteBedeutung    = Interpretamente [BelegPosition]
-    Bedeutungskategorie  = { EINZEILER [LZ] [BedeutungsQualifikation] [LZ] } §":"
+    Bedeutungskategorie  = { EINZEILER [LZ] [Zusatz] [LZ] } §":"
     Interpretamente      = LateinischeBedeutung ("--"| LZ) §DeutscheBedeutung [":"]
-    LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|";"|ZW> LateinischerAusdruck }
-    DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|";"|ZW> DeutscherAusdruck }
+    LateinischeBedeutung = LAT [LZ] [Zusatz] LateinischerAusdruck
+    DeutscheBedeutung    = DEU [LZ] [Zusatz] DeutscherAusdruck
+    LateinischerAusdruck = LAT_WORT { [ZW] ((/[,;]?/~ [ZW] (LAT_WORT | ("(" LateinischerAusdruck ")")))
+                                            | Zusatz) }
+    DeutscherAusdruck    = DEU_WORT { [ZW] ((/[,;]?/~ [ZW] (DEU_WORT | ("(" DeutscherAusdruck")")))
+                                            | Zusatz) }
     
-    LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
-    DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
-    
-    BedeutungsQualifikation = Zusatz # "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
+    # LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
+    # DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
+    # LateinischerAusdruck = LAT_WORT [[LZ] BedeutungsQualifikation]
+    # DeutscherAusdruck = DEU_WORT [[LZ] BedeutungsQualifikation]
     
     BelegPosition = ZWW ["BELEGE" [LZ]] Belege
     
@@ -185,8 +189,8 @@ class MLWGrammar(Grammar):
     
     #### AUTOR/AUTORIN ###########################################################
     
-    ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") Name
-    Name             = { NAME | NAMENS_ABKÜRZUNG }+
+    ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") §Name
+    Name             = { NAME | NAMENS_ABKÜRZUNG | "unbekannt" }+
     
     
     #### STELLENVERZEICHNIS ######################################################
@@ -254,14 +258,14 @@ class MLWGrammar(Grammar):
     NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
     
     DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
-    DEU_WORT_ERW     = DEU_WORT | (["("] DEU_WORT [")"])
+    # DEU_WORT_ERW     = DEU_WORT | (["("] DEU_WORT [")"])
     DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-.]+/~
     GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
     KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
     GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
     DEU_KLEIN        = /(?!--)[a-zäöüßęõ_\-.]+/~
     LAT_WORT         = /(?!--)[a-z|\-_.]+/~
-    LAT_WORT_ERW     = LAT_WORT | (["("] LAT_WORT [")"])
+    # LAT_WORT_ERW     = LAT_WORT | (["("] LAT_WORT [")"])
     GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
     ZAHL             = /[\d]+/~
     SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
@@ -299,11 +303,12 @@ class MLWGrammar(Grammar):
     NIEMALS          = /(?!.)/
     """
     DEU_WORT = Forward()
+    DeutscherAusdruck = Forward()
     FREITEXT = Forward()
     GROSSSCHRIFT = Forward()
     Kategorien = Forward()
-    LAT_WORT = Forward()
     LZ = Forward()
+    LateinischerAusdruck = Forward()
     LemmaWort = Forward()
     ROEMISCHE_ZAHL = Forward()
     SATZZEICHEN = Forward()
@@ -315,7 +320,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "281baae30880effd61f69fe6920192f8"
+    source_hash__ = "464ddc02bebdae51c3aef3bbee12f793"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -350,14 +355,12 @@ class MLWGrammar(Grammar):
     SEITENZAHL.set(RE('[\\d]+(?:\\^(?:(?:\\{[\\d\\w.]+\\})|\\w))?'))
     ZAHL = RE('[\\d]+')
     GROSSSCHRIFT.set(RE('(?!--)[A-ZÄÖÜ_\\-]+'))
-    LAT_WORT_ERW = Alternative(LAT_WORT, Series(Option(Token("(")), LAT_WORT, Option(Token(")"))))
-    LAT_WORT.set(RE('(?!--)[a-z|\\-_.]+'))
+    LAT_WORT = RE('(?!--)[a-z|\\-_.]+')
     DEU_KLEIN = RE('(?!--)[a-zäöüßęõ_\\-.]+')
     GRI_BUCHSTABE = RegExp('[αβγδεζηθικλμνξοπρςστυφχψω]')
     KLEINBUCHSTABE = RE('[a-zäöü](?=[ \\t\\n])')
     GROSSBUCHSTABE = RE('[A-ZÄÖÜ](?=[ \\t\\n])')
     DEU_GROSS = RE('[A-ZÄÖÜ][a-zäöüßę_\\-.]+')
-    DEU_WORT_ERW = Alternative(DEU_WORT, Series(Option(Token("(")), DEU_WORT, Option(Token(")"))))
     DEU_WORT.set(Alternative(DEU_GROSS, DEU_KLEIN, GROSSBUCHSTABE))
     NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
@@ -394,18 +397,17 @@ class MLWGrammar(Grammar):
     Stellenverweis = Series(BelegQuelle, ZeroOrMore(Series(Option(ABS), Stelle, Alternative(NullVerweis, Verweis))))
     Verweisliste = ZeroOrMore(Series(Option(LZ), Token("*"), Stellenverweis))
     Stellenverzeichnis = Series(ZWW, Token("STELLENVERZEICHNIS"), Option(LemmaWort), ZWW, Verweisliste)
-    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG))
-    ArtikelVerfasser = Series(ZWW, Alternative(Token("AUTORIN"), Token("AUTOR")), Name)
+    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, Token("unbekannt")))
+    ArtikelVerfasser = Series(ZWW, Alternative(Token("AUTORIN"), Token("AUTOR")), Name, mandatory=2)
     UnterArtikel = Series(ZWW, Token("UNTER-ARTIKEL"))
     VerweisPosition = Series(ZWW, Token("VERWEISE"))
     BelegPosition = Series(ZWW, Option(Series(Token("BELEGE"), Option(LZ))), Belege)
-    BedeutungsQualifikation = Synonym(Zusatz)
-    DeutscherAusdruck = Series(DEU_WORT_ERW, ZeroOrMore(Series(RE(''), DEU_WORT_ERW)), Option(Series(Option(LZ), BedeutungsQualifikation)))
-    LateinischerAusdruck = Series(LAT_WORT_ERW, ZeroOrMore(Series(RE(''), LAT_WORT_ERW)), Option(Series(Option(LZ), BedeutungsQualifikation)))
-    DeutscheBedeutung = Series(DEU, Option(LZ), DeutscherAusdruck, ZeroOrMore(Series(SomeOf(Token(","), Token(";"), ZW), DeutscherAusdruck)))
-    LateinischeBedeutung = Series(LAT, Option(LZ), LateinischerAusdruck, ZeroOrMore(Series(SomeOf(Token(","), Token(";"), ZW), LateinischerAusdruck)))
+    DeutscherAusdruck.set(Series(DEU_WORT, ZeroOrMore(Series(Option(ZW), Alternative(Series(RE('[,;]?'), Option(ZW), Alternative(DEU_WORT, Series(Token("("), DeutscherAusdruck, Token(")")))), Zusatz)))))
+    LateinischerAusdruck.set(Series(LAT_WORT, ZeroOrMore(Series(Option(ZW), Alternative(Series(RE('[,;]?'), Option(ZW), Alternative(LAT_WORT, Series(Token("("), LateinischerAusdruck, Token(")")))), Zusatz)))))
+    DeutscheBedeutung = Series(DEU, Option(LZ), Option(Zusatz), DeutscherAusdruck)
+    LateinischeBedeutung = Series(LAT, Option(LZ), Option(Zusatz), LateinischerAusdruck)
     Interpretamente = Series(LateinischeBedeutung, Alternative(Token("--"), LZ), DeutscheBedeutung, Option(Token(":")), mandatory=2)
-    Bedeutungskategorie = Series(ZeroOrMore(Series(EINZEILER, Option(LZ), Option(BedeutungsQualifikation), Option(LZ))), Token(":"), mandatory=1)
+    Bedeutungskategorie = Series(ZeroOrMore(Series(EINZEILER, Option(LZ), Option(Zusatz), Option(LZ))), Token(":"), mandatory=1)
     UntersteBedeutung = Series(Interpretamente, Option(BelegPosition))
     Bedeutung = Series(Alternative(Interpretamente, Bedeutungskategorie), Option(BelegPosition))
     U5Bedeutung = OneOrMore(Series(ZWW, Token("UUUUU_BEDEUTUNG"), Option(LZ), UntersteBedeutung, mandatory=3))

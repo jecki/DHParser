@@ -108,15 +108,19 @@ U5Bedeutung          = { ZWW "UUUUU_BEDEUTUNG" [LZ] §UntersteBedeutung }+
 
 Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 UntersteBedeutung    = Interpretamente [BelegPosition]
-Bedeutungskategorie  = { EINZEILER [LZ] [BedeutungsQualifikation] [LZ] } §":"
+Bedeutungskategorie  = { EINZEILER [LZ] [Zusatz] [LZ] } §":"
 Interpretamente      = LateinischeBedeutung ("--"| LZ) §DeutscheBedeutung [":"]
-LateinischeBedeutung = LAT [LZ] LateinischerAusdruck { <","|";"|ZW> LateinischerAusdruck }
-DeutscheBedeutung    = DEU [LZ] DeutscherAusdruck { <","|";"|ZW> DeutscherAusdruck }
+LateinischeBedeutung = LAT [LZ] [Zusatz] LateinischerAusdruck
+DeutscheBedeutung    = DEU [LZ] [Zusatz] DeutscherAusdruck
+LateinischerAusdruck = LAT_WORT { [ZW] ((/[,;]?/~ [ZW] (LAT_WORT | ("(" LateinischerAusdruck ")")))
+                                        | Zusatz) }
+DeutscherAusdruck    = DEU_WORT { [ZW] ((/[,;]?/~ [ZW] (DEU_WORT | ("(" DeutscherAusdruck")")))
+                                        | Zusatz) }
 
-LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
-DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
-
-BedeutungsQualifikation = Zusatz # "[" Gegenstand DPP (Verweis | EINZEILER) §"]"
+# LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
+# DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
+# LateinischerAusdruck = LAT_WORT [[LZ] BedeutungsQualifikation]
+# DeutscherAusdruck = DEU_WORT [[LZ] BedeutungsQualifikation]
 
 BelegPosition = ZWW ["BELEGE" [LZ]] Belege
 
@@ -133,8 +137,8 @@ UnterArtikel = ZWW "UNTER-ARTIKEL"
 
 #### AUTOR/AUTORIN ###########################################################
 
-ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") Name
-Name             = { NAME | NAMENS_ABKÜRZUNG }+
+ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") §Name
+Name             = { NAME | NAMENS_ABKÜRZUNG | "unbekannt" }+
 
 
 #### STELLENVERZEICHNIS ######################################################
@@ -202,14 +206,14 @@ NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
 DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
-DEU_WORT_ERW     = DEU_WORT | (["("] DEU_WORT [")"])
+# DEU_WORT_ERW     = DEU_WORT | (["("] DEU_WORT [")"])
 DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-.]+/~
 GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
 KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
 GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
 DEU_KLEIN        = /(?!--)[a-zäöüßęõ_\-.]+/~
 LAT_WORT         = /(?!--)[a-z|\-_.]+/~
-LAT_WORT_ERW     = LAT_WORT | (["("] LAT_WORT [")"])
+# LAT_WORT_ERW     = LAT_WORT | (["("] LAT_WORT [")"])
 GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
 ZAHL             = /[\d]+/~
 SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text

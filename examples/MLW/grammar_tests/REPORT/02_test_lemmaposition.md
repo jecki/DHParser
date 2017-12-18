@@ -142,16 +142,11 @@ Match-test "3"
                     (:Token
                         "{"
                     )
-                    (FREITEXT
-                        (DEU_WORT
-                            (DEU_KLEIN
-                                (:RegExp
-                                    "sim"
-                                )
+                    (DEU_WORT
+                        (DEU_KLEIN
+                            (:RegExp
+                                "sim."
                             )
-                        )
-                        (SATZZEICHEN
-                            "."
                         )
                     )
                     (:Token
@@ -214,16 +209,11 @@ Match-test "4"
                             (:Token
                                 "{"
                             )
-                            (FREITEXT
-                                (DEU_WORT
-                                    (DEU_KLEIN
-                                        (:RegExp
-                                            "sim"
-                                        )
+                            (DEU_WORT
+                                (DEU_KLEIN
+                                    (:RegExp
+                                        "sim."
                                     )
-                                )
-                                (SATZZEICHEN
-                                    "."
                                 )
                             )
                             (:Token
@@ -354,16 +344,11 @@ Match-test "1"
                                 (:Token
                                     "{"
                                 )
-                                (FREITEXT
-                                    (DEU_WORT
-                                        (DEU_KLEIN
-                                            (:RegExp
-                                                "sim"
-                                            )
+                                (DEU_WORT
+                                    (DEU_KLEIN
+                                        (:RegExp
+                                            "sim."
                                         )
-                                    )
-                                    (SATZZEICHEN
-                                        "."
                                     )
                                 )
                                 (:Token

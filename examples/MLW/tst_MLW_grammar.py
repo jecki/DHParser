@@ -36,7 +36,7 @@ from MLWCompiler import get_grammar, get_transformer
 
 with toolkit.logging(True):
     error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
-                                         fn_patterns=['08_test*'],
+                                         fn_patterns=['*_test*'],
                                          verbose=True)
     print(error_report)
     print(error_report[:error_report.find('\n')])
