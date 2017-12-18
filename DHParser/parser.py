@@ -546,7 +546,7 @@ class Grammar:
 
         >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
         >>> number_parser = Grammar(number)
-        >>> number_parser("3.1416").content()
+        >>> number_parser("3.1416").content
         '3.1416'
 
     Collecting the parsers that define a grammar in a descendant class of
@@ -1126,7 +1126,7 @@ class RegExp(Parser):
 
     Example:
     >>> word = RegExp(r'\w+')
-    >>> Grammar(word)("Haus").content()
+    >>> Grammar(word)("Haus").content
     'Haus'
 
     EBNF-Notation:  `/ ... /`
@@ -1182,11 +1182,11 @@ class RE(Parser):
     >>> word = RE(r'\w+', wR=r'\s*')
     >>> parser = Grammar(word)
     >>> result = parser('Haus ')
-    >>> result.content()
+    >>> result.content
     'Haus '
-    >>> result.structure()
+    >>> result.structure
     '(:RE (:RegExp "Haus") (:Whitespace " "))'
-    >>> parser(' Haus').content()
+    >>> str(parser(' Haus'))
     ' <<< Error on " Haus" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation:  `/ ... /~`  or  `~/ ... /`  or  `~/ ... /~`
@@ -1361,11 +1361,11 @@ class Option(UnaryOperator):
 
     Examples:
     >>> number = Option(Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
-    >>> Grammar(number)('3.14159').content()
+    >>> Grammar(number)('3.14159').content
     '3.14159'
-    >>> Grammar(number)('3.14159').structure()
+    >>> Grammar(number)('3.14159').structure
     '(:Series (:Option) (:RegExp "3") (:Option (:RegExp ".14159")))'
-    >>> Grammar(number)('-1').content()
+    >>> Grammar(number)('-1').content
     '-1'
 
     EBNF-Notation: `[ ... ]`
@@ -1401,9 +1401,9 @@ class ZeroOrMore(Option):
 
     Examples:
     >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
-    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content()
+    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
     'Wo viel der Weisheit, da auch viel des Grämens.'
-    >>> Grammar(sentence)('.').content()  # an empty sentence also matches
+    >>> Grammar(sentence)('.').content  # an empty sentence also matches
     '.'
 
     EBNF-Notation: `{ ... }`
@@ -1436,9 +1436,9 @@ class OneOrMore(UnaryOperator):
 
     Examples:
     >>> sentence = OneOrMore(RE(r'\w+,?')) + Token('.')
-    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content()
+    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
     'Wo viel der Weisheit, da auch viel des Grämens.'
-    >>> Grammar(sentence)('.').content()  # an empty sentence also matches
+    >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
     ' <<< Error on "." | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation: `{ ... }+`
@@ -1479,9 +1479,9 @@ class Series(NaryOperator):
 
     Example:
     >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
-    >>> Grammar(variable_name)('variable_1').content()
+    >>> Grammar(variable_name)('variable_1').content
     'variable_1'
-    >>> Grammar(variable_name)('1_variable').content()
+    >>> str(Grammar(variable_name)('1_variable'))
     ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation: `... ...`    (sequence of parsers separated by a blank or new line)
@@ -1583,12 +1583,12 @@ class Alternative(NaryOperator):
 
     # the order of the sub-expression matters!
     >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
-    >>> Grammar(number)("3.1416").content()
+    >>> str(Grammar(number)("3.1416"))
     '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
 
     # the most selective expression should be put first:
     >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
-    >>> Grammar(number)("3.1416").content()
+    >>> Grammar(number)("3.1416").content
     '3.1416'
 
     EBNF-Notation: `... | ...`
@@ -1645,9 +1645,9 @@ class AllOf(NaryOperator):
 
     Example:
     >>> prefixes = AllOf(Token("A"), Token("B"))
-    >>> Grammar(prefixes)('A B').content()
+    >>> Grammar(prefixes)('A B').content
     'A B'
-    >>> Grammar(prefixes)('B A').content()
+    >>> Grammar(prefixes)('B A').content
     'B A'
 
     EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
@@ -1694,11 +1694,11 @@ class SomeOf(NaryOperator):
 
     Example:
     >>> prefixes = SomeOf(Token("A"), Token("B"))
-    >>> Grammar(prefixes)('A B').content()
+    >>> Grammar(prefixes)('A B').content
     'A B'
-    >>> Grammar(prefixes)('B A').content()
+    >>> Grammar(prefixes)('B A').content
     'B A'
-    >>> Grammar(prefixes)('B').content()
+    >>> Grammar(prefixes)('B').content
     'B'
 
     EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
@@ -1869,7 +1869,7 @@ class Capture(UnaryOperator):
         if node:
             assert self.name, """Tried to apply an unnamed capture-parser!"""
             stack = self.grammar.variables__.setdefault(self.name, [])
-            stack.append(str(node))
+            stack.append(node.content)
             self.grammar.push_rollback__(len(text), lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures

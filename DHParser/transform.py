@@ -437,7 +437,7 @@ def collapse(context: List[Node]):
     string representation of the node.
     """
     node = context[-1]
-    node.result = str(node)
+    node.result = node.content
 
 
 @transformation_factory
@@ -516,7 +516,7 @@ def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 
 def has_content(context: List[Node], regexp: str) -> bool:
     """Checks a node's content against a regular expression."""
-    return bool(re.match(regexp, str(context[-1])))
+    return bool(re.match(regexp, context[-1].content))
 
 
 @transformation_factory(Callable)
@@ -624,7 +624,7 @@ def assert_content(context: List[Node], regexp: str):
     node = context[-1]
     if not has_content(context, regexp):
         node.add_error('Element "%s" violates %s on %s' %
-                       (node.parser.name, str(regexp), str(node)))
+                       (node.parser.name, str(regexp), node.content))
 
 
 @transformation_factory

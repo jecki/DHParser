@@ -401,13 +401,13 @@ class TestAllSome:
     def test_all(self):
         ebnf = 'prefix = <"A" "B">'
         grammar = grammar_provider(ebnf)()
-        assert grammar('B A').content() == 'B A'
+        assert grammar('B A').content == 'B A'
 
     def test_some(self):
         ebnf = 'prefix = <"A" | "B">'
         grammar = grammar_provider(ebnf)()
-        assert grammar('B A').content() == 'B A'
-        assert grammar('B').content() == 'B'
+        assert grammar('B A').content == 'B A'
+        assert grammar('B').content == 'B'
 
 
 if __name__ == "__main__":

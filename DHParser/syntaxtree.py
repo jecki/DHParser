@@ -161,7 +161,7 @@ ZOMBIE_PARSER = ZombieParser()
 
 ChildrenType = Tuple['Node', ...]
 NoChildren = cast(ChildrenType, ())  # type: ChildrenType
-StrictResultType = Union[ChildrenType, StringView, str]
+StrictResultType = Union[ChildrenType, str]
 ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 
@@ -233,7 +233,7 @@ class Node(collections.abc.Sized):
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = result       # type: StrictResultType
+            self._result = str(result)  # type: StrictResultType
             self.children = NoChildren  # type: ChildrenType
             self._len = -1              # type: int  # lazy evaluation
         else:
@@ -244,11 +244,11 @@ class Node(collections.abc.Sized):
 
 
     def __str__(self):
-        if self.children:
-            return "".join(str(child) for child in self.children)
-        elif isinstance(self._result, StringView):
-            self.result = str(self._result)
-        return self._result
+        s = "".join(str(child) for child in self.children) if self.children else self.result
+        if self._errors:
+            return ' <<< Error on "%s" | %s >>> ' % \
+                   (s, '; '.join(e.message for e in self._errors))
+        return s
 
 
     def __repr__(self):
@@ -308,6 +308,7 @@ class Node(collections.abc.Sized):
         """
         return self._result
 
+
     @result.setter
     def result(self, result: ResultType):
         # # made obsolete by static type checking with mypy
@@ -330,7 +331,7 @@ class Node(collections.abc.Sized):
                         self.error_flag = max(child.error_flag for child in self.children)
             else:
                 self.children = NoChildren
-                self._result = result
+                self._result = str(result)
         # # shorter but slower:
         # self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
         # self.children = cast(ChildrenType, self._result) \
@@ -338,6 +339,27 @@ class Node(collections.abc.Sized):
         # if self.children:
         #     self.error_flag = max(self.error_flag,
         #                           max(child.error_flag for child in self.children))  # type: bool
+
+
+    @property
+    def content(self) -> str:
+        """
+        Returns content as string, inserting error messages where
+        errors occurred.
+        """
+        if self.children:
+            return "".join(child.content for child in self.children)
+        return self._result
+
+
+    @property
+    def structure(self) -> str:
+        """
+        Return structure (and content) as S-expression on a single line
+        without any line breaks.
+        """
+        return flatten_sxpr(self.as_sxpr(showerrors=False))
+
 
     @property
     def pos(self) -> int:
@@ -362,7 +384,7 @@ class Node(collections.abc.Sized):
     @property
     def errors(self) -> List[Error]:
         """
-        Returns the errors that occured at this Node,
+        Returns the errors that occurred at this Node,
         not including any errors from child nodes.
         """
         return self._errors.copy()
@@ -464,7 +486,7 @@ class Node(collections.abc.Sized):
             return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str = None, compact: bool = False) -> str:
+    def as_sxpr(self, src: str = None, compact: bool = False, showerrors: bool = True) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -487,7 +509,7 @@ class Node(collections.abc.Sized):
                 txt += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
             # if node.error_flag:   # just for debugging error collecting
             #     txt += " HAS ERRORS"
-            if node.errors:
+            if showerrors and node.errors:
                 txt += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
                                                   for err in node.errors)
             return txt + '\n'
@@ -505,7 +527,7 @@ class Node(collections.abc.Sized):
         return self._tree_repr('    ', opening, closing, pretty, density=density)
 
 
-    def as_xml(self, src: str = None) -> str:
+    def as_xml(self, src: str = None, showerrors: bool = True) -> str:
         """
         Returns content as XML-tree.
 
@@ -521,7 +543,7 @@ class Node(collections.abc.Sized):
             # s += ' pos="%i"' % node.pos
             if src:
                 txt += ' line="%i" col="%i"' % line_col(src, node.pos)
-            if node.errors:
+            if showerrors and node.errors:
                 txt += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
             return txt + ">\n"
 
@@ -530,25 +552,6 @@ class Node(collections.abc.Sized):
             return '\n</' + node.tag_name + '>'
 
         return self._tree_repr('    ', opening, closing, density=1)
-
-
-    def structure(self) -> str:
-        """
-        Return structure (and content) as S-expression on a single line
-        without any line breaks.
-        """
-        return flatten_sxpr(self.as_sxpr())
-
-
-    def content(self) -> str:
-        """
-        Returns content as string, inserting error messages where
-        errors occurred.
-        """
-        s = "".join(child.content() for child in self.children) if self.children \
-            else str(self.result)
-        return (' <<< Error on "%s" | %s >>> '
-                % (s, '; '.join(e.message for e in self._errors))) if self._errors else s
 
 
     def find(self, match_function: Callable) -> Iterator['Node']:

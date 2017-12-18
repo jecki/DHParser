@@ -313,11 +313,11 @@ class TestAllOfSomeOf:
     def test_allOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
         prefixes = AllOf(Token("A"), Token("B"))
-        assert Grammar(prefixes)('A B').content() == 'A B'
-        assert Grammar(prefixes)('B A').content() == 'B A'
+        assert Grammar(prefixes)('A B').content == 'A B'
+        assert Grammar(prefixes)('B A').content == 'B A'
         # aternative Form
         prefixes = AllOf(Series(Token("B"), Token("A")))
-        assert Grammar(prefixes)('A B').content() == 'A B'
+        assert Grammar(prefixes)('A B').content == 'A B'
 
     def test_allOf_completeness(self):
         """Test that an error is raised if not  all parsers of an AllOf-List
@@ -329,28 +329,28 @@ class TestAllOfSomeOf:
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
         prefixes = AllOf(Token("A"), Token("B"), Token("A"))
-        assert Grammar(prefixes)('A A B').content() == 'A A B'
-        assert Grammar(prefixes)('A B A').content() == 'A B A'
-        assert Grammar(prefixes)('B A A').content() == 'B A A'
+        assert Grammar(prefixes)('A A B').content == 'A A B'
+        assert Grammar(prefixes)('A B A').content == 'A B A'
+        assert Grammar(prefixes)('B A A').content == 'B A A'
         assert Grammar(prefixes)('A B B').error_flag
 
     def test_someOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
         prefixes = SomeOf(Token("A"), Token("B"))
-        assert Grammar(prefixes)('A B').content() == 'A B'
-        assert Grammar(prefixes)('B A').content() == 'B A'
+        assert Grammar(prefixes)('A B').content == 'A B'
+        assert Grammar(prefixes)('B A').content == 'B A'
         # aternative Form
         prefixes = SomeOf(Alternative(Token("B"), Token("A")))
-        assert Grammar(prefixes)('A B').content() == 'A B'
-        assert Grammar(prefixes)('B').content() == 'B'
+        assert Grammar(prefixes)('A B').content == 'A B'
+        assert Grammar(prefixes)('B').content == 'B'
 
     def test_someOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
         prefixes = SomeOf(Token("A"), Token("B"), Token("A"))
-        assert Grammar(prefixes)('A A B').content() == 'A A B'
-        assert Grammar(prefixes)('A B A').content() == 'A B A'
-        assert Grammar(prefixes)('B A A').content() == 'B A A'
+        assert Grammar(prefixes)('A A B').content == 'A A B'
+        assert Grammar(prefixes)('A B A').content == 'A B A'
+        assert Grammar(prefixes)('B A A').content == 'B A A'
         assert Grammar(prefixes)('A B B').error_flag
 
 
