@@ -80,8 +80,7 @@ KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
 
 
-# TODO: Add more optional type dispatch paramters, e.g. t2=None, t3=None, t4=None
-def transformation_factory(t=None):
+def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     """Creates factory functions from transformation-functions that
     dispatch on the first parameter after the context parameter.
 
@@ -113,7 +112,7 @@ def transformation_factory(t=None):
         trans_table = { 'expression': partial(remove_tokens, tokens={'+', '-'}) }
 
     Parameters:
-        t:  type of the second argument of the transformation function,
+        t1:  type of the second argument of the transformation function,
             only necessary if the transformation functions' parameter list
             does not have type annotations.
     """
@@ -123,10 +122,10 @@ def transformation_factory(t=None):
         params = list(sig.parameters.values())[1:]
         if len(params) == 0:
             return f  # '@transformer' not needed w/o free parameters
-        assert t or params[0].annotation != params[0].empty, \
+        assert t1 or params[0].annotation != params[0].empty, \
             "No type information on second parameter found! Please, use type " \
             "annotation or provide the type information via transfomer-decorator."
-        p1type = t or params[0].annotation
+        p1type = t1 or params[0].annotation
         f = singledispatch(f)
         try:
             if len(params) == 1 and issubclass(p1type, Container) \
@@ -146,15 +145,19 @@ def transformation_factory(t=None):
             d.update(kwargs)
             return partial(f, **d)
 
-        f.register(p1type, gen_partial)
+        for t in (p1type, t2, t3, t4, t5):
+            if t:
+                f.register(t, gen_partial)
+            else:
+                break
         return f
 
-    if isinstance(t, type(lambda: 1)):
+    if isinstance(t1, type(lambda: 1)):
         # Provide for the case that transformation_factory has been
         # written as plain decorator and not as a function call that
         # returns the decorator proper.
-        func = t
-        t = None
+        func = t1
+        t1 = None
         return decorator(func)
     else:
         return decorator
@@ -265,6 +268,20 @@ def traverse(root_node: Node,
 # ------------------------------------------------
 
 
+def replace_by(node: Node, child: Node):
+    if not child.parser.name:
+        child.parser = MockParser(node.parser.name, child.parser.ptype)
+        # parser names must not be overwritten, else: child.parser.name = node.parser.name
+    node.parser = child.parser
+    node._errors.extend(child._errors)
+    node.result = child.result
+
+
+def reduce_child(node: Node, child: Node):
+    node._errors.extend(child._errors)
+    node.result = child.result
+
+
 def pick_child(context: List[Node], criteria: CriteriaType):
     """Returns the first child that meets the criteria."""
     if isinstance(criteria, int):
@@ -287,74 +304,62 @@ def pick_child(context: List[Node], criteria: CriteriaType):
         return None
 
 
-def replace_by(node: Node, child: Node):
-    if not child.parser.name:
-        child.parser = MockParser(node.parser.name, child.parser.ptype)
-        # parser names must not be overwritten, else: child.parser.name = node.parser.name
-    node.parser = child.parser
-    node._errors.extend(child._errors)
-    node.result = child.result
+def single_child(context: List[Node]) -> bool:
+    return len(context[-2].children) == 1
 
 
-def reduce_child(node: Node, child: Node):
-    node._errors.extend(child._errors)
-    node.result = child.result
-
-
-# TODO: default value = lambda context: len(context[-1].children) == 1
-# @transformation_factory(int, str, Callable)
-# def replace_by_child(context: List[Node], criteria: CriteriaType=0):
-#     """
-#     Replace a node by the first of its immediate descendants
-#     that meets the `criteria`. The criteria can either be the
-#     index of the child (counting from zero), or the tag name or
-#     a boolean-valued function on the context of the child.
-#     If no child matching the criteria is found, the node will
-#     not be replaced.
-#     """
-#     child = pick_child(context, criteria)
-#     if child:
-#         print(child)
-#         replace_by(context[-1], child)
-
-
-# @transformation_factory(int, str, Callable)
-# def content_from_child(context: List[None], criteria: CriteriaType=0):
-#     """
-#     Reduce a node, by transferring the result of the first of its
-#     immediate descendants that meets the `criteria` to this node,
-#     but keeping this node's parser entry. The criteria can either
-#     be the index of the child (counting from zero), or the tag
-#     name or a boolean-valued function on the context of the child.
-#     If no child matching the criteria is found, the node will
-#     not be replaced.
-#     """
-#     child = pick_child(context, criteria)
-#     if child:
-#         reduce_child(context[-1], child)
-
-
-
-def replace_by_child(context: List[Node]):
+@transformation_factory(int, str, Callable)
+def replace_by_child(context: List[Node], criteria: CriteriaType=single_child):
     """
-    Remove single branch node, replacing it by its immediate descendant
-    if and only if the condition on the descendant is true.
+    Replace a node by the first of its immediate descendants
+    that meets the `criteria`. The criteria can either be the
+    index of the child (counting from zero), or the tag name or
+    a boolean-valued function on the context of the child.
+    If no child matching the criteria is found, the node will
+    not be replaced.
     """
-    node = context[-1]
-    if len(node.children) == 1:
-        replace_by(node, node.children[0])
+    child = pick_child(context, criteria)
+    if child:
+        replace_by(context[-1], child)
 
 
-def content_from_child(context: List[Node]):
+@transformation_factory(int, str, Callable)
+def content_from_child(context: List[None], criteria: CriteriaType=single_child):
     """
-    Reduce a single branch node, by transferring the result of its
-    immediate descendant to this node, but keeping this node's parser entry.
-    If the condition evaluates to false on the descendant, it will not
-    be reduced.
+    Reduce a node, by transferring the result of the first of its
+    immediate descendants that meets the `criteria` to this node,
+    but keeping this node's parser entry. The criteria can either
+    be the index of the child (counting from zero), or the tag
+    name or a boolean-valued function on the context of the child.
+    If no child matching the criteria is found, the node will
+    not be replaced.
     """
-    node = context[-1]
-    if len(node.children) == 1:
-        reduce_child(node, node.children[0])
+    child = pick_child(context, criteria)
+    if child:
+        reduce_child(context[-1], child)
+
+
+
+# def replace_by_child(context: List[Node]):
+#     """
+#     Remove single branch node, replacing it by its immediate descendant
+#     if and only if the condition on the descendant is true.
+#     """
+#     node = context[-1]
+#     if len(node.children) == 1:
+#         replace_by(node, node.children[0])
+#
+#
+# def content_from_child(context: List[Node]):
+#     """
+#     Reduce a single branch node, by transferring the result of its
+#     immediate descendant to this node, but keeping this node's parser entry.
+#     If the condition evaluates to false on the descendant, it will not
+#     be reduced.
+#     """
+#     node = context[-1]
+#     if len(node.children) == 1:
+#         reduce_child(node, node.children[0])
 
 
 def is_named(context: List[Node]) -> bool:
