@@ -33,7 +33,7 @@ except ImportError:
 
 from DHParser import toolkit
 from DHParser import syntaxtree
-from DHParser import parser
+from DHParser import parsers
 from DHParser import transform
 from DHParser import ebnf
 from DHParser import dsl

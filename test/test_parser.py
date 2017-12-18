@@ -28,7 +28,7 @@ from DHParser.toolkit import is_logging, logging, compile_python_object
 from DHParser.stringview import StringView
 from DHParser.error import Error
 from DHParser.syntaxtree import mock_syntax_tree
-from DHParser.parser import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
+from DHParser.parsers import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, Compiler
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS

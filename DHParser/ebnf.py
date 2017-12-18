@@ -21,7 +21,7 @@ from collections import OrderedDict
 from functools import partial
 
 from DHParser.error import Error
-from DHParser.parser import Grammar, mixin_comment, nil_preprocessor, Forward, RegExp, RE, \
+from DHParser.parsers import Grammar, mixin_comment, nil_preprocessor, Forward, RegExp, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
     Compiler, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE

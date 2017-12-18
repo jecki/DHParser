@@ -26,7 +26,7 @@ from multiprocessing import Pool
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compile_python_object, re
-from DHParser.parser import compile_source, nil_preprocessor
+from DHParser.parsers import compile_source, nil_preprocessor
 from DHParser.error import has_errors
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler

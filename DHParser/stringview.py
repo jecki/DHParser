@@ -81,7 +81,7 @@ def real_indices(begin: Optional[int],
 class StringView(collections.abc.Sized):
     """
     A rudimentary StringView class, just enough for the use cases
-    in parser.py. The difference between a StringView and the python
+    in parsers.py. The difference between a StringView and the python
     builtin strings is that StringView-objects do slicing without
     copying, i.e. slices are just a view on a section of the sliced
     string.

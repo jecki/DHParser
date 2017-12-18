@@ -7,7 +7,7 @@ import sys
 sys.path.extend(['../../', '../', './'])
 
 from DHParser.toolkit import logging
-from DHParser.parser import compile_source
+from DHParser.parsers import compile_source
 from DHParser.dsl import recompile_grammar
 
 if not recompile_grammar('MLW.ebnf', force=False):  # recompiles Grammar only if it has changed

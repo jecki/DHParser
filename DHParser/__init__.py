@@ -22,7 +22,7 @@ permissions and limitations under the License.
 from .error import *
 from .dsl import *
 from .ebnf import *
-from .parser import *
+from .parsers import *
 from .stringview import *
 from .syntaxtree import *
 from .toolkit import *
