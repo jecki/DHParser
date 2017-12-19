@@ -1150,7 +1150,7 @@ class RegExp(Parser):
             match = text.match(self.regexp)
             if match:
                 end = text.index(match.end())
-                return Node(self, text[:end], True), text[end:]
+                return Node(self, match.group(0), True), text[end:]
         return None, text
 
     def __repr__(self):
