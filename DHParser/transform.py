@@ -311,7 +311,7 @@ def single_child(context: List[Node]) -> bool:
 @transformation_factory(int, str, Callable)
 def replace_by_child(context: List[Node], criteria: CriteriaType=single_child):
     """
-    Replace a node by the first of its immediate descendants
+    Replaces a node by the first of its immediate descendants
     that meets the `criteria`. The criteria can either be the
     index of the child (counting from zero), or the tag name or
     a boolean-valued function on the context of the child.
@@ -328,7 +328,7 @@ def replace_by_child(context: List[Node], criteria: CriteriaType=single_child):
 @transformation_factory(int, str, Callable)
 def content_from_child(context: List[None], criteria: CriteriaType=single_child):
     """
-    Reduce a node, by transferring the result of the first of its
+    Reduces a node, by transferring the result of the first of its
     immediate descendants that meets the `criteria` to this node,
     but keeping this node's parser entry. The criteria can either
     be the index of the child (counting from zero), or the tag
@@ -346,8 +346,9 @@ def content_from_child(context: List[None], criteria: CriteriaType=single_child)
 
 def replace_by_single_child(context: List[Node]):
     """
-    Remove single branch node, replacing it by its immediate descendant.
-    If there are more than one children, no replacement takes place.
+    Removes single branch node, replacing it by its immediate descendant.
+    Replacement only takes place, if the last node in the context has
+    exactly one child.
     """
     node = context[-1]
     if len(node.children) == 1:
@@ -356,10 +357,10 @@ def replace_by_single_child(context: List[Node]):
 
 def content_from_sinlge_child(context: List[Node]):
     """
-    Reduce a single branch node by transferring the result of its
+    Reduces a single branch node by transferring the result of its
     immediate descendant to this node, but keeping this node's parser entry.
-    This will only be done if the last node in the context has is exactly
-    one child.
+    Reduction only takes place if the last node in the context has
+    exactly one child.
     """
     node = context[-1]
     if len(node.children) == 1:
