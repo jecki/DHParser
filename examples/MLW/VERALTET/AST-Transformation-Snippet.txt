@@ -59,6 +59,6 @@ MLW_AST_transformation_table = {
     "LZ": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    ":Token, :RE": content_from_sinlge_child,
+    ":Token, :RE": reduce_single_child,
     "*": replace_by_single_child
 }

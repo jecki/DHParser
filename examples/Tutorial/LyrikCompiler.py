@@ -16,31 +16,30 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.toolkit import logging, is_filename, load_if_file    
-from DHParser.parsers import Grammar, Compiler, nil_scanner, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Optional, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, \
+    Alternative, Pop, Token, Synonym, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    last_value, counterpart, accumulate, ScannerFunc
-from DHParser.syntaxtree import Node, traverse, remove_children_if, \
+    PreprocessorFunc, TransformationDict, remove_empty, reduce_single_child, \
+    Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, TransformationFunc, remove_parser, remove_content, remove_brackets, \
-    keep_children, has_name, has_content, apply_if, remove_first, remove_last
-from DHParser.base import WHITESPACE_PTYPE, TOKEN_PTYPE
+    flatten, is_empty, collapse, replace_content, remove_brackets, \
+    is_one_of, remove_first, remove_last, remove_tokens, remove_nodes, \
+    is_whitespace, TOKEN_PTYPE
+
 
 
 #######################################################################
 #
-# SCANNER SECTION - Can be edited. Changes will be preserved.
+# PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
 
-def LyrikScanner(text):
+def LyrikPreprocessor(text):
     return text
 
-def get_scanner() -> ScannerFunc:
-    return LyrikScanner
+def get_preprocessor() -> PreprocessorFunc:
+    return LyrikPreprocessor
 
 
 #######################################################################
@@ -52,9 +51,9 @@ def get_scanner() -> ScannerFunc:
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file, with this grammar:
     
-    gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text /\s*/ §ENDE
+    gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text /\s*/ ENDE
     
-    bibliographisches = autor §"," [NZ] werk §"," [NZ] ort §"," [NZ] jahr §"."
+    bibliographisches = autor §"," [NZ] werk "," [NZ] ort "," [NZ] jahr "."
     autor             = namenfolge [verknüpfung]
     werk              = wortfolge ["." §untertitel] [verknüpfung]
     untertitel        = wortfolge [verknüpfung]
@@ -83,13 +82,14 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "5fd541c17475b7f71654ff0cda14ec6f"
+    source_hash__ = "5ceb5f91412cbe1bcd4dd8b7005598fb"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
-    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=r'')
+    WHITESPACE__ = r'[\t ]*'
+    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
-    ENDE = NegativeLookahead(RE('.', wR=''))
+    ENDE = NegativeLookahead(RegExp('.'))
     JAHRESZAHL = RE('\\d\\d\\d\\d')
     LEERZEILE = RE('\\n[ \\t]*(?=\\n)')
     NZ = RE('\\n')
@@ -107,22 +107,22 @@ class LyrikGrammar(Grammar):
     namenfolge = OneOrMore(NAME)
     wortfolge = OneOrMore(WORT)
     jahr = Synonym(JAHRESZAHL)
-    ort = Series(wortfolge, Optional(verknüpfung))
-    untertitel = Series(wortfolge, Optional(verknüpfung))
-    werk = Series(wortfolge, Optional(Series(Token("."), Required(untertitel))), Optional(verknüpfung))
-    autor = Series(namenfolge, Optional(verknüpfung))
-    bibliographisches = Series(autor, Required(Token(",")), Optional(NZ), werk, Required(Token(",")), Optional(NZ), ort, Required(Token(",")), Optional(NZ), jahr, Required(Token(".")))
-    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Optional(serie), Required(titel), Required(text), RE('\\s*', wR=''), Required(ENDE))
+    ort = Series(wortfolge, Option(verknüpfung))
+    untertitel = Series(wortfolge, Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Token("."), untertitel, mandatory=1)), Option(verknüpfung))
+    autor = Series(namenfolge, Option(verknüpfung))
+    bibliographisches = Series(autor, Token(","), Option(NZ), werk, Token(","), Option(NZ), ort, Token(","), Option(NZ), jahr, Token("."), mandatory=1)
+    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
     global thread_local_Lyrik_grammar_singleton
     try:
         grammar = thread_local_Lyrik_grammar_singleton
-        return grammar
     except NameError:
         thread_local_Lyrik_grammar_singleton = LyrikGrammar()
-        return thread_local_Lyrik_grammar_singleton
+        grammar = thread_local_Lyrik_grammar_singleton
+    return grammar
 
 
 #######################################################################
@@ -131,34 +131,49 @@ def get_grammar() -> LyrikGrammar:
 #
 #######################################################################
 
+def halt(node):
+    assert False
+
 Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
     "+": remove_empty,
-    "gedicht": [],
-    "bibliographisches": [],
+    "bibliographisches":
+        [remove_nodes('NZ'), remove_tokens],
     "autor": [],
     "werk": [],
     "untertitel": [],
     "ort": [],
-    "jahr": [],
-    "wortfolge": [],
-    "namenfolge": [],
-    "verknüpfung": [],
-    "ziel": [],
-    "serie": [],
-    "titel": [],
+    "jahr":
+        [reduce_single_child],
+    "wortfolge":
+        [flatten(is_one_of('WORT'), recursive=False), remove_last(is_whitespace), collapse],
+    "namenfolge":
+        [flatten(is_one_of('NAME'), recursive=False), remove_last(is_whitespace), collapse],
+    "verknüpfung":
+        [remove_tokens('<', '>'), reduce_single_child],
+    "ziel":
+        reduce_single_child,
+    "gedicht, strophe, text":
+        [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
+    "titel, serie":
+        [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'), collapse],
     "zeile": [],
-    "text": [],
-    "strophe": [],
-    "vers": [],
+    "vers":
+        collapse,
     "WORT": [],
     "NAME": [],
-    "ZEICHENFOLGE": [],
-    "NZ": [],
+    "ZEICHENFOLGE":
+        reduce_single_child,
+    "NZ":
+        reduce_single_child,
     "LEERZEILE": [],
-    "JAHRESZAHL": [],
+    "JAHRESZAHL":
+        [reduce_single_child],
     "ENDE": [],
-    ":Token, :RE": reduce_single_child,
+    ":Whitespace":
+        replace_content(lambda node : " "),
+    ":Token, :RE":
+        reduce_single_child,
     "*": replace_by_single_child
 }
 
@@ -283,7 +298,7 @@ def compile_src(source):
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \
             if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_scanner(), 
+        result = compile_source(source, get_preprocessor(), 
                                 get_grammar(),
                                 get_transformer(), compiler)
     return result

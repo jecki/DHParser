@@ -1,6 +1,6 @@
-gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel §text /\s*/ §ENDE
+gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text /\s*/ ENDE
 
-bibliographisches = autor §"," [NZ] werk §"," [NZ] ort §"," [NZ] jahr §"."
+bibliographisches = autor §"," [NZ] werk "," [NZ] ort "," [NZ] jahr "."
 autor             = namenfolge [verknüpfung]
 werk              = wortfolge ["." §untertitel] [verknüpfung]
 untertitel        = wortfolge [verknüpfung]

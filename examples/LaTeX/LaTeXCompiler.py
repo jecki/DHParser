@@ -21,7 +21,7 @@ from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Altern
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
-    content_from_sinlge_child, replace_by_single_child, remove_whitespace, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first, \
     remove_tokens, remove_nodes, TOKEN_PTYPE
 
@@ -389,10 +389,10 @@ LaTeX_AST_transformation_table = {
     "latexdoc": [],
     "preamble": [],
     "document": [flatten_structure],
-    "frontpages": content_from_sinlge_child,
+    "frontpages": reduce_single_child,
     "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
     "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph": [],
-    "heading": content_from_sinlge_child,
+    "heading": reduce_single_child,
     "Bibliography": [],
     "Index": [],
     "block_environment": replace_by_single_child,
@@ -402,14 +402,14 @@ LaTeX_AST_transformation_table = {
     "itemize, enumerate": [remove_brackets, flatten],
     "item": [],
     "figure": [],
-    "quotation": [content_from_sinlge_child, remove_brackets],
+    "quotation": [reduce_single_child, remove_brackets],
     "verbatim": [],
     "tabular": [],
-    "tabular_config, block_of_paragraphs": [remove_brackets, content_from_sinlge_child],
+    "tabular_config, block_of_paragraphs": [remove_brackets, reduce_single_child],
     "tabular_row": [flatten, remove_tokens('&', '\\')],
     "tabular_cell": [flatten, remove_whitespace],
     "multicolumn": [remove_tokens('{', '}')],
-    "hline": [remove_whitespace, content_from_sinlge_child],
+    "hline": [remove_whitespace, reduce_single_child],
     "sequence": [flatten],
     "paragraph": [flatten],
     "text_element": replace_by_single_child,
@@ -418,8 +418,8 @@ LaTeX_AST_transformation_table = {
     "known_inline_env": replace_by_single_child,
     "generic_inline_env": [],
     "begin_inline_env, end_inline_env": [replace_by_single_child],
-    "begin_environment, end_environment": [remove_brackets, content_from_sinlge_child],
-    "inline_math": [remove_brackets, content_from_sinlge_child],
+    "begin_environment, end_environment": [remove_brackets, reduce_single_child],
+    "inline_math": [remove_brackets, reduce_single_child],
     "command": replace_by_single_child,
     "known_command": replace_by_single_child,
     "text_command": [],
@@ -427,14 +427,14 @@ LaTeX_AST_transformation_table = {
     "footnote": [],
     "includegraphics": [],
     "caption": [],
-    "config": [remove_brackets, content_from_sinlge_child],
+    "config": [remove_brackets, reduce_single_child],
     "block": [remove_brackets, flatten, replace_by_single_child],
     "text": collapse,
     "no_command, blockcmd": [],
     "structural": [],
-    "CMDNAME": [remove_whitespace, content_from_sinlge_child],
-    "TXTCOMMAND": [remove_whitespace, content_from_sinlge_child],
-    "NAME": [content_from_sinlge_child, remove_whitespace, content_from_sinlge_child],
+    "CMDNAME": [remove_whitespace, reduce_single_child],
+    "TXTCOMMAND": [remove_whitespace, reduce_single_child],
+    "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
     "ESCAPED": [replace_content(lambda node: str(node)[1:])],
     "BRACKETS": [],
     "TEXTCHUNK": [],
@@ -445,7 +445,7 @@ LaTeX_AST_transformation_table = {
     "BACKSLASH": [],
     "EOF": [],
     ":Token":
-        [remove_whitespace, content_from_sinlge_child],
+        [remove_whitespace, reduce_single_child],
     ":RE": replace_by_single_child,
     ":Whitespace": streamline_whitespace,
     "*": replace_by_single_child

@@ -22,7 +22,7 @@ from DHParser import logging, is_filename, load_if_file, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
     traverse, remove_children_if, merge_children, is_anonymous, \
-    content_from_sinlge_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
+    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, replace_parser, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
@@ -471,7 +471,7 @@ def get_grammar() -> MLWGrammar:
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
     "+": remove_empty,
-    "Autor": [content_from_sinlge_child],
+    "Autor": [reduce_single_child],
     "Artikel": [],
     "LemmaPosition": [],
     "Lemma": [],
@@ -506,14 +506,14 @@ MLW_AST_transformation_table = {
     "Zusatz": [],
     "ArtikelVerfasser": [],
     "Name": [],
-    "Stelle": [content_from_sinlge_child],
+    "Stelle": [reduce_single_child],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
     "Beleg": [replace_by_single_child],
     "Verweis": [],
     "VerweisZiel": [],
-    "Werk": [content_from_sinlge_child],
+    "Werk": [reduce_single_child],
     "ZielName": [replace_by_single_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
@@ -539,7 +539,7 @@ MLW_AST_transformation_table = {
     "KOMMENTARZEILEN": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    ":Token, :RE": content_from_sinlge_child,
+    ":Token, :RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

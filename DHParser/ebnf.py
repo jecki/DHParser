@@ -27,7 +27,7 @@ from DHParser.parsers import Grammar, mixin_comment, nil_preprocessor, Forward, 
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, typing
 from DHParser.transform import traverse, remove_brackets, \
-    content_from_sinlge_child, replace_by_single_child, remove_expendables, \
+    reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
 from typing import Callable, Dict, List, Set, Tuple
@@ -212,12 +212,12 @@ EBNF_AST_transformation_table = {
     "unordered":
         remove_brackets,
     "oneormore, repetition, option":
-        [content_from_sinlge_child, remove_brackets,
+        [reduce_single_child, remove_brackets,
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)')],
     "symbol, literal, regexp":
-        content_from_sinlge_child,
+        reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        content_from_sinlge_child,
+        reduce_single_child,
     "list_":
         [flatten, remove_infix_operator],
     "*":
@@ -438,9 +438,9 @@ class EBNFCompiler(Compiler):
             if rule.startswith('Alternative'):
                 transformations = '[replace_or_reduce]'
             elif rule.startswith('Synonym'):
-                transformations = '[content_from_sinlge_child]'
+                transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        transtable.append('    ":Token, :RE": content_from_sinlge_child,')
+        transtable.append('    ":Token, :RE": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)

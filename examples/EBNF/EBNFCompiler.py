@@ -22,7 +22,7 @@ from DHParser import logging, is_filename, load_if_file, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \
     traverse, remove_children_if, merge_children, is_anonymous, \
-    content_from_sinlge_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
+    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, \
@@ -156,7 +156,7 @@ EBNF_AST_transformation_table = {
     "regexp": [],
     "list_": [],
     "EOF": [],
-    ":Token, :RE": content_from_sinlge_child,
+    ":Token, :RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

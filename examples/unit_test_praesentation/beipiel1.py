@@ -15,7 +15,7 @@ arithmetik_ebnf = """
 ASTTable = {
     "+": remove_expendables,
     "*": replace_by_single_child,
-    "factor": [content_from_sinlge_child, remove_brackets]
+    "factor": [reduce_single_child, remove_brackets]
 }
 
 parser = grammar_provider(arithmetik_ebnf)()
