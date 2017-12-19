@@ -109,17 +109,18 @@ U5Bedeutung          = { ZWW "UUUUU_BEDEUTUNG" [LZ] §UntersteBedeutung }+
 Bedeutung            = (Interpretamente | Bedeutungskategorie) [BelegPosition]
 UntersteBedeutung    = Interpretamente [BelegPosition]
 Bedeutungskategorie  = { EINZEILER [LZ] [Zusatz] [LZ] } §":"
+Interpretamente      = LateinischeBedeutung ("--"| LZ) §DeutscheBedeutung [":"]
+LateinischeBedeutung = LAT [LZ] [Zusatz] LateinischerAusdruck
+DeutscheBedeutung    = DEU [LZ] [Zusatz] DeutscherAusdruck
+LateinischerAusdruck = LAT_WORT { [ZW] ((/[,;]?/~ [ZW] (LAT_WORT | ("(" LateinischerAusdruck ")")))
+                                        | Zusatz) }
+DeutscherAusdruck    = DEU_WORT { [ZW] ((/[,;]?/~ [ZW] (DEU_WORT | ("(" DeutscherAusdruck")")))
+                                        | Zusatz) }
 
-Interpretamente      = LateinischeBedeutung (LZ | " " | "--") §DeutscheBedeutung [":"]
-LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," LateinischerAusdruck }
-DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," DeutscherAusdruck }
-LateinischerAusdruck = { <(LAT_WORT | "(" { LAT_WORT }+ ")") [Zusatz]> }+
-DeutscherAusdruck    = { <(DEU_WORT | "(" { DEU_WORT }+ ")") [Zusatz]> }+
-
-LAT = "LATEINISCH" | "LAT"
-DEU = "DEUTSCH" | "DEU"
-GRI = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
-
+# LateinischerAusdruck = LAT_WORT_ERW { //~ LAT_WORT_ERW } [[LZ] BedeutungsQualifikation]
+# DeutscherAusdruck    = DEU_WORT_ERW { //~ DEU_WORT_ERW } [[LZ] BedeutungsQualifikation]
+# LateinischerAusdruck = LAT_WORT [[LZ] BedeutungsQualifikation]
+# DeutscherAusdruck = DEU_WORT [[LZ] BedeutungsQualifikation]
 
 BelegPosition = ZWW ["BELEGE" [LZ]] Belege
 
@@ -148,6 +149,15 @@ Stellenverweis     = BelegQuelle { [ABS] Stelle (NullVerweis | Verweis) }
 NullVerweis        = "{" "-" "}"
 
 
+#### Schlüsselwörter #########################################################
+
+LAT = "LATEINISCH" | "LAT"
+DEU = "DEUTSCH" | "DEU"
+GRI = "GRIECHISCH" | "GRIECH" | "GRIE" | "GRI"
+
+SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
+
+
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
 Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
@@ -161,14 +171,16 @@ Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}
 
 Belege           = ["*"] Beleg { [LZ] "*" Beleg }
 Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
-Zitat            = Quellenangabe { SEM [ZW] BelegStelle }
+Zitat            = Quellenangabe
+                   { SEM [ZW] [Anker] [Zusatz] <Stelle | Verweis>
+                     [[ZW] BelegText] [[LZ] Zusatz] }
+
 Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
 BelegQuelle      = Autor §DPP [Werk] &SEM
-BelegStelle      = [<Anker | Zusatz>] (Stelle [[ZW] BelegText] | Verweis) [[ZW] Zusatz]
 BelegText        = /"/ { MEHRZEILER | Zusatz } §/"/~ ["."]
 
-Autor     = EINZEILER
-Werk      = EINZEILER
+Autor     = EINZEILER [<Anker | Verweis | Zusatz>]
+Werk      = <EINZEILER [<Anker | Verweis | Zusatz>]>
 Stelle    = EINZEILER
 Datierung = EINZEILER
 Edition   = EINZEILER
@@ -194,17 +206,18 @@ NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
 
 DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABE
+# DEU_WORT_ERW     = DEU_WORT | (["("] DEU_WORT [")"])
 DEU_GROSS        = /[A-ZÄÖÜ][a-zäöüßę_\-.]+/~
 GROSSBUCHSTABE   = /[A-ZÄÖÜ](?=[ \t\n])/~
 KLEINBUCHSTABE   = /[a-zäöü](?=[ \t\n])/~
 GRI_BUCHSTABE    = /[αβγδεζηθικλμνξοπρςστυφχψω]/
 DEU_KLEIN        = /(?!--)[a-zäöüßęõ_\-.]+/~
 LAT_WORT         = /(?!--)[a-z|\-_.]+/~
+# LAT_WORT_ERW     = LAT_WORT | (["("] LAT_WORT [")"])
 GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
 ZAHL             = /[\d]+/~
 SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
-SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
 SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)|[`''‘’?]/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
 TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`''‘’?]/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
