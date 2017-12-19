@@ -28,7 +28,7 @@ sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_expendables, \
-    replace_by_child, content_from_child, flatten
+    replace_by_single_child, content_from_sinlge_child, flatten
 from DHParser.dsl import grammar_provider
 from DHParser.testing import grammar_unit
 
@@ -45,10 +45,10 @@ ARITHMETIC_EBNF = """
 ARITHMETIC_EBNF_transformation_table = {
     # AST Transformations for the DSL-grammar
     "formula": [remove_expendables],
-    "term, expr": [replace_by_child, flatten],
-    "factor": [remove_expendables, content_from_child],
-    (TOKEN_PTYPE): [remove_expendables, content_from_child],
-    "*": [remove_expendables, replace_by_child]
+    "term, expr": [replace_by_single_child, flatten],
+    "factor": [remove_expendables, content_from_sinlge_child],
+    (TOKEN_PTYPE): [remove_expendables, content_from_sinlge_child],
+    "*": [remove_expendables, replace_by_single_child]
 }
 
 

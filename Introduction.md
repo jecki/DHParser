@@ -368,20 +368,20 @@ scroll down to the AST section, you'll see something like this:
         "+": remove_empty,
         "bibliographisches": [remove_nodes('NZ'), remove_tokens],
         "autor, werk, untertitel, ort": [],
-        "jahr": [content_from_child],
+        "jahr": [content_from_sinlge_child],
         "wortfolge": [flatten(is_one_of('WORT'), recursive=False), remove_last(is_whitespace), collapse],
         "namenfolge": [flatten(is_one_of('NAME'), recursive=False), remove_last(is_whitespace), collapse],
-        "verknüpfung": [remove_tokens('<', '>'), content_from_child],
-        "ziel": content_from_child,
+        "verknüpfung": [remove_tokens('<', '>'), content_from_sinlge_child],
+        "ziel": content_from_sinlge_child,
         "gedicht, strophe, text": [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
         "titel, serie": [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'), collapse],
         "vers": collapse,
         "zeile": [],
-        "ZEICHENFOLGE, NZ, JAHRESZAHL": content_from_child,
+        "ZEICHENFOLGE, NZ, JAHRESZAHL": content_from_sinlge_child,
         "WORT, NAME, LEERZEILE, ENDE": [],
         ":Whitespace": replace_content(lambda node : " "),
-        ":Token, :RE": content_from_child,
-        "*": replace_by_child
+        ":Token, :RE": content_from_sinlge_child,
+        "*": replace_by_single_child
     }
 
 As you can see, AST-transformations a specified declaratively (with the

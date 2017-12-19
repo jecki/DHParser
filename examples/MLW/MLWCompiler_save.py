@@ -22,7 +22,7 @@ from DHParser import logging, is_filename, load_if_file, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \
     traverse, remove_children_if, merge_children, is_anonymous, \
-    content_from_child, replace_by_child, replace_or_reduce, remove_whitespace, \
+    content_from_sinlge_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, \
@@ -312,11 +312,11 @@ MLW_AST_transformation_table = {
     "EtymologiePosition": [],
     "EtymologieVarianten": [],
     "EtymologieVariante": [],
-    "ArtikelKopf": [replace_by_child],
+    "ArtikelKopf": [replace_by_single_child],
     "SchreibweisenPosition": [],
     "SWTyp": [replace_or_reduce],
     "SWVariante": [],
-    "Schreibweise": [replace_by_child],
+    "Schreibweise": [replace_by_single_child],
     "BedeutungsPosition": [],
     "Bedeutung": [],
     "Bedeutungskategorie": [],
@@ -331,10 +331,10 @@ MLW_AST_transformation_table = {
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
-    "Beleg": [replace_by_child],
+    "Beleg": [replace_by_single_child],
     "Verweis": [],
     "VerweisZiel": [],
-    "ZielName": [replace_by_child],
+    "ZielName": [replace_by_single_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
     "DEU_WORT": [],
@@ -352,8 +352,8 @@ MLW_AST_transformation_table = {
     "LZ": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    ":Token, :RE": content_from_child,
-    "*": replace_by_child
+    ":Token, :RE": content_from_sinlge_child,
+    "*": replace_by_single_child
 }
 
 

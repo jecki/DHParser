@@ -36,8 +36,8 @@ __all__ = ('TransformationDict',
            'key_tag_name',
            'traverse',
            'is_named',
-           'replace_by_child',
-           'content_from_child',
+           'replace_by_single_child',
+           'content_from_sinlge_child',
            'replace_or_reduce',
            'replace_parser',
            'collapse',
@@ -202,8 +202,8 @@ def traverse(root_node: Node,
             key_func yields node.parser.name.
 
     Example:
-        table = { "term": [replace_by_child, flatten],
-            "factor, flowmarker, retrieveop": replace_by_child }
+        table = { "term": [replace_by_single_child, flatten],
+            "factor, flowmarker, retrieveop": replace_by_single_child }
         traverse(node, table)
     """
     # Is this optimazation really needed?
@@ -317,6 +317,8 @@ def replace_by_child(context: List[Node], criteria: CriteriaType=single_child):
     a boolean-valued function on the context of the child.
     If no child matching the criteria is found, the node will
     not be replaced.
+    With the default value for `criteria` the same semantics is
+    the same that of `replace_by_single_child`.
     """
     child = pick_child(context, criteria)
     if child:
@@ -333,6 +335,8 @@ def content_from_child(context: List[None], criteria: CriteriaType=single_child)
     name or a boolean-valued function on the context of the child.
     If no child matching the criteria is found, the node will
     not be replaced.
+    With the default value for `criteria` this has the same semantics
+    as `content_from_single_child`.
     """
     child = pick_child(context, criteria)
     if child:
@@ -340,26 +344,26 @@ def content_from_child(context: List[None], criteria: CriteriaType=single_child)
 
 
 
-# def replace_by_child(context: List[Node]):
-#     """
-#     Remove single branch node, replacing it by its immediate descendant
-#     if and only if the condition on the descendant is true.
-#     """
-#     node = context[-1]
-#     if len(node.children) == 1:
-#         replace_by(node, node.children[0])
-#
-#
-# def content_from_child(context: List[Node]):
-#     """
-#     Reduce a single branch node, by transferring the result of its
-#     immediate descendant to this node, but keeping this node's parser entry.
-#     If the condition evaluates to false on the descendant, it will not
-#     be reduced.
-#     """
-#     node = context[-1]
-#     if len(node.children) == 1:
-#         reduce_child(node, node.children[0])
+def replace_by_single_child(context: List[Node]):
+    """
+    Remove single branch node, replacing it by its immediate descendant.
+    If there are more than one children, no replacement takes place.
+    """
+    node = context[-1]
+    if len(node.children) == 1:
+        replace_by(node, node.children[0])
+
+
+def content_from_sinlge_child(context: List[Node]):
+    """
+    Reduce a single branch node by transferring the result of its
+    immediate descendant to this node, but keeping this node's parser entry.
+    This will only be done if the last node in the context has is exactly
+    one child.
+    """
+    node = context[-1]
+    if len(node.children) == 1:
+        reduce_child(node, node.children[0])
 
 
 def is_named(context: List[Node]) -> bool:

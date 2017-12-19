@@ -25,8 +25,8 @@ sys.path.extend(['../', './'])
 
 from DHParser.error import Error
 from DHParser.syntaxtree import Node, mock_syntax_tree, TOKEN_PTYPE
-from DHParser.transform import traverse, content_from_child, \
-    replace_by_child, flatten, remove_expendables
+from DHParser.transform import traverse, content_from_sinlge_child, \
+    replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider
 
@@ -73,10 +73,10 @@ class TestNode:
 
     def test_equality2(self):
         ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
-        att  = {"term": [replace_by_child, flatten],
-                "factor": [remove_expendables, content_from_child],
-                (TOKEN_PTYPE): [remove_expendables, content_from_child],
-                "?": [remove_expendables, replace_by_child]}
+        att  = {"term": [replace_by_single_child, flatten],
+                "factor": [remove_expendables, content_from_sinlge_child],
+                (TOKEN_PTYPE): [remove_expendables, content_from_sinlge_child],
+                "?": [remove_expendables, replace_by_single_child]}
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
