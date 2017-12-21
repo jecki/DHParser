@@ -868,9 +868,11 @@ class Grammar:
         Returns:
             Node: The root node ot the parse tree.
         """
-        def succ_pos(nd_list: List[Node]) -> int:
-            """Returns the position after the last node in the list."""
-            return nd_list[-1]._pos + len(nd_list[-1]) if nd_list else 0
+        def add_pos(node: Node, predecessors: List[Node]) -> int:
+            """Adds the position after the last node in the list of
+            predecessors to the node."""
+            node._pos = predecessors[-1]._pos + len(predecessors[-1]) if predecessors else 0
+            return node
 
         # assert isinstance(document, str), type(document)
         if self.root__ is None:
@@ -915,7 +917,7 @@ class Grammar:
                                    if self.history_tracking__ else "..."))
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
-                stitches.append(Node(None, skip).with_pos(succ_pos(stitches)))
+                stitches.append(add_pos(Node(None, skip), stitches))
                 stitches[-1].add_error(error_msg)
                 if self.history_tracking__:
                     # some parsers may have matched and left history records with nodes != None.
@@ -931,8 +933,8 @@ class Grammar:
                     self.history_tracking__ = False
         if stitches:
             if rest:
-                stitches.append(Node(None, rest).with_pos(succ_pos(stitches)))
-            result = Node(None, tuple(stitches)).with_pos(0)
+                stitches.append(add_pos(Node(None, rest), stitches))
+            result = add_pos(Node(None, tuple(stitches)), [])
         if any(self.variables__.values()):
             error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
                             str(self.variables__)
@@ -943,7 +945,7 @@ class Grammar:
                     # message above ("...after end of parsing") would appear illogical.
                     error_node = Node(ZOMBIE_PARSER, '')
                     error_node.add_error(error_str)
-                    result.result = result.children + (error_node.with_pos(succ_pos(result.children)),)
+                    result.result = result.children + (add_pos(error_node, result.children),)
                 else:
                     result.add_error(error_str)
         result.pos = 0  # calculate all positions

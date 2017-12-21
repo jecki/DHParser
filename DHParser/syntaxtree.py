@@ -367,10 +367,6 @@ class Node(collections.abc.Sized):
             raise AssertionError("position value not initialized!")
         return self._pos
 
-    def with_pos(self, pos: int) -> 'Node':
-        assert self._pos < 0
-        self._pos = pos
-        return self
 
     @pos.setter
     def pos(self, pos: int):
