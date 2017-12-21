@@ -340,13 +340,16 @@ def add_parser_guard(parser_func):
                 elif grammar.memoization__:
                     # otherwise also cache None-results
                     parser.visited[location] = (None, rest)
-            elif (grammar.last_rb__loc__ > location
-                  and (grammar.memoization__ or location in grammar.recursion_locations__)):
-                # - variable manipulating parsers will not be entered into the cache,
-                #   because caching would interfere with changes of variable state
-                # - in case of left recursion, the first recursive step that
-                #   matches will store its result in the cache
-                parser.visited[location] = (node, rest)
+            else:
+                node._pos = grammar.document_length__ - location
+                assert node._pos >= 0, str("%i != %i" % (grammar.document_length__, location))
+                if (grammar.last_rb__loc__ > location
+                        and (grammar.memoization__ or location in grammar.recursion_locations__)):
+                    # - variable manipulating parsers will not be entered into the cache,
+                    #   because caching would interfere with changes of variable state
+                    # - in case of left recursion, the first recursive step that
+                    #   matches will store its result in the cache
+                    parser.visited[location] = (node, rest)
 
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
@@ -651,6 +654,8 @@ class Grammar:
         document__:  the text that has most recently been parsed or that is
                 currently being parsed.
 
+        document_length__:  the length of the document.
+
         document_lbreaks__:  list of linebreaks within the document, starting
                 with -1 and ending with EOF. This helps generating line
                 and column number for history recording and will only be
@@ -808,6 +813,7 @@ class Grammar:
     def _reset__(self):
         self.document__ = EMPTY_STRING_VIEW   # type: StringView
         self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
+        self.document_length__ = 0            # type: int
         self.document_lbreaks__ = []          # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = dict()             # type: Dict[str, List[str]]
@@ -862,6 +868,10 @@ class Grammar:
         Returns:
             Node: The root node ot the parse tree.
         """
+        def succ_pos(nd_list: List[Node]) -> int:
+            """Returns the position after the last node in the list."""
+            return nd_list[-1]._pos + len(nd_list[-1]) if nd_list else 0
+
         # assert isinstance(document, str), type(document)
         if self.root__ is None:
             raise NotImplementedError()
@@ -873,6 +883,7 @@ class Grammar:
             self._dirty_flag__ = True
         self.history_tracking__ = is_logging()
         self.document__ = StringView(document)
+        self.document_length__ = len(self.document__)
         self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = len(self.document__) + 1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
@@ -904,7 +915,7 @@ class Grammar:
                                    if self.history_tracking__ else "..."))
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
-                stitches.append(Node(None, skip))
+                stitches.append(Node(None, skip).with_pos(succ_pos(stitches)))
                 stitches[-1].add_error(error_msg)
                 if self.history_tracking__:
                     # some parsers may have matched and left history records with nodes != None.
@@ -920,8 +931,8 @@ class Grammar:
                     self.history_tracking__ = False
         if stitches:
             if rest:
-                stitches.append(Node(None, rest))
-            result = Node(None, tuple(stitches))
+                stitches.append(Node(None, rest).with_pos(succ_pos(stitches)))
+            result = Node(None, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
             error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
                             str(self.variables__)
@@ -932,7 +943,7 @@ class Grammar:
                     # message above ("...after end of parsing") would appear illogical.
                     error_node = Node(ZOMBIE_PARSER, '')
                     error_node.add_error(error_str)
-                    result.result = result.children + (error_node,)
+                    result.result = result.children + (error_node.with_pos(succ_pos(result.children)),)
                 else:
                     result.add_error(error_str)
         result.pos = 0  # calculate all positions
