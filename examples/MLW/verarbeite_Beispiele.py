@@ -27,7 +27,7 @@ def tst_func():
             if fnmatch.fnmatch(entry, '*.mlw'):
                 print('\n Parse: ' + entry)
                 raw_name = os.path.splitext(entry)[0]
-                with logging(False):
+                with logging(True):
                     result, messages, AST = compile_source(entry,
                                                            get_preprocessor(),
                                                            get_grammar(),
@@ -68,4 +68,5 @@ def mem_profile(func):
         print(stat)
 
 if __name__ == "__main__":
-    cpu_profile(tst_func)
+    # cpu_profile(tst_func)
+    tst_func()

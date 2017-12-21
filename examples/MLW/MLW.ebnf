@@ -165,7 +165,7 @@ Zitat            = Quellenangabe { SEM [ZW] BelegStelle }
 Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
 BelegQuelle      = Autor §DPP [Werk] &SEM
 BelegStelle      = [<Anker | Zusatz>] (Stelle [[ZW] BelegText] | Verweis) [[ZW] Zusatz]
-BelegText        = /"/ { MEHRZEILER | Zusatz } §/"/~ ["."]
+BelegText        = /"/ { MEHRZEILER | Anker | Zusatz } §/"/~ ["."]
 
 Autor     = EINZEILER
 Werk      = EINZEILER

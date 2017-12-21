@@ -217,7 +217,7 @@ class MLWGrammar(Grammar):
     Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
     BelegQuelle      = Autor §DPP [Werk] &SEM
     BelegStelle      = [<Anker | Zusatz>] (Stelle [[ZW] BelegText] | Verweis) [[ZW] Zusatz]
-    BelegText        = /"/ { MEHRZEILER | Zusatz } §/"/~ ["."]
+    BelegText        = /"/ { MEHRZEILER | Anker | Zusatz } §/"/~ ["."]
     
     Autor     = EINZEILER
     Werk      = EINZEILER
@@ -305,7 +305,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d202980f0e4a3730229a6772c9dfc373"
+    source_hash__ = "a01b075b877de8bc46f92fa3b3e5b028"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -364,7 +364,7 @@ class MLWGrammar(Grammar):
     Stelle = Synonym(EINZEILER)
     Werk = Synonym(EINZEILER)
     Autor = Synonym(EINZEILER)
-    BelegText = Series(RegExp('"'), ZeroOrMore(Alternative(MEHRZEILER, Zusatz)), RE('"'), Option(Token(".")), mandatory=2)
+    BelegText = Series(RegExp('"'), ZeroOrMore(Alternative(MEHRZEILER, Anker, Zusatz)), RE('"'), Option(Token(".")), mandatory=2)
     BelegStelle = Series(Option(SomeOf(Anker, Zusatz)), Alternative(Series(Stelle, Option(Series(Option(ZW), BelegText))), Verweis), Option(Series(Option(ZW), Zusatz)))
     BelegQuelle = Series(Autor, DPP, Option(Werk), Lookahead(SEM), mandatory=1)
     Quellenangabe = Series(Option(SomeOf(Anker, Zusatz)), SomeOf(BelegQuelle, Verweis))
@@ -456,7 +456,8 @@ def get_grammar() -> MLWGrammar:
 
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "+": remove_empty,
+    "+": [remove_empty, remove_tokens,
+          remove_nodes('ZWW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM')],
     "Autor": [reduce_single_child],
     "Artikel": [],
     "LemmaPosition": [],
@@ -492,7 +493,7 @@ MLW_AST_transformation_table = {
     "Zusatz": [],
     "ArtikelVerfasser": [],
     "Name": [],
-    "Stelle": [reduce_single_child],
+    "Stelle": [collapse],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
@@ -503,10 +504,10 @@ MLW_AST_transformation_table = {
     "ZielName": [replace_by_single_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
-    "DEU_WORT": [],
-    "DEU_GROSS": [],
-    "DEU_KLEIN": [],
-    "LAT_WORT": [],
+    "DEU_WORT": [reduce_single_child],
+    "DEU_GROSS": [reduce_single_child],
+    "DEU_KLEIN": [reduce_single_child],
+    "LAT_WORT": [reduce_single_child],
     "LAT_WORT_TEIL": [],
     "GROSSSCHRIFT": [],
     "GROSSFOLGE": [],
@@ -525,7 +526,8 @@ MLW_AST_transformation_table = {
     "KOMMENTARZEILEN": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    ":Token, :RE": reduce_single_child,
+    ":Token": [],
+    "RE": reduce_single_child,
     "*": replace_by_single_child
 }
 
