@@ -1040,7 +1040,6 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     return " ".join(msg)
 
 
-
 ########################################################################
 #
 # Token and Regular Expression parser classes (i.e. leaf classes)
@@ -2081,7 +2080,7 @@ class Compiler:
     """
     Class Compiler is the abstract base class for compilers. Compiler
     objects are callable and take the root node of the abstract
-    syntax tree (AST) as agrument and return the compiled code in a
+    syntax tree (AST) as argument and return the compiled code in a
     format chosen by the compiler itself.
 
     Subclasses implementing a compiler must define `on_XXX()`-methods
@@ -2170,7 +2169,7 @@ class Compiler:
         Calls the compilation method for the given node and returns the
         result of the compilation.
 
-        The method's name is dreived from either the node's parser
+        The method's name is derived from either the node's parser
         name or, if the parser is anonymous, the node's parser's class
         name by adding the prefix 'on_'.
 
@@ -2230,7 +2229,7 @@ def compile_source(source: str,
         1. The result as returned by the compiler or ``None`` in case
             of failure,
         2. A list of error or warning messages
-        3. The root-node of the abstract syntax treelow
+        3. The root-node of the abstract syntax tree
     """
     source_text = load_if_file(source)
     log_file_name = logfile_basename(source, compiler)

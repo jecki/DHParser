@@ -5,3 +5,4 @@ General TODO-List
   parser guard to allow for early dropping of nodes. (Should speed
   up tree-traversal later)
  
+- Position handling should provide for position shifts during preprocessing
