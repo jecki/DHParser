@@ -229,6 +229,7 @@ class Node(collections.abc.Sized):
         """
         self.error_flag = 0             # type: int
         self._errors = []               # type: List[Error]
+        self._pos = -1                  # type: int
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
@@ -237,8 +238,6 @@ class Node(collections.abc.Sized):
             self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        # self.pos: int  = 0  # continuous updating of pos values wastes a lot of time
-        self._pos = -1  # type: int
         self.parser = parser or ZOMBIE_PARSER
 
 
@@ -321,6 +320,8 @@ class Node(collections.abc.Sized):
             self.children = (result,)
             self._result = self.children
             self.error_flag = result.error_flag
+            if self._pos < 0:
+                self._pos = result._pos
         else:
             if isinstance(result, tuple):
                 self.children = result
@@ -328,6 +329,8 @@ class Node(collections.abc.Sized):
                 if result:
                     if self.error_flag == 0:
                         self.error_flag = max(child.error_flag for child in self.children)
+                    if self._pos < 0:
+                        self._pos = result[0]._pos
             else:
                 self.children = NoChildren
                 self._result = str(result)
@@ -368,17 +371,33 @@ class Node(collections.abc.Sized):
         return self._pos
 
 
-    @pos.setter
-    def pos(self, pos: int):
-        assert self._pos == pos, str("%i != %i" % (self._pos, pos))
-        offset = 0
+    # @pos.setter
+    # def pos(self, pos: int):
+    #     assert self._pos == pos, str("%i != %i" % (self._pos, pos))
+    #     offset = 0
+    #     # recursively adjust pos-values of all children
+    #     for child in self.children:
+    #         assert child.pos == pos + offset
+    #         offset += len(child)
+    #     # add pos-values to Error-objects
+    #     for err in self._errors:
+    #         err.pos = pos
+
+
+    def init_pos(self, pos: int, overwrite: bool = False) -> 'Node':
+        if overwrite or self._pos < 0:
+            self._pos = pos
+            for err in self._errors:
+                err.pos = pos
+        else:
+            assert self._pos == pos, str("%i != %i" % (self._pos, pos))
         # recursively adjust pos-values of all children
+        offset = self.pos
         for child in self.children:
-            assert child.pos == pos + offset
-            offset += len(child)
-        # add pos-values to Error-objects
-        for err in self._errors:
-            err.pos = pos
+            child.init_pos(offset)
+            offset = child.pos + len(child)
+        return self
+
 
 
     @property

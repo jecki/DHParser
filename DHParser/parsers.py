@@ -868,11 +868,10 @@ class Grammar:
         Returns:
             Node: The root node ot the parse tree.
         """
-        def add_pos(node: Node, predecessors: List[Node]) -> int:
+        def tail_pos(predecessors: List[Node]) -> int:
             """Adds the position after the last node in the list of
             predecessors to the node."""
-            node._pos = predecessors[-1]._pos + len(predecessors[-1]) if predecessors else 0
-            return node
+            return predecessors[-1].pos + len(predecessors[-1]) if predecessors else 0
 
         # assert isinstance(document, str), type(document)
         if self.root__ is None:
@@ -897,7 +896,7 @@ class Grammar:
         if not rest:
             result, _ = parser(rest)
             if result is None:
-                result = Node(None, '')
+                result = Node(None, '').init_pos(0)
                 result.add_error('Parser "%s" did not match empty document.' % str(parser))
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
@@ -917,24 +916,24 @@ class Grammar:
                                    if self.history_tracking__ else "..."))
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
-                stitches.append(add_pos(Node(None, skip), stitches))
+                stitches.append(Node(None, skip).init_pos(tail_pos(stitches)))
                 stitches[-1].add_error(error_msg)
                 if self.history_tracking__:
-                    # some parsers may have matched and left history records with nodes != None.
-                    # Because these are not connected to the stitched root node, their pos-
-                    # properties will not be initialized by setting the root node's pos property
-                    # to zero. Therefore, their pos properties need to be initialized here
-                    for record in self.history__:
-                        if record.node and record.node._pos < 0:
-                            record.node.pos = 0
+                    # # some parsers may have matched and left history records with nodes != None.
+                    # # Because these are not connected to the stitched root node, their pos-
+                    # # properties will not be initialized by setting the root node's pos property
+                    # # to zero. Therefore, their pos properties need to be initialized here
+                    # for record in self.history__:
+                    #     if record.node and record.node._pos < 0:
+                    #         record.node.init_pos(0)
                     record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest)
                     self.history__.append(record)
                     # stop history tracking when parser returned too early
                     self.history_tracking__ = False
         if stitches:
             if rest:
-                stitches.append(add_pos(Node(None, rest), stitches))
-            result = add_pos(Node(None, tuple(stitches)), [])
+                stitches.append(Node(None, rest).init_pos(tail_pos(stitches)))
+            result = Node(None, tuple(stitches))
         if any(self.variables__.values()):
             error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
                             str(self.variables__)
@@ -943,12 +942,12 @@ class Grammar:
                     # add another child node at the end to ensure that the position
                     # of the error will be the end of the text. Otherwise, the error
                     # message above ("...after end of parsing") would appear illogical.
-                    error_node = Node(ZOMBIE_PARSER, '')
+                    error_node = Node(ZOMBIE_PARSER, '').init_pos(tail_pos(result.children))
                     error_node.add_error(error_str)
-                    result.result = result.children + (add_pos(error_node, result.children),)
+                    result.result = result.children + (error_node,)
                 else:
                     result.add_error(error_str)
-        result.pos = 0  # calculate all positions
+        # result.pos = 0  # calculate all positions
         # result.collect_errors(self.document__)
         return result
 
@@ -1529,7 +1528,7 @@ class Series(NaryOperator):
                     # Provide useful error messages
                     match = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(match.regs[1][0])) if match else 1
-                    node = Node(self, text_[:i])
+                    node = Node(self, text_[:i]).init_pos(self.grammar.document_length__ - len(text_))
                     node.add_error('%s expected; "%s"... found!'
                                    % (str(parser), text_[:10].replace('\n', '\\n ')),
                                    code=Error.MANDATORY_CONTINUATION)

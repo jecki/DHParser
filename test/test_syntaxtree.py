@@ -120,7 +120,7 @@ class TestNode:
         assert len(nd2) == 3, "Expected Node.len == 3, got %i" % len(nd2)
         nd = Node(None, (nd1, nd2))
         assert len(nd) == 6, "Expected Node.len == 6, got %i" % len(nd)
-        nd.pos = 0
+        nd.init_pos(0)
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos

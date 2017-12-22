@@ -89,6 +89,7 @@ class StringView(collections.abc.Sized):
     __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
+        assert isinstance(text, str)
         self.text = text  # type: str
         self.begin, self.end = real_indices(begin, end, len(text))
         self.len = max(self.end - self.begin, 0)  # type: int

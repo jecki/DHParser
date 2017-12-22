@@ -147,8 +147,8 @@ class TestRegex:
         assert result
         assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
-        node, rest = parser.regex(StringView('abc+def'))
-        assert rest == ''
+        node = parser('abc+def', parser.regex)
+        assert not node.error_flag
         assert node.parser.name == "regex"
         assert str(node) == 'abc+def'
 
