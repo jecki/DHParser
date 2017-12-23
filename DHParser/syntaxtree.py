@@ -385,6 +385,15 @@ class Node(collections.abc.Sized):
 
 
     def init_pos(self, pos: int, overwrite: bool = False) -> 'Node':
+        """
+        (Re-)initialize position value. Usually, the parser guard
+        (`parsers.add_parser_guard()`) takes care of assigning the
+        position in the document to newly created nodes. However,
+        where Nodes are created outside the reach of the parser
+        guard, their document-position must be assigned manually.
+        This function recursively reassigns the position values
+        of the child nodes, too.
+        """
         if overwrite or self._pos < 0:
             self._pos = pos
             for err in self._errors:
@@ -394,7 +403,7 @@ class Node(collections.abc.Sized):
         # recursively adjust pos-values of all children
         offset = self.pos
         for child in self.children:
-            child.init_pos(offset)
+            child.init_pos(offset, overwrite)
             offset = child.pos + len(child)
         return self
 
