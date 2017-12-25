@@ -57,11 +57,14 @@ __all__ = ('logging',
            'log_dir',
            'logfile_basename',
            'escape_re',
+           'escape_control_characters',
            'is_filename',
+           'lstrip_docstring',
            'load_if_file',
            'is_python_code',
            'md5',
            'expand_table',
+           'compile_python_object',
            'smart_list',
            'sane_parser_name',
            'identity')
@@ -160,13 +163,35 @@ def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
 
 
 def escape_re(strg: str) -> str:
-    """Returns `s` with all regular expression special characters escaped.
+    """
+    Returns the string with all regular expression special characters escaped.
     """
     # assert isinstance(strg, str)
     re_chars = r"\.^$*+?{}[]()#<>=|!"
     for esc_ch in re_chars:
         strg = strg.replace(esc_ch, '\\' + esc_ch)
     return strg
+
+
+def escape_control_characters(strg: str) -> str:
+    """Replace all control characters (e.g. \n \t) in a string by their
+    backslashed representation."""
+    return repr(strg).replace('\\\\', '\\')[1:-1]
+
+
+def lstrip_docstring(docstring: str) -> str:
+    """
+    Strips leading whitespace from a docstring.
+    """
+    lines = docstring.replace('\t', '    ').split('\n')
+    indent = 255  # highest integer value
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:  # ignore empty lines
+            indent = min(indent, len(line) - len(stripped))
+    if indent >= 255:
+        indent = 0
+    return '\n'.join([lines[0]] + [line[indent:] for line in lines[1:]])
 
 
 def is_filename(strg: str) -> bool:

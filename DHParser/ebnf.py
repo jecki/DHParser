@@ -19,18 +19,19 @@ permissions and limitations under the License.
 import keyword
 from collections import OrderedDict
 from functools import partial
+from typing import Callable, Dict, List, Set, Tuple
 
 from DHParser.error import Error
-from DHParser.parsers import Grammar, mixin_comment, nil_preprocessor, Forward, RegExp, RE, \
+from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
-    Compiler, PreprocessorFunc
+    Compiler
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, typing
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re
 from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
-from typing import Callable, Dict, List, Set, Tuple
 
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
@@ -332,7 +333,7 @@ class EBNFCompiler(Compiler):
 
                            `alternative = a | b`
 
-                Now `[str(node) for node in self.rules['alternative']]`
+                Now `[node.content for node in self.rules['alternative']]`
                 yields `['alternative = a | b', 'a', 'b']`
 
         symbols:  A mapping of symbol names to their first usage (not
@@ -597,7 +598,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
-        rule = str(node.children[0])
+        rule = node.children[0].content
         if rule in self.rules:
             first = self.rules[rule][0]
             if not first._errors:
@@ -652,7 +653,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_directive(self, node: Node) -> str:
-        key = str(node.children[0]).lower()
+        key = node.children[0].content.lower()
         assert key not in self.directives['tokens']
 
         if key not in self.REPEATABLE_DIRECTIVES:
@@ -674,8 +675,9 @@ class EBNFCompiler(Compiler):
                 else:
                     node.add_error('Value "%s" not allowed for directive "%s".' % (value, key))
             else:
-                value = str(node.children[1]).strip("~")  # cast(str, node.children[1].result).strip("~")
-                if value != str(node.children[1]):  # cast(str, node.children[1].result):
+                value = node.children[1].content.strip("~")  # cast(str, node.children[
+                # 1].result).strip("~")
+                if value != node.children[1].content:  # cast(str, node.children[1].result):
                     node.add_error("Whitespace marker '~' not allowed in definition of "
                                    "%s regular expression." % key)
                 if value[0] + value[-1] in {'""', "''"}:
@@ -688,11 +690,11 @@ class EBNFCompiler(Compiler):
             self.directives[key] = value
 
         elif key == 'ignorecase':
-            if str(node.children[1]).lower() not in {"off", "false", "no"}:
+            if node.children[1].content.lower() not in {"off", "false", "no"}:
                 self.re_flags.add('i')
 
         # elif key == 'testing':
-        #     value = str(node.children[1])
+        #     value = node.children[1].content
         #     self.directives['testing'] = value.lower() not in {"off", "false", "no"}
 
         elif key == 'literalws':
@@ -708,7 +710,7 @@ class EBNFCompiler(Compiler):
 
         elif key in {'tokens', 'preprocessor_tokens'}:
             tokens = self.compile(node.children[1])
-            redeclared = self.directives['tokes'] & tokens
+            redeclared = self.directives['tokens'] & tokens
             if redeclared:
                 node.add_error('Tokens %s have already been declared earlier. '
                                % str(redeclared) + 'Later declaration will be ignored',
@@ -752,7 +754,7 @@ class EBNFCompiler(Compiler):
         filtered_children = []
         i = 0
         for nd in node.children:
-            if nd.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
+            if nd.parser.ptype == TOKEN_PTYPE and nd.content == "§":
                 mandatory_marker.append(i)
                 if i == 0:
                     nd.add_error('First item of a series should not be mandatory.',
@@ -774,7 +776,7 @@ class EBNFCompiler(Compiler):
     def on_factor(self, node: Node) -> str:
         assert node.children
         assert len(node.children) >= 2, node.as_sxpr()
-        prefix = str(node.children[0])  # cast(str, node.children[0].result)
+        prefix = node.children[0].content
         custom_args = []  # type: List[str]
 
         if prefix in {'::', ':'}:
@@ -806,15 +808,15 @@ class EBNFCompiler(Compiler):
                     if len(nd.children) >= 1:
                         nd = nd.children[0]
                     while nd.parser.name == "symbol":
-                        symlist = self.rules.get(str(nd), [])
+                        symlist = self.rules.get(nd.content, [])
                         if len(symlist) == 2:
                             nd = symlist[1]
                         else:
                             if len(symlist) == 1:
                                 nd = symlist[0].children[1]
                             break
-                    if (nd.parser.name != "regexp" or str(nd)[:1] != '/'
-                        or str(nd)[-1:] != '/'):
+                    if (nd.parser.name != "regexp" or nd.content[:1] != '/'
+                            or nd.content[-1:] != '/'):
                         node.add_error("Lookbehind-parser can only be used with plain RegExp-"
                                        "parsers, not with: " + nd.parser.name + nd.parser.ptype)
 
@@ -838,10 +840,6 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(node, 'OneOrMore')
 
 
-    def on_regexchain(self, node) -> str:
-        raise EBNFCompilerError("Not yet implemented!")
-
-
     def on_group(self, node) -> str:
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
@@ -851,7 +849,7 @@ class EBNFCompiler(Compiler):
         assert len(node.children) == 1
         nd = node.children[0]
         for child in nd.children:
-            if child.parser.ptype == TOKEN_PTYPE and str(nd) == "§":
+            if child.parser.ptype == TOKEN_PTYPE and nd.content == "§":
                 node.add_error("Unordered parser lists cannot contain mandatory (§) items.")
         args = ', '.join(self.compile(child) for child in nd.children)
         if nd.parser.name == "term":
@@ -863,7 +861,7 @@ class EBNFCompiler(Compiler):
             return ""
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
-        symbol = str(node)  # ; assert result == cast(str, node.result)
+        symbol = node.content  # ; assert result == cast(str, node.result)
         if symbol in self.directives['tokens']:
             return 'PreprocessorToken("' + symbol + '")'
         else:
@@ -878,11 +876,12 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node) -> str:
-        return 'Token(' + str(node).replace('\\', r'\\') + ')'  # return 'Token(' + ', '.merge_children([node.result]) + ')' ?
+        return 'Token(' + node.content.replace('\\', r'\\') + ')'  # return 'Token(' + ',
+        # '.merge_children([node.result]) + ')' ?
 
 
     def on_regexp(self, node: Node) -> str:
-        rx = str(node)
+        rx = node.content
         name = []   # type: List[str]
         if rx[0] == '/' and rx[-1] == '/':
             parser = 'RegExp('

@@ -399,7 +399,6 @@ class Node(collections.abc.Sized):
         return self
 
 
-
     @property
     def errors(self) -> List[Error]:
         """

@@ -31,15 +31,6 @@ try:
 except ImportError:
     import re
 
-from DHParser import toolkit
-from DHParser import syntaxtree
-from DHParser import parsers
-from DHParser import transform
-from DHParser import ebnf
-from DHParser import dsl
-from DHParser import testing
-from DHParser import versionnumber
-
 modules = ('toolkit', 'syntaxtree', 'parser', 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber')
 
 all_symbols = list(functools.reduce(operator.or_, (set(eval(m + '.__all__')) for m in modules)))

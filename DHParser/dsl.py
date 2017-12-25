@@ -20,18 +20,20 @@ compilation of domain specific languages based on an EBNF-grammar.
 """
 
 import os
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
 
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
-from DHParser.parsers import Grammar, Compiler, compile_source, nil_preprocessor, PreprocessorFunc
+from DHParser.parse import Grammar, Compiler, compile_source
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
 from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object, \
-    re, typing
-from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
+    re
 
-__all__ = ('GrammarError',
+__all__ = ('DHPARSER_IMPORTS',
+           'GrammarError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
@@ -70,7 +72,7 @@ try:
 except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
@@ -495,14 +497,15 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                   + "\n# ".join(str(error).split('\n)')))
             print(result)
         finally:
-            if f:  f.close()
+            if f:
+                f.close()
 
     return messages
 
 
 def recompile_grammar(ebnf_filename, force=False) -> bool:
     """
-    Recompiles an ebnf-grammar if necessary, that is, if either no
+    Re-compiles an EBNF-grammar if necessary, that is, if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
 

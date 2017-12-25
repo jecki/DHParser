@@ -67,7 +67,8 @@ def tst_func():
                 transformer(result)
                 with open('REPORT/' + file[:-4]+'.ast', 'w', encoding='utf-8') as f:
                     f.write(result.as_sxpr(compact=False))
-                parser.log_parsing_history__()
+                if toolkit.is_logging():
+                    parser.log_parsing_history__()
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)

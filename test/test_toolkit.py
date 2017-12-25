@@ -26,7 +26,8 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import has_fenced_code, load_if_file, logging, log_dir, is_logging, re
+from DHParser.toolkit import has_fenced_code, load_if_file, logging, log_dir, is_logging, re, \
+    lstrip_docstring
 
 
 class TestLoggingAndLoading:
@@ -129,6 +130,23 @@ class TestLoggingAndLoading:
         assert f2.result()
         assert f3.result()
         assert f4.result()
+
+
+class TestStringHelpers:
+    def test_lstrip_docstring(self):
+        str1 = """line
+        
+            indented line
+        line
+        """
+        assert lstrip_docstring(str1) == 'line\n\n    indented line\nline\n'
+        str2 = """
+            line
+            line
+                indented line
+                    indented indented line"""
+        assert lstrip_docstring(str2) == '\nline\nline\n    indented line\n        indented ' \
+                                         'indented line'
 
 
 if __name__ == "__main__":

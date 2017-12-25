@@ -24,7 +24,7 @@ import os
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.parsers import Grammar, Compiler
+from DHParser.parse import Grammar, Compiler
 from DHParser.error import is_error
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_provider, \
     load_compiler_suite
