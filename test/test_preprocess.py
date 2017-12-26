@@ -60,7 +60,7 @@ class TestSourceMapping:
         assert len(positions) == len(offsets)
         assert positions[0] == 0
         assert all(positions[i] < positions[i + 1] for i in range(len(positions) - 1))
-        assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 1))
+        assert all(offsets[i] >= offsets[i + 1] for i in range(len(offsets) - 1))
         assert self.tokenized.find('AND') == self.code.find('AND') + len('CONJUNCTION') + 2
 
 
@@ -124,12 +124,21 @@ class TestTokenParsing:
         #     print()
         assert not cst.error_flag
 
-    def test_source_mapping(self):
+    def test_source_mapping_1(self):
         self.verify_mapping("def func", self.code, self.tokenized)
         self.verify_mapping("x > 0:", self.code, self.tokenized)
         self.verify_mapping("if y > 0:", self.code, self.tokenized)
         self.verify_mapping("print(x)", self.code, self.tokenized)
         self.verify_mapping("print(y)", self.code, self.tokenized)
+
+    def test_source_mapping_2(self):
+        previous_index = 0
+        L = len(self.code)
+        for mapped_index in range(len(self.tokenized)):
+            index = source_map(mapped_index, self.srcmap)
+            assert previous_index <= index <= L, \
+                "%i <= %i <= %i violated" % (previous_index, index, L)
+            previous_index = index
 
 
 if __name__ == "__main__":

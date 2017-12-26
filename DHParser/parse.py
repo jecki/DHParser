@@ -1127,8 +1127,8 @@ class RegExp(Parser):
         if match:
             capture = match.group(0)
             end = text.index(match.end())
-            # regular expresseion must never match preprocessor-tokens!
-            # TODO: Find a better solution here, e.g. static checking/re-mangling at compile time
+            # regular expression must never match preprocessor-tokens!
+            # TODO: Find a better solution here? e.g. static checking/re-mangling at compile time
             i = capture.find(BEGIN_TOKEN)
             if i >= 0:
                 capture = capture[:i]

@@ -106,14 +106,17 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
         positions.extend([d + 1, e + 1])
         offsets.extend([o + 1, o])
         i = tokenized_source.find(BEGIN_TOKEN, e + 1)
+    if e + 1 < len(tokenized_source):
+        positions.append(len(tokenized_source))
+        offsets.append(offsets[-1])
 
     # post conditions
     assert len(positions) == len(offsets), '\n' + str(positions) + '\n' + str(offsets)
     assert positions[0] == 0
     assert all(positions[i] < positions[i + 1] for i in range(len(positions) - 1))
-    assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 1))
+    assert all(offsets[i] >= offsets[i + 1] for i in range(len(offsets) - 1))
 
-    return SourceMap(positions, offsets)
+    return SourceMap(positions, offsets, len(positions))
 
 
 def source_map(position: int, srcmap: SourceMap) -> int:
@@ -128,7 +131,10 @@ def source_map(position: int, srcmap: SourceMap) -> int:
     Returns:
         the mapped position
     """
-    i = bisect.bisect_right(srcmap[0], position)
+    i = bisect.bisect_right(srcmap.positions, position)
     if i:
-        return position + srcmap[1][i - 1]
+        return min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i])
     raise ValueError
+
+# TODO: allow preprocessors to return their own source map (really a map or a function (easier)?)
+# TODO: apply source maps in sequence.
