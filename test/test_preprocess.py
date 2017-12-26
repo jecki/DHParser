@@ -22,10 +22,10 @@ limitations under the License.
 # import sys
 # sys.path.append('../')
 
-from DHParser.toolkit import re, lstrip_docstring, logging
-from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
-    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, pp_tokenized
 from DHParser.dsl import grammar_provider
+from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
+    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER
+from DHParser.toolkit import lstrip_docstring
 
 
 class TestMakeToken:
@@ -109,12 +109,27 @@ class TestTokenParsing:
         self.tokenized = self.preprocess_indentation(self.code)
         self.srcmap = tokenized_to_original_mapping(self.tokenized)
 
+    def verify_mapping(self, teststr, orig_text, preprocessed_text):
+        mapped_pos = preprocessed_text.find(teststr)
+        assert mapped_pos >= 0
+        original_pos = source_map(mapped_pos, self.srcmap)
+        assert orig_text[original_pos:original_pos + len(teststr)] == teststr, \
+            '"%s" (%i) wrongly mapped onto "%s" (%i)' % \
+            (teststr, mapped_pos, orig_text[original_pos:original_pos + len(teststr)], original_pos)
+
     def test_parse_tokenized(self):
         cst = self.grammar(self.tokenized)
         # for e in cst.collect_errors(self.tokenized):
         #     print(e.visualize(self.tokenized) + str(e))
         #     print()
         assert not cst.error_flag
+
+    def test_source_mapping(self):
+        self.verify_mapping("def func", self.code, self.tokenized)
+        self.verify_mapping("x > 0:", self.code, self.tokenized)
+        self.verify_mapping("if y > 0:", self.code, self.tokenized)
+        self.verify_mapping("print(x)", self.code, self.tokenized)
+        self.verify_mapping("print(y)", self.code, self.tokenized)
 
 
 if __name__ == "__main__":

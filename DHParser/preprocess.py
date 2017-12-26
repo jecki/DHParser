@@ -19,9 +19,9 @@ permissions and limitations under the License.
 import bisect
 import collections
 import functools
-
-from DHParser.toolkit import typing, re
 from typing import Union, Callable
+
+from DHParser.toolkit import re
 
 __all__ = ('RX_TOKEN_NAME',
            'BEGIN_TOKEN',
@@ -102,9 +102,9 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
         d = tokenized_source.find(TOKEN_DELIMITER, i)
         e = tokenized_source.find(END_TOKEN, i)
         assert 0 <= d < e
-        o -= (d - i + 2)
+        o -= (d - i + 3)
         positions.extend([d + 1, e + 1])
-        offsets.extend([o, o - 1])
+        offsets.extend([o + 1, o])
         i = tokenized_source.find(BEGIN_TOKEN, e + 1)
 
     # post conditions
