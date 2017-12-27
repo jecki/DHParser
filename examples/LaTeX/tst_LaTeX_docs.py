@@ -62,12 +62,13 @@ def tst_func():
                     doc = f.read()
                 print('\n\nParsing document: "%s"\n' % file)
                 result = parser(doc)
-                with open('REPORT/' + file[:-4]+'.cst', 'w', encoding='utf-8') as f:
-                    f.write(result.as_sxpr(compact=False))
-                transformer(result)
-                with open('REPORT/' + file[:-4]+'.ast', 'w', encoding='utf-8') as f:
-                    f.write(result.as_sxpr(compact=False))
-                parser.log_parsing_history__()
+                if toolkit.is_logging():
+                    with open('REPORT/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
+                        f.write(result.as_sxpr(compact=False))
+                    transformer(result)
+                    with open('REPORT/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
+                        f.write(result.as_sxpr(compact=False))
+                    parser.log_parsing_history__()
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)

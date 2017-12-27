@@ -18,11 +18,9 @@ permissions and limitations under the License.
 
 import bisect
 import functools
+from typing import Iterable, Iterator, Union, Tuple, List
 
 from DHParser.stringview import StringView
-from DHParser.toolkit import typing
-from typing import Hashable, Iterable, Iterator, Union, Tuple, List
-
 
 __all__ = ('Error',
            'is_error',
@@ -71,9 +69,15 @@ class Error:
 
     @property
     def level_str(self):
-        """Returns a string representation of the error level, e.g. "warning".
-        """
+        """Returns a string representation of the error level, e.g. "warning"."""
         return "Warning" if is_warning(self.code) else "Error"
+
+    def visualize(self, document: str) -> str:
+        """Shows the line of the document and the position where the error
+        occurred."""
+        start = document.rfind('\n', 0, self.pos) + 1
+        stop = document.find('\n', self.pos)
+        return document[start:stop] + '\n' + ' ' * (self.pos - start) + '^\n'
 
 
 def is_warning(code: int) -> bool:

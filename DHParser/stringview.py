@@ -1,5 +1,8 @@
-"""cstringview.pyx - a cython-version of the stringview class for speedup
-                     slicing strings without copying
+"""stringview.py - a string class where slices are views not copies as
+                   with the standard Python strings.
+
+   stringview.pxd - declarations for the cython Python to C compiler
+                   to speed up handling of StringViews.
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -23,6 +26,7 @@ However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 """
+
 
 import collections
 
@@ -81,7 +85,7 @@ def real_indices(begin: Optional[int],
 class StringView(collections.abc.Sized):
     """
     A rudimentary StringView class, just enough for the use cases
-    in parsers.py. The difference between a StringView and the python
+    in parse.py. The difference between a StringView and the python
     builtin strings is that StringView-objects do slicing without
     copying, i.e. slices are just a view on a section of the sliced
     string.

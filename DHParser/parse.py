@@ -59,26 +59,20 @@ import collections
 import copy
 import html
 import os
-from functools import partial
 
 from DHParser.error import Error, is_error, has_errors, linebreaks, line_col
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
+from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, \
+    PreprocessorFunc
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
-    load_if_file, re, typing
+    escape_control_characters, load_if_file, re, typing
 from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
 
-
-__all__ = ('PreprocessorFunc',
-           'HistoryRecord',
+__all__ = ('HistoryRecord',
            'Parser',
            'Grammar',
-           'RX_PREPROCESSOR_TOKEN',
-           'BEGIN_TOKEN',
-           'END_TOKEN',
-           'make_token',
-           'nil_preprocessor',
            'PreprocessorToken',
            'RegExp',
            'RE',
@@ -115,9 +109,6 @@ __all__ = ('PreprocessorFunc',
 # Grammar and parsing infrastructure
 #
 ########################################################################
-
-
-PreprocessorFunc = Union[Callable[[str], str], partial]
 
 
 LEFT_RECURSION_DEPTH = 8  # type: int
@@ -242,7 +233,7 @@ class HistoryRecord:
     def excerpt(self):
         length = len(self.node) if self.node else len(self.text)
         excerpt = str(self.node)[:min(length, 20)] if self.node else self.text[:20]
-        excerpt = excerpt.replace('\n', '\\n')
+        excerpt = escape_control_characters(excerpt)
         if length > 20:
             excerpt += '...'
         return excerpt
@@ -1007,27 +998,28 @@ class Grammar:
             if html and len(log) % 100 == 0:
                 log.append('\n</table>\n<table>\n' + HistoryRecord.COLGROUP)
 
-        if is_logging():
-            assert self.history__, \
-                "Parser did not yet run or logging was turned off when running parser!"
-            if not log_file_name:
-                name = self.__class__.__name__
-                log_file_name = name[:-7] if name.lower().endswith('grammar') else name
-            elif log_file_name.lower().endswith('.log'):
-                log_file_name = log_file_name[:-4]
-            full_history, match_history, errors_only = [], [], []
-            for record in self.history__:
-                line = record.as_html_tr() if html else str(record)
-                append_line(full_history, line)
-                if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
-                    append_line(match_history, line)
-                    if record.node.error_flag:
-                        append_line(errors_only, line)
-            write_log(full_history, log_file_name + '_full')
-            if len(full_history) > 250:
-                write_log(full_history[-200:], log_file_name + '_full.tail')
-            write_log(match_history, log_file_name + '_match')
-            write_log(errors_only, log_file_name + '_errors')
+        if not is_logging():
+            raise AssertionError("Cannot log history when logging is turned off!")
+        assert self.history__, \
+            "Parser did not yet run or logging was turned off when running parser!"
+        if not log_file_name:
+            name = self.__class__.__name__
+            log_file_name = name[:-7] if name.lower().endswith('grammar') else name
+        elif log_file_name.lower().endswith('.log'):
+            log_file_name = log_file_name[:-4]
+        full_history, match_history, errors_only = [], [], []
+        for record in self.history__:
+            line = record.as_html_tr() if html else str(record)
+            append_line(full_history, line)
+            if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
+                append_line(match_history, line)
+                if record.node.error_flag:
+                    append_line(errors_only, line)
+        write_log(full_history, log_file_name + '_full')
+        if len(full_history) > 250:
+            write_log(full_history[-200:], log_file_name + '_full.tail')
+        write_log(match_history, log_file_name + '_match')
+        write_log(errors_only, log_file_name + '_errors')
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
@@ -1059,31 +1051,6 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
 ########################################################################
 
 
-RX_PREPROCESSOR_TOKEN = re.compile(r'\w+')
-BEGIN_TOKEN = '\x1b'
-END_TOKEN = '\x1c'
-
-
-def make_token(token: str, argument: str = '') -> str:
-    """
-    Turns the ``token`` and ``argument`` into a special token that
-    will be caught by the `PreprocessorToken`-parser.
-
-    This function is a support function that should be used by
-    preprocessors to inject preprocessor tokens into the source text.
-    """
-    assert RX_PREPROCESSOR_TOKEN.match(token)
-    assert argument.find(BEGIN_TOKEN) < 0
-    assert argument.find(END_TOKEN) < 0
-
-    return BEGIN_TOKEN + token + argument + END_TOKEN
-
-
-def nil_preprocessor(text: str) -> str:
-    """A preprocessor that does nothing, i.e. just returns the input."""
-    return text
-
-
 class PreprocessorToken(Parser):
     """
     Parses tokens that have been inserted by a preprocessor.
@@ -1097,7 +1064,7 @@ class PreprocessorToken(Parser):
 
     def __init__(self, token: str) -> None:
         assert token and token.isupper()
-        assert RX_PREPROCESSOR_TOKEN.match(token)
+        assert RX_TOKEN_NAME.match(token)
         super(PreprocessorToken, self).__init__(token)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1121,8 +1088,7 @@ class PreprocessorToken(Parser):
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[end:]
             if text[1:len(self.name) + 1] == self.name:
-                return Node(self, text[len(self.name) + 1:end]), \
-                       text[end + 1:]
+                return Node(self, text[len(self.name) + 2:end]), text[end + 1:]
         return None, text
 
 
@@ -1157,15 +1123,21 @@ class RegExp(Parser):
         return RegExp(regexp, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        if text[0:1] != BEGIN_TOKEN:  # ESC starts a preprocessor token.
-            match = text.match(self.regexp)
-            if match:
-                end = text.index(match.end())
-                return Node(self, match.group(0), True), text[end:]
+        match = text.match(self.regexp)
+        if match:
+            capture = match.group(0)
+            end = text.index(match.end())
+            # regular expression must never match preprocessor-tokens!
+            # TODO: Find a better solution here? e.g. static checking/re-mangling at compile time
+            i = capture.find(BEGIN_TOKEN)
+            if i >= 0:
+                capture = capture[:i]
+                end = i
+            return Node(self, capture, True), text[end:]
         return None, text
 
     def __repr__(self):
-        return '/%s/' % self.regexp.pattern
+        return escape_control_characters('/%s/' % self.regexp.pattern)
 
 
 class Whitespace(RegExp):

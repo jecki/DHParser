@@ -187,7 +187,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                                            cst.collect_errors(test_code))))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
-                parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
+                if is_logging():
+                    parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                 errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                               (test_name, parser_name, cst.as_sxpr()))
@@ -215,7 +216,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
-                parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
+                if is_logging():
+                    parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 

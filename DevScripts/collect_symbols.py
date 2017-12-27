@@ -23,7 +23,7 @@ sys.path.append('../')
 
 from DHParser import toolkit
 from DHParser import syntaxtree
-from DHParser import parsers
+from DHParser import parse
 from DHParser import transform
 from DHParser import ebnf
 from DHParser import dsl
@@ -33,7 +33,7 @@ from DHParser import versionnumber
 symbols_table = {
     'toolkit': list(toolkit.__all__),
     'syntaxtree': list(syntaxtree.__all__),
-    'parser': list(parsers.__all__),
+    'parser': list(parse.__all__),
     'transform': list(transform.__all__),
     'ebnf': list(ebnf.__all__),
     'dsl': list(dsl.__all__),
