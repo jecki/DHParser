@@ -1097,7 +1097,7 @@ class PreprocessorToken(Parser):
 
 class PlainText(Parser):
     """
-    Parses plain text strings.
+    Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
     Example:
     >>> while_token = PlainText("while")
@@ -1108,14 +1108,14 @@ class PlainText(Parser):
     def __init__(self, text: str, name: str = '') -> None:
         super().__init__(name)
         self.text = text
-        self.textlen = len(text)
+        self.len = len(text)
 
     def __deepcopy__(self, memo):
         return self.__class__(self.text, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
-            return Node(self, self.text, True), text[self.textlen:]
+            return Node(self, self.text, True), text[self.len:]
         return None, text
 
 
@@ -2247,10 +2247,12 @@ def compile_source(source: str,
         2. A list of error or warning messages
         3. The root-node of the abstract syntax tree
     """
-    source_text = load_if_file(source)
+    original_text = load_if_file(source)
     log_file_name = logfile_basename(source, compiler)
-    if preprocessor is not None:
-        source_text, source_mapping = with_source_mapping(preprocessor(source_text))
+    if preprocessor is None:
+        source_text = original_text
+    else:
+        source_text, source_mapping = with_source_mapping(preprocessor(original_text))
     syntax_tree = parser(source_text)
     if is_logging():
         syntax_tree.log(log_file_name + '.cst')
@@ -2273,4 +2275,5 @@ def compile_source(source: str,
         # print(syntax_tree.as_sxpr())
         messages.extend(syntax_tree.collect_errors(source_text))
         syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
+
     return result, messages, syntax_tree
