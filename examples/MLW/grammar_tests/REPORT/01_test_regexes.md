@@ -77,7 +77,7 @@ Match-test "m2"
             ""
             ""
         )
-        (:RE
+        (:Whitespace
             "// Kommentar"
         )
     )
@@ -253,19 +253,6 @@ Match-test "m4"
                 )
             )
         )
-        (LZ
-            (:RegExp
-                ""
-                ""
-            )
-            (:RegExp
-                "// Kommentar"
-            )
-            (:RegExp
-                ""
-                ""
-            )
-        )
     )
 
 Match-test "m5"
@@ -304,7 +291,7 @@ Match-test "m5"
                 ""
                 ""
             )
-            (:RE
+            (:Whitespace
                 "// Kommentar"
             )
         )
@@ -546,12 +533,6 @@ Match-test "m3"
                 "// Kommentar"
             )
         )
-        (LZ
-            (:RegExp
-                ""
-                ""
-            )
-        )
     )
 
 Match-test "m4"
@@ -567,13 +548,6 @@ Match-test "m4"
     (ZWW
         (ZEILENSPRUNG
             (:RegExp
-                ""
-                ""
-            )
-        )
-        (LZ
-            (:RegExp
-                ""
                 ""
                 ""
             )
