@@ -36,12 +36,15 @@ Match-test "1"
     
     
 
-### CST
+### AST
     (GAP
         (:RegExp
             ""
             ""
             ""
+        )
+        (:Whitespace
+            " "
         )
     )
 
@@ -76,13 +79,16 @@ Match-test "3"
     
     
 
-### CST
+### AST
     (GAP
         (:RegExp
             ""
             ""
             ""
             ""
+        )
+        (:Whitespace
+            " "
         )
     )
 

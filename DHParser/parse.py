@@ -1068,7 +1068,7 @@ class PreprocessorToken(Parser):
     def __init__(self, token: str) -> None:
         assert token and token.isupper()
         assert RX_TOKEN_NAME.match(token)
-        super(PreprocessorToken, self).__init__(token)
+        super().__init__(token)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text[0:1] == BEGIN_TOKEN:
@@ -1095,6 +1095,30 @@ class PreprocessorToken(Parser):
         return None, text
 
 
+class PlainText(Parser):
+    """
+    Parses plain text strings.
+
+    Example:
+    >>> while_token = PlainText("while")
+    >>> Grammar(while_token)("while").content
+    'while'
+    """
+
+    def __init__(self, text: str, name: str = '') -> None:
+        super().__init__(name)
+        self.text = text
+        self.textlen = len(text)
+
+    def __deepcopy__(self, memo):
+        return self.__class__(self.text, self.name)
+
+    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        if text.startswith(self.text):
+            return Node(self, self.text, True), text[self.textlen:]
+        return None, text
+
+
 class RegExp(Parser):
     r"""
     Regular expression parser.
@@ -1114,7 +1138,7 @@ class RegExp(Parser):
     """
 
     def __init__(self, regexp, name: str = '') -> None:
-        super(RegExp, self).__init__(name)
+        super().__init__(name)
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -1123,7 +1147,7 @@ class RegExp(Parser):
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        return RegExp(regexp, self.name)
+        return self.__class__(regexp, self.name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         match = text.match(self.regexp)
@@ -1179,7 +1203,7 @@ class RE(Parser):
     EBNF-Example:   `word = /\w+/~`
     """
 
-    def __init__(self, regexp, wL=None, wR=None, name=''):
+    def __init__(self, regexp, wL=None, wR=None, name: str='') -> None:
         r"""Constructor for class RE.
 
         Args:
@@ -1195,12 +1219,12 @@ class RE(Parser):
                 See above.
             name:  The optional name of the parser.
         """
-        super(RE, self).__init__(name)
+        super().__init__(name)
         self.rx_wsl = wL
         self.rx_wsr = wR
         self.wsp_left = Whitespace(wL) if wL else ZOMBIE_PARSER
         self.wsp_right = Whitespace(wR) if wR else ZOMBIE_PARSER
-        self.main = RegExp(regexp)
+        self.main = self.create_main_parser(regexp)
 
     def __deepcopy__(self, memo={}):
         try:
@@ -1216,8 +1240,7 @@ class RE(Parser):
         main, txt = self.main(txt)
         if main:
             wsr, txt = self.wsp_right(txt)
-            result = tuple(nd for nd in (wsl, main, wsr)
-                           if nd and nd.result != '')
+            result = tuple(nd for nd in (wsl, main, wsr) if nd)
             return Node(self, result), txt
         return None, text
 
@@ -1244,6 +1267,10 @@ class RE(Parser):
             return True
         return False
 
+    def create_main_parser(self, arg) -> Parser:
+        """Creates the main parser of this compound parser. Can be overridden."""
+        return RegExp(arg)
+
 
 class Token(RE):
     """
@@ -1259,13 +1286,16 @@ class Token(RE):
 
     def __init__(self, token: str, wL=None, wR=None, name: str = '') -> None:
         self.token = token
-        super(Token, self).__init__(escape_re(token), wL, wR, name)
+        super().__init__(token, wL, wR, name)
 
     def __deepcopy__(self, memo={}):
         return self.__class__(self.token, self.rx_wsl, self.rx_wsr, self.name)
 
     def __repr__(self):
         return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
+
+    def create_main_parser(self, arg) -> Parser:
+        return PlainText(arg)
 
 
 ########################################################################
@@ -1316,7 +1346,7 @@ class NaryOperator(Parser):
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super(NaryOperator, self).__init__(name)
+        super().__init__(name)
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
@@ -1359,7 +1389,7 @@ class Option(UnaryOperator):
     """
 
     def __init__(self, parser: Parser, name: str = '') -> None:
-        super(Option, self).__init__(parser, name)
+        super().__init__(parser, name)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
             "Redundant nesting of options: %s(%s)" % (str(name), str(parser.name))
@@ -1431,7 +1461,7 @@ class OneOrMore(UnaryOperator):
     """
 
     def __init__(self, parser: Parser, name: str = '') -> None:
-        super(OneOrMore, self).__init__(parser, name)
+        super().__init__(parser, name)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (str(name), str(parser.name))
@@ -1476,7 +1506,7 @@ class Series(NaryOperator):
     NOPE = 1000
 
     def __init__(self, *parsers: Parser, mandatory: int = NOPE, name: str = '') -> None:
-        super(Series, self).__init__(*parsers, name=name)
+        super().__init__(*parsers, name=name)
         length = len(self.parsers)
         assert 1 <= length < Series.NOPE, \
             'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
@@ -1581,7 +1611,7 @@ class Alternative(NaryOperator):
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super(Alternative, self).__init__(*parsers, name=name)
+        super().__init__(*parsers, name=name)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \

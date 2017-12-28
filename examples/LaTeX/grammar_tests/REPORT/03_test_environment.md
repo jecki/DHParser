@@ -28,6 +28,9 @@ Match-test "1"
                 "A generic block element is a block element"
                 "that is unknown to DHParser."
             )
+            (:Whitespace
+                " "
+            )
         )
         (paragraph
             (text
@@ -134,9 +137,15 @@ Match-test "1"
         (begin_environment
             "generic"
         )
+        (:Whitespace
+            " "
+        )
         (paragraph
             (text
                 "inline environment"
+            )
+            (:Whitespace
+                " "
             )
         )
         (end_environment
@@ -155,6 +164,9 @@ Match-test "2"
     (generic_inline_env
         (begin_environment
             "generic"
+        )
+        (:Whitespace
+            " "
         )
         (paragraph
             (text
@@ -228,6 +240,9 @@ Match-test "2"
             (paragraph
                 (text
                     "separated by blank lines."
+                )
+                (:Whitespace
+                    " "
                 )
             )
         )
@@ -372,6 +387,9 @@ Match-test "3"
                 (text
                     "finally, the first item"
                 )
+                (:Whitespace
+                    " "
+                )
             )
         )
     )
@@ -395,6 +413,9 @@ Match-test "4"
             (paragraph
                 (text
                     "An item"
+                )
+                (:Whitespace
+                    " "
                 )
             )
             (itemize

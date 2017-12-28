@@ -82,6 +82,9 @@ Match-test "3"
             (text
                 "footnote"
             )
+            (:Whitespace
+                " "
+            )
         )
     )
 
@@ -160,12 +163,21 @@ Match-test "7"
 
 ### AST
     (block
+        (:Whitespace
+            " "
+        )
         (generic_command
             (CMDNAME
                 "\em"
             )
         )
+        (:Whitespace
+            " "
+        )
         (text
             "block"
+        )
+        (:Whitespace
+            " "
         )
     )

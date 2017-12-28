@@ -17,21 +17,38 @@ Match-test "1"
 ### AST
     (SubParagraph
         (heading
-            "A subparagraph"
+            (:Whitespace
+                " "
+            )
+            (text
+                "A subparagraph"
+            )
+            (:Whitespace
+                " "
+            )
         )
         (paragraph
             (text
                 "with some text"
+            )
+            (:Whitespace
+                " "
             )
         )
         (paragraph
             (text
                 "and consisting of several"
             )
+            (:Whitespace
+                " "
+            )
         )
         (paragraph
             (text
                 "real paragraphs"
+            )
+            (:Whitespace
+                " "
             )
         )
     )
@@ -60,30 +77,63 @@ Match-test "1"
 ### AST
     (Paragraph
         (heading
-            "A paragraph consisting of several subparagraphs"
+            (:Whitespace
+                " "
+            )
+            (text
+                "A paragraph consisting of several subparagraphs"
+            )
+            (:Whitespace
+                " "
+            )
         )
         (paragraph
             (text
                 "Some text ahead"
             )
+            (:Whitespace
+                " "
+            )
         )
         (SubParagraph
             (heading
-                "subparagraph 1"
+                (:Whitespace
+                    " "
+                )
+                (text
+                    "subparagraph 1"
+                )
+                (:Whitespace
+                    " "
+                )
             )
             (paragraph
                 (text
                     "First subparagraph"
                 )
+                (:Whitespace
+                    " "
+                )
             )
         )
         (SubParagraph
             (heading
-                "subparagraph 2"
+                (:Whitespace
+                    " "
+                )
+                (text
+                    "subparagraph 2"
+                )
+                (:Whitespace
+                    " "
+                )
             )
             (paragraph
                 (text
                     "Second subparagraph"
+                )
+                (:Whitespace
+                    " "
                 )
             )
         )
@@ -123,30 +173,73 @@ Match-test "1"
     (Chapters
         (Chapter
             (heading
-                "Chapter 1"
-            )
-            (Section
-                (heading
-                    "Section 1"
+                (:Whitespace
+                    " "
+                )
+                (text
+                    "Chapter 1"
+                )
+                (:Whitespace
+                    " "
                 )
             )
             (Section
                 (heading
-                    "Section 2"
-                )
-                (paragraph
+                    (:Whitespace
+                        " "
+                    )
                     (text
-                        "Section 2 contains some text"
+                        "Section 1"
+                    )
+                    (:Whitespace
+                        " "
                     )
                 )
             )
             (Section
                 (heading
-                    "Section 3"
+                    (:Whitespace
+                        " "
+                    )
+                    (text
+                        "Section 2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+                (paragraph
+                    (text
+                        "Section 2 contains some text"
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+            )
+            (Section
+                (heading
+                    (:Whitespace
+                        " "
+                    )
+                    (text
+                        "Section 3"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (SubSection
                     (heading
-                        "SubSection 1"
+                        (:Whitespace
+                            " "
+                        )
+                        (text
+                            "SubSection 1"
+                        )
+                        (:Whitespace
+                            " "
+                        )
                     )
                     (paragraph
                         (text
@@ -160,20 +253,42 @@ Match-test "1"
                 )
                 (SubSection
                     (heading
-                        "SubSection 2"
+                        (:Whitespace
+                            " "
+                        )
+                        (text
+                            "SubSection 2"
+                        )
+                        (:Whitespace
+                            " "
+                        )
                     )
                     (paragraph
                         (text
                             "Text for subsection 2"
                         )
+                        (:Whitespace
+                            " "
+                        )
                     )
                     (SubSubSection
                         (heading
-                            "A subsubsection"
+                            (:Whitespace
+                                " "
+                            )
+                            (text
+                                "A subsubsection"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (paragraph
                             (text
                                 "Text for subsubsecion"
+                            )
+                            (:Whitespace
+                                " "
                             )
                         )
                     )
@@ -181,17 +296,36 @@ Match-test "1"
             )
             (Section
                 (heading
-                    "Section 4"
+                    (:Whitespace
+                        " "
+                    )
+                    (text
+                        "Section 4"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
             )
         )
         (Chapter
             (heading
-                "Chapter 2"
+                (:Whitespace
+                    " "
+                )
+                (text
+                    "Chapter 2"
+                )
+                (:Whitespace
+                    " "
+                )
             )
             (paragraph
                 (text
                     "Some text for chapter 2"
+                )
+                (:Whitespace
+                    " "
                 )
             )
         )

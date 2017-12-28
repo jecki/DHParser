@@ -17,7 +17,12 @@ Match-test "1"
 ### AST
     (tabular
         (tabular_config
-            "c|c|"
+            (:RegExp
+                "c|c|"
+            )
+            (:Whitespace
+                " "
+            )
         )
         (tabular_row
             (tabular_cell
@@ -33,13 +38,23 @@ Match-test "1"
                     "\cline{"
                 )
                 (INTEGER
-                    "1"
+                    (:RegExp
+                        "1"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -65,13 +80,23 @@ Match-test "1"
                     "\cline{"
                 )
                 (INTEGER
-                    "1"
+                    (:RegExp
+                        "1"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -97,13 +122,23 @@ Match-test "1"
                     "\cline{"
                 )
                 (INTEGER
-                    "1"
+                    (:RegExp
+                        "1"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -132,48 +167,99 @@ Match-test "2"
 ### AST
     (tabular
         (tabular_config
-            "c|c|c|c|cc|c|c|c|"
+            (:RegExp
+                "c|c|c|c|cc|c|c|c|"
+            )
+            (:Whitespace
+                " "
+            )
         )
         (tabular_row
             (multicolumn
                 (INTEGER
-                    "1"
+                    (:RegExp
+                        "1"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (tabular_config
-                    "c"
-                )
-            )
-            (multicolumn
-                (INTEGER
-                    "3"
-                )
-                (tabular_config
-                    "c"
-                )
-                (block_of_paragraphs
-                    (text
-                        "Tabelle 1:"
+                    (:RegExp
+                        "c"
+                    )
+                    (:Whitespace
+                        " "
                     )
                 )
             )
             (multicolumn
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "3"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (tabular_config
-                    "c"
+                    (:RegExp
+                        "c"
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+                (block_of_paragraphs
+                    (text
+                        "Tabelle 1:"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
             )
             (multicolumn
                 (INTEGER
-                    "3"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (tabular_config
-                    "c"
+                    (:RegExp
+                        "c"
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+            )
+            (multicolumn
+                (INTEGER
+                    (:RegExp
+                        "3"
+                    )
+                    (:Whitespace
+                        " "
+                    )
+                )
+                (tabular_config
+                    (:RegExp
+                        "c"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (block_of_paragraphs
                     (text
                         "Tabelle 2:"
+                    )
+                    (:Whitespace
+                        " "
                     )
                 )
             )
@@ -185,13 +271,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "4"
+                    (:RegExp
+                        "4"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -202,13 +298,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "7"
+                    (:RegExp
+                        "7"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "9"
+                    (:RegExp
+                        "9"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -264,13 +370,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "4"
+                    (:RegExp
+                        "4"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -281,13 +397,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "7"
+                    (:RegExp
+                        "7"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "9"
+                    (:RegExp
+                        "9"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -343,13 +469,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "4"
+                    (:RegExp
+                        "4"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -360,13 +496,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "7"
+                    (:RegExp
+                        "7"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "9"
+                    (:RegExp
+                        "9"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -422,13 +568,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "2"
+                    (:RegExp
+                        "2"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "4"
+                    (:RegExp
+                        "4"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -439,13 +595,23 @@ Match-test "2"
                     "\cline{"
                 )
                 (INTEGER
-                    "7"
+                    (:RegExp
+                        "7"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "-"
                 )
                 (INTEGER
-                    "9"
+                    (:RegExp
+                        "9"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (:Token
                     "}"
@@ -487,6 +653,9 @@ Match-test "1"
                     "\doublespacing"
                 )
             )
+            (:Whitespace
+                " "
+            )
         )
         (generic_block
             (begin_environment
@@ -494,35 +663,73 @@ Match-test "1"
             )
             (tabular
                 (tabular_config
-                    "l|c|c|c|"
+                    (:RegExp
+                        "l|c|c|c|"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
                 (tabular_row
                     (multicolumn
                         (INTEGER
-                            "1"
+                            (:RegExp
+                                "1"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c"
+                            (:RegExp
+                                "c"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                     )
                     (multicolumn
                         (INTEGER
-                            "1"
+                            (:RegExp
+                                "1"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c"
+                            (:RegExp
+                                "c"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                     )
                     (multicolumn
                         (INTEGER
-                            "2"
+                            (:RegExp
+                                "2"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c"
+                            (:RegExp
+                                "c"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (block_of_paragraphs
                             (inline_math
                                 "\overbrace{\hspace{7cm}}^{Experiments}"
+                            )
+                            (:Whitespace
+                                " "
                             )
                         )
                     )
@@ -534,13 +741,23 @@ Match-test "1"
                             "\cline{"
                         )
                         (INTEGER
-                            "2"
+                            (:RegExp
+                                "2"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (:Token
                             "-"
                         )
                         (INTEGER
-                            "4"
+                            (:RegExp
+                                "4"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (:Token
                             "}"
@@ -550,37 +767,64 @@ Match-test "1"
                 (tabular_row
                     (tabular_cell
                         (block
+                            (:Whitespace
+                                " "
+                            )
                             (generic_command
                                 (CMDNAME
                                     "\bf"
                                 )
+                            )
+                            (:Whitespace
+                                " "
                             )
                             (text
                                 "computer simulation"
                             )
+                            (:Whitespace
+                                " "
+                            )
                         )
                     )
                     (tabular_cell
                         (block
+                            (:Whitespace
+                                " "
+                            )
                             (generic_command
                                 (CMDNAME
                                     "\bf"
                                 )
+                            )
+                            (:Whitespace
+                                " "
                             )
                             (text
                                 "analog simulation"
                             )
+                            (:Whitespace
+                                " "
+                            )
                         )
                     )
                     (tabular_cell
                         (block
+                            (:Whitespace
+                                " "
+                            )
                             (generic_command
                                 (CMDNAME
                                     "\bf"
                                 )
                             )
+                            (:Whitespace
+                                " "
+                            )
                             (text
                                 "plain experiment"
+                            )
+                            (:Whitespace
+                                " "
                             )
                         )
                     )
@@ -604,14 +848,27 @@ Match-test "1"
                     )
                     (multicolumn
                         (INTEGER
-                            "2"
+                            (:RegExp
+                                "2"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c|"
+                            (:RegExp
+                                "c|"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (block_of_paragraphs
                             (text
                                 "material"
+                            )
+                            (:Whitespace
+                                " "
                             )
                         )
                     )
@@ -630,14 +887,27 @@ Match-test "1"
                     )
                     (multicolumn
                         (INTEGER
-                            "2"
+                            (:RegExp
+                                "2"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c|"
+                            (:RegExp
+                                "c|"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (block_of_paragraphs
                             (text
                                 "representation"
+                            )
+                            (:Whitespace
+                                " "
                             )
                         )
                     )
@@ -656,31 +926,64 @@ Match-test "1"
                 (tabular_row
                     (multicolumn
                         (INTEGER
-                            "1"
+                            (:RegExp
+                                "1"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c"
-                        )
-                    )
-                    (multicolumn
-                        (INTEGER
-                            "2"
-                        )
-                        (tabular_config
-                            "c"
-                        )
-                        (block_of_paragraphs
-                            (inline_math
-                                "\underbrace{\hspace{7cm}}_{Simulations}"
+                            (:RegExp
+                                "c"
+                            )
+                            (:Whitespace
+                                " "
                             )
                         )
                     )
                     (multicolumn
                         (INTEGER
-                            "1"
+                            (:RegExp
+                                "2"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                         (tabular_config
-                            "c"
+                            (:RegExp
+                                "c"
+                            )
+                            (:Whitespace
+                                " "
+                            )
+                        )
+                        (block_of_paragraphs
+                            (inline_math
+                                "\underbrace{\hspace{7cm}}_{Simulations}"
+                            )
+                            (:Whitespace
+                                " "
+                            )
+                        )
+                    )
+                    (multicolumn
+                        (INTEGER
+                            (:RegExp
+                                "1"
+                            )
+                            (:Whitespace
+                                " "
+                            )
+                        )
+                        (tabular_config
+                            (:RegExp
+                                "c"
+                            )
+                            (:Whitespace
+                                " "
+                            )
                         )
                     )
                     (:Token
@@ -694,16 +997,38 @@ Match-test "1"
         )
         (paragraph
             (caption
-                (text
-                    "Conceptual relation of simulations and experiments"
+                (block
+                    (:Whitespace
+                        " "
+                    )
+                    (text
+                        "Conceptual relation of simulations and experiments"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
+            )
+            (:Whitespace
+                " "
             )
             (generic_command
                 (CMDNAME
                     "\label"
                 )
-                (text
-                    "SimulationExperimentsScheme"
+                (:Whitespace
+                    " "
+                )
+                (block
+                    (:Whitespace
+                        " "
+                    )
+                    (text
+                        "SimulationExperimentsScheme"
+                    )
+                    (:Whitespace
+                        " "
+                    )
                 )
             )
             (:Whitespace
