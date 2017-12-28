@@ -157,7 +157,7 @@ def error_str(messages: Iterable[Error]) -> str:
     Returns all true errors (i.e. not just warnings) from the
     `messages` as a concatenated multiline string.
     """
-    return '\n\n'.join(str(m) for m in messages if is_error(m.level))
+    return '\n\n'.join(str(m) for m in messages if is_error(m.code))
 
 
 def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
@@ -287,7 +287,8 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
 
 
 def load_compiler_suite(compiler_suite: str) -> \
-    Tuple[PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc]:
+        Tuple[PreprocessorFactoryFunc, ParserFactoryFunc,
+              TransformerFactoryFunc, CompilerFactoryFunc]:
     """
     Extracts a compiler suite from file or string ``compiler suite``
     and returns it as a tuple (preprocessor, parser, ast, compiler).

@@ -22,10 +22,13 @@ limitations under the License.
 # import sys
 # sys.path.append('../')
 
+from functools import partial
+
 from DHParser.dsl import grammar_provider
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
-    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER
-from DHParser.toolkit import lstrip_docstring
+    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors
+from DHParser.toolkit import lstrip_docstring, typing
+from typing import Tuple
 
 
 class TestMakeToken:
@@ -60,7 +63,8 @@ class TestSourceMapping:
         assert len(positions) == len(offsets)
         assert positions[0] == 0
         assert all(positions[i] < positions[i + 1] for i in range(len(positions) - 1))
-        assert all(offsets[i] >= offsets[i + 1] for i in range(len(offsets) - 1))
+        assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 2))
+        assert offsets[-1] >= offsets[-2]
         assert self.tokenized.find('AND') == self.code.find('AND') + len('CONJUNCTION') + 2
 
 
@@ -68,7 +72,7 @@ class TestTokenParsing:
     def preprocess_indentation(self, src: str) -> str:
         transformed = []
         indent_level = 0
-        for line in self.code.split('\n'):
+        for line in src.split('\n'):
             indent = len(line) - len(line.lstrip()) if line.strip() else indent_level * 4
             assert indent % 4 == 0
             if indent > indent_level * 4:
@@ -87,8 +91,24 @@ class TestTokenParsing:
             transformed.append(make_token('END_INDENT'))
             indent_level -= 1
         tokenized = '\n'.join(transformed)
-        # print(pp_tokenized(tokenized))
+        # print(prettyprint_tokenized(tokenized))
         return tokenized
+
+    def preprocess_comments(self, src: str) -> Tuple[str, SourceMapFunc]:
+        lines = src.split('\n')
+        positions, offsets = [0], [0]
+        pos = 0
+        for i, line in enumerate(lines):
+            comment_pos = line.find('#')
+            if comment_pos >= 0:
+                lines[i] = line[:comment_pos]
+                positions.append(pos + comment_pos)
+                offsets.append(len(line) - comment_pos)
+                pos += comment_pos
+            pos += len(line)
+        positions.append(pos)
+        offsets.append(offsets[-1])
+        return '\n'.join(lines), partial(source_map, srcmap=SourceMap(positions, offsets))
 
     def setup(self):
         self.ebnf = r"""
@@ -103,16 +123,17 @@ class TestTokenParsing:
             def func(x, y):
                 if x > 0:
                     if y > 0:
-                        print(x)
+                        print(x)  # a comment
                         print(y)
             """)
         self.tokenized = self.preprocess_indentation(self.code)
         self.srcmap = tokenized_to_original_mapping(self.tokenized)
 
-    def verify_mapping(self, teststr, orig_text, preprocessed_text):
+    def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
         mapped_pos = preprocessed_text.find(teststr)
         assert mapped_pos >= 0
-        original_pos = source_map(mapped_pos, self.srcmap)
+        original_pos = mapping(mapped_pos)
+        # original_pos = source_map(mapped_pos, self.srcmap)
         assert orig_text[original_pos:original_pos + len(teststr)] == teststr, \
             '"%s" (%i) wrongly mapped onto "%s" (%i)' % \
             (teststr, mapped_pos, orig_text[original_pos:original_pos + len(teststr)], original_pos)
@@ -125,11 +146,12 @@ class TestTokenParsing:
         assert not cst.error_flag
 
     def test_source_mapping_1(self):
-        self.verify_mapping("def func", self.code, self.tokenized)
-        self.verify_mapping("x > 0:", self.code, self.tokenized)
-        self.verify_mapping("if y > 0:", self.code, self.tokenized)
-        self.verify_mapping("print(x)", self.code, self.tokenized)
-        self.verify_mapping("print(y)", self.code, self.tokenized)
+        mapping = partial(source_map, srcmap=self.srcmap)
+        self.verify_mapping("def func", self.code, self.tokenized, mapping)
+        self.verify_mapping("x > 0:", self.code, self.tokenized, mapping)
+        self.verify_mapping("if y > 0:", self.code, self.tokenized, mapping)
+        self.verify_mapping("print(x)", self.code, self.tokenized, mapping)
+        self.verify_mapping("print(y)", self.code, self.tokenized, mapping)
 
     def test_source_mapping_2(self):
         previous_index = 0
@@ -139,6 +161,23 @@ class TestTokenParsing:
             assert previous_index <= index <= L, \
                 "%i <= %i <= %i violated" % (previous_index, index, L)
             previous_index = index
+
+    def test_non_token_preprocessor(self):
+        tokenized, mapping = self.preprocess_comments(self.code)
+        self.verify_mapping("def func", self.code, tokenized, mapping)
+        self.verify_mapping("x > 0:", self.code, tokenized, mapping)
+        self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
+        self.verify_mapping("print(x)", self.code, tokenized, mapping)
+        self.verify_mapping("print(y)", self.code, tokenized, mapping)
+
+    def test_chained_preprocessors(self):
+        pchain = chain_preprocessors(self.preprocess_comments, self.preprocess_indentation)
+        tokenized, mapping = pchain(self.code)
+        self.verify_mapping("def func", self.code, tokenized, mapping)
+        self.verify_mapping("x > 0:", self.code, tokenized, mapping)
+        self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
+        self.verify_mapping("print(x)", self.code, tokenized, mapping)
+        self.verify_mapping("print(y)", self.code, tokenized, mapping)
 
 
 if __name__ == "__main__":

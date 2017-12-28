@@ -417,7 +417,7 @@ class EBNFCompiler(Compiler):
         the previously compiled formal language.
         """
         name = self.grammar_name + "Preprocessor"
-        return "def %s(text):\n    return text\n" % name \
+        return "def %s(text):\n    return text, lambda i: i\n" % name \
                + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 

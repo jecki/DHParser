@@ -326,7 +326,7 @@ def replace_by_child(context: List[Node], criteria: CriteriaType=single_child):
 
 
 @transformation_factory(int, str, Callable)
-def content_from_child(context: List[None], criteria: CriteriaType=single_child):
+def content_from_child(context: List[Node], criteria: CriteriaType = single_child):
     """
     Reduces a node, by transferring the result of the first of its
     immediate descendants that meets the `criteria` to this node,

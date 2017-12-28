@@ -65,7 +65,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, \
-    PreprocessorFunc
+    PreprocessorFunc, with_source_mapping
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
     escape_control_characters, load_if_file, re, typing
 from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
@@ -859,7 +859,8 @@ class Grammar:
         Returns:
             Node: The root node ot the parse tree.
         """
-        def tail_pos(predecessors: List[Node]) -> int:
+
+        def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...]]) -> int:
             """Adds the position after the last node in the list of
             predecessors to the node."""
             return predecessors[-1].pos + len(predecessors[-1]) if predecessors else 0
@@ -1007,7 +1008,9 @@ class Grammar:
             log_file_name = name[:-7] if name.lower().endswith('grammar') else name
         elif log_file_name.lower().endswith('.log'):
             log_file_name = log_file_name[:-4]
-        full_history, match_history, errors_only = [], [], []
+        full_history = []  # type: List[str]
+        match_history = []  # type: List[str]
+        errors_only = []  # type: List[str]
         for record in self.history__:
             line = record.as_html_tr() if html else str(record)
             append_line(full_history, line)
@@ -1359,8 +1362,7 @@ class Option(UnaryOperator):
         super(Option, self).__init__(parser, name)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
-            "Redundant nesting of options: %s(%s)" % \
-            (str(name), str(parser.name))
+            "Redundant nesting of options: %s(%s)" % (str(name), str(parser.name))
         # assert not isinstance(parser, Required), \
         #     "Nesting options with required elements is contradictory: " \
         #     "%s(%s)" % (str(name), str(parser.name))
@@ -2218,7 +2220,7 @@ def compile_source(source: str,
     source_text = load_if_file(source)
     log_file_name = logfile_basename(source, compiler)
     if preprocessor is not None:
-        source_text = preprocessor(source_text)
+        source_text, source_mapping = with_source_mapping(preprocessor(source_text))
     syntax_tree = parser(source_text)
     if is_logging():
         syntax_tree.log(log_file_name + '.cst')

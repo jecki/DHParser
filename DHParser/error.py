@@ -43,6 +43,7 @@ class Error:
     # warning codes
 
     REDEFINED_DIRECTIVE_WARNING = 101
+    REDECLARED_TOKEN_WARNING = 102
 
     # error codes
 
@@ -106,7 +107,7 @@ def only_errors(messages: Iterable[Error], level: int = Error.ERROR) -> Iterator
     Returns an Iterator that yields only those messages that have
     at least the given error level.
     """
-    return (err for err in messages if err.level >= level)
+    return (err for err in messages if err.code >= level)
 
 
 def linebreaks(text: Union[StringView, str]) -> List[int]:

@@ -14,9 +14,7 @@ Match-test "1"
     (Lemma
         (LemmaWort
             (LAT_WORT
-                (:RegExp
-                    "facitergula"
-                )
+                "facitergula"
             )
         )
     )
@@ -44,9 +42,7 @@ Match-test "1"
 ### AST
     (LemmaVarianten
         (LAT_WORT
-            (:RegExp
-                "fascitergula"
-            )
+            "fascitergula"
         )
         (:ZeroOrMore
             (:Series
@@ -59,9 +55,7 @@ Match-test "1"
                     )
                 )
                 (LAT_WORT
-                    (:RegExp
-                        "facietergula"
-                    )
+                    "facietergula"
                 )
             )
             (:Series
@@ -74,9 +68,7 @@ Match-test "1"
                     )
                 )
                 (LAT_WORT
-                    (:RegExp
-                        "facistergula"
-                    )
+                    "facistergula"
                 )
             )
             (:Series
@@ -89,9 +81,7 @@ Match-test "1"
                     )
                 )
                 (LAT_WORT
-                    (:RegExp
-                        "farcutergula"
-                    )
+                    "farcutergula"
                 )
             )
         )
@@ -106,9 +96,7 @@ Match-test "2"
 ### AST
     (LemmaVarianten
         (LAT_WORT
-            (:RegExp
-                "fascitergula"
-            )
+            "fascitergula"
         )
     )
 
@@ -138,20 +126,8 @@ Match-test "3"
                 )
             )
             (Zusatz
-                (:Series
-                    (:Token
-                        "{"
-                    )
-                    (DEU_WORT
-                        (DEU_KLEIN
-                            (:RegExp
-                                "sim."
-                            )
-                        )
-                    )
-                    (:Token
-                        "}"
-                    )
+                (DEU_WORT
+                    "sim."
                 )
             )
         )
@@ -166,60 +142,24 @@ Match-test "4"
 ### AST
     (LemmaVarianten
         (LAT_WORT
-            (:RegExp
-                "fascitergula"
-            )
+            "fascitergula"
         )
         (:ZeroOrMore
-            (:Series
-                (:Token
-                    (:RegExp
-                        ","
-                    )
-                    (:Whitespace
-                        " "
-                    )
-                )
+            (LAT_WORT
+                "facietergula"
+            )
+            (LemmaVariante
                 (LAT_WORT
                     (:RegExp
-                        "facietergula"
-                    )
-                )
-            )
-            (:Series
-                (:Token
-                    (:RegExp
-                        ","
+                        "fascistergula"
                     )
                     (:Whitespace
                         " "
                     )
                 )
-                (LemmaVariante
-                    (LAT_WORT
-                        (:RegExp
-                            "fascistergula"
-                        )
-                        (:Whitespace
-                            " "
-                        )
-                    )
-                    (Zusatz
-                        (:Series
-                            (:Token
-                                "{"
-                            )
-                            (DEU_WORT
-                                (DEU_KLEIN
-                                    (:RegExp
-                                        "sim."
-                                    )
-                                )
-                            )
-                            (:Token
-                                "}"
-                            )
-                        )
+                (Zusatz
+                    (DEU_WORT
+                        "sim."
                     )
                 )
             )
@@ -253,42 +193,16 @@ Match-test "1"
 
 ### AST
     (LemmaPosition
-        (:Token
-            (:RegExp
-                "LEMMA"
-            )
-            (:Whitespace
-                " "
-            )
-        )
         (Lemma
             (LemmaWort
                 (LAT_WORT
-                    (:RegExp
-                        "facitergula"
-                    )
-                )
-            )
-        )
-        (ZWW
-            (ZEILENSPRUNG
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
-            (LZ
-                (:RegExp
-                    ""
-                    ""
+                    "facitergula"
                 )
             )
         )
         (LemmaVarianten
             (LAT_WORT
-                (:RegExp
-                    "fascitergula"
-                )
+                "fascitergula"
             )
             (:ZeroOrMore
                 (:Series
@@ -301,9 +215,7 @@ Match-test "1"
                         )
                     )
                     (LAT_WORT
-                        (:RegExp
-                            "facietergula"
-                        )
+                        "facietergula"
                     )
                 )
                 (:Series
@@ -316,9 +228,7 @@ Match-test "1"
                         )
                     )
                     (LAT_WORT
-                        (:RegExp
-                            "facistergula"
-                        )
+                        "facistergula"
                     )
                 )
                 (:Series
@@ -340,20 +250,8 @@ Match-test "1"
                             )
                         )
                         (Zusatz
-                            (:Series
-                                (:Token
-                                    "{"
-                                )
-                                (DEU_WORT
-                                    (DEU_KLEIN
-                                        (:RegExp
-                                            "sim."
-                                        )
-                                    )
-                                )
-                                (:Token
-                                    "}"
-                                )
+                            (DEU_WORT
+                                "sim."
                             )
                         )
                     )
@@ -361,48 +259,14 @@ Match-test "1"
             )
         )
         (GrammatikPosition
-            (ZWW
-                (ZEILENSPRUNG
+            (flexion
+                (FLEX
                     (:RegExp
-                        ""
-                        ""
+                        "-ae"
                     )
-                )
-                (LZ
-                    (:RegExp
-                        ""
-                        ""
+                    (:Whitespace
+                        " "
                     )
-                )
-            )
-            (:Token
-                "GRAMMATIK"
-            )
-            (LZ
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
-            (Grammatik
-                (wortart
-                    "nomen"
-                )
-                (ABS
-                    "; "
-                )
-                (flexion
-                    (FLEX
-                        (:RegExp
-                            "-ae"
-                        )
-                        (:Whitespace
-                            " "
-                        )
-                    )
-                )
-                (genus
-                    "f."
                 )
             )
         )
