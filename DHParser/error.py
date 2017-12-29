@@ -17,9 +17,9 @@ permissions and limitations under the License.
 """
 
 import bisect
-import functools
 from typing import Iterable, Iterator, Union, Tuple, List
 
+from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
 
 __all__ = ('Error',
@@ -28,11 +28,12 @@ __all__ = ('Error',
            'has_errors',
            'only_errors',
            'linebreaks',
-           'line_col')
+           'line_col',
+           'remap_error_locations')
 
 
 class Error:
-    __slots__ = ['message', 'level', 'code', 'pos', 'line', 'column']
+    __slots__ = ['message', 'level', 'code', 'pos', 'orig_pos', 'line', 'column']
 
     # error levels
 
@@ -49,12 +50,13 @@ class Error:
 
     MANDATORY_CONTINUATION = 1001
 
-    def __init__(self, message: str, code: int = ERROR,
-                 pos: int = -1, line: int = -1, column: int = -1) -> None:
+    def __init__(self, message: str, code: int = ERROR, pos: int = -1,
+                 orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
         self.message = message
         assert code >= 0
         self.code = code
         self.pos = pos
+        self.orig_pos = orig_pos
         self.line = line
         self.column = column
 
@@ -65,8 +67,8 @@ class Error:
         return prefix + "%s: %s" % (self.level_str, self.message)
 
     def __repr__(self):
-        return 'Error("%s", %s, %i, %i, %i)' \
-               % (self.message, repr(self.code), self.pos, self.line, self.column)
+        return 'Error("%s", %s, %i, %i, %i, %i)' \
+               % (self.message, repr(self.code), self.pos, self.orig_pos, self.line, self.column)
 
     @property
     def level_str(self):
@@ -110,6 +112,13 @@ def only_errors(messages: Iterable[Error], level: int = Error.ERROR) -> Iterator
     return (err for err in messages if err.code >= level)
 
 
+#######################################################################
+#
+# Setting of line, column and position properties of error messages.
+#
+#######################################################################
+
+
 def linebreaks(text: Union[StringView, str]) -> List[int]:
     """
     Returns a list of indices all line breaks in the text.
@@ -123,24 +132,13 @@ def linebreaks(text: Union[StringView, str]) -> List[int]:
     return lbr
 
 
-@functools.singledispatch
-def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
-    """
-    Returns the position within a text as (line, column)-tuple.
-    """
-    if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
-        raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
-    line = text.count("\n", 0, pos) + 1
-    column = pos - text.rfind("\n", 0, pos)
-    return line, column
-
-
-@line_col.register(list)
-def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
+def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
     """
     Returns the position within a text as (line, column)-tuple based
     on a list of all line breaks, including -1 and EOF.
     """
+    if not lbreaks and pos >= 0:
+        return 0, pos
     if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
         raise ValueError('Position %i outside text of length %s !' % (pos, lbreaks[-1]))
     line = bisect.bisect_left(lbreaks, pos)
@@ -148,20 +146,37 @@ def _line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
     return line, column
 
 
-# def error_messages(source_text:str, errors: List[Error]) -> List[str]:
-#     """Adds line, column information for error messages, if the position
-#     is given.
-#
-#     Args:
-#         source_text (str):  The source text on which the errors occurred.
-#             (Needed in order to determine the line and column numbers.)
-#         errors (list):  The list of errors as returned by the method
-#             ``collect_errors()`` of a Node object
-#     Returns:
-#         The same list of error messages, which now contain line and
-#         column numbers.
+# def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
 #     """
-#     for err in errors:
-#         if err.pos >= 0 and err.line <= 0:
-#             err.line, err.column = line_col(source_text, err.pos)
-#     return errors
+#     Returns the position within a text as (line, column)-tuple.
+#     """
+#     if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
+#         raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
+#     line = text.count("\n", 0, pos) + 1
+#     column = pos - text.rfind("\n", 0, pos)
+#     return line, column
+
+
+def remap_error_locations(errors: List[Error],
+                          original_text: Union[StringView, str],
+                          source_mapping: SourceMapFunc=lambda i: i) -> List[Error]:
+    """Adds (or adjusts) line and column numbers of error messages in place.
+
+    Args:
+        errors:  The list of errors as returned by the method
+            ``collect_errors()`` of a Node object
+        original_text:  The source text on which the errors occurred.
+            (Needed in order to determine the line and column numbers.)
+        source_mapping:  A function that maps error positions to their
+            positions in the original source file.
+    Returns:
+        The list of errors. (Returning the list of errors is just syntactical
+        sugar. Be aware that the line, col and orig_pos attributes have been
+        changed in place.)
+    """
+    line_breaks = linebreaks(original_text)
+    for err in errors:
+        assert err.pos >= 0
+        err.orig_pos = source_mapping(err.pos)
+        err.line, err.column = line_col(line_breaks, err.orig_pos)
+    return errors

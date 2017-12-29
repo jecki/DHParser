@@ -2,6 +2,13 @@ General TODO-List
 =================
 
 
+Readability of Code
+-------------------
+
+**direct vs inverse location counting in `parse.py:guarded_call`**: 
+use location value counting from the beginning rather than the end of 
+the text
+
 
 Optimizations
 -------------

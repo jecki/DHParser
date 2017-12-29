@@ -23,7 +23,7 @@ from functools import partial
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_logging, log_dir, identity, re, typing
+from DHParser.toolkit import is_logging, log_dir, re, typing
 from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable, Optional
 
 
@@ -320,8 +320,8 @@ class Node(collections.abc.Sized):
             self.children = (result,)
             self._result = self.children
             self.error_flag = result.error_flag
-            if self._pos < 0:
-                self._pos = result._pos
+            # if self._pos < 0:
+            #     self._pos = result._pos
         else:
             if isinstance(result, tuple):
                 self.children = result
@@ -329,8 +329,8 @@ class Node(collections.abc.Sized):
                 if result:
                     if self.error_flag == 0:
                         self.error_flag = max(child.error_flag for child in self.children)
-                    if self._pos < 0:
-                        self._pos = result[0]._pos
+                    # if self._pos < 0:
+                    #     self._pos = result[0]._pos
             else:
                 self.children = NoChildren
                 self._result = str(result)
@@ -367,21 +367,8 @@ class Node(collections.abc.Sized):
     def pos(self) -> int:
         """Returns the position of the Node's content in the source text."""
         if self._pos < 0:
-            raise AssertionError("position value not initialized!")
+            raise AssertionError("Position value not initialized!")
         return self._pos
-
-
-    # @pos.setter
-    # def pos(self, pos: int):
-    #     assert self._pos == pos, str("%i != %i" % (self._pos, pos))
-    #     offset = 0
-    #     # recursively adjust pos-values of all children
-    #     for child in self.children:
-    #         assert child.pos == pos + offset
-    #         offset += len(child)
-    #     # add pos-values to Error-objects
-    #     for err in self._errors:
-    #         err.pos = pos
 
 
     def init_pos(self, pos: int, overwrite: bool = False) -> 'Node':
@@ -431,29 +418,19 @@ class Node(collections.abc.Sized):
         return self
 
 
-    def collect_errors(self, document: Union[StringView, str] = '', clear_errors=False) \
-            -> List[Error]:
+    def collect_errors(self, clear_errors=False) -> List[Error]:
         """
         Recursively adds line- and column-numbers to all error objects.
         Returns all errors of this node or any child node in the form
         of a set of tuples (position, error_message), where position
         is always relative to this node.
         """
-        if self.error_flag:
-            lbreaks = linebreaks(document) if document else []
-            return self._collect_errors(lbreaks, clear_errors)
-        else:
-            return []
-
-    def _collect_errors(self, lbreaks: List[int] = [], clear_errors=False) -> List[Error]:
         errors = self.errors
-        if errors and lbreaks:
-            for err in errors:
-                err.pos = self.pos
-                err.line, err.column = line_col(lbreaks, err.pos)
+        for err in errors:
+            err.pos = self.pos
         if self.children:
             for child in self.children:
-                errors.extend(child._collect_errors(lbreaks, clear_errors))
+                errors.extend(child.collect_errors(clear_errors))
         if clear_errors:
             self._errors = []
             self.error_flag = 0
@@ -467,7 +444,7 @@ class Node(collections.abc.Sized):
 
 
 
-    def _tree_repr(self, tab, open_fn, close_fn, data_fn=identity, density=0) -> str:
+    def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i, density=0) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -569,7 +546,7 @@ class Node(collections.abc.Sized):
             txt = '<' + node.tag_name
             # s += ' pos="%i"' % node.pos
             if src:
-                txt += ' line="%i" col="%i"' % line_col(src, node.pos)
+                txt += ' line="%i" col="%i"' % line_col(line_breaks, node.pos)
             if showerrors and node.errors:
                 txt += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
             return txt + ">\n"
@@ -578,6 +555,7 @@ class Node(collections.abc.Sized):
             """Returns the closing string for the representation of `node`."""            
             return '\n</' + node.tag_name + '>'
 
+        line_breaks = linebreaks(src) if src else []
         return self._tree_repr('    ', opening, closing, density=1)
 
 
@@ -663,6 +641,10 @@ def mock_syntax_tree(sxpr):
     sxpr = sxpr[match.end():].strip()
     if sxpr[0] == '(':
         result = tuple(mock_syntax_tree(block) for block in next_block(sxpr))
+        pos = 0
+        for node in result:
+            node._pos = pos
+            pos += len(node)
     else:
         lines = []
         while sxpr and sxpr[0] != ')':
@@ -678,7 +660,9 @@ def mock_syntax_tree(sxpr):
                 lines.append(sxpr[:match.end()])
                 sxpr = sxpr[match.end():]
         result = "\n".join(lines)
-    return Node(MockParser(name, ':' + class_name), result)
+    node = Node(MockParser(name, ':' + class_name), result)
+    node._pos = 0
+    return node
 
 
 TransformationFunc = Union[Callable[[Node], Any], partial]

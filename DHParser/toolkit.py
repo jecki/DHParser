@@ -66,8 +66,7 @@ __all__ = ('logging',
            'expand_table',
            'compile_python_object',
            'smart_list',
-           'sane_parser_name',
-           'identity')
+           'sane_parser_name')
 
 
 #######################################################################
@@ -406,11 +405,6 @@ def sane_parser_name(name) -> bool:
     must not be preceded or succeeded by a double underscore '__'!
     """
     return name and name[:2] != '__' and name[-2:] != '__'
-
-
-def identity(anything: Any) -> Any:
-    """Identity function for functional programming style."""
-    return anything
 
 
 #######################################################################

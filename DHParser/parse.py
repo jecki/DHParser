@@ -60,7 +60,7 @@ import copy
 import html
 import os
 
-from DHParser.error import Error, is_error, has_errors, linebreaks, line_col
+from DHParser.error import Error, is_error, has_errors, linebreaks, line_col, remap_error_locations
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
@@ -332,6 +332,7 @@ def add_parser_guard(parser_func):
                     # otherwise also cache None-results
                     parser.visited[location] = (None, rest)
             else:
+                assert node._pos < 0
                 node._pos = grammar.document_length__ - location
                 assert node._pos >= 0, str("%i != %i" % (grammar.document_length__, location))
                 if (grammar.last_rb__loc__ > location
@@ -431,13 +432,13 @@ class Parser(ParserBase):
 
         # add "aspect oriented" wrapper around parser calls
         # for memoizing, left recursion and tracing
-
-        guarded_parser_call = add_parser_guard(self.__class__.__call__)
-        # The following check is necessary for classes that don't override
-        # the __call__() method, because in these cases the non-overridden
-        # __call__()-method would be substituted a second time!
-        if self.__class__.__call__.__code__ != guarded_parser_call.__code__:
-            self.__class__.__call__ = guarded_parser_call
+        if not isinstance(self, Forward):  # should Forward-Parser no be guarded? Not sure...
+            guarded_parser_call = add_parser_guard(self.__class__.__call__)
+            # The following check is necessary for classes that don't override
+            # the __call__() method, because in these cases the non-overridden
+            # __call__()-method would be substituted a second time!
+            if self.__class__.__call__.__code__ != guarded_parser_call.__code__:
+                self.__class__.__call__ = guarded_parser_call
 
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-
@@ -2251,6 +2252,7 @@ def compile_source(source: str,
     log_file_name = logfile_basename(source, compiler)
     if preprocessor is None:
         source_text = original_text
+        source_mapping = lambda i: i
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
     syntax_tree = parser(source_text)
@@ -2263,17 +2265,18 @@ def compile_source(source: str,
     # likely that error list gets littered with compile error messages
     result = None
     efl = syntax_tree.error_flag
-    messages = syntax_tree.collect_errors(source_text, clear_errors=True)
+    messages = syntax_tree.collect_errors(clear_errors=True)
     if not is_error(efl):
         transformer(syntax_tree)
         efl = max(efl, syntax_tree.error_flag)
-        messages.extend(syntax_tree.collect_errors(source_text, clear_errors=True))
+        messages.extend(syntax_tree.collect_errors(clear_errors=True))
         if is_logging():
             syntax_tree.log(log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
         # print(syntax_tree.as_sxpr())
-        messages.extend(syntax_tree.collect_errors(source_text))
+        messages.extend(syntax_tree.collect_errors())
         syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
 
+    remap_error_locations(messages, original_text, source_mapping)
     return result, messages, syntax_tree

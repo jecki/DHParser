@@ -29,43 +29,33 @@ from DHParser.error import linebreaks, line_col
 
 
 class TestErrorSupport:
-    def mini_suite(self, s, data, offset):
-        l, c = line_col(data, 0)
+    def mini_suite(self, s, lbreaks, offset):
+        l, c = line_col(lbreaks, 0)
         assert (l, c) == (1, 1), str((l, c))
-        l, c = line_col(data, 0 + offset)
+        l, c = line_col(lbreaks, 0 + offset)
         assert (l, c) == (1 + offset, 1), str((l, c))
-        l, c = line_col(data, 1 + offset)
+        l, c = line_col(lbreaks, 1 + offset)
         assert (l, c) == (1 + offset, 2), str((l, c))
-        l, c = line_col(data, 9 + offset)
+        l, c = line_col(lbreaks, 9 + offset)
         assert (l, c) == (1 + offset, 10), str((l, c))
-        l, c = line_col(data, 10 + offset)
+        l, c = line_col(lbreaks, 10 + offset)
         assert (l, c) == (2 + offset, 1), str((l, c))
-        l, c = line_col(data, 18 + offset)
+        l, c = line_col(lbreaks, 18 + offset)
         assert (l, c) == (2 + offset, 9), str((l, c))
-        l, c = line_col(data, 19 + offset)
+        l, c = line_col(lbreaks, 19 + offset)
         assert (l, c) == (2 + offset, 10), str((l, c))
         try:
-            l, c = line_col(data, -1)
+            l, c = line_col(lbreaks, -1)
             assert False, "ValueError expected for negative position."
         except ValueError:
             pass
         try:
-            l, c = line_col(data, len(s) + 1)
+            l, c = line_col(lbreaks, len(s) + 1)
             assert False, "ValueError expected for postion > pos(EOF)+1."
         except ValueError:
             pass
 
     def test_line_col(self):
-        s = "123456789\n123456789"
-        self.mini_suite(s, s, 0)
-        s = "\n123456789\n123456789"
-        self.mini_suite(s, s, 1)
-        s = "123456789\n123456789\n"
-        self.mini_suite(s, s, 0)
-        s = "\n123456789\n123456789\n"
-        self.mini_suite(s, s, 1)
-
-    def test_line_col_bisect(self):
         s = "123456789\n123456789"
         self.mini_suite(s, linebreaks(s), 0)
         s = "\n123456789\n123456789"
