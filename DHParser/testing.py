@@ -25,7 +25,7 @@ import os
 
 from DHParser.toolkit import is_logging, clear_logs, re
 from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
-from DHParser.error import is_error, remap_error_locations
+from DHParser.error import is_error, adjust_error_locations
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -181,7 +181,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast.log("match_%s_%s.ast" % (parser_name, test_name))
             if is_error(cst.error_flag):
-                errors = remap_error_locations(cst.collect_errors(), test_code)
+                errors = adjust_error_locations(cst.collect_errors(), test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))

@@ -31,6 +31,7 @@ __all__ = ('RX_TOKEN_NAME',
            'PreprocessorFunc',
            'PreprocessorResult',
            'make_token',
+           'strip_tokens',
            'nil_preprocessor',
            'chain_preprocessors',
            'prettyprint_tokenized',
@@ -127,6 +128,22 @@ def prettyprint_tokenized(tokenized: str) -> str:
     return tokenized.replace('\x1b', '<').replace('\x1c', '|').replace('\x1d', '>')
 
 
+def strip_tokens(tokenized: str) -> str:
+    """Replaces all tokens with the token's arguments."""
+    result = []
+    pos = 0
+    match = RX_TOKEN.search(tokenized, pos)
+    while match:
+        start, end = match.span()
+        result.append(tokenized[pos:start])
+        result.append(match.groupdict()['argument'])
+        pos = end
+        match = RX_TOKEN.search(tokenized, pos)
+    result.append(tokenized[pos:])
+    return ''.join(result)
+
+
+
 #######################################################################
 #
 # Source Maps - mapping source code positions between different
@@ -160,7 +177,7 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
         d = tokenized_source.find(TOKEN_DELIMITER, i)
         e = tokenized_source.find(END_TOKEN, i)
         assert 0 <= d < e
-        o -= (d - i + 3)
+        o -= (d - i + 2)
         positions.extend([d + 1, e + 1])
         offsets.extend([o + 1, o])
         i = tokenized_source.find(BEGIN_TOKEN, e + 1)

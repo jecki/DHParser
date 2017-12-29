@@ -25,8 +25,10 @@ limitations under the License.
 from functools import partial
 
 from DHParser.dsl import grammar_provider
+from DHParser.parse import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
-    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors
+    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors, \
+    strip_tokens
 from DHParser.toolkit import lstrip_docstring, typing
 from typing import Tuple
 
@@ -78,17 +80,17 @@ class TestTokenParsing:
             if indent > indent_level * 4:
                 assert indent == (indent_level + 1) * 4, str(indent)  # indent must be 4 spaces
                 indent_level += 1
-                transformed.append(make_token('BEGIN_INDENT'))
+                line = make_token('BEGIN_INDENT') + line
             elif indent <= (indent_level - 1) * 4:
                 while indent <= (indent_level - 1) * 4:
-                    transformed.append(make_token('END_INDENT'))
+                    line = make_token('END_INDENT') + line
                     indent_level -= 1
                 assert indent == (indent_level + 1) * 4  # indent must be 4 spaces
             else:
                 assert indent == indent_level * 4
             transformed.append(line)
         while indent_level > 0:
-            transformed.append(make_token('END_INDENT'))
+            transformed[-1] += make_token('END_INDENT')
             indent_level -= 1
         tokenized = '\n'.join(transformed)
         # print(prettyprint_tokenized(tokenized))
@@ -101,11 +103,11 @@ class TestTokenParsing:
         for i, line in enumerate(lines):
             comment_pos = line.find('#')
             if comment_pos >= 0:
-                lines[i] = line[:comment_pos]
-                positions.append(pos + comment_pos)
-                offsets.append(len(line) - comment_pos)
                 pos += comment_pos
-            pos += len(line)
+                lines[i] = line[:comment_pos]
+                positions.append(pos - offsets[-1])
+                offsets.append(offsets[-1] + len(line) - comment_pos)
+            pos += len(lines[i])
         positions.append(pos)
         offsets.append(offsets[-1])
         return '\n'.join(lines), partial(source_map, srcmap=SourceMap(positions, offsets))
@@ -121,9 +123,9 @@ class TestTokenParsing:
         self.grammar = grammar_provider(self.ebnf)()
         self.code = lstrip_docstring("""
             def func(x, y):
-                if x > 0:
+                if x > 0:         # a comment
                     if y > 0:
-                        print(x)  # a comment
+                        print(x)  # another comment
                         print(y)
             """)
         self.tokenized = self.preprocess_indentation(self.code)
@@ -137,6 +139,9 @@ class TestTokenParsing:
         assert orig_text[original_pos:original_pos + len(teststr)] == teststr, \
             '"%s" (%i) wrongly mapped onto "%s" (%i)' % \
             (teststr, mapped_pos, orig_text[original_pos:original_pos + len(teststr)], original_pos)
+
+    def test_strip_tokens(self):
+        assert self.code == strip_tokens(self.tokenized)
 
     def test_parse_tokenized(self):
         cst = self.grammar(self.tokenized)
@@ -178,6 +183,17 @@ class TestTokenParsing:
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
         self.verify_mapping("print(x)", self.code, tokenized, mapping)
         self.verify_mapping("print(y)", self.code, tokenized, mapping)
+
+    def test_error_position(self):
+        orig_src = self.code.replace('#', '\x1b')
+        prepr = chain_preprocessors(self.preprocess_comments, self.preprocess_indentation)
+        result, messages, syntaxtree = compile_source(orig_src, prepr, self.grammar,
+                                                      lambda i: i, lambda i: i)
+        for err in messages:
+            if self.code[err.orig_pos] == "#":
+                break
+        else:
+            assert False, "wrong error positions"
 
 
 if __name__ == "__main__":

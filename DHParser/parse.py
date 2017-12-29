@@ -60,12 +60,12 @@ import copy
 import html
 import os
 
-from DHParser.error import Error, is_error, has_errors, linebreaks, line_col, remap_error_locations
+from DHParser.error import Error, is_error, has_errors, linebreaks, line_col, adjust_error_locations
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, \
-    PreprocessorFunc, with_source_mapping
+    PreprocessorFunc, with_source_mapping, strip_tokens
 from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
     escape_control_characters, load_if_file, re, typing
 from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
@@ -2221,7 +2221,7 @@ def compile_source(source: str,
                    compiler: Compiler) -> Tuple[Any, List[Error], Node]:  # Node (AST) -> Any
     """
     Compiles a source in four stages:
-        1. Scanning (if needed)
+        1. Preprocessing (if needed)
         2. Parsing
         3. AST-transformation
         4. Compiling.
@@ -2260,7 +2260,7 @@ def compile_source(source: str,
         syntax_tree.log(log_file_name + '.cst')
         parser.log_parsing_history__(log_file_name)
 
-    assert is_error(syntax_tree.error_flag) or str(syntax_tree) == source_text, str(syntax_tree)
+    assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text)
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None
@@ -2278,5 +2278,5 @@ def compile_source(source: str,
         messages.extend(syntax_tree.collect_errors())
         syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
 
-    remap_error_locations(messages, original_text, source_mapping)
+    adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, syntax_tree

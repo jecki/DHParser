@@ -29,7 +29,7 @@ __all__ = ('Error',
            'only_errors',
            'linebreaks',
            'line_col',
-           'remap_error_locations')
+           'adjust_error_locations')
 
 
 class Error:
@@ -63,7 +63,9 @@ class Error:
     def __str__(self):
         prefix = ''
         if self.line > 0:
-            prefix = "line: %3i, column: %2i, " % (self.line, self.column)
+            prefix = "line: %s, column: %s, " % \
+                     ("%4i" % self.line if self.line >= 0 else ' ???',
+                      "%3i" % self.column if self.column >= 0 else '???')
         return prefix + "%s: %s" % (self.level_str, self.message)
 
     def __repr__(self):
@@ -157,9 +159,9 @@ def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
 #     return line, column
 
 
-def remap_error_locations(errors: List[Error],
-                          original_text: Union[StringView, str],
-                          source_mapping: SourceMapFunc=lambda i: i) -> List[Error]:
+def adjust_error_locations(errors: List[Error],
+                           original_text: Union[StringView, str],
+                           source_mapping: SourceMapFunc=lambda i: i) -> List[Error]:
     """Adds (or adjusts) line and column numbers of error messages in place.
 
     Args:
