@@ -232,7 +232,7 @@ class HistoryRecord:
     @property
     def excerpt(self):
         length = len(self.node) if self.node else len(self.text)
-        excerpt = str(self.node)[:min(length, 20)] if self.node else self.text[:20]
+        excerpt = str(self.node)[:min(length, 20)] if self.node else str(self.text[:20])
         excerpt = escape_control_characters(excerpt)
         if length > 20:
             excerpt += '...'
@@ -301,6 +301,7 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
+                # no history recording in case of meomized results
                 return parser.visited[location]
 
             if grammar.history_tracking__:
@@ -343,6 +344,7 @@ def add_parser_guard(parser_func):
                     #   matches will store its result in the cache
                     parser.visited[location] = (node, rest)
 
+            # Mind that meomized parser calls will not appear in the history record!
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 remaining = len(rest)

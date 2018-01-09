@@ -84,6 +84,9 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
+        if is_logging():
+            syntax_tree.log("test_LeftRecursion_indirect.cst")
+            parser.log_parsing_history__("test_LeftRecursion_indirect")
 
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""
