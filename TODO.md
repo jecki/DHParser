@@ -1,5 +1,5 @@
-General TODO-List
-=================
+Ideas for further development
+=============================
 
 
 Readability of Code
@@ -50,3 +50,29 @@ Challenges:
       Some parsers cannot profit from the optimization. For example variable
       delimiters, otherwise as all delimiters a good candidate for discarding
       cannot be discarded any more.  
+
+
+Debugging
+---------
+
+Supplement the History-Recording functionality of DHParser with a tracing
+debugger, i.e. a debugger that allows to trace particular parsers:
+
+- Add a tracing parser class that - like the Forward-Parser-class - "contains"
+  another parser without its calls being run through the parser guard, but
+  that records every call of the parser and its results, e.g. to trace the
+  `option`-parser from the ebnf-parser (see DHParser/ebnf.py) you'd write:
+  `option = Trace(Series(Token("["), expression, Token("]"), mandatory=1))`
+
+- For the ebnf-representation a tracing-prefix could be added, say `?`, e.g.
+  `option = ?("[" §expression "]")` or, alternatively, 
+  `?option = "[" §expression "]"`
+  
+- Another Alternative would be to add an EBNF-compiler directive, say `@ trace`,
+  so one could write `@ trace = option` at the beginning of the EBNF-code.
+   * disadvantage: only parsers represented by symobols can be traced
+     (can always be circumvented by introducing further symbols.)
+   * advantages: less clutter in the EBNF-code and easier to swith between
+     debugging and production code by simply commenting out the 
+     trace-statements at the beginning.
+  
