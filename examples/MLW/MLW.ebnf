@@ -45,20 +45,22 @@ GrammatikPosition = ZWW "GRAMMATIK" [LZ] §Grammatik { ABS GrammatikVariante }
 
 Grammatik        = wortart §ABS flexion [genus]
 
-wortart          = "nomen"  | "n."
-                 | "verb"   | "v."
-                 | "adverb" | "adv."
-                 | "adjektiv" | "adj."
-                 | "praeposition" | "praep."
+wortart          = nomen | verb | adverb | adjektiv | praeposition
+nomen            = "nomen"  | "n."
+verb             = "verb"   | "v."
+adverb           = "adverb" | "adv."
+adjektiv         = "adjektiv" | "adj."
+praeposition     = "praeposition" | "praep."
 
 flexion          = deklination | konjugation
 deklination      = FLEX ["," FLEX]
 konjugation      = FLEX
 FLEX             = /-?[a-z]+/~
 
-genus            = "maskulinum" | "m."
-                 | "femininum" | "f."
-                 | "neutrum" | "n."
+genus            = maskulinum | femininum | neutrum
+maskulinum       = "maskulinum" | "m."
+femininum        = "femininum" | "f."
+neutrum          = "neutrum" | "n."
 
 GrammatikVariante  = [wortart ABS] flexion [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
 

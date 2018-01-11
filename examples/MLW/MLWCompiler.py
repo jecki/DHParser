@@ -99,20 +99,22 @@ class MLWGrammar(Grammar):
     
     Grammatik        = wortart §ABS flexion [genus]
     
-    wortart          = "nomen"  | "n."
-                     | "verb"   | "v."
-                     | "adverb" | "adv."
-                     | "adjektiv" | "adj."
-                     | "praeposition" | "praep."
+    wortart          = nomen | verb | adverb | adjektiv | praeposition
+    nomen            = "nomen"  | "n."
+    verb             = "verb"   | "v."
+    adverb           = "adverb" | "adv."
+    adjektiv         = "adjektiv" | "adj."
+    praeposition     = "praeposition" | "praep."
     
     flexion          = deklination | konjugation
     deklination      = FLEX ["," FLEX]
     konjugation      = FLEX
     FLEX             = /-?[a-z]+/~
     
-    genus            = "maskulinum" | "m."
-                     | "femininum" | "f."
-                     | "neutrum" | "n."
+    genus            = maskulinum | femininum | neutrum
+    maskulinum       = "maskulinum" | "m."
+    femininum        = "femininum" | "f."
+    neutrum          = "neutrum" | "n."
     
     GrammatikVariante  = [wortart ABS] flexion [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
     
@@ -309,7 +311,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "ded96803a4eb4164ea8d2cf18924172b"
+    source_hash__ = "d4c194f1b966734e852e0293584409fb"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -426,12 +428,20 @@ class MLWGrammar(Grammar):
     EtymologieVariante = Alternative(LAT, Series(GRI, Option(EtymologieBesonderheit), Option(Series(Token("ETYM"), Etymologie)), DPP, Beleg))
     EtymologiePosition = Series(ZWW, Token("ETYMOLOGIE"), Option(LZ), OneOrMore(EtymologieVariante))
     GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(genus), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
-    genus.set(Alternative(Token("maskulinum"), Token("m."), Token("femininum"), Token("f."), Token("neutrum"), Token("n.")))
+    neutrum = Alternative(Token("neutrum"), Token("n."))
+    femininum = Alternative(Token("femininum"), Token("f."))
+    maskulinum = Alternative(Token("maskulinum"), Token("m."))
+    genus.set(Alternative(maskulinum, femininum, neutrum))
     FLEX = RE('-?[a-z]+')
     konjugation = Synonym(FLEX)
     deklination = Series(FLEX, Option(Series(Token(","), FLEX)))
     flexion.set(Alternative(deklination, konjugation))
-    wortart.set(Alternative(Token("nomen"), Token("n."), Token("verb"), Token("v."), Token("adverb"), Token("adv."), Token("adjektiv"), Token("adj."), Token("praeposition"), Token("praep.")))
+    praeposition = Alternative(Token("praeposition"), Token("praep."))
+    adjektiv = Alternative(Token("adjektiv"), Token("adj."))
+    adverb = Alternative(Token("adverb"), Token("adv."))
+    verb = Alternative(Token("verb"), Token("v."))
+    nomen = Alternative(Token("nomen"), Token("n."))
+    wortart.set(Alternative(nomen, verb, adverb, adjektiv, praeposition))
     Grammatik = Series(wortart, ABS, flexion, Option(genus), mandatory=1)
     GrammatikPosition = Series(ZWW, Token("GRAMMATIK"), Option(LZ), Grammatik, ZeroOrMore(Series(ABS, GrammatikVariante)), mandatory=3)
     LemmaVariante = Series(LAT_WORT, Option(Zusatz))
@@ -466,10 +476,11 @@ LemmaVariante_table = {
 }
 
 
+
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "+": [remove_empty, remove_nodes('ZWW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
-          remove_tokens(",", "{", "}", "=>")],
+    "+": [remove_empty, remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
+          remove_tokens],
     "Autor": [reduce_single_child],
     "Artikel": [],
     "LemmaPosition": [remove_first],
@@ -477,7 +488,7 @@ MLW_AST_transformation_table = {
     "klassisch": [reduce_single_child],
     "gesichert": [reduce_single_child],
     "LemmaVariante": [reduce_single_child, traverse_locally(LemmaVariante_table)],
-    "LemmaVarianten": [flatten, remove_nodes("ZW")],
+    "LemmaVarianten": [flatten],
     "LemmaWort": [reduce_single_child],
     "LemmaZusatz": [],
     "lzs_typ": [],
@@ -508,9 +519,9 @@ MLW_AST_transformation_table = {
         [remove_first, flatten],
     "Bedeutungskategorie": [],
     "Beleg": [],
-    "BelegText": [partial(strip, condition=lambda context: is_expendable(context)
-                                                           or has_content(context, '[".]')),
-                  reduce_single_child],
+    "BelegText":
+        [strip(lambda context: is_expendable(context) or has_content(context, '[".]')),
+         reduce_single_child],
     "BelegStelle": [flatten],
     "Interpretamente": [],
     "LateinischeBedeutung": [remove_nodes("LAT"), flatten],
@@ -518,23 +529,23 @@ MLW_AST_transformation_table = {
     "LateinischerAusdruck": [flatten, reduce_single_child],
     "DeutscherAusdruck": [flatten, reduce_single_child],
     "LateinischesWort, DeutschesWort": [strip, collapse],
-    "Belege": [flatten, remove_tokens("*")],
+    "Belege": [flatten],
     "Beleg": [],
     "EinBeleg": [],
-    "Zitat": [flatten, remove_nodes("ZW")],
-    "Zusatz": [reduce_single_child, flatten, remove_tokens(";;", ";")],
+    "Zitat": [flatten],
+    "Zusatz": [reduce_single_child, flatten],
     "ArtikelVerfasser": [remove_first],
     "Stellenverzeichnis": [remove_first],
-    "Verweisliste": [flatten, remove_tokens("*")],
+    "Verweisliste": [flatten],
     "Stellenverweis": [flatten],
     "Name": [],
     "Stelle": [collapse],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
-    "Verweis": [remove_tokens("=>")],
+    "Verweis": [],
     "VerweisZiel": [],
-    "Anker": [remove_tokens("#"), reduce_single_child],
+    "Anker": [reduce_single_child],
     "Werk": [reduce_single_child],
     "ZielName": [replace_by_single_child],
     "URL": [flatten, keep_nodes('protokoll', 'domäne', 'pfad', 'ziel')],
