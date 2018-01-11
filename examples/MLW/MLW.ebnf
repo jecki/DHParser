@@ -36,7 +36,7 @@ LemmaWort         = LAT_WORT
 
 LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
 
-LemmaVariante     = LAT_WORT [Zusatz]
+LemmaVariante     = LAT_WORT [Zusatz]   # Ist eine Lemma immer ein einzelnes Wort?
 
 
 ## GRAMMATIK-POSITION ##
@@ -113,8 +113,10 @@ Bedeutungskategorie  = { EINZEILER [LZ] [Zusatz] [LZ] } §":"
 Interpretamente      = LateinischeBedeutung (LZ | " " | "--") §DeutscheBedeutung [":"]
 LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," LateinischerAusdruck }
 DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," DeutscherAusdruck }
-LateinischerAusdruck = { <(LAT_WORT | "(" { LAT_WORT }+ ")") [Zusatz]> }+
-DeutscherAusdruck    = { <(DEU_WORT | "(" { DEU_WORT }+ ")") [Zusatz]> }+
+LateinischerAusdruck = { <LateinischesWort [Zusatz]> }+
+DeutscherAusdruck    = { <DeutschesWort [Zusatz]> }+
+LateinischesWort     = (LAT_WORT | "(" { LAT_WORT }+ ")")
+DeutschesWort        = (DEU_WORT | "(" { DEU_WORT }+ ")")
 
 LAT = "LATEINISCH" | "LAT"
 DEU = "DEUTSCH" | "DEU"

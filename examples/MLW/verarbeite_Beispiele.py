@@ -24,7 +24,7 @@ def tst_func():
     for root, dirs, files in os.walk('Beispiele'):
         for fname in files:
             entry = os.path.join(root, fname)
-            if fnmatch.fnmatch(entry, '*.mlw'):
+            if fnmatch.fnmatch(os.path.basename(entry), '*.mlw'):
                 print('\n Parse: ' + entry)
                 raw_name = os.path.splitext(entry)[0]
                 with logging(True):

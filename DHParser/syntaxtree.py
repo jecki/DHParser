@@ -616,20 +616,25 @@ def mock_syntax_tree(sxpr):
         that does not match an opening bracket matched earlier within the same
         package."""
         s = s.strip()
-        while s[0] != ')':
-            if s[0] != '(':
-                raise ValueError('"(" expected, not ' + s[:10])
-            # assert s[0] == '(', s
-            level = 1
-            k = 1
-            while level > 0:
-                if s[k] == '(':
-                    level += 1
-                elif s[k] == ')':
-                    level -= 1
-                k += 1
-            yield s[:k]
-            s = s[k:].strip()
+        try:
+            while s[0] != ')':
+                if s[0] != '(':
+                    raise ValueError('"(" expected, not ' + s[:10])
+                # assert s[0] == '(', s
+                level = 1
+                k = 1
+                while level > 0:
+                    if s[k] == '(':
+                        level += 1
+                    elif s[k] == ')':
+                        level -= 1
+                    k += 1
+                yield s[:k]
+                s = s[k:].strip()
+        except IndexError:
+            errmsg = ('Malformed S-expression. Unprocessed part: "%s"' % s) if s \
+                else 'Malformed S-expression. Closing bracket(s) ")" missing.'
+            raise AssertionError(errmsg)
 
     sxpr = sxpr.strip()
     if sxpr[0] != '(':
@@ -637,6 +642,9 @@ def mock_syntax_tree(sxpr):
     # assert sxpr[0] == '(', sxpr
     sxpr = sxpr[1:].strip()
     match = re.match(r'[\w:]+', sxpr)
+    if match is None:
+        raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
+                             'not "%s"' % sxpr[:40].replace('\n', ''))
     name, class_name = (sxpr[:match.end()].split(':') + [''])[:2]
     sxpr = sxpr[match.end():].strip()
     if sxpr[0] == '(':

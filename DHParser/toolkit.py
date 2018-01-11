@@ -130,7 +130,7 @@ def logging(dirname="LOGS"):
         save = LOGGING
     except NameError:
         save = ""
-    LOGGING = dirname
+    LOGGING = dirname or ""
     yield
     LOGGING = save
 

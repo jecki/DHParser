@@ -13,9 +13,7 @@ Match-test "1"
 ### AST
     (Lemma
         (LemmaWort
-            (LAT_WORT
-                "facitergula"
-            )
+            "facitergula"
         )
     )
 
@@ -41,49 +39,17 @@ Match-test "1"
 
 ### AST
     (LemmaVarianten
-        (LAT_WORT
+        (LemmaVariante
             "fascitergula"
         )
-        (:ZeroOrMore
-            (:Series
-                (ZW
-                    (ZEILENSPRUNG
-                        (:RegExp
-                            ""
-                            ""
-                        )
-                    )
-                )
-                (LAT_WORT
-                    "facietergula"
-                )
-            )
-            (:Series
-                (ZW
-                    (ZEILENSPRUNG
-                        (:RegExp
-                            ""
-                            ""
-                        )
-                    )
-                )
-                (LAT_WORT
-                    "facistergula"
-                )
-            )
-            (:Series
-                (ZW
-                    (ZEILENSPRUNG
-                        (:RegExp
-                            ""
-                            ""
-                        )
-                    )
-                )
-                (LAT_WORT
-                    "farcutergula"
-                )
-            )
+        (LemmaVariante
+            "facietergula"
+        )
+        (LemmaVariante
+            "facistergula"
+        )
+        (LemmaVariante
+            "farcutergula"
         )
     )
 
@@ -95,7 +61,7 @@ Match-test "2"
 
 ### AST
     (LemmaVarianten
-        (LAT_WORT
+        (LemmaVariante
             "fascitergula"
         )
     )
@@ -108,7 +74,7 @@ Match-test "3"
 
 ### AST
     (LemmaVarianten
-        (LAT_WORT
+        (LemmaVariante
             (:RegExp
                 "fascitergula"
             )
@@ -118,17 +84,10 @@ Match-test "3"
         )
         (LemmaVariante
             (LAT_WORT
-                (:RegExp
-                    "facietergula"
-                )
-                (:Whitespace
-                    " "
-                )
+                "facietergula"
             )
             (Zusatz
-                (DEU_WORT
-                    "sim."
-                )
+                "sim."
             )
         )
     )
@@ -141,27 +100,18 @@ Match-test "4"
 
 ### AST
     (LemmaVarianten
-        (LAT_WORT
+        (LemmaVariante
             "fascitergula"
         )
-        (:ZeroOrMore
+        (LemmaVariante
+            "facietergula"
+        )
+        (LemmaVariante
             (LAT_WORT
-                "facietergula"
+                "fascistergula"
             )
-            (LemmaVariante
-                (LAT_WORT
-                    (:RegExp
-                        "fascistergula"
-                    )
-                    (:Whitespace
-                        " "
-                    )
-                )
-                (Zusatz
-                    (DEU_WORT
-                        "sim."
-                    )
-                )
+            (Zusatz
+                "sim."
             )
         )
     )
@@ -195,78 +145,42 @@ Match-test "1"
     (LemmaPosition
         (Lemma
             (LemmaWort
-                (LAT_WORT
-                    "facitergula"
-                )
+                "facitergula"
             )
         )
         (LemmaVarianten
-            (LAT_WORT
+            (LemmaVariante
                 "fascitergula"
             )
-            (:ZeroOrMore
-                (:Series
-                    (ZW
-                        (ZEILENSPRUNG
-                            (:RegExp
-                                ""
-                                ""
-                            )
-                        )
-                    )
-                    (LAT_WORT
-                        "facietergula"
-                    )
+            (LemmaVariante
+                "facietergula"
+            )
+            (LemmaVariante
+                "facistergula"
+            )
+            (LemmaVariante
+                (LAT_WORT
+                    "fascitercula"
                 )
-                (:Series
-                    (ZW
-                        (ZEILENSPRUNG
-                            (:RegExp
-                                ""
-                                ""
-                            )
-                        )
-                    )
-                    (LAT_WORT
-                        "facistergula"
-                    )
-                )
-                (:Series
-                    (ZW
-                        (ZEILENSPRUNG
-                            (:RegExp
-                                ""
-                                ""
-                            )
-                        )
-                    )
-                    (LemmaVariante
-                        (LAT_WORT
-                            (:RegExp
-                                "fascitercula"
-                            )
-                            (:Whitespace
-                                " "
-                            )
-                        )
-                        (Zusatz
-                            (DEU_WORT
-                                "sim."
-                            )
-                        )
-                    )
+                (Zusatz
+                    "sim."
                 )
             )
         )
         (GrammatikPosition
-            (flexion
-                (FLEX
-                    (:RegExp
-                        "-ae"
+            (Grammatik
+                (wortart
+                    "nomen"
+                )
+                (flexion
+                    (deklination
+                        (FLEX
+                            "-ae"
+                        )
                     )
-                    (:Whitespace
-                        " "
-                    )
+                )
+                (genus
+                    "f."
                 )
             )
         )

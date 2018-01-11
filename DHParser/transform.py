@@ -44,6 +44,7 @@ __all__ = ('TransformationDict',
            'merge_children',
            'replace_content',
            'apply_if',
+           'traverse_locally',
            'is_anonymous',
            'is_whitespace',
            'is_empty',
@@ -51,6 +52,14 @@ __all__ = ('TransformationDict',
            'is_token',
            'is_one_of',
            'has_content',
+           'lstrip',
+           'rstrip',
+           'strip',
+           'keep_children',
+           'keep_children_if',
+           'keep_tokens',
+           'keep_nodes',
+           'keep_content',
            'remove_children_if',
            'remove_nodes',
            'remove_content',
@@ -63,7 +72,6 @@ __all__ = ('TransformationDict',
            'remove_infix_operator',
            'remove_single_child',
            'remove_tokens',
-           'keep_children',
            'flatten',
            'forbid',
            'require',
@@ -508,10 +516,60 @@ def is_expendable(context: List[Node]) -> bool:
     return is_empty(context) or is_whitespace(context)
 
 
+@transformation_factory(Callable)
+def lstrip(context: List[Node], condition: Callable = is_expendable):
+    """Recursively removes all leading child-nodes that fulfill a given condition."""
+    node = context[-1]
+    i = 1
+    while i > 0 and node.children:
+        lstrip(context + [node.children[0]], condition)
+        i, L = 0, len(node.children)
+        while i < L and condition(context + [node.children[i]]):
+            i += 1
+        if i > 0:
+            node.result = node.children[i:]
+
+
+@transformation_factory(Callable)
+def rstrip(context: List[Node], condition: Callable = is_expendable):
+    """Recursively removes all leading nodes that fulfill a given condition."""
+    node = context[-1]
+    i, L = 0, len(node.children)
+    while i < L and node.children:
+        rstrip(context + [node.children[-1]], condition)
+        L = len(node.children)
+        i = L
+        while i > 0 and condition(context + [node.children[i-1]]):
+            i -= 1
+        if i < L:
+            node.result = node.children[:i]
+
+
+@transformation_factory(Callable)
+def strip(context: List[Node], condition: Callable = is_expendable) -> str:
+    """Removes leading and trailing child-nodes that fulfill a given condition."""
+    lstrip(context, condition)
+    rstrip(context, condition)
+
+
 @transformation_factory(AbstractSet[str])
 def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
+    """Checks whether the last node in the context is has `ptype == TOKEN_PTYPE`
+    and it's content without leading or trailing whitespace child-nodes
+    matches one of the given tokens. If no tokens are given, any token is a match.
+    """
+    def stripped(nd: Node) -> str:
+        # assert node.parser.ptype == TOKEN_PTYPE
+        if nd.children:
+            i, k = 0, len(nd.children)
+            while i < len(nd.children) and nd.children[i] == WHITESPACE_PTYPE:
+                i += 1
+            while k > 0 and nd.children[k-1] == WHITESPACE_PTYPE:
+                k -= 1
+            return "".join(child.content for child in node.children[i:k])
+        return nd.content
     node = context[-1]
-    return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.result in tokens)
+    return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
 
 
 @transformation_factory(AbstractSet[str])
@@ -526,12 +584,43 @@ def has_content(context: List[Node], regexp: str) -> bool:
     return bool(re.match(regexp, context[-1].content))
 
 
+@transformation_factory(AbstractSet[str])
+def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Checks whether a node with one of the given tag names appears somewhere
+     in the context before the last node in the context."""
+    for i in range(2, len(context)):
+        if context[-i].tag_name in tag_name_set:
+            return True
+    return False
+
+
 @transformation_factory(Callable)
 def apply_if(context: List[Node], transformation: Callable, condition: Callable):
     """Applies a transformation only if a certain condition is met."""
-    node = context[-1]
-    if condition(node):
+    if condition(context):
         transformation(context)
+
+# @transformation_factory(List[Callable])
+# def apply_to_child(context: List[Node], transformations: List[Callable], condition: Callable):
+#     """Applies a list of transformations to those children that meet a specifc condition."""
+#     node = context[-1]
+#     for child in node.children:
+#         context.append(child)
+#         if condition(context):
+#             for transform in transformations:
+#                 transform(context)
+#         context.pop()
+
+@transformation_factory(Dict)
+def traverse_locally(context: List[Node],
+                     processing_table: Dict,            # actually: ProcessingTableType
+                     key_func: Callable=key_tag_name):  # actually: KeyFunc
+    """Transforms the syntax tree starting from the last node in the context
+    according to the given processing table. The purpose of this function is
+    to apply certain transformations locally, i.e. only for those nodes that
+    have the last node in the context as their parent node.
+    """
+    traverse(context[-1], processing_table, key_func)
 
 
 @transformation_factory(slice)
@@ -543,7 +632,35 @@ def keep_children(context: List[Node], section: slice = slice(None)):
 
 
 @transformation_factory(Callable)
-def remove_children_if(context: List[Node], condition: Callable):  # , section: slice = slice(None)):
+def keep_children_if(context: List[Node], condition: Callable):
+    """Removes all children for which `condition()` returns `True`."""
+    node = context[-1]
+    if node.children:
+        node.result = tuple(c for c in node.children if condition(context + [c]))
+
+
+@transformation_factory
+def keep_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
+    """Removes any among a particular set of tokens from the immediate
+    descendants of a node. If ``tokens`` is the empty set, all tokens
+    are removed."""
+    keep_children_if(context, partial(is_token, tokens=tokens))
+
+
+@transformation_factory
+def keep_nodes(context: List[Node], tag_names: AbstractSet[str]):
+    """Removes children by tag name."""
+    keep_children_if(context, partial(is_one_of, tag_name_set=tag_names))
+
+
+@transformation_factory
+def keep_content(context: List[Node], regexp: str):
+    """Removes children depending on their string value."""
+    keep_children_if(context, partial(has_content, regexp=regexp))
+
+
+@transformation_factory(Callable)
+def remove_children_if(context: List[Node], condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
@@ -576,16 +693,16 @@ def remove_children_if(context: List[Node], condition: Callable):  # , section: 
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
-remove_first = apply_if(keep_children(slice(1, None)), lambda nd: len(nd.children) > 1)
-remove_last = apply_if(keep_children(slice(None, -1)), lambda nd: len(nd.children) > 1)
-remove_brackets = apply_if(keep_children(slice(1, -1)), lambda nd: len(nd.children) >= 2)
+remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
+remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
+remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)
 remove_infix_operator = keep_children(slice(0, None, 2))
-remove_single_child = apply_if(keep_children(slice(0)), lambda nd: len(nd.children) == 1)
+remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
 
 
 @transformation_factory
 def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
-    """Reomoves any among a particular set of tokens from the immediate
+    """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
     remove_children_if(context, partial(is_token, tokens=tokens))

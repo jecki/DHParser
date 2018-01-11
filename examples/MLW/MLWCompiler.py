@@ -24,8 +24,10 @@ from DHParser import logging, is_filename, load_if_file, \
     traverse, remove_children_if, merge_children, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, replace_parser, \
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
+    is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
+    remove_brackets, replace_parser, traverse_locally, remove_nodes, \
+    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
+    lstrip, rstrip, strip, keep_nodes
 
 
 #######################################################################
@@ -88,7 +90,7 @@ class MLWGrammar(Grammar):
     
     LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
     
-    LemmaVariante     = LAT_WORT [Zusatz]
+    LemmaVariante     = LAT_WORT [Zusatz]   # Ist eine Lemma immer ein einzelnes Wort?
     
     
     ## GRAMMATIK-POSITION ##
@@ -165,8 +167,10 @@ class MLWGrammar(Grammar):
     Interpretamente      = LateinischeBedeutung (LZ | " " | "--") §DeutscheBedeutung [":"]
     LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," LateinischerAusdruck }
     DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," DeutscherAusdruck }
-    LateinischerAusdruck = { <(LAT_WORT | "(" { LAT_WORT }+ ")") [Zusatz]> }+
-    DeutscherAusdruck    = { <(DEU_WORT | "(" { DEU_WORT }+ ")") [Zusatz]> }+
+    LateinischerAusdruck = { <LateinischesWort [Zusatz]> }+
+    DeutscherAusdruck    = { <DeutschesWort [Zusatz]> }+
+    LateinischesWort     = (LAT_WORT | "(" { LAT_WORT }+ ")")
+    DeutschesWort        = (DEU_WORT | "(" { DEU_WORT }+ ")")
     
     LAT = "LATEINISCH" | "LAT"
     DEU = "DEUTSCH" | "DEU"
@@ -305,7 +309,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "a01b075b877de8bc46f92fa3b3e5b028"
+    source_hash__ = "ded96803a4eb4164ea8d2cf18924172b"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -388,8 +392,10 @@ class MLWGrammar(Grammar):
     GRI = Alternative(Token("GRIECHISCH"), Token("GRIECH"), Token("GRIE"), Token("GRI"))
     DEU = Alternative(Token("DEUTSCH"), Token("DEU"))
     LAT = Alternative(Token("LATEINISCH"), Token("LAT"))
-    DeutscherAusdruck = OneOrMore(AllOf(Alternative(DEU_WORT, Series(Token("("), OneOrMore(DEU_WORT), Token(")"))), Option(Zusatz)))
-    LateinischerAusdruck = OneOrMore(AllOf(Alternative(LAT_WORT, Series(Token("("), OneOrMore(LAT_WORT), Token(")"))), Option(Zusatz)))
+    DeutschesWort = Alternative(DEU_WORT, Series(Token("("), OneOrMore(DEU_WORT), Token(")")))
+    LateinischesWort = Alternative(LAT_WORT, Series(Token("("), OneOrMore(LAT_WORT), Token(")")))
+    DeutscherAusdruck = OneOrMore(AllOf(DeutschesWort, Option(Zusatz)))
+    LateinischerAusdruck = OneOrMore(AllOf(LateinischesWort, Option(Zusatz)))
     DeutscheBedeutung = Series(DEU, Option(ZW), DeutscherAusdruck, ZeroOrMore(Series(Token(","), DeutscherAusdruck)))
     LateinischeBedeutung = Series(LAT, Option(ZW), LateinischerAusdruck, ZeroOrMore(Series(Token(","), LateinischerAusdruck)))
     Interpretamente = Series(LateinischeBedeutung, Alternative(LZ, Token(" "), Token("--")), DeutscheBedeutung, Option(Token(":")), mandatory=2)
@@ -454,54 +460,84 @@ def get_grammar() -> MLWGrammar:
 #
 #######################################################################
 
+LemmaVariante_table = {
+    "LAT_WORT, DEU_WORT": [remove_whitespace, reduce_single_child],
+    "Zusatz": [reduce_single_child]
+}
+
+
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "+": [remove_empty, remove_tokens,
-          remove_nodes('ZWW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM')],
+    "+": [remove_empty, remove_nodes('ZWW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
+          remove_tokens(",", "{", "}", "=>")],
     "Autor": [reduce_single_child],
     "Artikel": [],
-    "LemmaPosition": [],
+    "LemmaPosition": [remove_first],
     "Lemma": [],
-    "klassisch": [],
-    "gesichert": [],
-    "LemmaVarianten": [],
-    "LemmaWort": [],
+    "klassisch": [reduce_single_child],
+    "gesichert": [reduce_single_child],
+    "LemmaVariante": [reduce_single_child, traverse_locally(LemmaVariante_table)],
+    "LemmaVarianten": [flatten, remove_nodes("ZW")],
+    "LemmaWort": [reduce_single_child],
     "LemmaZusatz": [],
     "lzs_typ": [],
-    "GrammatikPosition": [],
+    "GrammatikPosition": [remove_first, flatten],
     "wortart": [replace_or_reduce],
     "GrammatikVarianten": [],
     "flexion": [],
-    "FLEX": [],
+    "deklination": [],
+    "konjugation": [],
+    "FLEX": [remove_whitespace, reduce_single_child],
     "genus": [replace_or_reduce],
     "EtymologiePosition": [],
     "EtymologieVarianten": [],
     "EtymologieVariante": [],
     "ArtikelKopf": [replace_by_single_child],
-    "SchreibweisenPosition": [],
+    "SchreibweisenPosition, StrukturPosition, VerwechselungsPosition": [remove_first],
     "SWTyp": [replace_or_reduce],
     "SWVariante": [],
     "Schreibweise": [replace_by_single_child],
-    "BedeutungsPosition": [],
+    "Kategorie": [],
+    "Varianten": [flatten],
+    "Variante": [],
+    "Gegenstand": [reduce_single_child],
+    "Besonderheit": [reduce_single_child],
+    "BedeutungsPosition": [flatten, remove_tokens("BEDEUTUNG")],
     "Bedeutung": [],
+    "U1Bedeutung, U2Bedeutung, U3Bedeutung, U4Bedeutung, U5Bedeutung":
+        [remove_first, flatten],
     "Bedeutungskategorie": [],
+    "Beleg": [],
+    "BelegText": [partial(strip, condition=lambda context: is_expendable(context)
+                                                           or has_content(context, '[".]')),
+                  reduce_single_child],
+    "BelegStelle": [flatten],
     "Interpretamente": [],
-    "LateinischeBedeutung": [],
-    "DeutscheBedeutung": [],
-    "Belege": [],
+    "LateinischeBedeutung": [remove_nodes("LAT"), flatten],
+    "DeutscheBedeutung": [remove_nodes("DEU"), flatten],
+    "LateinischerAusdruck": [flatten, reduce_single_child],
+    "DeutscherAusdruck": [flatten, reduce_single_child],
+    "LateinischesWort, DeutschesWort": [strip, collapse],
+    "Belege": [flatten, remove_tokens("*")],
+    "Beleg": [],
     "EinBeleg": [],
-    "Zusatz": [],
-    "ArtikelVerfasser": [],
+    "Zitat": [flatten, remove_nodes("ZW")],
+    "Zusatz": [reduce_single_child, flatten, remove_tokens(";;", ";")],
+    "ArtikelVerfasser": [remove_first],
+    "Stellenverzeichnis": [remove_first],
+    "Verweisliste": [flatten, remove_tokens("*")],
+    "Stellenverweis": [flatten],
     "Name": [],
     "Stelle": [collapse],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
-    "Beleg": [replace_by_single_child],
-    "Verweis": [],
+    "Verweis": [remove_tokens("=>")],
     "VerweisZiel": [],
+    "Anker": [remove_tokens("#"), reduce_single_child],
     "Werk": [reduce_single_child],
     "ZielName": [replace_by_single_child],
+    "URL": [flatten, keep_nodes('protokoll', 'domäne', 'pfad', 'ziel')],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
     "DEU_WORT": [reduce_single_child],
@@ -512,6 +548,7 @@ MLW_AST_transformation_table = {
     "GROSSSCHRIFT": [],
     "GROSSFOLGE": [],
     "BUCHSTABENFOLGE": [],
+    "EINZEILER, FREITEXT, MEHRZEILER": [strip, collapse],
     "ZEICHENFOLGE": [],
     "TR": [replace_or_reduce],
     "ABS": [replace_or_reduce],
@@ -526,7 +563,7 @@ MLW_AST_transformation_table = {
     "KOMMENTARZEILEN": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    ":Token": [],
+    ":Token": [remove_whitespace, reduce_single_child],
     "RE": reduce_single_child,
     "*": replace_by_single_child
 }
