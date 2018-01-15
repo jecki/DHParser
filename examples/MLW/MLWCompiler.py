@@ -27,7 +27,7 @@ from DHParser import logging, is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
     remove_brackets, replace_parser, traverse_locally, remove_nodes, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    lstrip, rstrip, strip, keep_nodes
+    lstrip, rstrip, strip, keep_nodes, remove_empty_anonymous
 
 
 #######################################################################
@@ -195,8 +195,8 @@ class MLWGrammar(Grammar):
     #### AUTOR/AUTORIN ###########################################################
     
     ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") §Name
-    Name             = { NAME | NAMENS_ABKÜRZUNG | "unbekannt" }+
-    
+    Name             = { NAME | NAMENS_ABKÜRZUNG | unbekannt }+
+    unbekannt        = "unbekannt"
     
     #### STELLENVERZEICHNIS ######################################################
     
@@ -311,7 +311,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d4c194f1b966734e852e0293584409fb"
+    source_hash__ = "862de6ef9e50902a4cdf8ae8072052c6"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -386,7 +386,8 @@ class MLWGrammar(Grammar):
     Stellenverweis = Series(BelegQuelle, ZeroOrMore(Series(Option(ABS), Stelle, Alternative(NullVerweis, Verweis))))
     Verweisliste = ZeroOrMore(Series(Option(LZ), Token("*"), Stellenverweis))
     Stellenverzeichnis = Series(ZWW, Token("STELLENVERZEICHNIS"), Option(LemmaWort), ZWW, Verweisliste)
-    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, Token("unbekannt")))
+    unbekannt = Token("unbekannt")
+    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, unbekannt))
     ArtikelVerfasser = Series(ZWW, Alternative(Token("AUTORIN"), Token("AUTOR")), Name, mandatory=2)
     UnterArtikel = Series(ZWW, Token("UNTER-ARTIKEL"))
     VerweisPosition = Series(ZWW, Token("VERWEISE"))
@@ -479,7 +480,8 @@ LemmaVariante_table = {
 
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "+": [remove_empty, remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
+    "+": [remove_empty_anonymous,
+          remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
           remove_tokens],
     "Autor": [reduce_single_child],
     "Artikel": [],
@@ -538,7 +540,7 @@ MLW_AST_transformation_table = {
     "Stellenverzeichnis": [remove_first],
     "Verweisliste": [flatten],
     "Stellenverweis": [flatten],
-    "Name": [],
+    "Name": [reduce_single_child],
     "Stelle": [collapse],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
@@ -574,6 +576,7 @@ MLW_AST_transformation_table = {
     "KOMMENTARZEILEN": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
+    "NAME": [reduce_single_child],
     ":Token": [remove_whitespace, reduce_single_child],
     "RE": reduce_single_child,
     "*": replace_by_single_child

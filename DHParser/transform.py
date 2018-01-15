@@ -67,6 +67,7 @@ __all__ = ('TransformationDict',
            'remove_last',
            'remove_whitespace',
            'remove_empty',
+           'remove_empty_anonymous',
            'remove_expendables',
            'remove_brackets',
            'remove_infix_operator',
@@ -692,6 +693,7 @@ def remove_children_if(context: List[Node], condition: Callable):
 
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
+remove_empty_anonymous = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
 remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
 remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)

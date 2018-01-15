@@ -141,8 +141,8 @@ UnterArtikel = ZWW "UNTER-ARTIKEL"
 #### AUTOR/AUTORIN ###########################################################
 
 ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") §Name
-Name             = { NAME | NAMENS_ABKÜRZUNG | "unbekannt" }+
-
+Name             = { NAME | NAMENS_ABKÜRZUNG | unbekannt }+
+unbekannt        = "unbekannt"
 
 #### STELLENVERZEICHNIS ######################################################
 
