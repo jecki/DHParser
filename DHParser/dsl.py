@@ -88,10 +88,10 @@ from DHParser import logging, is_filename, load_if_file, \\
 
 
 DHPARSER_MAIN = '''
-def compile_src(source):
+def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging("LOGS"):
+    with logging(log_dir):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \\
@@ -104,7 +104,10 @@ def compile_src(source):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        result, errors, ast = compile_src(sys.argv[1])
+        file_name, log_dir = sys.argv[1], ''
+        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
+            file_name, log_dir = sys.argv[2], 'LOGS'
+        result, errors, ast = compile_src(file_name, log_dir)
         if errors:
             for error in errors:
                 print(error)

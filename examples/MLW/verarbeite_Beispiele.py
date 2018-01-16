@@ -33,9 +33,9 @@ def tst_func():
                                                            get_grammar(),
                                                            get_transformer(),
                                                            get_compiler())
-                if AST:
-                    with open(raw_name + '.ast', 'w', encoding='utf-8') as f:
-                        f.write(AST.as_sxpr(compact=False))
+                # if AST:
+                #     with open(raw_name + '.ast', 'w', encoding='utf-8') as f:
+                #         f.write(AST.as_sxpr(compact=False))
                 if messages:
                     print("Errors in: " + entry)
                     with open(raw_name + '.messages', 'w', encoding='utf-8') as f:
@@ -45,6 +45,8 @@ def tst_func():
                             f.write(s)
                             f.write('\n')
                 else:
+                    if os.path.isfile(raw_name + '.messages'):
+                        os.remove(raw_name + '.messages')
                     print("\nParsing of %s successfull :-)\n" % entry)
 
 def cpu_profile(func):

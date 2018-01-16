@@ -10,6 +10,9 @@
 from functools import partial
 import os
 import sys
+
+sys.path.extend(['../', '../../'])
+
 try:
     import regex as re
 except ImportError:
@@ -27,7 +30,7 @@ from DHParser import logging, is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
     remove_brackets, replace_parser, traverse_locally, remove_nodes, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    lstrip, rstrip, strip, keep_nodes, remove_empty_anonymous
+    lstrip, rstrip, strip, keep_nodes
 
 
 #######################################################################
@@ -195,8 +198,8 @@ class MLWGrammar(Grammar):
     #### AUTOR/AUTORIN ###########################################################
     
     ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") §Name
-    Name             = { NAME | NAMENS_ABKÜRZUNG | unbekannt }+
-    unbekannt        = "unbekannt"
+    Name             = { NAME | NAMENS_ABKÜRZUNG | "unbekannt" }+
+    
     
     #### STELLENVERZEICHNIS ######################################################
     
@@ -311,7 +314,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "862de6ef9e50902a4cdf8ae8072052c6"
+    source_hash__ = "d4c194f1b966734e852e0293584409fb"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -386,8 +389,7 @@ class MLWGrammar(Grammar):
     Stellenverweis = Series(BelegQuelle, ZeroOrMore(Series(Option(ABS), Stelle, Alternative(NullVerweis, Verweis))))
     Verweisliste = ZeroOrMore(Series(Option(LZ), Token("*"), Stellenverweis))
     Stellenverzeichnis = Series(ZWW, Token("STELLENVERZEICHNIS"), Option(LemmaWort), ZWW, Verweisliste)
-    unbekannt = Token("unbekannt")
-    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, unbekannt))
+    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, Token("unbekannt")))
     ArtikelVerfasser = Series(ZWW, Alternative(Token("AUTORIN"), Token("AUTOR")), Name, mandatory=2)
     UnterArtikel = Series(ZWW, Token("UNTER-ARTIKEL"))
     VerweisPosition = Series(ZWW, Token("VERWEISE"))
@@ -480,8 +482,7 @@ LemmaVariante_table = {
 
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "+": [remove_empty_anonymous,
-          remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
+    "+": [remove_empty, remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
           remove_tokens],
     "Autor": [reduce_single_child],
     "Artikel": [],
@@ -518,7 +519,7 @@ MLW_AST_transformation_table = {
     "BedeutungsPosition": [flatten, remove_tokens("BEDEUTUNG")],
     "Bedeutung": [],
     "U1Bedeutung, U2Bedeutung, U3Bedeutung, U4Bedeutung, U5Bedeutung":
-        [remove_first, flatten],
+        [flatten, remove_first],
     "Bedeutungskategorie": [],
     "Beleg": [],
     "BelegText":
@@ -540,7 +541,7 @@ MLW_AST_transformation_table = {
     "Stellenverzeichnis": [remove_first],
     "Verweisliste": [flatten],
     "Stellenverweis": [flatten],
-    "Name": [reduce_single_child],
+    "Name": [collapse],
     "Stelle": [collapse],
     "SW_LAT": [replace_or_reduce],
     "SW_DEU": [replace_or_reduce],
@@ -576,7 +577,6 @@ MLW_AST_transformation_table = {
     "KOMMENTARZEILEN": [],
     "DATEI_ENDE": [],
     "NIEMALS": [],
-    "NAME": [reduce_single_child],
     ":Token": [remove_whitespace, reduce_single_child],
     "RE": reduce_single_child,
     "*": replace_by_single_child
@@ -825,10 +825,10 @@ def get_compiler(grammar_name="MLW", grammar_source="") -> MLWCompiler:
 #######################################################################
 
 
-def compile_src(source):
+def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging("LOGS"):
+    with logging(log_dir):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \
@@ -841,7 +841,10 @@ def compile_src(source):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        result, errors, ast = compile_src(sys.argv[1])
+        file_name, log_dir = sys.argv[1], ''
+        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
+            file_name, log_dir = sys.argv[2], 'LOGS'
+        result, errors, ast = compile_src(file_name, log_dir)
         if errors:
             for error in errors:
                 print(error)
@@ -849,4 +852,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: MLWCompiler.py [FILENAME]")
+        print("Usage: MLWCompiler.py [--debug] FILENAME")
