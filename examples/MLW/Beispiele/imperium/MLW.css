@@ -52,6 +52,31 @@ Bedeutung {
     margin-top:0.5em;
 }
 
+U1Bedeutung {
+    display:block;
+    margin-left:1em;
+}
+
+U2Bedeutung {
+    display:block;
+    margin-left:2em;
+}
+
+U3Bedeutung {
+    display:block;
+    margin-left:3em;
+}
+
+U4Bedeutung {
+    display:block;
+    margin-left:4em;
+}
+
+U5Bedeutung {
+    display:block;
+    margin-left:5em;
+}
+
 Interpretamente {
     display: block;
 }
@@ -67,6 +92,16 @@ DeutscherAusdruck + DeutscherAusdruck:before {
 
 LateinischeBedeutung + DeutscheBedeutung:before {
     content: " -- "
+}
+
+
+Bedeutungskategorie {
+    display:block;
+    font-weight:bold;
+}
+
+Bedeutungskategorie:after {
+    content: ": ";
 }
 
 BelegQuelle {

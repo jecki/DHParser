@@ -3,15 +3,15 @@ LEMMA *facitergula
     fascitergula
     facietergula
     facistergula
-    facitercula {sim.}   
+    facitercula
+    {sim.}   
 
 
-GRAMMATIK
+GRAMMATIK FEHLER
     nomen; -ae f.
 
     -us, -i m.:  {=> ibi_1}
     -um, -i n.:  {=> ibi_2}
-
 
 SCHREIBWEISE
     script.:
@@ -22,7 +22,7 @@ SCHREIBWEISE
 
 BEDEUTUNG
 LAT pannus, faciale, sudarium
-DEU Gesichts-tuch, Schweißtuch {usu liturg.;; de re v. {=> eintrag/ibi_X}}
+DEU Gesichts-tuch, Schweiß-tuch, Tuch {usu liturg.}{de re v. {=> eintrag/ibi_X}}
 
 * Catal.: thes. Germ.; 28,11 (post 851) "-um III".
 * Form.: Sangall.; {#ibi_2} 39 p. 421,16

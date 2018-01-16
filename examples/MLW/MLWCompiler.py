@@ -880,7 +880,7 @@ if __name__ == "__main__":
             with open(file_name[:-4] + '.html', 'w', encoding="utf-8") as f:
                 f.write(HTML_LEAD_IN)
                 f.write(result.as_xml())
-                f.write8HTML_LEAD_OUT
+                f.write(HTML_LEAD_OUT)
             print("ready.")
     else:
         print("Usage: MLWCompiler.py [--debug] FILENAME")
