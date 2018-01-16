@@ -531,6 +531,14 @@ class Node(collections.abc.Sized):
         return self._tree_repr('    ', opening, closing, pretty, density=density)
 
 
+    @property
+    def xml_attr(self):
+        """Returns a dictionary of XML-Attributes attached to the Node."""
+        if not hasattr(self, '_xml_attr'):
+            self._xml_attr = dict()
+        return self._xml_attr
+
+
     def as_xml(self, src: str = None, showerrors: bool = True) -> str:
         """
         Returns content as XML-tree.
@@ -543,13 +551,16 @@ class Node(collections.abc.Sized):
 
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""            
-            txt = '<' + node.tag_name
+            txt = ['<', node.tag_name]
             # s += ' pos="%i"' % node.pos
+            if hasattr(self, '_xml_attr'):
+                txt.extend(' %s="%s"' % (k, v) for k, v in self.xml_attr.items())
             if src:
-                txt += ' line="%i" col="%i"' % line_col(line_breaks, node.pos)
+                txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors:
-                txt += ' err="%s"' % ''.join(str(err).replace('"', r'\"') for err in node.errors)
-            return txt + ">\n"
+                txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
+                                                 for err in node.errors))
+            return "".join(txt + [">\n"])
 
         def closing(node):
             """Returns the closing string for the representation of `node`."""            
