@@ -63,17 +63,15 @@ class Error:
     def __str__(self):
         prefix = ''
         if self.line > 0:
-            prefix = "line: %s, column: %s, " % \
-                     ("%4i" % self.line if self.line >= 0 else ' ???',
-                      "%3i" % self.column if self.column >= 0 else '???')
-        return prefix + "%s: %s" % (self.level_str, self.message)
+            prefix = "%i:%i: " % (max(self.line, 0), max(self.column, 0))
+        return prefix + "%s: %s" % (self.severity, self.message)
 
     def __repr__(self):
         return 'Error("%s", %s, %i, %i, %i, %i)' \
                % (self.message, repr(self.code), self.pos, self.orig_pos, self.line, self.column)
 
     @property
-    def level_str(self):
+    def severity(self):
         """Returns a string representation of the error level, e.g. "warning"."""
         return "Warning" if is_warning(self.code) else "Error"
 

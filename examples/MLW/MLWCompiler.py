@@ -30,7 +30,7 @@ from DHParser import logging, is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
     remove_brackets, replace_parser, traverse_locally, remove_nodes, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    lstrip, rstrip, strip, keep_nodes
+    lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty
 
 
 #######################################################################
@@ -135,15 +135,15 @@ class MLWGrammar(Grammar):
     
     ArtikelKopf     = <   SchreibweisenPosition
                         | StrukturPosition
-                        | GebrauchPosition
+                        | GebrauchsPosition
                         | MetrikPosition
-                        | VerwechselungPosition >
+                        | VerwechselungsPosition >
     
     SchreibweisenPosition = ZWW "SCHREIBWEISE"  Position
     StrukturPosition      = ZWW "STRUKTUR"      Position
-    GebrauchPosition      = ZWW "GEBRAUCH"      Position
+    GebrauchsPosition     = ZWW "GEBRAUCH"      Position
     MetrikPosition        = ZWW "METRIK"        Position
-    VerwechselungPosition = ZWW "VERWECHSELBAR" Position
+    VerwechselungsPosition = ZWW "VERWECHSELBAR" Position
     
     ## ARTIKELKOPF POSITIONEN ##
     
@@ -198,8 +198,8 @@ class MLWGrammar(Grammar):
     #### AUTOR/AUTORIN ###########################################################
     
     ArtikelVerfasser = ZWW ("AUTORIN" | "AUTOR") §Name
-    Name             = { NAME | NAMENS_ABKÜRZUNG | "unbekannt" }+
-    
+    Name             = { NAME | NAMENS_ABKÜRZUNG | unbekannt }+
+    unbekannt        = "unbekannt"
     
     #### STELLENVERZEICHNIS ######################################################
     
@@ -214,7 +214,9 @@ class MLWGrammar(Grammar):
     Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
       EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
       FesterZusatz     = "adde" | "sape" | "persaepe"
-      GemischterZusatz = ( "usu" | "plur. sensu sing." ) FreierZusatz
+      GemischterZusatz = ( GebrauchsHinweis | PlurSingHinweis ) FreierZusatz
+      GebrauchsHinweis = "usu"
+      PlurSingHinweis  = "plur. sensu sing."
       FreierZusatz     = { FREITEXT | VerweisKern | Verweis }+
     
     
@@ -314,7 +316,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d4c194f1b966734e852e0293584409fb"
+    source_hash__ = "00b9f456f98134ae0a0fdf9e45a8ce4c"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -381,7 +383,9 @@ class MLWGrammar(Grammar):
     Beleg = Series(Option(Zusatz), Alternative(Series(Verweis, Option(Zitat)), Zitat), Option(Series(ABS, Zusatz)), Option(Token(".")))
     Belege = Series(Option(Token("*")), Beleg, ZeroOrMore(Series(Option(LZ), Token("*"), Beleg)))
     FreierZusatz = OneOrMore(Alternative(FREITEXT, VerweisKern, Verweis))
-    GemischterZusatz = Series(Alternative(Token("usu"), Token("plur. sensu sing.")), FreierZusatz)
+    PlurSingHinweis = Token("plur. sensu sing.")
+    GebrauchsHinweis = Token("usu")
+    GemischterZusatz = Series(Alternative(GebrauchsHinweis, PlurSingHinweis), FreierZusatz)
     FesterZusatz = Alternative(Token("adde"), Token("sape"), Token("persaepe"))
     EinzelnerZusatz = Alternative(FesterZusatz, GemischterZusatz, FreierZusatz)
     Zusatz.set(OneOrMore(Series(Token("{"), NegativeLookahead(Alternative(Token("=>"), Token("#"))), EinzelnerZusatz, ZeroOrMore(Series(Token(";;"), EinzelnerZusatz)), Token("}"), mandatory=2)))
@@ -389,7 +393,8 @@ class MLWGrammar(Grammar):
     Stellenverweis = Series(BelegQuelle, ZeroOrMore(Series(Option(ABS), Stelle, Alternative(NullVerweis, Verweis))))
     Verweisliste = ZeroOrMore(Series(Option(LZ), Token("*"), Stellenverweis))
     Stellenverzeichnis = Series(ZWW, Token("STELLENVERZEICHNIS"), Option(LemmaWort), ZWW, Verweisliste)
-    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, Token("unbekannt")))
+    unbekannt = Token("unbekannt")
+    Name = OneOrMore(Alternative(NAME, NAMENS_ABKÜRZUNG, unbekannt))
     ArtikelVerfasser = Series(ZWW, Alternative(Token("AUTORIN"), Token("AUTOR")), Name, mandatory=2)
     UnterArtikel = Series(ZWW, Token("UNTER-ARTIKEL"))
     VerweisPosition = Series(ZWW, Token("VERWEISE"))
@@ -420,12 +425,12 @@ class MLWGrammar(Grammar):
     Kategorie = Series(Besonderheit, DPP, Option(LZ), Alternative(Varianten, Kategorien), mandatory=1)
     Kategorien.set(Series(Kategorie, ZeroOrMore(Series(ZWW, Kategorie))))
     Position = Series(Option(LZ), Kategorien, mandatory=1)
-    VerwechselungPosition = Series(ZWW, Token("VERWECHSELBAR"), Position)
+    VerwechselungsPosition = Series(ZWW, Token("VERWECHSELBAR"), Position)
     MetrikPosition = Series(ZWW, Token("METRIK"), Position)
-    GebrauchPosition = Series(ZWW, Token("GEBRAUCH"), Position)
+    GebrauchsPosition = Series(ZWW, Token("GEBRAUCH"), Position)
     StrukturPosition = Series(ZWW, Token("STRUKTUR"), Position)
     SchreibweisenPosition = Series(ZWW, Token("SCHREIBWEISE"), Position)
-    ArtikelKopf = SomeOf(SchreibweisenPosition, StrukturPosition, GebrauchPosition, MetrikPosition, VerwechselungPosition)
+    ArtikelKopf = SomeOf(SchreibweisenPosition, StrukturPosition, GebrauchsPosition, MetrikPosition, VerwechselungsPosition)
     Etymologie = Synonym(EINZEILER)
     EtymologieBesonderheit = Synonym(EINZEILER)
     EtymologieVariante = Alternative(LAT, Series(GRI, Option(EtymologieBesonderheit), Option(Series(Token("ETYM"), Etymologie)), DPP, Beleg))
@@ -478,24 +483,26 @@ LemmaVariante_table = {
     "Zusatz": [reduce_single_child]
 }
 
-
+def content_from_parser_name(context):
+    assert not context[-1].result
+    context[-1].result = context[-1].tag_name
 
 MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
-    "+": [remove_empty, remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM'),
-          remove_tokens],
+    "+": [remove_anonymous_empty, remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM', 'TR'),
+          remove_tokens(":")],
     "Autor": [reduce_single_child],
     "Artikel": [],
-    "LemmaPosition": [remove_first],
+    "LemmaPosition": [],
     "Lemma": [],
     "klassisch": [reduce_single_child],
     "gesichert": [reduce_single_child],
+    "LemmaWort": [reduce_single_child],
     "LemmaVariante": [reduce_single_child, traverse_locally(LemmaVariante_table)],
     "LemmaVarianten": [flatten],
-    "LemmaWort": [reduce_single_child],
     "LemmaZusatz": [],
     "lzs_typ": [],
-    "GrammatikPosition": [remove_first, flatten],
+    "GrammatikPosition": [flatten],
     "wortart": [replace_or_reduce],
     "GrammatikVarianten": [],
     "flexion": [],
@@ -503,11 +510,14 @@ MLW_AST_transformation_table = {
     "konjugation": [],
     "FLEX": [remove_whitespace, reduce_single_child],
     "genus": [replace_or_reduce],
+    "nomen, verb, adverb, adjektiv, praeposition": [content_from_parser_name],
+    "maskulinum, femininum, neutrum": [content_from_parser_name],
     "EtymologiePosition": [],
     "EtymologieVarianten": [],
     "EtymologieVariante": [],
     "ArtikelKopf": [replace_by_single_child],
-    "SchreibweisenPosition, StrukturPosition, VerwechselungsPosition": [remove_first],
+    "SchreibweisenPosition, StrukturPosition, VerwechselungsPosition, GebrauchsPosition":
+        [],
     "SWTyp": [replace_or_reduce],
     "SWVariante": [],
     "Schreibweise": [replace_by_single_child],
@@ -520,7 +530,7 @@ MLW_AST_transformation_table = {
     "Bedeutung": [],
     "U1Bedeutung, U2Bedeutung, U3Bedeutung, U4Bedeutung, U5Bedeutung":
         [flatten, remove_first],
-    "Bedeutungskategorie": [],
+    "Bedeutungskategorie": [flatten],
     "Beleg": [],
     "BelegText":
         [strip(lambda context: is_expendable(context) or has_content(context, '[".]')),
@@ -537,10 +547,11 @@ MLW_AST_transformation_table = {
     "EinBeleg": [],
     "Zitat": [flatten],
     "Zusatz": [reduce_single_child, flatten],
-    "ArtikelVerfasser": [remove_first],
-    "Stellenverzeichnis": [remove_first],
+    "ArtikelVerfasser": [],
+    "Stellenverzeichnis": [],
     "Verweisliste": [flatten],
     "Stellenverweis": [flatten],
+    "GebrauchsHinweis, PlurSingHinweis": [remove_whitespace, reduce_single_child],
     "Name": [collapse],
     "Stelle": [collapse],
     "SW_LAT": [replace_or_reduce],
@@ -839,6 +850,20 @@ def compile_src(source, log_dir=''):
     return result
 
 
+HTML_LEAD_IN = """<html>
+<head>
+<meta charset="UTF-8"/>
+<link rel="stylesheet" href="MLW.css" />
+</head>
+
+<body>
+"""
+
+HTML_LEAD_OUT = """
+</body>
+</html>
+"""
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         file_name, log_dir = sys.argv[1], ''
@@ -846,10 +871,16 @@ if __name__ == "__main__":
             file_name, log_dir = sys.argv[2], 'LOGS'
         result, errors, ast = compile_src(file_name, log_dir)
         if errors:
+            cwd = os.getcwd()
+            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
             for error in errors:
-                print(error)
+                print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            with open(file_name[:-4] + '.html', 'w', encoding="utf-8") as f:
+                f.write(HTML_LEAD_IN)
+                f.write(result.as_xml())
+                f.write8HTML_LEAD_OUT
+            print("ready.")
     else:
         print("Usage: MLWCompiler.py [--debug] FILENAME")

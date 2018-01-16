@@ -78,15 +78,15 @@ Etymologie         = EINZEILER
 
 ArtikelKopf     = <   SchreibweisenPosition
                     | StrukturPosition
-                    | GebrauchPosition
+                    | GebrauchsPosition
                     | MetrikPosition
-                    | VerwechselungPosition >
+                    | VerwechselungsPosition >
 
 SchreibweisenPosition = ZWW "SCHREIBWEISE"  Position
 StrukturPosition      = ZWW "STRUKTUR"      Position
-GebrauchPosition      = ZWW "GEBRAUCH"      Position
+GebrauchsPosition     = ZWW "GEBRAUCH"      Position
 MetrikPosition        = ZWW "METRIK"        Position
-VerwechselungPosition = ZWW "VERWECHSELBAR" Position
+VerwechselungsPosition = ZWW "VERWECHSELBAR" Position
 
 ## ARTIKELKOPF POSITIONEN ##
 
@@ -157,7 +157,9 @@ NullVerweis        = "{" "-" "}"
 Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
   EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
   FesterZusatz     = "adde" | "sape" | "persaepe"
-  GemischterZusatz = ( "usu" | "plur. sensu sing." ) FreierZusatz
+  GemischterZusatz = ( GebrauchsHinweis | PlurSingHinweis ) FreierZusatz
+  GebrauchsHinweis = "usu"
+  PlurSingHinweis  = "plur. sensu sing."
   FreierZusatz     = { FREITEXT | VerweisKern | Verweis }+
 
 

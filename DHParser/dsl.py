@@ -109,8 +109,10 @@ if __name__ == "__main__":
             file_name, log_dir = sys.argv[2], 'LOGS'
         result, errors, ast = compile_src(file_name, log_dir)
         if errors:
+            cwd = os.getcwd()
+            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
             for error in errors:
-                print(error)
+                print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
             print(result.as_xml() if isinstance(result, Node) else result)

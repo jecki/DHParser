@@ -67,7 +67,7 @@ __all__ = ('TransformationDict',
            'remove_last',
            'remove_whitespace',
            'remove_empty',
-           'remove_empty_anonymous',
+           'remove_anonymous_empty',
            'remove_expendables',
            'remove_brackets',
            'remove_infix_operator',
@@ -558,19 +558,22 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     """Checks whether the last node in the context is has `ptype == TOKEN_PTYPE`
     and it's content without leading or trailing whitespace child-nodes
     matches one of the given tokens. If no tokens are given, any token is a match.
+    If only ":" is given all anonymous tokens but no other tokens are a match.
     """
     def stripped(nd: Node) -> str:
         # assert node.parser.ptype == TOKEN_PTYPE
         if nd.children:
             i, k = 0, len(nd.children)
-            while i < len(nd.children) and nd.children[i] == WHITESPACE_PTYPE:
+            while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
                 i += 1
-            while k > 0 and nd.children[k-1] == WHITESPACE_PTYPE:
+            while k > 0 and nd.children[k-1].parser.ptype == WHITESPACE_PTYPE:
                 k -= 1
             return "".join(child.content for child in node.children[i:k])
         return nd.content
     node = context[-1]
-    return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
+    return (node.parser.ptype == TOKEN_PTYPE
+            and ((not tokens or stripped(node) in tokens)
+                 or (not node.parser.name and len(tokens) == 1 and ":" in tokens)))
 
 
 @transformation_factory(AbstractSet[str])
@@ -693,7 +696,7 @@ def remove_children_if(context: List[Node], condition: Callable):
 
 remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
-remove_empty_anonymous = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
+remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
 remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
 remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)

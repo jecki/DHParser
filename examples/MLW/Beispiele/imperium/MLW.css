@@ -1,0 +1,112 @@
+Lemma {
+    display:block;
+    font-weight:bold;
+    margin-bottom:0.5rem;
+}
+
+LemmaVarianten {
+    display:block;
+    color:darkgrey;
+}
+
+GrammatikPosition, SchreibweisenPosition, StrukturPosition, GebrauchsPosition,
+MetrikPosition, VerwechselungsPosition, BedeutungsPosition {
+    display:block;
+    margin-top:0.5em;
+}
+
+Kategorie {
+    display:block;
+}
+
+Besonderheit, Gegenstand {
+    font-style: italic;
+}
+
+Besonderheit:after, Gegenstand:after {
+    content: ": "
+}
+
+Grammatik {
+    display: block;
+    margin-bottom:0.5rem;
+}
+
+GrammatikVariante {
+    display: block;
+}
+
+FLEX + FLEX:before {
+    content: ", ";
+}
+
+LemmaVariante {
+}
+
+LemmaVariante + LemmaVariante:before {
+    content: ", ";
+}
+
+Bedeutung {
+    display:block;
+    margin-top:0.5em;
+}
+
+Interpretamente {
+    display: block;
+}
+
+LateinischerAusdruck, DeutscherAusdruck {
+    font-weight: bold;
+}
+
+LateinischerAusdruck + LateinischerAusdruck:before,
+DeutscherAusdruck + DeutscherAusdruck:before {
+    content: ", "
+}
+
+LateinischeBedeutung + DeutscheBedeutung:before {
+    content: " -- "
+}
+
+BelegQuelle {
+    font-variant:small-caps;
+}
+
+Stelle {
+
+}
+
+BelegText {
+    color: darkgoldenrod;
+}
+
+BelegText:before {
+    content:"“";
+}
+
+BelegText:after {
+    content:"”";
+}
+
+Zusatz {
+    font-style: italic;
+}
+
+Verweis {
+    color: blue;
+}
+
+pfad:after {
+    content: "/"
+}
+
+Stellenverzeichnis {
+    display:none;
+}
+
+ArtikelVerfasser {
+    display:block;
+    margin-top:1em;
+    font-style:italic;
+}
