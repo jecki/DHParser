@@ -266,18 +266,138 @@ def traverse(root_node: Node,
     # assert processing_table['__cache__']
 
 
-# ------------------------------------------------
+#######################################################################
 #
-# rearranging transformations:
-#     - tree may be rearranged (e.g.flattened)
-#     - nodes that are not leaves may be dropped
-#     - order is preserved
-#     - leave content is preserved (though not necessarily the leaves themselves)
+# meta transformations, i.e. transformations that call other
+# transformations
 #
-# ------------------------------------------------
+#######################################################################
 
 
-def replace_by(node: Node, child: Node):
+@transformation_factory(Dict)
+def traverse_locally(context: List[Node],
+                     processing_table: Dict,            # actually: ProcessingTableType
+                     key_func: Callable=key_tag_name):  # actually: KeyFunc
+    """Transforms the syntax tree starting from the last node in the context
+    according to the given processing table. The purpose of this function is
+    to apply certain transformations locally, i.e. only for those nodes that
+    have the last node in the context as their parent node.
+    """
+    traverse(context[-1], processing_table, key_func)
+
+
+# @transformation_factory(List[Callable])
+# def apply_to_child(context: List[Node], transformations: List[Callable], condition: Callable):
+#     """Applies a list of transformations to those children that meet a specifc condition."""
+#     node = context[-1]
+#     for child in node.children:
+#         context.append(child)
+#         if condition(context):
+#             for transform in transformations:
+#                 transform(context)
+#         context.pop()
+
+
+@transformation_factory(Callable)
+def apply_if(context: List[Node], transformation: Callable, condition: Callable):
+    """Applies a transformation only if a certain condition is met."""
+    if condition(context):
+        transformation(context)
+
+
+#######################################################################
+#
+# conditionals that determine whether the context (or the last node in
+# the context for that matter) fulfill a specific condition.
+# ---------------------------------------------------------------------
+#
+# The context of a node is understood as a list of all parent nodes
+# leading up to and including the node itself. If represented as list,
+# the last element of the list is the node itself.
+#
+#######################################################################
+
+
+def is_single_child(context: List[Node]) -> bool:
+    return len(context[-2].children) == 1
+
+
+def is_named(context: List[Node]) -> bool:
+    return bool(context[-1].parser.name)
+
+
+def is_anonymous(context: List[Node]) -> bool:
+    return not context[-1].parser.name
+
+
+def is_whitespace(context: List[Node]) -> bool:
+    """Removes whitespace and comments defined with the
+    ``@comment``-directive."""
+    return context[-1].parser.ptype == WHITESPACE_PTYPE
+
+
+def is_empty(context: List[Node]) -> bool:
+    return not context[-1].result
+
+
+def is_expendable(context: List[Node]) -> bool:
+    return is_empty(context) or is_whitespace(context)
+
+
+@transformation_factory(AbstractSet[str])
+def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
+    """Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
+    and it's content matches one of the given tokens. Leading and trailing
+    whitespace-tokens will be ignored. In case an empty set of tokens is passed,
+    any token is a match. If only ":" is given all anonymous tokens but no other
+    tokens are a match.
+    """
+    def stripped(nd: Node) -> str:
+        # assert node.parser.ptype == TOKEN_PTYPE
+        if nd.children:
+            i, k = 0, len(nd.children)
+            while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
+                i += 1
+            while k > 0 and nd.children[k-1].parser.ptype == WHITESPACE_PTYPE:
+                k -= 1
+            return "".join(child.content for child in node.children[i:k])
+        return nd.content
+    node = context[-1]
+    return (node.parser.ptype == TOKEN_PTYPE
+            and ((not tokens or stripped(node) in tokens)
+                 or (not node.parser.name and len(tokens) == 1 and ":" in tokens)))
+
+
+@transformation_factory(AbstractSet[str])
+def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Returns true, if the node's tag_name is one of the given tag names."""
+    return context[-1].tag_name in tag_name_set
+
+
+@transformation_factory(str)
+def has_content(context: List[Node], regexp: str) -> bool:
+    """Checks a node's content against a regular expression."""
+    return bool(re.match(regexp, context[-1].content))
+
+
+@transformation_factory(AbstractSet[str])
+def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Checks whether a node with one of the given tag names appears somewhere
+     in the context before the last node in the context."""
+    for i in range(2, len(context)):
+        if context[-i].tag_name in tag_name_set:
+            return True
+    return False
+
+
+#######################################################################
+#
+# utility functions (private)
+#
+#######################################################################
+
+
+def _replace_by(node: Node, child: Node):
     if not child.parser.name:
         child.parser = MockParser(node.parser.name, child.parser.ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
@@ -286,12 +406,12 @@ def replace_by(node: Node, child: Node):
     node.result = child.result
 
 
-def reduce_child(node: Node, child: Node):
+def _reduce_child(node: Node, child: Node):
     node._errors.extend(child._errors)
     node.result = child.result
 
 
-def pick_child(context: List[Node], criteria: CriteriaType):
+def _pick_child(context: List[Node], criteria: CriteriaType):
     """Returns the first child that meets the criteria."""
     if isinstance(criteria, int):
         try:
@@ -313,44 +433,52 @@ def pick_child(context: List[Node], criteria: CriteriaType):
         return None
 
 
-def single_child(context: List[Node]) -> bool:
-    return len(context[-2].children) == 1
+#######################################################################
+#
+# rearranging transformations
+#
+# - tree may be rearranged (e.g.flattened)
+# - nodes that are not leaves may be dropped
+# - order is preserved
+# - leave content is preserved (though not necessarily the leaves
+#   themselves)
+#
+#######################################################################
 
 
-@transformation_factory(int, str, Callable)
-def replace_by_child(context: List[Node], criteria: CriteriaType=single_child):
-    """
-    Replaces a node by the first of its immediate descendants
-    that meets the `criteria`. The criteria can either be the
-    index of the child (counting from zero), or the tag name or
-    a boolean-valued function on the context of the child.
-    If no child matching the criteria is found, the node will
-    not be replaced.
-    With the default value for `criteria` the same semantics is
-    the same that of `replace_by_single_child`.
-    """
-    child = pick_child(context, criteria)
-    if child:
-        replace_by(context[-1], child)
-
-
-@transformation_factory(int, str, Callable)
-def content_from_child(context: List[Node], criteria: CriteriaType = single_child):
-    """
-    Reduces a node, by transferring the result of the first of its
-    immediate descendants that meets the `criteria` to this node,
-    but keeping this node's parser entry. The criteria can either
-    be the index of the child (counting from zero), or the tag
-    name or a boolean-valued function on the context of the child.
-    If no child matching the criteria is found, the node will
-    not be replaced.
-    With the default value for `criteria` this has the same semantics
-    as `content_from_single_child`.
-    """
-    child = pick_child(context, criteria)
-    if child:
-        reduce_child(context[-1], child)
-
+# @transformation_factory(int, str, Callable)
+# def replace_by_child(context: List[Node], criteria: CriteriaType=is_single_child):
+#     """
+#     Replaces a node by the first of its immediate descendants
+#     that meets the `criteria`. The criteria can either be the
+#     index of the child (counting from zero), or the tag name or
+#     a boolean-valued function on the context of the child.
+#     If no child matching the criteria is found, the node will
+#     not be replaced.
+#     With the default value for `criteria` the same semantics is
+#     the same that of `replace_by_single_child`.
+#     """
+#     child = _pick_child(context, criteria)
+#     if child:
+#         _replace_by(context[-1], child)
+#
+#
+# @transformation_factory(int, str, Callable)
+# def content_from_child(context: List[Node], criteria: CriteriaType = is_single_child):
+#     """
+#     Reduces a node, by transferring the result of the first of its
+#     immediate descendants that meets the `criteria` to this node,
+#     but keeping this node's parser entry. The criteria can either
+#     be the index of the child (counting from zero), or the tag
+#     name or a boolean-valued function on the context of the child.
+#     If no child matching the criteria is found, the node will
+#     not be replaced.
+#     With the default value for `criteria` this has the same semantics
+#     as `content_from_single_child`.
+#     """
+#     child = _pick_child(context, criteria)
+#     if child:
+#         _reduce_child(context[-1], child)
 
 
 def replace_by_single_child(context: List[Node]):
@@ -361,7 +489,7 @@ def replace_by_single_child(context: List[Node]):
     """
     node = context[-1]
     if len(node.children) == 1:
-        replace_by(node, node.children[0])
+        _replace_by(node, node.children[0])
 
 
 def reduce_single_child(context: List[Node]):
@@ -373,15 +501,7 @@ def reduce_single_child(context: List[Node]):
     """
     node = context[-1]
     if len(node.children) == 1:
-        reduce_child(node, node.children[0])
-
-
-def is_named(context: List[Node]) -> bool:
-    return bool(context[-1].parser.name)
-
-
-def is_anonymous(context: List[Node]) -> bool:
-    return not context[-1].parser.name
+        _reduce_child(node, node.children[0])
 
 
 @transformation_factory(Callable)
@@ -394,9 +514,9 @@ def replace_or_reduce(context: List[Node], condition: Callable=is_named):
     if len(node.children) == 1:
         child = node.children[0]
         if condition(context):
-            replace_by(node, child)
+            _replace_by(node, child)
         else:
-            reduce_child(node, child)
+            _reduce_child(node, child)
 
 
 @transformation_factory
@@ -457,9 +577,9 @@ def collapse(context: List[Node]):
 @transformation_factory
 def merge_children(context: List[Node], tag_names: List[str]):
     """
-    Joins all children next to each other and with particular tag-
-    names into a single child node with a mock-parser with the name of
-    the first tag-name in the list.
+    Joins all children next to each other and with particular tag-names
+    into a single child node with a mock-parser with the name of the
+    first tag-name in the list.
     """
     node = context[-1]
     result = []
@@ -483,17 +603,6 @@ def merge_children(context: List[Node], tag_names: List[str]):
         node.result = tuple(result)
 
 
-# ------------------------------------------------
-#
-# destructive transformations:
-#     - tree may be rearranged (flattened),
-#     - order is preserved
-#     - but (irrelevant) leaves may be dropped
-#     - errors of dropped leaves will be lost
-#
-# ------------------------------------------------
-
-
 @transformation_factory
 def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
     """Replaces the content of the node. ``func`` takes the node
@@ -503,18 +612,15 @@ def replace_content(context: List[Node], func: Callable):  # Callable[[Node], Re
     node.result = func(node.result)
 
 
-def is_whitespace(context: List[Node]) -> bool:
-    """Removes whitespace and comments defined with the
-    ``@comment``-directive."""
-    return context[-1].parser.ptype == WHITESPACE_PTYPE
-
-
-def is_empty(context: List[Node]) -> bool:
-    return not context[-1].result
-
-
-def is_expendable(context: List[Node]) -> bool:
-    return is_empty(context) or is_whitespace(context)
+#######################################################################
+#
+# destructive transformations:
+#
+# - leaves may be dropped (e.g. if deemed irrelevant)
+# - errors of dropped leaves will be lost
+# - no promise that order will be preserved
+#
+#######################################################################
 
 
 @transformation_factory(Callable)
@@ -551,80 +657,6 @@ def strip(context: List[Node], condition: Callable = is_expendable) -> str:
     """Removes leading and trailing child-nodes that fulfill a given condition."""
     lstrip(context, condition)
     rstrip(context, condition)
-
-
-@transformation_factory(AbstractSet[str])
-def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
-    """Checks whether the last node in the context is has `ptype == TOKEN_PTYPE`
-    and it's content without leading or trailing whitespace child-nodes
-    matches one of the given tokens. If no tokens are given, any token is a match.
-    If only ":" is given all anonymous tokens but no other tokens are a match.
-    """
-    def stripped(nd: Node) -> str:
-        # assert node.parser.ptype == TOKEN_PTYPE
-        if nd.children:
-            i, k = 0, len(nd.children)
-            while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
-                i += 1
-            while k > 0 and nd.children[k-1].parser.ptype == WHITESPACE_PTYPE:
-                k -= 1
-            return "".join(child.content for child in node.children[i:k])
-        return nd.content
-    node = context[-1]
-    return (node.parser.ptype == TOKEN_PTYPE
-            and ((not tokens or stripped(node) in tokens)
-                 or (not node.parser.name and len(tokens) == 1 and ":" in tokens)))
-
-
-@transformation_factory(AbstractSet[str])
-def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
-    """Returns true, if the node's tag_name is on of the
-    given tag names."""
-    return context[-1].tag_name in tag_name_set
-
-@transformation_factory(str)
-def has_content(context: List[Node], regexp: str) -> bool:
-    """Checks a node's content against a regular expression."""
-    return bool(re.match(regexp, context[-1].content))
-
-
-@transformation_factory(AbstractSet[str])
-def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
-    """Checks whether a node with one of the given tag names appears somewhere
-     in the context before the last node in the context."""
-    for i in range(2, len(context)):
-        if context[-i].tag_name in tag_name_set:
-            return True
-    return False
-
-
-@transformation_factory(Callable)
-def apply_if(context: List[Node], transformation: Callable, condition: Callable):
-    """Applies a transformation only if a certain condition is met."""
-    if condition(context):
-        transformation(context)
-
-# @transformation_factory(List[Callable])
-# def apply_to_child(context: List[Node], transformations: List[Callable], condition: Callable):
-#     """Applies a list of transformations to those children that meet a specifc condition."""
-#     node = context[-1]
-#     for child in node.children:
-#         context.append(child)
-#         if condition(context):
-#             for transform in transformations:
-#                 transform(context)
-#         context.pop()
-
-@transformation_factory(Dict)
-def traverse_locally(context: List[Node],
-                     processing_table: Dict,            # actually: ProcessingTableType
-                     key_func: Callable=key_tag_name):  # actually: KeyFunc
-    """Transforms the syntax tree starting from the last node in the context
-    according to the given processing table. The purpose of this function is
-    to apply certain transformations locally, i.e. only for those nodes that
-    have the last node in the context as their parent node.
-    """
-    traverse(context[-1], processing_table, key_func)
 
 
 @transformation_factory(slice)
@@ -698,6 +730,7 @@ remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children
 remove_empty = remove_children_if(is_empty)
 remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
 remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
+remove_anonymous_expendables = remove_children_if(lambda ctx: is_anonymous(ctx) and is_expendable(ctx))
 remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
 remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
 remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)
