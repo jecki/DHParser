@@ -211,7 +211,7 @@ class MLWGrammar(Grammar):
     
     #### ZUSATZ an verschiedenen Stellen der Struktur ############################
     
-    Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
+    Zusatz       = { "{" !("=>" | "@" | "^") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+  # mehrteilige Zusätze unnötig
       EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
       FesterZusatz     = "adde" | "sape" | "persaepe"
       GemischterZusatz = ( GebrauchsHinweis | PlurSingHinweis ) FreierZusatz
@@ -241,7 +241,7 @@ class MLWGrammar(Grammar):
     
     Verweis          = "{" VerweisKern "}"
     VerweisKern      = "=>" §((alias "|" ("-" | URL)) | URL)
-    Anker            = "{" "#" §ziel "}"
+    Anker            = "{" "@" §ziel "}"
     URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
     
     alias            = FREITEXT
@@ -265,7 +265,7 @@ class MLWGrammar(Grammar):
     LAT_WORT         = /(?!--)[a-z|\-_.]+/~
     GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
     ZAHL             = /[\d]+/~
-    SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
+    SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.,!? ]+\})|[\d\w.]+))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
     ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
     SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
     
@@ -316,7 +316,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "00b9f456f98134ae0a0fdf9e45a8ce4c"
+    source_hash__ = "b672dda664d0a469c16dae0bf3585e5d"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -349,7 +349,7 @@ class MLWGrammar(Grammar):
     SATZZEICHEN.set(RE("(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\\[\\]]+)|[`''‘’?]"))
     SCHLUESSELWORT = Series(OneOrMore(Series(RE(''), RegExp('\\n'))), NegativeLookahead(ROEMISCHE_ZAHL), RegExp('[A-ZÄÖÜ]{3,}\\s+'))
     ROEMISCHE_ZAHL.set(RE('(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\\w])'))
-    SEITENZAHL.set(RE('[\\d]+(?:\\^(?:(?:\\{[\\d\\w.]+\\})|\\w))?'))
+    SEITENZAHL.set(RE('[\\d]+(?:\\^(?:(?:\\{[\\d\\w.,!? ]+\\})|[\\d\\w.]+))?'))
     ZAHL = RE('[\\d]+')
     GROSSSCHRIFT.set(RE('(?!--)[A-ZÄÖÜ_\\-]+'))
     LAT_WORT = RE('(?!--)[a-z|\\-_.]+')
@@ -367,7 +367,7 @@ class MLWGrammar(Grammar):
     protokoll = RegExp('\\w+://')
     alias = Synonym(FREITEXT)
     URL = Series(Option(Alternative(Series(Option(protokoll), domäne, RegExp('/')), RegExp('/'))), ZeroOrMore(Series(pfad, RegExp('/'))), ziel)
-    Anker = Series(Token("{"), Token("#"), ziel, Token("}"), mandatory=2)
+    Anker = Series(Token("{"), Token("@"), ziel, Token("}"), mandatory=2)
     VerweisKern = Series(Token("=>"), Alternative(Series(alias, Token("|"), Alternative(Token("-"), URL)), URL), mandatory=1)
     Verweis = Series(Token("{"), VerweisKern, Token("}"))
     Edition = Synonym(EINZEILER)
@@ -388,7 +388,7 @@ class MLWGrammar(Grammar):
     GemischterZusatz = Series(Alternative(GebrauchsHinweis, PlurSingHinweis), FreierZusatz)
     FesterZusatz = Alternative(Token("adde"), Token("sape"), Token("persaepe"))
     EinzelnerZusatz = Alternative(FesterZusatz, GemischterZusatz, FreierZusatz)
-    Zusatz.set(OneOrMore(Series(Token("{"), NegativeLookahead(Alternative(Token("=>"), Token("#"))), EinzelnerZusatz, ZeroOrMore(Series(Token(";;"), EinzelnerZusatz)), Token("}"), mandatory=2)))
+    Zusatz.set(OneOrMore(Series(Token("{"), NegativeLookahead(Alternative(Token("=>"), Token("@"), Token("^"))), EinzelnerZusatz, ZeroOrMore(Series(Token(";;"), EinzelnerZusatz)), Token("}"), mandatory=2)))
     NullVerweis = Series(Token("{"), Token("-"), Token("}"))
     Stellenverweis = Series(BelegQuelle, ZeroOrMore(Series(Option(ABS), Stelle, Alternative(NullVerweis, Verweis))))
     Verweisliste = ZeroOrMore(Series(Option(LZ), Token("*"), Stellenverweis))

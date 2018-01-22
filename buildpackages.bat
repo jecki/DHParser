@@ -1,1 +1,1 @@
-python3.exe setup.py sdist bdist
+python.exe setup.py sdist bdist

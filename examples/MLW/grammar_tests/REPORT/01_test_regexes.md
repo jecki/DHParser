@@ -165,6 +165,7 @@ Match-test "m1"
 
 ### AST
     (LÜCKE
+        (KOMMENTARZEILEN)
         (LEERZEILE
             (:RegExp
                 ""
@@ -185,6 +186,7 @@ Match-test "m2"
 
 ### AST
     (LÜCKE
+        (KOMMENTARZEILEN)
         (LEERZEILE
             (:RegExp
                 ""
@@ -214,6 +216,7 @@ Match-test "m3"
 
 ### AST
     (LÜCKE
+        (KOMMENTARZEILEN)
         (LEERZEILE
             (:RegExp
                 ""
@@ -237,6 +240,7 @@ Match-test "m4"
 
 ### AST
     (LÜCKE
+        (KOMMENTARZEILEN)
         (LEERZEILE
             (:RegExp
                 ""
@@ -652,9 +656,26 @@ Match-test "m3"
 ---------------
 
 ### Test-code:
-    4^{capit.}
+    4^capit.
 
 ### AST
     (SEITENZAHL
-        "4^{capit.}"
+        "4^capit."
     )
+
+Match-test "m4"
+---------------
+
+### Test-code:
+    4^{bona fide}
+
+### AST
+    (SEITENZAHL
+        "4^{bona fide}"
+    )
+
+Fail-test "f1"
+--------------
+
+### Test-code:
+    4^bona fide

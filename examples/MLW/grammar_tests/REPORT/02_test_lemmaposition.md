@@ -143,6 +143,11 @@ Match-test "1"
 
 ### AST
     (LemmaPosition
+        (Lemma
+            (LemmaWort
+                "facitergula"
+            )
+        )
         (LemmaVarianten
             (LemmaVariante
                 "fascitergula"
@@ -163,11 +168,19 @@ Match-test "1"
             )
         )
         (GrammatikPosition
-            (flexion
-                (deklination
-                    (FLEX
-                        "-ae"
+            (Grammatik
+                (nomen
+                    "nomen"
+                )
+                (flexion
+                    (deklination
+                        (FLEX
+                            "-ae"
+                        )
                     )
+                )
+                (femininum
+                    "femininum"
                 )
             )
         )

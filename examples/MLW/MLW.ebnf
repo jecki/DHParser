@@ -154,7 +154,7 @@ NullVerweis        = "{" "-" "}"
 
 #### ZUSATZ an verschiedenen Stellen der Struktur ############################
 
-Zusatz       = { "{" !("=>" | "#") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+
+Zusatz       = { "{" !("=>" | "@" | "^") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+  # mehrteilige Zusätze unnötig
   EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
   FesterZusatz     = "adde" | "sape" | "persaepe"
   GemischterZusatz = ( GebrauchsHinweis | PlurSingHinweis ) FreierZusatz
@@ -184,7 +184,7 @@ Edition   = EINZEILER
 
 Verweis          = "{" VerweisKern "}"
 VerweisKern      = "=>" §((alias "|" ("-" | URL)) | URL)
-Anker            = "{" "#" §ziel "}"
+Anker            = "{" "@" §ziel "}"
 URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
 
 alias            = FREITEXT
@@ -208,7 +208,7 @@ DEU_KLEIN        = /(?!--)[a-zäöüßęõ_\-.]+/~
 LAT_WORT         = /(?!--)[a-z|\-_.]+/~
 GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
 ZAHL             = /[\d]+/~
-SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.]+\})|\w))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
+SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.,!? ]+\})|[\d\w.]+))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
 ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
 SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
 
