@@ -29,7 +29,8 @@ from DHParser.stringview import StringView
 from DHParser.error import Error
 from DHParser.syntaxtree import mock_syntax_tree
 from DHParser.parse import compile_source, Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
-    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, Compiler
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, Compiler, \
+    UnknownParserError
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
@@ -560,6 +561,16 @@ class TestCompilerClass:
         assert not D.error_flag
         Compiler.propagate_error_flags(tree, lazy=False)
         assert D.error_flag
+
+
+class TestUnknownParserError:
+    def test_unknown_parser_error(self):
+        gr = Grammar()
+        try:
+            gr("", "NonExistantParser")
+            assert False, "UnknownParserError expected!"
+        except UnknownParserError:
+            pass
 
 
 if __name__ == "__main__":

@@ -72,6 +72,7 @@ from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
 
 __all__ = ('HistoryRecord',
            'Parser',
+           'UnknownParserError',
            'Grammar',
            'PreprocessorToken',
            'RegExp',
@@ -526,6 +527,12 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     return wspc
 
 
+class UnknownParserError(KeyError):
+    """UnknownParserError is raised if a Grammer object is called with a
+    parser that does not exist or if in the course of parsing a parser
+    is reffered to that does not exist."""
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -801,7 +808,7 @@ class Grammar:
                 parser.apply(self._add_parser__)
                 # assert self[key] == parser
                 return self[key]
-            raise KeyError('Unknown parser "%s" !' % key)
+            raise UnknownParserError('Unknown parser "%s" !' % key)
 
 
     def _reset__(self):
@@ -1004,8 +1011,8 @@ class Grammar:
 
         if not is_logging():
             raise AssertionError("Cannot log history when logging is turned off!")
-        assert self.history__, \
-            "Parser did not yet run or logging was turned off when running parser!"
+        # assert self.history__, \
+        #     "Parser did not yet run or logging was turned off when running parser!"
         if not log_file_name:
             name = self.__class__.__name__
             log_file_name = name[:-7] if name.lower().endswith('grammar') else name

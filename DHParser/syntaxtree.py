@@ -35,6 +35,7 @@ __all__ = ('ParserBase',
            'ZOMBIE_PARSER',
            'Node',
            'mock_syntax_tree',
+           'flatten_sxpr',
            'TransformationFunc')
 
 
