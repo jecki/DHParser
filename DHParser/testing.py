@@ -24,7 +24,8 @@ import json
 import os
 
 from DHParser.toolkit import is_logging, clear_logs, re
-from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr
+from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, ZOMBIE_PARSER
+from DHParser.parse import UnknownParserError
 from DHParser.error import is_error, adjust_error_locations
 
 __all__ = ('unit_from_configfile',
@@ -172,7 +173,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
-            cst = parser(test_code, parser_name)
+            try:
+                cst = parser(test_code, parser_name)
+            except UnknownParserError as upe:
+                cst = Node(ZOMBIE_PARSER, "").add_error(str(upe)).init_pos(0)
             cst.log("match_%s_%s.cst" % (parser_name, test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
@@ -210,7 +214,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if verbose:
                 infostr = '    fail-test  "' + test_name + '" ... '
                 errflag = len(errata)
-            cst = parser(test_code, parser_name)
+            # cst = parser(test_code, parser_name)
+            try:
+                cst = parser(test_code, parser_name)
+            except UnknownParserError as upe:
+                cst = Node(ZOMBIE_PARSER, "").add_error(str(upe)).init_pos(0)
             if not is_error(cst.error_flag):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
