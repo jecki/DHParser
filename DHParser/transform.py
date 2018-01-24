@@ -653,7 +653,7 @@ def rstrip(context: List[Node], condition: Callable = is_expendable):
 
 
 @transformation_factory(Callable)
-def strip(context: List[Node], condition: Callable = is_expendable) -> str:
+def strip(context: List[Node], condition: Callable = is_expendable):
     """Removes leading and trailing child-nodes that fulfill a given condition."""
     lstrip(context, condition)
     rstrip(context, condition)

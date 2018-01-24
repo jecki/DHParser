@@ -352,7 +352,7 @@ class Node(collections.abc.Sized):
         """
         if self.children:
             return "".join(child.content for child in self.children)
-        return self._result
+        return cast(str, self._result)
 
 
     @property

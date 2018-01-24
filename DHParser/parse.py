@@ -1842,23 +1842,33 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowOperator):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp-parser.
+    the contained parser to be a RegExp, Re, PlainText or Token parser.
     """
     def __init__(self, parser: Parser, name: str = '') -> None:
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
-        assert isinstance(p, RegExp), str(type(p))
-        self.regexp = cast(RE, p).main.regexp if isinstance(p, RE) else p.regexp
+        assert isinstance(p, RegExp) or isinstance(p, PlainText) or isinstance(p, RE), str(type(p))
+        self.regexp = None
+        self.text = None
+        if isinstance(p, RE):
+            if isinstance(cast(RE, p).main, RegExp):
+                self.regexp = cast(RegExp, cast(RE, p).main).regexp
+            else:  # p.main is of type PlainText
+                self.text = cast(PlainText, cast(RE, p).main).text
+        elif isinstance(p, RegExp):
+            self.regexp = cast(RegExp, p).regexp
+        else:  # p is of type PlainText
+            self.text = cast(PlainText, p).text
         super().__init__(parser, name)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        # backwards_text = self.grammar.document__[-len(text) - 1::-1]
         backwards_text = self.grammar.reversed__[len(text):]
-        if self.sign(backwards_text.match(self.regexp)):
-            return Node(self, ''), text
-        else:
-            return None, text
+        if self.regexp is None:  # assert self.text is not None
+            does_match = backwards_text[:len(self.text)] == self.text
+        else:  # assert self.regexp is not None
+            does_match = backwards_text.match(self.regexp)
+        return (Node(self, ''), text) if self.sign(does_match) else (None, text)
 
     def __repr__(self):
         return '-&' + self.parser.repr

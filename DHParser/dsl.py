@@ -320,7 +320,7 @@ def load_compiler_suite(compiler_suite: str) -> \
     else:
         # assume source is an ebnf grammar. Is there really any reasonable application case for this?
         with logging(False):
-            compiler_py, messages, _ = compile_source(source, None, get_ebnf_grammar(),
+            compiler_py, messages, n = compile_source(source, None, get_ebnf_grammar(),
                                                       get_ebnf_transformer(), get_ebnf_compiler())
         if has_errors(messages):
             raise GrammarError(only_errors(messages), source)
@@ -352,7 +352,7 @@ def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
         True, if ``compiler_suite`` seems to be out of date.
     """
     try:
-        _, grammar, _, _ = load_compiler_suite(compiler_suite)
+        n1, grammar, n2, n3 = load_compiler_suite(compiler_suite)
         return grammar_changed(grammar(), grammar_source)
     except ValueError:
         return True
