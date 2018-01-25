@@ -293,10 +293,10 @@ def add_parser_guard(parser_func):
     """
     def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         try:
-            location = len(text)    # mind that location is always the distance to the end
-            grammar = parser.grammar  # grammar may be 'None' for unconnected parsers!
+            grammar = parser.grammar
+            location = grammar.document_length__ - len(text)
 
-            if grammar.last_rb__loc__ <= location:
+            if grammar.last_rb__loc__ >= location:
                 grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser,
@@ -335,9 +335,9 @@ def add_parser_guard(parser_func):
                     parser.visited[location] = (None, rest)
             else:
                 assert node._pos < 0
-                node._pos = grammar.document_length__ - location
-                assert node._pos >= 0, str("%i != %i" % (grammar.document_length__, location))
-                if (grammar.last_rb__loc__ > location
+                node._pos = location
+                assert node._pos >= 0, str("%i < %i" % (grammar.document_length__, location))
+                if (grammar.last_rb__loc__ < location
                         and (grammar.memoization__ or location in grammar.recursion_locations__)):
                     # - variable manipulating parsers will not be entered into the cache,
                     #   because caching would interfere with changes of variable state
@@ -677,9 +677,8 @@ class Grammar:
 
         last_rb__loc__:  The last, i.e. most advanced location in the text
                 where a variable changing operation occurred. If the parser
-                backtracks to a location at or before `last_rb__loc__` (which,
-                since locations are counted from the reverse, means:
-                `location >= last_rb__loc__`) then a rollback of all variable
+                backtracks to a location at or before `last_rb__loc__` (i.e.
+                `location <= last_rb__loc__`) then a rollback of all variable
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
                 calling method `.rollback_to__(location)`.
@@ -888,7 +887,7 @@ class Grammar:
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
-        self.last_rb__loc__ = len(self.document__) + 1  # rollback location
+        self.last_rb__loc__ = -1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
@@ -934,8 +933,8 @@ class Grammar:
                     self.history_tracking__ = False
         if stitches:
             if rest:
-                stitches.append(Node(None, rest).init_pos(tail_pos(stitches)))
-            result = Node(None, tuple(stitches))
+                stitches.append(Node(None, rest))
+            result = Node(None, tuple(stitches)).init_pos(0)
         if any(self.variables__.values()):
             error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
                             str(self.variables__)
@@ -970,7 +969,7 @@ class Grammar:
         Rolls back the variable stacks (`self.variables`) to its
         state at an earlier location in the parsed document.
         """
-        while self.rollback__ and self.rollback__[-1][0] <= location:
+        while self.rollback__ and self.rollback__[-1][0] >= location:
             _, rollback_func = self.rollback__.pop()
             # assert not loc > self.last_rb__loc__, \
             #     "Rollback confusion: line %i, col %i < line %i, col %i" % \
@@ -1905,7 +1904,8 @@ class Capture(UnaryOperator):
             assert self.name, """Tried to apply an unnamed capture-parser!"""
             stack = self.grammar.variables__.setdefault(self.name, [])
             stack.append(node.content)
-            self.grammar.push_rollback__(len(text), lambda: stack.pop())
+            location = self.grammar.document_length__ - len(text)
+            self.grammar.push_rollback__(location, lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
             return Node(self, node), text_
@@ -1999,7 +1999,8 @@ class Pop(Retrieve):
         if node and not node.error_flag:
             stack = self.grammar.variables__[self.symbol.name]
             value = stack.pop()
-            self.grammar.push_rollback__(len(text), lambda: stack.append(value))
+            location = self.grammar.document_length__ - len(text)
+            self.grammar.push_rollback__(location, lambda: stack.append(value))
         return node, txt
 
     def __repr__(self):
