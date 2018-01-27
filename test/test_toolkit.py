@@ -26,8 +26,9 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import has_fenced_code, load_if_file, logging, log_dir, is_logging, re, \
+from DHParser.toolkit import has_fenced_code, load_if_file, re, \
     lstrip_docstring
+from DHParser.log import log_dir, logging, is_logging
 
 
 class TestLoggingAndLoading:

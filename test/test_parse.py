@@ -24,7 +24,8 @@ from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import is_logging, logging, compile_python_object
+from DHParser.toolkit import compile_python_object
+from DHParser.log import logging, is_logging, log_ST
 from DHParser.stringview import StringView
 from DHParser.error import Error
 from DHParser.syntaxtree import mock_syntax_tree
@@ -49,7 +50,7 @@ class TestInfiLoopsAndRecursion:
         assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
         assert snippet == str(syntax_tree)
         if is_logging():
-            syntax_tree.log("test_LeftRecursion_direct.cst")
+            log_ST(syntax_tree, "test_LeftRecursion_direct.cst")
             parser.log_parsing_history__("test_LeftRecursion_direct")
 
     def test_direct_left_recursion2(self):
@@ -86,7 +87,7 @@ class TestInfiLoopsAndRecursion:
         assert not syntax_tree.error_flag, syntax_tree.collect_errors()
         assert snippet == str(syntax_tree)
         if is_logging():
-            syntax_tree.log("test_LeftRecursion_indirect.cst")
+            log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
             parser.log_parsing_history__("test_LeftRecursion_indirect")
 
     def test_inifinite_loops(self):
@@ -204,7 +205,7 @@ class TestRegex:
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         result = parser(testdoc)
-        # parser.log_parsing_history__("test.log")
+        # parser.log_parsing_history("test.log")
         assert not result.error_flag
 
 
@@ -452,7 +453,7 @@ class TestPopRetrieve:
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert delim == pop
         if is_logging():
-            syntax_tree.log("test_PopRetrieve_single_line.cst")
+            log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
 
     def test_multi_line(self):
         teststr = """
@@ -469,7 +470,7 @@ class TestPopRetrieve:
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert delim == pop
         if is_logging():
-            syntax_tree.log("test_PopRetrieve_multi_line.cst")
+            log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
 
     def test_single_line_complement(self):
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
@@ -479,7 +480,7 @@ class TestPopRetrieve:
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
-            syntax_tree.log("test_PopRetrieve_single_line.cst")
+            log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
 
     def test_multi_line_complement(self):
         teststr = """
@@ -496,7 +497,7 @@ class TestPopRetrieve:
         pop = str(next(syntax_tree.find(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
-            syntax_tree.log("test_PopRetrieve_multi_line.cst")
+            log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
 
 
 class TestWhitespaceHandling:

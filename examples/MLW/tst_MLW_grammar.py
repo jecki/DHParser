@@ -21,6 +21,8 @@ limitations under the License.
 
 import sys
 
+import DHParser.log
+
 sys.path.extend(['../../', '../', './'])
 
 from DHParser import dsl
@@ -34,7 +36,7 @@ if not dsl.recompile_grammar('MLW.ebnf', force=True):  # recompiles Grammar only
 
 from MLWCompiler import get_grammar, get_transformer
 
-with toolkit.logging(True):
+with DHParser.log.logging(True):
     error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
                                          fn_patterns=['*_test*'],
                                          verbose=True)

@@ -15,7 +15,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
+from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
     Token, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
@@ -24,6 +24,7 @@ from DHParser import logging, is_filename, Grammar, Compiler, Lookbehind, Altern
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first, \
     remove_tokens, remove_nodes, TOKEN_PTYPE
+from DHParser.log import logging
 
 
 #######################################################################

@@ -25,10 +25,13 @@ import os
 import pstats
 import sys
 
+import DHParser.log
+
 sys.path.extend(['../../', '../', './'])
 
 import DHParser.dsl
-from DHParser import toolkit
+from DHParser.log import log_parsing_history
+
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
@@ -51,7 +54,7 @@ def fail_on_error(src, result):
 
 
 def tst_func():
-    with toolkit.logging(False):
+    with DHParser.log.logging(False):
         if not os.path.exists('REPORT'):
             os.mkdir('REPORT')
         files = os.listdir('testdata')
@@ -62,13 +65,13 @@ def tst_func():
                     doc = f.read()
                 print('\n\nParsing document: "%s"\n' % file)
                 result = parser(doc)
-                if toolkit.is_logging():
+                if DHParser.log.is_logging():
                     with open('REPORT/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
                         f.write(result.as_sxpr(compact=False))
                     transformer(result)
                     with open('REPORT/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
                         f.write(result.as_sxpr(compact=False))
-                    parser.log_parsing_history__()
+                    log_parsing_history(parser)
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)

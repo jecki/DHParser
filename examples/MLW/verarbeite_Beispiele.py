@@ -8,7 +8,7 @@ import sys
 
 sys.path.extend(['../../', '../', './'])
 
-from DHParser.toolkit import logging
+from DHParser.log import logging
 from DHParser.parse import compile_source
 from DHParser.dsl import recompile_grammar
 

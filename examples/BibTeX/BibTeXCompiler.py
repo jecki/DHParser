@@ -17,7 +17,7 @@ except ImportError:
 
 sys.path.extend(['../../', '../', './'])
 
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
@@ -30,6 +30,7 @@ from DHParser import logging, is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, replace_parser, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
     WHITESPACE_PTYPE, TOKEN_PTYPE
+from DHParser.log import logging
 
 
 #######################################################################

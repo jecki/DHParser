@@ -31,10 +31,8 @@ already exists.
 """
 
 import codecs
-import contextlib
 import hashlib
 import io
-import os
 import parser
 
 try:
@@ -51,12 +49,7 @@ except ImportError:
 
 from typing import Any, Iterable, Sequence, Set, Union, cast
 
-__all__ = ('logging',
-           'is_logging',
-           'clear_logs',
-           'log_dir',
-           'logfile_basename',
-           'escape_re',
+__all__ = ('escape_re',
            'escape_control_characters',
            'is_filename',
            'lstrip_docstring',
@@ -71,94 +64,9 @@ __all__ = ('logging',
 
 #######################################################################
 #
-# logging
+# miscellaneous (generic)
 #
 #######################################################################
-
-
-def log_dir() -> str:
-    """Creates a directory for log files (if it does not exist) and
-    returns its path.
-
-    WARNING: Any files in the log dir will eventually be overwritten.
-    Don't use a directory name that could be the name of a directory
-    for other purposes than logging.
-
-    Returns:
-        name of the logging directory
-    """
-    # the try-except clauses in the following are precautions for multiprocessing
-    global LOGGING
-    try:
-        dirname = LOGGING  # raises a name error if LOGGING is not defined
-        if not dirname:
-            raise NameError  # raise a name error if LOGGING evaluates to False
-    except NameError:
-        raise NameError("No access to log directory before logging has been "
-                        "turned on within the same thread/process.")
-    if os.path.exists(dirname) and not os.path.isdir(dirname):
-        raise IOError('"' + dirname + '" cannot be used as log directory, '
-                                      'because it is not a directory!')
-    else:
-        try:
-            os.mkdir(dirname)
-        except FileExistsError:
-            pass
-    info_file_name = os.path.join(dirname, 'info.txt')
-    if not os.path.exists(info_file_name):
-        with open(info_file_name, 'w') as f:
-            f.write("This directory has been created by DHParser to store log files from\n"
-                    "parsing. ANY FILE IN THIS DIRECTORY CAN BE OVERWRITTEN! Therefore,\n"
-                    "do not place any files here and do not bother editing files in this\n"
-                    "directory as any changes will get lost.\n")
-    return dirname
-
-
-@contextlib.contextmanager
-def logging(dirname="LOGS"):
-    """Context manager. Log files within this context will be stored in
-    directory ``dirname``. Logging is turned off if name is empty.
-
-    Args:
-        dirname: the name for the log directory or the empty string to
-            turn logging of
-    """
-    global LOGGING
-    if dirname and not isinstance(dirname, str): 
-        dirname = "LOGS"  # be fail tolerant here...
-    try:
-        save = LOGGING
-    except NameError:
-        save = ""
-    LOGGING = dirname or ""
-    yield
-    LOGGING = save
-
-
-def is_logging() -> bool:
-    """-> True, if logging is turned on."""
-    global LOGGING
-    try:
-        return bool(LOGGING)
-    except NameError:
-        return False
-
-
-def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
-    """Removes all logs from the log-directory and removes the
-    log-directory if it is empty.
-    """
-    log_dirname = log_dir()
-    files = os.listdir(log_dirname)
-    only_log_files = True
-    for file in files:
-        path = os.path.join(log_dirname, file)
-        if os.path.splitext(file)[1] in logfile_types or file == 'info.txt':
-            os.remove(path)
-        else:
-            only_log_files = False
-    if only_log_files:
-        os.rmdir(log_dirname)
 
 
 def escape_re(strg: str) -> str:
@@ -198,21 +106,6 @@ def is_filename(strg: str) -> bool:
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
            and all(strg.find(ch) < 0 for ch in '*?"<>|')
            # and strg.find('*') < 0 and strg.find('?') < 0
-
-
-def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
-    """Generates a reasonable logfile-name (without extension) based on
-    the given information.
-    """
-    if is_filename(filename_or_text):
-        return os.path.basename(os.path.splitext(filename_or_text)[0])
-    else:
-        try:
-            name = function_or_class_or_instance.__qualname.__
-        except AttributeError:
-            name = function_or_class_or_instance.__class__.__name__
-        i = name.find('.')
-        return name[:i] + '_out' if i >= 0 else name
 
 
 #######################################################################
@@ -395,7 +288,7 @@ def expand_table(compact_table):
 
 #######################################################################
 #
-# miscellaneous
+# miscellaneous (DHParser-specific)
 #
 #######################################################################
 

@@ -55,23 +55,22 @@ Vegard Øye: General Parser Combinators in Racket, 2012,
 https://epsil.github.io/gll/
 """
 
-import collections
 import copy
-import html
 import os
 
-from DHParser.error import Error, is_error, has_errors, linebreaks, line_col, adjust_error_locations
+from DHParser.error import Error, is_error, linebreaks, adjust_error_locations
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, \
     PreprocessorFunc, with_source_mapping, strip_tokens
-from DHParser.toolkit import is_logging, log_dir, logfile_basename, escape_re, sane_parser_name, \
-    escape_control_characters, load_if_file, re, typing
+from DHParser.toolkit import sane_parser_name, \
+    escape_control_characters, load_if_file, re
+from DHParser.log import log_dir, is_logging, logfile_basename, HistoryRecord, log_ST, \
+    log_parsing_history
 from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
 
-__all__ = ('HistoryRecord',
-           'Parser',
+__all__ = ('Parser',
            'UnknownParserError',
            'Grammar',
            'PreprocessorToken',
@@ -117,172 +116,6 @@ LEFT_RECURSION_DEPTH = 8  # type: int
 # set too high. PyPy allows higher values than CPython
 MAX_DROPOUTS = 3  # type: int
 # stop trying to recover parsing after so many errors
-
-
-class HistoryRecord:
-    """
-    Stores debugging information about one completed step in the
-    parsing history.
-
-    A parsing step is "completed" when the last one of a nested
-    sequence of parser-calls returns. The call stack including
-    the last parser call will be frozen in the ``HistoryRecord``-
-    object. In addition a reference to the generated leaf node
-    (if any) will be stored and the result status of the last
-    parser call, which ist either MATCH, FAIL (i.e. no match)
-    or ERROR.
-    """
-    __slots__ = ('call_stack', 'node', 'text', 'line_col')
-
-    MATCH = "MATCH"
-    ERROR = "ERROR"
-    FAIL = "FAIL"
-    Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
-
-    COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col style="width:75"/>' \
-               '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>\n'
-    HTML_LEAD_IN  = (
-        '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
-        'td.line, td.column {font-family:monospace;color:darkgrey}\n'
-        'td.stack{font-family:monospace}\n'
-        'td.status{font-family:monospace;font-weight:bold}\n'
-        'td.text{font-family:monospace;color:darkblue}\n'
-        'table{border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
-        'td{border-right: thin solid grey; border-bottom: thin solid grey}\n'
-        'span.delimiter{color:grey;}\nspan.match{color:darkgreen}\n'
-        'span.fail{color:darkgrey}\nspan.error{color:red}\n'
-        'span.matchstack{font-weight:bold;color:darkred}'
-        '\n</style>\n</head>\n<body>\n<table>\n' + COLGROUP)
-    HTML_LEAD_OUT = '\n</table>\n</body>\n</html>\n'
-
-    def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
-        # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['Parser']
-        self.node = node                # type: Node
-        self.text = text                # type: StringView
-        self.line_col = (1, 1)          # type: Tuple[int, int]
-        if call_stack:
-            grammar = call_stack[-1].grammar
-            document = grammar.document__
-            lbreaks = grammar.document_lbreaks__
-            self.line_col = line_col(lbreaks, len(document) - len(text))
-
-    def __str__(self):
-        return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
-
-    def as_tuple(self) -> Snapshot:
-        """
-        Returns history record formatted as a snapshot tuple.
-        """
-        return self.Snapshot(self.line_col[0], self.line_col[1],
-                             self.stack, self.status, self.excerpt)
-    def as_csv_line(self) -> str:
-        """
-        Returns history record formatted as a csv table row.
-        """
-        return '"{}", "{}", "{}", "{}", "{}"'.format(*self.as_tuple())
-
-    def as_html_tr(self) -> str:
-        """
-        Returns history record formatted as an html table row.
-        """
-        stack = html.escape(self.stack).replace(
-            '-&gt;', '<span class="delimiter">&shy;-&gt;</span>')
-        status = html.escape(self.status)
-        excerpt = html.escape(self.excerpt)
-        if status == self.MATCH:
-            status = '<span class="match">' + status + '</span>'
-            i = stack.rfind('-&gt;')
-            chr = stack[i+12:i+13]
-            while not chr.isidentifier() and i >= 0:
-                i = stack.rfind('-&gt;', 0, i)
-                chr = stack[i+12:i+13]
-            if i >= 0:
-                i += 12
-                k = stack.find('<', i)
-                if k < 0:
-                    stack = stack[:i] + '<span class="matchstack">' + stack[i:]
-                else:
-                    stack = stack[:i] + '<span class="matchstack">' + stack[i:k] \
-                            + '</span>' + stack[k:]
-        elif status == self.FAIL:
-            status = '<span class="fail">' + status + '</span>'
-        else:
-            stack += '<br/>\n' + status
-            status = '<span class="error">ERROR</span>'
-        tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
-        # return ''.join(['<tr>'] + [('<td>%s</td>' % item) for item in tpl] + ['</tr>'])
-        return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
-                                   for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
-
-    def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(
-            str(e) for e in (self.node._errors if self.node._errors else
-                             self.node.collect_errors()[:2]))
-
-    @property
-    def stack(self) -> str:
-        return "->".join((p.repr if p.ptype == ':RegExp' else p.name or p.ptype)
-                         for p in self.call_stack)
-
-    @property
-    def status(self) -> str:
-        return self.FAIL if self.node is None else \
-            ('"%s"' % self.err_msg()) if self.node.error_flag else self.MATCH  # has_errors(self.node._errors)
-
-    @property
-    def excerpt(self):
-        length = len(self.node) if self.node else len(self.text)
-        excerpt = str(self.node)[:min(length, 20)] if self.node else str(self.text[:20])
-        excerpt = escape_control_characters(excerpt)
-        if length > 20:
-            excerpt += '...'
-        return excerpt
-
-    # @property
-    # def extent(self) -> slice:
-    #     return (slice(-self.remaining - len(self.node), -self.remaining) if self.node
-    #             else slice(-self.remaining, None))
-
-    @property
-    def remaining(self) -> int:
-        return len(self.text) - (len(self.node) if self.node else 0)
-
-    @staticmethod
-    def last_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
-        """
-        Returns the last match from the parsing-history.
-        Args:
-            history:  the parsing-history as a list of HistoryRecord objects
-
-        Returns:
-            the history record of the last match or none if either history is
-            empty or no parser could match
-        """
-        for record in reversed(history):
-            if record.status == HistoryRecord.MATCH:
-                return record
-        return None
-
-    @staticmethod
-    def most_advanced_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
-        """
-        Returns the closest-to-the-end-match from the parsing-history.
-        Args:
-            history:  the parsing-history as a list of HistoryRecord objects
-
-        Returns:
-            the history record of the closest-to-the-end-match or none if either history is
-            empty or no parser could match
-        """
-        remaining = -1
-        result = None
-        for record in history:
-            if (record.status == HistoryRecord.MATCH and
-                    (record.remaining < remaining or remaining < 0)):
-                result = record
-                remaining = record.remaining
-        return result
 
 
 def add_parser_guard(parser_func):
@@ -978,60 +811,6 @@ class Grammar:
             rollback_func()
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
             else (len(self.document__) + 1)
-
-
-    def log_parsing_history__(self, log_file_name: str = '', html: bool=True) -> None:
-        """
-        Writes a log of the parsing history of the most recently parsed
-        document.
-        """
-        def write_log(history, log_name):
-            htm = '.html' if html else ''
-            path = os.path.join(log_dir(), log_name + "_parser.log" + htm)
-            if os.path.exists(path):
-                os.remove(path)
-                print('WARNING: Log-file "%s" already existed and was deleted.' % path)
-            if history:
-                with open(path, "w", encoding="utf-8") as f:
-                    if html:
-                        f.write(HistoryRecord.HTML_LEAD_IN)
-                        f.write("\n".join(history))
-                        f.write(HistoryRecord.HTML_LEAD_OUT)
-                    else:
-                        f.write("\n".join(history))
-
-        def append_line(log, line):
-            """Appends a line to a list of HTML table rows. Starts a new
-            table every 100 rows to allow browser to speed up rendering.
-            Does this really work...?"""
-            log.append(line)
-            if html and len(log) % 100 == 0:
-                log.append('\n</table>\n<table>\n' + HistoryRecord.COLGROUP)
-
-        if not is_logging():
-            raise AssertionError("Cannot log history when logging is turned off!")
-        # assert self.history__, \
-        #     "Parser did not yet run or logging was turned off when running parser!"
-        if not log_file_name:
-            name = self.__class__.__name__
-            log_file_name = name[:-7] if name.lower().endswith('grammar') else name
-        elif log_file_name.lower().endswith('.log'):
-            log_file_name = log_file_name[:-4]
-        full_history = []  # type: List[str]
-        match_history = []  # type: List[str]
-        errors_only = []  # type: List[str]
-        for record in self.history__:
-            line = record.as_html_tr() if html else str(record)
-            append_line(full_history, line)
-            if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
-                append_line(match_history, line)
-                if record.node.error_flag:
-                    append_line(errors_only, line)
-        write_log(full_history, log_file_name + '_full')
-        if len(full_history) > 250:
-            write_log(full_history[-200:], log_file_name + '_full.tail')
-        write_log(match_history, log_file_name + '_match')
-        write_log(errors_only, log_file_name + '_errors')
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
@@ -1841,7 +1620,9 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowOperator):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp, Re, PlainText or Token parser.
+    the contained parser to be a RegExp, RE, PlainText or Token parser.
+
+    EXPERIMENTAL
     """
     def __init__(self, parser: Parser, name: str = '') -> None:
         p = parser
@@ -2277,8 +2058,8 @@ def compile_source(source: str,
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
     syntax_tree = parser(source_text)
     if is_logging():
-        syntax_tree.log(log_file_name + '.cst')
-        parser.log_parsing_history__(log_file_name)
+        log_ST(syntax_tree, log_file_name + '.cst')
+        log_parsing_history(parser, log_file_name)
 
     assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text)
     # only compile if there were no syntax errors, for otherwise it is
@@ -2291,7 +2072,7 @@ def compile_source(source: str,
         efl = max(efl, syntax_tree.error_flag)
         messages.extend(syntax_tree.collect_errors(clear_errors=True))
         if is_logging():
-            syntax_tree.log(log_file_name + '.ast')
+            log_ST(syntax_tree, log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
             result = compiler(syntax_tree)
         # print(syntax_tree.as_sxpr())

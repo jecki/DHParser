@@ -18,12 +18,11 @@ permissions and limitations under the License.
 
 import collections.abc
 import copy
-import os
 from functools import partial
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_logging, log_dir, re, typing
+from DHParser.toolkit import re, typing
 from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable, Optional
 
 
@@ -500,7 +499,7 @@ class Node(collections.abc.Sized):
                 given the position of the element in the text will be
                 reported as line and column.
             compact:  If True a compact representation is returned where
-                brackets are ommited and only the indentation indicates the
+                brackets are omitted and only the indentation indicates the
                 tree structure.
         """
 
@@ -599,18 +598,6 @@ class Node(collections.abc.Sized):
         Recursively counts the number of nodes in the tree including the root node.
         """
         return sum(child.tree_size() for child in self.children) + 1
-
-
-    def log(self, log_file_name):
-        """
-        Writes an S-expression-representation of the tree with root `self` to a file.
-        """
-        if is_logging():
-            path = os.path.join(log_dir(), log_file_name)
-            if os.path.exists(path):
-                print('WARNING: Log-file "%s" already exists and will be overwritten!' % path)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(self.as_sxpr())
 
 
 def mock_syntax_tree(sxpr):

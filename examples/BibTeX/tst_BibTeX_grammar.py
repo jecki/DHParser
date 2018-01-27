@@ -21,6 +21,8 @@ limitations under the License.
 
 import sys
 
+import DHParser.log
+
 sys.path.extend(['../../', '../'])
 
 import DHParser.dsl
@@ -37,7 +39,7 @@ sys.path.append('./')
 # must be appended after module creation, because otherwise an ImportError is raised under Windows
 from BibTeXCompiler import get_grammar, get_transformer
 
-with toolkit.logging(True):
+with DHParser.log.logging(True):
     error_report = testing.grammar_suite('grammar_tests', get_grammar,
                                          get_transformer, report=True, verbose=True)
 if error_report:

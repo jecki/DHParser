@@ -29,8 +29,9 @@ from DHParser.error import Error, is_error, has_errors, only_errors
 from DHParser.parse import Grammar, Compiler, compile_source
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
-from DHParser.toolkit import logging, load_if_file, is_python_code, compile_python_object, \
+from DHParser.toolkit import load_if_file, is_python_code, compile_python_object, \
     re
+from DHParser.log import logging
 
 __all__ = ('DHPARSER_IMPORTS',
            'GrammarError',

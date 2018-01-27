@@ -22,6 +22,7 @@ from .dsl import *
 from .ebnf import *
 # Flat namespace for the DHParser Package. Is this a good idea...?
 from .error import *
+from .log import *
 from .parse import *
 from .preprocess import *
 from .stringview import *

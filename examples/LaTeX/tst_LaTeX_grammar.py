@@ -21,6 +21,8 @@ limitations under the License.
 
 import sys
 
+import DHParser.log
+
 sys.path.extend(['../../', '../', './'])
 
 from DHParser import dsl
@@ -29,7 +31,7 @@ from DHParser import toolkit
 
 # print(dir(dsl))
 
-with toolkit.logging(False):
+with DHParser.log.logging(False):
     if not dsl.recompile_grammar('LaTeX.ebnf', force=True):  # recompiles Grammar only if it has
         # changed
         print(
@@ -40,7 +42,7 @@ with toolkit.logging(False):
 
 from LaTeXCompiler import get_grammar, get_transformer
 
-with toolkit.logging(True):
+with DHParser.log.logging(True):
     error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
                                          fn_patterns=['*_test_*.ini'],
                                          report=True, verbose=True)

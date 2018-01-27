@@ -17,7 +17,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
@@ -31,6 +31,7 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_brackets, replace_parser, traverse_locally, remove_nodes, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
     lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty
+from DHParser.log import logging
 
 
 #######################################################################

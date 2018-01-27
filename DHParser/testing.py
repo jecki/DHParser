@@ -23,7 +23,8 @@ import inspect
 import json
 import os
 
-from DHParser.toolkit import is_logging, clear_logs, re
+from DHParser.toolkit import re
+from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
 from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, ZOMBIE_PARSER
 from DHParser.parse import UnknownParserError
 from DHParser.error import is_error, adjust_error_locations
@@ -177,13 +178,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 cst = Node(ZOMBIE_PARSER, "").add_error(str(upe)).init_pos(0)
-            cst.log("match_%s_%s.cst" % (parser_name, test_name))
+            log_ST(cst, "match_%s_%s.cst" % (parser_name, test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                ast.log("match_%s_%s.ast" % (parser_name, test_name))
+                log_ST(ast, "match_%s_%s.ast" % (parser_name, test_name))
             if is_error(cst.error_flag):
                 errors = adjust_error_locations(cst.collect_errors(), test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
@@ -192,7 +193,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
                 if is_logging():
-                    parser.log_parsing_history__("match_%s_%s.log" % (parser_name, test_name))
+                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, test_name))
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                 errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                               (test_name, parser_name, cst.as_sxpr()))
@@ -225,7 +226,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
                 if is_logging():
-                    parser.log_parsing_history__("fail_%s_%s.log" % (parser_name, test_name))
+                    log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 

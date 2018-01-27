@@ -22,6 +22,9 @@ limitations under the License.
 
 import os
 import sys
+
+import DHParser.log
+
 sys.path.append(os.path.abspath('../../../'))
 import DHParser.toolkit as toolkit
 from DHParser.ebnf import grammar_changed
@@ -40,7 +43,7 @@ if (not os.path.exists(MLW_compiler) or
         print('\n'.join(errors))
         sys.exit(1)
 
-with toolkit.logging():
+with DHParser.log.logging():
     errors = compile_on_disk("fascitergula.mlw", MLW_compiler, ".sxpr")
 if errors:
     print('\n'.join(errors))
