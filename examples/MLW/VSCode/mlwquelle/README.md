@@ -62,4 +62,8 @@ Added features X, Y, and Z.
 * [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
 * [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
+* [Visual Studio Code Language Support](https://code.visualstudio.com/docs/extensionAPI/language-support)
+* [Visual Studio Code Extension Programming](https://code.visualstudio.com/docs/extensions/overview)
+* [Visual Studio Code's Snippet Support](https://code.visualstudio.com/docs/editor/userdefinedsnippets)
+
 **Enjoy!**

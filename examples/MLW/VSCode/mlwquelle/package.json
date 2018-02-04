@@ -21,6 +21,10 @@
             "language": "mlw",
             "scopeName": "source.mlw",
             "path": "./syntaxes/mlw.tmLanguage.json"
+        }],
+        "snippets": [{
+            "language": "mlw",
+            "path": "./snippets/mlw.snippets.json"
         }]
     }
 }

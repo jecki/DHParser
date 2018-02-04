@@ -7,6 +7,9 @@
 		},
 		{
 			"include": "#strings"
+		},
+		{
+			"include": "#comment"
 		}
 	],
 	"repository": {
@@ -30,6 +33,18 @@
 					"match": "\\\\."
 				}
 			]
+		},
+		"comment": {
+			"name": "comment.mlw",
+			"patterns": [{
+				"name": "comment.block.mlw",
+				"begin": "/\\*",
+				"end": "\\*/"
+			},
+			{
+				"name": "comment.line.mlw",
+				"match": "(//).*$\\n?"
+			}]
 		}
 	},
 	"scopeName": "source.mlw"

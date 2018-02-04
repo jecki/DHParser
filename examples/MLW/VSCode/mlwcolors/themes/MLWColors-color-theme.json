@@ -8,6 +8,18 @@
 			"settings": {
 				"foreground": "#a000ff"
 			}
-		}
+		},
+		// {
+		// 	"scope": "comment.block.mlw",
+		// 	"settings": {
+		// 		"foreground": "#9f9f9f"
+		// 	}
+		// },
+		// {
+		// 	"scope": "comment.line.mlw",
+		// 	"settings": {
+		// 		"foreground": "#9f9f9f"
+		// 	}
+		// }
 	]
 }
