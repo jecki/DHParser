@@ -7,13 +7,13 @@ LEMMA imperium
 GRAMMATIK
     nomen; -i n.
 
-
+	/* comment */
 SCHREIBWEISE
     script.:  // gibt es hier überhaupt andere Kategorien außer "script."?
-	    hym-:   {=> imperator37m_1}
+		      hym-:   {=> imperator37m_1}
         em-:    Chron.: Fred.; 2,35sqq. capit.; p. 43.; 2,36 p. 60,10.
         ym-:    Chart.: Sangall.; A 194.
-        impir-: {=> imperator38m_1}
+        impir-: {=> impoerator38m_1}
 
 STRUKTUR
     form. sing.:
@@ -32,7 +32,7 @@ BEDEUTUNG
     LATEINISCH	iussum, praeceptum, mandatum
     DEUTSCH		Befehl, Anweisung, Auftrag
 
-    UNTER_BEDEUTUNG proprie:
+    UNTER_BEDEUTUNG  proprie:
 
         UNTER_UNTER_BEDEUTUNG  in univ.:
         * Leg.: Burgund. Rom.; 38,1 "si quis ... nullo metu aut imperio ad pacta venire conpellitur, sed libera voluntate pactum inisse cognuscitur {eqs.}"
@@ -73,8 +73,7 @@ BEDEUTUNG
             * Einh.: Karol.; 1 p. 3,7 "ad quos (maiores domus) summa imperii pertinebat."
             * Albert. Mett.: div. temp.; 1,1 "cuius (Wicmanni) maiores magnam partem Germanie et maxime circa littora Oceani imperio {imperia var. l.} tenebant."
             * Dipl.: Conr. II.; 64 p. 78,17 "Chõnradus ... ad imperium designatus Romanorum."
-            * Const.: imp. II; 423,10 p. 557,43 "si rex ... in imperatorem electus ... ad imperium transire
-                voluerit {eqs.}" {persaepe} {v. et {=> p. 1395, 32|URL}}.
+            * Const.: imp. II; 423,10 p. 557,43 "si rex ... in imperatorem electus ... ad imperium transire voluerit {eqs.}" {persaepe} {v. et {=> p. 1395, 32|URL}}.
             * Alcuin.: epist. 129; p. 191,22 "a vobis {sc. Cantuariensibus} imperii {@imperator39m_1}{imperi S1} potestas prima processit, et fidei catholicae origo exorta est."
 
             UUU_BEDEUTUNG  in indicatione temporis:

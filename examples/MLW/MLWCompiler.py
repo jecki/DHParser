@@ -223,7 +223,8 @@ class MLWGrammar(Grammar):
     
     #### BELEGE ##################################################################
     
-    Belege           = ["*"] Beleg { [LZ] "*" Beleg }
+    Belege           = ["*"] Beleg { [LZ] (SonderBelege | "*" Beleg) }
+    SonderBelege     = "**" Beleg { [LZ] "**" Beleg }
     Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
     Zitat            = Quellenangabe { SEM [ZW] BelegStelle }
     Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
@@ -317,7 +318,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "b672dda664d0a469c16dae0bf3585e5d"
+    source_hash__ = "2ebc0b379191a029f86fff325f660f17"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -382,7 +383,8 @@ class MLWGrammar(Grammar):
     Quellenangabe = Series(Option(SomeOf(Anker, Zusatz)), SomeOf(BelegQuelle, Verweis))
     Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), BelegStelle)))
     Beleg = Series(Option(Zusatz), Alternative(Series(Verweis, Option(Zitat)), Zitat), Option(Series(ABS, Zusatz)), Option(Token(".")))
-    Belege = Series(Option(Token("*")), Beleg, ZeroOrMore(Series(Option(LZ), Token("*"), Beleg)))
+    SonderBelege = Series(Token("**"), Beleg, ZeroOrMore(Series(Option(LZ), Token("**"), Beleg)))
+    Belege = Series(Option(Token("*")), Beleg, ZeroOrMore(Series(Option(LZ), Alternative(SonderBelege, Series(Token("*"), Beleg)))))
     FreierZusatz = OneOrMore(Alternative(FREITEXT, VerweisKern, Verweis))
     PlurSingHinweis = Token("plur. sensu sing.")
     GebrauchsHinweis = Token("usu")

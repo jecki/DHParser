@@ -165,7 +165,8 @@ Zusatz       = { "{" !("=>" | "@" | "^") §EinzelnerZusatz { ";;" EinzelnerZusat
 
 #### BELEGE ##################################################################
 
-Belege           = ["*"] Beleg { [LZ] "*" Beleg }
+Belege           = ["*"] Beleg { [LZ] (SonderBelege | "*" Beleg) }
+SonderBelege     = "**" Beleg { [LZ] "**" Beleg }
 Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
 Zitat            = Quellenangabe { SEM [ZW] BelegStelle }
 Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
