@@ -10,6 +10,7 @@
 from functools import partial
 import os
 import sys
+import webbrowser
 
 sys.path.extend(['../', '../../'])
 
@@ -214,7 +215,10 @@ class MLWGrammar(Grammar):
     
     Zusatz       = { "{" !("=>" | "@" | "^") §EinzelnerZusatz { ";;" EinzelnerZusatz } "}" }+  # mehrteilige Zusätze unnötig
       EinzelnerZusatz  = FesterZusatz | GemischterZusatz | FreierZusatz
-      FesterZusatz     = "adde" | "sape" | "persaepe"
+      FesterZusatz     = adde | saepe | persaepe
+        adde     = "adde"
+        saepe    = "saepe"
+        persaepe = "persaepe"
       GemischterZusatz = ( GebrauchsHinweis | PlurSingHinweis ) FreierZusatz
       GebrauchsHinweis = "usu"
       PlurSingHinweis  = "plur. sensu sing."
@@ -318,7 +322,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "2ebc0b379191a029f86fff325f660f17"
+    source_hash__ = "d2ad87ba3c55e5da7b76adfca633e702"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -389,7 +393,10 @@ class MLWGrammar(Grammar):
     PlurSingHinweis = Token("plur. sensu sing.")
     GebrauchsHinweis = Token("usu")
     GemischterZusatz = Series(Alternative(GebrauchsHinweis, PlurSingHinweis), FreierZusatz)
-    FesterZusatz = Alternative(Token("adde"), Token("sape"), Token("persaepe"))
+    persaepe = Token("persaepe")
+    saepe = Token("saepe")
+    adde = Token("adde")
+    FesterZusatz = Alternative(adde, saepe, persaepe)
     EinzelnerZusatz = Alternative(FesterZusatz, GemischterZusatz, FreierZusatz)
     Zusatz.set(OneOrMore(Series(Token("{"), NegativeLookahead(Alternative(Token("=>"), Token("@"), Token("^"))), EinzelnerZusatz, ZeroOrMore(Series(Token(";;"), EinzelnerZusatz)), Token("}"), mandatory=2)))
     NullVerweis = Series(Token("{"), Token("-"), Token("}"))
@@ -532,7 +539,7 @@ MLW_AST_transformation_table = {
     "BedeutungsPosition": [flatten, remove_tokens("BEDEUTUNG")],
     "Bedeutung": [],
     "U1Bedeutung, U2Bedeutung, U3Bedeutung, U4Bedeutung, U5Bedeutung":
-        [flatten, remove_first],
+        [flatten],
     "Bedeutungskategorie": [flatten],
     "Beleg": [],
     "BelegText":
@@ -880,10 +887,12 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            with open(file_name[:-4] + '.html', 'w', encoding="utf-8") as f:
+            out_name = file_name[:-4] + '.html'
+            with open(out_name, 'w', encoding="utf-8") as f:
                 f.write(HTML_LEAD_IN)
                 f.write(result.as_xml())
                 f.write(HTML_LEAD_OUT)
+            webbrowser.open(out_name)
             print("ready.")
     else:
         print("Usage: MLWCompiler.py [--debug] FILENAME")
