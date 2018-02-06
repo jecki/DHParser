@@ -48,6 +48,10 @@ Elizabeth Scott and Adrian Johnstone, GLL Parsing,
 in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
 http://dotat.at/tmp/gll.pdf
 
+Christopher Seaton: A Programming Language Where the Syntax and Semantics
+are Mutuable at Runtime, University of Bristol 2007,
+http://chrisseaton.com/katahdin/katahdin.pdfs
+
 Juancarlo Añez: grako, a PEG parser generator in Python,
 https://bitbucket.org/apalala/grako
 
