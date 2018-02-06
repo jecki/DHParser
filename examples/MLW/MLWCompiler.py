@@ -31,7 +31,7 @@ from DHParser import is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
     remove_brackets, replace_parser, traverse_locally, remove_nodes, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty, has_parent
+    lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty, has_parent, MockParser
 from DHParser.log import logging
 
 
@@ -248,16 +248,21 @@ class MLWGrammar(Grammar):
     Verweis          = "{" VerweisKern "}"
     VerweisKern      = "=>" §((alias "|" ("-" | URL)) | URL)
     Anker            = "{" "@" §ziel "}"
-    URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
+    # URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
+    URL              = [protokoll] [/\//] { pfad /\// } ziel
     
     alias            = FREITEXT
     protokoll        = /\w+:\/\//
-    domäne           = /\w+\.\w+(?:\.\w+)*/
-    pfad             = /\w+/
-    ziel             = /[\w=?.%&\[\] ]+/
+    # domäne           = /\w+\.\w+(?:\.\w+)*/
+    pfad             = PFAD_NAME # /\w+/
+    ziel             = PFAD_NAME # /[\w=?.%&\[\] ]+/
+    
+    
     
     
     #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
+    
+    PFAD_NAME        = /[\w=?.%&\[\] ]+/
     
     NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
     NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
@@ -322,7 +327,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "c0bebb58c93f0f0986f0383b6ec022ea"
+    source_hash__ = "d2e7f9b37c45e9df1e67ccf382641f36"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -367,12 +372,12 @@ class MLWGrammar(Grammar):
     DEU_WORT.set(Alternative(DEU_GROSS, DEU_KLEIN, GROSSBUCHSTABE))
     NAME = RE('[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+')
     NAMENS_ABKÜRZUNG = RE('[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\\.')
-    ziel = RegExp('[\\w=?.%&\\[\\] ]+')
-    pfad = RegExp('\\w+')
-    domäne = RegExp('\\w+\\.\\w+(?:\\.\\w+)*')
+    PFAD_NAME = RegExp('[\\w=?.%&\\[\\] ]+')
+    ziel = Synonym(PFAD_NAME)
+    pfad = Synonym(PFAD_NAME)
     protokoll = RegExp('\\w+://')
     alias = Synonym(FREITEXT)
-    URL = Series(Option(Alternative(Series(Option(protokoll), domäne, RegExp('/')), RegExp('/'))), ZeroOrMore(Series(pfad, RegExp('/'))), ziel)
+    URL = Series(Option(protokoll), Option(RegExp('/')), ZeroOrMore(Series(pfad, RegExp('/'))), ziel)
     Anker = Series(Token("{"), Token("@"), ziel, Token("}"), mandatory=2)
     VerweisKern = Series(Token("=>"), Alternative(Series(alias, Token("|"), Alternative(Token("-"), URL)), URL), mandatory=1)
     Verweis = Series(Token("{"), VerweisKern, Token("}"))
@@ -568,8 +573,8 @@ MLW_AST_transformation_table = {
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
     "Verweis": [],
-    "VerweisKern": [reduce_single_child],
-    "ziel": [], # [apply_if(replace_content(lambda s: ''), has_parent("URL"))],
+    "VerweisKern": [flatten],
+    "pfad, ziel": [reduce_single_child], # [apply_if(replace_content(lambda s: ''), has_parent("URL"))],
     "Anker": [reduce_single_child],
     "Werk": [reduce_single_child],
     "ZielName": [replace_by_single_child],
@@ -628,204 +633,57 @@ class MLWCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a MLW source file.
     """
 
+    ZÄHLER = (
+        ('I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'),
+        'ABCDEFGHI',
+        '123456789',
+        'abcdefghi',
+        'αβγδεζηθι'
+    )
+
     def __init__(self, grammar_name="MLW", grammar_source=""):
         super(MLWCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
 
-    def on_Artikel(self, node):
+    def on_VerweisKern(self, node):
+        if node.children[0].parser.name == "FREITEXT":
+            node.children[1].result = ""
+        elif node.children[0].parser.name == "ziel":
+            node.children[0].result = "v. ibi."
         return node
 
-    def on_LemmaPosition(self, node):
-        pass
-
-    def on_Lemma(self, node):
-        pass
-
-    def on_klassisch(self, node):
-        pass
-
-    def on_gesichert(self, node):
-        pass
-
-    def on_LemmaVarianten(self, node):
-        pass
-
-    def on_LemmaWort(self, node):
-        pass
-
-    def on_LemmaZusatz(self, node):
-        pass
-
-    def on_lzs_typ(self, node):
-        pass
-
-    def on_GrammatikPosition(self, node):
-        pass
-
-    def on_wortart(self, node):
-        pass
-
-    def on_GrammatikVarianten(self, node):
-        pass
-
-    def on_flexion(self, node):
-        pass
-
-    def on_FLEX(self, node):
-        pass
-
-    def on_genus(self, node):
-        pass
-
-    def on_EtymologiePosition(self, node):
-        pass
-
-    def on_EtymologieVarianten(self, node):
-        pass
-
-    def on_EtymologieVariante(self, node):
-        pass
-
-    def on_ArtikelKopf(self, node):
-        pass
-
-    def on_SchreibweisenPosition(self, node):
-        pass
-
-    def on_SWTyp(self, node):
-        pass
-
-    def on_SWVariante(self, node):
-        pass
-
-    def on_Schreibweise(self, node):
-        pass
+    def ergänze_Zähler(self, node, tiefe):
+        i = 0
+        for nd in node.children:
+            if nd.parser.name == "Bedeutung":
+                zähler = Node(MockParser("Zähler", ":RE"), self.ZÄHLER[tiefe][i])
+                i += 1
+                nd2 = nd.children[0]
+                nd2.children = (zähler,) + nd2.children
 
     def on_BedeutungsPosition(self, node):
-        pass
+        self.ergänze_Zähler(node, 0)
+        return self.fallback_compiler(node)
 
-    def on_Bedeutung(self, node):
-        pass
+    def on_U1Bedeutung(self, node):
+        self.ergänze_Zähler(node, 1)
+        return self.fallback_compiler(node)
 
-    def on_Bedeutungskategorie(self, node):
-        pass
+    def on_U2Bedeutung(self, node):
+        self.ergänze_Zähler(node, 2)
+        return self.fallback_compiler(node)
 
-    def on_Interpretamente(self, node):
-        pass
+    def on_U3Bedeutung(self, node):
+        self.ergänze_Zähler(node, 3)
+        return self.fallback_compiler(node)
 
-    def on_LateinischeBedeutung(self, node):
-        pass
+    def on_U4Bedeutung(self, node):
+        self.ergänze_Zähler(node, 4)
+        return self.fallback_compiler(node)
 
-    def on_DeutscheBedeutung(self, node):
-        pass
-
-    def on_Belege(self, node):
-        pass
-
-    def on_EinBeleg(self, node):
-        pass
-
-    def on_Zusatz(self, node):
-        pass
-
-    def on_ArtikelVerfasser(self, node):
-        pass
-
-    def on_Name(self, node):
-        pass
-
-    def on_SW_LAT(self, node):
-        pass
-
-    def on_SW_DEU(self, node):
-        pass
-
-    def on_SW_GRIECH(self, node):
-        pass
-
-    def on_Beleg(self, node):
-        pass
-
-    def on_Verweis(self, node):
-        pass
-
-    def on_VerweisZiel(self, node):
-        pass
-
-    def on_ZielName(self, node):
-        pass
-
-    def on_NAMENS_ABKÜRZUNG(self, node):
-        pass
-
-    def on_NAME(self, node):
-        pass
-
-    def on_DEU_WORT(self, node):
-        pass
-
-    def on_DEU_GROSS(self, node):
-        pass
-
-    def on_DEU_KLEIN(self, node):
-        pass
-
-    def on_LAT_WORT(self, node):
-        pass
-
-    def on_LAT_WORT_TEIL(self, node):
-        pass
-
-    def on_GROSSSCHRIFT(self, node):
-        pass
-
-    def on_GROSSFOLGE(self, node):
-        pass
-
-    def on_BUCHSTABENFOLGE(self, node):
-        pass
-
-    def on_ZEICHENFOLGE(self, node):
-        pass
-
-    def on_TR(self, node):
-        pass
-
-    def on_ABS(self, node):
-        pass
-
-    def on_LZ(self, node):
-        pass
-
-    def on_ZW(self, node):
-        pass
-
-    def on_ZWW(self, node):
-        pass
-
-    def on_LÜCKE(self, node):
-        pass
-
-    def on_LEERRAUM(self, node):
-        pass
-
-    def on_LEERZEILE(self, node):
-        pass
-
-    def on_RZS(self, node):
-        pass
-
-    def on_ZEILENSPRUNG(self, node):
-        pass
-
-    def on_KOMMENTARZEILEN(self, node):
-        pass
-
-    def on_DATEI_ENDE(self, node):
-        pass
-
-    def on_NIEMALS(self, node):
-        pass
+    def on_U5Bedeutung(self, node):
+        self.ergänze_Zähler(node, 5)
+        return self.fallback_compiler(node)
 
 
 def get_compiler(grammar_name="MLW", grammar_source="") -> MLWCompiler:

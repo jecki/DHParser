@@ -1982,6 +1982,14 @@ class Compiler:
         """
         return 'on_' + node_name
 
+    def fallback_compiler(self, node: Node) -> Any:
+        """This is a generic compiler function which will be called on
+        all those node types for which no compiler method `on_XXX` has
+        been defined."""
+        if node.children:
+            node.result = tuple(self.compile(nd) for nd in node.children)
+        return node
+
     def compile(self, node: Node) -> Any:
         """
         Calls the compilation method for the given node and returns the
@@ -2002,7 +2010,10 @@ class Compiler:
                            "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
-            compiler = self.__getattribute__(self.method_name(elem))
+            try:
+                compiler = self.__getattribute__(self.method_name(elem))
+            except AttributeError:
+                compiler = self.fallback_compiler
             self.context.append(node)
             result = compiler(node)
             self.context.pop()

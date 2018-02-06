@@ -470,8 +470,8 @@ class EBNFCompiler(Compiler):
                 compiler += ['    def ' + method_name + '(self, node):',
                              '        return node', '']
             else:
-                compiler += ['    def ' + method_name + '(self, node):',
-                             '        pass', '']
+                compiler += ['    # def ' + method_name + '(self, node):',
+                             '    #     return node', '']
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 

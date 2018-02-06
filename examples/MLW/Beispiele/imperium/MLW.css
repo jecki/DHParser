@@ -59,22 +59,22 @@ U1Bedeutung {
 
 U2Bedeutung {
     display:block;
-    margin-left:2em;
+    margin-left:1em;
 }
 
 U3Bedeutung {
     display:block;
-    margin-left:3em;
+    margin-left:1em;
 }
 
 U4Bedeutung {
     display:block;
-    margin-left:4em;
+    margin-left:1em;
 }
 
 U5Bedeutung {
     display:block;
-    margin-left:5em;
+    margin-left:1em;
 }
 
 Interpretamente {
@@ -113,7 +113,7 @@ Stelle {
 }
 
 BelegText {
-    color: darkgoldenrod;
+    color: darkslateblue;
 }
 
 BelegText:before {
@@ -124,12 +124,25 @@ BelegText:after {
     content:"”";
 }
 
+Sonderbelege {
+    font-style: italic;
+}
+
+Sonderbelege:before {
+    content:" ("
+}
+
+Sonderbelege:after {
+    content: ") "
+}
+
 Zusatz {
     font-style: italic;
 }
 
 Verweis {
     color: blue;
+    text-decoration: underline;
 }
 
 pfad:after {

@@ -189,16 +189,19 @@ Edition   = EINZEILER
 Verweis          = "{" VerweisKern "}"
 VerweisKern      = "=>" §((alias "|" ("-" | URL)) | URL)
 Anker            = "{" "@" §ziel "}"
-URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
+# URL              = [ ([protokoll] domäne /\//) | /\// ] { pfad /\// } ziel
+URL              = [protokoll] [/\//] { pfad /\// } ziel
 
 alias            = FREITEXT
 protokoll        = /\w+:\/\//
-domäne           = /\w+\.\w+(?:\.\w+)*/
-pfad             = /\w+/
-ziel             = /[\w=?.%&\[\] ]+/
+# domäne           = /\w+\.\w+(?:\.\w+)*/
+pfad             = PFAD_NAME # /\w+/
+ziel             = PFAD_NAME # /[\w=?.%&\[\] ]+/
 
 
 #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
+
+PFAD_NAME        = /[\w=?.%&\[\] ]+/
 
 NAMENS_ABKÜRZUNG = /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
 NAME             = /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
