@@ -52,6 +52,7 @@ __all__ = ('TransformationDict',
            'is_token',
            'is_one_of',
            'has_content',
+           'has_parent',
            'lstrip',
            'rstrip',
            'strip',
@@ -605,7 +606,7 @@ def merge_children(context: List[Node], tag_names: List[str]):
 
 @transformation_factory
 def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
-    """Replaces the content of the node. ``func`` takes the node
+    """Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
     """
     node = context[-1]

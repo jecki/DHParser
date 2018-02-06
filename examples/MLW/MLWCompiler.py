@@ -31,7 +31,7 @@ from DHParser import is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
     remove_brackets, replace_parser, traverse_locally, remove_nodes, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty
+    lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty, has_parent
 from DHParser.log import logging
 
 
@@ -568,11 +568,12 @@ MLW_AST_transformation_table = {
     "SW_DEU": [replace_or_reduce],
     "SW_GRIECH": [replace_or_reduce],
     "Verweis": [],
-    "VerweisZiel": [],
+    "VerweisKern": [reduce_single_child],
+    "ziel": [], # [apply_if(replace_content(lambda s: ''), has_parent("URL"))],
     "Anker": [reduce_single_child],
     "Werk": [reduce_single_child],
     "ZielName": [replace_by_single_child],
-    "URL": [flatten, keep_nodes('protokoll', 'domäne', 'pfad', 'ziel')],
+    "URL": [flatten, keep_nodes('protokoll', 'domäne', 'pfad', 'ziel'), replace_by_single_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
     "DEU_WORT": [reduce_single_child],
