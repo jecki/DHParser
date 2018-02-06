@@ -1322,7 +1322,7 @@ class Series(NaryOperator):
                     i = max(1, text.index(match.regs[1][0])) if match else 1
                     node = Node(self, text_[:i]).init_pos(self.grammar.document_length__ - len(text_))
                     node.add_error('%s expected; "%s"... found!'
-                                   % (str(parser), text_[:10].replace('\n', '\\n ')),
+                                   % (parser.repr, text_[:10].replace('\n', '\\n ')),
                                    code=Error.MANDATORY_CONTINUATION)
                     text_ = text_[i:]
             results += (node,)

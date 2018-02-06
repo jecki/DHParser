@@ -283,7 +283,7 @@ class MLWGrammar(Grammar):
     TEXTELEMENT      = DEU_WORT | SEITENZAHL | ROEMISCHE_ZAHL
     EINZEILER        = { TEXTELEMENT | TEIL_SATZZEICHEN }+
     FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+
-    MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ }+
+    MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ | /\n\s*/ }+
     
     TR               = ABS | LZ                  # (beliebiger) Trenner
     ABS              = /\s*;;?\s*/ | ZWW         # Abschluss (durch Semikolon oder Zeilenwechsel)
@@ -322,7 +322,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d2ad87ba3c55e5da7b76adfca633e702"
+    source_hash__ = "c0bebb58c93f0f0986f0383b6ec022ea"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -345,7 +345,7 @@ class MLWGrammar(Grammar):
     LZ.set(OneOrMore(Alternative(RegExp(COMMENT__), RegExp('\\s+'))))
     ABS = Alternative(RegExp('\\s*;;?\\s*'), ZWW)
     TR = Alternative(ABS, LZ)
-    MEHRZEILER = OneOrMore(Alternative(FREITEXT, RegExp('\\s+(?=[\\w,;:.\\(\\)\\-])')))
+    MEHRZEILER = OneOrMore(Alternative(FREITEXT, RegExp('\\s+(?=[\\w,;:.\\(\\)\\-])'), RegExp('\\n\\s*')))
     FREITEXT.set(OneOrMore(Alternative(TEXTELEMENT, SATZZEICHEN, GROSSSCHRIFT)))
     EINZEILER = OneOrMore(Alternative(TEXTELEMENT, TEIL_SATZZEICHEN))
     TEXTELEMENT.set(Alternative(DEU_WORT, SEITENZAHL, ROEMISCHE_ZAHL))
@@ -885,6 +885,7 @@ if __name__ == "__main__":
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
             for error in errors:
                 print(rel_path + ':' + str(error))
+            print('\nLeider hat es ein paar Fehler gegeben :-(\n')
             sys.exit(1)
         else:
             out_name = file_name[:-4] + '.html'
@@ -893,6 +894,6 @@ if __name__ == "__main__":
                 f.write(result.as_xml())
                 f.write(HTML_LEAD_OUT)
             webbrowser.open(out_name)
-            print("ready.")
+            print("Das Einlesen war erfolgreich :-)")
     else:
-        print("Usage: MLWCompiler.py [--debug] FILENAME")
+        print("Aufruf: MLWCompiler.py [--debug] FILENAME")

@@ -224,7 +224,7 @@ ZEICHENFOLGE     = /[\w()-]+/~
 TEXTELEMENT      = DEU_WORT | SEITENZAHL | ROEMISCHE_ZAHL
 EINZEILER        = { TEXTELEMENT | TEIL_SATZZEICHEN }+
 FREITEXT         = { TEXTELEMENT | SATZZEICHEN | GROSSSCHRIFT }+
-MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ }+
+MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\(\)\-])/ | /\n\s*/ }+
 
 TR               = ABS | LZ                  # (beliebiger) Trenner
 ABS              = /\s*;;?\s*/ | ZWW         # Abschluss (durch Semikolon oder Zeilenwechsel)

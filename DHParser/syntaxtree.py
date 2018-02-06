@@ -56,7 +56,7 @@ class ParserBase:
         self._ptype = ':' + self.__class__.__name__  # type: str
 
     def __repr__(self):
-        return self.name + self.ptype
+         return self.name + self.ptype
 
     def __str__(self):
         return self.name + (' = ' if self.name else '') + repr(self)
@@ -78,10 +78,7 @@ class ParserBase:
 
     @property
     def repr(self) -> str:
-        """Returns the parser's name if it has a name and the parser's
-        `ptype` otherwise. Note that for named parsers this is not the
-        same as `repr(parsers)` which always returns the comined name
-        and ptype, e.g. 'term:OneOrMore'."""
+        """Returns the parser's name if it has a name and repr()"""
         return self.name if self.name else repr(self)
 
     def reset(self):
