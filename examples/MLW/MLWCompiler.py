@@ -102,7 +102,7 @@ class MLWGrammar(Grammar):
     
     GrammatikPosition = ZWW "GRAMMATIK" [LZ] §Grammatik { ABS GrammatikVariante }
     
-    Grammatik        = wortart §ABS flexion [genus]
+    Grammatik        = wortart §ABS flexion [";"] [genus]
     
     wortart          = nomen | verb | adverb | adjektiv | praeposition
     nomen            = "nomen"  | "n."
@@ -121,7 +121,8 @@ class MLWGrammar(Grammar):
     femininum        = "femininum" | "f."
     neutrum          = "neutrum" | "n."
     
-    GrammatikVariante  = [wortart ABS] flexion [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
+    
+    GrammatikVariante  = [wortart ABS] flexion [";"] [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
     
     
     
@@ -258,8 +259,6 @@ class MLWGrammar(Grammar):
     ziel             = PFAD_NAME # /[\w=?.%&\[\] ]+/
     
     
-    
-    
     #### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
     
     PFAD_NAME        = /[\w=?.%&\[\] ]+/
@@ -327,7 +326,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "d2e7f9b37c45e9df1e67ccf382641f36"
+    source_hash__ = "85e451ba51497e7812801dc7a7062bf2"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -450,7 +449,7 @@ class MLWGrammar(Grammar):
     EtymologieBesonderheit = Synonym(EINZEILER)
     EtymologieVariante = Alternative(LAT, Series(GRI, Option(EtymologieBesonderheit), Option(Series(Token("ETYM"), Etymologie)), DPP, Beleg))
     EtymologiePosition = Series(ZWW, Token("ETYMOLOGIE"), Option(LZ), OneOrMore(EtymologieVariante))
-    GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(genus), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
+    GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(Token(";")), Option(genus), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
     neutrum = Alternative(Token("neutrum"), Token("n."))
     femininum = Alternative(Token("femininum"), Token("f."))
     maskulinum = Alternative(Token("maskulinum"), Token("m."))
@@ -465,7 +464,7 @@ class MLWGrammar(Grammar):
     verb = Alternative(Token("verb"), Token("v."))
     nomen = Alternative(Token("nomen"), Token("n."))
     wortart.set(Alternative(nomen, verb, adverb, adjektiv, praeposition))
-    Grammatik = Series(wortart, ABS, flexion, Option(genus), mandatory=1)
+    Grammatik = Series(wortart, ABS, flexion, Option(Token(";")), Option(genus), mandatory=1)
     GrammatikPosition = Series(ZWW, Token("GRAMMATIK"), Option(LZ), Grammatik, ZeroOrMore(Series(ABS, GrammatikVariante)), mandatory=3)
     LemmaVariante = Series(LAT_WORT, Option(Zusatz))
     LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Alternative(Token(";"), Token(","))), Option(ZW), LemmaVariante)), Option(Series(ABS, Zusatz)))

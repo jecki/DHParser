@@ -43,7 +43,7 @@ LemmaVariante     = LAT_WORT [Zusatz]   # Ist eine Lemma immer ein einzelnes Wor
 
 GrammatikPosition = ZWW "GRAMMATIK" [LZ] §Grammatik { ABS GrammatikVariante }
 
-Grammatik        = wortart §ABS flexion [genus]
+Grammatik        = wortart §ABS flexion [[";"] genus]
 
 wortart          = nomen | verb | adverb | adjektiv | praeposition
 nomen            = "nomen"  | "n."
@@ -62,7 +62,8 @@ maskulinum       = "maskulinum" | "m."
 femininum        = "femininum" | "f."
 neutrum          = "neutrum" | "n."
 
-GrammatikVariante  = [wortart ABS] flexion [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
+
+GrammatikVariante  = [wortart ABS] flexion [[";"] genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
 
 
 
