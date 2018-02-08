@@ -173,8 +173,8 @@ class MLWGrammar(Grammar):
     Bedeutungskategorie  = { EINZEILER [LZ] [Zusatz] [LZ] } §":"
     
     Interpretamente      = LateinischeBedeutung (LZ | " " | "--") §DeutscheBedeutung [":"]
-    LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," LateinischerAusdruck }
-    DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," DeutscherAusdruck }
+    LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," [ZW] LateinischerAusdruck }
+    DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," [ZW] DeutscherAusdruck }
     LateinischerAusdruck = { <LateinischesWort [Zusatz]> }+
     DeutscherAusdruck    = { <DeutschesWort [Zusatz]> }+
     LateinischesWort     = (LAT_WORT | "(" { LAT_WORT }+ ")")
@@ -326,7 +326,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "03a9263834396314dae2eccaac23615e"
+    source_hash__ = "006973bb80648bce916ec3ac284ba94f"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -420,8 +420,8 @@ class MLWGrammar(Grammar):
     LateinischesWort = Alternative(LAT_WORT, Series(Token("("), OneOrMore(LAT_WORT), Token(")")))
     DeutscherAusdruck = OneOrMore(AllOf(DeutschesWort, Option(Zusatz)))
     LateinischerAusdruck = OneOrMore(AllOf(LateinischesWort, Option(Zusatz)))
-    DeutscheBedeutung = Series(DEU, Option(ZW), DeutscherAusdruck, ZeroOrMore(Series(Token(","), DeutscherAusdruck)))
-    LateinischeBedeutung = Series(LAT, Option(ZW), LateinischerAusdruck, ZeroOrMore(Series(Token(","), LateinischerAusdruck)))
+    DeutscheBedeutung = Series(DEU, Option(ZW), DeutscherAusdruck, ZeroOrMore(Series(Token(","), Option(ZW), DeutscherAusdruck)))
+    LateinischeBedeutung = Series(LAT, Option(ZW), LateinischerAusdruck, ZeroOrMore(Series(Token(","), Option(ZW), LateinischerAusdruck)))
     Interpretamente = Series(LateinischeBedeutung, Alternative(LZ, Token(" "), Token("--")), DeutscheBedeutung, Option(Token(":")), mandatory=2)
     Bedeutungskategorie = Series(ZeroOrMore(Series(EINZEILER, Option(LZ), Option(Zusatz), Option(LZ))), Token(":"), mandatory=1)
     UntersteBedeutung = Series(Interpretamente, Option(BelegPosition))

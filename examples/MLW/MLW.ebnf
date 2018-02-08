@@ -114,8 +114,8 @@ UntersteBedeutung    = Interpretamente [BelegPosition]
 Bedeutungskategorie  = { EINZEILER [LZ] [Zusatz] [LZ] } §":"
 
 Interpretamente      = LateinischeBedeutung (LZ | " " | "--") §DeutscheBedeutung [":"]
-LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," LateinischerAusdruck }
-DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," DeutscherAusdruck }
+LateinischeBedeutung = LAT [ZW] LateinischerAusdruck { "," [ZW] LateinischerAusdruck }
+DeutscheBedeutung    = DEU [ZW] DeutscherAusdruck { "," [ZW] DeutscherAusdruck }
 LateinischerAusdruck = { <LateinischesWort [Zusatz]> }+
 DeutscherAusdruck    = { <DeutschesWort [Zusatz]> }+
 LateinischesWort     = (LAT_WORT | "(" { LAT_WORT }+ ")")
