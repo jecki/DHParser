@@ -174,11 +174,11 @@ SonderBelege     = "**" Beleg { [LZ] "**" Beleg }
 Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
 Zitat            = Quellenangabe { SEM [ZW] BelegStelle }
 Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
-BelegQuelle      = Autor §DPP [Werk] &SEM
+BelegQuelle      = AutorWerk &SEM
 BelegStelle      = [<Anker | Zusatz>] (Stelle [[ZW] BelegText] | Verweis) [[ZW] Zusatz]
 BelegText        = /"/ { MEHRZEILER | Anker | Zusatz } §/"/~ ["."]
 
-Autor     = EINZEILER
+AutorWerk = EINZEILER
 Werk      = EINZEILER
 Stelle    = EINZEILER
 Datierung = EINZEILER

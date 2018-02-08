@@ -233,11 +233,11 @@ class MLWGrammar(Grammar):
     Beleg            = [Zusatz] ((Verweis [Zitat]) | Zitat) [ABS Zusatz] ["."]
     Zitat            = Quellenangabe { SEM [ZW] BelegStelle }
     Quellenangabe    = [<Anker | Zusatz>] < BelegQuelle | Verweis >
-    BelegQuelle      = Autor §DPP [Werk] &SEM
+    BelegQuelle      = AutorWerk &SEM
     BelegStelle      = [<Anker | Zusatz>] (Stelle [[ZW] BelegText] | Verweis) [[ZW] Zusatz]
     BelegText        = /"/ { MEHRZEILER | Anker | Zusatz } §/"/~ ["."]
     
-    Autor     = EINZEILER
+    AutorWerk = EINZEILER
     Werk      = EINZEILER
     Stelle    = EINZEILER
     Datierung = EINZEILER
@@ -326,7 +326,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "88fa777691b17d758426d918e5dbdaa5"
+    source_hash__ = "03a9263834396314dae2eccaac23615e"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -384,10 +384,10 @@ class MLWGrammar(Grammar):
     Datierung = Synonym(EINZEILER)
     Stelle = Synonym(EINZEILER)
     Werk = Synonym(EINZEILER)
-    Autor = Synonym(EINZEILER)
+    AutorWerk = Synonym(EINZEILER)
     BelegText = Series(RegExp('"'), ZeroOrMore(Alternative(MEHRZEILER, Anker, Zusatz)), RE('"'), Option(Token(".")), mandatory=2)
     BelegStelle = Series(Option(SomeOf(Anker, Zusatz)), Alternative(Series(Stelle, Option(Series(Option(ZW), BelegText))), Verweis), Option(Series(Option(ZW), Zusatz)))
-    BelegQuelle = Series(Autor, DPP, Option(Werk), Lookahead(SEM), mandatory=1)
+    BelegQuelle = Series(AutorWerk, Lookahead(SEM))
     Quellenangabe = Series(Option(SomeOf(Anker, Zusatz)), SomeOf(BelegQuelle, Verweis))
     Zitat = Series(Quellenangabe, ZeroOrMore(Series(SEM, Option(ZW), BelegStelle)))
     Beleg = Series(Option(Zusatz), Alternative(Series(Verweis, Option(Zitat)), Zitat), Option(Series(ABS, Zusatz)), Option(Token(".")))
