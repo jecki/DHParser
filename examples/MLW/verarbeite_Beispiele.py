@@ -18,7 +18,8 @@ if not recompile_grammar('MLW.ebnf', force=False):  # recompiles Grammar only if
     sys.exit(1)
 
 
-from MLWCompiler import get_preprocessor, get_grammar, get_transformer, get_compiler
+from MLWCompiler import get_preprocessor, get_grammar, get_transformer, get_compiler, \
+    write_as_html
 
 def tst_func():
     for root, dirs, files in os.walk('Beispiele'):
@@ -47,6 +48,7 @@ def tst_func():
                 else:
                     if os.path.isfile(raw_name + '.messages'):
                         os.remove(raw_name + '.messages')
+                    write_as_html(raw_name, result)
                     print("\nParsing of %s successfull :-)\n" % entry)
 
 def cpu_profile(func):

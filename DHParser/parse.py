@@ -1991,7 +1991,8 @@ class Compiler:
         all those node types for which no compiler method `on_XXX` has
         been defined."""
         if node.children:
-            node.result = tuple(self.compile(nd) for nd in node.children)
+            result = tuple(self.compile(nd) for nd in node.children)
+            node.result = result
         return node
 
     def compile(self, node: Node) -> Any:

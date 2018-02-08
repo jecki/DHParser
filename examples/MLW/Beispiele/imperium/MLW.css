@@ -41,11 +41,17 @@ FLEX + FLEX:before {
 }
 
 LemmaVariante {
+    display: block;
 }
 
-LemmaVariante + LemmaVariante:before {
-    content: ", ";
+LemmaVariante:after {
+    content: " (" attr(verdichtung) ") ";
 }
+
+/* LemmaVariante + LemmaVariante:before {
+    content: ", ";
+} */
+
 
 Bedeutung {
     display:block;

@@ -36,7 +36,7 @@ LemmaWort         = LAT_WORT
 
 LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
 
-LemmaVariante     = LAT_WORT [Zusatz]   # Ist eine Lemma immer ein einzelnes Wort?
+LemmaVariante     = LAT_WORT  # Ist eine Lemma immer ein einzelnes Wort?
 
 
 ## GRAMMATIK-POSITION ##

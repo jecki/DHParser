@@ -95,14 +95,14 @@ class MLWGrammar(Grammar):
     
     LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
     
-    LemmaVariante     = LAT_WORT [Zusatz]   # Ist eine Lemma immer ein einzelnes Wort?
+    LemmaVariante     = LAT_WORT  # Ist eine Lemma immer ein einzelnes Wort?
     
     
     ## GRAMMATIK-POSITION ##
     
     GrammatikPosition = ZWW "GRAMMATIK" [LZ] §Grammatik { ABS GrammatikVariante }
     
-    Grammatik        = wortart §ABS flexion [";"] [genus]
+    Grammatik        = wortart §ABS flexion [[";"] genus]
     
     wortart          = nomen | verb | adverb | adjektiv | praeposition
     nomen            = "nomen"  | "n."
@@ -122,7 +122,7 @@ class MLWGrammar(Grammar):
     neutrum          = "neutrum" | "n."
     
     
-    GrammatikVariante  = [wortart ABS] flexion [";"] [genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
+    GrammatikVariante  = [wortart ABS] flexion [[";"] genus] DPP Beleg { FORTSETZUNG Beleg }   # Beleg { SEM Beleg }
     
     
     
@@ -326,7 +326,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "85e451ba51497e7812801dc7a7062bf2"
+    source_hash__ = "88fa777691b17d758426d918e5dbdaa5"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -449,7 +449,7 @@ class MLWGrammar(Grammar):
     EtymologieBesonderheit = Synonym(EINZEILER)
     EtymologieVariante = Alternative(LAT, Series(GRI, Option(EtymologieBesonderheit), Option(Series(Token("ETYM"), Etymologie)), DPP, Beleg))
     EtymologiePosition = Series(ZWW, Token("ETYMOLOGIE"), Option(LZ), OneOrMore(EtymologieVariante))
-    GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(Token(";")), Option(genus), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
+    GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(Series(Option(Token(";")), genus)), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
     neutrum = Alternative(Token("neutrum"), Token("n."))
     femininum = Alternative(Token("femininum"), Token("f."))
     maskulinum = Alternative(Token("maskulinum"), Token("m."))
@@ -464,9 +464,9 @@ class MLWGrammar(Grammar):
     verb = Alternative(Token("verb"), Token("v."))
     nomen = Alternative(Token("nomen"), Token("n."))
     wortart.set(Alternative(nomen, verb, adverb, adjektiv, praeposition))
-    Grammatik = Series(wortart, ABS, flexion, Option(Token(";")), Option(genus), mandatory=1)
+    Grammatik = Series(wortart, ABS, flexion, Option(Series(Option(Token(";")), genus)), mandatory=1)
     GrammatikPosition = Series(ZWW, Token("GRAMMATIK"), Option(LZ), Grammatik, ZeroOrMore(Series(ABS, GrammatikVariante)), mandatory=3)
-    LemmaVariante = Series(LAT_WORT, Option(Zusatz))
+    LemmaVariante = Synonym(LAT_WORT)
     LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Alternative(Token(";"), Token(","))), Option(ZW), LemmaVariante)), Option(Series(ABS, Zusatz)))
     LemmaWort.set(Synonym(LAT_WORT))
     gesichert = Token("$")
@@ -628,6 +628,30 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
+
+def lemma_verdichtung(lemma, variante):
+    # finde den ersten Unterschied von links
+    l = 0
+    while l < min(len(lemma), len(variante)) and lemma[l] == variante[l]:
+        l += 1
+
+    # finde den ersten Unterschied von rechts
+    r = 1
+    while r <= min(len(lemma), len(variante)) and lemma[-r] == variante[-r]:
+        r += 1
+    r -= 1
+
+    l -= 1              # beginne 1 Zeichen vor dem ersten Unterschied
+    if l <= 1:  l = 0   # einzelne Buchstaben nicht abtrennen
+
+    r -= 1              # beginne 1 Zeichen nach dem letzten Unterschied
+    if r <= 1:  r = 0   # einzelne Buchstaben nicht abtrennen
+
+    # gib Zeichenkette der Unterschide ab dem letzten gemeinsamen (von links) bzw.
+    # ab dem ersten gemeinsamen (von rechts) Buchstaben mit Trennstrichen zurück
+    return (('-' if l > 0 else '') + variante[l:(-r) or None] + ('-' if r > 0 else ''))
+
+
 class MLWCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a MLW source file.
     """
@@ -643,6 +667,7 @@ class MLWCompiler(Compiler):
     def __init__(self, grammar_name="MLW", grammar_source=""):
         super(MLWCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
+        self.lemmawort = ""
 
     def on_VerweisKern(self, node):
         if node.children[0].parser.name == "FREITEXT":
@@ -684,6 +709,15 @@ class MLWCompiler(Compiler):
         self.ergänze_Zähler(node, 5)
         return self.fallback_compiler(node)
 
+    def on_LemmaWort(self, node):
+        assert not node.children
+        self.lemmawort = node.result
+        return node
+
+    def on_LemmaVariante(self, node):
+        assert not node.children
+        node.xml_attr['verdichtung'] = lemma_verdichtung(self.lemmawort, node.result)
+        return node
 
 def get_compiler(grammar_name="MLW", grammar_source="") -> MLWCompiler:
     global thread_local_MLW_compiler_singleton
@@ -732,6 +766,16 @@ HTML_LEAD_OUT = """
 </html>
 """
 
+def write_as_html(file_name, tree, show=False):
+    out_name = os.path.splitext(file_name)[0] + '.html'
+    with open(out_name, 'w', encoding="utf-8") as f:
+        f.write(HTML_LEAD_IN)
+        f.write(tree.as_xml())
+        f.write(HTML_LEAD_OUT)
+    if show:
+        webbrowser.open(out_name)
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         file_name, log_dir = sys.argv[1], ''
@@ -746,12 +790,7 @@ if __name__ == "__main__":
             print('\nLeider hat es ein paar Fehler gegeben :-(\n')
             sys.exit(1)
         else:
-            out_name = file_name[:-4] + '.html'
-            with open(out_name, 'w', encoding="utf-8") as f:
-                f.write(HTML_LEAD_IN)
-                f.write(result.as_xml())
-                f.write(HTML_LEAD_OUT)
-            webbrowser.open(out_name)
+            write_as_html(file_name, result, show=True)
             print("Das Einlesen war erfolgreich :-)")
     else:
         print("Aufruf: MLWCompiler.py [--debug] FILENAME")

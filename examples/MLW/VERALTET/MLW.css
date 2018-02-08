@@ -41,17 +41,11 @@ FLEX + FLEX:before {
 }
 
 LemmaVariante {
-    display: block;
 }
 
-LemmaVariante:after {
-    content: " (" attr(verdichtung) ") ";
-}
-
-/* LemmaVariante + LemmaVariante:before {
+LemmaVariante + LemmaVariante:before {
     content: ", ";
-} */
-
+}
 
 Bedeutung {
     display:block;
@@ -65,22 +59,22 @@ U1Bedeutung {
 
 U2Bedeutung {
     display:block;
-    margin-left:1em;
+    margin-left:2em;
 }
 
 U3Bedeutung {
     display:block;
-    margin-left:1em;
+    margin-left:3em;
 }
 
 U4Bedeutung {
     display:block;
-    margin-left:1em;
+    margin-left:4em;
 }
 
 U5Bedeutung {
     display:block;
-    margin-left:1em;
+    margin-left:5em;
 }
 
 Interpretamente {
@@ -119,7 +113,7 @@ Stelle {
 }
 
 BelegText {
-    color: darkslateblue;
+    color: darkgoldenrod;
 }
 
 BelegText:before {
@@ -130,25 +124,12 @@ BelegText:after {
     content:"”";
 }
 
-Sonderbelege {
-    font-style: italic;
-}
-
-Sonderbelege:before {
-    content:" ("
-}
-
-Sonderbelege:after {
-    content: ") "
-}
-
 Zusatz {
     font-style: italic;
 }
 
 Verweis {
     color: blue;
-    text-decoration: underline;
 }
 
 pfad:after {

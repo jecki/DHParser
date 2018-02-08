@@ -216,8 +216,8 @@ class Node(collections.abc.Sized):
             stage and never during or after the AST-transformation.
     """
 
-    __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag']
-
+    __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag',
+                 '_xml_attr']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -550,8 +550,8 @@ class Node(collections.abc.Sized):
             """Returns the opening string for the representation of `node`."""            
             txt = ['<', node.tag_name]
             # s += ' pos="%i"' % node.pos
-            if hasattr(self, '_xml_attr'):
-                txt.extend(' %s="%s"' % (k, v) for k, v in self.xml_attr.items())
+            if hasattr(node, '_xml_attr'):
+                txt.extend(' %s="%s"' % (k, v) for k, v in node.xml_attr.items())
             if src:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors:
