@@ -83,12 +83,15 @@ Match-test "3"
             )
         )
         (LemmaVariante
-            (LAT_WORT
+            (:RegExp
                 "facietergula"
             )
-            (Zusatz
-                "sim."
+            (:Whitespace
+                " "
             )
+        )
+        (Zusatz
+            "sim."
         )
     )
 
@@ -107,12 +110,15 @@ Match-test "4"
             "facietergula"
         )
         (LemmaVariante
-            (LAT_WORT
+            (:RegExp
                 "fascistergula"
             )
-            (Zusatz
-                "sim."
+            (:Whitespace
+                " "
             )
+        )
+        (Zusatz
+            "sim."
         )
     )
 
@@ -159,12 +165,15 @@ Match-test "1"
                 "facistergula"
             )
             (LemmaVariante
-                (LAT_WORT
+                (:RegExp
                     "fascitercula"
                 )
-                (Zusatz
-                    "sim."
+                (:Whitespace
+                    " "
                 )
+            )
+            (Zusatz
+                "sim."
             )
         )
         (GrammatikPosition

@@ -34,7 +34,7 @@ Lemma             = [< klassisch | gesichert >] LemmaWort
 
 LemmaWort         = LAT_WORT
 
-LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
+LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ [LZ] Zusatz ]
 
 LemmaVariante     = LAT_WORT  # Ist eine Lemma immer ein einzelnes Wort?
 

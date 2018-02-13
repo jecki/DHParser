@@ -93,7 +93,7 @@ class MLWGrammar(Grammar):
     
     LemmaWort         = LAT_WORT
     
-    LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ ABS Zusatz ]
+    LemmaVarianten    = LemmaVariante { [";" | ","] [ZW] LemmaVariante } [ [LZ] Zusatz ]
     
     LemmaVariante     = LAT_WORT  # Ist eine Lemma immer ein einzelnes Wort?
     
@@ -326,7 +326,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "006973bb80648bce916ec3ac284ba94f"
+    source_hash__ = "e14c9e38e16ad15f7e15cca038fdd8b7"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -467,7 +467,7 @@ class MLWGrammar(Grammar):
     Grammatik = Series(wortart, ABS, flexion, Option(Series(Option(Token(";")), genus)), mandatory=1)
     GrammatikPosition = Series(ZWW, Token("GRAMMATIK"), Option(LZ), Grammatik, ZeroOrMore(Series(ABS, GrammatikVariante)), mandatory=3)
     LemmaVariante = Synonym(LAT_WORT)
-    LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Alternative(Token(";"), Token(","))), Option(ZW), LemmaVariante)), Option(Series(ABS, Zusatz)))
+    LemmaVarianten = Series(LemmaVariante, ZeroOrMore(Series(Option(Alternative(Token(";"), Token(","))), Option(ZW), LemmaVariante)), Option(Series(Option(LZ), Zusatz)))
     LemmaWort.set(Synonym(LAT_WORT))
     gesichert = Token("$")
     klassisch = Token("*")
