@@ -9,9 +9,9 @@ Match-test "1"
 
 ### Test-code:
     \begin{tabular}{c|c|}
-    & $S_1$ \\ \cline{1-2}
-    $A_1$ & $r_1$ \\ \cline{1-2}
-    $A_2$ & $r_2$ \\ \cline{1-2}
+              & $S_1$ \\ \cline{1-2}
+        $A_1$ & $r_1$ \\ \cline{1-2}
+        $A_2$ & $r_2$ \\ \cline{1-2}
     \end{tabular}
 
 ### AST
@@ -152,16 +152,16 @@ Match-test "2"
 
 ### Test-code:
     \begin{tabular}{c|c|c|c|cc|c|c|c|}
-    \multicolumn{1}{c}{} & \multicolumn{3}{c}{Tabelle 1:} &
-    \multicolumn{2}{c}{} & \multicolumn{3}{c}{Tabelle 2:}
-    \\
-    \cline{2-4} \cline{7-9}
-    $A_1$ &  7 &  0 &  4  & & $A_1$ &  5 & 20 &  6  \\
-    \cline{2-4} \cline{7-9}
-    $A_2$ &  5 & 21 & 11  & & $A_2$ & -3 &  8 & 10  \\
-    \cline{2-4} \cline{7-9}
-    $A_3$ & 10 & -5 & -1  & & $A_3$ &  4 &  5 &  9  \\
-    \cline{2-4} \cline{7-9}
+        \multicolumn{1}{c}{} & \multicolumn{3}{c}{Tabelle 1:} &
+        \multicolumn{2}{c}{} & \multicolumn{3}{c}{Tabelle 2:}
+        \\
+        \cline{2-4} \cline{7-9}
+        $A_1$ &  7 &  0 &  4  & & $A_1$ &  5 & 20 &  6  \\
+        \cline{2-4} \cline{7-9}
+        $A_2$ &  5 & 21 & 11  & & $A_2$ & -3 &  8 & 10  \\
+        \cline{2-4} \cline{7-9}
+        $A_3$ & 10 & -5 & -1  & & $A_3$ &  4 &  5 &  9  \\
+        \cline{2-4} \cline{7-9}
     \end{tabular}
 
 ### AST
@@ -630,19 +630,19 @@ Match-test "1"
 
 ### Test-code:
     \begin{figure}
-    \doublespacing
-    \begin{center}
-    \begin{tabular}{l|c|c|c|}
-    \multicolumn{1}{c}{ } & \multicolumn{1}{c}{ } & \multicolumn{2}{c}{$\overbrace{\hspace{7cm}}^{Experiments}$} \\ \cline{2-4}
-    & {\bf computer simulation} & {\bf analog simulation} & {\bf plain experiment} \\ \hline
-    materiality of object
-    & semantic              & \multicolumn{2}{c|}{material} \\ \hline
-    relation to target
-    & \multicolumn{2}{c|}{representation}       & representative \\ \hline
-    \multicolumn{1}{c}{ } & \multicolumn{2}{c}{$\underbrace{\hspace{7cm}}_{Simulations}$} & \multicolumn{1}{c}{ } \\
-    \end{tabular}
-    \end{center}
-    \caption{Conceptual relation of simulations and experiments}\label{SimulationExperimentsScheme}
+        \doublespacing
+        \begin{center}
+            \begin{tabular}{l|c|c|c|}
+                \multicolumn{1}{c}{ } & \multicolumn{1}{c}{ } & \multicolumn{2}{c}{$\overbrace{\hspace{7cm}}^{Experiments}$} \\ \cline{2-4}
+                                      & {\bf computer simulation} & {\bf analog simulation} & {\bf plain experiment} \\ \hline
+                materiality of object
+                                      & semantic              & \multicolumn{2}{c|}{material} \\ \hline
+                relation to target
+                                      & \multicolumn{2}{c|}{representation}       & representative \\ \hline
+                \multicolumn{1}{c}{ } & \multicolumn{2}{c}{$\underbrace{\hspace{7cm}}_{Simulations}$} & \multicolumn{1}{c}{ } \\
+            \end{tabular}
+        \end{center}
+        \caption{Conceptual relation of simulations and experiments}\label{SimulationExperimentsScheme}
     \end{figure}
 
 ### AST

@@ -34,7 +34,7 @@ Match-test "1"
 ### Test-code:
     
     
-    
+        
 
 ### AST
     (GAP
@@ -54,8 +54,8 @@ Match-test "2"
 ### Test-code:
     
     
-    % Comment
-    
+        % Comment
+        
 
 ### AST
     (GAP
@@ -77,7 +77,7 @@ Match-test "3"
     
     
     
-    
+        
 
 ### AST
     (GAP
@@ -105,10 +105,10 @@ Fail-test "11"
 ### Test-code:
     
     
-    % Comment
+        % Comment
     
-    % Comment
-    
+        % Comment
+        
 
 
 Test of parser: "PARSEP"
@@ -121,7 +121,7 @@ Match-test "1"
 ### Test-code:
     
     
-    
+        
 
 ### AST
     (PARSEP
@@ -136,8 +136,8 @@ Match-test "2"
 ### Test-code:
     
     
-    % Comment
-    
+        % Comment
+        
 
 ### AST
     (PARSEP
@@ -153,7 +153,7 @@ Match-test "3"
     
     
     
-    
+        
 
 ### AST
     (PARSEP
@@ -168,10 +168,10 @@ Match-test "4"
 ### Test-code:
     
     
-    % Comment
+        % Comment
     
-    % Comment
-    
+        % Comment
+        
 
 ### AST
     (PARSEP
@@ -185,9 +185,9 @@ Match-test "5"
 
 ### Test-code:
      % Comment
-    % Comment
+        % Comment
     
-    % Comment
+        % Comment
 
 ### AST
     (PARSEP
@@ -301,17 +301,17 @@ Match-test "6"
 
 ### Test-code:
     
-    % Comment
+        % Comment
     
-    % Comment
+        % Comment
     
-    
+        
 
 ### AST
     (WSPC
         (:RegExp
             ""
-            ""
+            "    "
         )
         (:RegExp
             "% Comment"
@@ -319,7 +319,7 @@ Match-test "6"
         (:RegExp
             ""
             ""
-            ""
+            "    "
         )
         (:RegExp
             "% Comment"
@@ -327,7 +327,7 @@ Match-test "6"
         (:RegExp
             ""
             ""
-            ""
+            "    "
         )
     )
 
@@ -338,14 +338,14 @@ Match-test "7"
     
     
     
-    
+        
 
 ### AST
     (WSPC
         ""
         ""
         ""
-        ""
+        "    "
     )
 
 Fail-test "10"
@@ -406,7 +406,7 @@ Match-test "4"
     
     
     
-    
+        
 
 ### AST
     (NEW_LINE
@@ -495,4 +495,4 @@ Fail-test "10"
 ### Test-code:
     
     
-    
+        

@@ -118,7 +118,7 @@ Match-test "3"
 ### Test-code:
     Paragraphs are separated only by at least one blank line.
     Therefore,
-    this line still belongs to the same paragraph.
+                 this line still belongs to the same paragraph.
 
 ### AST
     (paragraph
@@ -141,7 +141,7 @@ Match-test "4"
     % or like thist comment.
     Comment lines do not break paragraphs.
     % There can even be several comment lines,
-    % even indented comment lines,
+        % even indented comment lines,
     in sequence.
 
 ### AST
@@ -707,7 +707,7 @@ Fail-test "20"
 ### Test-code:
     Paragraphs are separated by gaps.
     
-    Like this one.
+        Like this one.
 
 Fail-test "21"
 --------------
@@ -748,7 +748,7 @@ Match-test "1"
 ### Test-code:
     Paragraphs are separated by gaps.
     
-    Like this one.
+        Like this one.
 
 ### AST
     (sequence
@@ -777,7 +777,7 @@ Match-test "2"
     The second paragraph follows after a long gap.
     
     
-    The parser should accept this, too.
+        The parser should accept this, too.
 
 ### AST
     (sequence
@@ -805,13 +805,13 @@ Match-test "3"
 ### Test-code:
     Paragraphs can be delimited by  % comment
     
-    % sequences of separators
+        % sequences of separators
     
-    % and comments
-    % or sequences of comment lines
+        % and comments
+        % or sequences of comment lines
     
-    In the end such a sequence counts
-    % merely as one comment
+        In the end such a sequence counts
+        % merely as one comment
 
 ### AST
     (sequence

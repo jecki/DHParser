@@ -30,7 +30,91 @@ from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
-from DHParser.testing import grammar_unit
+from DHParser.testing import grammar_unit, unit_from_configfile
+
+CFG_FILE_1 = '''
+# a comment
+
+[match:ParserA]
+M1: test
+M2: 'test'
+M3: "test"
+M4: """
+    test
+        proper multiline indent?
+    """
+
+# another comment
+
+[fail:ParserA]
+F1: test
+'''
+
+CFG_FILE_2 = '''
+[match:LB]
+1:  """
+    """
+
+[fail:LB]
+10: """ """
+
+[match:BedeutungsPosition]
+M1: """
+    BEDEUTUNG
+    LAT pannus, faciale, sudarium
+    DEU Gesichts-, Schweißtuch {usu liturg.: de re v. p. 32, 63}:"""
+'''
+
+CFG_FILE_3 = r'''
+[match:paragraph]
+1 : Im allgemeinen werden die Bewohner Göttingens eingeteilt in Studenten,
+    Professoren, Philister und Vieh; welche vier Stände doch nichts weniger
+    als streng geschieden sind. Der Viehstand ist der bedeutendste.
+
+2 : Paragraphs may contain {\em inline blocks} as well as \emph{inline commands}
+    and also special \& characters.
+
+[fail:paragraph]
+20: Paragraphs are separated by gaps.
+
+    Like this one.
+
+21: \begin{enumerate}
+'''
+
+
+class TestTestfiles:
+    def setup(self):
+        with open('configfile_test_1.ini', 'w') as f:
+            f.write(CFG_FILE_1)
+        with open('configfile_test_2.ini', 'w') as f:
+            f.write(CFG_FILE_2)
+        with open('configfile_test_3.ini', 'w') as f:
+            f.write(CFG_FILE_3)
+
+    def teardown(self):
+        os.remove('configfile_test_1.ini')
+        os.remove('configfile_test_2.ini')
+        os.remove('configfile_test_3.ini')
+
+    def test_unit_from_config_file(self):
+        unit = unit_from_configfile('configfile_test_1.ini')
+        assert list(unit.keys()) == ['ParserA']
+        assert list(unit['ParserA'].keys()) == ['match', 'fail']
+        assert list(unit['ParserA']['match'].keys()) == ['M1', 'M2', 'M3', 'M4']
+        assert list(unit['ParserA']['fail'].keys()) == ['F1']
+        testcase = unit['ParserA']['match']['M4']
+        lines = testcase.split('\n')
+        assert len(lines[2]) - len(lines[2].lstrip()) == 4
+
+        unit = unit_from_configfile('configfile_test_2.ini')
+        txt = unit['BedeutungsPosition']['match']['M1']
+        txt.split('\n')
+        for line in txt:
+            assert line.rstrip()[0:1] != ' '
+
+        unit = unit_from_configfile('configfile_test_3.ini')
+
 
 ARITHMETIC_EBNF = """
     @ whitespace = linefeed

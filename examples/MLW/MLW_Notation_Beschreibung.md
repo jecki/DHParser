@@ -64,12 +64,18 @@ Der Einfachheit halber werden zunächst nur die Standardfälle dargestellt.
 ### LEMMA-Position
 
 Die Lemmaposition wird durch das Schlüsselword LEMMA eingeleitet, gefolgt von
-dem möglicherweise gesternten Lemmawort. Durch Zeilenwechsel getrennt 
-können darauf mehrere Lemmavarianten folgen, die immer vollständig 
-ausgeschrieben werden müssen. (Die Abkürzungen werden vom Computer 
-automatisch generiert.) Zum Schluss kann, wiederum durch eine Leerzeile
+dem (ggf. "gesternten") Lemmawort. Durch Zeilenwechsel getrennt
+können darauf mehrere "Lemmavarianten" folgen. In der Regel werden hier
+nur Abkürzungen zur Bezeichnung bestimmter sprachlicher Phänomene
+angegeben. (Das System verbietet es aber auch nicht an dieser Stelle
+vollständige Wörter anzugeben.) Zum Schluss kann, wiederum durch eine Leerzeile
 getrennt, noch ein Zusatzhinweis des Bearbeiters oder der Bearbeiterin
-folgen.
+wie z.B. `{sim.}` folgen. Zusätze werden als solche dadurch kenntlich
+gemacht, indem man sie in geschweifte Klammern einschließt.
+
+(Hinweis: Im Druck und in der Vorschau werden die geschweiften Klammern nicht
+mit angezeigt und statt dessen, das was innerhlab der geschweiften
+Klammern steht kursiv gesetzt.)
 
 Beispiel:
 
@@ -84,10 +90,6 @@ Beispiel:
 Die zusätzliche Leerzeile zur deutlicheren optischen Trennung von Lemmawort
 und Lemmavarianten ist nicht zwingend und kann auch weggelassen werden, 
 ebenso wie die Einrückung der Lemmavarianten und des Zusatzes.
-
-Zusätze müssen dadurch kenntlich gemacht werden, dass sie in geschweifte
-Klammern eingeschlossen werden. (Ohne die geschweiften Klammern könnte der
-Computer nicht mit Sicherheit erkennen, dass es sich um einen Zusatz handelt.)
 
 Das allgemeine Format für die LEMMA-Angabe sieht so aus:
 
@@ -105,8 +107,11 @@ Das allgemeine Format für die LEMMA-Angabe sieht so aus:
 
 Die Grammatik-Position wird durch das Schlüsselwort "GRAMMATIK" eingeleitet.
 Darauf folgt die Wortart, die Angabe der Flexion und - bei Nomen - der Genus.
-Wortart und Flexion müssen durch ein Semikolon getrennt werden. Zwischen
-Flexion und Genus genügt ein Leerzeichen. 
+Die Angabe der Wortart ist optional und kann auch weggelassen werden.
+Wir die Wortart jedoch angegeben, so muss sie von der Flexion durch
+ein Semikolon getrennt werden. Zwischen Flexion und Genus genügt
+demgegenüber ein einfaches Leerzeichen, so wie das auch später im Druck
+erscheint.
 
 Die Flexion wird abgekürzt mit führendem Spiegelstrich angegen, ggf. kann es
 mehrere solcher Angaben geben, die durch Komma getrennt sind (z.B. "-us, -i").
@@ -138,7 +143,8 @@ Beispiel:
 
 Die allgemeine Form lautet:
 
-    GRAMMATIK Wortart; Flexion [Genus]
+    GRAMMATIK
+        [Wortart;] Flexion [Genus]
     
         Flexion [Genus]: Beleg [* Beleg] ...
             .
@@ -149,6 +155,5 @@ Die allgemeine Form lautet:
 
 Alle Positionen im Artikelkopf (Etymologie-Position, Schreibweisen-Position,
 Struktur-Position, Gebrauchs-Position, Metrik-Position, 
-Verwechselungs-Position) sind nach demselben Schema aufgebaut.
+Verwechselungs-Position) sind nach ein- und demselben Schema aufgebaut.
 
- 

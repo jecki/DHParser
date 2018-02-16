@@ -16,18 +16,19 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 import collections
-import configparser
+# import configparser
 import copy
 import fnmatch
 import inspect
 import json
 import os
+import sys
 
-from DHParser.toolkit import re
-from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
-from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, ZOMBIE_PARSER
-from DHParser.parse import UnknownParserError
 from DHParser.error import is_error, adjust_error_locations
+from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
+from DHParser.parse import UnknownParserError
+from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, ZOMBIE_PARSER
+from DHParser.toolkit import re
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -39,31 +40,86 @@ __all__ = ('unit_from_configfile',
 
 UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 
+# def unit_from_configfile(config_filename):
+#     """
+#     Reads a grammar unit test from a config file.
+#     """
+#     cfg = configparser.ConfigParser(interpolation=None)
+#     cfg.read(config_filename, encoding="utf8")
+#     OD = collections.OrderedDict
+#     unit = OD()
+#     for section in cfg.sections():
+#         symbol, stage = section.split(':')
+#         if stage not in UNIT_STAGES:
+#             if symbol in UNIT_STAGES:
+#                 symbol, stage = stage, symbol
+#             else:
+#                 raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
+#         for testkey, testcode in cfg[section].items():
+#             if testcode[:3] + testcode[-3:] in {"''''''", '""""""'}:
+#                 testcode = testcode[3:-3]
+#                 # testcode = testcode.replace('\\#', '#')
+#                 testcode = re.sub(r'(?<!\\)\\#', '#', testcode).replace('\\\\', '\\')
+#             elif testcode[:1] + testcode[-1:] in {"''", '""'}:
+#                 testcode = testcode[1:-1]
+#             unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
+#     # print(json.dumps(unit, sort_keys=True, indent=4))
+#     return unit
+
+RX_SECTION = re.compile('\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
+RE_VALUE = '(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
+           '(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
+RX_ENTRY = re.compile('\s*(\w+)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
+RX_COMMENT = re.compile('\s*#.*\n')
+
 
 def unit_from_configfile(config_filename):
-    """
-    Reads a grammar unit test from a config file.
-    """
-    cfg = configparser.ConfigParser(interpolation=None)
-    cfg.read(config_filename, encoding="utf8")
+    def eat_comments(txt, pos):
+        m = RX_COMMENT.match(txt, pos)
+        while m:
+            pos = m.span()[1]
+            m = RX_COMMENT.match(txt, pos)
+        return pos
+
+    with open(config_filename, 'r') as f:
+        cfg = f.read()
+        cfg = cfg.replace('\t', '    ')
+
     OD = collections.OrderedDict
     unit = OD()
-    for section in cfg.sections():
-        symbol, stage = section.split(':')
+
+    pos = eat_comments(cfg, 0)
+    section_match = RX_SECTION.match(cfg, pos)
+    while section_match:
+        d = section_match.groupdict()
+        stage = d['stage']
         if stage not in UNIT_STAGES:
-            if symbol in UNIT_STAGES:
-                symbol, stage = stage, symbol
-            else:
-                raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
-        for testkey, testcode in cfg[section].items():
-            if testcode[:3] + testcode[-3:] in {"''''''", '""""""'}:
-                testcode = testcode[3:-3]
-                # testcode = testcode.replace('\\#', '#')
-                testcode = re.sub(r'(?<!\\)\\#', '#', testcode).replace('\\\\', '\\')
-            elif testcode[:1] + testcode[-1:] in {"''", '""'}:
-                testcode = testcode[1:-1]
+            raise KeyError('Unknown stage ' + stage + " ! must be one of: " + str(UNIT_STAGES))
+        symbol = d['symbol']
+        pos = eat_comments(cfg, section_match.span()[1])
+
+        entry_match = RX_ENTRY.match(cfg, pos)
+        if entry_match is None:
+            raise SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
+        while entry_match:
+            testkey, testcode = [group for group in entry_match.groups() if group is not None]
+            lines = testcode.split('\n')
+            if len(lines) > 1:
+                indent = sys.maxsize
+                for line in lines[1:]:
+                    indent = min(indent, len(line) - len(line.lstrip()))
+                for i in range(1, len(lines)):
+                    lines[i] = lines[i][indent:]
+                testcode = '\n'.join(lines)
             unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
-    # print(json.dumps(unit, sort_keys=True, indent=4))
+            pos = eat_comments(cfg, entry_match.span()[1])
+            entry_match = RX_ENTRY.match(cfg, pos)
+
+        section_match = RX_SECTION.match(cfg, pos)
+
+    if pos != len(cfg):
+        raise SyntaxError('in file %s in line %i' % (config_filename, cfg[:pos].count('\n') + 1))
+
     return unit
 
 

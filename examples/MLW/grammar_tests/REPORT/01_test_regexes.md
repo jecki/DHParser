@@ -4,7 +4,7 @@ Test of parser: "SCHLUESSELWORT"
 ================================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
@@ -27,7 +27,7 @@ Test of parser: "RZS"
 =====================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
@@ -45,30 +45,13 @@ Test of parser: "LEERZEILE"
 ===========================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
     
     
-    
-
-### AST
-    (LEERZEILE
-        (:RegExp
-            ""
-            ""
-            ""
-        )
-    )
-
-Match-test "m2"
----------------
-
-### Test-code:
-    
-    
-    // Kommentar
+        
 
 ### AST
     (LEERZEILE
@@ -78,18 +61,38 @@ Match-test "m2"
             ""
         )
         (:Whitespace
-            "// Kommentar"
+            "    "
         )
     )
 
-Match-test "m3"
+Match-test "M2"
+---------------
+
+### Test-code:
+    
+    
+        // Kommentar
+
+### AST
+    (LEERZEILE
+        (:RegExp
+            ""
+            ""
+            ""
+        )
+        (:Whitespace
+            "    // Kommentar"
+        )
+    )
+
+Match-test "M3"
 ---------------
 
 ### Test-code:
     
     
     
-    
+        
 
 ### AST
     (LEERZEILE
@@ -99,69 +102,65 @@ Match-test "m3"
             ""
             ""
         )
+        (:Whitespace
+            "    "
+        )
     )
 
-Match-test "m4"
+Match-test "M4"
 ---------------
 
 ### Test-code:
     
     
-    /* Kommentar
+        /* Kommentar
     
-    Kommentar fortsetzung */
-    
+           Kommentar fortsetzung */
 
-### CST
+### AST
     (LEERZEILE
         (:RegExp
             ""
             ""
             ""
         )
-        (:RE
-            (:Whitespace
-                "/* Kommentar"
-                ""
-                "Kommentar fortsetzung */"
-            )
-            (:RegExp
-                ""
-                ""
-            )
+        (:Whitespace
+            "    /* Kommentar"
+            ""
+            "       Kommentar fortsetzung */"
         )
     )
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:
     
     
 
-Fail-test "f2"
+Fail-test "F2"
 --------------
 
 ### Test-code:
     
     
-    // Kommentar
+        // Kommentar
     
-    // Kommentar
-    
+        // Kommentar
+        
 
 
 Test of parser: "LÜCKE"
 =======================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
     
     
-    
+        
 
 ### AST
     (LÜCKE
@@ -172,71 +171,20 @@ Match-test "m1"
                 ""
                 ""
             )
+            (:Whitespace
+                "    "
+            )
         )
     )
 
-Match-test "m2"
+Match-test "M2"
 ---------------
 
 ### Test-code:
     
     
-    // Kommentar
-    
-
-### AST
-    (LÜCKE
-        (KOMMENTARZEILEN)
-        (LEERZEILE
-            (:RegExp
-                ""
-                ""
-                ""
-            )
-            (:RE
-                (:Whitespace
-                    "// Kommentar"
-                )
-                (:RegExp
-                    ""
-                    ""
-                )
-            )
-        )
-    )
-
-Match-test "m3"
----------------
-
-### Test-code:
-    
-    
-    
-    
-
-### AST
-    (LÜCKE
-        (KOMMENTARZEILEN)
-        (LEERZEILE
-            (:RegExp
-                ""
-                ""
-                ""
-                ""
-            )
-        )
-    )
-
-Match-test "m4"
----------------
-
-### Test-code:
-    
-    
-    // Kommentar
-    
-    // Kommentar
-    
+        // Kommentar
+        
 
 ### AST
     (LÜCKE
@@ -249,7 +197,7 @@ Match-test "m4"
             )
             (:RE
                 (:Whitespace
-                    "// Kommentar"
+                    "    // Kommentar"
                 )
                 (:RegExp
                     ""
@@ -259,14 +207,71 @@ Match-test "m4"
         )
     )
 
-Match-test "m5"
+Match-test "M3"
+---------------
+
+### Test-code:
+    
+    
+    
+        
+
+### AST
+    (LÜCKE
+        (KOMMENTARZEILEN)
+        (LEERZEILE
+            (:RegExp
+                ""
+                ""
+                ""
+                ""
+            )
+            (:Whitespace
+                "    "
+            )
+        )
+    )
+
+Match-test "M4"
+---------------
+
+### Test-code:
+    
+    
+        // Kommentar
+    
+        // Kommentar
+        
+
+### AST
+    (LÜCKE
+        (KOMMENTARZEILEN)
+        (LEERZEILE
+            (:RegExp
+                ""
+                ""
+                ""
+            )
+            (:RE
+                (:Whitespace
+                    "    // Kommentar"
+                )
+                (:RegExp
+                    ""
+                    ""
+                )
+            )
+        )
+    )
+
+Match-test "M5"
 ---------------
 
 ### Test-code:
      //Kommentar
-    //Kommentar
+        //Kommentar
     
-    // Kommentar
+        // Kommentar
 
 ### AST
     (LÜCKE
@@ -282,7 +287,7 @@ Match-test "m5"
             (:Series
                 (:RegExp
                     ""
-                    ""
+                    "    "
                 )
                 (:RegExp
                     "//Kommentar"
@@ -296,32 +301,32 @@ Match-test "m5"
                 ""
             )
             (:Whitespace
-                "// Kommentar"
+                "    // Kommentar"
             )
         )
     )
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:
      
 
-Fail-test "f2"
+Fail-test "F2"
 --------------
 
 ### Test-code:
     
     
 
-Fail-test "f3"
+Fail-test "F3"
 --------------
 
 ### Test-code:
     
     // Kommentar
 
-Fail-test "f4"
+Fail-test "F4"
 --------------
 
 ### Test-code:
@@ -329,21 +334,21 @@ Fail-test "f4"
     // Kommentar
     // Kommentar
 
-Fail-test "f5"
+Fail-test "F5"
 --------------
 
 ### Test-code:
      //Kommentar
-    /* Kommentar
+        /* Kommentar
     
-    Kommentar */
+           Kommentar */
 
 
 Test of parser: "LZ"
 ====================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
@@ -356,7 +361,7 @@ Match-test "m1"
         )
     )
 
-Match-test "m2"
+Match-test "M2"
 ---------------
 
 ### Test-code:
@@ -372,7 +377,7 @@ Match-test "m2"
         )
     )
 
-Match-test "m3"
+Match-test "M3"
 ---------------
 
 ### Test-code:
@@ -385,7 +390,7 @@ Match-test "m3"
         )
     )
 
-Match-test "m4"
+Match-test "M4"
 ---------------
 
 ### Test-code:
@@ -398,7 +403,7 @@ Match-test "m4"
         )
     )
 
-Match-test "m5"
+Match-test "M5"
 ---------------
 
 ### Test-code:
@@ -416,22 +421,22 @@ Match-test "m5"
         )
     )
 
-Match-test "m6"
+Match-test "M6"
 ---------------
 
 ### Test-code:
     
-    // Kommentar
+        // Kommentar
     
-    // Kommentar
+        // Kommentar
     
-    
+        
 
 ### AST
     (LZ
         (:RegExp
             ""
-            ""
+            "    "
         )
         (:RegExp
             "// Kommentar"
@@ -439,7 +444,7 @@ Match-test "m6"
         (:RegExp
             ""
             ""
-            ""
+            "    "
         )
         (:RegExp
             "// Kommentar"
@@ -447,18 +452,18 @@ Match-test "m6"
         (:RegExp
             ""
             ""
-            ""
+            "    "
         )
     )
 
-Match-test "m7"
+Match-test "M7"
 ---------------
 
 ### Test-code:
     
     
     
-    
+        
 
 ### AST
     (LZ
@@ -466,11 +471,11 @@ Match-test "m7"
             ""
             ""
             ""
-            ""
+            "    "
         )
     )
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:
@@ -481,7 +486,7 @@ Test of parser: "ZWW"
 =====================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
@@ -498,7 +503,7 @@ Match-test "m1"
         )
     )
 
-Match-test "m2"
+Match-test "M2"
 ---------------
 
 ### Test-code:
@@ -518,7 +523,7 @@ Match-test "m2"
         )
     )
 
-Match-test "m3"
+Match-test "M3"
 ---------------
 
 ### Test-code:
@@ -539,14 +544,14 @@ Match-test "m3"
         )
     )
 
-Match-test "m4"
+Match-test "M4"
 ---------------
 
 ### Test-code:
     
     
     
-    
+        
 
 ### AST
     (ZWW
@@ -558,7 +563,7 @@ Match-test "m4"
         )
     )
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:
@@ -569,7 +574,7 @@ Test of parser: "ZW"
 ====================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
@@ -586,7 +591,7 @@ Match-test "m1"
         )
     )
 
-Match-test "m2"
+Match-test "M2"
 ---------------
 
 ### Test-code:
@@ -606,20 +611,20 @@ Match-test "m2"
         )
     )
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:
     
     
-    
+        
 
 
 Test of parser: "FREITEXT"
 ==========================
 
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:
@@ -630,7 +635,7 @@ Test of parser: "SEITENZAHL"
 ============================
 
 
-Match-test "m1"
+Match-test "M1"
 ---------------
 
 ### Test-code:
@@ -641,7 +646,7 @@ Match-test "m1"
         "123"
     )
 
-Match-test "m2"
+Match-test "M2"
 ---------------
 
 ### Test-code:
@@ -652,7 +657,7 @@ Match-test "m2"
         "123^b"
     )
 
-Match-test "m3"
+Match-test "M3"
 ---------------
 
 ### Test-code:
@@ -663,7 +668,7 @@ Match-test "m3"
         "4^capit."
     )
 
-Match-test "m4"
+Match-test "M4"
 ---------------
 
 ### Test-code:
@@ -674,7 +679,7 @@ Match-test "m4"
         "4^{bona fide}"
     )
 
-Fail-test "f1"
+Fail-test "F1"
 --------------
 
 ### Test-code:

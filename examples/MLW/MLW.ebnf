@@ -70,7 +70,7 @@ GrammatikVariante  = [wortart ABS] flexion [[";"] genus] DPP Beleg { FORTSETZUNG
 #### ETYMOLOGIE-POSITION #####################################################
 
 EtymologiePosition = ZWW "ETYMOLOGIE" [LZ] { EtymologieVariante }+
-EtymologieVariante = LAT | GRI [EtymologieBesonderheit] ["ETYM" Etymologie] DPP Beleg
+EtymologieVariante = (LAT | GRI) [EtymologieBesonderheit] [DPP [LZ] Etymologie] DPP Beleg
 EtymologieBesonderheit = EINZEILER
 Etymologie         = EINZEILER
 

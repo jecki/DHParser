@@ -139,13 +139,13 @@ Match-test "1"
 ### Test-code:
     LEMMA facitergula
     
-    fascitergula
-    facietergula
-    facistergula
-    fascitercula {sim.}
+        fascitergula
+        facietergula
+        facistergula
+        fascitercula {sim.}
     
-    GRAMMATIK
-    nomen; -ae f.
+        GRAMMATIK
+        nomen; -ae f.
 
 ### AST
     (LemmaPosition

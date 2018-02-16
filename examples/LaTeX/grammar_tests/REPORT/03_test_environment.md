@@ -9,14 +9,14 @@ Match-test "1"
 
 ### Test-code:
     \begin{generic}
-    A generic block element is a block element
-    that is unknown to DHParser.
+        A generic block element is a block element
+        that is unknown to DHParser.
     
-    Unknown begin-end-structures are always
-    considered as block elements and not
-    as inline elements.
-    \end{generic}
-    
+        Unknown begin-end-structures are always
+        considered as block elements and not
+        as inline elements.
+        \end{generic}
+        
 
 ### AST
     (generic_block
@@ -224,15 +224,15 @@ Match-test "2"
 ### Test-code:
     \begin{itemize}
     
-    \item But items may be
+        \item But items may be
     
-    \item separated by blank lines.
+        \item separated by blank lines.
     
-    \item
+        \item
     
-    Empty lines at the beginning of an item will be ignored.
+        Empty lines at the beginning of an item will be ignored.
     
-    \end{itemize}
+        \end{itemize}
 
 ### AST
     (itemize
@@ -253,11 +253,11 @@ Match-test "3"
 
 ### Test-code:
     \begin{itemize}
-    \item Items can consist of
+        \item Items can consist of
     
-    several paragraphs.
-    \item Or of one paragraph
-    \end{itemize}
+              several paragraphs.
+        \item Or of one paragraph
+        \end{itemize}
 
 ### AST
     (itemize)
@@ -268,9 +268,9 @@ Match-test "4"
 ### Test-code:
     \begin{itemize}
     \item
-    \begin{itemize}
-    \item Item-lists can be nested!
-    \end{itemize}
+      \begin{itemize}
+        \item Item-lists can be nested!
+      \end{itemize}
     \end{itemize}
 
 ### AST
@@ -346,14 +346,14 @@ Match-test "2"
 ### Test-code:
     \begin{enumerate}
     \item \begin{itemize}
-    \item Item-lists and
-    \item Enumeration-lists
-    \begin{enumerate}
-    \item can be nested
-    \item arbitrarily
-    \end{enumerate}
-    \item Another item
-    \end{itemize}
+          \item Item-lists and
+          \item Enumeration-lists
+             \begin{enumerate}
+                \item can be nested
+                \item arbitrarily
+             \end{enumerate}
+          \item Another item
+          \end{itemize}
     \item Plain numerated item.
     \end{enumerate}
 
@@ -367,18 +367,18 @@ Match-test "3"
     \begin{enumerate} % comment
     
     
-    % more comments and paragraph separators
-    % yet some more
+        % more comments and paragraph separators
+        % yet some more
     
     
-    \item %another comment
-    finally, the first item
+        \item %another comment
+              finally, the first item
     
     
-    % comment
+        % comment
     
     
-    \end{enumerate}
+        \end{enumerate}
 
 ### AST
     (enumerate
@@ -399,13 +399,13 @@ Match-test "4"
 
 ### Test-code:
     \begin{enumerate}
-    \item An item
+        \item An item
     
-    \begin{itemize}
-    \item with an enumeration
-    \end{itemize}
-    as a separate paragraph
-    \end{enumerate}
+              \begin{itemize}
+              \item with an enumeration
+              \end{itemize}
+             as a separate paragraph
+        \end{enumerate}
 
 ### AST
     (enumerate

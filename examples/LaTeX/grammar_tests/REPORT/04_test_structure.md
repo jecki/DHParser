@@ -10,9 +10,9 @@ Match-test "1"
 ### Test-code:
     \subparagraph{A subparagraph} with some text
     
-    and consisting of several
+        and consisting of several
     
-    real paragraphs
+        real paragraphs
 
 ### AST
     (SubParagraph
@@ -64,15 +64,15 @@ Match-test "1"
 ### Test-code:
     \paragraph{A paragraph consisting of several subparagraphs}
     
-    Some text ahead
+        Some text ahead
     
-    \subparagraph{subparagraph 1}
+        \subparagraph{subparagraph 1}
     
-    First subparagraph
+        First subparagraph
     
-    \subparagraph{subparagraph 2}
+        \subparagraph{subparagraph 2}
     
-    Second subparagraph
+        Second subparagraph
 
 ### AST
     (Paragraph
@@ -149,25 +149,25 @@ Match-test "1"
 
 ### Test-code:
     \chapter{Chapter 1}
-    \section{Section 1}
-    \section{Section 2}
+        \section{Section 1}
+        \section{Section 2}
     
-    Section 2 contains some text
+        Section 2 contains some text
     
-    \section{Section 3}
-    \subsection{SubSection 1}
-    Text for subsection 1
-    \subsection{SubSection 2}
-    Text for subsection 2
+        \section{Section 3}
+        \subsection{SubSection 1}
+        Text for subsection 1
+        \subsection{SubSection 2}
+        Text for subsection 2
     
-    \subsubsection{A subsubsection}
-    Text for subsubsecion
+        \subsubsection{A subsubsection}
+        Text for subsubsecion
     
-    \section{Section 4}
+        \section{Section 4}
     
-    \chapter{Chapter 2}
+        \chapter{Chapter 2}
     
-    Some text for chapter 2
+        Some text for chapter 2
 
 ### AST
     (Chapters

@@ -7,10 +7,10 @@
 #######################################################################
 
 
-from functools import partial
 import os
 import sys
 import webbrowser
+from functools import partial
 
 sys.path.extend(['../', '../../'])
 
@@ -18,20 +18,15 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    last_value, counterpart, accumulate, PreprocessorFunc, \
+from DHParser import is_filename, Grammar, Compiler, Lookahead, Alternative, Token, Synonym, AllOf, \
+    SomeOf, \
+    Option, OneOrMore, RegExp, Series, RE, ZeroOrMore, Forward, NegativeLookahead, mixin_comment, \
+    compile_source, \
+    PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
-    traverse, remove_children_if, merge_children, is_anonymous, \
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, \
-    remove_brackets, replace_parser, traverse_locally, remove_nodes, \
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    lstrip, rstrip, strip, keep_nodes, remove_anonymous_empty, has_parent, MockParser
+    traverse, reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
+    remove_tokens, flatten, is_expendable, collapse, traverse_locally, remove_nodes, \
+    has_content, strip, keep_nodes, remove_anonymous_empty, MockParser
 from DHParser.log import logging
 
 
@@ -129,7 +124,7 @@ class MLWGrammar(Grammar):
     #### ETYMOLOGIE-POSITION #####################################################
     
     EtymologiePosition = ZWW "ETYMOLOGIE" [LZ] { EtymologieVariante }+
-    EtymologieVariante = LAT | GRI [EtymologieBesonderheit] ["ETYM" Etymologie] DPP Beleg
+    EtymologieVariante = (LAT | GRI) [EtymologieBesonderheit] [DPP [LZ] Etymologie] DPP Beleg
     EtymologieBesonderheit = EINZEILER
     Etymologie         = EINZEILER
     
@@ -326,7 +321,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "e14c9e38e16ad15f7e15cca038fdd8b7"
+    source_hash__ = "59b9cf3ee2f5a4bb0c8396422e102f32"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -447,7 +442,8 @@ class MLWGrammar(Grammar):
     ArtikelKopf = SomeOf(SchreibweisenPosition, StrukturPosition, GebrauchsPosition, MetrikPosition, VerwechselungsPosition)
     Etymologie = Synonym(EINZEILER)
     EtymologieBesonderheit = Synonym(EINZEILER)
-    EtymologieVariante = Alternative(LAT, Series(GRI, Option(EtymologieBesonderheit), Option(Series(Token("ETYM"), Etymologie)), DPP, Beleg))
+    EtymologieVariante = Series(Alternative(LAT, GRI), Option(EtymologieBesonderheit),
+                                Option(Series(DPP, Option(LZ), Etymologie)), DPP, Beleg)
     EtymologiePosition = Series(ZWW, Token("ETYMOLOGIE"), Option(LZ), OneOrMore(EtymologieVariante))
     GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(Series(Option(Token(";")), genus)), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
     neutrum = Alternative(Token("neutrum"), Token("n."))
