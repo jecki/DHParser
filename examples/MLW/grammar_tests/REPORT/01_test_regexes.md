@@ -115,7 +115,7 @@ Match-test "M4"
     
         /* Kommentar
     
-           Kommentar fortsetzung */
+        Kommentar fortsetzung */
 
 ### AST
     (LEERZEILE
@@ -127,7 +127,7 @@ Match-test "M4"
         (:Whitespace
             "    /* Kommentar"
             ""
-            "       Kommentar fortsetzung */"
+            "    Kommentar fortsetzung */"
         )
     )
 

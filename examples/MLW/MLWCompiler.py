@@ -442,8 +442,7 @@ class MLWGrammar(Grammar):
     ArtikelKopf = SomeOf(SchreibweisenPosition, StrukturPosition, GebrauchsPosition, MetrikPosition, VerwechselungsPosition)
     Etymologie = Synonym(EINZEILER)
     EtymologieBesonderheit = Synonym(EINZEILER)
-    EtymologieVariante = Series(Alternative(LAT, GRI), Option(EtymologieBesonderheit),
-                                Option(Series(DPP, Option(LZ), Etymologie)), DPP, Beleg)
+    EtymologieVariante = Series(Alternative(LAT, GRI), Option(EtymologieBesonderheit), Option(Series(DPP, Option(LZ), Etymologie)), DPP, Beleg)
     EtymologiePosition = Series(ZWW, Token("ETYMOLOGIE"), Option(LZ), OneOrMore(EtymologieVariante))
     GrammatikVariante = Series(Option(Series(wortart, ABS)), flexion, Option(Series(Option(Token(";")), genus)), DPP, Beleg, ZeroOrMore(Series(FORTSETZUNG, Beleg)))
     neutrum = Alternative(Token("neutrum"), Token("n."))
@@ -531,6 +530,7 @@ MLW_AST_transformation_table = {
     "SWTyp": [replace_or_reduce],
     "SWVariante": [],
     "Schreibweise": [replace_by_single_child],
+    "Kategorien": [flatten],
     "Kategorie": [],
     "Varianten": [flatten],
     "Variante": [],
