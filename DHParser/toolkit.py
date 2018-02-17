@@ -47,7 +47,7 @@ except ImportError:
     import DHParser.foreign_typing as typing
     sys.modules['typing'] = typing  # make it possible to import from typing
 
-from typing import Any, Iterable, Sequence, Set, Union, cast
+from typing import Any, Iterable, Sequence, Set, Union, Dict, cast
 
 __all__ = ('escape_re',
            'escape_control_characters',
@@ -267,7 +267,7 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
         return [arg]
 
 
-def expand_table(compact_table):
+def expand_table(compact_table: Dict) -> Dict:
     """Expands a table by separating keywords that are tuples or strings
     containing comma separated words into single keyword entries with
     the same values. Returns the expanded table.

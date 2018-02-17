@@ -27,7 +27,6 @@ sys.path.extend(['../../', '../', './'])
 
 from DHParser import dsl
 from DHParser import testing
-from DHParser import toolkit
 
 if not dsl.recompile_grammar('MLW.ebnf', force=True):  # recompiles Grammar only if it has changed
     with open('MLW_ebnf_ERRORS.txt') as f:
@@ -36,7 +35,7 @@ if not dsl.recompile_grammar('MLW.ebnf', force=True):  # recompiles Grammar only
 
 from MLWCompiler import get_grammar, get_transformer
 
-with DHParser.log.logging(True):
+with DHParser.log.logging(False):
     error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
                                          fn_patterns=['*_test*'],
                                          verbose=True)

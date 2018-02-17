@@ -91,13 +91,14 @@ VerwechselungsPosition = ZWW "VERWECHSELBAR" Position
 
 ## ARTIKELKOPF POSITIONEN ##
 
-Position       = [LZ] §Kategorien
+Position       = [LZ] §(Kategorien | Besonderheiten)
 Kategorien     = Kategorie { ZWW Kategorie }
-Kategorie      = Besonderheit §DPP [LZ] ( Varianten | Kategorien )
-Besonderheit   = EINZEILER
+Kategorie      = Beschreibung DPP [LZ] Besonderheiten
+Besonderheiten = Besonderheit { ZWW Besonderheit }
+Besonderheit   = Beschreibung DPP [LZ] Varianten
 Varianten      = Variante { ZWW Variante }
-Variante       = !KATEGORIENZEILE Gegenstand DPP Belege
-Gegenstand     = EINZEILER
+Variante       = !KATEGORIENZEILE Beschreibung DPP Belege
+Beschreibung   = EINZEILER
 
 
 #### BEDEUTUNGS-POSITION #####################################################
@@ -179,10 +180,7 @@ BelegStelle      = [<Anker | Zusatz>] (Stelle [[ZW] BelegText] | Verweis) [[ZW] 
 BelegText        = /"/ { MEHRZEILER | Anker | Zusatz } §/"/~ ["."]
 
 AutorWerk = EINZEILER
-Werk      = EINZEILER
 Stelle    = EINZEILER
-Datierung = EINZEILER
-Edition   = EINZEILER
 
 
 #### VERWEISE (LINKS) ########################################################

@@ -60,7 +60,7 @@ Match-test "M1"
             ""
             ""
         )
-        (:Whitespace
+        (:RE
             "    "
         )
     )
@@ -80,7 +80,7 @@ Match-test "M2"
             ""
             ""
         )
-        (:Whitespace
+        (:RE
             "    // Kommentar"
         )
     )
@@ -102,7 +102,7 @@ Match-test "M3"
             ""
             ""
         )
-        (:Whitespace
+        (:RE
             "    "
         )
     )
@@ -124,7 +124,7 @@ Match-test "M4"
             ""
             ""
         )
-        (:Whitespace
+        (:RE
             "    /* Kommentar"
             ""
             "    Kommentar fortsetzung */"
@@ -171,7 +171,7 @@ Match-test "M1"
                 ""
                 ""
             )
-            (:Whitespace
+            (:RE
                 "    "
             )
         )
@@ -226,7 +226,7 @@ Match-test "M3"
                 ""
                 ""
             )
-            (:Whitespace
+            (:RE
                 "    "
             )
         )
@@ -300,7 +300,7 @@ Match-test "M5"
                 ""
                 ""
             )
-            (:Whitespace
+            (:RE
                 "    // Kommentar"
             )
         )

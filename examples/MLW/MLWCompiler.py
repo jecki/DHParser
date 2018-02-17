@@ -145,13 +145,14 @@ class MLWGrammar(Grammar):
     
     ## ARTIKELKOPF POSITIONEN ##
     
-    Position       = [LZ] §Kategorien
+    Position       = [LZ] §(Kategorien | Besonderheiten)
     Kategorien     = Kategorie { ZWW Kategorie }
-    Kategorie      = Besonderheit §DPP [LZ] ( Varianten | Kategorien )
-    Besonderheit   = EINZEILER
+    Kategorie      = Beschreibung DPP [LZ] Besonderheiten
+    Besonderheiten = Besonderheit { ZWW Besonderheit }
+    Besonderheit   = Beschreibung DPP [LZ] Varianten
     Varianten      = Variante { ZWW Variante }
-    Variante       = !KATEGORIENZEILE Gegenstand DPP Belege
-    Gegenstand     = EINZEILER
+    Variante       = !KATEGORIENZEILE Beschreibung DPP Belege
+    Beschreibung   = EINZEILER
     
     
     #### BEDEUTUNGS-POSITION #####################################################
@@ -233,10 +234,7 @@ class MLWGrammar(Grammar):
     BelegText        = /"/ { MEHRZEILER | Anker | Zusatz } §/"/~ ["."]
     
     AutorWerk = EINZEILER
-    Werk      = EINZEILER
     Stelle    = EINZEILER
-    Datierung = EINZEILER
-    Edition   = EINZEILER
     
     
     #### VERWEISE (LINKS) ########################################################
@@ -308,7 +306,6 @@ class MLWGrammar(Grammar):
     DEU_WORT = Forward()
     FREITEXT = Forward()
     GROSSSCHRIFT = Forward()
-    Kategorien = Forward()
     LZ = Forward()
     LemmaWort = Forward()
     ROEMISCHE_ZAHL = Forward()
@@ -321,7 +318,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "59b9cf3ee2f5a4bb0c8396422e102f32"
+    source_hash__ = "17e7d9c6b771eb2fa259912b687f8677"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'
@@ -375,10 +372,7 @@ class MLWGrammar(Grammar):
     Anker = Series(Token("{"), Token("@"), ziel, Token("}"), mandatory=2)
     VerweisKern = Series(Token("=>"), Alternative(Series(alias, Token("|"), Alternative(Token("-"), URL)), URL), mandatory=1)
     Verweis = Series(Token("{"), VerweisKern, Token("}"))
-    Edition = Synonym(EINZEILER)
-    Datierung = Synonym(EINZEILER)
     Stelle = Synonym(EINZEILER)
-    Werk = Synonym(EINZEILER)
     AutorWerk = Synonym(EINZEILER)
     BelegText = Series(RegExp('"'), ZeroOrMore(Alternative(MEHRZEILER, Anker, Zusatz)), RE('"'), Option(Token(".")), mandatory=2)
     BelegStelle = Series(Option(SomeOf(Anker, Zusatz)), Alternative(Series(Stelle, Option(Series(Option(ZW), BelegText))), Verweis), Option(Series(Option(ZW), Zusatz)))
@@ -427,13 +421,14 @@ class MLWGrammar(Grammar):
     U2Bedeutung = OneOrMore(Series(ZWW, Alternative(Token("UU_BEDEUTUNG"), Token("UNTER_UNTER_BEDEUTUNG")), Option(LZ), Bedeutung, Option(U3Bedeutung), mandatory=3))
     U1Bedeutung = OneOrMore(Series(ZWW, Alternative(Token("U_BEDEUTUNG"), Token("UNTER_BEDEUTUNG")), Option(LZ), Bedeutung, Option(U2Bedeutung), mandatory=3))
     BedeutungsPosition = OneOrMore(Series(ZWW, Token("BEDEUTUNG"), Option(LZ), Bedeutung, Option(U1Bedeutung), mandatory=3))
-    Gegenstand = Synonym(EINZEILER)
-    Variante = Series(NegativeLookahead(KATEGORIENZEILE), Gegenstand, DPP, Belege)
+    Beschreibung = Synonym(EINZEILER)
+    Variante = Series(NegativeLookahead(KATEGORIENZEILE), Beschreibung, DPP, Belege)
     Varianten = Series(Variante, ZeroOrMore(Series(ZWW, Variante)))
-    Besonderheit = Synonym(EINZEILER)
-    Kategorie = Series(Besonderheit, DPP, Option(LZ), Alternative(Varianten, Kategorien), mandatory=1)
-    Kategorien.set(Series(Kategorie, ZeroOrMore(Series(ZWW, Kategorie))))
-    Position = Series(Option(LZ), Kategorien, mandatory=1)
+    Besonderheit = Series(Beschreibung, DPP, Option(LZ), Varianten)
+    Besonderheiten = Series(Besonderheit, ZeroOrMore(Series(ZWW, Besonderheit)))
+    Kategorie = Series(Beschreibung, DPP, Option(LZ), Besonderheiten)
+    Kategorien = Series(Kategorie, ZeroOrMore(Series(ZWW, Kategorie)))
+    Position = Series(Option(LZ), Alternative(Kategorien, Besonderheiten), mandatory=1)
     VerwechselungsPosition = Series(ZWW, Token("VERWECHSELBAR"), Position)
     MetrikPosition = Series(ZWW, Token("METRIK"), Position)
     GebrauchsPosition = Series(ZWW, Token("GEBRAUCH"), Position)
@@ -500,7 +495,7 @@ MLW_AST_transformation_table = {
     # AST Transformations for the MLW-grammar
     "+": [remove_anonymous_empty, remove_nodes('ZWW', 'ZW', 'LZ', 'DPP', 'COMMENT__', 'ABS', 'SEM', 'TR'),
           remove_tokens(":")],
-    "Autor": [reduce_single_child],
+    "AutorWerk": [reduce_single_child],
     "Artikel": [],
     "LemmaPosition": [],
     "Lemma": [],
@@ -509,11 +504,8 @@ MLW_AST_transformation_table = {
     "LemmaWort": [reduce_single_child],
     "LemmaVariante": [reduce_single_child, traverse_locally(LemmaVariante_table)],
     "LemmaVarianten": [flatten],
-    "LemmaZusatz": [],
-    "lzs_typ": [],
     "GrammatikPosition": [flatten],
     "wortart": [replace_or_reduce],
-    "GrammatikVarianten": [],
     "flexion": [],
     "deklination": [],
     "konjugation": [],
@@ -522,19 +514,15 @@ MLW_AST_transformation_table = {
     "nomen, verb, adverb, adjektiv, praeposition": [content_from_parser_name],
     "maskulinum, femininum, neutrum": [content_from_parser_name],
     "EtymologiePosition": [],
-    "EtymologieVarianten": [],
     "EtymologieVariante": [],
     "ArtikelKopf": [replace_by_single_child],
     "SchreibweisenPosition, StrukturPosition, VerwechselungsPosition, GebrauchsPosition":
         [],
-    "SWTyp": [replace_or_reduce],
-    "SWVariante": [],
-    "Schreibweise": [replace_by_single_child],
     "Kategorien": [flatten],
     "Kategorie": [],
     "Varianten": [flatten],
     "Variante": [],
-    "Gegenstand": [reduce_single_child],
+    "Beschreibung": [reduce_single_child],
     "Besonderheit": [reduce_single_child],
     "BedeutungsPosition": [flatten, remove_tokens("BEDEUTUNG")],
     "Bedeutung": [],
@@ -554,7 +542,6 @@ MLW_AST_transformation_table = {
     "LateinischesWort, DeutschesWort": [strip, collapse],
     "Belege": [flatten],
     "Beleg": [],
-    "EinBeleg": [],
     "Zitat": [flatten],
     "Zusatz": [reduce_single_child, flatten],
     "ArtikelVerfasser": [],
@@ -564,15 +551,10 @@ MLW_AST_transformation_table = {
     "GebrauchsHinweis, PlurSingHinweis": [remove_whitespace, reduce_single_child],
     "Name": [collapse],
     "Stelle": [collapse],
-    "SW_LAT": [replace_or_reduce],
-    "SW_DEU": [replace_or_reduce],
-    "SW_GRIECH": [replace_or_reduce],
     "Verweis": [],
     "VerweisKern": [flatten],
     "pfad, ziel": [reduce_single_child], # [apply_if(replace_content(lambda s: ''), has_parent("URL"))],
     "Anker": [reduce_single_child],
-    "Werk": [reduce_single_child],
-    "ZielName": [replace_by_single_child],
     "URL": [flatten, keep_nodes('protokoll', 'domäne', 'pfad', 'ziel'), replace_by_single_child],
     "NAMENS_ABKÜRZUNG": [],
     "NAME": [],
@@ -580,9 +562,7 @@ MLW_AST_transformation_table = {
     "DEU_GROSS": [reduce_single_child],
     "DEU_KLEIN": [reduce_single_child],
     "LAT_WORT": [reduce_single_child],
-    "LAT_WORT_TEIL": [],
     "GROSSSCHRIFT": [],
-    "GROSSFOLGE": [],
     "BUCHSTABENFOLGE": [],
     "EINZEILER, FREITEXT, MEHRZEILER": [strip, collapse],
     "ZEICHENFOLGE": [],
@@ -592,7 +572,6 @@ MLW_AST_transformation_table = {
     "ZW": [],
     "ZWW": [],
     "LÜCKE": [],
-    "LEERRAUM": [],
     "LEERZEILE": [],
     "RZS": [],
     "ZEILENSPRUNG": [],
@@ -600,7 +579,7 @@ MLW_AST_transformation_table = {
     "DATEI_ENDE": [],
     "NIEMALS": [],
     ":Token": [remove_whitespace, reduce_single_child],
-    "RE": reduce_single_child,
+    ":RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

@@ -26,12 +26,12 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
+from DHParser.log import logging
 from DHParser.parse import Grammar, Compiler, compile_source
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc
 from DHParser.toolkit import load_if_file, is_python_code, compile_python_object, \
     re
-from DHParser.log import logging
 
 __all__ = ('DHPARSER_IMPORTS',
            'GrammarError',
@@ -84,7 +84,8 @@ from DHParser import logging, is_filename, load_if_file, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, \\
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
+    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \\
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip
 '''
 
 
@@ -296,7 +297,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         Tuple[PreprocessorFactoryFunc, ParserFactoryFunc,
               TransformerFactoryFunc, CompilerFactoryFunc]:
     """
-    Extracts a compiler suite from file or string ``compiler suite``
+    Extracts a compiler suite from file or string `compiler_suite`
     and returns it as a tuple (preprocessor, parser, ast, compiler).
 
     Returns:
@@ -442,6 +443,10 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             source = f.read()
             sections = RX_SECTION_MARKER.split(source)
             intro, imports, preprocessor, parser, ast, compiler, outro = sections
+            # TODO: Verify transformation table
+            ast_trans_table = compile_python_object(DHPARSER_IMPORTS + ast,
+                                                    r'(?:\w+_)?AST_transformation_table$')
+            messages.extend(ebnf_compiler.verify_transformation_table(ast_trans_table))
         except (PermissionError, FileNotFoundError, IOError) as error:
             intro, imports, preprocessor, parser, ast, compiler, outro = '', '', '', '', '', '', ''
         except ValueError as error:

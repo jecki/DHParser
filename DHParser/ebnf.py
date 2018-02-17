@@ -27,7 +27,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, RE, \
     Compiler
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table
 from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
@@ -474,6 +474,18 @@ class EBNFCompiler(Compiler):
                              '    #     return node', '']
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
+
+    def verify_transformation_table(self, transtable):
+        assert self._dirty_flag
+        table_entries = set(expand_table(transtable).keys()) - {'*', '+', '~'}
+        symbols = self.rules.keys()
+        messages = []
+        for entry in table_entries:
+            if entry not in symbols and not entry.startswith(":"):
+                messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
+                                       'the transformation table!') % (entry, self.grammar_name),
+                                      Error.UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE))
+        return messages
 
 
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:

@@ -61,18 +61,18 @@ https://epsil.github.io/gll/
 
 import copy
 import os
+from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
 
 from DHParser.error import Error, is_error, linebreaks, adjust_error_locations
+from DHParser.log import is_logging, logfile_basename, HistoryRecord, log_ST, \
+    log_parsing_history
+from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, \
+    PreprocessorFunc, with_source_mapping, strip_tokens
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, TransformationFunc, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
-from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, \
-    PreprocessorFunc, with_source_mapping, strip_tokens
 from DHParser.toolkit import sane_parser_name, \
     escape_control_characters, load_if_file, re
-from DHParser.log import log_dir, is_logging, logfile_basename, HistoryRecord, log_ST, \
-    log_parsing_history
-from typing import Any, Callable, cast, Dict, List, Set, Tuple, Union, Optional
 
 __all__ = ('Parser',
            'UnknownParserError',
@@ -1931,11 +1931,11 @@ class Compiler:
 
     def __init__(self, grammar_name="", grammar_source=""):
         self._reset()
-        self._dirty_flag = False
         self.set_grammar_name(grammar_name, grammar_source)
 
     def _reset(self):
         self.context = []  # type: List[Node]
+        self._dirty_flag = False
 
     def __call__(self, node: Node) -> Any:
         """
@@ -1947,8 +1947,7 @@ class Compiler:
         """
         if self._dirty_flag:
             self._reset()
-        else:
-            self._dirty_flag = True
+        self._dirty_flag = True
         result = self.compile(node)
         self.propagate_error_flags(node, lazy=True)
         return result
