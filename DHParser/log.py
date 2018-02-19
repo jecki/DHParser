@@ -33,13 +33,12 @@ import collections
 import contextlib
 import html
 import os
+from typing import List, Union
 
 from DHParser.error import line_col
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE
-from DHParser.toolkit import is_filename, escape_control_characters, typing
-
-from typing import List, Union
+from DHParser.toolkit import is_filename, escape_control_characters
 
 __all__ = ('log_dir',
            'logging',
@@ -88,7 +87,7 @@ def log_dir() -> str:
             pass
     info_file_name = os.path.join(dirname, 'info.txt')
     if not os.path.exists(info_file_name):
-        with open(info_file_name, 'w') as f:
+        with open(info_file_name, 'w', encoding="utf-8") as f:
             f.write("This directory has been created by DHParser to store log files from\n"
                     "parsing. ANY FILE IN THIS DIRECTORY CAN BE OVERWRITTEN! Therefore,\n"
                     "do not place any files here and do not bother editing files in this\n"

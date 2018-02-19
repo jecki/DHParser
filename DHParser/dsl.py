@@ -546,7 +546,7 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
         messages = compile_on_disk(ebnf_filename)
         if messages:
             # print("Errors while compiling: " + ebnf_filename + '!')
-            with open(error_file_name, 'w', encoding="UTF-8") as f:
+            with open(error_file_name, 'w', encoding="utf-8") as f:
                 for e in messages:
                     f.write(str(e))
                     f.write('\n')

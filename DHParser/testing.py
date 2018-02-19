@@ -81,7 +81,7 @@ def unit_from_configfile(config_filename):
             m = RX_COMMENT.match(txt, pos)
         return pos
 
-    with open(config_filename, 'r') as f:
+    with open(config_filename, 'r', encoding="utf-8") as f:
         cfg = f.read()
         cfg = cfg.replace('\t', '    ')
 
