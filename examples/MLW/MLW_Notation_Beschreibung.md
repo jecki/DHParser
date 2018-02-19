@@ -153,7 +153,78 @@ Die allgemeine Form lautet:
             
 ### Artikelkopf-Positionen
 
-Alle Positionen im Artikelkopf (Etymologie-Position, Schreibweisen-Position,
+Alle Positionen im Artikelkopf (*Etymologie-Position, Schreibweisen-Position,
 Struktur-Position, Gebrauchs-Position, Metrik-Position, 
-Verwechselungs-Position) sind nach ein- und demselben Schema aufgebaut.
+Verwechselungs-Position*) sind nach ein- und demselben Schema aufgebaut:
 
+Am Anfang steht ein Schlüsselwort, das anzeigt, um welche Artikelkopf-Position
+es sich handelt, z.B. SCHREIBWEISE, danach folgen ein oder mehrere 
+*Besonderheiten* und für jede Besonderheit ein oder mehrere *Varianten* 
+mit *Belegen*. Die Varianten einer Besonderheit können (müssen aber nicht) 
+wiederum verschiedenen Unterkategorien zugeordnet sein.
+
+Beispiel 1:
+
+    SCHREIBWEISE
+    script.:
+		hym-:   {=> ziel_1}
+        em-:    Chron. Fred.; 2,35sqq. capit.; p. 43.; 2,36 p. 60,10.
+        ym-:    Chart. Sangall.; A 194.
+        impir-: {=> ziel_2}
+        
+Hier ist "script." die Bezeichnung einer Besonderheit, während "hym-", "em-",
+"ym-", "impir-" jeweils Varianten dieser Besonderheit repräsentieren. Die
+auf die Varianten folgenden Belge können entweder Verweise (z.B: "{=> ziel_1}"),
+die auf eine frei vergebene Sprungmarke verweisen sein (siehe weiter unten die 
+Erklärungen zu "Verweise") oder Belegstellen, bei denen immer ein Werk gefolgt
+von Stellenangaben und ggf. Zitaten angegeben wird. Das genaue Format wird weiter
+unten unter "Belege" näher beschrieben.
+
+Beispiel 2:
+
+    STRUKTUR
+        form. sing.:
+            gen.:
+                -ri: * {=> ziel_3}
+                     * {adde} Annal. Plac. a.; 1266; p. 516,21.
+                -iae: Chron. Fred.; 2,33.; p. 56,22. 2,35.
+            abl.:
+                -um: Chron. Fred.; 2,15. 2,35sqq. capit.; p. 43.
+
+Bei diesem Beispiel ist "form. sing." eine Besonderheit, die die Unterkategorien
+"gen." und "abl." enthält. 
+
+Man beachte, dass für die Variante "-ri" unterhalb von
+"gen." mehrere Belege angegeben sind. Sobald mehr als ein Beleg angeben ist, 
+muss jeder neue Beleg durch einen Stern "*" eigeleitet werden. Als ein Beleg zählt
+dabei ein Verweis oder ein Werk mit möglicherweise mehreren Stellenangaben. 
+Eine weitere Stellenangabe innerhalb eines Werks darf nicht mit einem Stern 
+eingeleitet werden, sondern wird von der vorhergehenden Stellenangabe oder vom Werk
+mit einem einfachen Semikolon abgetrennt.
+
+Die allgemeine Form für Artikelkopf-Positionen kan man grob so darstellen:
+
+    SCHLÜSSELWORT
+        Besonderheit :
+            [Unterkategorie :]
+                Variante : Beleg
+                   .
+                   .
+                   .
+           .
+           .
+           .
+
+Die Einrückungen sind übrigens nicht zwingend. Sie helfen aber besonders bei den
+Positionen im Artikelkopf, die Übersicht zu behalten. 
+
+### Bedeutungsposition
+
+Die Bedeutungsposition besteht aus einer Folge von Bedeutungs-, 
+Unterbedeutungs-, Unterunterbedeutungs-, ...-Blöcken, die bis zu
+sechs Ebenen tief verschachtelt werden können.
+
+Wie schon die anderen Abschnitte des Wörterbuchartikels wird jeder 
+Bedeutungsblock durch ein Schlüsselwort eingeleitet.  
+Auf der obersten Bedeutungsebene ist das das Schlüsselwort "BEDEUTUNG".
+Tiefere Bedeutungsebenenen 

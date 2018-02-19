@@ -35,7 +35,7 @@ from DHParser.log import log_parsing_history
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
-    with open('LaTeX_ebnf_ERRORS.txt') as f:
+    with open('LaTeX_ebnf_ERRORS.txt', encoding="utf-8") as f:
         print(f.read())
     sys.exit(1)
 
