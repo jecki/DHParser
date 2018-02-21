@@ -54,7 +54,7 @@ SECTION_MARKER = """\n
 \n"""
 
 RX_SECTION_MARKER = re.compile(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
-RX_WHITESPACE = re.compile('\s*')
+RX_WHITESPACE = re.compile(r'\s*')
 
 SYMBOLS_SECTION = "SYMBOLS SECTION - Can be edited. Changes will be preserved."
 PREPROCESSOR_SECTION = "PREPROCESSOR SECTION - Can be edited. Changes will be preserved."
@@ -97,8 +97,8 @@ def compile_src(source, log_dir=''):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
         log_file_name = os.path.basename(os.path.splitext(source)[0]) \\
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_preprocessor(), 
+            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+        result = compile_source(source, get_preprocessor(),
                                 get_grammar(),
                                 get_transformer(), compiler)
     return result
@@ -320,7 +320,8 @@ def load_compiler_suite(compiler_suite: str) -> \
         parser = compile_python_object(imports + parser_py, r'get_(?:\w+_)?grammar$')
         ast = compile_python_object(imports + ast_py, r'get_(?:\w+_)?transformer$')
     else:
-        # assume source is an ebnf grammar. Is there really any reasonable application case for this?
+        # Assume source is an ebnf grammar.
+        # Is there really any reasonable application case for this?
         with logging(False):
             compiler_py, messages, n = compile_source(source, None, get_ebnf_grammar(),
                                                       get_ebnf_transformer(), get_ebnf_compiler())
@@ -397,7 +398,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     need to be delimited section marker blocks.). `compile_on_disk()`
     returns a list of error messages or an empty list if no errors
     occurred.
-    
+
     Parameters:
         source_file(str):  The file name of the source text to be
             compiled.
@@ -432,7 +433,9 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     if has_errors(messages):
         return messages
 
-    elif cfactory == get_ebnf_compiler:  # trans == get_ebnf_transformer or trans == EBNFTransformer:  # either an EBNF- or no compiler suite given
+    elif cfactory == get_ebnf_compiler:
+        # trans == get_ebnf_transformer or trans == EBNFTransformer:
+        # either an EBNF- or no compiler suite given
         ebnf_compiler = cast(EBNFCompiler, compiler1)
         global SECTION_MARKER, RX_SECTION_MARKER, PREPROCESSOR_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
@@ -491,7 +494,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                   + "\n# ".join(str(error).split('\n)')))
             print(result)
         finally:
-            if f:  f.close()
+            if f:
+                f.close()
 
     else:
         f = None

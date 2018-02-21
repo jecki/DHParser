@@ -186,7 +186,7 @@ class HistoryRecord:
 
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col style="width:75"/>' \
                '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>\n'
-    HTML_LEAD_IN  = (
+    HTML_LEAD_IN = (
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
         'td.line, td.column {font-family:monospace;color:darkgrey}\n'
         'td.stack{font-family:monospace}\n'
@@ -221,6 +221,7 @@ class HistoryRecord:
         """
         return self.Snapshot(self.line_col[0], self.line_col[1],
                              self.stack, self.status, self.excerpt)
+
     def as_csv_line(self) -> str:
         """
         Returns history record formatted as a csv table row.
@@ -249,7 +250,7 @@ class HistoryRecord:
                     stack = stack[:i] + '<span class="matchstack">' + stack[i:]
                 else:
                     stack = stack[:i] + '<span class="matchstack">' + stack[i:k] \
-                            + '</span>' + stack[k:]
+                        + '</span>' + stack[k:]
         elif status == self.FAIL:
             status = '<span class="fail">' + status + '</span>'
         else:
@@ -273,7 +274,8 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            ('"%s"' % self.err_msg()) if self.node.error_flag else self.MATCH  # has_errors(self.node._errors)
+            ('"%s"' % self.err_msg()) if self.node.error_flag else self.MATCH
+            # has_errors(self.node._errors)
 
     @property
     def excerpt(self):

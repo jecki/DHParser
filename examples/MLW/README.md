@@ -9,6 +9,4 @@ This directory contains the components for two kinds of DSLs for the
    for the "Mittellateinisches Wörterbuch". The DSL texts will be converted
    to an XML data model.
 
-2. MLW_RETRO: A grammar for the retrodigitalisation of existing dictionary
-   entries in ASCII-Format. This is very experimental...
 

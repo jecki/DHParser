@@ -71,17 +71,20 @@ class EBNFGrammar(Grammar):
 
     # EBNF-Grammar in EBNF
 
-    @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace =  /\s*/                            # whitespace includes linefeed
-    @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
+    @ comment    =  /#.*(?:\n|$)/                # comments start with '#' and
+                                                 # eat all chars up to and including '\n'
+    @ whitespace =  /\s*/                        # whitespace includes linefeed
+    @ literalws  =  right                        # trailing whitespace of literals will be
+                                                 # ignored tacitly
 
     syntax     =  [~//] { definition | directive } §EOF
     definition =  symbol §"=" expression
     directive  =  "@" §symbol "=" ( regexp | literal | list_ )
 
     expression =  term { "|" term }
-    term       =  { ["§"] factor }+                       # "§" means all following factors mandatory
-    factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+    term       =  { ["§"] factor }+               # "§" means all following factors mandatory
+    factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure
+                                                          # it's not a definition
                 | [flowmarker] literal
                 | [flowmarker] regexp
                 | [flowmarker] oneormore
@@ -90,24 +93,27 @@ class EBNFGrammar(Grammar):
                 | repetition
                 | option
 
-    flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-                | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
+    flowmarker =  "!"  | "&"                     # '!' negative lookahead, '&' positive lookahead
+                | "-!" | "-&"                    # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop =  "::" | ":"                     # '::' pop, ':' retrieve
 
     group      =  "(" §expression ")"
-    unordered  =  "<" §expression ">"                # elements of expression in arbitrary order
+    unordered  =  "<" §expression ">"            # elements of expression in arbitrary order
     oneormore  =  "{" expression "}+"
     repetition =  "{" §expression "}"
     option     =  "[" §expression "]"
 
-    symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-    literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                     # '~' is a whitespace-marker, if present leading or trailing
-                                                     # whitespace of a regular expression will be ignored tacitly.
-    list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                     # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+    symbol     =  /(?!\d)\w+/~                   # e.g. expression, factor, parameter_list
+    literal    =  /"(?:[^"]|\\")*?"/~            # e.g. "(", '+', 'while'
+                | /'(?:[^']|\\')*?'/~            # whitespace following literals will be ignored
+    regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                 # '~' is a whitespace-marker, if present leading
+                                                 # or trailing whitespace of a regular expression
+                                                 # will be ignored tacitly.
+    list_      =  /\w+/~ { "," /\w+/~ }          # comma separated list of symbols,
+                                                 # e.g. BEGIN_LIST, END_LIST,
+                                                 # BEGIN_QUOTE, END_QUOTE
+                                                 # see CommonMark/markdown.py for an exmaple
     EOF =  !/./
     """
     expression = Forward()
@@ -205,7 +211,8 @@ EBNF_AST_transformation_table = {
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
     "term":
-        [replace_by_single_child, flatten],  # supports both idioms:  "{ factor }+" and "factor { factor }"
+        [replace_by_single_child, flatten],  # supports both idioms:
+                                             # "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
@@ -574,7 +581,7 @@ class EBNFCompiler(Compiler):
         remove_connections(self.root_symbol)
         for leftover in defined_symbols:
             self.rules[leftover][0].add_error(
-                ('Rule "%s" is not connected to parser root "%s" !') % 
+                ('Rule "%s" is not connected to parser root "%s" !') %
                 (leftover, self.root_symbol), Error.WARNING)
 
         # set root_symbol parser and assemble python grammar definition
@@ -882,7 +889,8 @@ class EBNFCompiler(Compiler):
                 self.symbols[symbol] = node  # remember first use of symbol
             if symbol in self.rules:
                 self.recursive.add(symbol)
-            if symbol in EBNFCompiler.RESERVED_SYMBOLS:  # (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
+            if symbol in EBNFCompiler.RESERVED_SYMBOLS:
+                # (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
                 return "RegExp(%s)" % symbol
             return symbol
 

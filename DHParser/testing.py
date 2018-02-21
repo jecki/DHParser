@@ -155,7 +155,8 @@ def unit_from_file(filename):
     for parser_name, tests in test_unit.items():
         m_names = set(tests.get('match', dict()).keys())
         f_names = set(tests.get('fail', dict()).keys())
-        intersection = list(m_names & f_names);  intersection.sort()
+        intersection = list(m_names & f_names)
+        intersection.sort()
         if intersection:
             errors.append("Same names %s assigned to match and fail test "
                           "of parser %s." % (str(intersection), parser_name))
@@ -212,10 +213,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     Unit tests for a grammar-parser and ast transformations.
     """
     if isinstance(test_unit, str):
-        unit_dir, unit_name = os.path.split(os.path.splitext(test_unit)[0])
+        _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
         test_unit = unit_from_file(test_unit)
     else:
-        unit_dir = ""
         unit_name = str(id(test_unit))
     if verbose:
         print("\nUnit: " + unit_name)

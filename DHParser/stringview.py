@@ -255,10 +255,10 @@ class StringView(collections.abc.Sized):
             k = 0
             i = self.find(sep, k)
             while i >= 0:
-                pieces.append(self.text[self.begin + k : self.begin + i])
+                pieces.append(self.text[self.begin + k: self.begin + i])
                 k = i + l
                 i = self.find(sep, k)
-            pieces.append(self.text[self.begin + k : self.end])
+            pieces.append(self.text[self.begin + k: self.end])
             return pieces
 
     def replace(self, old, new):

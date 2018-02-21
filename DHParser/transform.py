@@ -251,9 +251,9 @@ def traverse(root_node: Node,
         try:
             sequence = cache[key]
         except KeyError:
-            sequence = table.get('+', []) + \
-                       table.get(key, table.get('*', [])) + \
-                       table.get('~', [])
+            sequence = table.get('+', []) \
+                + table.get(key, table.get('*', [])) \
+                + table.get('~', [])
             # '+' always called (before any other processing function)
             # '*' called for those nodes for which no (other) processing function
             #     appears in the table
@@ -359,7 +359,7 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
             i, k = 0, len(nd.children)
             while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
                 i += 1
-            while k > 0 and nd.children[k-1].parser.ptype == WHITESPACE_PTYPE:
+            while k > 0 and nd.children[k - 1].parser.ptype == WHITESPACE_PTYPE:
                 k -= 1
             return "".join(child.content for child in node.children[i:k])
         return nd.content
@@ -727,11 +727,14 @@ def remove_children_if(context: List[Node], condition: Callable):
 #         #     node.result = tuple(selection)
 
 
-remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)
+remove_whitespace = remove_children_if(is_whitespace)
+# partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
-remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)
-remove_anonymous_expendables = remove_children_if(lambda ctx: is_anonymous(ctx) and is_expendable(ctx))
+remove_expendables = remove_children_if(is_expendable)
+# partial(remove_children_if, condition=is_expendable)
+remove_anonymous_expendables = remove_children_if(lambda ctx: is_anonymous(ctx)
+                                                  and is_expendable(ctx))
 remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
 remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
 remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)

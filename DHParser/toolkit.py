@@ -17,7 +17,7 @@ permissions and limitations under the License.
 
 
 Module ``toolkit`` contains utility functions and cross-sectional
-functionality like logging support that is needed across several 
+functionality like logging support that is needed across several
 of the the other DHParser-Modules.
 
 For logging functionality, the global variable LOGGING is defined which
@@ -104,8 +104,8 @@ def lstrip_docstring(docstring: str) -> str:
 def is_filename(strg: str) -> bool:
     """Tries to guess whether string ``s`` is a file name."""
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
-           and all(strg.find(ch) < 0 for ch in '*?"<>|')
-           # and strg.find('*') < 0 and strg.find('?') < 0
+        and all(strg.find(ch) < 0 for ch in '*?"<>|')
+    #   and strg.find('*') < 0 and strg.find('?') < 0
 
 
 #######################################################################
@@ -275,7 +275,7 @@ def expand_table(compact_table: Dict) -> Dict:
     >>> expand_table({"a, b": 1, ('d','e','f'):5, "c":3})
     {'a': 1, 'b': 1, 'd': 5, 'e': 5, 'f': 5, 'c': 3}
     """
-    expanded_table = {}
+    expanded_table = {}  # type: Dict
     keys = list(compact_table.keys())
     for key in keys:
         value = compact_table[key]

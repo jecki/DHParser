@@ -30,3 +30,10 @@ DHParser/cstringview.c
 .vscode/
 DHParser.egg-info
 .noseids/
+*.build
+VERALTET
+DHParser/stringview.c
+*_ERRORS.txt
+*_WARNINGS.txt
+imperium.html
+fascitergula.html

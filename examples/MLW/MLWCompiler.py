@@ -268,11 +268,13 @@ class MLWGrammar(Grammar):
     LAT_WORT         = /(?!--)[a-z|\-_.]+/~
     GROSSSCHRIFT     = /(?!--)[A-ZÄÖÜ_\-]+/~
     ZAHL             = /[\d]+/~
-    SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.,!? ]+\})|[\d\w.]+))?/~     # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
+    SEITENZAHL       = /[\d]+(?:\^(?:(?:\{[\d\w.,!? ]+\})|[\d\w.]+))?/~
+        # Zahl mit optionale folgendem hochgestelltem Buchstaben oder Text
     ROEMISCHE_ZAHL   = /(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])/~
     SCHLUESSELWORT   = { //~ /\n/ }+ !ROEMISCHE_ZAHL /[A-ZÄÖÜ]{3,}\s+/
     
-    SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)|[`''‘’?]/~  # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
+    SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.()\[\]]+)|[`''‘’?]/~
+        # div. Satzzeichen, aber keine doppelten ,, ;; oder ::
     TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.()]+)|[`''‘’?]/~ # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und eckige Klammern
     
     BUCHSTABENFOLGE  = /\w+/~
@@ -297,7 +299,8 @@ class MLWGrammar(Grammar):
     
     ZEILENSPRUNG     = /[ \t]*\n/~
     KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
-    KATEGORIENZEILE  = /[^:\n]+[:][ \t]*\n/     # Kategorienzeilen enthalten genau einen Doppelpunkt am Ende der Zeile
+    KATEGORIENZEILE  = /[^:\n]+[:][ \t]*\n/
+        # Kategorienzeilen enthalten genau einen Doppelpunkt am Ende der Zeile
     FORTSETZUNG      = !(ZWW /[^:\n]+[:]/)
     
     DATEI_ENDE       = !/./
@@ -318,7 +321,7 @@ class MLWGrammar(Grammar):
     flexion = Forward()
     genus = Forward()
     wortart = Forward()
-    source_hash__ = "17e7d9c6b771eb2fa259912b687f8677"
+    source_hash__ = "96bc2c3d1c350e563d9cb484394fc5e2"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
     WHITESPACE__ = r'[\t ]*'

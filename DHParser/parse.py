@@ -185,7 +185,7 @@ def add_parser_guard(parser_func):
             # Mind that meomized parser calls will not appear in the history record!
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
-                remaining = len(rest)
+                # remaining = len(rest)
                 if grammar.moving_forward__ or (node and node.error_flag):  # node._errors
                     record = HistoryRecord(grammar.call_stack__, node, text)
                     grammar.history__.append(record)
@@ -685,7 +685,7 @@ class Grammar:
         if parser.name:
             # prevent overwriting instance variables or parsers of a different class
             assert parser.name not in self.__dict__ or \
-                   isinstance(self.__dict__[parser.name], parser.__class__), \
+                isinstance(self.__dict__[parser.name], parser.__class__), \
                 ('Cannot add parser "%s" because a field with the same name '
                  'already exists in grammar object!' % parser.name)
             setattr(self, parser.name, parser)
@@ -773,8 +773,8 @@ class Grammar:
                 stitches.append(Node(None, rest))
             result = Node(None, tuple(stitches)).init_pos(0)
         if any(self.variables__.values()):
-            error_str = "Capture-retrieve-stack not empty after end of parsing: " + \
-                            str(self.variables__)
+            error_str = "Capture-retrieve-stack not empty after end of parsing: " \
+                + str(self.variables__)
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
@@ -1324,7 +1324,8 @@ class Series(NaryOperator):
                     # Provide useful error messages
                     match = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(match.regs[1][0])) if match else 1
-                    node = Node(self, text_[:i]).init_pos(self.grammar.document_length__ - len(text_))
+                    node = Node(self, text_[:i]).init_pos(self.grammar.document_length__
+                                                          - len(text_))
                     node.add_error('%s expected; "%s"... found!'
                                    % (parser.repr, text_[:10].replace('\n', '\\n ')),
                                    code=Error.MANDATORY_CONTINUATION)
@@ -1361,19 +1362,19 @@ class Series(NaryOperator):
 
     def __add__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(self.parsers + other_parsers),
                       mandatory=self.combined_mandatory(self, other))
 
     def __radd__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(other_parsers + self.parsers),
                       mandatory=self.combined_mandatory(other, self))
 
     def __iadd__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
         self.mandatory = self.combined_mandatory(self, other)
         return self
@@ -1429,17 +1430,17 @@ class Alternative(NaryOperator):
 
     def __or__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(self.parsers + other_parsers))
 
     def __ror__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(other_parsers + self.parsers))
 
     def __ior__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-                        else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
         return self
 
