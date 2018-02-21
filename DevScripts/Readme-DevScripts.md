@@ -2,6 +2,7 @@ Folder "DevScripts"
 ===================
 
 This folder contains helper scripts for the development of DHParser.
+**These scripts are experimental and my be out of date!**
 
 * collect_symbols.py - Lists all exported symbols from DHParser modules
 
