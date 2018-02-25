@@ -39,6 +39,10 @@ Get them with:
 
     git clone https://gitlab.lrz.de/badw-it/DHParser
 
+There exists a mirror of this repository on github:
+https://github.com/jecki/DHParser Be aware, though, that the github-mirror
+may occasionally lag behind a few commits.
+
 Please contact me, if you are intested in contributing to the
 development or just using DHParser.
 
