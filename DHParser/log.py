@@ -356,8 +356,7 @@ def log_ST(syntax_tree, log_file_name):
 
 def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> None:
     """
-    Writes a log of the parsing history of the most recently parsed
-    document.
+    Writes a log of the parsing history of the most recently parsed document.
     """
     def write_log(history, log_name):
         htm = '.html' if html else ''

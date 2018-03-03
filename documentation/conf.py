@@ -80,18 +80,26 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 
+# A boolean that decides whether module names are prepended to all object names
+add_module_names = False
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+# html_theme_options = {
+#     'body_max_width': '880px',
+#     # 'documentwidth' : '1024px',
+#     'page_width': '1024px',
+#     'code_font_size': '0.70em'
+# }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -107,6 +115,9 @@ html_static_path = ['_static']
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
+
+
+# -- Patch to suppress type annotations --------------------------------------
 
 
 # -- Options for HTMLHelp output ---------------------------------------------

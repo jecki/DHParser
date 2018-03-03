@@ -81,8 +81,9 @@ def escape_re(strg: str) -> str:
 
 
 def escape_control_characters(strg: str) -> str:
-    """Replace all control characters (e.g. \n \t) in a string by their
-    backslashed representation."""
+    """
+    Replace all control characters (e.g. \n \t) in a string by their backslashed representation.
+    """
     return repr(strg).replace('\\\\', '\\')[1:-1]
 
 

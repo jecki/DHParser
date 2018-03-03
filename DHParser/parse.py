@@ -409,7 +409,7 @@ class Grammar:
     ("direct instantiation"), or by assigning the root parser to the
     class variable "root__" of a descendant class of class Grammar.
 
-    Example for direct instantian of a grammar:
+    Example for direct instantiation of a grammar:
 
         >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
         >>> number_parser = Grammar(number)
@@ -437,7 +437,7 @@ class Grammar:
     underscore '__' is *not* a legal parser name and can safely be
     used.
 
-    Example:
+    Example::
 
         class Arithmetic(Grammar):
             # special fields for implicit whitespace and comment configuration
@@ -594,7 +594,7 @@ class Grammar:
         """
         Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
-        the field's name, e.g.
+        the field's name, e.g.::
 
             class Grammar(Grammar):
                 ...
@@ -951,12 +951,14 @@ class RegExp(Parser):
     other parsers delegate part of the parsing job to other parsers,
     but do not match text directly.
 
-    Example:
-    >>> word = RegExp(r'\w+')
-    >>> Grammar(word)("Haus").content
-    'Haus'
+    Example::
+
+        >>> word = RegExp(r'\w+')
+        >>> Grammar(word)("Haus").content
+        'Haus'
 
     EBNF-Notation:  ``/ ... /``
+
     EBNF-Example:   ``word = /\w+/``
     """
 
@@ -1011,18 +1013,20 @@ class RE(Parser):
     whitespace expression from the Grammar object will be used.
 
     Example (allowing whitespace on the right hand side, but not on
-    the left hand side of a regular expression):
-    >>> word = RE(r'\w+', wR=r'\s*')
-    >>> parser = Grammar(word)
-    >>> result = parser('Haus ')
-    >>> result.content
-    'Haus '
-    >>> result.structure
-    '(:RE (:RegExp "Haus") (:Whitespace " "))'
-    >>> str(parser(' Haus'))
-    ' <<< Error on " Haus" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
+    the left hand side of a regular expression)::
+
+        >>> word = RE(r'\w+', wR=r'\s*')
+        >>> parser = Grammar(word)
+        >>> result = parser('Haus ')
+        >>> result.content
+        'Haus '
+        >>> result.structure
+        '(:RE (:RegExp "Haus") (:Whitespace " "))'
+        >>> str(parser(' Haus'))
+        ' <<< Error on " Haus" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation:  ``/ ... /~`  or  `~/ ... /`  or  `~/ ... /~``
+
     EBNF-Example:   ``word = /\w+/~``
     """
 
@@ -1198,16 +1202,18 @@ class Option(UnaryOperator):
     child and the text at the position where the child-parser
     left it.
 
-    Examples:
-    >>> number = Option(Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
-    >>> Grammar(number)('3.14159').content
-    '3.14159'
-    >>> Grammar(number)('3.14159').structure
-    '(:Series (:Option) (:RegExp "3") (:Option (:RegExp ".14159")))'
-    >>> Grammar(number)('-1').content
-    '-1'
+    Examples::
+
+        >>> number = Option(Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
+        >>> Grammar(number)('3.14159').content
+        '3.14159'
+        >>> Grammar(number)('3.14159').structure
+        '(:Series (:Option) (:RegExp "3") (:Option (:RegExp ".14159")))'
+        >>> Grammar(number)('-1').content
+        '-1'
 
     EBNF-Notation: ``[ ... ]``
+
     EBNF-Example:  ``number = ["-"]  /\d+/  [ /\.\d+/ ]``
     """
 
@@ -1237,14 +1243,16 @@ class ZeroOrMore(Option):
     matches. Like `Option` the `ZeroOrMore` parser always matches. In
     case of zero repetitions, the empty match `((), text)` is returned.
 
-    Examples:
-    >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
-    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
-    'Wo viel der Weisheit, da auch viel des Grämens.'
-    >>> Grammar(sentence)('.').content  # an empty sentence also matches
-    '.'
+    Examples::
+
+        >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
+        >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
+        'Wo viel der Weisheit, da auch viel des Grämens.'
+        >>> Grammar(sentence)('.').content  # an empty sentence also matches
+        '.'
 
     EBNF-Notation: ``{ ... }``
+
     EBNF-Example:  ``sentence = { /\w+,?/ } "."``
     """
 
@@ -1272,14 +1280,16 @@ class OneOrMore(UnaryOperator):
     matches. Other than `ZeroOrMore` which always matches, at least
     one match is required by `OneOrMore`.
 
-    Examples:
-    >>> sentence = OneOrMore(RE(r'\w+,?')) + Token('.')
-    >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
-    'Wo viel der Weisheit, da auch viel des Grämens.'
-    >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-    ' <<< Error on "." | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
+    Examples::
+
+        >>> sentence = OneOrMore(RE(r'\w+,?')) + Token('.')
+        >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
+        'Wo viel der Weisheit, da auch viel des Grämens.'
+        >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
+        ' <<< Error on "." | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation: ``{ ... }+``
+
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
 
@@ -1315,14 +1325,16 @@ class Series(NaryOperator):
     Matches if each of a series of parsers matches exactly in the order of
     the series.
 
-    Example:
-    >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
-    >>> Grammar(variable_name)('variable_1').content
-    'variable_1'
-    >>> str(Grammar(variable_name)('1_variable'))
-    ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
+    Example::
+
+        >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
+        >>> Grammar(variable_name)('variable_1').content
+        'variable_1'
+        >>> str(Grammar(variable_name)('1_variable'))
+        ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
+
     EBNF-Example:  ``series = letter letter_or_digit``
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
@@ -1418,19 +1430,20 @@ class Alternative(NaryOperator):
 
     This parser represents the EBNF-operator "|" with the qualification
     that both the symmetry and the ambiguity of the EBNF-or-operator
-    are broken by selecting the first match.
+    are broken by selecting the first match.::
 
-    # the order of the sub-expression matters!
-    >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
-    >>> str(Grammar(number)("3.1416"))
-    '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
+        # the order of the sub-expression matters!
+        >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+        >>> str(Grammar(number)("3.1416"))
+        '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
 
-    # the most selective expression should be put first:
-    >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
-    >>> Grammar(number)("3.1416").content
-    '3.1416'
+        # the most selective expression should be put first:
+        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> Grammar(number)("3.1416").content
+        '3.1416'
 
     EBNF-Notation: ``... | ...``
+
     EBNF-Example:  ``sentence = /\d+\.\d+/ | /\d+/``
     """
 
@@ -1482,14 +1495,16 @@ class AllOf(NaryOperator):
     match exactly once. Other than in a sequence, the order in which
     the parsers match is arbitrary, however.
 
-    Example:
-    >>> prefixes = AllOf(Token("A"), Token("B"))
-    >>> Grammar(prefixes)('A B').content
-    'A B'
-    >>> Grammar(prefixes)('B A').content
-    'B A'
+    Example::
+
+        >>> prefixes = AllOf(Token("A"), Token("B"))
+        >>> Grammar(prefixes)('A B').content
+        'A B'
+        >>> Grammar(prefixes)('B A').content
+        'B A'
 
     EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
+
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
@@ -1531,16 +1546,18 @@ class SomeOf(NaryOperator):
     must match more than once . Other than in a sequence, the order in which
     the parsers match is arbitrary, however.
 
-    Example:
-    >>> prefixes = SomeOf(Token("A"), Token("B"))
-    >>> Grammar(prefixes)('A B').content
-    'A B'
-    >>> Grammar(prefixes)('B A').content
-    'B A'
-    >>> Grammar(prefixes)('B').content
-    'B'
+    Example::
+
+        >>> prefixes = SomeOf(Token("A"), Token("B"))
+        >>> Grammar(prefixes)('A B').content
+        'A B'
+        >>> Grammar(prefixes)('B A').content
+        'B A'
+        >>> Grammar(prefixes)('B').content
+        'B'
 
     EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
+
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
@@ -1836,7 +1853,7 @@ class Synonym(UnaryOperator):
     Simply calls another parser and encapsulates the result in
     another node if that parser matches.
 
-    This parser is needed to support synonyms in EBNF, e.g.
+    This parser is needed to support synonyms in EBNF, e.g.::
 
         jahr       = JAHRESZAHL
         JAHRESZAHL = /\d\d\d\d/
@@ -1860,7 +1877,7 @@ class Forward(Parser):
     r"""
     Forward allows to declare a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
-    nested, e.g.:
+    nested, e.g.::
 
         class Arithmetic(Grammar):
             '''
@@ -2014,9 +2031,10 @@ class Compiler:
 
     @staticmethod
     def method_name(node_name: str) -> str:
-        """Returns the method name for `node_name`, e.g.
-        >>> Compiler.method_name('expression')
-        'on_expression'
+        """Returns the method name for `node_name`, e.g.::
+
+            >>> Compiler.method_name('expression')
+            'on_expression'
         """
         return 'on_' + node_name
 
@@ -2036,7 +2054,7 @@ class Compiler:
 
         The method's name is derived from either the node's parser
         name or, if the parser is anonymous, the node's parser's class
-        name by adding the prefix 'on_'.
+        name by adding the prefix ``on_``.
 
         Note that ``compile`` does not call any compilation functions
         for the parsers of the sub nodes by itself. Rather, this should

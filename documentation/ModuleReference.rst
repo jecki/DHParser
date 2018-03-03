@@ -7,11 +7,11 @@ DHParser is split into a number of modules plus one command line utility
 
 Usually, the user or "importer" of DHParser does not need to worry
 about its internal module structure, because DHParser provides a flat
-namespace form which all of its symbols can be imported, e.g.:
+namespace form which all of its symbols can be imported, e.g.::
 
    from DHParser import *
 
-or:
+or::
 
    from DHParser import recompile_grammar, grammar_suite, compile_source
 
@@ -30,31 +30,31 @@ The import-order of DHParser's modules runs accross these categories. In the
 following list the modules further below in the list may import one or
 more of the modules further above in the list, but not the other way round:
 
-- versionnumber.py - contains the verison number of DHParser
+- versionnumber.py -- contains the verison number of DHParser
 
-- toolkit.py - utility functions for DHParser
+- toolkit.py -- utility functions for DHParser
 
-- stringview.py - a string class where slices are views not copies as
-                  with the standard Python strings.
+- stringview.py -- a string class where slices are views not copies as
+  with the standard Python strings.
 
-- preprocess.py - preprocessing of source files for DHParser
+- preprocess.py -- preprocessing of source files for DHParser
 
-- error.py - error handling for DHParser
+- error.py -- error handling for DHParser
 
 - syntaxtree.py -- syntax tree classes for DHParser
 
-- logging.py - logging and debugging for DHParser
+- logging.py -- logging and debugging for DHParser
 
-- parse.py - parser combinators for for DHParser
+- parse.py -- parser combinators for for DHParser
 
-- transform.py - transformation functions for converting the
-                 concrete into the abstract syntax tree
+- transform.py -- transformation functions for converting the concrete
+  into the abstract syntax tree
 
-- ebnf.py - EBNF -> Python-Parser compilation for DHParser
+- ebnf.py -- EBNF -> Python-Parser compilation for DHParser
 
-- dsl.py - Support for domain specific notations for DHParser
+- dsl.py -- Support for domain specific notations for DHParser
 
-- testing.py - test support for DHParser based grammars and compilers
+- testing.py -- test support for DHParser based grammars and compilers
 
 
 
@@ -132,7 +132,7 @@ Module ``testing``
 ------------------
 
 .. automodule:: testing
-   :mebmers:
+   :members:
 
 
 
