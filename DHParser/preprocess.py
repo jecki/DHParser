@@ -1,20 +1,32 @@
-""" preprocess.py - preprocessing of source files for DHParser
+# preprocess.py - preprocessing of source files for DHParser
+#
+# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
 
-Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
 """
+Module ``preprocess`` contains functions for preprocessing source
+code before the parsing stage as well as source mapping facilities
+to map the locations of parser and compiler errors to the
+non-preprocessed source text.
+
+Preprocessing (and source mapping of errors) will only be needed
+for some domain specific languages, most notable those that
+cannot completely be described with context-free grammars.
+"""
+
 
 import bisect
 import collections
@@ -65,7 +77,7 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> int:
     """
     Sequentially apply a number of mapping functions to a source position.
     In the context of source mapping, the source position usually is a
-    position within a preprocessed source text and `mappings` should therefore
+    position within a preprocessed source text and mappings should therefore
     be a list of reverse-mappings in reversed order.
     """
     for mapping in mappings:
@@ -112,7 +124,7 @@ def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
 def make_token(token: str, argument: str = '') -> str:
     """
     Turns the ``token`` and ``argument`` into a special token that
-    will be caught by the `PreprocessorToken`-parser.
+    will be caught by the ``PreprocessorToken``-parser.
 
     This function is a support function that should be used by
     preprocessors to inject preprocessor tokens into the source text.
@@ -201,8 +213,7 @@ def source_map(position: int, srcmap: SourceMap) -> int:
 
     Args:
         position: the position in the processed text
-        srcmap:   the source map, i.e. a mapping of locations to
-                  offset values
+        srcmap:   the source map, i.e. a mapping of locations to offset values
     Returns:
         the mapped position
     """
@@ -218,7 +229,7 @@ def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]
     only returns the transformed source code and no mapping by itself. It is
     assumed that in this case the preprocessor has just enriched the source
     code with tokens, so that a source mapping can be derived automatically
-    with `tokenized_to_original_mapping` (see above).
+    with :func:`tokenized_to_original_mapping` (see above).
     """
     if isinstance(result, str):
         srcmap = tokenized_to_original_mapping(result)

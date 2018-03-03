@@ -1,20 +1,28 @@
-"""ebnf.py - EBNF -> Python-Parser compilation for DHParser
+# ebnf.py - EBNF -> Python-Parser compilation for DHParser
+#
+# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
 
-Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
 """
+Module ``ebnf`` provides a self-hosting parser for EBNF-Grammars as
+well as an EBNF-compiler that compiles an EBNF-Grammar into a
+DHParser based Grammar class that can be executed to parse source text
+conforming to this grammar into contrete syntax trees.
+"""
+
 
 import keyword
 from collections import OrderedDict
@@ -67,55 +75,56 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 
 
 class EBNFGrammar(Grammar):
-    r"""Parser for an EBNF source file, with this grammar:
+    r"""
+    Parser for an EBNF source file, with this grammar::
 
-    # EBNF-Grammar in EBNF
+        # EBNF-Grammar in EBNF
 
-    @ comment    =  /#.*(?:\n|$)/                # comments start with '#' and
-                                                 # eat all chars up to and including '\n'
-    @ whitespace =  /\s*/                        # whitespace includes linefeed
-    @ literalws  =  right                        # trailing whitespace of literals will be
-                                                 # ignored tacitly
+        @ comment    =  /#.*(?:\n|$)/                # comments start with '#' and
+                                                     # eat all chars up to and including '\n'
+        @ whitespace =  /\s*/                        # whitespace includes linefeed
+        @ literalws  =  right                        # trailing whitespace of literals will be
+                                                     # ignored tacitly
 
-    syntax     =  [~//] { definition | directive } §EOF
-    definition =  symbol §"=" expression
-    directive  =  "@" §symbol "=" ( regexp | literal | list_ )
+        syntax     =  [~//] { definition | directive } §EOF
+        definition =  symbol §"=" expression
+        directive  =  "@" §symbol "=" ( regexp | literal | list_ )
 
-    expression =  term { "|" term }
-    term       =  { ["§"] factor }+               # "§" means all following factors mandatory
-    factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure
-                                                          # it's not a definition
-                | [flowmarker] literal
-                | [flowmarker] regexp
-                | [flowmarker] oneormore
-                | [flowmarker] group
-                | [flowmarker] unordered
-                | repetition
-                | option
+        expression =  term { "|" term }
+        term       =  { ["§"] factor }+               # "§" means all following factors mandatory
+        factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure
+                                                              # it's not a definition
+                    | [flowmarker] literal
+                    | [flowmarker] regexp
+                    | [flowmarker] oneormore
+                    | [flowmarker] group
+                    | [flowmarker] unordered
+                    | repetition
+                    | option
 
-    flowmarker =  "!"  | "&"                     # '!' negative lookahead, '&' positive lookahead
-                | "-!" | "-&"                    # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop =  "::" | ":"                     # '::' pop, ':' retrieve
+        flowmarker =  "!"  | "&"                     # '!' negative lookahead, '&' positive lookahead
+                    | "-!" | "-&"                    # '-' negative lookbehind, '-&' positive lookbehind
+        retrieveop =  "::" | ":"                     # '::' pop, ':' retrieve
 
-    group      =  "(" §expression ")"
-    unordered  =  "<" §expression ">"            # elements of expression in arbitrary order
-    oneormore  =  "{" expression "}+"
-    repetition =  "{" §expression "}"
-    option     =  "[" §expression "]"
+        group      =  "(" §expression ")"
+        unordered  =  "<" §expression ">"            # elements of expression in arbitrary order
+        oneormore  =  "{" expression "}+"
+        repetition =  "{" §expression "}"
+        option     =  "[" §expression "]"
 
-    symbol     =  /(?!\d)\w+/~                   # e.g. expression, factor, parameter_list
-    literal    =  /"(?:[^"]|\\")*?"/~            # e.g. "(", '+', 'while'
-                | /'(?:[^']|\\')*?'/~            # whitespace following literals will be ignored
-    regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                 # '~' is a whitespace-marker, if present leading
-                                                 # or trailing whitespace of a regular expression
-                                                 # will be ignored tacitly.
-    list_      =  /\w+/~ { "," /\w+/~ }          # comma separated list of symbols,
-                                                 # e.g. BEGIN_LIST, END_LIST,
-                                                 # BEGIN_QUOTE, END_QUOTE
-                                                 # see CommonMark/markdown.py for an exmaple
-    EOF =  !/./
-    """
+        symbol     =  /(?!\d)\w+/~                   # e.g. expression, factor, parameter_list
+        literal    =  /"(?:[^"]|\\")*?"/~            # e.g. "(", '+', 'while'
+                    | /'(?:[^']|\\')*?'/~            # whitespace following literals will be ignored
+        regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                     # '~' is a whitespace-marker, if present leading
+                                                     # or trailing whitespace of a regular expression
+                                                     # will be ignored tacitly.
+        list_      =  /\w+/~ { "," /\w+/~ }          # comma separated list of symbols,
+                                                     # e.g. BEGIN_LIST, END_LIST,
+                                                     # BEGIN_QUOTE, END_QUOTE
+                                                     # see CommonMark/markdown.py for an exmaple
+        EOF =  !/./
+"""
     expression = Forward()
     source_hash__ = "3fc9f5a340f560e847d9af0b61a68743"
     parser_initialization__ = "upon instantiation"

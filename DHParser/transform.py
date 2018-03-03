@@ -1,27 +1,36 @@
-"""transformation.py - transformation functions for converting the
-                       concrete into the abstract syntax tree
+# transform.py - transformation functions for converting the
+#                concrete into the abstract syntax tree
+#
+# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
 
-Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
 """
+Module ``transform`` contains the functions for transforming the
+concrete syntax tree (CST) into an abstract syntax tree (AST).
+
+As these functions are very generic, they can in principle be
+used for any kind of tree transformations, not necessarily only
+for CST -> AST transformations.
+"""
+
 
 import inspect
 from functools import partial, reduce, singledispatch
 
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
-
 from DHParser.toolkit import expand_table, smart_list, re, typing
 
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
@@ -107,18 +116,24 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
 
     Main benefit is readability of processing tables.
 
-    Usage:
+    Usage::
+
         @transformation_factory(AbstractSet[str])
         def remove_tokens(context, tokens):
             ...
-      or, alternatively:
+
+    or, alternatively::
+
         @transformation_factory
         def remove_tokens(context, tokens: AbstractSet[str]):
             ...
 
-    Example:
+    Example::
+
         trans_table = { 'expression': remove_tokens('+', '-') }
-      instead of:
+
+    instead of::
+
         trans_table = { 'expression': partial(remove_tokens, tokens={'+', '-'}) }
 
     Parameters:
@@ -187,7 +202,7 @@ def traverse(root_node: Node,
     """
     Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
-    in the ``calltable``-dictionary.
+    in the ``processing_table``-dictionary.
 
     The most important use case is the transformation of a concrete
     syntax tree into an abstract tree (AST). But it is also imaginable
@@ -197,24 +212,27 @@ def traverse(root_node: Node,
     dictionary ("processing table") is used. The keys usually represent
     tag names, but any other key function is possible. There exist
     three special keys:
-        '+': always called (before any other processing function)
-        '*': called for those nodes for which no (other) processing
-             function appears in the table
-        '~': always called (after any other processing function)
+
+    - '+': always called (before any other processing function)
+    - '*': called for those nodes for which no (other) processing
+      function appears in the table
+    - '~': always called (after any other processing function)
 
     Args:
         root_node (Node): The root-node of the syntax tree to be traversed
         processing_table (dict): node key -> sequence of functions that
             will be applied to matching nodes in order. This dictionary
-            is interpreted as a `compact_table`. See
-            `toolkit.expand_table` or ``EBNFCompiler.EBNFTransTable`
+            is interpreted as a ``compact_table``. See
+            :func:`expand_table` or :func:`EBNFCompiler.EBNFTransTable`
         key_func (function): A mapping key_func(node) -> keystr. The default
             key_func yields node.parser.name.
 
-    Example:
+    Example::
+
         table = { "term": [replace_by_single_child, flatten],
-            "factor, flowmarker, retrieveop": replace_by_single_child }
+                  "factor, flowmarker, retrieveop": replace_by_single_child }
         traverse(node, table)
+
     """
     # Is this optimazation really needed?
     if '__cache__' in processing_table:
@@ -538,16 +556,19 @@ def replace_parser(context: List[Node], name: str):
 @transformation_factory(Callable)
 def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bool=True):
     """
-    Flattens all children, that fulfil the given `condition`
+    Flattens all children, that fulfil the given ``condition``
     (default: all unnamed children). Flattening means that wherever a
     node has child nodes, the child nodes are inserted in place of the
     node.
-     If the parameter `recursive` is `True` the same will recursively be
+
+    If the parameter ``recursive`` is ``True`` the same will recursively be
     done with the child-nodes, first. In other words, all leaves of
     this node and its child nodes are collected in-order as direct
     children of this node.
-     Applying flatten recursively will result in these kinds of
-    structural transformation:
+
+    Applying flatten recursively will result in these kinds of
+    structural transformation::
+
         (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
         (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
     """

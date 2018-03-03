@@ -1,63 +1,89 @@
-"""parsers.py - parser combinators for for DHParser
+# parse.py - parser combinators for for DHParser
+#
+# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# Module ``parsers.py`` contains a number of classes that together
+# make up parser combinators for left-recursive grammers. For each
+# element of the extended Backus-Naur-Form as well as for a regular
+# expression token a class is defined. The set of classes can be used to
+# define a parser for (ambiguous) left-recursive grammers.
+#
+#
+# References and Acknowledgements:
+#
+# Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
+# Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
+# anregungen und links rund um informatik-themen, URL:
+# http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
+#
+# Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
+# September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
+# links rund um informatik-themen, URL:
+# http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
+#
+# Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
+# denkspuren. gedanken, ideen, anregungen und links rund um
+# informatik-themen, URL:
+# http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
+#
+# Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser
+# Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
+# D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
+# Berlin Heidelberg 2008.
+#
+# Elizabeth Scott and Adrian Johnstone, GLL Parsing,
+# in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
+# http://dotat.at/tmp/gll.pdf
+#
+# Christopher Seaton: A Programming Language Where the Syntax and Semantics
+# are Mutuable at Runtime, University of Bristol 2007,
+# http://chrisseaton.com/katahdin/katahdin.pdfs
+#
+# Juancarlo Añez: grako, a PEG parser generator in Python,
+# https://bitbucket.org/apalala/grako
+#
+# Vegard Øye: General Parser Combinators in Racket, 2012,
+# https://epsil.github.io/gll/
 
-Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
-
-Module ``parsers.py`` contains a number of classes that together
-make up parser combinators for left-recursive grammers. For each
-element of the extended Backus-Naur-Form as well as for a regular
-expression token a class is defined. The set of classes can be used to
-define a parser for (ambiguous) left-recursive grammers.
-
-
-References and Acknowledgements:
-
-Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
-Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
-anregungen und links rund um informatik-themen, URL:
-http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
-
-Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
-September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
-links rund um informatik-themen, URL:
-http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
-
-Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
-denkspuren. gedanken, ideen, anregungen und links rund um
-informatik-themen, URL:
-http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
-
-Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser
-Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
-D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
-Berlin Heidelberg 2008.
-
-Elizabeth Scott and Adrian Johnstone, GLL Parsing,
-in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
-http://dotat.at/tmp/gll.pdf
-
-Christopher Seaton: A Programming Language Where the Syntax and Semantics
-are Mutuable at Runtime, University of Bristol 2007,
-http://chrisseaton.com/katahdin/katahdin.pdfs
-
-Juancarlo Añez: grako, a PEG parser generator in Python,
-https://bitbucket.org/apalala/grako
-
-Vegard Øye: General Parser Combinators in Racket, 2012,
-https://epsil.github.io/gll/
 """
+Module ``parse`` contains the python classes and functions for
+DHParser's packrat parser. It's central class is the
+``Grammar``-class, which is the base class for any contrete
+Grammar. Grammar-objects are callable and parsing is done by
+calling a Grammar-object with a source text as argument.
+
+The different parsing functions are callable descendants of class
+``Parser``. Usually, they are organized in a tree and defined
+within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
+for an example.
+
+Module ``parse`` furthermode contains the base class for a
+compiler as well as a generic ccompiler function. Compiler
+objects are also callabe receive the Abstract syntax tree (AST)
+as argument and yield whatever output the compiler produces. In
+most Digital Humanities applications this will be
+XML-code. However, it can also be anything else, like binary
+code or, as in the case of DHParser's ebnf-compiler, Python
+source code.
+
+See module ``ebnf`` for a sample of the implementation of a
+compiler object.
+"""
+
 
 import copy
 import os
@@ -448,25 +474,28 @@ class Grammar:
     Grammar classes contain a few special class fields for implicit
     whitespace and comments that should be overwritten, if the defaults
     (no comments, horizontal right aligned whitespace) don't fit:
-    COMMENT__:  regular expression string for matching comments
-    WSP__:   regular expression for whitespace and comments
 
-    wspL__:  regular expression string for left aligned whitespace,
-             which either equals WSP__ or is empty.
+    Attributes:
+        COMMENT__:  regular expression string for matching comments
 
-    wspR__:  regular expression string for right aligned whitespace,
-             which either equals WSP__ or is empty.
+        WSP__:   regular expression for whitespace and comments
 
-    root__:  The root parser of the grammar. Theoretically, all parsers of the
-             grammar should be reachable by the root parser. However, for testing
-             of yet incomplete grammars class Grammar does not assume that this
-             is the case.
+        wspL__:  regular expression string for left aligned whitespace,
+                 which either equals WSP__ or is empty.
 
-    parser_initializiation__:  Before the parser class (!) has been initialized,
-             which happens upon the first time it is instantiated (see doctring for
-             method `_assign_parser_names()` for an explanation), this class
-             field contains a value other than "done". A value of "done" indicates
-             that the class has already been initialized.
+        wspR__:  regular expression string for right aligned whitespace,
+                 which either equals WSP__ or is empty.
+
+        root__:  The root parser of the grammar. Theoretically, all parsers of the
+                 grammar should be reachable by the root parser. However, for testing
+                 of yet incomplete grammars class Grammar does not assume that this
+                 is the case.
+
+        parser_initializiation__:  Before the parser class (!) has been initialized,
+                 which happens upon the first time it is instantiated (see
+                 :func:_assign_parser_names()` for an explanation), this class
+                 field contains a value other than "done". A value of "done" indicates
+                 that the class has already been initialized.
 
     Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
@@ -475,15 +504,15 @@ class Grammar:
                 be tracked
 
         wsp_left_parser__:  A parser for the default left-adjacent-whitespace
-                or the zombie-parser (see `syntaxtree.ZOMBIE_PARSER`) if the
+                or the :class:zombie-parser if the
                 default is empty. The default whitespace will be used by parsers
-                `Token` and, if no other parsers are passed to its constructor,
-                by parser `RE'.
+                :class:`Token` and, if no other parsers are passed to its constructor,
+                by parser :class:`RE`.
 
         wsp_right_parser__: The same for the default right-adjacent-whitespace.
                 Both wsp_left_parser__ and wsp_right_parser__ merely serve the
                 purpose to avoid having to specify the default whitespace
-                explicitly every time an `RE`-parser-object is created.
+                explicitly every time an :class:`RE`-parser-object is created.
 
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -497,28 +526,28 @@ class Grammar:
         document_lbreaks__:  list of linebreaks within the document, starting
                 with -1 and ending with EOF. This helps generating line
                 and column number for history recording and will only be
-                initialized if `history_tracking__` is true.
+                initialized if :attr:`history_tracking__` is true.
 
-        _reversed__:  the same text in reverse order - needed by the `Lookbehind'-
+        _reversed__:  the same text in reverse order - needed by the `Lookbehind`-
                 parsers.
 
         variables__:  A mapping for variable names to a stack of their respective
-                string values - needed by the `Capture`-, `Retrieve`- and `Pop`-
-                parsers.
+                string values - needed by the :class:`Capture`-, :class:`Retrieve`-
+                and :class:`Pop`-parsers.
 
         rollback__:  A list of tuples (location, rollback-function) that are
-                deposited by the `Capture`- and `Pop`-parsers. If the parsing
-                process reaches a dead end then all rollback-functions up to
-                the point to which it retreats will be called and the state
-                of the variable stack restored accordingly.
+                deposited by the :class:`Capture`- and :class:`Pop`-parsers.
+                If the parsing process reaches a dead end then all
+                rollback-functions up to the point to which it retreats will be
+                called and the state of the variable stack restored accordingly.
 
         last_rb__loc__:  The last, i.e. most advanced location in the text
                 where a variable changing operation occurred. If the parser
-                backtracks to a location at or before `last_rb__loc__` (i.e.
-                `location <= last_rb__loc__`) then a rollback of all variable
+                backtracks to a location at or before last_rb__loc__ (i.e.
+                location <= last_rb__loc__) then a rollback of all variable
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
-                calling method `.rollback_to__(location)`.
+                calling method :func:`rollback_to__(location)`.
 
         call_stack__:  A stack of all parsers that have been called. This
                 is required for recording the parser history (for debugging)
@@ -532,14 +561,14 @@ class Grammar:
         moving_forward__: This flag indicates that the parsing process is currently
                 moving forward . It is needed to reduce noise in history recording
                 and should not be considered as having a valid value if history
-                recording is turned off! (See `add_parser_guard` and its local
-                function `guarded_call`)
+                recording is turned off! (See :func:`add_parser_guard` and its local
+                function :func:`guarded_call`)
 
         recursion_locations__:  Stores the locations where left recursion was
                 detected. Needed to provide minimal memoization for the left
                 recursion detection algorithm, but, strictly speaking, superfluous
-                if full memoization is enabled. (See `add_parser_guard` and its
-                local function `guarded_call`)
+                if full memoization is enabled. (See :func:`add_parser_guard` and its
+                local function :func:`guarded_call`)
 
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
@@ -566,14 +595,16 @@ class Grammar:
         Initializes the `parser.name` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.
+
             class Grammar(Grammar):
                 ...
                 symbol = RE('(?!\\d)\\w+')
+
         After the call of this method symbol.name == "symbol"
         holds. Names assigned via the ``name``-parameter of the
         constructor will not be overwritten. Parser names starting or
         ending with a double underscore like ``root__`` will be
-        ignored. See ``toolkit.sane_parser_name()``
+        ignored. See :func:`sane_parser_name()`
 
         This is done only once, upon the first instantiation of the
         grammar class!
@@ -925,8 +956,8 @@ class RegExp(Parser):
     >>> Grammar(word)("Haus").content
     'Haus'
 
-    EBNF-Notation:  `/ ... /`
-    EBNF-Example:   `word = /\w+/`
+    EBNF-Notation:  ``/ ... /``
+    EBNF-Example:   ``word = /\w+/``
     """
 
     def __init__(self, regexp, name: str = '') -> None:
@@ -991,8 +1022,8 @@ class RE(Parser):
     >>> str(parser(' Haus'))
     ' <<< Error on " Haus" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
-    EBNF-Notation:  `/ ... /~`  or  `~/ ... /`  or  `~/ ... /~`
-    EBNF-Example:   `word = /\w+/~`
+    EBNF-Notation:  ``/ ... /~`  or  `~/ ... /`  or  `~/ ... /~``
+    EBNF-Example:   ``word = /\w+/~``
     """
 
     def __init__(self, regexp, wL=None, wR=None, name: str='') -> None:
@@ -1156,13 +1187,13 @@ class NaryOperator(Parser):
 
 class Option(UnaryOperator):
     r"""
-    Parser `Optional` always matches, even if its child-parser
+    Parser ``Option`` always matches, even if its child-parser
     did not match.
 
-    If the child-parser did not match `Optional` returns a node
+    If the child-parser did not match ``Option`` returns a node
     with no content and does not move forward in the text.
 
-    If the child-parser did match, `Optional` returns the a node
+    If the child-parser did match, ``Option`` returns the a node
     with the node returnd by the child-parser as its single
     child and the text at the position where the child-parser
     left it.
@@ -1176,8 +1207,8 @@ class Option(UnaryOperator):
     >>> Grammar(number)('-1').content
     '-1'
 
-    EBNF-Notation: `[ ... ]`
-    EBNF-Example:  `number = ["-"]  /\d+/  [ /\.\d+/ ]
+    EBNF-Notation: ``[ ... ]``
+    EBNF-Example:  ``number = ["-"]  /\d+/  [ /\.\d+/ ]``
     """
 
     def __init__(self, parser: Parser, name: str = '') -> None:
@@ -1213,8 +1244,8 @@ class ZeroOrMore(Option):
     >>> Grammar(sentence)('.').content  # an empty sentence also matches
     '.'
 
-    EBNF-Notation: `{ ... }`
-    EBNF-Example:  `sentence = { /\w+,?/ } "."`
+    EBNF-Notation: ``{ ... }``
+    EBNF-Example:  ``sentence = { /\w+,?/ } "."``
     """
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1248,8 +1279,8 @@ class OneOrMore(UnaryOperator):
     >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
     ' <<< Error on "." | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
-    EBNF-Notation: `{ ... }+`
-    EBNF-Example:  `sentence = { /\w+,?/ }+`
+    EBNF-Notation: ``{ ... }+``
+    EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
 
     def __init__(self, parser: Parser, name: str = '') -> None:
@@ -1291,8 +1322,8 @@ class Series(NaryOperator):
     >>> str(Grammar(variable_name)('1_variable'))
     ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
 
-    EBNF-Notation: `... ...`    (sequence of parsers separated by a blank or new line)
-    EBNF-Example:  `series = letter letter_or_digit`
+    EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
+    EBNF-Example:  ``series = letter letter_or_digit``
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
     NOPE = 1000
@@ -1399,8 +1430,8 @@ class Alternative(NaryOperator):
     >>> Grammar(number)("3.1416").content
     '3.1416'
 
-    EBNF-Notation: `... | ...`
-    EBNF-Example:  `sentence = /\d+\.\d+/ | /\d+/`
+    EBNF-Notation: ``... | ...``
+    EBNF-Example:  ``sentence = /\d+\.\d+/ | /\d+/``
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
@@ -1458,8 +1489,8 @@ class AllOf(NaryOperator):
     >>> Grammar(prefixes)('B A').content
     'B A'
 
-    EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
-    EBNF-Example:  `set = <letter letter_or_digit>`
+    EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
+    EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
@@ -1509,8 +1540,8 @@ class SomeOf(NaryOperator):
     >>> Grammar(prefixes)('B').content
     'B'
 
-    EBNF-Notation: `<... ...>`    (sequence of parsers enclosed by angular brackets)
-    EBNF-Example:  `set = <letter letter_or_digit>`
+    EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
+    EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
     def __init__(self, *parsers: Parser, name: str = '') -> None:
@@ -1806,8 +1837,10 @@ class Synonym(UnaryOperator):
     another node if that parser matches.
 
     This parser is needed to support synonyms in EBNF, e.g.
+
         jahr       = JAHRESZAHL
         JAHRESZAHL = /\d\d\d\d/
+
     Otherwise the first line could not be represented by any parser
     class, in which case it would be unclear whether the parser
     RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
@@ -1828,19 +1861,20 @@ class Forward(Parser):
     Forward allows to declare a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
     nested, e.g.:
-    class Arithmetic(Grammar):
-        '''
-        expression =  term  { ("+" | "-") term }
-        term       =  factor  { ("*" | "/") factor }
-        factor     =  INTEGER | "("  expression  ")"
-        INTEGER    =  /\d+/~
-        '''
-        expression = Forward()
-        INTEGER    = RE('\\d+')
-        factor     = INTEGER | Token("(") + expression + Token(")")
-        term       = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
-        expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
-        root__     = expression
+
+        class Arithmetic(Grammar):
+            '''
+            expression =  term  { ("+" | "-") term }
+            term       =  factor  { ("*" | "/") factor }
+            factor     =  INTEGER | "("  expression  ")"
+            INTEGER    =  /\d+/~
+            '''
+            expression = Forward()
+            INTEGER    = RE('\\d+')
+            factor     = INTEGER | Token("(") + expression + Token(")")
+            term       = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
+            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            root__     = expression
     """
 
     def __init__(self):
@@ -2038,10 +2072,11 @@ def compile_source(source: str,
                    compiler: Compiler) -> Tuple[Any, List[Error], Node]:  # Node (AST) -> Any
     """
     Compiles a source in four stages:
-        1. Preprocessing (if needed)
-        2. Parsing
-        3. AST-transformation
-        4. Compiling.
+    1. Preprocessing (if needed)
+    2. Parsing
+    3. AST-transformation
+    4. Compiling.
+
     The compilations stage is only invoked if no errors occurred in
     either of the two previous stages.
 
@@ -2060,8 +2095,7 @@ def compile_source(source: str,
     Returns (tuple):
         The result of the compilation as a 3-tuple
         (result, errors, abstract syntax tree). In detail:
-        1. The result as returned by the compiler or ``None`` in case
-            of failure,
+        1. The result as returned by the compiler or ``None`` in case of failure
         2. A list of error or warning messages
         3. The root-node of the abstract syntax tree
     """

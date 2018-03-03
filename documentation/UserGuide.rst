@@ -1,12 +1,13 @@
+*********************
 DHParser User's Guide
-=====================
+*********************
 
 This user's guide explains how to use create, test and employ a domain
 specific language with DHParser for encoding text or data in a Digital
 Humanities Project.
 
 Introduction
-------------
+============
 
 Most Digital Humanities projects or least most text-centered DH projects
 involve in some way or other the entering and encoding of annotated text or

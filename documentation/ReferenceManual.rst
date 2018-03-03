@@ -1,27 +1,36 @@
+*************************
 DHParser Reference Manual
-=========================
+*************************
 
-This reference manual explains the technology used by DHParser. It is intended for people who
-would like to extend or contribute to DHParser. The reference manual does not explain how a
-Domain Specific Language (DSL) is developed (see the User's Manual for that). It it explains the
-technical approach that DHParser employs for parsing, abstract syntax tree transformation and
-compilation of a given DSL. And it describes the module and class structure of the DHParser
-Software. The programming guide requires a working knowledge of Python programming and a basic
-understanding or common parser technology from the reader. Also, it is recommended to
-read the introduction and the user's guide first.
+This reference manual explains the technology used by DHParser. It is
+intended for people who would like to extend or contribute to
+DHParser. The reference manual does not explain how a Domain Specific
+Language (DSL) is developed (see the User's Manual for that). It it
+explains the technical approach that DHParser employs for parsing,
+abstract syntax tree transformation and compilation of a given
+DSL. And it describes the module and class structure of the DHParser
+Software. The programming guide requires a working knowledge of Python
+programming and a basic understanding or common parser technology from
+the reader. Also, it is recommended to read the introduction and the
+user's guide first.
 
 Fundamentals
-------------
+============
 
-DHParser is a parser generator aimed at but not restricted to the creation of domain specific
-languages in the Digital Humanities (DH), hence the name "DHParser". In the Digital Humanities,
-DSLs allow to enter annotated texts or data in a human friendly and readable form with a
-Text-Editor. In contrast to the prevailing XML-approach, the DSL-approach distinguishes between
-a human-friendly *editing data format* and a maschine friendly *working data format* which can
-be XML but does not need to be. Therefore, the DSL-approach requires an additional step to reach
-the *working data format*, that is, the compilation of the annotated text or data written in the
-DSL (editing data format) to the working data format. In the following a text or data file
-wirtten in a DSL will simply be called *document*. The editing data format will also be called *source format* and the working data format be denoted as *target format*.
+DHParser is a parser generator aimed at but not restricted to the
+creation of domain specific languages in the Digital Humanities (DH),
+hence the name "DHParser". In the Digital Humanities, DSLs allow to
+enter annotated texts or data in a human friendly and readable form
+with a Text-Editor. In contrast to the prevailing XML-approach, the
+DSL-approach distinguishes between a human-friendly *editing data
+format* and a maschine friendly *working data format* which can be XML
+but does not need to be. Therefore, the DSL-approach requires an
+additional step to reach the *working data format*, that is, the
+compilation of the annotated text or data written in the DSL (editing
+data format) to the working data format. In the following a text or
+data file wirtten in a DSL will simply be called *document*. The
+editing data format will also be called *source format* and the
+working data format be denoted as *target format*.
 
 Compiling a document specified in a domain specific language involves the following steps:
 
@@ -31,7 +40,7 @@ Compiling a document specified in a domain specific language involves the follow
 2. **Transforming** the concrete syntax tree (CST) into an abstract syntax tree (AST), i.e. a
    streamlined and simplified syntax tree ready for compilation.
 
-3  **Compiling** the abstract syntax tree into the working data format.
+3.  **Compiling** the abstract syntax tree into the working data format.
 
 All of these steps a carried out be the computer without any user intervention, i.e. without the
 need of humans to rewrite or enrich the data during any these steps. A DSL-compiler therefore
@@ -60,18 +69,20 @@ The creation of all of these components is supported by DHParser, albeit to a di
    syntax tree as XML without the need of a dedicated compilation step.
 
 Compiler Creation Workflow
---------------------------
+==========================
 
 TODO: Describe:
 - setting up a new projekt
 - invoking the DSL Compiler
-- conventions and data type
+- conventions and data types
 - the flat namespace of DH Parser
 
-Component Guide
----------------
 
-### Parser
+Component Guide
+===============
+
+Parser
+------
 
 Parser-creation if supported by DHParser by an EBNF to Python compiler which yields a working
 python class that parses any document the EBNF-specified DSL to a tree of Node-objects, which
@@ -86,7 +97,8 @@ DH-projects this task will be less complex, however, as the target format is XML
 usually can be derived from the abstract syntax tree with fewer steps than the Python code in
 the case of DHParser's EBNF to Python compiler.
 
-### AST-Transformation
+AST-Transformation
+------------------
 
 Other than for the compiler generation (see the next point below), a functional rather than
 object-oriented approach has been employed, because it allows for a more concise
@@ -95,13 +107,13 @@ transformations can be used for several node types of the AST. It would therefor
 to fill in a method for each of these. In a sense, the specification of AST-transformation
 constitutes an "internal DSL" realized with the means of the Python language itself.
 
-### Compiler
-
+Compiler
+--------
 
 
 Module Structure of DHParser
-----------------------------
+============================
 
-
+      
 Class Hierarchy of DHParser
----------------------------
+===========================

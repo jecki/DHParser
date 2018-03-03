@@ -1,15 +1,6 @@
 Ideas for further development
 =============================
 
-
-Readability of Code
--------------------
-
-**direct vs inverse location counting in `parse.py:guarded_call`**: 
-use location value counting from the beginning rather than the end of 
-the text
-
-
 Optimizations
 -------------
 
@@ -72,7 +63,7 @@ debugger, i.e. a debugger that allows to trace particular parsers:
   so one could write `@ trace = option` at the beginning of the EBNF-code.
    * disadvantage: only parsers represented by symobols can be traced
      (can always be circumvented by introducing further symbols.)
-   * advantages: less clutter in the EBNF-code and easier to swith between
+   * advantages: less clutter in the EBNF-code and easier to switch between
      debugging and production code by simply commenting out the 
      trace-statements at the beginning.
   

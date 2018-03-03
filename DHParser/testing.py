@@ -1,20 +1,31 @@
-"""testing.py - test support for DHParser based grammars and compilers
+# testing.py - test support for DHParser based grammars and compilers
+#
+# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
 
-Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
 """
+Module ``testing`` contains support for unit-testing domain specific
+languages. Tests for arbitrarily small components of the Grammar can
+be written into test files with ini-file syntax in order to test
+whether the parser matches or fails as expected. It can also be
+tested whether it produces an expected concrete or abstract syntax tree.
+Usually, however, unexpected failure to match a certain string is the
+main cause of trouble when constructing a context free Grammar.
+"""
+
+
 import collections
 # import configparser
 import copy
@@ -74,6 +85,15 @@ RX_COMMENT = re.compile('\s*#.*\n')
 
 
 def unit_from_configfile(config_filename):
+    """ Reads grammar unit tests contained in a file in config file (.ini)
+    syntax.
+
+    Args:
+        config_filename (str): A config file containing Grammar unit-tests
+
+    Returns:
+        A dictionary representing the unit tests.
+    """
     def eat_comments(txt, pos):
         m = RX_COMMENT.match(txt, pos)
         while m:
@@ -125,7 +145,7 @@ def unit_from_configfile(config_filename):
 
 def unit_from_json(json_filename):
     """
-    Reads a grammar unit test from a json file.
+    Reads grammar unit tests from a json file.
     """
     with open(json_filename, 'r', encoding='utf8') as f:
         unit = json.load(f)

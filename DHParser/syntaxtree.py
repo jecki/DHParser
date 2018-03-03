@@ -1,20 +1,28 @@
-"""syntaxtree.py - syntax tree classes for DHParser
+# syntaxtree.py - syntax tree classes for DHParser
+#
+# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
 
-Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
 """
+Module ``syntaxtree`` defines the ``Node``-class for syntax trees as well
+as an abstract base class for parser-objects. The latter is defined
+here, becuase node-objects refer to parser-objects. All concrete
+parser classes are defined in the ``parse`` module.
+"""
+
 
 import collections.abc
 import copy
@@ -163,7 +171,7 @@ ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 
 def flatten_sxpr(sxpr: str) -> str:
-    """Returns S-expression `sxpr` as a one-liner without unnecessary
+    """Returns S-expression ``sxpr`` as a one-liner without unnecessary
     whitespace.
 
     Example:
@@ -177,7 +185,7 @@ class Node(collections.abc.Sized):
     """
     Represents a node in the concrete or abstract syntax tree.
 
-    Attributes and Properties:
+    Attributes:
         tag_name (str):  The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name
         result (str or tuple):  The result of the parser which

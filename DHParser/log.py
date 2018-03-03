@@ -1,34 +1,35 @@
-"""logging.py - logging and debugging for DHParser
+# logging.py - logging and debugging for DHParser
+#
+# Copyright 2018  by Eckhart Arnold (arnold@badw.de)
+#                 Bavarian Academy of Sciences an Humanities (badw.de)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+#
+#
+# Module ``toolkit`` contains utility functions and cross-sectional
+# functionality like logging support that is needed across several
+# of the the other DHParser-Modules.
+#
+# For logging functionality, the global variable LOGGING is defined which
+# contains the name of a directory where log files shall be placed. By
+# setting its value to the empty string "" logging can be turned off.
+#
+# To read the directory name function ``LOGS_DIR()`` should be called
+# rather than reading the variable LOGGING. ``LOGS_DIR()`` makes sure
+# the directory exists and raises an error if a file with the same name
+# already exists.
 
-Copyright 2018  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.
-
-
-Module ``toolkit`` contains utility functions and cross-sectional
-functionality like logging support that is needed across several
-of the the other DHParser-Modules.
-
-For logging functionality, the global variable LOGGING is defined which
-contains the name of a directory where log files shall be placed. By
-setting its value to the empty string "" logging can be turned off.
-
-To read the directory name function ``LOGS_DIR()`` should be called
-rather than reading the variable LOGGING. ``LOGS_DIR()`` makes sure
-the directory exists and raises an error if a file with the same name
-already exists.
-"""
 import collections
 import contextlib
 import html
