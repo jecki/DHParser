@@ -15,6 +15,26 @@
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
 
+"""
+Module ``error`` defines class Error and a few helpful functions that are
+needed for error reporting of DHParser. Usually, what is of interest are
+the string representations of the error objects. For example::
+
+    from DHParser import compile_source, has_errors
+
+    result, errors, ast = compile_source(source, preprocessor, grammar,
+                                         transformer, compiler)
+    if errors:
+        for error in errors:
+            print(error)
+
+        if has_errors(errors):
+            print("There have been fatal errors!")
+            sys.exit(1)
+        else:
+            print("There have been warnings, but no errors.")
+"""
+
 
 import bisect
 from typing import Iterable, Iterator, Union, Tuple, List

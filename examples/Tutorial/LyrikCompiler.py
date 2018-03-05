@@ -82,7 +82,7 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "5ceb5f91412cbe1bcd4dd8b7005598fb"
+    source_hash__ = "e4060274178d9c633c6dbfafb34471bd"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'[\t ]*'

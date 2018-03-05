@@ -14,21 +14,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
-#
-#
-# Module ``toolkit`` contains utility functions and cross-sectional
-# functionality like logging support that is needed across several
-# of the the other DHParser-Modules.
-#
-# For logging functionality, the global variable LOGGING is defined which
-# contains the name of a directory where log files shall be placed. By
-# setting its value to the empty string "" logging can be turned off.
-#
-# To read the directory name function ``LOGS_DIR()`` should be called
-# rather than reading the variable LOGGING. ``LOGS_DIR()`` makes sure
-# the directory exists and raises an error if a file with the same name
-# already exists.
 
+"""
+Module ``log`` contains logging and debugging support for the
+parsing process.
+
+For logging functionality, the global variable LOGGING is defined which
+contains the name of a directory where log files shall be placed. By
+setting its value to the empty string "" logging can be turned off.
+
+To read the directory name function ``LOGS_DIR()`` should be called
+rather than reading the variable LOGGING. ``LOGS_DIR()`` makes sure
+the directory exists and raises an error if a file with the same name
+already exists.
+
+For debugging of the parsing process, the parsing history can be
+logged and written to an html-File.
+
+For ease of use module ``log`` defines a context-manager ``logging``
+to which either ``False`` (turn off logging), a log directory name or
+``True`` for the default logging directory is passed as argument.
+The other components of DHParser check whether logging is on and
+write log files in the the logging directory accordingly. Usually,
+this will be concrete and abstract syntax trees as well as the full
+and abreviated parsing history.
+
+Example::
+
+    from DHParser import compile_source, logging
+
+    with logging("LOGS"):
+        result, errors, ast = compile_source(source, preprocessor, grammar,
+                                             transformer, compiler)
+"""
 
 import collections
 import contextlib
