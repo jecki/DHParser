@@ -14,49 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
-#
-# Module ``parsers.py`` contains a number of classes that together
-# make up parser combinators for left-recursive grammers. For each
-# element of the extended Backus-Naur-Form as well as for a regular
-# expression token a class is defined. The set of classes can be used to
-# define a parser for (ambiguous) left-recursive grammers.
-#
-#
-# References and Acknowledgements:
-#
-# Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
-# Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
-# anregungen und links rund um informatik-themen, URL:
-# http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
-#
-# Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
-# September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
-# links rund um informatik-themen, URL:
-# http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
-#
-# Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
-# denkspuren. gedanken, ideen, anregungen und links rund um
-# informatik-themen, URL:
-# http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
-#
-# Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser
-# Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
-# D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
-# Berlin Heidelberg 2008.
-#
-# Elizabeth Scott and Adrian Johnstone, GLL Parsing,
-# in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
-# http://dotat.at/tmp/gll.pdf
-#
-# Christopher Seaton: A Programming Language Where the Syntax and Semantics
-# are Mutuable at Runtime, University of Bristol 2007,
-# http://chrisseaton.com/katahdin/katahdin.pdfs
-#
-# Juancarlo Añez: grako, a PEG parser generator in Python,
-# https://bitbucket.org/apalala/grako
-#
-# Vegard Øye: General Parser Combinators in Racket, 2012,
-# https://epsil.github.io/gll/
 
 
 """
