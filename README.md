@@ -127,7 +127,7 @@ Introduction
 
 see [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md)
 
-References
+References and Acknowledment
 ----------
 
 Juancarlo Añez: grako, a PEG parser generator in Python, 2017. URL:
@@ -146,7 +146,7 @@ München 2016. Short-URL: [tiny.badw.de/2JVT][Arnold_2016]
 
 Brian Ford: Parsing Expression Grammars: A Recognition-Based Syntactic
 Foundation, Cambridge
-Massachusetts, 2004. Short-URL:[http://t1p.de/jihs][Ford_2004]
+Massachusetts, 2004. Short-URL:[t1p.de/jihs][Ford_2004]
 
 [Ford_2004]: https://pdos.csail.mit.edu/~baford/packrat/popl04/peg-popl04.pdf
 
@@ -157,23 +157,29 @@ Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
 D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
 Berlin Heidelberg 2008.
 
+Elizabeth Scott and Adrian Johnstone, GLL Parsing,
+in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
+[dotat.at/tmp/gll.pdf][scott_johnstone_2010]
+
+[scott_johnstone_2010]: http://dotat.at/tmp/gll.pdf
+
 Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
 Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
 anregungen und links rund um informatik-themen, short-URL:
-[http://t1p.de/bm3k][Herzberg_2008a]
+[t1p.de/bm3k][Herzberg_2008a]
 
 [Herzberg_2008a]: http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
 
 Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
 September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
 links rund um informatik-themen, short-URL:
-[http://t1p.de/7jzh][Herzberg_2008b]
+[t1p.de/7jzh][Herzberg_2008b]
 
 [Herzberg_2008b]: http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
 
 Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
 denkspuren. gedanken, ideen, anregungen und links rund um
-informatik-themen, short-URL: [http://t1p.de/s0zk][Herzberg_2007]
+informatik-themen, short-URL: [t1p.de/s0zk][Herzberg_2007]
 
 [Herzberg_2007]: http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
 
@@ -196,7 +202,18 @@ München 2016. Short-URL: [tiny.badw.de/2JVy][Müller_2016]
 Markus Voelter, Sbastian Benz, Christian Dietrich, Birgit Engelmann,
 Mats Helander, Lennart Kats, Eelco Visser, Guido Wachsmuth:
 DSL Engineering. Designing, Implementing and Using Domain-Specific Languages, 2013.
-[http://dslbook.org/][Voelter_2013]
+[dslbook.org/][Voelter_2013]
+
+Christopher Seaton: A Programming Language Where the Syntax and Semantics
+are Mutuable at Runtime, University of Bristol 2007,
+[chrisseaton.com/katahdin/katahdin.pdf][seaton_2007]
+
+Vegard Øye: General Parser Combinators in Racket, 2012,
+[epsil.github.io/gll/][vegard_2012]
+
+[vegard_2012]: https://epsil.github.io/gll/ 
+
+[seaton_2007]: http://chrisseaton.com/katahdin/katahdin.pdf
 
 [voelter_2013]: http://dslbook.org/
 
