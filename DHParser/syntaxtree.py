@@ -326,7 +326,25 @@ class Node(collections.abc.Sized):
                 raise ValueError('Leave nodes have no children that can be indexed!')
         else:
             match_function = lambda node: node.tag_name == index_or_tagname
-            return self.find(match_function)
+            return self.find(match_function, False)
+
+
+    def __contains__(self, tag_name: str) -> bool:
+        """
+        Returns true if a descendant with the given tag name exists.
+        Args:
+            tag_name: tag_name which will be searched among the descendant
+                nodes
+        Returns:
+            bool:  True, if at least one descendant node with the given tag
+                name exists, False otherwise
+        """
+        generator = self[tag_name]
+        try:
+            generator.__next__()
+            return True
+        except StopIteration:
+            return False
 
 
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
@@ -613,7 +631,7 @@ class Node(collections.abc.Sized):
         return self._tree_repr('    ', opening, closing, density=1)
 
 
-    def find(self, match_function: Callable) -> Iterator['Node']:
+    def find(self, match_function: Callable, include_root: bool=True) -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion.
 
@@ -624,15 +642,17 @@ class Node(collections.abc.Sized):
         Args:
             match_function (function): A function  that takes as Node
                 object as argument and returns True or False
+            include_root (bool): If False, only descendant nodes will be
+                checked for a match.
         Yields:
             Node: All nodes of the tree for which
             ``match_function(node)`` returns True
         """
-        if match_function(self):
+        if include_root and match_function(self):
             yield self
         else:
             for child in self.children:
-                for node in child.find(match_function):
+                for node in child.find(match_function, True):
                     yield node
 
 

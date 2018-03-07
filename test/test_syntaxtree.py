@@ -172,6 +172,10 @@ class TestNodeFind():
         assert str(matches[1]) == 'F', str(matches[1])
         assert matches[0] == mock_syntax_tree('(X (c d))')
         assert matches[1] == mock_syntax_tree('(X F)')
+        # check default: root is included in search:
+        matchf2 = lambda node: match_tag_name(node, 'a')
+        assert list(tree.find(matchf2))
+        assert not list(tree.find(matchf2, include_root=False))
 
     def test_getitem(self):
         tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
@@ -188,6 +192,13 @@ class TestNodeFind():
         print(flatten_sxpr(matches[0].as_sxpr()))
         assert matches[1] == mock_syntax_tree('(X F)')
 
+    def test_contains(self):
+        tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
+        assert 'a' not in tree
+        assert 'b' in tree
+        assert 'X' in tree
+        assert 'e' in tree
+        assert 'c' in tree
 
 
 if __name__ == "__main__":
