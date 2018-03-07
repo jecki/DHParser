@@ -2031,6 +2031,8 @@ class Compiler:
             self.context.append(node)
             result = compiler(node)
             self.context.pop()
+            if result is None:
+                raise ValueError('%s failed to return a valid compilation result!' % str(compiler))
             # # the following statement makes sure that the error_flag
             # # is propagated early on. Otherwise it is redundant, because
             # # the __call__ method globally propagates the node's error_flag
