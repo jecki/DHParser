@@ -382,9 +382,8 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
             return "".join(child.content for child in node.children[i:k])
         return nd.content
     node = context[-1]
-    return (node.parser.ptype == TOKEN_PTYPE
-            and ((not tokens or stripped(node) in tokens)
-                 or (not node.parser.name and len(tokens) == 1 and ":" in tokens)))
+    return (node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens))
+
 
 
 @transformation_factory(AbstractSet[str])

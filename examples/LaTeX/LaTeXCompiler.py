@@ -231,7 +231,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "a078d3d46ee55a7543f37c62b3fb24a7"
+    source_hash__ = "96b3c5ce2f75505a279d4d27f7712323"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

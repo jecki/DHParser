@@ -85,11 +85,11 @@ CFG_FILE_3 = r'''
 
 class TestTestfiles:
     def setup(self):
-        with open('configfile_test_1.ini', 'w') as f:
+        with open('configfile_test_1.ini', 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_1)
-        with open('configfile_test_2.ini', 'w') as f:
+        with open('configfile_test_2.ini', 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_2)
-        with open('configfile_test_3.ini', 'w') as f:
+        with open('configfile_test_3.ini', 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_3)
 
     def teardown(self):
