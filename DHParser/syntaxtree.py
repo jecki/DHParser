@@ -188,27 +188,34 @@ class Node(collections.abc.Sized):
     Attributes:
         tag_name (str):  The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name
+
         result (str or tuple):  The result of the parser which
             generated this node, which can be either a string or a
             tuple of child nodes.
+
         children (tuple):  The tuple of child nodes or an empty tuple
             if there are no child nodes. READ ONLY!
+
         parser (Parser):  The parser which generated this node.
             WARNING: In case you use mock syntax trees for testing or
             parser replacement during the AST-transformation: DO NOT
             rely on this being a real parser object in any phase after
             parsing (i.e. AST-transformation and compiling), for
             example by calling ``isinstance(node.parer, ...)``.
+
         errors (list):  A list of parser- or compiler-errors:
             tuple(position, string) attached to this node
+
         error_flag (int):  0 if no error occurred in either the node
             itself or any of its descendants. Otherwise contains the
             highest warning or error level or all errors that occurred.
+
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the concatenated string
             result's of its descendants. The figure always represents
             the length before AST-transformation and will never change
             through AST-transformation. READ ONLY!
+
         pos (int):  the position of the node within the parsed text.
 
             The value of ``pos`` is -1 meaning invalid by default.
@@ -269,14 +276,16 @@ class Node(collections.abc.Sized):
         return self._len
 
 
-
     def __bool__(self):
         # A node that is not None is always True, even if it's empty
         return True
 
 
     def __eq__(self, other):
-        # return str(self.parser) == str(other.parser) and self.result == other.result
+        """
+        Equality of nodes: Two nodes are considered as equal, if their tag
+        name is the same and if their results are equal.
+        """
         return self.tag_name == other.tag_name and self.result == other.result
 
 
@@ -289,6 +298,35 @@ class Node(collections.abc.Sized):
         other = Node(self.parser, result)
         other._pos = self._pos
         return other
+
+
+    def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
+        """
+        Returns the child node with the given index if ``index_or_tagname`` is
+        an integer value or a generator that yields all descendant nodes that
+        match a particular tag name. Examples::
+
+            >>> tree =  mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> flatten_sxpr(tree[0].as_sxpr())
+            '(b "X")'
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree["X"])
+            ['(X (c "d"))', '(X "F")']
+
+        Args:
+            index_or_tagname(str): Either an index of a child node or a
+                tag name.
+        Return:
+            Node: All nodes which have a given tag name.
+        """
+        if isinstance(index_or_tagname, int):
+            children = self.children
+            if children:
+                return children[index_or_tagname]
+            else:
+                raise ValueError('Leave nodes have no children that can be indexed!')
+        else:
+            match_function = lambda node: node.tag_name == index_or_tagname
+            return self.find(match_function)
 
 
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
@@ -577,7 +615,7 @@ class Node(collections.abc.Sized):
 
     def find(self, match_function: Callable) -> Iterator['Node']:
         """
-        Finds nodes in the tree that match a specific criterion.
+        Finds nodes in the tree that fulfill a given criterion.
 
         `find` is a generator that yields all nodes for which the
         given `match_function` evaluates to True. The tree is
@@ -587,7 +625,7 @@ class Node(collections.abc.Sized):
             match_function (function): A function  that takes as Node
                 object as argument and returns True or False
         Yields:
-            Node: all nodes of the tree for which
+            Node: All nodes of the tree for which
             ``match_function(node)`` returns True
         """
         if match_function(self):
@@ -596,6 +634,17 @@ class Node(collections.abc.Sized):
             for child in self.children:
                 for node in child.find(match_function):
                     yield node
+
+
+    def find_by_tag(self, tag_name: str) -> Iterator['Node']:
+        """
+        Finds all nodes with the given tag name.
+
+        Args:
+            tag_name(str): The tag name that is being searched for.
+        Yields:
+            Node: All nodes which have a given tag name.
+        """
 
 
     def tree_size(self) -> int:

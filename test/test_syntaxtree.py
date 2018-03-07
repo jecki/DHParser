@@ -24,7 +24,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.error import Error
-from DHParser.syntaxtree import Node, mock_syntax_tree, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -155,6 +155,39 @@ class TestErrorHandling:
         assert not tree.error_flag
         traverse(tree, {"*": find_h})
         assert tree.error_flag
+
+
+class TestNodeFind():
+    """Test the find-functions of class Node.
+    """
+
+    def test_find(self):
+        def match_tag_name(node, tag_name):
+            return node.tag_name == tag_name
+        matchf = lambda node: match_tag_name(node, "X")
+        tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
+        matches = list(tree.find(matchf))
+        assert len(matches) == 2, len(matches)
+        assert str(matches[0]) == 'd', str(matches[0])
+        assert str(matches[1]) == 'F', str(matches[1])
+        assert matches[0] == mock_syntax_tree('(X (c d))')
+        assert matches[1] == mock_syntax_tree('(X F)')
+
+    def test_getitem(self):
+        tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
+        assert tree[0] == mock_syntax_tree('(b X)')
+        assert tree[2] == mock_syntax_tree('(e (X F))')
+        print(flatten_sxpr(tree[0].as_sxpr()))
+        try:
+            node = tree[3]
+            assert False, "IndexError expected!"
+        except IndexError:
+            pass
+        matches = list(tree['X'])
+        assert matches[0] == mock_syntax_tree('(X (c d))')
+        print(flatten_sxpr(matches[0].as_sxpr()))
+        assert matches[1] == mock_syntax_tree('(X F)')
+
 
 
 if __name__ == "__main__":
