@@ -279,6 +279,7 @@ def expand_table(compact_table: Dict) -> Dict:
     return expanded_table
 
 
+
 #######################################################################
 #
 # miscellaneous (DHParser-specific)

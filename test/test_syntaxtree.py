@@ -181,7 +181,6 @@ class TestNodeFind():
         tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
         assert tree[0] == mock_syntax_tree('(b X)')
         assert tree[2] == mock_syntax_tree('(e (X F))')
-        print(flatten_sxpr(tree[0].as_sxpr()))
         try:
             node = tree[3]
             assert False, "IndexError expected!"
@@ -189,7 +188,6 @@ class TestNodeFind():
             pass
         matches = list(tree['X'])
         assert matches[0] == mock_syntax_tree('(X (c d))')
-        print(flatten_sxpr(matches[0].as_sxpr()))
         assert matches[1] == mock_syntax_tree('(X F)')
 
     def test_contains(self):

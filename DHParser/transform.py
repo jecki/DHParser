@@ -382,8 +382,7 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
             return "".join(child.content for child in node.children[i:k])
         return nd.content
     node = context[-1]
-    return (node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens))
-
+    return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
 
 
 @transformation_factory(AbstractSet[str])
@@ -755,6 +754,7 @@ remove_expendables = remove_children_if(is_expendable)
 # partial(remove_children_if, condition=is_expendable)
 remove_anonymous_expendables = remove_children_if(lambda ctx: is_anonymous(ctx)
                                                   and is_expendable(ctx))
+remove_anonymous_tokens = remove_children_if(lambda ctx: is_token(ctx) and is_anonymous(ctx))
 remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
 remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
 remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)
