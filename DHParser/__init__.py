@@ -18,6 +18,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+from .compile import *
 from .dsl import *
 from .ebnf import *
 # Flat namespace for the DHParser Package. Is this a good idea...?

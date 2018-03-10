@@ -25,7 +25,7 @@ limitations under the License.
 from functools import partial
 
 from DHParser.dsl import grammar_provider
-from DHParser.parse import compile_source
+from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors, \
     strip_tokens

@@ -25,7 +25,7 @@ import sys
 
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.parse import compile_source
+from DHParser import compile_source
 from DHParser.log import logging
 
 EBNF_TEMPLATE = r"""-grammar

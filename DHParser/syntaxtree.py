@@ -26,12 +26,11 @@ parser classes are defined in the ``parse`` module.
 
 import collections.abc
 import copy
-from functools import partial
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import re, typing
-from typing import Any, Callable, cast, Iterator, List, Union, Tuple, Hashable, Optional
+from DHParser.toolkit import re
+from typing import Callable, cast, Iterator, List, Union, Tuple, Optional
 
 
 __all__ = ('ParserBase',
@@ -42,8 +41,7 @@ __all__ = ('ParserBase',
            'ZOMBIE_PARSER',
            'Node',
            'mock_syntax_tree',
-           'flatten_sxpr',
-           'TransformationFunc')
+           'flatten_sxpr')
 
 
 #######################################################################
@@ -744,10 +742,6 @@ def mock_syntax_tree(sxpr):
     node = Node(MockParser(name, ':' + class_name), result)
     node._pos = 0
     return node
-
-
-TransformationFunc = Union[Callable[[Node], Any], partial]
-
 
 # if __name__ == "__main__":
 #     st = mock_syntax_tree("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")

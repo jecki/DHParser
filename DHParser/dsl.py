@@ -30,9 +30,10 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
 from DHParser.log import logging
-from DHParser.parse import Grammar, Compiler, compile_source
+from DHParser.parse import Grammar
+from DHParser import Compiler, compile_source, TransformationFunc
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, TransformationFunc
+from DHParser.syntaxtree import Node
 from DHParser.toolkit import load_if_file, is_python_code, compile_python_object, \
     re
 

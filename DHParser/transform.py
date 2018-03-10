@@ -38,6 +38,7 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
 
 __all__ = ('TransformationDict',
            'TransformationProc',
+           'TransformationFunc',
            'ConditionFunc',
            'KeyFunc',
            'transformation_factory',
@@ -96,6 +97,7 @@ __all__ = ('TransformationDict',
 
 TransformationProc = Callable[[List[Node]], None]
 TransformationDict = Dict[str, Sequence[Callable]]
+TransformationFunc = Union[Callable[[Node], Any], partial]
 ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[List[Node]], bool]
 KeyFunc = Callable[[Node], str]
@@ -846,3 +848,4 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
         if child.tag_name in child_tags:
             node.add_error('Element "%s" cannot be nested inside "%s".' %
                            (child.parser.name, node.parser.name))
+

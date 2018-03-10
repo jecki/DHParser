@@ -31,10 +31,10 @@ from typing import Callable, Dict, List, Set, Tuple
 
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, RE, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
-    Compiler
+    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
+from DHParser import Compiler, TransformationFunc
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, TransformationFunc, WHITESPACE_PTYPE, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table
 from DHParser.transform import traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \

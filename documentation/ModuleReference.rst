@@ -63,9 +63,9 @@ Main Modules Reference
 
 The core of DHParser are the modules containing the functionality
 for the parsing and compiling process. The modules ``preprocess``,
-``parse`` and  ``transform`` represent particular stages of the
+``parse``, ``transform`` and ``compile`` represent particular stages of the
 parsing/compiling process, while ``syntaxtree`` and ``error`` define
-clases for syntax trees and parser/compiler errors, respectively.
+classes for syntax trees and parser/compiler errors, respectively.
 
 Module ``preprocess``
 ---------------------
@@ -89,6 +89,12 @@ Module ``transform``
 --------------------
 
 .. automodule:: transform
+   :members:
+
+Module ``compile``
+--------------------
+
+.. automodule:: compile
    :members:
 
 Module ``error``
