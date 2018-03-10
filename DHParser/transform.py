@@ -53,6 +53,7 @@ __all__ = ('TransformationDict',
            'merge_children',
            'replace_content',
            'apply_if',
+           'apply_unless',
            'traverse_locally',
            'is_anonymous',
            'is_whitespace',
@@ -324,6 +325,13 @@ def apply_if(context: List[Node], transformation: Callable, condition: Callable)
         transformation(context)
 
 
+@transformation_factory(Callable)
+def apply_unless(context: List[Node], transformation: Callable, condition: Callable):
+    """Applies a transformation if a certain condition is *not* met."""
+    if not condition(context):
+        transformation(context)
+
+
 #######################################################################
 #
 # conditionals that determine whether the context (or the last node in
@@ -338,14 +346,17 @@ def apply_if(context: List[Node], transformation: Callable, condition: Callable)
 
 
 def is_single_child(context: List[Node]) -> bool:
+    """Returns ``True`` if the current node does not have any siblings."""
     return len(context[-2].children) == 1
 
 
 def is_named(context: List[Node]) -> bool:
+    """Returns ``True`` if the current node's parser is a named parser."""
     return bool(context[-1].parser.name)
 
 
 def is_anonymous(context: List[Node]) -> bool:
+    """Returns ``True`` if the current node's parser is an anonymous parser."""
     return not context[-1].parser.name
 
 
@@ -356,10 +367,13 @@ def is_whitespace(context: List[Node]) -> bool:
 
 
 def is_empty(context: List[Node]) -> bool:
+    """Returns ``True`` if the current node's content is empty."""
     return not context[-1].result
 
 
 def is_expendable(context: List[Node]) -> bool:
+    """Returns ``True`` if the current node either is a node containing
+    whitespace or an empty node."""
     return is_empty(context) or is_whitespace(context)
 
 
