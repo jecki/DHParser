@@ -738,7 +738,7 @@ def remove_children_if(context: List[Node], condition: Callable):
     node = context[-1]
     if node.children:
         node.result = tuple(c for c in node.children if not condition(context + [c]))
-
+    pass
 
 # @transformation_factory(Callable)
 # def remove_children(context: List[Node],
