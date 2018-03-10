@@ -1,0 +1,634 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE BWB SYSTEM "BWB_17-11-16.dtd" >
+<BWB>
+
+<!--ein VERB !!!-->
+
+
+<artikel id="tändeln">
+<lemma-position>
+<lemma>tändeln</lemma>
+<!--In lemma-variante stets die Langform angeben, die in Suchindex soll.-->
+<lemma-variante kurzform="-a-">tandeln</lemma-variante>
+<grammatik wortart="Vb"/></lemma-position>
+
+<bedeutung-position nr="1">
+<bedeutung>(mit Tauschwaren od. Trödel) Handel treiben</bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="OB" häufigkeit="vielf."/>
+<verbreitung-angabe bezirk="NB" häufigkeit="mehrf."/>
+<verbreitung-angabe bezirk="OP" häufigkeit="vereinz."/>
+<verbreitung-angabe bezirk="MF" häufigkeit="vereinz."/></verbreitung-position>
+
+
+<beleg-position>
+<beleg-angabe belegt="nach1958"><beleg-text>dea’ma Buiddl danddln?</beleg-text>
+<beleg-quelle><beleg-region><ort>Dachau</ort><landkreis>DAH</landkreis></beleg-region></beleg-quelle></beleg-angabe>
+
+<beleg-angabe><beleg-text><kontext anfuehrung="ja">Trödelwaare verkaufen … <beleg>dándln</beleg></kontext></beleg-text><beleg-quelle></beleg-quelle></beleg-angabe>
+<beleg-angabe><beleg-text>dạndln </beleg-text><beleg-quelle><beleg-region><ort>Baar </ort><landkreis>ND</landkreis></beleg-region><literatur-quelle>SBS X,8</literatur-quelle><beleg-zeit></beleg-zeit></beleg-quelle></beleg-angabe>
+<beleg-angabe><beleg-text>min Läid <kontext>(Feuer)</kontext> dandln <kontext anfuehrung="ja">zündeln</kontext></beleg-text><beleg-quelle></beleg-quelle></beleg-angabe>
+
+
+</beleg-position>
+</bedeutung-position>
+<bedeutung-position nr="2">
+<bedeutung>spielen</bedeutung>
+<bedeutung-variante nr="2a" id="tändeln-2a">
+<bedeutung>mit Spielsachen spielen</bedeutung></bedeutung-variante></bedeutung-position>
+</artikel>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--nun ein neuerer Artikel-->
+<artikel id="Darm" sort="Därm">
+<lemma-position>
+<lemma>Darm</lemma>
+<lemma-verweise>
+<lemma-variante>Gedärm</lemma-variante><!--Generieren von Verweisartikeln-->
+<lemma-variante>Daram</lemma-variante></lemma-verweise>
+<grammatik wortart="N" genus="M"/>
+</lemma-position>
+<bedeutung-position id="Darm-00"><bedeutung belegt="ausgestorben">nnnhh</bedeutung>
+<beleg-position><beleg-angabe><beleg-text></beleg-text><beleg-quelle></beleg-quelle></beleg-angabe></beleg-position>
+</bedeutung-position>
+<bedeutung-position nr="1" id="Darm-1"><!--Sprungziel für Verweise-->
+<bedeutung>Darm, Gedärm</bedeutung>
+<verbreitung-position>
+<verbreitung-angabe bezirk="Gesamtgebiet" häufigkeit="vielf."/>
+<verbreitung-angabe häufigkeit="vielf." bezirk="OB"/> 
+</verbreitung-position>
+
+
+<beleg-position><beleg-angabe><beleg-text>er hats im Darm </beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Wasserburg-WAS"></beleg-region><beleg-zeit>9.Jh</beleg-zeit><literatur-quelle></literatur-quelle></beleg-quelle></beleg-angabe> 
+<beleg-angabe><beleg-text><kontext anfuehrung="ja">für Leberwürste die <beleg>Darm</beleg> des Schweins</kontext></beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Prackenbach-VIT"></beleg-region><literatur-quelle></literatur-quelle><beleg-region></beleg-region></beleg-quelle></beleg-angabe>
+
+<beleg-angabe><beleg-text>Därmer hobn si vaschlinglt</beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Rothenstadt-NEW"></beleg-region></beleg-quelle></beleg-angabe>
+
+<beleg-angabe><beleg-text>vom Wasser kröigt ma’ bloue Daarma</beleg-text>
+<beleg-quelle><literatur-quelle>Oberpfalz 80 (1992) 145</literatur-quelle></beleg-quelle></beleg-angabe>
+
+<beleg-angabe><beleg-text>intestinis … indarmum</beleg-text>
+<beleg-quelle><beleg-zeit>8./9.Jh.</beleg-zeit><literatur-quelle>StSG. I,154,32</literatur-quelle></beleg-quelle></beleg-angabe>
+
+<beleg-angabe><beleg-text>chrebs dærmlein streket sich … vntz <kontext>[bis]</kontext> an daz end seins swantzes</beleg-text>
+<beleg-quelle><literatur-quelle>KONRADvM BdN 276,1f.</literatur-quelle></beleg-quelle></beleg-angabe>
+
+
+<beleg-angabe><beleg-text>in stechen, daß im die därm heraus sollen geen </beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Hankfn-SR"></beleg-region><beleg-zeit>1550</beleg-zeit><literatur-quelle>HELM Obrigkeit 171</literatur-quelle></beleg-quelle></beleg-angabe>
+
+
+<phraseologie>
+<phrase><beleg-angabe><beleg-text>dö dickn Da(r)m <kontext>Dickdärme</kontext></beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Mengkfn-DGF"></beleg-region></beleg-quelle></beleg-angabe></phrase>
+
+
+
+<phrase><beleg-typ>Dünner <lemma-referenz abk="D." vollform="Darm">D.</lemma-referenz> </beleg-typ>
+ 
+<bedeutung>Dünndarm</bedeutung>
+<verbreitung-angabe bezirk="NB" häufigkeit="vereinz."/><!--Doppelpunkt-->
+<beleg-angabe><beleg-text>dö dina Da(r)m</beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Mittich-GRI"></beleg-region></beleg-quelle></beleg-angabe>
+</phrase>
+<phrase><beleg-angabe belegt="nach1958"><beleg-text>toter Darm</beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Söldenau-VOF"></beleg-region></beleg-quelle></beleg-angabe></phrase>
+<phrase><beleg-angabe belegt="nach1958"><beleg-text>Wöi a Doam <kontext anfuehrung="ja">lang und dünn</kontext></beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Brennbg-R"></beleg-region></beleg-quelle></beleg-angabe></phrase>
+
+
+<phrase><beleg-angabe><beleg-text>dẹị siaht wẹị a asgschdrafda Doarm <kontext anfuehrung="ja">sie ist sehr mager</kontext></beleg-text>
+<beleg-quelle><literatur-quelle>KONRAD nördl.Opf. 63</literatur-quelle>
+<literatur-quelle quelle-art="ähnlich">KAPS Welt d.Bauern 61</literatur-quelle></beleg-quelle></beleg-angabe>
+<beleg-angabe><beleg-text>dea schat hea wia wen a grad an Doam het dua und dua <kontext anfuehrung="ja">ist bleich und mager</kontext></beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Iggensbach-DEG"></beleg-region>
+<!--Hier nur Landkreis, daher als "Bezirk" angelegt ...-->
+<beleg-region quelle-art="ähnlich" bezirk="SR"></beleg-region></beleg-quelle></beleg-angabe>
+</phrase>
+</phraseologie>
+</beleg-position>
+</bedeutung-position>
+<!--zweite Bedeutung-->
+<bedeutung-position nr="2" id="Darm-2">
+<bedeutung>aus Tierdarm Bestehendes</bedeutung>
+
+<bedeutung-position nr="2a" id="Darm-2a">
+<bedeutung>Wursthaut</bedeutung>
+
+<verbreitung-position>
+<verbreitung-angabe bezirk="MF" häufigkeit="vielf."/>
+<verbreitung-angabe bezirk="NB" häufigkeit="mehrf." belegt="nach1958"/>
+<verbreitung-angabe bezirk="OP" häufigkeit="mehrf."/>
+<verbreitung-angabe bezirk="Restgebiet" häufigkeit="vereinz."/></verbreitung-position>
+
+<beleg-position>
+<beleg-angabe><beleg-text>Darm, Saitling</beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Oalting-STA"></beleg-region></beleg-quelle></beleg-angabe>
+<beleg-angabe belegt="nach1958"><beleg-text>i hed no an Badzn Gwuaschdad <kontext>(Wurstteig)</kontext> då, bringsdas no ei öd Darm?</beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Grafenau-GRA"></beleg-region></beleg-quelle></beleg-angabe></beleg-position>
+</bedeutung-position>
+<bedeutung-position nr="2b" id="Darm-2b"><bedeutung>Darmsaite</bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="NB" häufigkeit="vereinz."/></verbreitung-position><!--: ????--><beleg-position><beleg-angabe><beleg-text>Soatn, Darm <kontext>auf Streichinstrumenten</kontext></beleg-text>
+<beleg-quelle><beleg-region ort-landkreis="Rgbg-R"></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position>
+</bedeutung-position>
+<bedeutung-position nr="3" id="Darm-3"><bedeutung>lange schmale Fläche, schmaler Raum</bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="OB" häufigkeit="vielf."/>
+<verbreitung-angabe bezirk="Restgebiet" häufigkeit="mehrf."/></verbreitung-position>
+<beleg-position><beleg-angabe><beleg-text>grod a so a schmoicha Darm <kontext>sehr schmales Feld</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Frasdf</ort><landkreis>RO</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position>
+
+
+<etymologie-position>
+ Ahd. <lemma-form typ="ahd.">darm</lemma-form>, mhd. 
+<lemma-form typ="mhd.">darm</lemma-form> <abk langform="stark männlich ">stm.</abk>, germ. Wort <abk langform="indogermanisch">idg.</abk> Herkunft; <beleg-quelle><literatur-quelle>KLUGE-SEEBOLD 181</literatur-quelle></beleg-quelle></etymologie-position>
+
+
+<lautung-position typ="ltg">
+<lautung-angabe><beleg-typ>dårm</beleg-typ>, <beleg-typ>d#å3m</beleg-typ> u.ä., auch <beleg-typ>dǫαm</beleg-typ> u.ä. <verbreitung-angabe bezirk="NB"/>, <verbreitung-angabe/>OP, <verbreitung-angabe/>OF (dazu <verbreitung-angabe/>DAH, <verbreitung-angabe/>IN, <verbreitung-angabe/>M, <verbreitung-angabe/>WM; <verbreitung-angabe/>EIH, <verbreitung-angabe/>HEB, <verbreitung-angabe/>HIP, <verbreitung-angabe/>N, <verbreitung-angabe/>WUG), <beleg-typ>dārαm</beleg-typ> (<verbreitung-angabe/>LL), daneben mit Vok. des Pl., vgl. <literatur-quelle>WBÖ IV,770</literatur-quelle>, <beleg-typ>dạrm</beleg-typ>, <beleg-typ>d#a13m</beleg-typ> u.ä. <verbreitung-angabe/>OB, <verbreitung-angabe/>NB, <verbreitung-angabe/>OP, <verbreitung-angabe/>SCH (dazu <verbreitung-angabe/>EIH), <beleg-typ>dęrm</beleg-typ> (<verbreitung-angabe/>SC).— Pl. <beleg-typ>dạrm</beleg-typ>, <beleg-typ>d#a13m</beleg-typ> <verbreitung-angabe/>OB, <verbreitung-angabe/>NB, <verbreitung-angabe/>OP, <verbreitung-angabe/>SCH (dazu <verbreitung-angabe/>EIH, <verbreitung-angabe/>HEB, <verbreitung-angabe/>WUG), daneben <beleg-typ>-mα</beleg-typ> <verbreitung-angabe/>OP, <verbreitung-angabe/>OF (dazu <verbreitung-angabe/>N), <beleg-typ>dęrm</beleg-typ>, <beleg-typ>dęαm</beleg-typ> u.ä. <verbreitung-angabe/>OB, <verbreitung-angabe/>OP, <verbreitung-angabe/>MF (dazu <verbreitung-angabe/>KEH; <verbreitung-angabe/>BT, <verbreitung-angabe/>PEG; <verbreitung-angabe/>FDB), <beleg-typ>-mα</beleg-typ> u.ä. <verbreitung-angabe/>OP, <verbreitung-angabe/>MF (dazu <verbreitung-angabe/>FFB; <verbreitung-angabe/>REH; <verbreitung-angabe/>FDB), <beleg-typ>diαm</beleg-typ> (<verbreitung-angabe/>NM, <verbreitung-angabe/>PAR; <verbreitung-angabe/>BT), <beleg-typ>-mα</beleg-typ> u.a. (<verbreitung-angabe/>NM, <verbreitung-angabe/>SUL; <verbreitung-angabe/>FO; <verbreitung-angabe/>HEB, <verbreitung-angabe/>LAU, <verbreitung-angabe/>N, <verbreitung-angabe/>SC), <beleg-typ>dęrαm</beleg-typ> (<verbreitung-angabe/>PA), <beleg-typ>dērαm</beleg-typ> (<verbreitung-angabe/>LL), auch <beleg-typ>dǫαm</beleg-typ> (<verbreitung-angabe/>M; <verbreitung-angabe/>KEH, <verbreitung-angabe/>WEG; <verbreitung-angabe/>ESB, <verbreitung-angabe/>SUL; <verbreitung-angabe/>EIH).— Dat.Pl. vereinz. <beleg-typ>dęαwαn</beleg-typ> (<verbreitung-angabe/>ESB).</lautung-angabe></lautung-position>
+
+<literatur-position><literatur-gruppe><literatur-quelle>DELLING I,115</literatur-quelle><literatur-quelle>SCHMELLER I,540</literatur-quelle><literatur-quelle>ZAUPSER 21</literatur-quelle></literatur-gruppe>
+<literatur-gruppe><sammlung-quelle>WBÖ IV,769-774</sammlung-quelle></literatur-gruppe></literatur-position>
+
+<ableitung-position><verweis>Därm</verweis>, <verweis>-darmach</verweis>, <verweis>därmen</verweis>, <verweis>därmig</verweis></ableitung-position>
+
+<!--Komposita-->
+
+<komposita-position>
+<kompositum id="Arschdarm">
+<lemma-kompositum><bestimmungsteil>Arsch</bestimmungsteil><lemma-referenz abk="d." vollform="darm"></lemma-referenz></lemma-kompositum>
+
+<bedeutung-position nr="1" id="Arschdarm-1"><bedeutung>Mastdarm</bedeutung>
+
+
+<verbreitung-position>
+<verbreitung-angabe bezirk="NB" belegt="nach1958" häufigkeit="vereinz."/>
+<verbreitung-angabe belegt="nach1958" bezirk="OP" häufigkeit="vereinz."/>
+</verbreitung-position><!--:-->
+<beleg-position><beleg-angabe><beleg-text>Oschdam</beleg-text>
+<beleg-quelle><beleg-region><ort>Neurandsbg</ort><landkreis>BOG</landkreis></beleg-region></beleg-quelle></beleg-angabe>
+<beleg-angabe><beleg-text>Arschdarm</beleg-text>
+<beleg-quelle><beleg-region><verbreitung-angabe bezirk="OB"/></beleg-region><literatur-quelle>BzAnthr. 8 (1889) 163</literatur-quelle></beleg-quelle></beleg-angabe></beleg-position>
+</bedeutung-position>
+
+<bedeutung-position nr="2" id="Arschdarm-2"><bedeutung>Dickdarm</bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="OP" häufigkeit="vereinz." belegt="nach1958"/></verbreitung-position><!--:-->
+<beleg-position>
+<beleg-angabe belegt="nach1958"><beleg-text>Oaschdoam <kontext anfuehrung="ja">vom Schwein zum Einfüllen von Wurstmasse</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Rottendf </ort><landkreis>NAB</landkreis></beleg-region></beleg-quelle></beleg-angabe>
+
+<phraseologie>
+<phrase><beleg-typ>Reim</beleg-typ><!--:--><!--???--><beleg-angabe><beleg-text>Arschdarm, bist im Bett verdarbm </beleg-text>
+<beleg-quelle><beleg-region><ort>Ahrain</ort></beleg-region><literatur-quelle>POLLINGER Landshut 214</literatur-quelle></beleg-quelle></beleg-angabe></phrase>
+
+<phrase><beleg-typ>Auch †</beleg-typ><!--:--><beleg-angabe><beleg-text>Arschdarm <kontext anfuehrung="ja">der Letzte; namentlich … derjenige [Hirtenjunge] … der am Pfingstsonntag … zuletzt auf die Weide kommt</kontext></beleg-text>
+<beleg-quelle><literatur-quelle>SCHMELLER I,148</literatur-quelle></beleg-quelle></beleg-angabe></phrase>
+
+
+</phraseologie></beleg-position>
+</bedeutung-position>
+<bedeutung-position nr="0" id="Arschdarm-0"><bedeutung>Auch †</bedeutung>
+<beleg-position><beleg-angabe><beleg-text>Arschdarm <kontext anfuehrung="ja">der Letzte; namentlich … derjenige [Hirtenjunge] … der am Pfingstsonntag … zuletzt auf die Weide kommt</kontext></beleg-text>
+<beleg-quelle><literatur-quelle>SCHMELLER I,148</literatur-quelle></beleg-quelle></beleg-angabe>
+</beleg-position></bedeutung-position>
+
+<literatur-position><literatur-gruppe><literatur-quelle>SCHMELLER I,148, 540</literatur-quelle></literatur-gruppe><literatur-gruppe><sammlung-quelle>WBÖ IV,774</sammlung-quelle></literatur-gruppe></literatur-position>
+</kompositum>
+
+
+<kompositum typ="mehrfach" id="Pfingstel-arsch">
+<lemma-kompositum><bestimmungsteil>Pfingst(el)-arsch</bestimmungsteil><lemma-referenz abk="d." vollform="darm">d.</lemma-referenz></lemma-kompositum>
+
+<bedeutung-position id="Pfingstel-arsch-0"><bedeutung>wie <!--[Arsch]d.4 ➙--><verweis ziel="Arschdarm-2"></verweis></bedeutung><!--Pfeil funktioniert nicht im Kopieren  -->
+<verbreitung-position><verbreitung-angabe bezirk="NB" häufigkeit="vereinz."/></verbreitung-position>
+<beleg-position>
+<beleg-angabe><beleg-text>Pfingstlarschdarm</beleg-text>
+<beleg-quelle><beleg-region><ort>Sossau</ort></beleg-region></beleg-quelle></beleg-angabe>
+<phraseologie><intro>Reime:</intro><phrase><beleg-angabe><beleg-text>Pfingståschdoarm, bist ön Böt vodoarm</beleg-text>
+<beleg-quelle><beleg-region><ort>Iggensbach</ort><landkreis>DEG</landkreis><!--ähnlich--><verbreitung-angabe bezirk="NB" häufigkeit="vereinz."/><verbreitung-angabe bezirk="OP" häufigkeit="vereinz."/></beleg-region></beleg-quelle></beleg-angabe></phrase></phraseologie>
+</beleg-position>
+</bedeutung-position></kompositum>
+
+<kompositum id="Bachdarm">
+<lemma-kompositum><bestimmungsteil>Bach</bestimmungsteil><lemma-referenz abk="d." vollform="darm">d.</lemma-referenz></lemma-kompositum>
+<bedeutung-position id="Bachdarm-0"><bedeutung>Kleine Wasserlinse <name-linne>Lemna minor</name-linne><!--neues Element--></bedeutung>
+<beleg-position><beleg-angabe><beleg-text>Bo(ch)darm <kontext>hilft im Badewasser bei Kindern gegen Winde</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Loitzendf</ort><landkreis>Bog</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position></kompositum>
+
+
+<kompositum typ="doppel" id="Gansdarm">
+
+<lemma-kompositum><bestimmungsteil>Gans</bestimmungsteil><lemma-referenz abk="d." vollform="darm"></lemma-referenz></lemma-kompositum><!--, -->
+<lemma-kompositum><bestimmungsteil>Gänse</bestimmungsteil><lemma-referenz abk="d." vollform="darm"></lemma-referenz><!--beim 2. Lemma keine Lemmaabk.--></lemma-kompositum>
+<bedeutung-position id="Gansdarm-1" nr="1"><bedeutung>Darm der Gans</bedeutung>
+<beleg-position><phraseologie><intro>in Phras.</intro>
+<phrase><beleg-angabe><beleg-text>der hat an Gänsdarm <kontext>wird nie satt</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Eslarn </ort><landkreis>VOH</landkreis></beleg-region></beleg-quelle></beleg-angabe></phrase></phraseologie></beleg-position></bedeutung-position>
+<!--...-->
+</kompositum>
+</komposita-position>
+
+
+<verfasser kuerzel="JD"/></artikel>
+
+<artikel id="dan1">
+<lemma-position>
+<lemma>dan<hoch>1</hoch></lemma>
+<lemma-variante>dannen</lemma-variante>
+<grammatik wortart="Adv"/></lemma-position>
+<bedeutung-position id="dan1-1" nr="1"><bedeutung><!--lokal, -->von dort (weg), fort</bedeutung><!--"lokal" ist eig. Bestimmung-->
+
+<beleg-position><beleg-angabe><beleg-text></beleg-text>
+<beleg-quelle></beleg-quelle></beleg-angabe>
+<!--nur Phraseologie--><!--ggf. auch bedeutung erweitern ...-->
+<phraseologie><intro>auch in Phras. <!--von d.-->, ä.Spr., in heutiger Mda. nur in Phras. u. Komp.:</intro>
+<phrase><beleg-angabe><beleg-text>des … man dana … uona … deru chirichun … mitunrehtu … farchaufta </beleg-text>
+<beleg-quelle><beleg-region><ort>Rgbg</ort></beleg-region><beleg-zeit>10./11. Jh.</beleg-zeit><literatur-quelle>StSG. II,99,15-19</literatur-quelle></beleg-quelle></beleg-angabe>
+<beleg-angabe><beleg-text>sulen … in varen z#v7 · Wizenburg … vnd sulen dannen niht k#v7men/ vnz <kontext>[bis]</kontext> den brudern der k#oauf … gestetet <kontext>[bestätigt]</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Pappenhm</ort><landkreis>WUG</landkreis></beleg-region><beleg-zeit>1269</beleg-zeit> <literatur-quelle>Corp.Urk. I,166,17-19</literatur-quelle></beleg-quelle></beleg-angabe></phrase>
+
+<phrase><beleg-typ>Auch in Phras.<!--von da --><lemma-referenz abk="d." vollform="dan">d.</lemma-referenz></beleg-typ>
+<verbreitung-angabe bezirk="NB" häufigkeit="vereinz." belegt="nach1958"/>
+<verbreitung-angabe bezirk="OP" häufigkeit="vereinz." belegt="nach1958"/>
+<beleg-angabe belegt="nach1958"><beleg-text>dem gej i ejtz ned vo da danna <kontext>lasse ihn nicht aus den Augen</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Kötzting</ort></beleg-region></beleg-quelle></beleg-angabe></phrase></phraseologie></beleg-position>
+</bedeutung-position>
+<bedeutung-position id="dan1-2" nr="2"><bedeutung belegt="ausgestorben"><!--temporal, -->dann, darauf</bedeutung>
+<beleg-position>
+<beleg-angabe><beleg-text>exinde danan</beleg-text>
+<beleg-quelle><beleg-zeit>8./9.Jh.</beleg-zeit><literatur-quelle>StSG. I,132,8</literatur-quelle></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position>
+<bedeutung-position id="dan1-3" nr="3"><bedeutung belegt="ausgestorben"><!--kausal, -->deswegen, daher</bedeutung>
+<beleg-position><beleg-angabe><beleg-text>dannen hête si gesiechet … zwaier minner denne drîzec jâre </beleg-text>
+<beleg-quelle><literatur-quelle>Kaiserchr. 94,733f.</literatur-quelle></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position>
+<bedeutung-position id="dan1-4" nr="4"><bedeutung><!--Rel.adv., -->von wo aus, auch in Phras. <!--von d.--></bedeutung></bedeutung-position>
+
+<etymologie-position><!--Ahd. --><lemma-form typ="ahd">dana</lemma-form>, <lemma-form typ="ahd">danan(a)</lemma-form>, <!--mhd. --><lemma-form>dan(e)</lemma-form>, <lemma-form>danne(n)</lemma-form>, <lemma-form>dannant</lemma-form>, germ. Bildungen idg. Herkunft; <beleg-quelle><literatur-quelle>Et.Wb.Ahd. II,522-524</literatur-quelle></beleg-quelle>.</etymologie-position>
+
+<literatur-position><literatur-gruppe><literatur-quelle>SCHMELLER I,512.— WBÖ IV,553f</literatur-quelle></literatur-gruppe></literatur-position>
+<ableitung-position><lemma-form>-daner</lemma-form>, <lemma-form>danher</lemma-form>, <lemma-form>danhin</lemma-form><!--wirklich Lemmaformen?--></ableitung-position>
+<verfasser kuerzel="AR"/></artikel>
+
+<!--	nur eine Bedeutung -->
+<artikel id="Ache">
+	<!--Lemma-->
+	<lemma-position>
+		<lemma>Ache</lemma><!--,  (nur wenn lemma-variante folgt)-->
+		<lemma-variante>Ohe</lemma-variante><!--CR (immer vor grammatik)-->
+		<!-- Verweiseinträge, die im Print zu Verweisartikeln werden-->
+		 <lemma-verweise><lemma-variante>Oache</lemma-variante></lemma-verweise>                
+
+		<grammatik genus="F" wortart="N"/>  <!--(grammatik gibts immer, nur nicht bei Namen "Achatius" => eigener Artikeltyp)-->
+	</lemma-position><!--, (nur wenn keine Bedeutungs-Nr. folgt = nur eine Bedeutung) -->
+
+
+<!--Bedeutung-->
+	<bedeutung-position id="Ache-0">
+		<bedeutung>fließendes Gewässer</bedeutung>		<!--,(stets nach Bedeutung, auch wenn mehrere) -->
+
+<!--Verbreitung-->
+	<verbreitung-position>
+		<verbreitung-angabe belegt="nach1958" bezirk="OB" häufigkeit="vereinz."/>
+		<!--, (immer zwischen den Angaben)-->
+		<verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="NB"/>
+	</verbreitung-position> 
+
+<!--Belege-->
+<!--: (immer vor Beleg-Position) -->	
+<beleg-position>
+	<beleg-angabe belegt="nach1958">		<beleg-text><beleg>Ocha</beleg> <kontext><!--" (immer?)-->alle Gewässer, die aus einem See kommen</kontext></beleg-text>
+		<beleg-quelle><beleg-region><ort>Hemhof</ort>
+<landkreis>RO</landkreis></beleg-region></beleg-quelle>
+	</beleg-angabe><!--; (wenn weitere Belegangabe folgt) -->
+
+	 <beleg-angabe belegt="nach1958"><beleg-text><beleg>gehn wir in d’Ach zum Schwimmen?</beleg> <kontext>eine <beleg>Ache</beleg> ist größer als ein Bach</kontext></beleg-text>
+ 	<beleg-quelle><beleg-region><ort>Bayersoien</ort>
+<landkreis>SOG</landkreis></beleg-region></beleg-quelle></beleg-angabe><!-- ; (wenn weitere Belegangabe folgt)-->
+	
+
+		
+		<beleg-angabe belegt="nach1958"><beleg-text><beleg>Ohe</beleg> <kontext anfuehrung="ja">jeder Bach</kontext></beleg-text>
+ 		<beleg-quelle><beleg-region><ort>Schönbg</ort>
+<landkreis>GRA</landkreis></beleg-region></beleg-quelle></beleg-angabe><!-- ; (wenn weitere Belegangabe folgt)-->
+
+
+
+
+
+
+			<beleg-angabe><beleg-text><beleg>Und wie d’Ach graben worden ist, sind die Grabenmacher dran hinkommen</beleg></beleg-text>
+ <beleg-quelle><beleg-region><ort>Berg</ort>
+<landkreis>SOB</landkreis></beleg-region><literatur-quelle><autor>Böck</autor> Sagen Neuburg-Schrobenhsn 20</literatur-quelle></beleg-quelle>  </beleg-angabe><!-- ; (immer am Ende) -->
+
+
+
+			<beleg-angabe><beleg-text><beleg>So daz Eliases pluot in erda kitriufit, so inprinnant die perga ... aha artruknent</beleg></beleg-text>
+<beleg-quelle><beleg-zeit>9.Jh.</beleg-zeit><literatur-quelle>SKD 68,50-52 (Muspilli)</literatur-quelle></beleg-quelle></beleg-angabe><!-- ; (immer am Ende) -->
+			<beleg-angabe><beleg-text><beleg>das sye Beclagte an gemeltem Subenttage <glossierung><!--[ (immer) -->Sonnwendtag<!--] (immer) --></glossierung> Reischen <glossierung><!--[-->Reusen<!--]--></glossierung> zu höben in die Achen hinunter geloffen</beleg></beleg-text>
+<beleg-quelle><beleg-zeit>1749</beleg-zeit><literatur-quelle>StA Mchn Hofmark Amerang Pr. 18</literatur-quelle></beleg-quelle></beleg-angabe><!--. (beim letzten) -->
+</beleg-position>
+
+
+<!--Erläuterung-->
+<!-- — -->	
+<erlaeuterung-position>Im Gesamtgeb. als Flußn. <lemma-referenz abk="A." vollform="Ache"><!--A.--></lemma-referenz>, <lemma-referenz abk="O." vollform="Ohe"><!--O.--></lemma-referenz>, häufig in Komposita, z.B. <beleg-typ>Salzach</beleg-typ>, <beleg-typ>Kolbach</beleg-typ>; sekundär auch in <abk langform="Ortsnamen">ON</abk>, z.B. <beleg-typ>Ohu</beleg-typ> (<verbreitung-angabe/><landkreis>LA</landkreis>), <beleg-typ>Moosach</beleg-typ> (<verbreitung-angabe/><landkreis>M</landkreis>), mit falscher Restitution od. verdunkelt z.B. <beleg-typ>Altaich</beleg-typ> (<verbreitung-angabe/><landkreis>BOG</landkreis>, <verbreitung-angabe/><landkreis>DEG</landkreis>).</erlaeuterung-position>
+	</bedeutung-position> <!-- CR -->
+
+		<!--Etymologie-->
+		<etymologie-position><!--Etym.:-->Ahd. <lemma-form typ="ahd">ahha</lemma-form>, mhd. <lemma-form typ="mhd">ache</lemma-form>, <abk langform="starkesFeminin">stf.</abk>, urverwandt mit lat. <lemma-form typ="Latein">aqua</lemma-form>; <beleg-quelle><literatur-quelle>HIERSCHE I,23</literatur-quelle><!--; (wenn weitere literatur-quelle folgt)--><literatur-quelle>Et.Wb.Ahd. I,99-103</literatur-quelle></beleg-quelle>
+		</etymologie-position><!--. + CR-->
+
+<!--Lautung-->
+<lautung-position typ="lautg-formen"><!--Ltg oder Ltg, Formen:-->Appellativum <lautung-angabe><beleg-typ>a#x2</beleg-typ> (<verbreitung-angabe/><landkreis>SOG</landkreis>), <beleg-typ>å#x2</beleg-typ> (<verbreitung-angabe/><landkreis>WOR</landkreis>); <beleg-typ>å#x2α</beleg-typ> (<verbreitung-angabe/><landkreis>MB</landkreis>, <verbreitung-angabe/><landkreis>TS</landkreis>); <beleg-typ>å#x2αn</beleg-typ> (<verbreitung-angabe/><landkreis>M</landkreis>); mit Dehnung <beleg-typ>#o23x</beleg-typ> (<verbreitung-angabe/><landkreis>PA</landkreis>); <beleg-typ>ou</beleg-typ> (<verbreitung-angabe/><landkreis>GRA</landkreis>); im Namenskomp. abgeschwächt zu <beleg-typ>- α</beleg-typ>.
+		</lautung-angabe></lautung-position><!--CR-->
+
+<!--Nachweis in der Literatur-->	
+<literatur-position>
+<literatur-gruppe><literatur-quelle>SCHMELLER I,21f.</literatur-quelle><!--; --><literatur-quelle>WESTENRIEDER Gloss. 4 <!--. - --> </literatur-quelle></literatur-gruppe>
+<literatur-gruppe><literatur-quelle>WBÖ I,115f.</literatur-quelle><!--; --><literatur-quelle>Schwäb.Wb. I,88</literatur-quelle><!--; --><literatur-quelle>Schw.Id. I,63</literatur-quelle><!--.--></literatur-gruppe>
+		<literatur-gruppe><literatur-quelle>²DWB I,1349f.</literatur-quelle><!--; --><literatur-quelle>Frühnhd.Wb. I,535</literatur-quelle><!--; --><literatur-quelle>LEXER HWb. I,28</literatur-quelle><!--; --><literatur-quelle>WMU 38</literatur-quelle><!--; - --><literatur-quelle>Ahd.Wb. I,65f.</literatur-quelle></literatur-gruppe>
+		<literatur-gruppe><sammlung-quelle>W-129a/2</sammlung-quelle><!--.--></literatur-gruppe>
+	</literatur-position>
+
+<!--Komposita-->
+	
+<komposita-position><!--Komp.:-->
+	<kompositum id="Altache">
+		<lemma-kompositum><!--[ (immer) --><bestimmungsteil>Alt</bestimmungsteil><!--] (immer) --><lemma-referenz abk="a." vollform="ache"><!-- a. --></lemma-referenz></lemma-kompositum><!--ist bei Ache falsch im Artikel-->
+<bedeutung-position id="Altache-0"><bedeutung>Altwasser</bedeutung><!--,-->
+<verbreitung-position>
+<verbreitung-angabe belegt="nach1958" bezirk="OB" häufigkeit="mehrf."/><!--,-->
+<verbreitung-angabe belegt="nach1958" häufigkeit="mehrf." bezirk="NB"/><!--,-->
+<verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OP"/></verbreitung-position><!--:-->
+
+<beleg-position><beleg-angabe><beleg-text><!--"-->die Freisinger fischen in den <beleg>Oitαn</beleg> der Isar<!--"--></beleg-text>
+<beleg-quelle><beleg-region><ort><abk langform="Freising">Frsg<!--!!!!!!!!!!!!!!!--></abk></ort></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text><beleg>Alta</beleg> <kontext><!--"-->das Altwasser, das Rinnsal abgeleiteter Flüsse<!--"--></kontext></beleg-text>
+<beleg-quelle><literatur-quelle><autor>Bauernfeind</autor> Nordopf. 142</literatur-quelle></beleg-quelle></beleg-angabe></beleg-position><!--.--></bedeutung-position>
+
+
+
+<lautung-position><!--Ltg.:--><lautung-angabe><beleg-typ>åltα(n)</beleg-typ>, im Vokalisierungsgeb. <beleg-typ>#o2i ; -d-</beleg-typ> (<verbreitung-angabe/><landkreis>SOB</landkreis>; <verbreitung-angabe/><landkreis>DGF</landkreis>, <verbreitung-angabe/><landkreis>GRA</landkreis>, <verbreitung-angabe/><landkreis>GRI</landkreis>, <verbreitung-angabe/><landkreis>PA</landkreis>)</lautung-angabe></lautung-position><!--.-->
+
+<literatur-position>
+	<literatur-gruppe><literatur-quelle>SCHMELLER I,22</literatur-quelle><!--; --><literatur-quelle>WESTENRIEDER Gloss. 4</literatur-quelle></literatur-gruppe><!--.— -->
+	<literatur-gruppe><literatur-quelle>WBÖ I,116</literatur-quelle><!--; --><literatur-quelle>Schwäb.Wb. I,158</literatur-quelle></literatur-gruppe><!--.— -->
+	<literatur-gruppe><literatur-quelle>Frühnhd.Wb. I,867</literatur-quelle></literatur-gruppe><!--.— -->
+	<literatur-gruppe><sammlung-quelle>W-2/49</sammlung-quelle><!--, --><sammlung-quelle>129a/2</sammlung-quelle></literatur-gruppe>
+</literatur-position>
+		</kompositum>	
+<!--Ab hier pecken für mehrfach kompositum-->
+
+<kompositum typ="mehrfach" id="hin-ein-pecken">
+<!--Mehrfachkompositum = mehrere Bestimmungsteile, von denen das letzte bereits als Bestimmungsteil in einem vorausgehenden Kompositum vorkommt.-->
+<lemma-kompositum><bestimmungsteil>hin-ein</bestimmungsteil><lemma-referenz abk="p." vollform="pecken"></lemma-referenz></lemma-kompositum>
+
+
+<bedeutung-position nr="1" id="hin-ein-pecken-1"><bedeutung>hineinhacken</bedeutung>
+<beleg-position><beleg-angabe belegt="nach1958"><beleg-text><beleg>der kann ruhig in Bam neibecka und im Stehn schlaffa</beleg> <kontext>er hat eine Hakennase</kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Wettstetten</ort>
+<landkreis>IN</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position>
+<bedeutung-position nr="2" id="hin-ein-pecken-2"><bedeutung-spezial>auf jmd. losgehen</bedeutung-spezial> <form-spezial>in präp. Fügung <beleg-typ>auf / in jmdn <lemma-referenz abk="h." vollform="hineinpecken"></lemma-referenz></beleg-typ></form-spezial>
+<verbreitung-position><verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OF"/></verbreitung-position>
+
+ <beleg-position><beleg-angabe><beleg-text></beleg-text>
+<beleg-quelle><literatur-quelle></literatur-quelle></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position>
+
+</kompositum>
+</komposita-position>
+<verfasser kuerzel="HUS"/></artikel>
+
+
+
+
+
+<!--sehr sehr langer Artikel mit mehreren Bedeutungen und vielen Komposita-->
+<artikel id="Pech"><lemma-position><lemma>Pech</lemma><!--CR-->
+<grammatik genus="N" wortart="N"/></lemma-position>
+<!--Bedeutungsposition-->
+<bedeutung-position nr="1" id="Pech-1"><bedeutung>Baumharz, daraus hergestellte Substanz</bedeutung><!--.— (Punkt, weil bedeutung-variante folgt)-->
+
+<!--Unterbedeutung-->
+<bedeutung-variante nr="1a" id="Pech-1a"><bedeutung>Baumharz</bedeutung><!--,-->
+<verbreitung-position>
+<verbreitung-angabe belegt="nach1958" häufigkeit="vielf." bezirk="OB"/>
+<verbreitung-angabe belegt="nach1958" häufigkeit="vielf." bezirk="MF"/>
+<verbreitung-angabe belegt="nach1958" häufigkeit="vielf." bezirk="NB"/>
+<verbreitung-angabe belegt="nach1958" häufigkeit="vielf." bezirk="OF"/>
+<verbreitung-angabe belegt="nach1958" häufigkeit="vielf." bezirk="OP"/>
+<verbreitung-angabe belegt="nach1958" häufigkeit="vielf." bezirk="SCH"/>
+</verbreitung-position>
+<!--: (Doppelpunkt stets VOR beleg-position)-->
+<beleg-position><beleg-angabe belegt="nach1958"><beleg-text><beleg>es gibt a feichters, tänners, zwetschgers und lärchers Pech </beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Siegsdorf</ort>
+<landkreis>TS</landkreis></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe belegt="nach1958"><beleg-text><beleg>Bö</beleg><kontext anfuehrung="ja"><!--"-->herabtropfendes Harz<!--"--></kontext></beleg-text>
+<beleg-quelle><beleg-region><ort>Lohbg</ort>
+<landkreis>KÖZ</landkreis></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe belegt="nach1958"><beleg-text><beleg>a biggats Bech</beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Rgbg</ort></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text><beleg>A nass’s Pe(ch) kafft sched <glossierung><!--[-->nur<!--]--></glossierung> der Noarr, aber koa Gscheiter</beleg></beleg-text>
+<beleg-quelle><literatur-quelle><autor>SIEBZEHNRIEBL</autor> Grenzwaldheimat 56</literatur-quelle></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text><beleg>Pice ... peche</beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Tegernsee</ort>
+<landkreis>MB</landkreis></beleg-region><beleg-zeit>11. Jh.</beleg-zeit><literatur-quelle>StSG. I,660,57f.</literatur-quelle></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text><beleg>einer umbgefallen Fiechten, an deren vor diesem drey eingehauene und mit Bech verrunnene Zeichen zu finden gewesen</beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Pyrbaum</ort>
+<landkreis>NM</landkreis></beleg-region><beleg-zeit>1660</beleg-zeit><literatur-quelle><autor>HARTINGER</autor> Ordnungen 785</literatur-quelle></beleg-quelle></beleg-angabe><!--.-->
+
+<!-- — -->
+<phraseologie><intro>In festen Fügungen:</intro>
+
+<phrase><beleg-typ><lemma-referenz abk="P." vollform="Pech"><!--P.--></lemma-referenz> und Schwefel</beleg-typ><!--:--><beleg-angabe><beleg-text><beleg>iamer vnd we von pech und von swebel in der helle</beleg></beleg-text>
+<beleg-quelle><beleg-zeit>um 1300</beleg-zeit><literatur-quelle>Nürnbg, Germ. Nationalmuseum Cod.4953,fol.19<hoch>r</hoch></literatur-quelle></beleg-quelle></beleg-angabe></phrase><!--;- (Strichpunkt, da Phraseologie in der Phraseologie)-->
+
+<phraseologie><intro>Ra.:</intro>
+<phrase><beleg-typ>zusammenhalten wie <lemma-referenz abk="P." vollform="Pech"><!--P.--></lemma-referenz> und Schwefel </beleg-typ>
+<verbreitung-angabe belegt="nach1958" bezirk="OB" häufigkeit="vereinz."/><!--,--><verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OP"/> <!--:--><beleg-angabe belegt="nach1958"><beleg-text><beleg>de hoit’n z’samm wia Beech und Schweefe </beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Mchn</ort></beleg-region></beleg-quelle></beleg-angabe></phrase>
+</phraseologie>
+
+<phrase><beleg-typ>Verborgenes <lemma-referenz abk="P." vollform="Pech"><!--P.--></lemma-referenz></beleg-typ>
+
+<bedeutung>Harz aus den inneren Harzgängen des Holzes</bedeutung>
+<verbreitung-angabe belegt="nach1958" bezirk="OB" häufigkeit="vereinz."/><!--,--><verbreitung-angabe belegt="nach1958" bezirk="NB" häufigkeit="vereinz."/><!--,--><verbreitung-angabe belegt="nach1958" bezirk="OP" häufigkeit="vereinz."/><!--,--><verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OF"/>
+
+<beleg-angabe><beleg-text><beleg>aus an vabag’na Pech håut ma früha a Pflasta g’macht </beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Plößbg</ort>
+<landkreis>TIR</landkreis></beleg-region></beleg-quelle></beleg-angabe></phrase>
+
+</phraseologie>
+
+<!--.-->
+<!-- — -->
+
+<phraseologie><intro><abk langform="Sprichwort">Sprichw.</abk>:</intro><phrase><beleg-angabe><beleg-text>boist <glossierung>wenn</glossierung> ...</beleg-text>
+<beleg-quelle><beleg-region><ort>Achental</ort>
+<landkreis>TS</landkreis></beleg-region></beleg-quelle></beleg-angabe></phrase>
+<!--:--><phrase><beleg-angabe belegt="nach1958"><beleg-text><beleg></beleg></beleg-text>
+<beleg-quelle><beleg-region><ort>Plößbg</ort>
+<landkreis>TIR</landkreis></beleg-region></beleg-quelle></beleg-angabe><!--;-->
+
+</phrase></phraseologie><!--.-->
+<!-- — -->
+<!--.-->
+<!--...-->
+
+</beleg-position>
+
+</bedeutung-variante>
+<!--.—-->
+
+<bedeutung-variante nr="1b" id="Pech-1b"><bedeutung>aus Harz hergestellte Substanz</bedeutung><!--,--><verbreitung-position>
+<verbreitung-angabe belegt="nach1958" bezirk="OB" häufigkeit="vereinz."/><!--,-->
+<verbreitung-angabe belegt="nach1958" bezirk="NB" häufigkeit="vereinz."/><!--,-->
+<verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OP"/></verbreitung-position><!--:-->
+<beleg-position><beleg-angabe><beleg-text>Pech</beleg-text>
+<beleg-kontext anfuehrung="ja"><!--"-->in Salbenform für Wundbehandlung verwendet<!--"--></beleg-kontext><beleg-quelle><beleg-region><ort>Garmisch-Partenkchn</ort></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>Pfiass mit Bö ai<hoch>n</hoch>streicha</beleg-text>
+<beleg-kontext anfuehrung="ja">zum Maibaumklettern</beleg-kontext><beleg-quelle><beleg-region><ort>Aicha</ort>
+<landkreis>PA</landkreis></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>Nim böch und schlag ihn damit ein</beleg-text>
+<beleg-quelle><literatur-quelle>HÖFLER Sindelsdf.Hausmittelb. 71</literatur-quelle></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>???</beleg-text>
+<beleg-kontext anfuehrung="ja"><beleg>Pech</beleg> brauchten auch schon in alter Zeit die Schuhmacher, die Faßbinder und die Schweineschlachter<!--"--></beleg-kontext><beleg-quelle><literatur-quelle>SIEBZEHNRIEBL Grenzwaldheimat 57</literatur-quelle></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>bitumen ... peh</beleg-text>
+<beleg-quelle><beleg-region><ort>Tegernsee</ort>
+<landkreis>MB</landkreis></beleg-region><beleg-zeit>11. Jh.</beleg-zeit><literatur-quelle>StSG. I,304,64f.</literatur-quelle></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>dem sailer vmb ruststrick vnd bech in die stainhutten</beleg-text>
+<beleg-quelle><beleg-region><ort>Ingolstadt</ort></beleg-region><beleg-zeit>1485</beleg-zeit><literatur-quelle>Sammelbl.HV.Ingolstadt 89 (1980) 39</literatur-quelle></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>auß dem ... Kienigen Holtz vnd St#o6cken/ Bech zu machen</beleg-text>
+<beleg-quelle><literatur-quelle>Landr.1616 749</literatur-quelle></beleg-quelle></beleg-angabe><!--.— -->
+<!--Im Vergleich:--><beleg-angabe><beleg-text>a Haua wäi a Bech</beleg-text>
+<beleg-kontext anfuehrung="nein">tiefschwarzes Haar</beleg-kontext><beleg-quelle><beleg-region><ort>Pommelsbrunn</ort>
+<landkreis>HEB</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position><!--.-->
+	
+
+</bedeutung-variante>
+
+<exkurs-position><intro>Sachl.:</intro> 
+
+<exkurs><lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz> wurde früher vom <verweis><!---->Pecher(er)</verweis> od. <verweis><!---->Pechler</verweis> gesammelt (<verweis><!---->pecheln</verweis>, <verweis><!---->pechen</verweis>). Von geeigneten Bäumen wurde stellenweise die Rinde entfernt, um den Harzfluß auszulösen. Das <lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz> wurde in Behältern od. in eigens in den Baum gehackten trogförmigen Vertiefungen gesammelt, in Fässer umgefüllt u. in die <verweis><!---->[Pech]siederei</verweis> gebracht. <lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz> konnte auch aus Kienholzscheiten im <verweis><!---->[Pech]ofen</verweis> gewonnen werden (<literatur-quelle>Heimat TIR 13 (2001) 92f.</literatur-quelle>).— <lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz> wurde in roher Form als antiseptisches Heilmittel, Wundpflaster u. Blutstillmittel angewendet Gesamtgeb., vgl. <literatur-quelle>HÖFLER Volksmed. 128</literatur-quelle>, <verweis>u.</verweis> unter Beimengung weiterer Stoffe zu Zugsalbe od. Seife verarbeitet. Außerdem war es in versch. handwerklichen Bereichen von Nutzen, bes. in der Schuhmacherei (Einschmieren des Garns), Küfnerei (Abdichten von Fässern), Wagnerei (Wagenschmiere), dazu zum Enthaaren der Schlachttiere sowie zum Veredeln von Bäumen (Versiegeln der Schnittstellen).</exkurs><!--— --><literatur-position><!--Lit.:-->
+<literatur-gruppe> <literatur-quelle>HAGER-HEYN Dorf 187-189</literatur-quelle><!--; --><literatur-quelle>SIEBZEHNRIEBL Grenzwaldheimat 55-60</literatur-quelle><!--; --><literatur-quelle>VEH in: BJV 1969, 207-215</literatur-quelle></literatur-gruppe>
+</literatur-position></exkurs-position>
+</bedeutung-position>
+<bedeutung-position nr="2" id="Pech-2"><bedeutung>klebriger Ausfluß von den Milchdrüsen trächtiger Kalbinnen od. Stuten</bedeutung><!--,-->
+<verbreitung-position><verbreitung-angabe belegt="nach1958" häufigkeit="mehrf." bezirk="OB"/><!--,-->
+<verbreitung-angabe belegt="nach1958" bezirk="NB" häufigkeit="vereinz."/><!--,-->
+<verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OP"/>
+</verbreitung-position><!--:-->
+<beleg-position><beleg-angabe><beleg-text>wenn’s amoe Bech gibt, d’ Kuah, na woaß ma daß s’ tragt</beleg-text>
+<beleg-quelle><beleg-region><ort>Bruckmühl</ort>
+<landkreis>AIB</landkreis></beleg-region></beleg-quelle></beleg-angabe><!--;--><beleg-angabe><beleg-text>iatz kimmt no lauta Böch</beleg-text>
+<beleg-quelle><beleg-region><ort>Tegernbach</ort>
+<landkreis>MAI</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position><!--.--></bedeutung-position>
+
+<bedeutung-position nr="3" id="Pech-3"><bedeutung>erste Ausscheidung neugeborener Kälber od. Fohlen</bedeutung><!--,-->
+<verbreitung-position><verbreitung-angabe belegt="nach1958" häufigkeit="mehrf." bezirk="OB"/><!--,-->
+<verbreitung-angabe belegt="nach1958" bezirk="NB" häufigkeit="vereinz."/><!--,-->
+<verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OP"/>
+</verbreitung-position><!--:-->
+<beleg-position><beleg-angabe><beleg-text>Bech</beleg-text>
+<beleg-kontext anfuehrung="ja"><!--"-->der erste Kot des Kalbes nach der Geburt<!--"--></beleg-kontext><beleg-quelle><beleg-region><ort>Obing</ort>
+<landkreis>TS</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position><!--.--><bedeutung-position nr="4" id="Pech-4"><!--: (da keine Bedeutung!)-->
+<beleg-position><beleg-angabe belegt="nach1958"><beleg-text>dös Kaibl is voller Bech</beleg-text>
+<beleg-kontext anfuehrung="ja"><!--"-->gelbe Masse am Fell, die von der Mutter weggeschleckt wird<!--"--></beleg-kontext><beleg-quelle><beleg-region><ort>Winklarn</ort>
+<landkreis>OVI</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position><!--.-->
+<!--...--><bedeutung-position nr="8" id="Pech-8"><bedeutung belegt="ausgestorben">Hölle</bedeutung><!--: (da nur ein Literaturbeleg)-->
+
+<beleg-position><beleg-angabe><beleg-text>ein heri fona himilzungalon <glossierung><!--[-->den Sternen<!--]--></glossierung> ... daz andar fona pehhe</beleg-text>
+<beleg-quelle><beleg-zeit>9. Jh.</beleg-zeit><literatur-quelle>SKD 66 4f. (Muspilli)</literatur-quelle></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position><!--.-->
+
+<etymologie-position><!--Etym.:-->Ahd. <lemma-form>pëh</lemma-form>, mhd. <lemma-form>pëch</lemma-form>, <lemma-form>b-</lemma-form>, aus lat. <lemma-form>pix</lemma-form>; <beleg-quelle><literatur-quelle>KLUGE-SEEBOLD 687</literatur-quelle></beleg-quelle></etymologie-position><!--.-->
+
+<lautung-position><!--Ltg:--><lautung-angabe><beleg-typ>b#e3x</beleg-typ>, v.a. NB daneben <beleg-typ>b#e3</beleg-typ>, auch <beleg-typ>b#e23x</beleg-typ> (<verbreitung-angabe/><landkreis>BGD</landkreis>, <landkreis>LF</landkreis>, <landkreis>REI</landkreis>, <landkreis>TS</landkreis>; <landkreis>BUL</landkreis>),<beleg-typ>b#e3ix</beleg-typ><verbreitung-angabe/>  (<landkreis>FFB</landkreis>, <landkreis>GAP</landkreis>, <landkreis>LL</landkreis>; <landkreis>FDB</landkreis>),<beleg-typ>beα#x2</beleg-typ> <verbreitung-angabe/> (<landkreis>LL</landkreis>, <landkreis>SOG</landkreis>; <landkreis>NEW</landkreis>)</lautung-angabe></lautung-position><!--.-->
+
+<literatur-position><literatur-gruppe><literatur-quelle>SCHMELLER I,379</literatur-quelle><!--; --><literatur-quelle>WESTENRIEDER Gloss. 414</literatur-quelle></literatur-gruppe><!--. — --><literatur-gruppe><literatur-quelle>WBÖ II,748-753</literatur-quelle><!--; --><literatur-quelle>Schwäb.Wb. I,736f.</literatur-quelle><!--; --><literatur-quelle>Schw.Id. IV,964</literatur-quelle><!--; --><literatur-quelle>Suddt.Wb. II,151f.</literatur-quelle></literatur-gruppe><!-- — --><literatur-gruppe><literatur-quelle>DWB VII,1516f.</literatur-quelle><!--; --><literatur-quelle>Frühnhd.Wb. III,339-342</literatur-quelle><!--; --><literatur-quelle>LEXER HWb. I,137</literatur-quelle><!--; --><literatur-quelle>Gl.Wb. 458</literatur-quelle></literatur-gruppe><!--.— --><literatur-gruppe><literatur-quelle>BRAUN Gr.Wb. 452</literatur-quelle><!--; --><literatur-quelle>RASP Bgdn.Mda. 119</literatur-quelle><!--; --><literatur-quelle>SCHWEIZER Dießner Wb. 145</literatur-quelle><!--; --><literatur-quelle>SINGER Arzbg.Wb. 171</literatur-quelle></literatur-gruppe><!--.— --><literatur-gruppe><literatur-quelle>S-59C25</literatur-quelle><!-- , --><literatur-quelle>M-267/11</literatur-quelle><!--, --><literatur-quelle>W-14/17</literatur-quelle><!--, --><literatur-quelle>18/42</literatur-quelle><!--.--></literatur-gruppe></literatur-position>
+
+<ableitung-position>
+<!--Abl.:--> <verweis>pecheinen</verweis>, <verweis>-pechel</verweis>, <verweis>pecheln</verweis>, <verweis>pechen<hoch>1</hoch></verweis>, <verweis>pechen<hoch>2</hoch></verweis>, <verweis>Pecher(er)</verweis>, <verweis>pecherln</verweis>, <verweis>pechern</verweis>, <verweis>Pechet</verweis>, <verweis>pechicht</verweis>, <verweis>Pechler</verweis>, <verweis>Pechlerei</verweis>, <verweis>Pechlerin</verweis>, <verweis>pechlicht</verweis>.</ableitung-position>
+
+
+
+<!--Komposita-->
+
+<komposita-position><kompositum id="Augenpech"><lemma-kompositum><bestimmungsteil>Augen</bestimmungsteil><lemma-referenz abk="p." vollform="pech">p.</lemma-referenz></lemma-kompositum>
+
+<bedeutung-position id="Augenpech-0"><bedeutung><verweis ziel="Pech-4"><!---->wie <lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz>5</verweis></bedeutung>
+<verbreitung-position><verbreitung-angabe belegt="nach1958" bezirk="OB" häufigkeit="mehrf."/><!--,--><verbreitung-angabe belegt="nach1958" bezirk="NB" häufigkeit="mehrf."/><!--,--><verbreitung-angabe belegt="nach1958" bezirk="OP" häufigkeit="mehrf."/><!--,--><verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="MF"/><!--,--><verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="OF"/><!--,--><verbreitung-angabe belegt="nach1958" häufigkeit="vereinz." bezirk="SCH"/><!--Restgeb.--></verbreitung-position><!--:-->
+<beleg-position><beleg-angabe belegt="nach1958"><beleg-text>tua dei Augnpech wegputzen, host richtige Pechaugn beinand</beleg-text>
+<beleg-quelle><beleg-region><ort>Wettstetten</ort>
+<landkreis>IN</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position><!--.-->
+
+<literatur-position><literatur-gruppe><literatur-quelle>WBÖ II,753</literatur-quelle><literatur-quelle>Schw.Id. IV,964</literatur-quelle><literatur-quelle>Suddt.Wb. I,575</literatur-quelle></literatur-gruppe>
+<literatur-gruppe><literatur-quelle>ANGRÜNER Abbach 9</literatur-quelle></literatur-gruppe><literatur-gruppe><literatur-quelle>W-14/17</literatur-quelle></literatur-gruppe></literatur-position></kompositum>
+<!--Kompositum mit mehreren Bedeutungen--><kompositum id="Baumpech"><lemma-kompositum><bestimmungsteil>Baum</bestimmungsteil><lemma-referenz abk="p." vollform="pech">p.</lemma-referenz></lemma-kompositum>
+<bedeutung-position nr="1" id="Baumpech-1"><bedeutung>Baumharz</bedeutung><!--. —  --><bedeutung-variante id="Baumpech-1-0"><bedeutung><verweis ziel="Pech-1a">wie <lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz>1a</verweis></bedeutung>
+<verbreitung-position><verbreitung-angabe häufigkeit="vielf." bezirk="OB"/></verbreitung-position>
+<beleg-position><beleg-angabe><beleg-text></beleg-text>
+<beleg-quelle><beleg-region><ort></ort>
+<landkreis></landkreis></beleg-region></beleg-quelle></beleg-angabe><!--...--></beleg-position>
+</bedeutung-variante>
+
+<bedeutung-variante nr="1b" id="Baumpech-1-1b"><bedeutung><verweis ziel="Pech-1b">wie <lemma-referenz abk="P." vollform="Pech">P.</lemma-referenz>1b</verweis></bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="NB" häufigkeit="mehrf."/></verbreitung-position><beleg-position><beleg-angabe><beleg-text>xxx</beleg-text>
+<beleg-quelle><beleg-region><ort>M</ort></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-variante></bedeutung-position>
+<bedeutung-position nr="2" id="Baumpech-2"><bedeutung>Baumwachs</bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="NB" häufigkeit="einBeleg"/></verbreitung-position>
+<beleg-position><beleg-angabe><beleg-text></beleg-text>
+<beleg-quelle><beleg-region><ort></ort>
+<landkreis></landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position><!--Bedeutungsvariante ohne Bedeutung!!--><bedeutung-position nr="3" id="Baumpech-3"><!--:-->
+<beleg-position><beleg-angabe><beleg-text> ??</beleg-text>
+<beleg-kontext belegt="nach1958"><beleg>Beißpech</beleg> hartes trockenes Pech, <beleg>Schmierpech</beleg> helles fließendes Pech</beleg-kontext><beleg-quelle><literatur-quelle>sdadassadas</literatur-quelle></beleg-quelle></beleg-angabe></beleg-position><!--.--></bedeutung-position>
+
+<literatur-position><literatur-gruppe><literatur-quelle>Suddt.Wb. II,140.</literatur-quelle></literatur-gruppe></literatur-position></kompositum>
+<!--Kompositum mit Lemmavariante-->
+<kompositum id="Blasenpech"><lemma-kompositum><bestimmungsteil>Blasen</bestimmungsteil><lemma-referenz abk="p." vollform="pech">p.</lemma-referenz></lemma-kompositum><!--,--><lemma-kompositum-variante><bestimmungsteil>Bläselein</bestimmungsteil><lemma-referenz abk="-" vollform="pech">- <!--???--></lemma-referenz></lemma-kompositum-variante>
+
+<bedeutung-position id="Blasenpech-0"><bedeutung>in Bläschen an Fichten u. Tannen abgesondertes Harz</bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="SCH" häufigkeit="vereinz."/></verbreitung-position>
+<beleg-position><beleg-angabe><beleg-text></beleg-text>
+<beleg-kontext></beleg-kontext><beleg-quelle><beleg-region><ort></ort></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position></kompositum>
+
+
+<!--Kompositum mit Lemmavariante-->
+<kompositum id="Blatternpech"><lemma-kompositum><bestimmungsteil>Blatter(n)</bestimmungsteil><lemma-referenz abk="p." vollform="pech">p.</lemma-referenz></lemma-kompositum><!--,--><lemma-kompositum-variante><bestimmungsteil>Blätterlein(s)</bestimmungsteil><lemma-referenz abk="-" vollform="pech">- <!--???--></lemma-referenz></lemma-kompositum-variante>
+
+<bedeutung-position id="Blatternpech-0"><bedeutung><!--dass. !!!!!!!!!!!!!!!!!!!!--></bedeutung>
+<verbreitung-position><verbreitung-angabe bezirk="OB" häufigkeit="vielf."/></verbreitung-position>
+<beleg-position><beleg-angabe><beleg-text></beleg-text>
+<beleg-kontext></beleg-kontext><beleg-quelle><beleg-region><ort></ort></beleg-region></beleg-quelle></beleg-angabe></beleg-position></bedeutung-position></kompositum></komposita-position>
+<verfasser kuerzel="EBF"/>
+ 
+
+
+
+</artikel>
+
+
+<artikel id="Pechlerei"><lemma-position><lemma>Pechlerei</lemma>
+<grammatik genus="F" wortart="N"/></lemma-position>
+<bedeutung-position id="Pechlerei-0"><bedeutung>Harzsammeln, das Recht dazu</bedeutung>
+
+<beleg-position><beleg-angabe><beleg-text>ljkhlökj</beleg-text>
+<beleg-quelle><beleg-region><ort>cvbcvbvcbc</ort>
+<landkreis>cxvbvcbvc</landkreis>
+<landkreis>rewterterter</landkreis></beleg-region></beleg-quelle></beleg-angabe></beleg-position>
+</bedeutung-position>
+<etymologie-position></etymologie-position><lautung-position></lautung-position><literatur-position><literatur-gruppe><literatur-quelle>sdfgadsfgdfgdsgs</literatur-quelle></literatur-gruppe></literatur-position><verfasser kuerzel="BUS"/></artikel>	
+</BWB>
+
