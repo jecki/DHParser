@@ -152,7 +152,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             return f  # '@transformer' not needed w/o free parameters
         assert t1 or params[0].annotation != params[0].empty, \
             "No type information on second parameter found! Please, use type " \
-            "annotation or provide the type information via transfomer-decorator."
+            "annotation or provide the type information via transformer-decorator."
         p1type = t1 or params[0].annotation
         f = singledispatch(f)
         try:
@@ -296,7 +296,7 @@ def traverse(root_node: Node,
 #######################################################################
 
 
-@transformation_factory(Dict)
+@transformation_factory(dict)
 def traverse_locally(context: List[Node],
                      processing_table: Dict,            # actually: ProcessingTableType
                      key_func: Callable=key_tag_name):  # actually: KeyFunc
@@ -379,7 +379,7 @@ def is_expendable(context: List[Node]) -> bool:
     return is_empty(context) or is_whitespace(context)
 
 
-@transformation_factory(AbstractSet[str])
+@transformation_factory  # (AbstractSet[str])
 def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
     """Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
     and it's content matches one of the given tokens. Leading and trailing
@@ -402,19 +402,19 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
 
 
-@transformation_factory(AbstractSet[str])
+@transformation_factory
 def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's tag_name is one of the given tag names."""
     return context[-1].tag_name in tag_name_set
 
 
-@transformation_factory(str)
+@transformation_factory
 def has_content(context: List[Node], regexp: str) -> bool:
     """Checks a node's content against a regular expression."""
     return bool(re.match(regexp, context[-1].content))
 
 
-@transformation_factory(AbstractSet[str])
+@transformation_factory
 def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     """Checks whether a node with one of the given tag names appears somewhere
      in the context before the last node in the context."""
@@ -640,7 +640,7 @@ def merge_children(context: List[Node], tag_names: List[str]):
         node.result = tuple(result)
 
 
-@transformation_factory
+@transformation_factory(Callable)
 def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
     """Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
@@ -713,7 +713,7 @@ def keep_children_if(context: List[Node], condition: Callable):
 
 
 @transformation_factory
-def keep_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
+def keep_tokens(context: List[Node], tokens: AbstractSet[str]=frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -779,8 +779,8 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
 
 
-@transformation_factory
-def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
+@transformation_factory(AbstractSet[str])
+def remove_tokens(context: List[Node], tokens: AbstractSet[str]=frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
