@@ -79,6 +79,8 @@ __all__ = ('TransformationDict',
            'remove_whitespace',
            'remove_empty',
            'remove_anonymous_empty',
+           'remove_anonymous_expendables',
+           'remove_anonymous_tokens',
            'remove_expendables',
            'remove_brackets',
            'remove_infix_operator',
@@ -386,6 +388,7 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     tokens are a match.
     """
     def stripped(nd: Node) -> str:
+        """Removes leading and trailing whitespace-nodes from content."""
         # assert node.parser.ptype == TOKEN_PTYPE
         if nd.children:
             i, k = 0, len(nd.children)
