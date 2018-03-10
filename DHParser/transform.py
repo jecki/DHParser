@@ -561,7 +561,7 @@ def replace_parser(context: List[Node], name: str):
 
     Parameters:
         context: the context where the parser shall be replaced
-        name: "NAME:PTYPE" of the surogate. The ptype is optional
+        name: "NAME:PTYPE" of the surrogate. The ptype is optional
     """
     node = context[-1]
     name, ptype = (name.split(':') + [''])[:2]
