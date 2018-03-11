@@ -27,19 +27,21 @@ conforming to this grammar into contrete syntax trees.
 import keyword
 from collections import OrderedDict
 from functools import partial
-from typing import Callable, Dict, List, Set, Tuple
 
+from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
-from DHParser import Compiler, TransformationFunc
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
-from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table
-from DHParser.transform import traverse, remove_brackets, \
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
+    typing
+from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
+from typing import Callable, Dict, List, Set, Tuple
+
 
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
@@ -314,7 +316,7 @@ def get_compiler(grammar_name="{NAME}", grammar_source="") -> {NAME}Compiler:
 '''
 
 
-class EBNFCompilerError(Exception):
+class EBNFCompilerError(CompilerError):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
     in the strict sense, see `CompilationError` in module ``dsl.py``)"""
     pass

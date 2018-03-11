@@ -37,10 +37,11 @@ the string representations of the error objects. For example::
 
 
 import bisect
-from typing import Iterable, Iterator, Union, Tuple, List
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
+from DHParser.toolkit import typing
+from typing import Iterable, Iterator, Union, Tuple, List
 
 __all__ = ('Error',
            'is_error',

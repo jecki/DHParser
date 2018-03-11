@@ -23,19 +23,21 @@ compilation of domain specific languages based on an EBNF-grammar.
 
 
 import os
-from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
 
+from DHParser.compile import Compiler, compile_source
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
 from DHParser.log import logging
 from DHParser.parse import Grammar
-from DHParser import Compiler, compile_source, TransformationFunc
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
+from DHParser.transform import TransformationFunc
 from DHParser.toolkit import load_if_file, is_python_code, compile_python_object, \
-    re
+    re, typing
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
+
 
 __all__ = ('DHPARSER_IMPORTS',
            'GrammarError',

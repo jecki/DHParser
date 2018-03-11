@@ -47,6 +47,17 @@ from DHParser.toolkit import typing, sane_parser_name, load_if_file
 from typing import Any, Optional, Tuple, List
 
 
+__all__ = ('CompilerError', 'Compiler', 'compile_source')
+
+
+class CompilerError(Exception):
+    """Exception raised when an error of the compiler itself is detected.
+    Compiler errors are not to be confused with errors in the source
+    code to be compiled, which do not raise Exceptions but are merely
+    reported as an error."""
+    pass
+
+
 class Compiler:
     """
     Class Compiler is the abstract base class for compilers. Compiler
@@ -119,6 +130,9 @@ class Compiler:
     @staticmethod
     def propagate_error_flags(node: Node, lazy: bool = True) -> None:
         # See test_parser.TestCompilerClass.test_propagate_error()..
+        """Propagates error flags from children to parent nodes to make sure
+        that the parent's error flag is always greater or equal the maximum
+        of the children's error flags."""
         if not lazy or node.error_flag < Error.HIGHEST:
             for child in node.children:
                 Compiler.propagate_error_flags(child)
@@ -172,7 +186,9 @@ class Compiler:
             result = compiler(node)
             self.context.pop()
             if result is None:
-                raise ValueError('%s failed to return a valid compilation result!' % str(compiler))
+                raise CompilerError(('Method %s returned `None` instead of a '
+                                     'valid compilation result!')
+                                    % str(compiler))
             # # the following statement makes sure that the error_flag
             # # is propagated early on. Otherwise it is redundant, because
             # # the __call__ method globally propagates the node's error_flag
@@ -189,7 +205,7 @@ def compile_source(source: str,
                    compiler: Compiler) -> Tuple[Any, List[Error], Node]:  # Node (AST) -> Any
     """
     Compiles a source in four stages:
-    1. Preprocessing (if needed)
+    1. Pre-Processing (if needed)
     2. Parsing
     3. AST-transformation
     4. Compiling.

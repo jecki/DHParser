@@ -31,9 +31,10 @@ cannot completely be described with context-free grammars.
 import bisect
 import collections
 import functools
+
+from DHParser.toolkit import re, typing
 from typing import Union, Callable, Tuple, List
 
-from DHParser.toolkit import re
 
 __all__ = ('RX_TOKEN_NAME',
            'BEGIN_TOKEN',

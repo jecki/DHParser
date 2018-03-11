@@ -52,12 +52,12 @@ import collections
 import contextlib
 import html
 import os
-from typing import List, Union
 
 from DHParser.error import line_col
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE
-from DHParser.toolkit import is_filename, escape_control_characters
+from DHParser.toolkit import is_filename, escape_control_characters, typing
+from typing import List, Union
 
 __all__ = ('log_dir',
            'logging',

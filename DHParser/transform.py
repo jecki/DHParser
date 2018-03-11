@@ -32,9 +32,8 @@ from functools import partial, reduce, singledispatch
 
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
 from DHParser.toolkit import expand_table, smart_list, re, typing
-
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-    Iterator, List, NamedTuple, Sequence, Union, Text, Tuple
+    List, Sequence, Union, Text
 
 __all__ = ('TransformationDict',
            'TransformationProc',

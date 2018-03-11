@@ -29,7 +29,7 @@ import copy
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import re
+from DHParser.toolkit import re, typing
 from typing import Callable, cast, Iterator, List, Union, Tuple, Optional
 
 
