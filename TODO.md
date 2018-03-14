@@ -25,14 +25,14 @@ Challenges:
    
 2. ...but discarded or discardable nodes are not the same as a not matching parser.
    Possible solution would be to introduce a dummy/zombie-Node that will be discarded
-   by the calling Parser, i.e. Zero or More, Series etc. 
+   by the calling Parser, i.e. ZeroOrMore, Series etc. 
 
-3. Two kinds of conditions for dis
+3. Two kinds of conditions for discarding...?
 
 4. Capture/Retrieve/Pop - need the parsed data even if the node would otherwise
    be discardable (Example: Variable Delimiters.) So, either:
    
-   a. temporarily suspend discarding by gramma-object-flag set and cleared by
+   a. temporarily suspend discarding by Grammar-object-flag set and cleared by
       Capture/Retrieve/Pop. Means yet another flag has to be checked every time
       the decision to discard or not needs to be taken... 
 

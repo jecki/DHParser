@@ -27,7 +27,7 @@ code or, as in the case of DHParser's EBNF-compiler, Python
 source code.
 
 Function ``compile_source`` invokes all stages of the compilation
-process, i.e. preprocessing, parsing, CST to AST-transformation
+process, i.e. pre-processing, parsing, CST to AST-transformation
 and compilation.
 
 See module ``ebnf`` for a sample of the implementation of a

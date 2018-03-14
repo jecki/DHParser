@@ -862,10 +862,11 @@ class PlainText(Parser):
     """
     Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
-    Example:
-    >>> while_token = PlainText("while")
-    >>> Grammar(while_token)("while").content
-    'while'
+    Example::
+
+        >>> while_token = PlainText("while")
+        >>> Grammar(while_token)("while").content
+        'while'
     """
 
     def __init__(self, text: str, name: str = '') -> None:

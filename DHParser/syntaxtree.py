@@ -19,7 +19,7 @@
 """
 Module ``syntaxtree`` defines the ``Node``-class for syntax trees as well
 as an abstract base class for parser-objects. The latter is defined
-here, becuase node-objects refer to parser-objects. All concrete
+here, because node-objects refer to parser-objects. All concrete
 parser classes are defined in the ``parse`` module.
 """
 
