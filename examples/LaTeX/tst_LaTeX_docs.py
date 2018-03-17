@@ -25,11 +25,10 @@ import os
 import pstats
 import sys
 
-import DHParser.log
-
 sys.path.extend(['../../', '../', './'])
 
 import DHParser.dsl
+import DHParser.log
 from DHParser.log import log_parsing_history
 
 

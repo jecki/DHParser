@@ -100,7 +100,7 @@ class TestTestfiles:
     def test_unit_from_config_file(self):
         unit = unit_from_configfile('configfile_test_1.ini')
         assert list(unit.keys()) == ['ParserA']
-        assert list(unit['ParserA'].keys()) == ['match', 'fail']
+        assert list(unit['ParserA'].keys()) == ['match', 'fail'], str(list(unit['ParserA'].keys()))
         assert list(unit['ParserA']['match'].keys()) == ['M1', 'M2', 'M3', 'M4']
         assert list(unit['ParserA']['fail'].keys()) == ['F1']
         testcase = unit['ParserA']['match']['M4']

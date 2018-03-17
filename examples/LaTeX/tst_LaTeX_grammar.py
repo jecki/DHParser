@@ -21,11 +21,10 @@ limitations under the License.
 
 import sys
 
-import DHParser.log
-
 sys.path.extend(['../../', '../', './'])
 
 from DHParser import dsl
+import DHParser.log
 from DHParser import testing
 
 # print(dir(dsl))

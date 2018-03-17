@@ -78,8 +78,12 @@ UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 #     return unit
 
 RX_SECTION = re.compile('\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
-RE_VALUE = '(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
+RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
            '(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
+# the following does not work with pypy3, because pypy's re-engine does not
+# support local flags, e.g. '(?s: )'
+# RE_VALUE = '(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
+#            '(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
 RX_ENTRY = re.compile('\s*(\w+)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
 RX_COMMENT = re.compile('\s*#.*\n')
 
