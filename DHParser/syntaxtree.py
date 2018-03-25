@@ -227,6 +227,11 @@ class Node(collections.abc.Sized):
             Other than that, this value should be considered READ ONLY.
             At any rate, it should only be reassigned during the parsing
             stage and never during or after the AST-transformation.
+
+        xml_attr (dict): An optional dictionary of XML-attributes. This
+            dictionary is created lazily upon first usage. The attributes
+            will only be shown in the XML-Representation, not in the
+            S-Expression-output.
     """
 
     __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag',
