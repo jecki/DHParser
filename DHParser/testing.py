@@ -369,11 +369,15 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     return ''
 
 
-def runner(tests, namespace):
+def runner(test_classes, namespace):
     """
     Runs all or some selected Python unit tests found in the
     namespace. To run all tests in a module, call
     ``runner("", globals())`` from within that module.
+
+    Unit-Tests are either classes, the name of which starts with
+    "Test" and methods, the name of which starts with "test" contained
+    in such classes or functions, the name of which starts with "test".
 
     Args:
         tests: Either a string or a list of strings that contains the
@@ -403,18 +407,23 @@ def runner(tests, namespace):
             obj.setup()
         return obj
 
-    if tests:
-        if isinstance(tests, str):
-            tests = tests.split(" ")
+    if test_classes:
+        if isinstance(test_classes, str):
+            test_classes = test_classes.split(" ")
     else:
         # collect all test classes, in case no methods or classes have been passed explicitly
-        tests = []
+        test_classes = []
+        test_functions = []
         for name in namespace.keys():
-            if name.lower().startswith('test') and inspect.isclass(namespace[name]):
-                tests.append(name)
+            if name.lower().startswith('test'):
+                if inspect.isclass(namespace[name]):
+                    test_classes.append(name)
+                elif inspect.isfunction(namespace[name]):
+                    test_functions.append(name)
+
 
     obj = None
-    for test in tests:
+    for test in test_classes:
         try:
             if test.find('.') >= 0:
                 cls_name, method_name = test.split('.')
@@ -430,3 +439,7 @@ def runner(tests, namespace):
         finally:
             if "teardown" in dir(obj):
                 obj.teardown()
+
+    for test in test_functions:
+        exec(test + '()', namespace)
+
