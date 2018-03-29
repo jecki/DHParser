@@ -80,6 +80,9 @@ CFG_FILE_3 = r'''
     Like this one.
 
 21: \begin{enumerate}
+
+[match:csttest]
+M1*: """Trigger CST-output with an asterix!"""
 '''
 
 
