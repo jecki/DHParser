@@ -411,7 +411,14 @@ def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 
 @transformation_factory
 def has_content(context: List[Node], regexp: str) -> bool:
-    """Checks a node's content against a regular expression."""
+    """
+    Checks a node's content against a regular expression.
+
+    In contrast to ``re.match`` the regular expression must match the complete
+    string and not just the beginning of the string to succeed!
+    """
+    if not regexp.endswith('$'):
+        regexp += "$"
     return bool(re.match(regexp, context[-1].content))
 
 

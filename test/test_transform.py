@@ -26,7 +26,7 @@ sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import mock_syntax_tree
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
-    traverse_locally, collapse, lstrip, rstrip
+    traverse_locally, collapse, lstrip, rstrip, remove_content
 
 
 class TestRemoval:
@@ -70,6 +70,14 @@ class TestRemoval:
                                '(:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
+
+    def test_remove_content(self):
+        cst = mock_syntax_tree('(BelegLemma (:Series (:RegExp "#") (LAT_WORT (:RegExp "facitergula"))))')
+        remove_content([cst], '#')
+        assert cst.content == "#facitergula", str(cst.content)
+        reduce_single_child([cst])
+        remove_content([cst], '#')
+        assert cst.content == "facitergula"
 
 
 class TestConditionalTransformations:
