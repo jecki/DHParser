@@ -410,9 +410,9 @@ class Node(collections.abc.Sized):
     @property
     def content(self) -> str:
         """
-        Returns content as string, inserting error messages where
-        errors occurred.
+        Returns content as string, omitting error messages.
         """
+        # TODO: Optimize with caching and StringViews
         if self.children:
             return "".join(child.content for child in self.children)
         return cast(str, self._result)
