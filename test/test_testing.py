@@ -166,6 +166,11 @@ class TestGrammarTest:
                 4: "4 + 5",
                 5: "20 / 4 - 3"
             }
+        },
+        "no_match_tests_specified": {
+            "fail": {
+                1: "+ 4 5"
+            }
         }
     }
 
