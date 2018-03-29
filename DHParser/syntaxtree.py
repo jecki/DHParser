@@ -164,7 +164,7 @@ ZOMBIE_PARSER = ZombieParser()
 
 ChildrenType = Tuple['Node', ...]
 NoChildren = cast(ChildrenType, ())  # type: ChildrenType
-StrictResultType = Union[ChildrenType, str]
+StrictResultType = Union[ChildrenType, StringView, str]
 ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 
@@ -193,6 +193,10 @@ class Node(collections.abc.Sized):
 
         children (tuple):  The tuple of child nodes or an empty tuple
             if there are no child nodes. READ ONLY!
+
+        content (str):  Yields the contents of the tree as string. The
+            difference to ``str(node)`` is that ``node.content`` does
+            not add the error messages to the returned string.
 
         parser (Parser):  The parser which generated this node.
             WARNING: In case you use mock syntax trees for testing or
@@ -232,10 +236,13 @@ class Node(collections.abc.Sized):
             dictionary is created lazily upon first usage. The attributes
             will only be shown in the XML-Representation, not in the
             S-Expression-output.
+
+
+        _parent (Node): SLOT RESERVED FOR FUTURE USE!
     """
 
     __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag',
-                 '_xml_attr']
+                 '_xml_attr', '_parent']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -248,7 +255,7 @@ class Node(collections.abc.Sized):
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = str(result)  # type: StrictResultType
+            self._result = result       # type: StrictResultType
             self.children = NoChildren  # type: ChildrenType
             self._len = -1              # type: int  # lazy evaluation
         else:
@@ -412,7 +419,6 @@ class Node(collections.abc.Sized):
         """
         Returns content as string, omitting error messages.
         """
-        # TODO: Optimize with caching and StringViews
         if self.children:
             return "".join(child.content for child in self.children)
         return cast(str, self._result)
