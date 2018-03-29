@@ -142,7 +142,7 @@ ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_tr
 class TestGrammarTest:
     cases = {
         "factor": {
-            "match*": {
+            "match": {
                 1: "0",
                 2: "314",
             },
@@ -153,12 +153,12 @@ class TestGrammarTest:
         },
         "term": {
             "match": {
-                1: "4 * 5",
+                '1*': "4 * 5",
                 2: "20 / 4",
                 3: "20 / 4 * 3"
             },
             "ast": {
-                1: "(term (factor 4) (:Token *) (factor 5))",
+                '1*': "(term (factor 4) (:Token *) (factor 5))",
                 2: "(term (factor 20) (:Token /) (factor 4))",
                 3: "(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))"
             },

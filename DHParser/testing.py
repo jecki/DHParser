@@ -208,9 +208,8 @@ def get_report(test_unit):
     lists the source of all tests as well as the error messages, if a test
     failed or the abstract-syntax-tree (AST) in case of success.
 
-    If an asterix has been appended to the parser name (e.g.
-    '[match:identifier*]') then the concrete syntax tree will also be
-    added to the report in this particular case.
+    If an asterix has been appended to the test name then the concrete syntax
+    tree will also be added to the report in this particular case.
 
     The purpose of the latter is to help constructing and debugging
     of AST-Transformations. It is better to switch the CST-output on and off
@@ -225,8 +224,7 @@ def get_report(test_unit):
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
         report.append('\n\n%s\n%s\n' % (heading, '=' * len(heading)))
-        cst_output = frozenset(tests.get('match*', dict()).keys())
-        for test_name, test_code in all_match_tests(tests):
+        for test_name, test_code in tests.get('match', dict()).items():
             heading = 'Match-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:')
@@ -237,7 +235,7 @@ def get_report(test_unit):
                 report.append(error)
             ast = tests.get('__ast__', {}).get(test_name, None)
             cst = tests.get('__cst__', {}).get(test_name, None)
-            if cst and (not ast or test_name in cst_output):
+            if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
                 report.append(indent(cst.as_sxpr()))
             if ast:
@@ -274,7 +272,18 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         assert set(tests.keys()).issubset(UNIT_STAGES)
         if verbose:
             print('  Match-Tests for parser "' + parser_name + '"')
-        for test_name, test_code in all_match_tests(tests):
+        match_tests = set(tests['match'].keys())
+        if 'ast' in tests:
+            ast_tests = set(tests['ast'].keys())
+            if not ast_tests <= match_tests:
+                raise AssertionError('AST-Tests %s lack corresponding match-tests!'
+                                     % str(ast_tests - match_tests))
+        if 'cst' in tests:
+            cst_tests = set(tests['cst'].keys())
+            if not cst_tests <= match_tests:
+                raise AssertionError('CST-Tests %s lack corresponding match-tests!'
+                                     % str(cst_tests - match_tests))
+        for test_name, test_code in tests.get('match', dict()).items():
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
@@ -302,7 +311,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                               (test_name, parser_name, cst.as_sxpr()))
             elif "ast" in tests:
-                compare = mock_syntax_tree(tests["ast"][test_name])
+                try:
+                    compare = mock_syntax_tree(tests["ast"][test_name])
+                except KeyError:
+                    pass
                 if compare != ast:
                     errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                   '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
