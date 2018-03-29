@@ -31,6 +31,7 @@ import collections
 import copy
 import fnmatch
 import inspect
+import itertools
 import json
 import os
 import sys
@@ -39,7 +40,9 @@ from DHParser.error import is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
 from DHParser.parse import UnknownParserError
 from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, ZOMBIE_PARSER
-from DHParser.toolkit import re
+from DHParser.toolkit import re, typing
+
+from typing import Tuple
 
 __all__ = ('unit_from_configfile',
            'unit_from_json',
@@ -49,7 +52,7 @@ __all__ = ('unit_from_configfile',
            'grammar_suite',
            'runner')
 
-UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
+UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 
 # def unit_from_configfile(config_filename):
 #     """
@@ -77,7 +80,7 @@ UNIT_STAGES = {'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
 #     # print(json.dumps(unit, sort_keys=True, indent=4))
 #     return unit
 
-RX_SECTION = re.compile('\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
+RX_SECTION = re.compile('\s*\[(?P<stage>\w+\*?):(?P<symbol>\w+)\]')
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
            '(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
 # the following does not work with pypy3, because pypy's re-engine does not
@@ -191,9 +194,28 @@ def unit_from_file(filename):
     return test_unit
 
 
+def all_match_tests(tests):
+    """Returns all match tests from ``tests``, This includes match tests
+    marked with an asterix for CST-output as well as unmarked match-tests.
+    """
+    return itertools.chain(tests.get('match', dict()).items(),
+                           tests.get('match*', dict()).items())
+
+
 def get_report(test_unit):
     """
-    Returns a text-report of the results of a grammar unit test.
+    Returns a text-report of the results of a grammar unit test. The report
+    lists the source of all tests as well as the error messages, if a test
+    failed or the abstract-syntax-tree (AST) in case of success.
+
+    If an asterix has been appended to the parser name (e.g.
+    '[match:identifier*]') then the concrete syntax tree will also be
+    added to the report in this particular case.
+
+    The purpose of the latter is to help constructing and debugging
+    of AST-Transformations. It is better to switch the CST-output on and off
+    with the asterix marker when needed than to output the CST for all tests
+    which would unneccesarily bloat the test reports.
     """
     def indent(txt):
         lines = txt.split('\n')
@@ -203,7 +225,8 @@ def get_report(test_unit):
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
         report.append('\n\n%s\n%s\n' % (heading, '=' * len(heading)))
-        for test_name, test_code in tests.get('match', dict()).items():
+        cst_output = frozenset(tests.get('match*', dict()).keys())
+        for test_name, test_code in all_match_tests(tests):
             heading = 'Match-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:')
@@ -214,10 +237,10 @@ def get_report(test_unit):
                 report.append(error)
             ast = tests.get('__ast__', {}).get(test_name, None)
             cst = tests.get('__cst__', {}).get(test_name, None)
-            if cst and (not ast or cst == ast):
+            if cst and (not ast or test_name in cst_output):
                 report.append('\n### CST')
                 report.append(indent(cst.as_sxpr()))
-            elif ast:
+            if ast:
                 report.append('\n### AST')
                 report.append(indent(ast.as_sxpr()))
         for test_name, test_code in tests.get('fail', dict()).items():
@@ -247,10 +270,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
     for parser_name, tests in test_unit.items():
+        assert parser_name, "Missing parser name in test %s!" % unit_name
         assert set(tests.keys()).issubset(UNIT_STAGES)
         if verbose:
             print('  Match-Tests for parser "' + parser_name + '"')
-        for test_name, test_code in tests.get('match', dict()).items():
+        for test_name, test_code in all_match_tests(tests):
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)

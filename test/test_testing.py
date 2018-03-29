@@ -30,7 +30,7 @@ from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
-from DHParser.testing import grammar_unit, unit_from_configfile
+from DHParser.testing import get_report, grammar_unit, unit_from_configfile
 
 CFG_FILE_1 = '''
 # a comment
@@ -142,7 +142,7 @@ ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_tr
 class TestGrammarTest:
     cases = {
         "factor": {
-            "match": {
+            "match*": {
                 1: "0",
                 2: "314",
             },
@@ -208,7 +208,14 @@ class TestGrammarTest:
         errata = grammar_unit(self.failure_cases, parser_fac, trans_fac)
         # for e in errata:
         #     print(e)
-        assert len(errata) == 3
+        assert len(errata) == 3, str(errata)
+
+    def test_get_report(self):
+        parser_fac = grammar_provider(ARITHMETIC_EBNF)
+        trans_fac = lambda : ARITHMETIC_EBNFTransform
+        grammar_unit(self.cases, parser_fac, trans_fac)
+        report = get_report(self.cases)
+        assert report.find('### CST') >= 0
 
 
 class TestSExpr:
