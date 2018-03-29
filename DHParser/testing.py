@@ -272,7 +272,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         assert set(tests.keys()).issubset(UNIT_STAGES)
         if verbose:
             print('  Match-Tests for parser "' + parser_name + '"')
-        match_tests = set(tests['match'].keys())
+        match_tests = set(tests['match'].keys()) if 'match' in tests else set()
         if 'ast' in tests:
             ast_tests = set(tests['ast'].keys())
             if not ast_tests <= match_tests:
