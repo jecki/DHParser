@@ -232,7 +232,7 @@ EBNF_AST_transformation_table = {
         remove_brackets,
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets,
-         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)')],
+         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
     "symbol, literal, regexp":
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
