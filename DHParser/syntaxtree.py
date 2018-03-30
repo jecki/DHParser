@@ -242,7 +242,7 @@ class Node(collections.abc.Sized):
     """
 
     __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag',
-                 '_xml_attr', '_parent']
+                 '_xml_attr', '_content', '_parent']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -256,6 +256,7 @@ class Node(collections.abc.Sized):
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType
+            self._content = None        # type: str
             self.children = NoChildren  # type: ChildrenType
             self._len = -1              # type: int  # lazy evaluation
         else:
@@ -264,7 +265,7 @@ class Node(collections.abc.Sized):
 
 
     def __str__(self):
-        s = "".join(str(child) for child in self.children) if self.children else self.result
+        s = "".join(str(child) for child in self.children) if self.children else self.content
         if self._errors:
             return ' <<< Error on "%s" | %s >>> ' % \
                    (s, '; '.join(e.message for e in self._errors))
@@ -386,13 +387,12 @@ class Node(collections.abc.Sized):
         #         or isinstance(result, str)), str(result)
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
-        self._len = -1  # lazy evaluation
+        self._len = -1        # lazy evaluation
+        self._content = None
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
             self.error_flag = result.error_flag
-            # if self._pos < 0:
-            #     self._pos = result._pos
         else:
             if isinstance(result, tuple):
                 self.children = result
@@ -400,18 +400,9 @@ class Node(collections.abc.Sized):
                 if result:
                     if self.error_flag == 0:
                         self.error_flag = max(child.error_flag for child in self.children)
-                    # if self._pos < 0:
-                    #     self._pos = result[0]._pos
             else:
                 self.children = NoChildren
-                self._result = str(result)
-        # # shorter but slower:
-        # self._result = (result,) if isinstance(result, Node) else result or ''  # type: StrictResultType
-        # self.children = cast(ChildrenType, self._result) \
-        #     if isinstance(self._result, tuple) else NoChildren  # type: ChildrenType
-        # if self.children:
-        #     self.error_flag = max(self.error_flag,
-        #                           max(child.error_flag for child in self.children))  # type: bool
+                self._result = result
 
 
     @property
@@ -419,9 +410,13 @@ class Node(collections.abc.Sized):
         """
         Returns content as string, omitting error messages.
         """
-        if self.children:
-            return "".join(child.content for child in self.children)
-        return cast(str, self._result)
+        if self._content is None:
+            if self.children:
+                self._content = "".join(child.content for child in self.children)
+            else:
+                self._content = str(self._result)
+                self._result = self._content  # self._result might be more efficient as a string!?
+        return self._content
 
 
     @property
