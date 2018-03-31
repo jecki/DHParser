@@ -53,7 +53,7 @@ def fail_on_error(src, result):
 
 
 def tst_func():
-    with DHParser.log.logging(False):
+    with DHParser.log.logging(True):
         if not os.path.exists('REPORT'):
             os.mkdir('REPORT')
         files = os.listdir('testdata')
@@ -70,7 +70,7 @@ def tst_func():
                     transformer(result)
                     with open('REPORT/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
                         f.write(result.as_sxpr(compact=False))
-                    log_parsing_history(parser)
+                    log_parsing_history(parser, os.path.basename(file), html=True)
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)

@@ -372,9 +372,19 @@ def log_ST(syntax_tree, log_file_name):
             f.write(syntax_tree.as_sxpr())
 
 
-def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> None:
+def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> None:
     """
     Writes a log of the parsing history of the most recently parsed document.
+
+    Parameters:
+        grammar (Grammar):  The Grammar object from which the parsing history
+            shall be logged.
+        log_file_name (str):  The (base-)name of the log file to be written.
+            If no name is given (default), then the class name of the grammar
+            object will be used.
+        html (bool):  If true (default), the log will be output as html-Table,
+            otherwise as plain test. (Browsers might take a few seconds or
+            minutes to display the table for long histories.)
     """
     def write_log(history, log_name):
         htm = '.html' if html else ''
@@ -419,7 +429,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> No
             if record.node.error_flag:
                 append_line(errors_only, line)
     write_log(full_history, log_file_name + '_full')
-    if len(full_history) > 250:
-        write_log(full_history[-200:], log_file_name + '_full.tail')
+    if len(full_history) > 500:
+        write_log(full_history[-500:], log_file_name + '_full.tail')
     write_log(match_history, log_file_name + '_match')
     write_log(errors_only, log_file_name + '_errors')

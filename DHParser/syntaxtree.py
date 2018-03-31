@@ -30,7 +30,7 @@ import copy
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, typing
-from typing import Callable, cast, Iterator, List, Union, Tuple, Optional
+from typing import Callable, cast, Iterator, List, Set, Union, Tuple, Optional
 
 
 __all__ = ('ParserBase',
@@ -314,48 +314,54 @@ class Node(collections.abc.Sized):
     def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
         """
         Returns the child node with the given index if ``index_or_tagname`` is
-        an integer value or a generator that yields all descendant nodes that
-        match a particular tag name. Examples::
+        an integer or the first child node with the given tag name. Examples::
 
-            >>> tree =  mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> tree = mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
             >>> flatten_sxpr(tree[0].as_sxpr())
             '(b "X")'
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree["X"])
-            ['(X (c "d"))', '(X "F")']
+            >>> flatten_sxpr(tree["X"].as_sxpr())
+            '(X (c "d"))'
 
         Args:
             index_or_tagname(str): Either an index of a child node or a
                 tag name.
-        Return:
+        Returns:
             Node: All nodes which have a given tag name.
         """
-        if isinstance(index_or_tagname, int):
-            children = self.children
-            if children:
-                return children[index_or_tagname]
+        if self.children:
+            if isinstance(index_or_tagname, int):
+                return self.children[index_or_tagname]
             else:
-                raise ValueError('Leave nodes have no children that can be indexed!')
-        else:
-            match_function = lambda node: node.tag_name == index_or_tagname
-            return self.find(match_function, False)
+                for child in self.children:
+                    if child.tag_name == index_or_tagname:
+                        return child
+                raise KeyError(index_or_tagname)
+        raise ValueError('Leave nodes have no children that can be indexed!')
 
 
     def __contains__(self, tag_name: str) -> bool:
         """
-        Returns true if a descendant with the given tag name exists.
+        Returns true if a child with the given tag name exists.
         Args:
-            tag_name: tag_name which will be searched among the descendant
-                nodes
+            tag_name (str): tag_name which will be searched among to immediate
+                descendants of this node.
         Returns:
             bool:  True, if at least one descendant node with the given tag
                 name exists, False otherwise
         """
-        generator = self[tag_name]
-        try:
-            generator.__next__()
-            return True
-        except StopIteration:
+        # assert isinstance(tag_name, str)
+        if self.children:
+            for child in self.children:
+                if child.tag_name == tag_name:
+                    return True
             return False
+        raise ValueError('Leave node cannot contain other nodes')
+        # generator = self.select_tags(tag_name, False)
+        # try:
+        #     generator.__next__()
+        #     return True
+        # except StopIteration:
+        #     return False
 
 
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
@@ -406,7 +412,7 @@ class Node(collections.abc.Sized):
 
 
     @property
-    def content(self) -> str:
+    def content(self) -> Union[StringView, str]:
         """
         Returns content as string, omitting error messages.
         """
@@ -414,6 +420,7 @@ class Node(collections.abc.Sized):
             if self.children:
                 self._content = "".join(child.content for child in self.children)
             else:
+                # self._content = self._result
                 self._content = str(self._result)
                 self._result = self._content  # self._result might be more efficient as a string!?
         return self._content
@@ -635,13 +642,13 @@ class Node(collections.abc.Sized):
         return self._tree_repr('    ', opening, closing, density=1)
 
 
-    def find(self, match_function: Callable, include_root: bool=True) -> Iterator['Node']:
+    def select(self, match_function: Callable, include_root: bool=True) -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion.
 
-        `find` is a generator that yields all nodes for which the
+        `select` is a generator that yields all nodes for which the
         given `match_function` evaluates to True. The tree is
-        traversed pre-order.
+        traversed pre-order, depth last.
 
         Args:
             match_function (function): A function  that takes as Node
@@ -656,19 +663,38 @@ class Node(collections.abc.Sized):
             yield self
         else:
             for child in self.children:
-                for node in child.find(match_function, True):
+                for node in child.select(match_function, True):
                     yield node
 
 
-    def find_by_tag(self, tag_name: str) -> Iterator['Node']:
+    def select_tags(self, tag_names: Union[str, Set[str]],
+                    include_root: bool=True) -> Iterator['Node']:
         """
-        Finds all nodes with the given tag name.
+        Returns an iterator that runs through all descendants that have the
+        given tag name.
+        Example::
+
+            >>> tree = mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_tags("X", False))
+            ['(X (c "d"))', '(X "F")']
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_tags({"X", "b"}, False))
+            ['(b "X")', '(X (c "d"))', '(X "F")']
+            >>> any(tree.select_tags('a', False))
+            False
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_tags('a', True))
+            ['(a (b "X") (X (c "d")) (e (X "F")))']
 
         Args:
-            tag_name(str): The tag name that is being searched for.
+            tag_name(set): A tag name or set of tag names that is being
+                searched for
+            include_root (bool): If False, only descendant nodes will be
+                checked for a match.
         Yields:
             Node: All nodes which have a given tag name.
         """
+        if isinstance(tag_names, str):
+            tag_names = frozenset(tag_names)
+        return self.select(lambda node: node.tag_name in tag_names, include_root)
 
 
     def tree_size(self) -> int:

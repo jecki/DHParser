@@ -14,8 +14,8 @@ testdata/*.pdf
 *~
 *.old
 DEBUG*
-LOGS/
-REPORT/
+LOGS
+REPORT
 external_resources/
 tmp/*
 test/tmp*

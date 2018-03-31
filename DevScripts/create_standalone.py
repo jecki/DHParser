@@ -38,9 +38,9 @@ all_symbols.sort()
 
 
 def start(module):
-    i = module.find('__all__')
-    i = module.find(')', i)
-    i = module.find('\n', i) + 1
+    i = module.select('__all__')
+    i = module.select(')', i)
+    i = module.select('\n', i) + 1
     return i
 
 

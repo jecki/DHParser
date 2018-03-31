@@ -344,17 +344,16 @@ def streamline_whitespace(context):
         return
     node = context[-1]
     assert node.tag_name in ['WSPC', ':Whitespace']
-    s = str(node)
-    c = s.find('%')
-    n = s.find('\n')
-    if c >= 0:
+    s = node.content
+    if s.find('%') >= 0:
         node.result = '\n'
+        # c = s.find('%')
         # node.result = ('  ' if (n >= c) or (n < 0) else '\n')+ s[c:].rstrip(' \t')
         # node.parser = MockParser('COMMENT', '')
     elif s.find('\n') >= 0:
         node.result = '\n'
     else:
-        node.result = ' '
+        node.result = ' ' if s else ''
 
 
 def watch(node):
@@ -482,205 +481,252 @@ class LaTeXCompiler(Compiler):
         assert re.match('\w+\Z', grammar_name)
 
     def on_latexdoc(self, node):
+        self.compile(node['preamble'])
+        self.compile(node['document'])
         return node
 
     def on_preamble(self, node):
-        pass
+        return node
 
-    def on_document(self, node):
-        pass
+    # def on_document(self, node):
+    #     return node
 
-    def on_frontpages(self, node):
-        pass
+    # def on_frontpages(self, node):
+    #     return node
 
-    def on_Chapters(self, node):
-        pass
+    # def on_Chapters(self, node):
+    #     return node
 
-    def on_Chapter(self, node):
-        pass
+    # def on_Chapter(self, node):
+    #     return node
 
-    def on_Sections(self, node):
-        pass
+    # def on_Sections(self, node):
+    #     return node
 
-    def on_Section(self, node):
-        pass
+    # def on_Section(self, node):
+    #     return node
 
-    def on_SubSections(self, node):
-        pass
+    # def on_SubSections(self, node):
+    #     return node
 
-    def on_SubSection(self, node):
-        pass
+    # def on_SubSection(self, node):
+    #     return node
 
-    def on_SubSubSections(self, node):
-        pass
+    # def on_SubSubSections(self, node):
+    #     return node
 
-    def on_SubSubSection(self, node):
-        pass
+    # def on_SubSubSection(self, node):
+    #     return node
 
-    def on_Paragraphs(self, node):
-        pass
+    # def on_Paragraphs(self, node):
+    #     return node
 
-    def on_Paragraph(self, node):
-        pass
+    # def on_Paragraph(self, node):
+    #     return node
 
-    def on_SubParagraphs(self, node):
-        pass
+    # def on_SubParagraphs(self, node):
+    #     return node
 
-    def on_SubParagraph(self, node):
-        pass
+    # def on_SubParagraph(self, node):
+    #     return node
 
-    def on_Bibliography(self, node):
-        pass
+    # def on_Bibliography(self, node):
+    #     return node
 
-    def on_Index(self, node):
-        pass
+    # def on_Index(self, node):
+    #     return node
 
-    def on_block_environment(self, node):
-        pass
+    # def on_heading(self, node):
+    #     return node
 
-    def on_known_environment(self, node):
-        pass
+    # def on_block_environment(self, node):
+    #     return node
 
-    def on_generic_block(self, node):
-        pass
+    # def on_known_environment(self, node):
+    #     return node
 
-    def on_begin_generic_block(self, node):
-        pass
+    # def on_generic_block(self, node):
+    #     return node
 
-    def on_end_generic_block(self, node):
-        pass
+    # def on_begin_generic_block(self, node):
+    #     return node
 
-    def on_itemize(self, node):
-        pass
+    # def on_end_generic_block(self, node):
+    #     return node
 
-    def on_enumerate(self, node):
-        pass
+    # def on_itemize(self, node):
+    #     return node
 
-    def on_item(self, node):
-        pass
+    # def on_enumerate(self, node):
+    #     return node
 
-    def on_figure(self, node):
-        pass
+    # def on_item(self, node):
+    #     return node
 
-    def on_quotation(self, node):
-        pass
+    # def on_figure(self, node):
+    #     return node
 
-    def on_verbatim(self, node):
-        pass
+    # def on_quotation(self, node):
+    #     return node
 
-    def on_table(self, node):
-        pass
+    # def on_verbatim(self, node):
+    #     return node
 
-    def on_table_config(self, node):
-        pass
+    # def on_tabular(self, node):
+    #     return node
 
-    def on_block_of_paragraphs(self, node):
-        pass
+    # def on_tabular_row(self, node):
+    #     return node
 
-    def on_sequence(self, node):
-        pass
+    # def on_tabular_cell(self, node):
+    #     return node
 
-    def on_paragraph(self, node):
-        pass
+    # def on_tabular_config(self, node):
+    #     return node
 
-    def on_text_element(self, node):
-        pass
+    # def on_block_of_paragraphs(self, node):
+    #     return node
 
-    def on_inline_environment(self, node):
-        pass
+    # def on_sequence(self, node):
+    #     return node
 
-    def on_known_inline_env(self, node):
-        pass
+    # def on_paragraph(self, node):
+    #     return node
 
-    def on_generic_inline_env(self, node):
-        pass
+    # def on_text_element(self, node):
+    #     return node
 
-    def on_begin_inline_env(self, node):
-        pass
+    # def on_line_element(self, node):
+    #     return node
 
-    def on_begin_environment(self, node):
-        pass
+    # def on_inline_environment(self, node):
+    #     return node
 
-    def on_end_environment(self, node):
-        pass
+    # def on_known_inline_env(self, node):
+    #     return node
 
-    def on_inline_math(self, node):
-        pass
+    # def on_generic_inline_env(self, node):
+    #     return node
 
-    def on_command(self, node):
-        pass
+    # def on_begin_inline_env(self, node):
+    #     return node
 
-    def on_known_command(self, node):
-        pass
+    # def on_end_inline_env(self, node):
+    #     return node
 
-    def on_generic_command(self, node):
-        pass
+    # def on_begin_environment(self, node):
+    #     return node
 
-    def on_footnote(self, node):
-        pass
+    # def on_end_environment(self, node):
+    #     return node
 
-    def on_includegraphics(self, node):
-        pass
+    # def on_inline_math(self, node):
+    #     return node
 
-    def on_caption(self, node):
-        pass
+    # def on_command(self, node):
+    #     return node
 
-    def on_config(self, node):
-        pass
+    # def on_known_command(self, node):
+    #     return node
 
-    def on_block(self, node):
-        pass
+    # def on_text_command(self, node):
+    #     return node
 
-    def on_text(self, node):
-        pass
+    # def on_generic_command(self, node):
+    #     return node
 
-    def on_cfgtext(self, node):
-        pass
+    # def on_footnote(self, node):
+    #     return node
 
-    def on_word_sequence(self, node):
-        pass
+    # def on_includegraphics(self, node):
+    #     return node
 
-    def on_no_command(self, node):
-        pass
+    # def on_caption(self, node):
+    #     return node
 
-    def on_blockcmd(self, node):
-        pass
+    # def on_multicolumn(self, node):
+    #     return node
 
-    def on_structural(self, node):
-        pass
+    # def on_hline(self, node):
+    #     return node
 
-    def on_CMDNAME(self, node):
-        pass
+    # def on_cline(self, node):
+    #     return node
 
-    def on_NAME(self, node):
-        pass
+    # def on_config(self, node):
+    #     return node
 
-    def on_ESCAPED(self, node):
-        pass
+    # def on_cfg_text(self, node):
+    #     return node
 
-    def on_BRACKETS(self, node):
-        pass
+    # def on_block(self, node):
+    #     return node
 
-    def on_TEXTCHUNK(self, node):
-        pass
+    # def on_text(self, node):
+    #     return node
 
-    def on_WSPC(self, node):
-        pass
+    # def on_no_command(self, node):
+    #     return node
 
-    def on_LF(self, node):
-        pass
+    # def on_blockcmd(self, node):
+    #     return node
 
-    def on_PARSEP(self, node):
-        pass
+    # def on_structural(self, node):
+    #     return node
 
-    def on_LB(self, node):
-        pass
+    # def on_CMDNAME(self, node):
+    #     return node
 
-    def on_BACKSLASH(self, node):
-        pass
+    # def on_TXTCOMMAND(self, node):
+    #     return node
 
-    def on_EOF(self, node):
-        pass
+    # def on_ESCAPED(self, node):
+    #     return node
+
+    # def on_SPECIAL(self, node):
+    #     return node
+
+    # def on_BRACKETS(self, node):
+    #     return node
+
+    # def on_LINEFEED(self, node):
+    #     return node
+
+    # def on_NAME(self, node):
+    #     return node
+
+    # def on_INTEGER(self, node):
+    #     return node
+
+    # def on_TEXTCHUNK(self, node):
+    #     return node
+
+    # def on_LF(self, node):
+    #     return node
+
+    # def on_LFF(self, node):
+    #     return node
+
+    # def on_PARSEP(self, node):
+    #     return node
+
+    # def on_WSPC(self, node):
+    #     return node
+
+    # def on_GAP(self, node):
+    #     return node
+
+    # def on_NEW_LINE(self, node):
+    #     return node
+
+    # def on_LB(self, node):
+    #     return node
+
+    # def on_BACKSLASH(self, node):
+    #     return node
+
+    # def on_EOF(self, node):
+    #     return node
 
 
 def get_compiler(grammar_name="LaTeX", grammar_source="") -> LaTeXCompiler:
@@ -688,11 +734,11 @@ def get_compiler(grammar_name="LaTeX", grammar_source="") -> LaTeXCompiler:
     try:
         compiler = thread_local_LaTeX_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
-        return compiler
     except NameError:
         thread_local_LaTeX_compiler_singleton = \
             LaTeXCompiler(grammar_name, grammar_source)
-        return thread_local_LaTeX_compiler_singleton 
+        compiler = thread_local_LaTeX_compiler_singleton
+    return compiler
 
 
 #######################################################################

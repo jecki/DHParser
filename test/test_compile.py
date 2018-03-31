@@ -27,9 +27,9 @@ class TestCompilerClass:
     def test_error_propagations(self):
         tree = mock_syntax_tree('(A (B 1) (C (D (E 2) (F 3))))')
         A = tree
-        B = next(tree.find(lambda node: str(node) == "1"))
-        D = next(tree.find(lambda node: node.parser.name == "D"))
-        F = next(tree.find(lambda node: str(node) == "3"))
+        B = next(tree.select(lambda node: str(node) == "1"))
+        D = next(tree.select(lambda node: node.parser.name == "D"))
+        F = next(tree.select(lambda node: str(node) == "3"))
         B.add_error("Error in child node")
         F.add_error("Error in child's child node")
         Compiler.propagate_error_flags(tree, lazy=True)

@@ -143,7 +143,7 @@ class TestEBNFParser:
         result = self.EBNF(snippet, 'literal')
         assert not result.error_flag
         assert str(result) == snippet
-        assert result.find(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
+        assert result.select(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
 
         result = self.EBNF(' "literal"', 'literal')
         assert result.error_flag  # literals catch following, but not leading whitespace

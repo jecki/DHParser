@@ -43,12 +43,15 @@ more of the modules further above in the list, but not the other way round:
 
 - syntaxtree.py -- syntax tree classes for DHParser
 
+- transform.py -- transformation functions for converting the concrete
+                  into the abstract syntax tree
+
 - logging.py -- logging and debugging for DHParser
 
 - parse.py -- parser combinators for for DHParser
 
-- transform.py -- transformation functions for converting the concrete
-  into the abstract syntax tree
+- compile.py -- abstract base class for compilers that transform an AST
+                into something useful
 
 - ebnf.py -- EBNF -> Python-Parser compilation for DHParser
 

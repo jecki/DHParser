@@ -58,10 +58,10 @@ class TestNode:
         assert str(self.recurr_tree) == "xey"
 
     def test_find(self):
-        found = list(self.unique_tree.find(lambda nd: not nd.children and nd.result == "e"))
+        found = list(self.unique_tree.select(lambda nd: not nd.children and nd.result == "e"))
         assert len(found) == 1
         assert found[0].result == 'e'
-        found = list(self.recurr_tree.find(lambda nd: nd.tag_name == 'b'))
+        found = list(self.recurr_tree.select(lambda nd: nd.tag_name == 'b'))
         assert len(found) == 2
         assert found[0].result == 'x' and found[1].result == 'y'
 
@@ -128,9 +128,9 @@ class TestNode:
     def test_collect_errors(self):
         tree = mock_syntax_tree('(A (B 1) (C (D (E 2) (F 3))))')
         A = tree
-        B = next(tree.find(lambda node: str(node) == "1"))
-        D = next(tree.find(lambda node: node.parser.name == "D"))
-        F = next(tree.find(lambda node: str(node) == "3"))
+        B = next(tree.select(lambda node: str(node) == "1"))
+        D = next(tree.select(lambda node: node.parser.name == "D"))
+        F = next(tree.select(lambda node: str(node) == "3"))
         B.add_error("Error in child node")
         F.add_error("Error in child's child node")
         tree.error_flag = Error.ERROR
@@ -158,7 +158,7 @@ class TestErrorHandling:
 
 
 class TestNodeFind():
-    """Test the find-functions of class Node.
+    """Test the select-functions of class Node.
     """
 
     def test_find(self):
@@ -166,7 +166,7 @@ class TestNodeFind():
             return node.tag_name == tag_name
         matchf = lambda node: match_tag_name(node, "X")
         tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
-        matches = list(tree.find(matchf))
+        matches = list(tree.select(matchf))
         assert len(matches) == 2, len(matches)
         assert str(matches[0]) == 'd', str(matches[0])
         assert str(matches[1]) == 'F', str(matches[1])
@@ -174,8 +174,8 @@ class TestNodeFind():
         assert matches[1] == mock_syntax_tree('(X F)')
         # check default: root is included in search:
         matchf2 = lambda node: match_tag_name(node, 'a')
-        assert list(tree.find(matchf2))
-        assert not list(tree.find(matchf2, include_root=False))
+        assert list(tree.select(matchf2))
+        assert not list(tree.select(matchf2, include_root=False))
 
     def test_getitem(self):
         tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
@@ -186,17 +186,20 @@ class TestNodeFind():
             assert False, "IndexError expected!"
         except IndexError:
             pass
-        matches = list(tree['X'])
+        matches = list(tree.select_tags('X', False))
         assert matches[0] == mock_syntax_tree('(X (c d))')
         assert matches[1] == mock_syntax_tree('(X F)')
 
     def test_contains(self):
         tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
         assert 'a' not in tree
+        assert any(tree.select_tags('a', True))
+        assert not any(tree.select_tags('a', False))
         assert 'b' in tree
         assert 'X' in tree
         assert 'e' in tree
-        assert 'c' in tree
+        assert 'c' not in tree
+        assert any(tree.select_tags('c', False))
 
 
 if __name__ == "__main__":
