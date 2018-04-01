@@ -39,10 +39,11 @@ if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles 
     sys.exit(1)
 
 
-from LaTeXCompiler import get_grammar, get_transformer
+from LaTeXCompiler import get_grammar, get_transformer, get_compiler
 
 parser = get_grammar()
 transformer = get_transformer()
+compiler = get_compiler()
 
 def fail_on_error(src, result):
     if result.error_flag:
@@ -62,19 +63,27 @@ def tst_func():
             if fnmatch.fnmatch(file, '*.tex') and file.lower().find('error') < 0:
                 with open(os.path.join('testdata', file), 'r', encoding='utf-8') as f:
                     doc = f.read()
-                print('\n\nParsing document: "%s"\n' % file)
+
+                print('\n\nParsing document: "%s"' % file)
                 result = parser(doc)
                 if DHParser.log.is_logging():
+                    print('Saving CST')
                     with open('REPORT/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
                         f.write(result.as_sxpr(compact=False))
-                    transformer(result)
-                    with open('REPORT/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
-                        f.write(result.as_sxpr(compact=False))
+                    print('Saving parsing history')
                     log_parsing_history(parser, os.path.basename(file), html=True)
+
+                print('\nTransforming document: "%s"' % file)
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)
-                # print(result.as_sxpr())
+                if DHParser.log.is_logging():
+                    print('Saving AST')
+                    with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
+                        f.write(result.as_sxpr(compact=False))
+
+                print('\nCompiling document: "%s"' % file)
+                output = compiler(result)
 
 
 def cpu_profile(func):

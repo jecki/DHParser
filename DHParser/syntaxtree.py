@@ -232,7 +232,7 @@ class Node(collections.abc.Sized):
             At any rate, it should only be reassigned during the parsing
             stage and never during or after the AST-transformation.
 
-        xml_attr (dict): An optional dictionary of XML-attributes. This
+        attributes (dict): An optional dictionary of XML-attributes. This
             dictionary is created lazily upon first usage. The attributes
             will only be shown in the XML-Representation, not in the
             S-Expression-output.
@@ -356,7 +356,7 @@ class Node(collections.abc.Sized):
                     return True
             return False
         raise ValueError('Leave node cannot contain other nodes')
-        # generator = self.select_tags(tag_name, False)
+        # generator = self.select_by_tag(tag_name, False)
         # try:
         #     generator.__next__()
         #     return True
@@ -604,7 +604,7 @@ class Node(collections.abc.Sized):
 
 
     @property
-    def xml_attr(self):
+    def attributes(self):
         """Returns a dictionary of XML-Attributes attached to the Node."""
         if not hasattr(self, '_xml_attr'):
             self._xml_attr = dict()
@@ -626,7 +626,7 @@ class Node(collections.abc.Sized):
             txt = ['<', node.tag_name]
             # s += ' pos="%i"' % node.pos
             if hasattr(node, '_xml_attr'):
-                txt.extend(' %s="%s"' % (k, v) for k, v in node.xml_attr.items())
+                txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
             if src:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors:
@@ -648,7 +648,9 @@ class Node(collections.abc.Sized):
 
         `select` is a generator that yields all nodes for which the
         given `match_function` evaluates to True. The tree is
-        traversed pre-order, depth last.
+        traversed pre-order.
+
+        See function `Node.select_by_tag` for some examples.
 
         Args:
             match_function (function): A function  that takes as Node
@@ -667,22 +669,25 @@ class Node(collections.abc.Sized):
                     yield node
 
 
-    def select_tags(self, tag_names: Union[str, Set[str]],
-                    include_root: bool=True) -> Iterator['Node']:
+    def select_by_tag(self, tag_names: Union[str, Set[str]],
+                      include_root: bool=True) -> Iterator['Node']:
         """
-        Returns an iterator that runs through all descendants that have the
-        given tag name.
-        Example::
+        Returns an iterator that runs through all descendants that have one
+        of the given tag names.
+
+        Examples::
 
             >>> tree = mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_tags("X", False))
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag("X", False))
             ['(X (c "d"))', '(X "F")']
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_tags({"X", "b"}, False))
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag({"X", "b"}, False))
             ['(b "X")', '(X (c "d"))', '(X "F")']
-            >>> any(tree.select_tags('a', False))
+            >>> any(tree.select_by_tag('a', False))
             False
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_tags('a', True))
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag('a', True))
             ['(a (b "X") (X (c "d")) (e (X "F")))']
+            >>> flatten_sxpr(next(tree.select_by_tag("X", False)).as_sxpr())
+            '(X (c "d"))'
 
         Args:
             tag_name(set): A tag name or set of tag names that is being
@@ -695,6 +700,21 @@ class Node(collections.abc.Sized):
         if isinstance(tag_names, str):
             tag_names = frozenset(tag_names)
         return self.select(lambda node: node.tag_name in tag_names, include_root)
+
+
+    def pick(self, tag_names: Union[str, Set[str]]) -> Optional['Node']:
+        """
+        Picks the first descendant with one of the given tag_names.
+
+        This function is just syntactic sugar for
+        ``next(node.select_by_tag(tag_names, False))``. However, rather than
+        raising a StopIterationError if no descendant with the given tag-name
+        exists, it returns None.
+        """
+        try:
+            return next(self.select_by_tag(tag_names, False))
+        except StopIteration:
+            return None
 
 
     def tree_size(self) -> int:

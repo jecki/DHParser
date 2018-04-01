@@ -107,16 +107,21 @@ inline_math         = /\$/ /[^$]*/ §/\$/
 #### commands ####
 
 command             = known_command | text_command | generic_command
-known_command       = footnote | includegraphics | caption | multicolumn | hline | cline
+known_command       = citet | citep | footnote | includegraphics | caption
+                    | multicolumn | hline | cline | documentclass | pdfinfo
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
 
+citet               = "\citet" [config] block
+citep               = ("\citep" | "\cite") [config] block
 footnote            = "\footnote" block_of_paragraphs
 includegraphics     = "\includegraphics" [ config ] block
 caption             = "\caption" block
 multicolumn         = "\multicolumn" "{" INTEGER "}" tabular_config block_of_paragraphs
 hline               = "\hline"
 cline               = "\cline{" INTEGER "-" INTEGER "}"
+documentclass       = "\documentclass" [ config ] block
+pdfinfo             = "\pdfinfo" block
 
 
 #######################################################################

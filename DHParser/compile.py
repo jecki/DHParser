@@ -44,7 +44,7 @@ from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basename
 from DHParser.toolkit import typing, sane_parser_name, load_if_file
-from typing import Any, Optional, Tuple, List
+from typing import Any, Optional, Tuple, List, Callable
 
 
 __all__ = ('CompilerError', 'Compiler', 'compile_source')
@@ -186,9 +186,8 @@ class Compiler:
             result = compiler(node)
             self.context.pop()
             if result is None:
-                raise CompilerError(('Method %s returned `None` instead of a '
-                                     'valid compilation result!')
-                                    % str(compiler))
+                raise CompilerError('Method on_%s returned `None` instead of a '
+                                    'valid compilation result!' % elem)
             # # the following statement makes sure that the error_flag
             # # is propagated early on. Otherwise it is redundant, because
             # # the __call__ method globally propagates the node's error_flag

@@ -13,9 +13,6 @@ Match-test "1"
 ### AST
     (includegraphics
         (config
-            (:Whitespace
-                " "
-            )
             (text
                 "width="
             )
@@ -23,16 +20,8 @@ Match-test "1"
                 "\textwidth"
             )
         )
-        (block
-            (:Whitespace
-                " "
-            )
-            (text
-                "Graph.eps"
-            )
-            (:Whitespace
-                " "
-            )
+        (text
+            "Graph.eps"
         )
     )
 
@@ -45,20 +34,10 @@ Match-test "2"
 ### AST
     (multicolumn
         (INTEGER
-            (:RegExp
-                "1"
-            )
-            (:Whitespace
-                " "
-            )
+            "1"
         )
         (tabular_config
-            (:RegExp
-                "c"
-            )
-            (:Whitespace
-                " "
-            )
+            "c"
         )
     )
 
@@ -71,27 +50,14 @@ Match-test "3"
 ### AST
     (multicolumn
         (INTEGER
-            (:RegExp
-                "2"
-            )
-            (:Whitespace
-                " "
-            )
+            "2"
         )
         (tabular_config
-            (:RegExp
-                "c|"
-            )
-            (:Whitespace
-                " "
-            )
+            "c|"
         )
         (block_of_paragraphs
             (text
                 "material"
-            )
-            (:Whitespace
-                " "
             )
         )
     )
@@ -105,27 +71,14 @@ Match-test "4"
 ### AST
     (multicolumn
         (INTEGER
-            (:RegExp
-                "2"
-            )
-            (:Whitespace
-                " "
-            )
+            "2"
         )
         (tabular_config
-            (:RegExp
-                "c"
-            )
-            (:Whitespace
-                " "
-            )
+            "c"
         )
         (block_of_paragraphs
             (inline_math
                 "\underbrace{\hspace{7cm}}_{Simulations}"
-            )
-            (:Whitespace
-                " "
             )
         )
     )

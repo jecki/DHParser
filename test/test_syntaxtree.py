@@ -186,20 +186,20 @@ class TestNodeFind():
             assert False, "IndexError expected!"
         except IndexError:
             pass
-        matches = list(tree.select_tags('X', False))
+        matches = list(tree.select_by_tag('X', False))
         assert matches[0] == mock_syntax_tree('(X (c d))')
         assert matches[1] == mock_syntax_tree('(X F)')
 
     def test_contains(self):
         tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
         assert 'a' not in tree
-        assert any(tree.select_tags('a', True))
-        assert not any(tree.select_tags('a', False))
+        assert any(tree.select_by_tag('a', True))
+        assert not any(tree.select_by_tag('a', False))
         assert 'b' in tree
         assert 'X' in tree
         assert 'e' in tree
         assert 'c' not in tree
-        assert any(tree.select_tags('c', False))
+        assert any(tree.select_by_tag('c', False))
 
 
 if __name__ == "__main__":

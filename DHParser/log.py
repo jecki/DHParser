@@ -204,20 +204,22 @@ class HistoryRecord:
     Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
 
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col style="width:75"/>' \
-               '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>\n'
-    HTML_LEAD_IN = (
+               '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>'
+    HEADINGS = ('<tr><th>L</th><th>C</th><th>parser calling sequence</th>'
+        '<th>success</th><th>text to parse</th></tr>')
+    HTML_LEAD_IN = ('<!DOCTYPE html>\n'
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
-        'td.line, td.column {font-family:monospace;color:darkgrey}\n'
-        'td.stack{font-family:monospace}\n'
-        'td.status{font-family:monospace;font-weight:bold}\n'
-        'td.text{font-family:monospace;color:darkblue}\n'
-        'table{border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
-        'td{border-right: thin solid grey; border-bottom: thin solid grey}\n'
-        'span.delimiter{color:grey;}\nspan.match{color:darkgreen}\n'
-        'span.fail{color:darkgrey}\nspan.error{color:red}\n'
-        'span.matchstack{font-weight:bold;color:darkred}'
-        '\n</style>\n</head>\n<body>\n<table>\n' + COLGROUP)
-    HTML_LEAD_OUT = '\n</table>\n</body>\n</html>\n'
+        'td,th {font-family:monospace; '
+        'border-right: thin solid grey; border-bottom: thin solid grey}\n'        
+        'td.line, td.column {color:darkgrey}\n' # 'td.stack {}\n'
+        'td.status {font-weight:bold}\n'
+        'td.text {color:darkblue}\n'
+        'table {border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
+        'span {color:grey;}\nspan.match {color:darkgreen}\n'
+        'span.fail {color:darkgrey}\nspan.error {color:red}\n'
+        'span.matchstack {font-weight:bold;color:darkred}'
+        '\n</style>\n</head>\n<body>\n')
+    HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
@@ -252,7 +254,7 @@ class HistoryRecord:
         Returns history record formatted as an html table row.
         """
         stack = html.escape(self.stack).replace(
-            '-&gt;', '<span class="delimiter">&shy;-&gt;</span>')
+            '-&gt;', '<span>&shy;-&gt;</span>')
         status = html.escape(self.status)
         excerpt = html.escape(self.excerpt)
         if status == self.MATCH:
@@ -372,6 +374,10 @@ def log_ST(syntax_tree, log_file_name):
             f.write(syntax_tree.as_sxpr())
 
 
+LOG_SIZE_THRESHOLD = 100000   # maximum number of history records to log
+LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
+
+
 def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> None:
     """
     Writes a log of the parsing history of the most recently parsed document.
@@ -395,9 +401,9 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> N
         if history:
             with open(path, "w", encoding="utf-8") as f:
                 if html:
-                    f.write(HistoryRecord.HTML_LEAD_IN)
+                    f.write(HistoryRecord.HTML_LEAD_IN + '\n')
                     f.write("\n".join(history))
-                    f.write(HistoryRecord.HTML_LEAD_OUT)
+                    f.write('\n</table>\n' + HistoryRecord.HTML_LEAD_OUT)
                 else:
                     f.write("\n".join(history))
 
@@ -406,8 +412,8 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> N
         table every 100 rows to allow browser to speed up rendering.
         Does this really work...?"""
         log.append(line)
-        if html and len(log) % 100 == 0:
-            log.append('\n</table>\n<table>\n' + HistoryRecord.COLGROUP)
+        if html and len(log) % 50 == 0:
+            log.append('\n'.join(['</table>\n<table>', HistoryRecord.COLGROUP]))
 
     if not is_logging():
         raise AssertionError("Cannot log history when logging is turned off!")
@@ -418,10 +424,26 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> N
         log_file_name = name[:-7] if name.lower().endswith('grammar') else name
     elif log_file_name.lower().endswith('.log'):
         log_file_name = log_file_name[:-4]
-    full_history = []  # type: List[str]
-    match_history = []  # type: List[str]
-    errors_only = []  # type: List[str]
-    for record in grammar.history__:
+
+    full_history = ['<h1>Full parsing history of "%s"</h1>' % log_file_name]  # type: List[str]
+    match_history = ['<h1>Match history of parsing "%s"</h1>' % log_file_name]  # type: List[str]
+    errors_only = ['<h1>Errors when parsing "%s"</h1>' % log_file_name]  # type: List[str]
+
+    if len(grammar.history__) > LOG_SIZE_THRESHOLD:
+        warning =('Sorry, man, %iK history records is just too many! '
+                  'Only looking at the last %iK records.'
+                  % (len(grammar.history__)//1000, LOG_SIZE_THRESHOLD//1000))
+        html_warning = '<p><strong>' + warning + '</strong></p>'
+        full_history.append(html_warning)
+        match_history.append(html_warning)
+        errors_only.append(html_warning)
+
+    lead_in = '\n'. join(['<table>', HistoryRecord.COLGROUP, HistoryRecord.HEADINGS])
+    full_history.append(lead_in)
+    match_history.append(lead_in)
+    errors_only.append(lead_in)
+
+    for record in grammar.history__[-LOG_SIZE_THRESHOLD:]:
         line = record.as_html_tr() if html else str(record)
         append_line(full_history, line)
         if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
@@ -429,7 +451,10 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> N
             if record.node.error_flag:
                 append_line(errors_only, line)
     write_log(full_history, log_file_name + '_full')
-    if len(full_history) > 500:
-        write_log(full_history[-500:], log_file_name + '_full.tail')
+    if len(full_history) > LOG_TAIL_THRESHOLD + 10:
+        heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
+        write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
     write_log(match_history, log_file_name + '_match')
-    write_log(errors_only, log_file_name + '_errors')
+    if (len(errors_only) > 3 or (len(grammar.history__) <= LOG_SIZE_THRESHOLD
+                                 and len(errors_only) > 2)):
+        write_log(errors_only, log_file_name + '_errors')

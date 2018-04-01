@@ -7,6 +7,7 @@
 #######################################################################
 
 
+from collections import defaultdict
 import os
 import sys
 from functools import partial
@@ -23,7 +24,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first, \
-    remove_tokens, remove_nodes, TOKEN_PTYPE
+    traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error
 from DHParser.log import logging
 
 
@@ -158,16 +159,21 @@ class LaTeXGrammar(Grammar):
     #### commands ####
     
     command             = known_command | text_command | generic_command
-    known_command       = footnote | includegraphics | caption | multicolumn | hline | cline
+    known_command       = citet | citep | footnote | includegraphics | caption
+                        | multicolumn | hline | cline | documentclass | pdfinfo
     text_command        = TXTCOMMAND | ESCAPED | BRACKETS
     generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
     
+    citet               = "\citet" [config] block
+    citep               = ("\citep" | "\cite") [config] block
     footnote            = "\footnote" block_of_paragraphs
     includegraphics     = "\includegraphics" [ config ] block
     caption             = "\caption" block
     multicolumn         = "\multicolumn" "{" INTEGER "}" tabular_config block_of_paragraphs
     hline               = "\hline"
     cline               = "\cline{" INTEGER "-" INTEGER "}"
+    documentclass       = "\documentclass" [ config ] block
+    pdfinfo             = "\pdfinfo" block
     
     
     #######################################################################
@@ -231,7 +237,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "96b3c5ce2f75505a279d4d27f7712323"
+    source_hash__ = "8dcbc88ac7db7a9bee51f440394aaa18"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
@@ -263,15 +269,19 @@ class LaTeXGrammar(Grammar):
     block = Series(RegExp('{'), RE(''), ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))), RegExp('}'), mandatory=3)
     cfg_text = ZeroOrMore(Alternative(Series(Option(RE('')), text), CMDNAME, SPECIAL))
     config = Series(Token("["), cfg_text, Token("]"), mandatory=2)
+    pdfinfo = Series(Token("\\pdfinfo"), block)
+    documentclass = Series(Token("\\documentclass"), Option(config), block)
     cline = Series(Token("\\cline{"), INTEGER, Token("-"), INTEGER, Token("}"))
     hline = Token("\\hline")
     multicolumn = Series(Token("\\multicolumn"), Token("{"), INTEGER, Token("}"), tabular_config, block_of_paragraphs)
     caption = Series(Token("\\caption"), block)
     includegraphics = Series(Token("\\includegraphics"), Option(config), block)
     footnote = Series(Token("\\footnote"), block_of_paragraphs)
+    citep = Series(Alternative(Token("\\citep"), Token("\\cite")), Option(config), block)
+    citet = Series(Token("\\citet"), Option(config), block)
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(RE(''), config)), RE(''), block)))
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
-    known_command = Alternative(footnote, includegraphics, caption, multicolumn, hline, cline)
+    known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo)
     command = Alternative(known_command, text_command, generic_command)
     inline_math = Series(RegExp('\\$'), RegExp('[^$]*'), RegExp('\\$'), mandatory=2)
     end_environment = Series(RegExp('\\\\end{'), Pop(NAME), RegExp('}'), mandatory=1)
@@ -361,7 +371,7 @@ def watch(node):
 
 flatten_structure = flatten(lambda context: is_anonymous(context) or is_one_of(
     context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
-              "SubParagraphs", "sequence"}), True)
+              "SubParagraphs", "sequence"}), recursive=True)
 
 
 def is_commandname(context):
@@ -387,7 +397,7 @@ LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
     "+": [drop_expendables, flatten_structure],
     "latexdoc": [],
-    "preamble": [],
+    "preamble": [traverse_locally({'+': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],
     "frontpages": reduce_single_child,
     "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
@@ -455,6 +465,7 @@ LaTeX_AST_transformation_table = {
 def LaTeXTransform() -> TransformationDict:
     return partial(traverse, processing_table=LaTeX_AST_transformation_table.copy())
 
+
 def get_transformer() -> TransformationFunc:
     global thread_local_LaTeX_transformer_singleton
     try:
@@ -472,21 +483,30 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
+
+def empty_defaultdict():
+    """Returns a defaultdict with an empty defaultdict as default value."""
+    return defaultdict(empty_defaultdict)
+
+
 class LaTeXCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a LaTeX source file.
     """
+    KNOWN_DOCUMENT_CLASSES = {'book', 'article'}
+    KNOWN_LANGUAGES = {'english', 'german'}
 
     def __init__(self, grammar_name="LaTeX", grammar_source=""):
         super(LaTeXCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
+        self.metadata = defaultdict(empty_defaultdict)
 
-    def on_latexdoc(self, node):
-        self.compile(node['preamble'])
-        self.compile(node['document'])
-        return node
+    # def on_latexdoc(self, node):
+    #     self.compile(node['preamble'])
+    #     self.compile(node['document'])
+    #     return node
 
-    def on_preamble(self, node):
-        return node
+    # def on_preamble(self, node):
+    #     return node
 
     # def on_document(self, node):
     #     return node
@@ -652,6 +672,23 @@ class LaTeXCompiler(Compiler):
 
     # def on_cline(self, node):
     #     return node
+
+    def on_documentclass(self, node):
+        if 'config' in node:
+            for it in {part.strip() for part in node['config'].content.split(',')}:
+                if it in self.KNOWN_LANGUAGES:
+                    if 'language' in node.attributes:
+                        self.metadata['language'] = it
+                    else:
+                        node.add_error('Only one document language supported. '
+                                       'Using %s, ignoring %s.'
+                                       % (self.metadata['language'], it), Error.WARNING)
+        if node['text'] in self.KNOWN_DOCUMENT_CLASSES:
+            self.metadata['documentclass'] = node['text']
+        return node
+
+    def on_pdfinfo(self, node):
+        return node
 
     # def on_config(self, node):
     #     return node

@@ -19,9 +19,6 @@ Match-test "1"
             "Professoren, Philister und Vieh; welche vier Stände doch nichts weniger"
             "als streng geschieden sind. Der Viehstand ist der bedeutendste."
         )
-        (:Whitespace
-            " "
-        )
     )
 
 Match-test "2"
@@ -40,22 +37,13 @@ Match-test "2"
             " "
         )
         (block
-            (:Whitespace
-                " "
-            )
             (generic_command
                 (CMDNAME
                     "\em"
                 )
             )
-            (:Whitespace
-                " "
-            )
             (text
                 "inline blocks"
-            )
-            (:Whitespace
-                " "
             )
         )
         (:Whitespace
@@ -71,19 +59,8 @@ Match-test "2"
             (CMDNAME
                 "\emph"
             )
-            (:Whitespace
-                " "
-            )
-            (block
-                (:Whitespace
-                    " "
-                )
-                (text
-                    "inline commands"
-                )
-                (:Whitespace
-                    " "
-                )
+            (text
+                "inline commands"
             )
         )
         (:Whitespace
@@ -107,9 +84,6 @@ Match-test "2"
         (text
             "characters."
         )
-        (:Whitespace
-            " "
-        )
     )
 
 Match-test "3"
@@ -126,9 +100,6 @@ Match-test "3"
             "Paragraphs are separated only by at least one blank line."
             "Therefore,"
             "this line still belongs to the same paragraph."
-        )
-        (:Whitespace
-            " "
         )
     )
 
@@ -152,9 +123,6 @@ Match-test "4"
             "Comment lines do not break paragraphs."
             "in sequence."
         )
-        (:Whitespace
-            " "
-        )
     )
 
 Match-test "5"
@@ -174,22 +142,13 @@ Match-test "5"
             " "
         )
         (block
-            (:Whitespace
-                " "
-            )
             (generic_command
                 (CMDNAME
                     "\em"
                 )
             )
-            (:Whitespace
-                " "
-            )
             (text
                 "emphasized"
-            )
-            (:Whitespace
-                " "
             )
         )
         (:Whitespace
@@ -202,22 +161,13 @@ Match-test "5"
             " "
         )
         (block
-            (:Whitespace
-                " "
-            )
             (generic_command
                 (CMDNAME
                     "\bf"
                 )
             )
-            (:Whitespace
-                " "
-            )
             (text
                 "bold"
-            )
-            (:Whitespace
-                " "
             )
         )
         (:Whitespace
@@ -260,32 +210,17 @@ Match-test "5"
             " "
         )
         (block
-            (:Whitespace
-                " "
-            )
             (generic_command
                 (CMDNAME
                     "\large"
                 )
             )
-            (:Whitespace
-                " "
-            )
             (text
                 "large"
             )
-            (:Whitespace
-                " "
-            )
-        )
-        (:Whitespace
-            " "
         )
         (text
             "."
-        )
-        (:Whitespace
-            " "
         )
     )
 
@@ -304,16 +239,10 @@ Match-test "6"
             " "
         )
         (block
-            (:Whitespace
-                " "
-            )
             (generic_command
                 (CMDNAME
                     "\xy"
                 )
-            )
-            (:Whitespace
-                " "
             )
             (text
                 "unknown blocks"
@@ -322,14 +251,8 @@ Match-test "6"
                 " "
             )
         )
-        (:Whitespace
-            " "
-        )
         (text
             "."
-        )
-        (:Whitespace
-            " "
         )
     )
 
@@ -351,24 +274,10 @@ Match-test "7"
             (CMDNAME
                 "\xy"
             )
-            (:Whitespace
-                " "
-            )
             (config
-                (:Whitespace
-                    " "
-                )
-                (text
-                    "xycgf"
-                )
-            )
-            (:Whitespace
-                " "
+                "xycgf"
             )
             (block
-                (:Whitespace
-                    " "
-                )
                 (text
                     "some"
                 )
@@ -376,26 +285,14 @@ Match-test "7"
                     " "
                 )
                 (block
-                    (:Whitespace
-                        " "
-                    )
                     (generic_command
                         (CMDNAME
                             "\em"
                         )
                     )
-                    (:Whitespace
-                        " "
-                    )
                     (text
                         "unbknown"
                     )
-                    (:Whitespace
-                        " "
-                    )
-                )
-                (:Whitespace
-                    " "
                 )
             )
         )
@@ -404,9 +301,6 @@ Match-test "7"
         )
         (text
             "commands."
-        )
-        (:Whitespace
-            " "
         )
     )
 
@@ -430,9 +324,6 @@ Match-test "8"
                 "\xy"
             )
         )
-        (:Whitespace
-            " "
-        )
         (text
             "commands within paragraphs may be simple"
             "or"
@@ -444,29 +335,12 @@ Match-test "8"
             (CMDNAME
                 "\xy"
             )
-            (:Whitespace
-                " "
+            (text
+                "complex"
             )
-            (block
-                (:Whitespace
-                    " "
-                )
-                (text
-                    "complex"
-                )
-                (:Whitespace
-                    " "
-                )
-            )
-        )
-        (:Whitespace
-            " "
         )
         (text
             "."
-        )
-        (:Whitespace
-            " "
         )
     )
 
@@ -517,26 +391,14 @@ Match-test "9"
             ""
         )
         (block
-            (:Whitespace
-                " "
-            )
             (generic_command
                 (CMDNAME
                     "\bf"
                 )
             )
-            (:Whitespace
-                " "
-            )
             (text
                 "blocks"
             )
-            (:Whitespace
-                " "
-            )
-        )
-        (:Whitespace
-            " "
         )
         (text
             ","
@@ -562,9 +424,6 @@ Match-test "9"
             (BRACKETS
                 "]"
             )
-        )
-        (:Whitespace
-            " "
         )
         (text
             ","
@@ -621,13 +480,7 @@ Match-test "9"
                 (text
                     "footnote"
                 )
-                (:Whitespace
-                    " "
-                )
             )
-        )
-        (:Whitespace
-            " "
         )
     )
 
@@ -644,15 +497,9 @@ Match-test "10"
             (begin_environment
                 "generic"
             )
-            (:Whitespace
-                " "
-            )
             (paragraph
                 (text
                     "inline environment"
-                )
-                (:Whitespace
-                    " "
                 )
             )
             (end_environment
@@ -678,9 +525,6 @@ Match-test "11"
         (generic_inline_env
             (begin_environment
                 "generic"
-            )
-            (:Whitespace
-                " "
             )
             (paragraph
                 (text
@@ -756,16 +600,10 @@ Match-test "1"
             (text
                 "Paragraphs are separated by gaps."
             )
-            (:Whitespace
-                " "
-            )
         )
         (paragraph
             (text
                 "Like this one."
-            )
-            (:Whitespace
-                " "
             )
         )
     )
@@ -785,16 +623,10 @@ Match-test "2"
             (text
                 "The second paragraph follows after a long gap."
             )
-            (:Whitespace
-                " "
-            )
         )
         (paragraph
             (text
                 "The parser should accept this, too."
-            )
-            (:Whitespace
-                " "
             )
         )
     )
@@ -870,9 +702,6 @@ Match-test "4"
         (paragraph
             (text
                 "like block quotes."
-            )
-            (:Whitespace
-                " "
             )
         )
     )

@@ -30,6 +30,7 @@ for an example.
 """
 
 
+from collections import defaultdict
 import copy
 
 from DHParser.error import Error, linebreaks
@@ -39,7 +40,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
-from typing import Callable, cast, Dict, List, Set, Tuple, Union, Optional
+from typing import Callable, cast, Dict, DefaultDict, List, Set, Tuple, Union, Optional
 
 
 __all__ = ('Parser',
@@ -114,7 +115,7 @@ def add_parser_guard(parser_func):
 
             # break left recursion at the maximum allowed depth
             if grammar.left_recursion_handling__:
-                if parser.recursion_counter.setdefault(location, 0) > LEFT_RECURSION_DEPTH:
+                if parser.recursion_counter[location] > LEFT_RECURSION_DEPTH:
                     grammar.recursion_locations__.add(location)
                     return None, text
                 parser.recursion_counter[location] += 1
@@ -124,6 +125,7 @@ def add_parser_guard(parser_func):
 
             if grammar.left_recursion_handling__:
                 parser.recursion_counter[location] -= 1
+                # don't clear recursion_locations__ !!!
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
@@ -259,9 +261,9 @@ class Parser(ParserBase):
         """Initializes or resets any parser variables. If overwritten,
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
-        self.visited = dict()            # type: Dict[int, Tuple[Optional[Node], StringView]]
-        self.recursion_counter = dict()  # type: Dict[int, int]
-        self.cycle_detection = set()     # type: Set[Callable]
+        self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
+        self.recursion_counter = defaultdict(lambda :0)  # type: DefaultDict[int, int]
+        self.cycle_detection = set()  # type: Set[Callable]
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
@@ -624,7 +626,7 @@ class Grammar:
         self.document_length__ = 0            # type: int
         self.document_lbreaks__ = []          # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
-        self.variables__ = dict()             # type: Dict[str, List[str]]
+        self.variables__ = defaultdict(lambda :[])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
@@ -1677,7 +1679,7 @@ class Capture(UnaryOperator):
         node, text_ = self.parser(text)
         if node:
             assert self.name, """Tried to apply an unnamed capture-parser!"""
-            stack = self.grammar.variables__.setdefault(self.name, [])
+            stack = self.grammar.variables__[self.name]
             stack.append(node.content)
             location = self.grammar.document_length__ - len(text)
             self.grammar.push_rollback__(location, lambda: stack.pop())

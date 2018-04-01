@@ -50,9 +50,11 @@ __all__ = ('unit_from_configfile',
            'get_report',
            'grammar_unit',
            'grammar_suite',
+           'reset_unit',
            'runner')
 
-UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst', '__ast__', '__cst__'}
+UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst'}
+RESULT_STAGES = {'__cst__', '__ast__', '__err__'}
 
 # def unit_from_configfile(config_filename):
 #     """
@@ -261,7 +263,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
         test_unit = unit_from_file(test_unit)
     else:
-        unit_name = str(id(test_unit))
+        unit_name = 'unit_test_' + str(id(test_unit))
     if verbose:
         print("\nUnit: " + unit_name)
     errata = []
@@ -269,7 +271,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     transform = transformer_factory()
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
-        assert set(tests.keys()).issubset(UNIT_STAGES)
+        assert not any (test_type in RESULT_STAGES for test_type in tests), \
+            ("Test %s in %s already has results. Use reset_unit() before running again!"
+             % (parser_name, unit_name))
+        assert set(tests.keys()).issubset(UNIT_STAGES), \
+            'Unknown test-types: %s ! Must be one of %s' \
+            % (set(tests.keys()) - UNIT_STAGES, UNIT_STAGES)
         if verbose:
             print('  Match-Tests for parser "' + parser_name + '"')
         match_tests = set(tests['match'].keys()) if 'match' in tests else set()
@@ -355,6 +362,18 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             f.write(get_report(test_unit))
 
     return errata
+
+
+def reset_unit(test_unit):
+    """Resets the tests in ``test_unit`` by removing all results and
+    error messages."""
+    for parser, tests in test_unit.items():
+        for key in list(tests.keys()):
+            if key not in UNIT_STAGES:
+                if key not in RESULT_STAGES:
+                    print('Removing unknown component %s from test %s' % (key, parser))
+                del tests[key]
+
 
 
 def grammar_suite(directory, parser_factory, transformer_factory,
