@@ -27,25 +27,37 @@ from DHParser import dsl
 import DHParser.log
 from DHParser import testing
 
-# print(dir(dsl))
 
-with DHParser.log.logging(False):
-    if not dsl.recompile_grammar('LaTeX.ebnf', force=True):  # recompiles Grammar only if it has
-        # changed
-        print(
-            '\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
-        with open('LaTeX_ebnf_ERRORS.txt') as f:
-            print(f.read())
-        sys.exit(1)
+def recompile_grammar(grammar_src, force):
+    with DHParser.log.logging(False):
+        # recompiles Grammar only if it has changed
+        if not dsl.recompile_grammar(grammar_src, force=force):
+            print('\nErrors while recompiling "%s":' % grammar_src +
+                  '\n--------------------------------------\n\n')
+            with open('LaTeX_ebnf_ERRORS.txt') as f:
+                print(f.read())
+            sys.exit(1)
 
-from LaTeXCompiler import get_grammar, get_transformer
 
-with DHParser.log.logging(False):
-    error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
-                                         fn_patterns=['*_test_*.ini'],
-                                         report=True, verbose=True)
-if error_report:
-    print('\n')
-    print(error_report)
-    sys.exit(1)
+def run_grammar_tests(glob_pattern):
+    with DHParser.log.logging(False):
+        print(glob_pattern)
+        error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
+            fn_patterns=[glob_pattern], report=True, verbose=True)
+    return error_report
 
+
+if __name__ == '__main__':
+    arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
+    if arg.endswith('.ebnf'):
+        recompile_grammar(arg, force=True)
+    else:
+        recompile_grammar('LaTeX.ebnf', force=False)
+        sys.path.append('.')
+        from LaTeXCompiler import get_grammar, get_transformer
+        error_report = run_grammar_tests(glob_pattern=arg)
+        if error_report:
+            print('\n')
+            print(error_report)
+            sys.exit(1)
+        print('ready.')

@@ -23,10 +23,11 @@ permissions and limitations under the License.
 import os
 import sys
 
+from DHParser.compile import compile_source
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser import compile_source
 from DHParser.log import logging
+from DHParser.toolkit import re
 
 EBNF_TEMPLATE = r"""-grammar
 
@@ -110,33 +111,59 @@ GRAMMAR_TEST_TEMPLATE = r'''#!/usr/bin/python3
 """tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
 """
 
+import os
 import sys
 
-import DHParser.dsl
-from DHParser import testing
-from DHParser import toolkit
+# sys.path.extend(['../../', '../', './'])  # use for developing DHParser
 
-# recompiles Grammar only if it has changed
-if not DHParser.dsl.recompile_grammar('{name}.ebnf', force=False):
-    print('\nErrors while recompiling "{name}.ebnf":\n--------------------------------------\n\n')
-    with open('{name}_ebnf_ERRORS.txt') as f:
-        print(f.read())
+scriptpath = os.path.dirname(__file__)
+
+try:
+    from DHParser import dsl
+    import DHParser.log
+    from DHParser import testing
+except ModuleNotFoundError:
+    print('Could not import DHParser. Please adjust sys.path in file '
+          '"%s" manually' % __file__)
     sys.exit(1)
 
-sys.path.append('./')
-# must be appended after module creation, because
-# otherwise an ImportError is raised under Windows
-from {name}Compiler import get_grammar, get_transformer
 
-with toolkit.logging(True):
-    error_report = testing.grammar_suite('grammar_tests', get_grammar,
-                                         get_transformer, report=True, verbose=True)
-if error_report:
-    print('\n')
-    print(error_report)
-    sys.exit(1)
-else:
-    print('ready.')
+def recompile_grammar(grammar_src, force):
+    with DHParser.log.logging(False):
+        # recompiles Grammar only if it has changed
+        if not dsl.recompile_grammar(grammar_src, force=force):
+            print('\nErrors while recompiling "%s":' % grammar_src +
+                  '\n--------------------------------------\n\n')
+            with open('{name}_ebnf_ERRORS.txt') as f:
+                print(f.read())
+            sys.exit(1)
+
+
+def run_grammar_tests(glob_pattern):
+    with DHParser.log.logging(False):
+        print(glob_pattern)
+        error_report = testing.grammar_suite(
+            os.path.join(scriptpath, 'grammar_tests'), 
+            get_grammar, get_transformer, 
+            fn_patterns=[glob_pattern], report=True, verbose=True)
+    return error_report
+
+
+if __name__ == '__main__':
+    arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
+    if arg.endswith('.ebnf'):
+        recompile_grammar(arg, force=True)
+    else:
+        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'), 
+                          force=False)
+        sys.path.append('.')
+        from {name}Compiler import get_grammar, get_transformer
+        error_report = run_grammar_tests(glob_pattern=arg)
+        if error_report:
+            print('\n')
+            print(error_report)
+            sys.exit(1)
+        print('ready.\n')
 '''
 
 
@@ -152,10 +179,13 @@ def create_project(path: str):
         else:
             print('"%s" already exists! Not overwritten.' % name)
 
+    name = os.path.basename(path)
+    if not re.match('(?!\d)\w+', name):
+        print('Project name "%s" is not a valid identifier! Aborting.' % name)
+        sys.exit(1)
     if os.path.exists(path) and not os.path.isdir(path):
         print('Cannot create new project, because a file named "%s" already exists!' % path)
         sys.exit(1)
-    name = os.path.basename(path)
     print('Creating new DHParser-project "%s".' % name)
     if not os.path.exists(path):
         os.mkdir(path)
@@ -173,9 +203,10 @@ def create_project(path: str):
     create_file(name + '.ebnf', '# ' + name + EBNF_TEMPLATE)
     create_file('README.md', README_TEMPLATE.format(name=name))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(name=name))
+    create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     os.chdir(curr_dir)
-    print('ready.')
+    print('ready.\n')
 
 
 def selftest() -> bool:
@@ -202,7 +233,6 @@ def selftest() -> bool:
                                         ebnf_transformer, ebnf_compiler)
     ebnf_compiler.gen_transformer_skeleton()
     print(selfhosted_ebnf_parser)
-    print("\n\n Selftest SUCCEEDED :-)\n\n")
     return True
 
 
@@ -213,6 +243,7 @@ def cpu_profile(func, repetitions=1):
     import pstats
     profile = cProfile.Profile()
     profile.enable()
+    success = True
     for _ in range(repetitions):
         success = func()
         if not success:
@@ -253,11 +284,41 @@ def main():
         else:
             create_project(sys.argv[1])
     else:
-        # run self test
-        # selftest('EBNF/EBNF.ebnf')
-        with logging(False):
-            if not cpu_profile(selftest, 1):
+        print('Usage: \n'
+              '    dhparser.py DSL_FILENAME [COMPILER]  - to compile a file\n'
+              '    dhparser.py PROJECTNAME  - to create a new project\n\n')
+        choice = input('Would you now like to ...\n'
+                       '  [1] create a new project\n'
+                       '  [2] compile an ebnf-grammar or a dsl-file\n'
+                       '  [3] run a self-test\n'
+                       '  [q] to quit\n'
+                       'Please chose 1, 2 or 3> ')
+        if choice.strip() == '1':
+            project_name = input('Please project name or path > ')
+            create_project(project_name)
+        elif choice.strip() == '2':
+            file_path = input('Please enter a file path for compilation > ')
+            if os.path.exists(file_path) and os.path.isfile(file_path):
+                compiler_suite = input('Compiler suite or ENTER (for ebnf) > ')
+                if (not compiler_suite or (os.path.exists(compiler_suite)
+                        and os.path.isfile(compiler_suite))):
+                    _errors = compile_on_disk(file_path, compiler_suite)
+                    if _errors:
+                        print('\n\n'.join(str(err) for err in _errors))
+                        sys.exit(1)
+                else:
+                    print('Compiler suite %s not found! Aborting' % compiler_suite)
+            else:
+                print('File %s not found! Aborting.' % file_path)
                 sys.exit(1)
+        elif choice.strip() == '3':
+            with logging(False):
+                if not cpu_profile(selftest, 1):
+                    print("Selftest FAILED :-(\n")
+                    sys.exit(1)
+                print("Selftest SUCCEEDED :-)\n")
+        elif choice.strip().lower() not in {'q', 'quit', 'exit'}:
+            print('No valid choice. Goodbye!')
 
 
 if __name__ == "__main__":
