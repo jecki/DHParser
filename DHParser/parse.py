@@ -234,7 +234,7 @@ class Parser(ParserBase):
 
     def __init__(self, name: str = '') -> None:
         # assert isinstance(name, str), str(name)
-        super(Parser, self).__init__(name)
+        super().__init__(name)
         self._grammar = None  # type: 'Grammar'
         self.reset()
 
