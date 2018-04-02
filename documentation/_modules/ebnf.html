@@ -1,0 +1,1181 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ebnf &mdash; DHParser 0.8 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DHParser
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../StepByStepGuide.html">DHParser’s Step by Step Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../UserGuide.html">DHParser User’s Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ReferenceManual.html">DHParser Reference Manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ModuleReference.html">Module Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DHParser</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>ebnf</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for ebnf</h1><div class="highlight"><pre>
+<span></span><span class="c1"># ebnf.py - EBNF -&gt; Python-Parser compilation for DHParser</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2016  by Eckhart Arnold (arnold@badw.de)</span>
+<span class="c1">#                 Bavarian Academy of Sciences an Humanities (badw.de)</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or</span>
+<span class="c1"># implied.  See the License for the specific language governing</span>
+<span class="c1"># permissions and limitations under the License.</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module ``ebnf`` provides a self-hosting parser for EBNF-Grammars as</span>
+<span class="sd">well as an EBNF-compiler that compiles an EBNF-Grammar into a</span>
+<span class="sd">DHParser based Grammar class that can be executed to parse source text</span>
+<span class="sd">conforming to this grammar into contrete syntax trees.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">keyword</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
+
+<span class="kn">from</span> <span class="nn">DHParser.compile</span> <span class="k">import</span> <span class="n">CompilerError</span><span class="p">,</span> <span class="n">Compiler</span>
+<span class="kn">from</span> <span class="nn">DHParser.error</span> <span class="k">import</span> <span class="n">Error</span>
+<span class="kn">from</span> <span class="nn">DHParser.parse</span> <span class="k">import</span> <span class="n">Grammar</span><span class="p">,</span> <span class="n">mixin_comment</span><span class="p">,</span> <span class="n">Forward</span><span class="p">,</span> <span class="n">RegExp</span><span class="p">,</span> <span class="n">RE</span><span class="p">,</span> \
+    <span class="n">NegativeLookahead</span><span class="p">,</span> <span class="n">Alternative</span><span class="p">,</span> <span class="n">Series</span><span class="p">,</span> <span class="n">Option</span><span class="p">,</span> <span class="n">OneOrMore</span><span class="p">,</span> <span class="n">ZeroOrMore</span><span class="p">,</span> <span class="n">Token</span>
+<span class="kn">from</span> <span class="nn">DHParser.preprocess</span> <span class="k">import</span> <span class="n">nil_preprocessor</span><span class="p">,</span> <span class="n">PreprocessorFunc</span>
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> <span class="n">TOKEN_PTYPE</span>
+<span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">load_if_file</span><span class="p">,</span> <span class="n">escape_re</span><span class="p">,</span> <span class="n">md5</span><span class="p">,</span> <span class="n">sane_parser_name</span><span class="p">,</span> <span class="n">re</span><span class="p">,</span> <span class="n">expand_table</span><span class="p">,</span> \
+    <span class="n">typing</span>
+<span class="kn">from</span> <span class="nn">DHParser.transform</span> <span class="k">import</span> <span class="n">TransformationFunc</span><span class="p">,</span> <span class="n">traverse</span><span class="p">,</span> <span class="n">remove_brackets</span><span class="p">,</span> \
+    <span class="n">reduce_single_child</span><span class="p">,</span> <span class="n">replace_by_single_child</span><span class="p">,</span> <span class="n">remove_expendables</span><span class="p">,</span> \
+    <span class="n">remove_tokens</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">forbid</span><span class="p">,</span> <span class="n">assert_content</span><span class="p">,</span> <span class="n">remove_infix_operator</span>
+<span class="kn">from</span> <span class="nn">DHParser.versionnumber</span> <span class="k">import</span> <span class="n">__version__</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;get_ebnf_preprocessor&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;get_ebnf_grammar&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;get_ebnf_transformer&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;get_ebnf_compiler&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;EBNFGrammar&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;EBNFTransform&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;EBNFCompilerError&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;EBNFCompiler&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;grammar_changed&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;PreprocessorFactoryFunc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;ParserFactoryFunc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;TransformerFactoryFunc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;CompilerFactoryFunc&#39;</span><span class="p">)</span>
+
+
+<span class="c1">########################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># EBNF scanning</span>
+<span class="c1">#</span>
+<span class="c1">########################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">get_ebnf_preprocessor</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">PreprocessorFunc</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">nil_preprocessor</span>
+
+
+<span class="c1">########################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># EBNF parsing</span>
+<span class="c1">#</span>
+<span class="c1">########################################################################</span>
+
+
+<div class="viewcode-block" id="EBNFGrammar"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFGrammar">[docs]</a><span class="k">class</span> <span class="nc">EBNFGrammar</span><span class="p">(</span><span class="n">Grammar</span><span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parser for an EBNF source file, with this grammar::</span>
+
+<span class="sd">        # EBNF-Grammar in EBNF</span>
+
+<span class="sd">        @ comment    =  /#.*(?:\n|$)/                # comments start with &#39;#&#39; and</span>
+<span class="sd">                                                     # eat all chars up to and including &#39;\n&#39;</span>
+<span class="sd">        @ whitespace =  /\s*/                        # whitespace includes linefeed</span>
+<span class="sd">        @ literalws  =  right                        # trailing whitespace of literals will be</span>
+<span class="sd">                                                     # ignored tacitly</span>
+
+<span class="sd">        syntax     =  [~//] { definition | directive } §EOF</span>
+<span class="sd">        definition =  symbol §&quot;=&quot; expression</span>
+<span class="sd">        directive  =  &quot;@&quot; §symbol &quot;=&quot; ( regexp | literal | list_ )</span>
+
+<span class="sd">        expression =  term { &quot;|&quot; term }</span>
+<span class="sd">        term       =  { [&quot;§&quot;] factor }+               # &quot;§&quot; means all following factors mandatory</span>
+<span class="sd">        factor     =  [flowmarker] [retrieveop] symbol !&quot;=&quot;   # negative lookahead to be sure</span>
+<span class="sd">                                                              # it&#39;s not a definition</span>
+<span class="sd">                    | [flowmarker] literal</span>
+<span class="sd">                    | [flowmarker] regexp</span>
+<span class="sd">                    | [flowmarker] oneormore</span>
+<span class="sd">                    | [flowmarker] group</span>
+<span class="sd">                    | [flowmarker] unordered</span>
+<span class="sd">                    | repetition</span>
+<span class="sd">                    | option</span>
+
+<span class="sd">        flowmarker =  &quot;!&quot;  | &quot;&amp;&quot;                     # &#39;!&#39; negative lookahead, &#39;&amp;&#39; positive lookahead</span>
+<span class="sd">                    | &quot;-!&quot; | &quot;-&amp;&quot;                    # &#39;-&#39; negative lookbehind, &#39;-&amp;&#39; positive lookbehind</span>
+<span class="sd">        retrieveop =  &quot;::&quot; | &quot;:&quot;                     # &#39;::&#39; pop, &#39;:&#39; retrieve</span>
+
+<span class="sd">        group      =  &quot;(&quot; §expression &quot;)&quot;</span>
+<span class="sd">        unordered  =  &quot;&lt;&quot; §expression &quot;&gt;&quot;            # elements of expression in arbitrary order</span>
+<span class="sd">        oneormore  =  &quot;{&quot; expression &quot;}+&quot;</span>
+<span class="sd">        repetition =  &quot;{&quot; §expression &quot;}&quot;</span>
+<span class="sd">        option     =  &quot;[&quot; §expression &quot;]&quot;</span>
+
+<span class="sd">        symbol     =  /(?!\d)\w+/~                   # e.g. expression, factor, parameter_list</span>
+<span class="sd">        literal    =  /&quot;(?:[^&quot;]|\\&quot;)*?&quot;/~            # e.g. &quot;(&quot;, &#39;+&#39;, &#39;while&#39;</span>
+<span class="sd">                    | /&#39;(?:[^&#39;]|\\&#39;)*?&#39;/~            # whitespace following literals will be ignored</span>
+<span class="sd">        regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~</span>
+<span class="sd">                                                     # &#39;~&#39; is a whitespace-marker, if present leading</span>
+<span class="sd">                                                     # or trailing whitespace of a regular expression</span>
+<span class="sd">                                                     # will be ignored tacitly.</span>
+<span class="sd">        list_      =  /\w+/~ { &quot;,&quot; /\w+/~ }          # comma separated list of symbols,</span>
+<span class="sd">                                                     # e.g. BEGIN_LIST, END_LIST,</span>
+<span class="sd">                                                     # BEGIN_QUOTE, END_QUOTE</span>
+<span class="sd">                                                     # see CommonMark/markdown.py for an exmaple</span>
+<span class="sd">        EOF =  !/./</span>
+<span class="sd">&quot;&quot;&quot;</span>
+    <span class="n">expression</span> <span class="o">=</span> <span class="n">Forward</span><span class="p">()</span>
+    <span class="n">source_hash__</span> <span class="o">=</span> <span class="s2">&quot;3fc9f5a340f560e847d9af0b61a68743&quot;</span>
+    <span class="n">parser_initialization__</span> <span class="o">=</span> <span class="s2">&quot;upon instantiation&quot;</span>
+    <span class="n">COMMENT__</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;#.*(?:\n|$)&#39;</span>
+    <span class="n">WHITESPACE__</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;\s*&#39;</span>
+    <span class="n">WSP__</span> <span class="o">=</span> <span class="n">mixin_comment</span><span class="p">(</span><span class="n">whitespace</span><span class="o">=</span><span class="n">WHITESPACE__</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="n">COMMENT__</span><span class="p">)</span>
+    <span class="n">wspL__</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">wspR__</span> <span class="o">=</span> <span class="n">WSP__</span>
+    <span class="n">EOF</span> <span class="o">=</span> <span class="n">NegativeLookahead</span><span class="p">(</span><span class="n">RegExp</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">))</span>
+    <span class="n">list_</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">RE</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">w+&#39;</span><span class="p">),</span> <span class="n">ZeroOrMore</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">),</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">w+&#39;</span><span class="p">))))</span>
+    <span class="n">regexp</span> <span class="o">=</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;~?/(?:</span><span class="se">\\\\</span><span class="s1">/|[^/])*?/~?&#39;</span><span class="p">)</span>
+    <span class="n">literal</span> <span class="o">=</span> <span class="n">Alternative</span><span class="p">(</span><span class="n">RE</span><span class="p">(</span><span class="s1">&#39;&quot;(?:[^&quot;]|</span><span class="se">\\\\</span><span class="s1">&quot;)*?&quot;&#39;</span><span class="p">),</span> <span class="n">RE</span><span class="p">(</span><span class="s2">&quot;&#39;(?:[^&#39;]|</span><span class="se">\\\\</span><span class="s2">&#39;)*?&#39;&quot;</span><span class="p">))</span>
+    <span class="n">symbol</span> <span class="o">=</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;(?!</span><span class="se">\\</span><span class="s1">d)</span><span class="se">\\</span><span class="s1">w+&#39;</span><span class="p">)</span>
+    <span class="n">option</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">),</span> <span class="n">expression</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;]&quot;</span><span class="p">),</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">repetition</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">),</span> <span class="n">expression</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">),</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">oneormore</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">),</span> <span class="n">expression</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;}+&quot;</span><span class="p">))</span>
+    <span class="n">unordered</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;&lt;&quot;</span><span class="p">),</span> <span class="n">expression</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;&gt;&quot;</span><span class="p">),</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;(&quot;</span><span class="p">),</span> <span class="n">expression</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;)&quot;</span><span class="p">),</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">retrieveop</span> <span class="o">=</span> <span class="n">Alternative</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;::&quot;</span><span class="p">),</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">))</span>
+    <span class="n">flowmarker</span> <span class="o">=</span> <span class="n">Alternative</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;!&quot;</span><span class="p">),</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;&amp;&quot;</span><span class="p">),</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;-!&quot;</span><span class="p">),</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;-&amp;&quot;</span><span class="p">))</span>
+    <span class="n">factor</span> <span class="o">=</span> <span class="n">Alternative</span><span class="p">(</span>
+        <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">flowmarker</span><span class="p">),</span> <span class="n">Option</span><span class="p">(</span><span class="n">retrieveop</span><span class="p">),</span> <span class="n">symbol</span><span class="p">,</span> <span class="n">NegativeLookahead</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">))),</span>
+        <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">flowmarker</span><span class="p">),</span> <span class="n">literal</span><span class="p">),</span> <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">flowmarker</span><span class="p">),</span> <span class="n">regexp</span><span class="p">),</span>
+        <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">flowmarker</span><span class="p">),</span> <span class="n">oneormore</span><span class="p">),</span> <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">flowmarker</span><span class="p">),</span> <span class="n">group</span><span class="p">),</span>
+        <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">flowmarker</span><span class="p">),</span> <span class="n">unordered</span><span class="p">),</span> <span class="n">repetition</span><span class="p">,</span> <span class="n">option</span><span class="p">)</span>
+    <span class="n">term</span> <span class="o">=</span> <span class="n">OneOrMore</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;§&quot;</span><span class="p">)),</span> <span class="n">factor</span><span class="p">))</span>
+    <span class="n">expression</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="n">ZeroOrMore</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">),</span> <span class="n">term</span><span class="p">))))</span>
+    <span class="n">directive</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Token</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">),</span> <span class="n">symbol</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">),</span> <span class="n">Alternative</span><span class="p">(</span><span class="n">regexp</span><span class="p">,</span> <span class="n">literal</span><span class="p">,</span> <span class="n">list_</span><span class="p">),</span>
+                       <span class="n">mandatory</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">definition</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">symbol</span><span class="p">,</span> <span class="n">Token</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">),</span> <span class="n">expression</span><span class="p">,</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">syntax</span> <span class="o">=</span> <span class="n">Series</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">RE</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">wR</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">wL</span><span class="o">=</span><span class="n">WSP__</span><span class="p">)),</span> <span class="n">ZeroOrMore</span><span class="p">(</span><span class="n">Alternative</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">directive</span><span class="p">)),</span>
+                    <span class="n">EOF</span><span class="p">,</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">root__</span> <span class="o">=</span> <span class="n">syntax</span></div>
+
+
+<div class="viewcode-block" id="grammar_changed"><a class="viewcode-back" href="../ModuleReference.html#ebnf.grammar_changed">[docs]</a><span class="k">def</span> <span class="nf">grammar_changed</span><span class="p">(</span><span class="n">grammar_class</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns ``True`` if ``grammar_class`` does not reflect the latest</span>
+<span class="sd">    changes of ``grammar_source``</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        grammar_class:  the parser class representing the grammar</span>
+<span class="sd">            or the file name of a compiler suite containing the grammar</span>
+<span class="sd">        grammar_source:  File name or string representation of the</span>
+<span class="sd">            EBNF code of the grammar</span>
+
+<span class="sd">    Returns (bool):</span>
+<span class="sd">        True, if the source text of the grammar is different from the</span>
+<span class="sd">        source from which the grammar class was generated</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">grammar</span> <span class="o">=</span> <span class="n">load_if_file</span><span class="p">(</span><span class="n">grammar_source</span><span class="p">)</span>
+    <span class="n">chksum</span> <span class="o">=</span> <span class="n">md5</span><span class="p">(</span><span class="n">grammar</span><span class="p">,</span> <span class="n">__version__</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">grammar_class</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="c1"># grammar_class = load_compiler_suite(grammar_class)[1]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">grammar_class</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pycode</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;class \w*\(Grammar\)&#39;</span><span class="p">,</span> <span class="n">pycode</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">&#39;    source_hash__ *= *&quot;([a-z0-9]*)&quot;&#39;</span><span class="p">,</span>
+                          <span class="n">pycode</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">span</span><span class="p">()[</span><span class="mi">1</span><span class="p">]:])</span>
+            <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="n">m</span> <span class="ow">and</span> <span class="n">m</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span> <span class="ow">and</span> <span class="n">m</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">chksum</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">chksum</span> <span class="o">!=</span> <span class="n">grammar_class</span><span class="o">.</span><span class="n">source_hash__</span></div>
+
+
+<span class="k">def</span> <span class="nf">get_ebnf_grammar</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">EBNFGrammar</span><span class="p">:</span>
+    <span class="k">global</span> <span class="n">thread_local_ebnf_grammar_singleton</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">grammar</span> <span class="o">=</span> <span class="n">thread_local_ebnf_grammar_singleton</span>
+        <span class="k">return</span> <span class="n">grammar</span>
+    <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+        <span class="n">thread_local_ebnf_grammar_singleton</span> <span class="o">=</span> <span class="n">EBNFGrammar</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">thread_local_ebnf_grammar_singleton</span>
+
+
+<span class="c1">########################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># EBNF concrete to abstract syntax tree transformation and validation</span>
+<span class="c1">#</span>
+<span class="c1">########################################################################</span>
+
+
+<span class="n">EBNF_AST_transformation_table</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># AST Transformations for EBNF-grammar</span>
+    <span class="s2">&quot;+&quot;</span><span class="p">:</span>
+        <span class="n">remove_expendables</span><span class="p">,</span>
+    <span class="s2">&quot;syntax&quot;</span><span class="p">:</span>
+        <span class="p">[],</span>  <span class="c1"># otherwise &#39;&quot;*&quot;: replace_by_single_child&#39; would be applied</span>
+    <span class="s2">&quot;directive, definition&quot;</span><span class="p">:</span>
+        <span class="n">remove_tokens</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">,</span> <span class="s1">&#39;=&#39;</span><span class="p">),</span>
+    <span class="s2">&quot;expression&quot;</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">replace_by_single_child</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">remove_tokens</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">)],</span>  <span class="c1"># remove_infix_operator],</span>
+    <span class="s2">&quot;term&quot;</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">replace_by_single_child</span><span class="p">,</span> <span class="n">flatten</span><span class="p">],</span>  <span class="c1"># supports both idioms:</span>
+                                             <span class="c1"># &quot;{ factor }+&quot; and &quot;factor { factor }&quot;</span>
+    <span class="s2">&quot;factor, flowmarker, retrieveop&quot;</span><span class="p">:</span>
+        <span class="n">replace_by_single_child</span><span class="p">,</span>
+    <span class="s2">&quot;group&quot;</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">remove_brackets</span><span class="p">,</span> <span class="n">replace_by_single_child</span><span class="p">],</span>
+    <span class="s2">&quot;unordered&quot;</span><span class="p">:</span>
+        <span class="n">remove_brackets</span><span class="p">,</span>
+    <span class="s2">&quot;oneormore, repetition, option&quot;</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">reduce_single_child</span><span class="p">,</span> <span class="n">remove_brackets</span><span class="p">,</span>
+         <span class="n">forbid</span><span class="p">(</span><span class="s1">&#39;repetition&#39;</span><span class="p">,</span> <span class="s1">&#39;option&#39;</span><span class="p">,</span> <span class="s1">&#39;oneormore&#39;</span><span class="p">),</span> <span class="n">assert_content</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?!§)(?:.|\n)*&#39;</span><span class="p">)],</span>
+    <span class="s2">&quot;symbol, literal, regexp&quot;</span><span class="p">:</span>
+        <span class="n">reduce_single_child</span><span class="p">,</span>
+    <span class="p">(</span><span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">):</span>
+        <span class="n">reduce_single_child</span><span class="p">,</span>
+    <span class="s2">&quot;list_&quot;</span><span class="p">:</span>
+        <span class="p">[</span><span class="n">flatten</span><span class="p">,</span> <span class="n">remove_infix_operator</span><span class="p">],</span>
+    <span class="s2">&quot;*&quot;</span><span class="p">:</span>
+        <span class="n">replace_by_single_child</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">EBNFTransform</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">TransformationFunc</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">traverse</span><span class="p">,</span> <span class="n">processing_table</span><span class="o">=</span><span class="n">EBNF_AST_transformation_table</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+
+<span class="k">def</span> <span class="nf">get_ebnf_transformer</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">TransformationFunc</span><span class="p">:</span>
+    <span class="k">global</span> <span class="n">thread_local_EBNF_transformer_singleton</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">transformer</span> <span class="o">=</span> <span class="n">thread_local_EBNF_transformer_singleton</span>
+    <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+        <span class="n">thread_local_EBNF_transformer_singleton</span> <span class="o">=</span> <span class="n">EBNFTransform</span><span class="p">()</span>
+        <span class="n">transformer</span> <span class="o">=</span> <span class="n">thread_local_EBNF_transformer_singleton</span>
+    <span class="k">return</span> <span class="n">transformer</span>
+
+
+<span class="c1">########################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># EBNF abstract syntax tree to Python parser compilation</span>
+<span class="c1">#</span>
+<span class="c1">########################################################################</span>
+
+
+<span class="n">PreprocessorFactoryFunc</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">PreprocessorFunc</span><span class="p">]</span>
+<span class="n">ParserFactoryFunc</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Grammar</span><span class="p">]</span>
+<span class="n">TransformerFactoryFunc</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">TransformationFunc</span><span class="p">]</span>
+<span class="n">CompilerFactoryFunc</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Compiler</span><span class="p">]</span>
+
+<span class="n">PREPROCESSOR_FACTORY</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">def get_preprocessor() -&gt; PreprocessorFunc:</span>
+<span class="s1">    return </span><span class="si">{NAME}</span><span class="s1">Preprocessor</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+
+<span class="n">GRAMMAR_FACTORY</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">def get_grammar() -&gt; </span><span class="si">{NAME}</span><span class="s1">Grammar:</span>
+<span class="s1">    global thread_local_</span><span class="si">{NAME}</span><span class="s1">_grammar_singleton</span>
+<span class="s1">    try:</span>
+<span class="s1">        grammar = thread_local_</span><span class="si">{NAME}</span><span class="s1">_grammar_singleton</span>
+<span class="s1">    except NameError:</span>
+<span class="s1">        thread_local_</span><span class="si">{NAME}</span><span class="s1">_grammar_singleton = </span><span class="si">{NAME}</span><span class="s1">Grammar()</span>
+<span class="s1">        grammar = thread_local_</span><span class="si">{NAME}</span><span class="s1">_grammar_singleton</span>
+<span class="s1">    return grammar</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+
+<span class="n">TRANSFORMER_FACTORY</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">def </span><span class="si">{NAME}</span><span class="s1">Transform() -&gt; TransformationDict:</span>
+<span class="s1">    return partial(traverse, processing_table=</span><span class="si">{NAME}</span><span class="s1">_AST_transformation_table.copy())</span>
+
+<span class="s1">def get_transformer() -&gt; TransformationFunc:</span>
+<span class="s1">    global thread_local_</span><span class="si">{NAME}</span><span class="s1">_transformer_singleton</span>
+<span class="s1">    try:</span>
+<span class="s1">        transformer = thread_local_</span><span class="si">{NAME}</span><span class="s1">_transformer_singleton</span>
+<span class="s1">    except NameError:</span>
+<span class="s1">        thread_local_</span><span class="si">{NAME}</span><span class="s1">_transformer_singleton = </span><span class="si">{NAME}</span><span class="s1">Transform()</span>
+<span class="s1">        transformer = thread_local_</span><span class="si">{NAME}</span><span class="s1">_transformer_singleton</span>
+<span class="s1">    return transformer</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+
+<span class="n">COMPILER_FACTORY</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">def get_compiler(grammar_name=&quot;</span><span class="si">{NAME}</span><span class="s1">&quot;, grammar_source=&quot;&quot;) -&gt; </span><span class="si">{NAME}</span><span class="s1">Compiler:</span>
+<span class="s1">    global thread_local_</span><span class="si">{NAME}</span><span class="s1">_compiler_singleton</span>
+<span class="s1">    try:</span>
+<span class="s1">        compiler = thread_local_</span><span class="si">{NAME}</span><span class="s1">_compiler_singleton</span>
+<span class="s1">        compiler.set_grammar_name(grammar_name, grammar_source)</span>
+<span class="s1">    except NameError:</span>
+<span class="s1">        thread_local_</span><span class="si">{NAME}</span><span class="s1">_compiler_singleton = </span><span class="se">\\</span><span class="s1"></span>
+<span class="s1">            </span><span class="si">{NAME}</span><span class="s1">Compiler(grammar_name, grammar_source)</span>
+<span class="s1">        compiler = thread_local_</span><span class="si">{NAME}</span><span class="s1">_compiler_singleton</span>
+<span class="s1">    return compiler</span>
+<span class="s1">&#39;&#39;&#39;</span>
+
+
+<div class="viewcode-block" id="EBNFCompilerError"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompilerError">[docs]</a><span class="k">class</span> <span class="nc">EBNFCompilerError</span><span class="p">(</span><span class="n">CompilerError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Error raised by `EBNFCompiler` class. (Not compilation errors</span>
+<span class="sd">    in the strict sense, see `CompilationError` in module ``dsl.py``)&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="EBNFCompiler"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompiler">[docs]</a><span class="k">class</span> <span class="nc">EBNFCompiler</span><span class="p">(</span><span class="n">Compiler</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a Parser from an abstract syntax tree of a grammar specified</span>
+<span class="sd">    in EBNF-Notation.</span>
+
+<span class="sd">    Instances of this class must be called with the root-node of the</span>
+<span class="sd">    abstract syntax tree from an EBNF-specification of a formal language.</span>
+<span class="sd">    The returned value is the Python-source-code of a Grammar class for</span>
+<span class="sd">    this language that can be used to parse texts in this language.</span>
+<span class="sd">    See classes `parser.Compiler` and `parser.Grammar` for more information.</span>
+
+<span class="sd">    Addionally, class EBNFCompiler provides helper methods to generate</span>
+<span class="sd">    code-skeletons for a preprocessor, AST-transformation and full</span>
+<span class="sd">    compilation of the formal language. These method&#39;s names start with</span>
+<span class="sd">    the prefix `gen_`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        current_symbols:  During compilation, a list containing the root</span>
+<span class="sd">                node of the currently compiled definition as first element</span>
+<span class="sd">                and then the nodes of the symbols that are referred to in</span>
+<span class="sd">                the currently compiled definition.</span>
+
+<span class="sd">        rules:  Dictionary that maps rule names to a list of Nodes that</span>
+<span class="sd">                contain symbol-references in the definition of the rule.</span>
+<span class="sd">                The first item in the list is the node of the rule-</span>
+<span class="sd">                definition itself. Example:</span>
+
+<span class="sd">                           `alternative = a | b`</span>
+
+<span class="sd">                Now `[node.content for node in self.rules[&#39;alternative&#39;]]`</span>
+<span class="sd">                yields `[&#39;alternative = a | b&#39;, &#39;a&#39;, &#39;b&#39;]`</span>
+
+<span class="sd">        symbols:  A mapping of symbol names to their first usage (not</span>
+<span class="sd">                their definition!) in the EBNF source.</span>
+
+<span class="sd">        variables:  A set of symbols names that are used with the</span>
+<span class="sd">                Pop or Retrieve operator. Because the values of these</span>
+<span class="sd">                symbols need to be captured they are called variables.</span>
+<span class="sd">                See `test_parser.TestPopRetrieve` for an example.</span>
+
+<span class="sd">        recursive:  A set of symbols that are used recursively and</span>
+<span class="sd">                therefore require a `Forward`-operator.</span>
+
+<span class="sd">        definitions:  A dictionary of definitions. Other than `rules`</span>
+<span class="sd">                this maps the symbols to their compiled definienda.</span>
+
+<span class="sd">        deferred_taks:  A list of callables that is filled during</span>
+<span class="sd">                compilatation, but that will be executed only after</span>
+<span class="sd">                compilation has finished. Typically, it contains</span>
+<span class="sd">                sementatic checks that require information that</span>
+<span class="sd">                is only available upon completion of compilation.</span>
+
+<span class="sd">        root:   The name of the root symbol.</span>
+
+<span class="sd">        directives:  A dictionary of all directives and their default</span>
+<span class="sd">                values.</span>
+
+<span class="sd">        re_flags:  A set of regular expression flags to be added to all</span>
+<span class="sd">                regular expressions found in the current parsing process</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">COMMENT_KEYWORD</span> <span class="o">=</span> <span class="s2">&quot;COMMENT__&quot;</span>
+    <span class="n">WHITESPACE_KEYWORD</span> <span class="o">=</span> <span class="s2">&quot;WSP__&quot;</span>
+    <span class="n">RAW_WS_KEYWORD</span> <span class="o">=</span> <span class="s2">&quot;WHITESPACE__&quot;</span>
+    <span class="n">RESERVED_SYMBOLS</span> <span class="o">=</span> <span class="p">{</span><span class="n">WHITESPACE_KEYWORD</span><span class="p">,</span> <span class="n">RAW_WS_KEYWORD</span><span class="p">,</span> <span class="n">COMMENT_KEYWORD</span><span class="p">}</span>
+    <span class="n">AST_ERROR</span> <span class="o">=</span> <span class="s2">&quot;Badly structured syntax tree. &quot;</span> \
+                <span class="s2">&quot;Potentially due to erroneous AST transformation.&quot;</span>
+    <span class="n">PREFIX_TABLE</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;§&#39;</span><span class="p">:</span> <span class="s1">&#39;Required&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;&amp;&#39;</span><span class="p">:</span> <span class="s1">&#39;Lookahead&#39;</span><span class="p">,</span> <span class="s1">&#39;!&#39;</span><span class="p">:</span> <span class="s1">&#39;NegativeLookahead&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;-&amp;&#39;</span><span class="p">:</span> <span class="s1">&#39;Lookbehind&#39;</span><span class="p">,</span> <span class="s1">&#39;-!&#39;</span><span class="p">:</span> <span class="s1">&#39;NegativeLookbehind&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;::&#39;</span><span class="p">:</span> <span class="s1">&#39;Pop&#39;</span><span class="p">,</span> <span class="s1">&#39;:&#39;</span><span class="p">:</span> <span class="s1">&#39;Retrieve&#39;</span><span class="p">}</span>
+    <span class="n">WHITESPACE</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;horizontal&#39;</span><span class="p">:</span> <span class="sa">r</span><span class="s1">&#39;[\t ]*&#39;</span><span class="p">,</span>  <span class="c1"># default: horizontal</span>
+                  <span class="s1">&#39;linefeed&#39;</span><span class="p">:</span> <span class="sa">r</span><span class="s1">&#39;[ \t]*\n?(?!\s*\n)[ \t]*&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;vertical&#39;</span><span class="p">:</span> <span class="sa">r</span><span class="s1">&#39;\s*&#39;</span><span class="p">}</span>
+    <span class="n">REPEATABLE_DIRECTIVES</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;tokens&#39;</span><span class="p">}</span>
+
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grammar_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EBNFCompiler</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">grammar_name</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EBNFCompiler</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>           <span class="c1"># type: str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">re_flags</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>       <span class="c1"># type: Set[str]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rules</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>  <span class="c1"># type: OrderedDict[str, List[Node]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_symbols</span> <span class="o">=</span> <span class="p">[]</span>   <span class="c1"># type: List[Node]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span> <span class="o">=</span> <span class="p">{}</span>           <span class="c1"># type: Dict[str, Node]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>      <span class="c1"># type: Set[str]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recursive</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>      <span class="c1"># type: Set[str]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">definitions</span> <span class="o">=</span> <span class="p">{}</span>       <span class="c1"># type: Dict[str, str]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deferred_tasks</span> <span class="o">=</span> <span class="p">[]</span>    <span class="c1"># type: List[Callable]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>       <span class="c1"># type: str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">directives</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;whitespace&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">WHITESPACE</span><span class="p">[</span><span class="s1">&#39;horizontal&#39;</span><span class="p">],</span>
+                           <span class="s1">&#39;comment&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;literalws&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;right&#39;</span><span class="p">},</span>
+                           <span class="s1">&#39;tokens&#39;</span><span class="p">:</span> <span class="nb">set</span><span class="p">(),</span>  <span class="c1"># alt. &#39;preprocessor_tokens&#39;</span>
+                           <span class="s1">&#39;filter&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">()}</span>  <span class="c1"># alt. &#39;filter&#39;</span>
+        <span class="c1"># self.directives[&#39;ignorecase&#39;]: False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">defined_directives</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># type: Set[str]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">result</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span>
+
+    <span class="c1"># methods for generating skeleton code for preprocessor, transformer, and compiler</span>
+
+<div class="viewcode-block" id="EBNFCompiler.gen_preprocessor_skeleton"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompiler.gen_preprocessor_skeleton">[docs]</a>    <span class="k">def</span> <span class="nf">gen_preprocessor_skeleton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns Python-skeleton-code for a preprocessor-function for</span>
+<span class="sd">        the previously compiled formal language.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span> <span class="s2">&quot;Preprocessor&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;def </span><span class="si">%s</span><span class="s2">(text):</span><span class="se">\n</span><span class="s2">    return text, lambda i: i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">name</span> \
+               <span class="o">+</span> <span class="n">PREPROCESSOR_FACTORY</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">NAME</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EBNFCompiler.gen_transformer_skeleton"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompiler.gen_transformer_skeleton">[docs]</a>    <span class="k">def</span> <span class="nf">gen_transformer_skeleton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns Python-skeleton-code for the AST-transformation for the</span>
+<span class="sd">        previously compiled formal language.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EBNFCompilerError</span><span class="p">(</span><span class="s1">&#39;Compiler must be run before calling &#39;</span>
+                                    <span class="s1">&#39;&quot;gen_transformer_Skeleton()&quot;!&#39;</span><span class="p">)</span>
+        <span class="n">tt_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span> <span class="s1">&#39;_AST_transformation_table&#39;</span>
+        <span class="n">transtable</span> <span class="o">=</span> <span class="p">[</span><span class="n">tt_name</span> <span class="o">+</span> <span class="s1">&#39; = {&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;    # AST Transformations for the &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span> <span class="s1">&#39;-grammar&#39;</span><span class="p">]</span>
+        <span class="n">transtable</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;    &quot;+&quot;: remove_empty,&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="n">transformations</span> <span class="o">=</span> <span class="s1">&#39;[]&#39;</span>
+            <span class="n">rule</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">definitions</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">rule</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Alternative&#39;</span><span class="p">):</span>
+                <span class="n">transformations</span> <span class="o">=</span> <span class="s1">&#39;[replace_or_reduce]&#39;</span>
+            <span class="k">elif</span> <span class="n">rule</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Synonym&#39;</span><span class="p">):</span>
+                <span class="n">transformations</span> <span class="o">=</span> <span class="s1">&#39;[reduce_single_child]&#39;</span>
+            <span class="n">transtable</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;    &quot;&#39;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;&quot;: </span><span class="si">%s</span><span class="s1">,&#39;</span> <span class="o">%</span> <span class="n">transformations</span><span class="p">)</span>
+        <span class="n">transtable</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;    &quot;:Token, :RE&quot;: reduce_single_child,&#39;</span><span class="p">)</span>
+        <span class="n">transtable</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;    &quot;*&quot;: replace_by_single_child&#39;</span><span class="p">,</span> <span class="s1">&#39;}&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+        <span class="n">transtable</span> <span class="o">+=</span> <span class="p">[</span><span class="n">TRANSFORMER_FACTORY</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">NAME</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">transtable</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EBNFCompiler.gen_compiler_skeleton"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompiler.gen_compiler_skeleton">[docs]</a>    <span class="k">def</span> <span class="nf">gen_compiler_skeleton</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns Python-skeleton-code for a Compiler-class for the</span>
+<span class="sd">        previously compiled formal language.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EBNFCompilerError</span><span class="p">(</span><span class="s1">&#39;Compiler has not been run before calling &#39;</span>
+                                    <span class="s1">&#39;&quot;gen_Compiler_Skeleton()&quot;!&#39;</span><span class="p">)</span>
+        <span class="n">compiler</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;class &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span> <span class="s1">&#39;Compiler(Compiler):&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;    &quot;&quot;&quot;Compiler for the abstract-syntax-tree of a &#39;</span> <span class="o">+</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span> <span class="s1">&#39; source file.&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;    &quot;&quot;&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;    def __init__(self, grammar_name=&quot;&#39;</span> <span class="o">+</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span> <span class="s1">&#39;&quot;, grammar_source=&quot;&quot;):&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;        super(&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span>
+                    <span class="s1">&#39;Compiler, self).__init__(grammar_name, grammar_source)&#39;</span><span class="p">,</span>
+                    <span class="sa">r</span><span class="s2">&quot;        assert re.match(&#39;\w+\Z&#39;, grammar_name)&quot;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="n">method_name</span> <span class="o">=</span> <span class="n">Compiler</span><span class="o">.</span><span class="n">method_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span><span class="p">:</span>
+                <span class="n">compiler</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;    def &#39;</span> <span class="o">+</span> <span class="n">method_name</span> <span class="o">+</span> <span class="s1">&#39;(self, node):&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;        return node&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">compiler</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;    # def &#39;</span> <span class="o">+</span> <span class="n">method_name</span> <span class="o">+</span> <span class="s1">&#39;(self, node):&#39;</span><span class="p">,</span>
+                             <span class="s1">&#39;    #     return node&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span>
+        <span class="n">compiler</span> <span class="o">+=</span> <span class="p">[</span><span class="n">COMPILER_FACTORY</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">NAME</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">compiler</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">verify_transformation_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transtable</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span>
+        <span class="n">table_entries</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">expand_table</span><span class="p">(</span><span class="n">transtable</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">-</span> <span class="p">{</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="s1">&#39;~&#39;</span><span class="p">}</span>
+        <span class="n">symbols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">messages</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">table_entries</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">symbols</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">entry</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">):</span>
+                <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Error</span><span class="p">((</span><span class="s1">&#39;Symbol &quot;</span><span class="si">%s</span><span class="s1">&quot; is not defined in grammar </span><span class="si">%s</span><span class="s1"> but appears in &#39;</span>
+                                       <span class="s1">&#39;the transformation table!&#39;</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span><span class="p">),</span>
+                                      <span class="n">Error</span><span class="o">.</span><span class="n">UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">messages</span>
+
+
+<div class="viewcode-block" id="EBNFCompiler.assemble_parser"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompiler.assemble_parser">[docs]</a>    <span class="k">def</span> <span class="nf">assemble_parser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">definitions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span> <span class="n">root_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates the Python code for the parser after compilation of</span>
+<span class="sd">        the EBNF-Grammar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># execute deferred tasks, for example semantic checks that cannot</span>
+        <span class="c1"># be done before the symbol table is complete</span>
+
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">deferred_tasks</span><span class="p">:</span>
+            <span class="n">task</span><span class="p">()</span>
+
+        <span class="c1"># provide for capturing of symbols that are variables, i.e. the</span>
+        <span class="c1"># value of will be retrieved at some point during the parsing process</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">definitions</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">definitions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+                    <span class="n">definitions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">definitions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;Capture(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">definitions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># add special fields for Grammar class</span>
+
+        <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;wspR__&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">WHITESPACE_KEYWORD</span>
+                            <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;literalws&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="s2">&quot;&#39;&#39;&quot;</span><span class="p">))</span>
+        <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;wspL__&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">WHITESPACE_KEYWORD</span>
+                            <span class="k">if</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;literalws&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="s2">&quot;&#39;&#39;&quot;</span><span class="p">))</span>
+        <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">WHITESPACE_KEYWORD</span><span class="p">,</span>
+                            <span class="p">(</span><span class="s2">&quot;mixin_comment(whitespace=&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">RAW_WS_KEYWORD</span> <span class="o">+</span>
+                             <span class="s2">&quot;, comment=&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">COMMENT_KEYWORD</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span><span class="p">)))</span>
+        <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">RAW_WS_KEYWORD</span><span class="p">,</span> <span class="s2">&quot;r&#39;</span><span class="si">{whitespace}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">)))</span>
+        <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMENT_KEYWORD</span><span class="p">,</span> <span class="s2">&quot;r&#39;</span><span class="si">{comment}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">)))</span>
+
+        <span class="c1"># prepare parser class header and docstring and</span>
+        <span class="c1"># add EBNF grammar to the doc string of the parser class</span>
+
+        <span class="n">article</span> <span class="o">=</span> <span class="s1">&#39;an &#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="s2">&quot;AaEeIiOoUu&quot;</span> <span class="k">else</span> <span class="s1">&#39;a &#39;</span>  <span class="c1"># what about &#39;hour&#39;, &#39;universe&#39; etc.?</span>
+        <span class="n">declarations</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;class &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span>
+                        <span class="s1">&#39;Grammar(Grammar):&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;r&quot;&quot;&quot;Parser for &#39;</span> <span class="o">+</span> <span class="n">article</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">+</span>
+                        <span class="s1">&#39; source file&#39;</span> <span class="o">+</span>
+                        <span class="p">(</span><span class="s1">&#39;, with this grammar:&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span> <span class="k">else</span> <span class="s1">&#39;.&#39;</span><span class="p">)]</span>
+        <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;parser_initialization__&#39;</span><span class="p">,</span> <span class="s1">&#39;&quot;upon instantiation&quot;&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span><span class="p">:</span>
+            <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;source_hash__&#39;</span><span class="p">,</span>
+                                <span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">md5</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span><span class="p">,</span> <span class="n">__version__</span><span class="p">)))</span>
+            <span class="n">declarations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">declarations</span> <span class="o">+=</span> <span class="p">[</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)]</span>
+            <span class="k">while</span> <span class="n">declarations</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">declarations</span> <span class="o">=</span> <span class="n">declarations</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">declarations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&quot;&quot;&quot;&#39;</span><span class="p">)</span>
+
+        <span class="c1"># turn definitions into declarations in reverse order</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span> <span class="o">=</span> <span class="n">definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">definitions</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">definitions</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+        <span class="n">declarations</span> <span class="o">+=</span> <span class="p">[</span><span class="n">symbol</span> <span class="o">+</span> <span class="s1">&#39; = Forward()&#39;</span>
+                         <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recursive</span><span class="p">))]</span>
+        <span class="k">for</span> <span class="n">symbol</span><span class="p">,</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">definitions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">recursive</span><span class="p">:</span>
+                <span class="n">declarations</span> <span class="o">+=</span> <span class="p">[</span><span class="n">symbol</span> <span class="o">+</span> <span class="s1">&#39;.set(&#39;</span> <span class="o">+</span> <span class="n">statement</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">declarations</span> <span class="o">+=</span> <span class="p">[</span><span class="n">symbol</span> <span class="o">+</span> <span class="s1">&#39; = &#39;</span> <span class="o">+</span> <span class="n">statement</span><span class="p">]</span>
+
+        <span class="c1"># check for symbols used but never defined</span>
+
+        <span class="n">defined_symbols</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">RESERVED_SYMBOLS</span>
+        <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">symbol</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">defined_symbols</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="n">symbol</span><span class="p">]</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Missing definition for symbol &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">symbol</span><span class="p">)</span>
+                <span class="c1"># root_node.error_flag = True</span>
+
+        <span class="c1"># check for unconnected rules</span>
+
+        <span class="n">defined_symbols</span><span class="o">.</span><span class="n">difference_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">RESERVED_SYMBOLS</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">remove_connections</span><span class="p">(</span><span class="n">symbol</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Recursively removes all symbols which appear in the</span>
+<span class="sd">            definiens of a particular symbol.&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">defined_symbols</span><span class="p">:</span>
+                <span class="n">defined_symbols</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">symbol</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">related</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="n">symbol</span><span class="p">][</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="n">remove_connections</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">related</span><span class="p">))</span>
+
+        <span class="n">remove_connections</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">leftover</span> <span class="ow">in</span> <span class="n">defined_symbols</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="n">leftover</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                <span class="p">(</span><span class="s1">&#39;Rule &quot;</span><span class="si">%s</span><span class="s1">&quot; is not connected to parser root &quot;</span><span class="si">%s</span><span class="s1">&quot; !&#39;</span><span class="p">)</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">leftover</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span><span class="p">),</span> <span class="n">Error</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+
+        <span class="c1"># set root_symbol parser and assemble python grammar definition</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span> <span class="ow">and</span> <span class="s1">&#39;root__&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="n">declarations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;root__ = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">root_symbol</span><span class="p">)</span>
+        <span class="n">declarations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">declarations</span><span class="p">)</span> \
+                       <span class="o">+</span> <span class="n">GRAMMAR_FACTORY</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">NAME</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result</span></div>
+
+
+    <span class="c1">## compilation methods</span>
+
+    <span class="k">def</span> <span class="nf">on_syntax</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">definitions</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># type: List[Tuple[str, str]]</span>
+
+        <span class="c1"># drop the wrapping sequence node</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># compile definitions and directives and collect definitions</span>
+        <span class="k">for</span> <span class="n">nd</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;definition&quot;</span><span class="p">:</span>
+                <span class="n">definitions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">nd</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;directive&quot;</span><span class="p">,</span> <span class="n">nd</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">nd</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">nd</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">definitions</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">definitions</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">assemble_parser</span><span class="p">(</span><span class="n">definitions</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">on_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="n">rule</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">content</span>
+        <span class="k">if</span> <span class="n">rule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="n">first</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="n">rule</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">first</span><span class="o">.</span><span class="n">_errors</span><span class="p">:</span>
+                <span class="n">first</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;First definition of rule &quot;</span><span class="si">%s</span><span class="s1">&quot; &#39;</span>
+                                <span class="s1">&#39;followed by illegal redefinitions.&#39;</span> <span class="o">%</span> <span class="n">rule</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;A rule with name &quot;</span><span class="si">%s</span><span class="s1">&quot; has already been defined earlier.&#39;</span> <span class="o">%</span> <span class="n">rule</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">EBNFCompiler</span><span class="o">.</span><span class="n">RESERVED_SYMBOLS</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Symbol &quot;</span><span class="si">%s</span><span class="s1">&quot; is a reserved symbol.&#39;</span> <span class="o">%</span> <span class="n">rule</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">sane_parser_name</span><span class="p">(</span><span class="n">rule</span><span class="p">):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Illegal symbol &quot;</span><span class="si">%s</span><span class="s1">&quot;. Symbols must not start or &#39;</span>
+                           <span class="s1">&#39; end with a doube underscore &quot;__&quot;.&#39;</span> <span class="o">%</span> <span class="n">rule</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">rule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;tokens&#39;</span><span class="p">]:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Symbol &quot;</span><span class="si">%s</span><span class="s1">&quot; has already been defined as &#39;</span>
+                           <span class="s1">&#39;a preprocessor token.&#39;</span> <span class="o">%</span> <span class="n">rule</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">keyword</span><span class="o">.</span><span class="n">iskeyword</span><span class="p">(</span><span class="n">rule</span><span class="p">):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Python keyword &quot;</span><span class="si">%s</span><span class="s1">&quot; may not be used as a symbol. &#39;</span>
+                           <span class="o">%</span> <span class="n">rule</span> <span class="o">+</span> <span class="s1">&#39;(This may change in the future.)&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_symbols</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="n">rule</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_symbols</span>
+            <span class="n">defn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">rule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+                <span class="n">defn</span> <span class="o">=</span> <span class="s1">&#39;Capture(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">defn</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">defn</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;(&quot;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># assume it&#39;s a synonym, like &#39;page = REGEX_PAGE_NR&#39;</span>
+                <span class="n">defn</span> <span class="o">=</span> <span class="s1">&#39;Synonym(</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">defn</span>
+        <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">traceback</span> <span class="k">import</span> <span class="n">extract_tb</span>
+            <span class="n">trace</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">errmsg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> (TypeError: </span><span class="si">%s</span><span class="s2">; </span><span class="si">%s</span><span class="s2">)</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> \
+                     <span class="o">%</span> <span class="p">(</span><span class="n">EBNFCompiler</span><span class="o">.</span><span class="n">AST_ERROR</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">trace</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">())</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="n">rule</span><span class="p">,</span> <span class="n">defn</span> <span class="o">=</span> <span class="n">rule</span> <span class="o">+</span> <span class="s1">&#39;:error&#39;</span><span class="p">,</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="n">errmsg</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span>
+        <span class="k">return</span> <span class="n">rule</span><span class="p">,</span> <span class="n">defn</span>
+
+
+    <span class="k">def</span> <span class="nf">_check_rx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">rx</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks whether the string `rx` represents a valid regular</span>
+<span class="sd">        expression. Makes sure that multiline regular expressions are</span>
+<span class="sd">        prepended by the multiline-flag. Returns the regular expression string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">re_flags</span> <span class="o">|</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">}</span> <span class="k">if</span> <span class="n">rx</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">re_flags</span>
+        <span class="k">if</span> <span class="n">flags</span><span class="p">:</span>  <span class="n">rx</span> <span class="o">=</span> <span class="s2">&quot;(?</span><span class="si">%s</span><span class="s2">)</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">flags</span><span class="p">),</span> <span class="n">rx</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">rx</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">re_error</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;malformed regular expression </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                           <span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">rx</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">re_error</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">rx</span>
+
+
+    <span class="k">def</span> <span class="nf">on_directive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;tokens&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">REPEATABLE_DIRECTIVES</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">defined_directives</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Directive &quot;</span><span class="si">%s</span><span class="s1">&quot; has already been defined earlier. &#39;</span> <span class="o">%</span> <span class="n">key</span> <span class="o">+</span> \
+                               <span class="s1">&#39;Later definition will be ignored!&#39;</span><span class="p">,</span>
+                               <span class="n">code</span><span class="o">=</span><span class="n">Error</span><span class="o">.</span><span class="n">REDEFINED_DIRECTIVE_WARNING</span><span class="p">)</span>
+                <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">defined_directives</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;comment&#39;</span><span class="p">,</span> <span class="s1">&#39;whitespace&#39;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;list_&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Directive &quot;</span><span class="si">%s</span><span class="s1">&quot; must have one, but not </span><span class="si">%i</span><span class="s1"> values.&#39;</span> <span class="o">%</span>
+                                   <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span><span class="p">)))</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;whitespace&#39;</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">EBNFCompiler</span><span class="o">.</span><span class="n">WHITESPACE</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="n">EBNFCompiler</span><span class="o">.</span><span class="n">WHITESPACE</span><span class="p">[</span><span class="n">value</span><span class="p">]</span>  <span class="c1"># replace whitespace-name by regex</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Value &quot;</span><span class="si">%s</span><span class="s1">&quot; not allowed for directive &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)</span>  <span class="c1"># cast(str, node.children[</span>
+                <span class="c1"># 1].result).strip(&quot;~&quot;)</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">content</span><span class="p">:</span>  <span class="c1"># cast(str, node.children[1].result):</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Whitespace marker &#39;~&#39; not allowed in definition of &quot;</span>
+                                   <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> regular expression.&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">value</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;&quot;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&#39;&#39;&quot;</span><span class="p">}:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="n">escape_re</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">value</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;//&#39;</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_rx</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">value</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;whitespace&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Implicit whitespace should always match the empty string, &quot;</span>
+                                   <span class="s2">&quot;/</span><span class="si">%s</span><span class="s2">/ does not.&quot;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;ignorecase&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;off&quot;</span><span class="p">,</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span> <span class="s2">&quot;no&quot;</span><span class="p">}:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">re_flags</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">)</span>
+
+        <span class="c1"># elif key == &#39;testing&#39;:</span>
+        <span class="c1">#     value = node.children[1].content</span>
+        <span class="c1">#     self.directives[&#39;testing&#39;] = value.lower() not in {&quot;off&quot;, &quot;false&quot;, &quot;no&quot;}</span>
+
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;literalws&#39;</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="p">{</span><span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">])}</span>
+            <span class="k">if</span> <span class="p">((</span><span class="n">value</span> <span class="o">-</span> <span class="p">{</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="s1">&#39;none&#39;</span><span class="p">})</span>
+                    <span class="ow">or</span> <span class="p">(</span><span class="s1">&#39;none&#39;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)):</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Directive &quot;literalws&quot; allows the values &#39;</span>
+                               <span class="s1">&#39;`left`, `right`, `both` or `none`, &#39;</span>
+                               <span class="s1">&#39;but not `</span><span class="si">%s</span><span class="s1">`&#39;</span> <span class="o">%</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="n">wsp</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">}</span> <span class="k">if</span> <span class="s1">&#39;both&#39;</span> <span class="ow">in</span> <span class="n">value</span> \
+                <span class="k">else</span> <span class="p">{}</span> <span class="k">if</span> <span class="s1">&#39;none&#39;</span> <span class="ow">in</span> <span class="n">value</span> <span class="k">else</span> <span class="n">value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">wsp</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;tokens&#39;</span><span class="p">,</span> <span class="s1">&#39;preprocessor_tokens&#39;</span><span class="p">}:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">redeclared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;tokens&#39;</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">tokens</span>
+            <span class="k">if</span> <span class="n">redeclared</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Tokens </span><span class="si">%s</span><span class="s1"> have already been declared earlier. &#39;</span>
+                               <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">redeclared</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;Later declaration will be ignored&#39;</span><span class="p">,</span>
+                               <span class="n">code</span><span class="o">=</span><span class="n">Error</span><span class="o">.</span><span class="n">REDECLARED_TOKEN_WARNING</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;tokens&#39;</span><span class="p">]</span> <span class="o">|=</span> <span class="n">tokens</span> <span class="o">-</span> <span class="n">redeclared</span>
+
+        <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_filter&#39;</span><span class="p">):</span>
+            <span class="n">filter_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filter_set</span><span class="p">,</span> <span class="nb">set</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">filter_set</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Directive &quot;</span><span class="si">%s</span><span class="s1">&quot; accepts exactly on symbol, not </span><span class="si">%s</span><span class="s1">&#39;</span>
+                               <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">filter_set</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">][</span><span class="n">key</span><span class="p">[:</span><span class="o">-</span><span class="mi">7</span><span class="p">]]</span> <span class="o">=</span> <span class="n">filter_set</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Unknown directive </span><span class="si">%s</span><span class="s1"> ! (Known ones are </span><span class="si">%s</span><span class="s1"> .)&#39;</span> <span class="o">%</span>
+                           <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="o">.</span><span class="n">keys</span><span class="p">()))))</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="EBNFCompiler.non_terminal"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFCompiler.non_terminal">[docs]</a>    <span class="k">def</span> <span class="nf">non_terminal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">parser_class</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">custom_args</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span><span class="p">[])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compiles any non-terminal, where `parser_class` indicates the Parser class</span>
+<span class="sd">        name for the particular non-terminal.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">]</span> <span class="o">+</span> <span class="n">custom_args</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">error_flag</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">parser_class</span> <span class="o">+</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span></div>
+
+
+    <span class="k">def</span> <span class="nf">on_expression</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># TODO: Add check for errors like &quot;a&quot; | &quot;ab&quot; (which will always yield a, even for ab)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_terminal</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;Alternative&#39;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">on_term</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># Basically, the following code does only this:</span>
+        <span class="c1">#       return self.non_terminal(node, &#39;Series&#39;)</span>
+        <span class="c1"># What makes it (look) more complicated is the handling of the</span>
+        <span class="c1"># mandatory §-operator</span>
+        <span class="n">mandatory_marker</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">filtered_children</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">nd</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">TOKEN_PTYPE</span> <span class="ow">and</span> <span class="n">nd</span><span class="o">.</span><span class="n">content</span> <span class="o">==</span> <span class="s2">&quot;§&quot;</span><span class="p">:</span>
+                <span class="n">mandatory_marker</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">nd</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;First item of a series should not be mandatory.&#39;</span><span class="p">,</span>
+                                 <span class="n">Error</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">mandatory_marker</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">nd</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;One mandatory marker (§) sufficient to declare the &#39;</span>
+                                 <span class="s1">&#39;rest of the series as mandatory.&#39;</span><span class="p">,</span> <span class="n">Error</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">filtered_children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nd</span><span class="p">)</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">saved_result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">result</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">filtered_children</span><span class="p">)</span>
+        <span class="n">custom_args</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;mandatory=</span><span class="si">%i</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">mandatory_marker</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="k">if</span> <span class="n">mandatory_marker</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">compiled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_terminal</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;Series&#39;</span><span class="p">,</span> <span class="n">custom_args</span><span class="p">)</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">saved_result</span>
+        <span class="k">return</span> <span class="n">compiled</span>
+
+
+    <span class="k">def</span> <span class="nf">on_factor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">()</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">content</span>
+        <span class="n">custom_args</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># type: List[str]</span>
+
+        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;::&#39;</span><span class="p">,</span> <span class="s1">&#39;:&#39;</span><span class="p">}:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+            <span class="n">arg</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">arg</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;symbol&#39;</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">((</span><span class="s1">&#39;Retrieve Operator &quot;</span><span class="si">%s</span><span class="s1">&quot; requires a symbol, &#39;</span>
+                                <span class="s1">&#39;and not a </span><span class="si">%s</span><span class="s1">.&#39;</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="o">.</span><span class="n">parser</span><span class="p">)))</span>
+                <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">]:</span>
+                <span class="n">custom_args</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;rfilter=</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;filter&#39;</span><span class="p">][</span><span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="p">)]]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">arg</span><span class="p">))</span>  <span class="c1"># cast(str, arg.result)</span>
+
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># shift = (Node(node.parser, node.result[1].result),)</span>
+            <span class="c1"># node.result[1].result = shift + node.result[2:]</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">Node</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span><span class="p">),)</span> \
+                                    <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">parser_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">PREFIX_TABLE</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_terminal</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">parser_class</span><span class="p">,</span> <span class="n">custom_args</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">prefix</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;-&#39;</span><span class="p">:</span>
+                <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+                    <span class="n">nd</span> <span class="o">=</span> <span class="n">node</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">nd</span> <span class="o">=</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">while</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;symbol&quot;</span><span class="p">:</span>
+                        <span class="n">symlist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">nd</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="p">[])</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">symlist</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                            <span class="n">nd</span> <span class="o">=</span> <span class="n">symlist</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">symlist</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                                <span class="n">nd</span> <span class="o">=</span> <span class="n">symlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                            <span class="k">break</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot;regexp&quot;</span> <span class="ow">or</span> <span class="n">nd</span><span class="o">.</span><span class="n">content</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;/&#39;</span>
+                            <span class="ow">or</span> <span class="n">nd</span><span class="o">.</span><span class="n">content</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">:]</span> <span class="o">!=</span> <span class="s1">&#39;/&#39;</span><span class="p">):</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Lookbehind-parser can only be used with plain RegExp-&quot;</span>
+                                       <span class="s2">&quot;parsers, not with: &quot;</span> <span class="o">+</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;RegExp(&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">deferred_tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">check</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Unknown prefix &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span> <span class="n">prefix</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+
+    <span class="k">def</span> <span class="nf">on_option</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_terminal</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;Option&#39;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">on_repetition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_terminal</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;ZeroOrMore&#39;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">on_oneormore</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_terminal</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;OneOrMore&#39;</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">on_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">EBNFCompilerError</span><span class="p">(</span><span class="s2">&quot;Group nodes should have been eliminated by &quot;</span>
+                                <span class="s2">&quot;AST transformation!&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_unordered</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># return self.non_terminal(node, &#39;Unordered&#39;)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">nd</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">TOKEN_PTYPE</span> <span class="ow">and</span> <span class="n">nd</span><span class="o">.</span><span class="n">content</span> <span class="o">==</span> <span class="s2">&quot;§&quot;</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Unordered parser lists cannot contain mandatory (§) items.&quot;</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;term&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;AllOf(&quot;</span> <span class="o">+</span> <span class="n">args</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+        <span class="k">elif</span> <span class="n">nd</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;expression&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;SomeOf(&quot;</span> <span class="o">+</span> <span class="n">args</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Unordered sequence or alternative requires at least two elements.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">on_symbol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>     <span class="c1"># called only for symbols on the right hand side!</span>
+        <span class="n">symbol</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span>  <span class="c1"># ; assert result == cast(str, node.result)</span>
+        <span class="k">if</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;tokens&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s1">&#39;PreprocessorToken(&quot;&#39;</span> <span class="o">+</span> <span class="n">symbol</span> <span class="o">+</span> <span class="s1">&#39;&quot;)&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_symbols</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">symbol</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="n">symbol</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span>  <span class="c1"># remember first use of symbol</span>
+            <span class="k">if</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">recursive</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">symbol</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">EBNFCompiler</span><span class="o">.</span><span class="n">RESERVED_SYMBOLS</span><span class="p">:</span>
+                <span class="c1"># (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):</span>
+                <span class="k">return</span> <span class="s2">&quot;RegExp(</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">symbol</span>
+            <span class="k">return</span> <span class="n">symbol</span>
+
+
+    <span class="k">def</span> <span class="nf">on_literal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Token(&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>  <span class="c1"># return &#39;Token(&#39; + &#39;,</span>
+        <span class="c1"># &#39;.merge_children([node.result]) + &#39;)&#39; ?</span>
+
+
+    <span class="k">def</span> <span class="nf">on_regexp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">rx</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="p">[]</span>   <span class="c1"># type: List[str]</span>
+        <span class="k">if</span> <span class="n">rx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;/&#39;</span> <span class="ow">and</span> <span class="n">rx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;/&#39;</span><span class="p">:</span>
+            <span class="n">parser</span> <span class="o">=</span> <span class="s1">&#39;RegExp(&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">parser</span> <span class="o">=</span> <span class="s1">&#39;RE(&#39;</span>
+            <span class="k">if</span> <span class="n">rx</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;~/&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;literalws&#39;</span><span class="p">]:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;wL=&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">WHITESPACE_KEYWORD</span><span class="p">]</span> <span class="o">+</span> <span class="n">name</span>
+                <span class="n">rx</span> <span class="o">=</span> <span class="n">rx</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">elif</span> <span class="s1">&#39;left&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;literalws&#39;</span><span class="p">]:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;wL=&#39;&#39;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">name</span>
+            <span class="k">if</span> <span class="n">rx</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]</span> <span class="o">==</span> <span class="s1">&#39;/~&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;right&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;literalws&#39;</span><span class="p">]:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;wR=&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">WHITESPACE_KEYWORD</span><span class="p">]</span> <span class="o">+</span> <span class="n">name</span>
+                <span class="n">rx</span> <span class="o">=</span> <span class="n">rx</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s1">&#39;right&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">directives</span><span class="p">[</span><span class="s1">&#39;literalws&#39;</span><span class="p">]:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;wR=&#39;&#39;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">arg</span> <span class="o">=</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_check_rx</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">rx</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\/&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)))</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">traceback</span> <span class="k">import</span> <span class="n">extract_tb</span>
+            <span class="n">trace</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">errmsg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> (AttributeError: </span><span class="si">%s</span><span class="s2">; </span><span class="si">%s</span><span class="s2">)</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> \
+                     <span class="o">%</span> <span class="p">(</span><span class="n">EBNFCompiler</span><span class="o">.</span><span class="n">AST_ERROR</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">trace</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">())</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s1">&#39;&quot;&#39;</span> <span class="o">+</span> <span class="n">errmsg</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span>
+        <span class="k">return</span> <span class="n">parser</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">arg</span><span class="p">]</span> <span class="o">+</span> <span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span>
+
+
+    <span class="k">def</span> <span class="nf">on_list_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">assert</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">get_ebnf_compiler</span><span class="p">(</span><span class="n">grammar_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EBNFCompiler</span><span class="p">:</span>
+    <span class="k">global</span> <span class="n">thread_local_ebnf_compiler_singleton</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">compiler</span> <span class="o">=</span> <span class="n">thread_local_ebnf_compiler_singleton</span>
+        <span class="n">compiler</span><span class="o">.</span><span class="n">set_grammar_name</span><span class="p">(</span><span class="n">grammar_name</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">compiler</span>
+    <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+        <span class="n">thread_local_ebnf_compiler_singleton</span> <span class="o">=</span> <span class="n">EBNFCompiler</span><span class="p">(</span><span class="n">grammar_name</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">thread_local_ebnf_compiler_singleton</span>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Eckhart Arnold.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.8',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

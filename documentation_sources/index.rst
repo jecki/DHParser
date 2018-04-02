@@ -10,6 +10,7 @@ Welcome to DHParser's documentation!
    :maxdepth: 3
    :caption: Contents:
 
+   StepByStepGuide.rst
    UserGuide.rst
    ReferenceManual.rst
    ModuleReference.rst

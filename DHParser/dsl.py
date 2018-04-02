@@ -23,6 +23,8 @@ compilation of domain specific languages based on an EBNF-grammar.
 
 
 import os
+import platform
+import stat
 
 from DHParser.compile import Compiler, compile_source
 from DHParser.ebnf import EBNFCompiler, grammar_changed, \
@@ -70,10 +72,16 @@ COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved.
 END_SECTIONS_MARKER = "END OF DHPARSER-SECTIONS"
 
 
+dhparserdir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+
 DHPARSER_IMPORTS = '''
 from functools import partial
 import os
 import sys
+
+sys.path.append('{dhparserdir}')
+
 try:
     import regex as re
 except ImportError:
@@ -92,7 +100,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, \\
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip
-'''
+'''.format(dhparserdir=dhparserdir)
 
 
 DHPARSER_MAIN = '''
@@ -480,8 +488,9 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(compiler):
             compiler = ebnf_compiler.gen_compiler_skeleton()
 
+        compilerscript = rootname + 'Compiler.py'
         try:
-            f = open(rootname + 'Compiler.py', 'w', encoding="utf-8")
+            f = open(compilerscript, 'w', encoding="utf-8")
             f.write(intro)
             f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
             f.write(imports)
@@ -496,12 +505,17 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             f.write(SECTION_MARKER.format(marker=END_SECTIONS_MARKER))
             f.write(outro)
         except (PermissionError, FileNotFoundError, IOError) as error:
-            print('# Could not write file "' + rootname + 'Compiler.py" because of: '
+            print('# Could not write file "' + compilerscript + '" because of: '
                   + "\n# ".join(str(error).split('\n)')))
             print(result)
         finally:
             if f:
                 f.close()
+
+        if platform.system() != "Windows":
+            # set file permissions so that the compilerscript can be executed
+            st = os.stat(compilerscript)
+            os.chmod(compilerscript, st.st_mode | stat.S_IEXEC)
 
     else:
         f = None

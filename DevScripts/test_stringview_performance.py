@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+import sys
+
+sys.path.append('../')
+
 from DHParser.stringview import StringView
 from timeit import timeit
 import re

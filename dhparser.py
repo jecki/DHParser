@@ -29,6 +29,8 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.log import logging
 from DHParser.toolkit import re
 
+dhparserdir = os.path.dirname(os.path.realpath(__file__))
+
 EBNF_TEMPLATE = r"""-grammar
 
 #######################################################################
@@ -114,9 +116,10 @@ GRAMMAR_TEST_TEMPLATE = r'''#!/usr/bin/python3
 import os
 import sys
 
-# sys.path.extend(['../../', '../', './'])  # use for developing DHParser
+sys.path.append('{dhparserdir}')
 
 scriptpath = os.path.dirname(__file__)
+
 
 try:
     from DHParser import dsl
@@ -141,10 +144,9 @@ def recompile_grammar(grammar_src, force):
 
 def run_grammar_tests(glob_pattern):
     with DHParser.log.logging(False):
-        print(glob_pattern)
         error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'), 
-            get_grammar, get_transformer, 
+            os.path.join(scriptpath, 'grammar_tests'),
+            get_grammar, get_transformer,
             fn_patterns=[glob_pattern], report=True, verbose=True)
     return error_report
 
@@ -154,7 +156,7 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'), 
+        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'),
                           force=False)
         sys.path.append('.')
         from {name}Compiler import get_grammar, get_transformer
@@ -180,7 +182,7 @@ def create_project(path: str):
             print('"%s" already exists! Not overwritten.' % name)
 
     name = os.path.basename(path)
-    if not re.match('(?!\d)\w+', name):
+    if not re.match(r'(?!\d)\w+', name):
         print('Project name "%s" is not a valid identifier! Aborting.' % name)
         sys.exit(1)
     if os.path.exists(path) and not os.path.isdir(path):
@@ -202,7 +204,8 @@ def create_project(path: str):
     create_file(os.path.join('grammar_tests', '02_test_document.ini'), TEST_DOCUMENT_TEMPLATE)
     create_file(name + '.ebnf', '# ' + name + EBNF_TEMPLATE)
     create_file('README.md', README_TEMPLATE.format(name=name))
-    create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(name=name))
+    create_file('tst_%s_grammar.py' % name,
+                GRAMMAR_TEST_TEMPLATE.format(name=name, dhparserdir=dhparserdir))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     os.chdir(curr_dir)

@@ -15,9 +15,9 @@ or::
 
    from DHParser import recompile_grammar, grammar_suite, compile_source
 
-However, in order to add or change the source code of DHParser, its
-module structure must be understood. DHParser's modules can roughly
-be sorted into three different categories:
+However, in order to add or change the source code of DHParser, its module
+structure must be understood. DHParser's modules can roughly be sorted into
+three different categories:
 
 1. Modules that contain the basic funcionality for packrat-parsing,
    AST-transformation and the skeleton for a DSL-compilers.

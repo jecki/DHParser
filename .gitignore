@@ -38,3 +38,7 @@ DHParser/stringview.c
 imperium.html
 fascitergula.html
 _build
+examples/Tutorial/LyrikCompiler.py
+_build
+_static
+_templates

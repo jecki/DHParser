@@ -1,0 +1,1080 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>transform &mdash; DHParser 0.8 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DHParser
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../StepByStepGuide.html">DHParser’s Step by Step Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../UserGuide.html">DHParser User’s Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ReferenceManual.html">DHParser Reference Manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ModuleReference.html">Module Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DHParser</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>transform</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for transform</h1><div class="highlight"><pre>
+<span></span><span class="c1"># transform.py - transformation functions for converting the</span>
+<span class="c1">#                concrete into the abstract syntax tree</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2016  by Eckhart Arnold (arnold@badw.de)</span>
+<span class="c1">#                 Bavarian Academy of Sciences an Humanities (badw.de)</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or</span>
+<span class="c1"># implied.  See the License for the specific language governing</span>
+<span class="c1"># permissions and limitations under the License.</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module ``transform`` contains the functions for transforming the</span>
+<span class="sd">concrete syntax tree (CST) into an abstract syntax tree (AST).</span>
+
+<span class="sd">As these functions are very generic, they can in principle be</span>
+<span class="sd">used for any kind of tree transformations, not necessarily only</span>
+<span class="sd">for CST -&gt; AST transformations.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">reduce</span><span class="p">,</span> <span class="n">singledispatch</span>
+
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> <span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">MockParser</span>
+<span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">expand_table</span><span class="p">,</span> <span class="n">smart_list</span><span class="p">,</span> <span class="n">re</span><span class="p">,</span> <span class="n">typing</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">AbstractSet</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ByteString</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> \
+    <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Text</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;TransformationDict&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;TransformationProc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;TransformationFunc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;ConditionFunc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;KeyFunc&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;transformation_factory&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;key_parser_name&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;key_tag_name&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;traverse&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_named&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;replace_by_single_child&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;reduce_single_child&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;replace_or_reduce&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;replace_parser&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;collapse&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;merge_children&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;replace_content&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;apply_if&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;apply_unless&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;traverse_locally&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_anonymous&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_whitespace&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_empty&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_expendable&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_token&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_one_of&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;has_content&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;has_parent&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;lstrip&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;rstrip&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;strip&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;keep_children&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;keep_children_if&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;keep_tokens&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;keep_nodes&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;keep_content&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_children_if&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_nodes&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_content&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_first&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_last&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_whitespace&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_empty&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_anonymous_empty&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_anonymous_expendables&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_anonymous_tokens&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_expendables&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_brackets&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_infix_operator&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_single_child&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;remove_tokens&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;flatten&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;forbid&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;require&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;assert_content&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;assert_condition&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;assert_has_children&#39;</span><span class="p">)</span>
+
+
+<span class="n">TransformationProc</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span>
+<span class="n">TransformationDict</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Callable</span><span class="p">]]</span>
+<span class="n">TransformationFunc</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Node</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span> <span class="n">partial</span><span class="p">]</span>
+<span class="n">ProcessingTableType</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">TransformationDict</span><span class="p">]]</span>
+<span class="n">ConditionFunc</span> <span class="o">=</span> <span class="n">Callable</span>  <span class="c1"># Callable[[List[Node]], bool]</span>
+<span class="n">KeyFunc</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Node</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span>
+<span class="n">CriteriaType</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="transformation_factory"><a class="viewcode-back" href="../ModuleReference.html#transform.transformation_factory">[docs]</a><span class="k">def</span> <span class="nf">transformation_factory</span><span class="p">(</span><span class="n">t1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t3</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t4</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">t5</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates factory functions from transformation-functions that</span>
+<span class="sd">    dispatch on the first parameter after the context parameter.</span>
+
+<span class="sd">    Decorating a transformation-function that has more than merely the</span>
+<span class="sd">    ``node``-parameter with ``transformation_factory`` creates a</span>
+<span class="sd">    function with the same name, which returns a partial-function that</span>
+<span class="sd">    takes just the context-parameter.</span>
+
+<span class="sd">    Additionally, there is some some syntactic sugar for</span>
+<span class="sd">    transformation-functions that receive a collection as their second</span>
+<span class="sd">    parameter and do not have any further parameters. In this case a</span>
+<span class="sd">    list of parameters passed to the factory function will be converted</span>
+<span class="sd">    into a collection.</span>
+
+<span class="sd">    Main benefit is readability of processing tables.</span>
+
+<span class="sd">    Usage::</span>
+
+<span class="sd">        @transformation_factory(AbstractSet[str])</span>
+<span class="sd">        def remove_tokens(context, tokens):</span>
+<span class="sd">            ...</span>
+
+<span class="sd">    or, alternatively::</span>
+
+<span class="sd">        @transformation_factory</span>
+<span class="sd">        def remove_tokens(context, tokens: AbstractSet[str]):</span>
+<span class="sd">            ...</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        trans_table = { &#39;expression&#39;: remove_tokens(&#39;+&#39;, &#39;-&#39;) }</span>
+
+<span class="sd">    instead of::</span>
+
+<span class="sd">        trans_table = { &#39;expression&#39;: partial(remove_tokens, tokens={&#39;+&#39;, &#39;-&#39;}) }</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        t1:  type of the second argument of the transformation function,</span>
+<span class="sd">            only necessary if the transformation functions&#39; parameter list</span>
+<span class="sd">            does not have type annotations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">f</span>  <span class="c1"># &#39;@transformer&#39; not needed w/o free parameters</span>
+        <span class="k">assert</span> <span class="n">t1</span> <span class="ow">or</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotation</span> <span class="o">!=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">empty</span><span class="p">,</span> \
+            <span class="s2">&quot;No type information on second parameter found! Please, use type &quot;</span> \
+            <span class="s2">&quot;annotation or provide the type information via transformer-decorator.&quot;</span>
+        <span class="n">p1type</span> <span class="o">=</span> <span class="n">t1</span> <span class="ow">or</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">annotation</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="n">singledispatch</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Container</span><span class="p">)</span> \
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Text</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">ByteString</span><span class="p">):</span>
+                <span class="k">def</span> <span class="nf">gen_special</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">AbstractSet</span><span class="p">)</span> <span class="k">else</span> \
+                        <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="k">else</span> <span class="n">args</span>
+                    <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">c</span><span class="p">}</span>
+                    <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+
+                <span class="n">f</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">p1type</span><span class="o">.</span><span class="n">__args__</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gen_special</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Union Type does not allow subclassing, but is not needed here</span>
+
+        <span class="k">def</span> <span class="nf">gen_partial</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">arg</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">args</span><span class="p">)}</span>
+            <span class="n">d</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">partial</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">**</span><span class="n">d</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">t2</span><span class="p">,</span> <span class="n">t3</span><span class="p">,</span> <span class="n">t4</span><span class="p">,</span> <span class="n">t5</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">t</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">gen_partial</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">f</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="c1"># Provide for the case that transformation_factory has been</span>
+        <span class="c1"># written as plain decorator and not as a function call that</span>
+        <span class="c1"># returns the decorator proper.</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">t1</span>
+        <span class="n">t1</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">decorator</span></div>
+
+
+<span class="k">def</span> <span class="nf">key_parser_name</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span>
+
+
+<span class="k">def</span> <span class="nf">key_tag_name</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span>
+
+
+<div class="viewcode-block" id="traverse"><a class="viewcode-back" href="../ModuleReference.html#transform.traverse">[docs]</a><span class="k">def</span> <span class="nf">traverse</span><span class="p">(</span><span class="n">root_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
+             <span class="n">processing_table</span><span class="p">:</span> <span class="n">ProcessingTableType</span><span class="p">,</span>
+             <span class="n">key_func</span><span class="p">:</span> <span class="n">KeyFunc</span><span class="o">=</span><span class="n">key_tag_name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Traverses the snytax tree starting with the given ``node`` depth</span>
+<span class="sd">    first and applies the sequences of callback-functions registered</span>
+<span class="sd">    in the ``processing_table``-dictionary.</span>
+
+<span class="sd">    The most important use case is the transformation of a concrete</span>
+<span class="sd">    syntax tree into an abstract tree (AST). But it is also imaginable</span>
+<span class="sd">    to employ tree-traversal for the semantic analysis of the AST.</span>
+
+<span class="sd">    In order to assign sequences of callback-functions to nodes, a</span>
+<span class="sd">    dictionary (&quot;processing table&quot;) is used. The keys usually represent</span>
+<span class="sd">    tag names, but any other key function is possible. There exist</span>
+<span class="sd">    three special keys:</span>
+
+<span class="sd">    - &#39;+&#39;: always called (before any other processing function)</span>
+<span class="sd">    - &#39;*&#39;: called for those nodes for which no (other) processing</span>
+<span class="sd">      function appears in the table</span>
+<span class="sd">    - &#39;~&#39;: always called (after any other processing function)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        root_node (Node): The root-node of the syntax tree to be traversed</span>
+<span class="sd">        processing_table (dict): node key -&gt; sequence of functions that</span>
+<span class="sd">            will be applied to matching nodes in order. This dictionary</span>
+<span class="sd">            is interpreted as a ``compact_table``. See</span>
+<span class="sd">            :func:`expand_table` or :func:`EBNFCompiler.EBNFTransTable`</span>
+<span class="sd">        key_func (function): A mapping key_func(node) -&gt; keystr. The default</span>
+<span class="sd">            key_func yields node.parser.name.</span>
+
+<span class="sd">    Example::</span>
+
+<span class="sd">        table = { &quot;term&quot;: [replace_by_single_child, flatten],</span>
+<span class="sd">                  &quot;factor, flowmarker, retrieveop&quot;: replace_by_single_child }</span>
+<span class="sd">        traverse(node, table)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Is this optimazation really needed?</span>
+    <span class="k">if</span> <span class="s1">&#39;__cache__&#39;</span> <span class="ow">in</span> <span class="n">processing_table</span><span class="p">:</span>
+        <span class="c1"># assume that processing table has already been expanded</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">processing_table</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">processing_table</span><span class="p">[</span><span class="s1">&#39;__cache__&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># normalize processing_table entries by turning single values</span>
+        <span class="c1"># into lists with a single value</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">cast</span><span class="p">(</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">smart_list</span><span class="p">(</span><span class="n">call</span><span class="p">))</span>
+                 <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">call</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">processing_table</span><span class="o">.</span><span class="n">items</span><span class="p">())}</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">expand_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__cache__&#39;</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="n">TransformationDict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">()))</span>
+        <span class="c1"># change processing table in place, so its already expanded and cache filled next time</span>
+        <span class="n">processing_table</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">processing_table</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+    <span class="c1"># assert &#39;__cache__&#39; in processing_table</span>
+    <span class="c1"># # Code without optimization</span>
+    <span class="c1"># table = {name: smart_list(call) for name, call in list(processing_table.items())}</span>
+    <span class="c1"># table = expand_table(table)</span>
+    <span class="c1"># cache = {}  # type: Dict[str, List[Callable]]</span>
+
+    <span class="k">def</span> <span class="nf">traverse_recursive</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">result</span><span class="p">:</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                <span class="n">traverse_recursive</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>  <span class="c1"># depth first</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>  <span class="c1"># propagate error flag</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="n">key</span> <span class="o">=</span> <span class="n">key_func</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sequence</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">sequence</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="p">[])</span> \
+                <span class="o">+</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="p">[]))</span> \
+                <span class="o">+</span> <span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="c1"># &#39;+&#39; always called (before any other processing function)</span>
+            <span class="c1"># &#39;*&#39; called for those nodes for which no (other) processing function</span>
+            <span class="c1">#     appears in the table</span>
+            <span class="c1"># &#39;~&#39; always called (after any other processing function)</span>
+            <span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">sequence</span>
+
+        <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">sequence</span><span class="p">:</span>
+            <span class="n">call</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+    <span class="n">traverse_recursive</span><span class="p">([</span><span class="n">root_node</span><span class="p">])</span></div>
+    <span class="c1"># assert processing_table[&#39;__cache__&#39;]</span>
+
+
+<span class="c1">#######################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># meta transformations, i.e. transformations that call other</span>
+<span class="c1"># transformations</span>
+<span class="c1">#</span>
+<span class="c1">#######################################################################</span>
+
+
+<div class="viewcode-block" id="traverse_locally"><a class="viewcode-back" href="../ModuleReference.html#transform.traverse_locally">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">traverse_locally</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+                     <span class="n">processing_table</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span>            <span class="c1"># actually: ProcessingTableType</span>
+                     <span class="n">key_func</span><span class="p">:</span> <span class="n">Callable</span><span class="o">=</span><span class="n">key_tag_name</span><span class="p">):</span>  <span class="c1"># actually: KeyFunc</span>
+    <span class="sd">&quot;&quot;&quot;Transforms the syntax tree starting from the last node in the context</span>
+<span class="sd">    according to the given processing table. The purpose of this function is</span>
+<span class="sd">    to apply certain transformations locally, i.e. only for those nodes that</span>
+<span class="sd">    have the last node in the context as their parent node.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">traverse</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">processing_table</span><span class="p">,</span> <span class="n">key_func</span><span class="p">)</span></div>
+
+
+<span class="c1"># @transformation_factory(List[Callable])</span>
+<span class="c1"># def apply_to_child(context: List[Node], transformations: List[Callable], condition: Callable):</span>
+<span class="c1">#     &quot;&quot;&quot;Applies a list of transformations to those children that meet a specifc condition.&quot;&quot;&quot;</span>
+<span class="c1">#     node = context[-1]</span>
+<span class="c1">#     for child in node.children:</span>
+<span class="c1">#         context.append(child)</span>
+<span class="c1">#         if condition(context):</span>
+<span class="c1">#             for transform in transformations:</span>
+<span class="c1">#                 transform(context)</span>
+<span class="c1">#         context.pop()</span>
+
+
+<div class="viewcode-block" id="apply_if"><a class="viewcode-back" href="../ModuleReference.html#transform.apply_if">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">apply_if</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">transformation</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Applies a transformation only if a certain condition is met.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="n">transformation</span><span class="p">(</span><span class="n">context</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="apply_unless"><a class="viewcode-back" href="../ModuleReference.html#transform.apply_unless">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">apply_unless</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">transformation</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Applies a transformation if a certain condition is *not* met.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="n">transformation</span><span class="p">(</span><span class="n">context</span><span class="p">)</span></div>
+
+
+<span class="c1">#######################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># conditionals that determine whether the context (or the last node in</span>
+<span class="c1"># the context for that matter) fulfill a specific condition.</span>
+<span class="c1"># ---------------------------------------------------------------------</span>
+<span class="c1">#</span>
+<span class="c1"># The context of a node is understood as a list of all parent nodes</span>
+<span class="c1"># leading up to and including the node itself. If represented as list,</span>
+<span class="c1"># the last element of the list is the node itself.</span>
+<span class="c1">#</span>
+<span class="c1">#######################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">is_single_child</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns ``True`` if the current node does not have any siblings.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+
+
+<div class="viewcode-block" id="is_named"><a class="viewcode-back" href="../ModuleReference.html#transform.is_named">[docs]</a><span class="k">def</span> <span class="nf">is_named</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns ``True`` if the current node&#39;s parser is a named parser.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="is_anonymous"><a class="viewcode-back" href="../ModuleReference.html#transform.is_anonymous">[docs]</a><span class="k">def</span> <span class="nf">is_anonymous</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns ``True`` if the current node&#39;s parser is an anonymous parser.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="is_whitespace"><a class="viewcode-back" href="../ModuleReference.html#transform.is_whitespace">[docs]</a><span class="k">def</span> <span class="nf">is_whitespace</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Removes whitespace and comments defined with the</span>
+<span class="sd">    ``@comment``-directive.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">WHITESPACE_PTYPE</span></div>
+
+
+<div class="viewcode-block" id="is_empty"><a class="viewcode-back" href="../ModuleReference.html#transform.is_empty">[docs]</a><span class="k">def</span> <span class="nf">is_empty</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns ``True`` if the current node&#39;s content is empty.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="is_expendable"><a class="viewcode-back" href="../ModuleReference.html#transform.is_expendable">[docs]</a><span class="k">def</span> <span class="nf">is_expendable</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns ``True`` if the current node either is a node containing</span>
+<span class="sd">    whitespace or an empty node.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">is_empty</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="ow">or</span> <span class="n">is_whitespace</span><span class="p">(</span><span class="n">context</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="is_token"><a class="viewcode-back" href="../ModuleReference.html#transform.is_token">[docs]</a><span class="nd">@transformation_factory</span>  <span class="c1"># (AbstractSet[str])</span>
+<span class="k">def</span> <span class="nf">is_token</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tokens</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Checks whether the last node in the context has `ptype == TOKEN_PTYPE`</span>
+<span class="sd">    and it&#39;s content matches one of the given tokens. Leading and trailing</span>
+<span class="sd">    whitespace-tokens will be ignored. In case an empty set of tokens is passed,</span>
+<span class="sd">    any token is a match. If only &quot;:&quot; is given all anonymous tokens but no other</span>
+<span class="sd">    tokens are a match.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">stripped</span><span class="p">(</span><span class="n">nd</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Removes leading and trailing whitespace-nodes from content.&quot;&quot;&quot;</span>
+        <span class="c1"># assert node.parser.ptype == TOKEN_PTYPE</span>
+        <span class="k">if</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="n">i</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+            <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="ow">and</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">:</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">:</span>
+                <span class="n">k</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">content</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">k</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">nd</span><span class="o">.</span><span class="n">content</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">TOKEN_PTYPE</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">tokens</span> <span class="ow">or</span> <span class="n">stripped</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="is_one_of"><a class="viewcode-back" href="../ModuleReference.html#transform.is_one_of">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">is_one_of</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tag_name_set</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns true, if the node&#39;s tag_name is one of the given tag names.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">tag_name_set</span></div>
+
+
+<div class="viewcode-block" id="has_content"><a class="viewcode-back" href="../ModuleReference.html#transform.has_content">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">has_content</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">regexp</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks a node&#39;s content against a regular expression.</span>
+
+<span class="sd">    In contrast to ``re.match`` the regular expression must match the complete</span>
+<span class="sd">    string and not just the beginning of the string to succeed!</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">regexp</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;$&#39;</span><span class="p">):</span>
+        <span class="n">regexp</span> <span class="o">+=</span> <span class="s2">&quot;$&quot;</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">regexp</span><span class="p">,</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">content</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="has_parent"><a class="viewcode-back" href="../ModuleReference.html#transform.has_parent">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">has_parent</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tag_name_set</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Checks whether a node with one of the given tag names appears somewhere</span>
+<span class="sd">     in the context before the last node in the context.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">context</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">tag_name_set</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<span class="c1">#######################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># utility functions (private)</span>
+<span class="c1">#</span>
+<span class="c1">#######################################################################</span>
+
+
+<span class="k">def</span> <span class="nf">_replace_by</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">child</span><span class="p">:</span> <span class="n">Node</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+        <span class="n">child</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span><span class="p">)</span>
+        <span class="c1"># parser names must not be overwritten, else: child.parser.name = node.parser.name</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">parser</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">_errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">_errors</span><span class="p">)</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">_reduce_child</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">child</span><span class="p">:</span> <span class="n">Node</span><span class="p">):</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">_errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">_errors</span><span class="p">)</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">_pick_child</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">criteria</span><span class="p">:</span> <span class="n">CriteriaType</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the first child that meets the criteria.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">criteria</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">criteria</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">criteria</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag_name</span> <span class="o">==</span> <span class="n">criteria</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">child</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># assume criteria has type ConditionFunc</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">evaluation</span> <span class="o">=</span> <span class="n">criteria</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">evaluation</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">child</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="c1">#######################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># rearranging transformations</span>
+<span class="c1">#</span>
+<span class="c1"># - tree may be rearranged (e.g.flattened)</span>
+<span class="c1"># - nodes that are not leaves may be dropped</span>
+<span class="c1"># - order is preserved</span>
+<span class="c1"># - leave content is preserved (though not necessarily the leaves</span>
+<span class="c1">#   themselves)</span>
+<span class="c1">#</span>
+<span class="c1">#######################################################################</span>
+
+
+<span class="c1"># @transformation_factory(int, str, Callable)</span>
+<span class="c1"># def replace_by_child(context: List[Node], criteria: CriteriaType=is_single_child):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Replaces a node by the first of its immediate descendants</span>
+<span class="c1">#     that meets the `criteria`. The criteria can either be the</span>
+<span class="c1">#     index of the child (counting from zero), or the tag name or</span>
+<span class="c1">#     a boolean-valued function on the context of the child.</span>
+<span class="c1">#     If no child matching the criteria is found, the node will</span>
+<span class="c1">#     not be replaced.</span>
+<span class="c1">#     With the default value for `criteria` the same semantics is</span>
+<span class="c1">#     the same that of `replace_by_single_child`.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     child = _pick_child(context, criteria)</span>
+<span class="c1">#     if child:</span>
+<span class="c1">#         _replace_by(context[-1], child)</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># @transformation_factory(int, str, Callable)</span>
+<span class="c1"># def content_from_child(context: List[Node], criteria: CriteriaType = is_single_child):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Reduces a node, by transferring the result of the first of its</span>
+<span class="c1">#     immediate descendants that meets the `criteria` to this node,</span>
+<span class="c1">#     but keeping this node&#39;s parser entry. The criteria can either</span>
+<span class="c1">#     be the index of the child (counting from zero), or the tag</span>
+<span class="c1">#     name or a boolean-valued function on the context of the child.</span>
+<span class="c1">#     If no child matching the criteria is found, the node will</span>
+<span class="c1">#     not be replaced.</span>
+<span class="c1">#     With the default value for `criteria` this has the same semantics</span>
+<span class="c1">#     as `content_from_single_child`.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     child = _pick_child(context, criteria)</span>
+<span class="c1">#     if child:</span>
+<span class="c1">#         _reduce_child(context[-1], child)</span>
+
+
+<div class="viewcode-block" id="replace_by_single_child"><a class="viewcode-back" href="../ModuleReference.html#transform.replace_by_single_child">[docs]</a><span class="k">def</span> <span class="nf">replace_by_single_child</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Removes single branch node, replacing it by its immediate descendant.</span>
+<span class="sd">    Replacement only takes place, if the last node in the context has</span>
+<span class="sd">    exactly one child.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">_replace_by</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="reduce_single_child"><a class="viewcode-back" href="../ModuleReference.html#transform.reduce_single_child">[docs]</a><span class="k">def</span> <span class="nf">reduce_single_child</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reduces a single branch node by transferring the result of its</span>
+<span class="sd">    immediate descendant to this node, but keeping this node&#39;s parser entry.</span>
+<span class="sd">    Reduction only takes place if the last node in the context has</span>
+<span class="sd">    exactly one child.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">_reduce_child</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="replace_or_reduce"><a class="viewcode-back" href="../ModuleReference.html#transform.replace_or_reduce">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">replace_or_reduce</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="o">=</span><span class="n">is_named</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Replaces node by a single child, if condition is met on child,</span>
+<span class="sd">    otherwise (i.e. if the child is anonymous) reduces the child.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">child</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+            <span class="n">_replace_by</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">child</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_reduce_child</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">child</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="replace_parser"><a class="viewcode-back" href="../ModuleReference.html#transform.replace_parser">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">replace_parser</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Replaces the parser of a Node with a mock parser with the given</span>
+<span class="sd">    name.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        context: the context where the parser shall be replaced</span>
+<span class="sd">        name: &quot;NAME:PTYPE&quot; of the surrogate. The ptype is optional</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">name</span><span class="p">,</span> <span class="n">ptype</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">])[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ptype</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="flatten"><a class="viewcode-back" href="../ModuleReference.html#transform.flatten">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">flatten</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="o">=</span><span class="n">is_anonymous</span><span class="p">,</span> <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Flattens all children, that fulfil the given ``condition``</span>
+<span class="sd">    (default: all unnamed children). Flattening means that wherever a</span>
+<span class="sd">    node has child nodes, the child nodes are inserted in place of the</span>
+<span class="sd">    node.</span>
+
+<span class="sd">    If the parameter ``recursive`` is ``True`` the same will recursively be</span>
+<span class="sd">    done with the child-nodes, first. In other words, all leaves of</span>
+<span class="sd">    this node and its child nodes are collected in-order as direct</span>
+<span class="sd">    children of this node.</span>
+
+<span class="sd">    Applying flatten recursively will result in these kinds of</span>
+<span class="sd">    structural transformation::</span>
+
+<span class="sd">        (1 (+ 2) (+ 3)     -&gt;   (1 + 2 + 3)</span>
+<span class="sd">        (1 (+ (2 + (3))))  -&gt;   (1 + 2 + 3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">new_result</span> <span class="o">=</span> <span class="p">[]</span>     <span class="c1"># type: List[Node]</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">children</span> <span class="ow">and</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">recursive</span><span class="p">:</span>
+                    <span class="n">flatten</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">condition</span><span class="p">,</span> <span class="n">recursive</span><span class="p">)</span>
+                <span class="n">new_result</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">new_result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="collapse"><a class="viewcode-back" href="../ModuleReference.html#transform.collapse">[docs]</a><span class="k">def</span> <span class="nf">collapse</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Collapses all sub-nodes of a node by replacing them with the</span>
+<span class="sd">    string representation of the node.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span></div>
+
+
+<div class="viewcode-block" id="merge_children"><a class="viewcode-back" href="../ModuleReference.html#transform.merge_children">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">merge_children</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tag_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Joins all children next to each other and with particular tag-names</span>
+<span class="sd">    into a single child node with a mock-parser with the name of the</span>
+<span class="sd">    first tag-name in the list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">name</span><span class="p">,</span> <span class="n">ptype</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">tag_names</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">if</span> <span class="n">tag_names</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;:&#39;</span> <span class="k">else</span> <span class="p">(</span><span class="n">tag_names</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">L</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">L</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">tag_names</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="p">(</span><span class="n">k</span> <span class="o">&lt;</span> <span class="n">L</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">tag_names</span>
+                   <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)):</span>
+                <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">L</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Node</span><span class="p">(</span><span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">ptype</span><span class="p">),</span>
+                                   <span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">,</span>
+                                          <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">k</span><span class="p">]))))</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">k</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="replace_content"><a class="viewcode-back" href="../ModuleReference.html#transform.replace_content">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">replace_content</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">):</span>  <span class="c1"># Callable[[Node], ResultType]</span>
+    <span class="sd">&quot;&quot;&quot;Replaces the content of the node. ``func`` takes the node&#39;s result</span>
+<span class="sd">    as an argument an returns the mapped result.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<span class="c1">#######################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># destructive transformations:</span>
+<span class="c1">#</span>
+<span class="c1"># - leaves may be dropped (e.g. if deemed irrelevant)</span>
+<span class="c1"># - errors of dropped leaves will be lost</span>
+<span class="c1"># - no promise that order will be preserved</span>
+<span class="c1">#</span>
+<span class="c1">#######################################################################</span>
+
+
+<div class="viewcode-block" id="lstrip"><a class="viewcode-back" href="../ModuleReference.html#transform.lstrip">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">lstrip</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">is_expendable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Recursively removes all leading child-nodes that fulfill a given condition.&quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">lstrip</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">condition</span><span class="p">)</span>
+        <span class="n">i</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">L</span> <span class="ow">and</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">]]):</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span></div>
+
+
+<div class="viewcode-block" id="rstrip"><a class="viewcode-back" href="../ModuleReference.html#transform.rstrip">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">rstrip</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">is_expendable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Recursively removes all leading nodes that fulfill a given condition.&quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">i</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">L</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">rstrip</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="n">condition</span><span class="p">)</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]]):</span>
+            <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">L</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="strip"><a class="viewcode-back" href="../ModuleReference.html#transform.strip">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">strip</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">is_expendable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes leading and trailing child-nodes that fulfill a given condition.&quot;&quot;&quot;</span>
+    <span class="n">lstrip</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">condition</span><span class="p">)</span>
+    <span class="n">rstrip</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">condition</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="keep_children"><a class="viewcode-back" href="../ModuleReference.html#transform.keep_children">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="nb">slice</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">keep_children</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">section</span><span class="p">:</span> <span class="nb">slice</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Keeps only child-nodes which fall into a slice of the result field.&quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">section</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="keep_children_if"><a class="viewcode-back" href="../ModuleReference.html#transform.keep_children_if">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">keep_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes all children for which `condition()` returns `True`.&quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span> <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="p">[</span><span class="n">c</span><span class="p">]))</span></div>
+
+
+<div class="viewcode-block" id="keep_tokens"><a class="viewcode-back" href="../ModuleReference.html#transform.keep_tokens">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">keep_tokens</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tokens</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">()):</span>
+    <span class="sd">&quot;&quot;&quot;Removes any among a particular set of tokens from the immediate</span>
+<span class="sd">    descendants of a node. If ``tokens`` is the empty set, all tokens</span>
+<span class="sd">    are removed.&quot;&quot;&quot;</span>
+    <span class="n">keep_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="n">is_token</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="n">tokens</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="keep_nodes"><a class="viewcode-back" href="../ModuleReference.html#transform.keep_nodes">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">keep_nodes</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tag_names</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;Removes children by tag name.&quot;&quot;&quot;</span>
+    <span class="n">keep_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="n">is_one_of</span><span class="p">,</span> <span class="n">tag_name_set</span><span class="o">=</span><span class="n">tag_names</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="keep_content"><a class="viewcode-back" href="../ModuleReference.html#transform.keep_content">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">keep_content</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">regexp</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes children depending on their string value.&quot;&quot;&quot;</span>
+    <span class="n">keep_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="n">has_content</span><span class="p">,</span> <span class="n">regexp</span><span class="o">=</span><span class="n">regexp</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="remove_children_if"><a class="viewcode-back" href="../ModuleReference.html#transform.remove_children_if">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">remove_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes all children for which `condition()` returns `True`.&quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span> <span class="o">+</span> <span class="p">[</span><span class="n">c</span><span class="p">]))</span>
+    <span class="k">pass</span></div>
+
+<span class="c1"># @transformation_factory(Callable)</span>
+<span class="c1"># def remove_children(context: List[Node],</span>
+<span class="c1">#                     condition: Callable = TRUE_CONDITION,</span>
+<span class="c1">#                     section: slice = slice(None)):</span>
+<span class="c1">#     &quot;&quot;&quot;Removes all nodes from a slice of the result field if the function</span>
+<span class="c1">#     `condition(child_node)` evaluates to `True`.&quot;&quot;&quot;</span>
+<span class="c1">#     node = context[-1]</span>
+<span class="c1">#     if node.children:</span>
+<span class="c1">#         c = node.children</span>
+<span class="c1">#         N = len(c)</span>
+<span class="c1">#         rng = range(*section.indices(N))</span>
+<span class="c1">#         node.result = tuple(c[i] for i in range(N)</span>
+<span class="c1">#                             if i not in rng or not condition(context + [c[i]]))</span>
+<span class="c1">#         # selection = []</span>
+<span class="c1">#         # for i in range(N):</span>
+<span class="c1">#         #     context.append(c[i])</span>
+<span class="c1">#         #     if not i in rng or not condition(context):</span>
+<span class="c1">#         #         selection.append(c[i])</span>
+<span class="c1">#         #     context.pop()</span>
+<span class="c1">#         # if len(selection) != c:</span>
+<span class="c1">#         #     node.result = tuple(selection)</span>
+
+
+<span class="n">remove_whitespace</span> <span class="o">=</span> <span class="n">remove_children_if</span><span class="p">(</span><span class="n">is_whitespace</span><span class="p">)</span>
+<span class="c1"># partial(remove_children_if, condition=is_whitespace)</span>
+<span class="n">remove_empty</span> <span class="o">=</span> <span class="n">remove_children_if</span><span class="p">(</span><span class="n">is_empty</span><span class="p">)</span>
+<span class="n">remove_anonymous_empty</span> <span class="o">=</span> <span class="n">remove_children_if</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">is_empty</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_anonymous</span><span class="p">(</span><span class="n">ctx</span><span class="p">))</span>
+<span class="n">remove_expendables</span> <span class="o">=</span> <span class="n">remove_children_if</span><span class="p">(</span><span class="n">is_expendable</span><span class="p">)</span>
+<span class="c1"># partial(remove_children_if, condition=is_expendable)</span>
+<span class="n">remove_anonymous_expendables</span> <span class="o">=</span> <span class="n">remove_children_if</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">is_anonymous</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>
+                                                  <span class="ow">and</span> <span class="n">is_expendable</span><span class="p">(</span><span class="n">ctx</span><span class="p">))</span>
+<span class="n">remove_anonymous_tokens</span> <span class="o">=</span> <span class="n">remove_children_if</span><span class="p">(</span><span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">is_token</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_anonymous</span><span class="p">(</span><span class="n">ctx</span><span class="p">))</span>
+<span class="n">remove_first</span> <span class="o">=</span> <span class="n">apply_if</span><span class="p">(</span><span class="n">keep_children</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span> <span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ctx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">remove_last</span> <span class="o">=</span> <span class="n">apply_if</span><span class="p">(</span><span class="n">keep_children</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)),</span> <span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ctx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">remove_brackets</span> <span class="o">=</span> <span class="n">apply_if</span><span class="p">(</span><span class="n">keep_children</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)),</span> <span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ctx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">remove_infix_operator</span> <span class="o">=</span> <span class="n">keep_children</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">remove_single_child</span> <span class="o">=</span> <span class="n">apply_if</span><span class="p">(</span><span class="n">keep_children</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="k">lambda</span> <span class="n">ctx</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ctx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="remove_tokens"><a class="viewcode-back" href="../ModuleReference.html#transform.remove_tokens">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">remove_tokens</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tokens</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">()):</span>
+    <span class="sd">&quot;&quot;&quot;Removes any among a particular set of tokens from the immediate</span>
+<span class="sd">    descendants of a node. If ``tokens`` is the empty set, all tokens</span>
+<span class="sd">    are removed.&quot;&quot;&quot;</span>
+    <span class="n">remove_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="n">is_token</span><span class="p">,</span> <span class="n">tokens</span><span class="o">=</span><span class="n">tokens</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="remove_nodes"><a class="viewcode-back" href="../ModuleReference.html#transform.remove_nodes">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">remove_nodes</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">tag_names</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;Removes children by tag name.&quot;&quot;&quot;</span>
+    <span class="n">remove_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="n">is_one_of</span><span class="p">,</span> <span class="n">tag_name_set</span><span class="o">=</span><span class="n">tag_names</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="remove_content"><a class="viewcode-back" href="../ModuleReference.html#transform.remove_content">[docs]</a><span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">remove_content</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">regexp</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes children depending on their string value.&quot;&quot;&quot;</span>
+    <span class="n">remove_children_if</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="n">has_content</span><span class="p">,</span> <span class="n">regexp</span><span class="o">=</span><span class="n">regexp</span><span class="p">))</span></div>
+
+
+<span class="c1">########################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># AST semantic validation functions (EXPERIMENTAL!!!)</span>
+<span class="c1">#</span>
+<span class="c1">########################################################################</span>
+
+<div class="viewcode-block" id="assert_condition"><a class="viewcode-back" href="../ModuleReference.html#transform.assert_condition">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">assert_condition</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks for `condition`; adds an error message if condition is not met.&quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">error_msg</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">error_msg</span> <span class="o">%</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span> <span class="k">if</span> <span class="n">error_msg</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">error_msg</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cond_name</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="s1">&#39;__name__&#39;</span><span class="p">)</span> \
+                        <span class="k">else</span> <span class="n">condition</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="s1">&#39;__class__&#39;</span><span class="p">)</span> \
+                        <span class="k">else</span> <span class="s1">&#39;&lt;unknown&gt;&#39;</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;transform.assert_condition: Failed to meet condition &quot;</span> <span class="o">+</span> <span class="n">cond_name</span><span class="p">)</span></div>
+
+
+<span class="n">assert_has_children</span> <span class="o">=</span> <span class="n">assert_condition</span><span class="p">(</span><span class="k">lambda</span> <span class="n">nd</span><span class="p">:</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">,</span> <span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; has no children&#39;</span><span class="p">)</span>
+
+
+<span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">assert_content</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">regexp</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_content</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">regexp</span><span class="p">):</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; violates </span><span class="si">%s</span><span class="s1"> on </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
+                       <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">regexp</span><span class="p">),</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span><span class="p">))</span>
+
+
+<span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">require</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">child_tags</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">child_tags</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; is not allowed inside &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span>
+                           <span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+
+<span class="nd">@transformation_factory</span>
+<span class="k">def</span> <span class="nf">forbid</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">child_tags</span><span class="p">:</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">child_tags</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; cannot be nested inside &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span>
+                           <span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Eckhart Arnold.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.8',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

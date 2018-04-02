@@ -1,8 +1,6 @@
 Introduction to [DHParser](https://gitlab.lrz.de/badw-it/DHParser)
 ==================================================================
 
-*This is just an appetizer. Full documentation coming soon...*
-
 Motto: **Computers enjoy XML, humans don't.**
 
 Why use domain specific languages in the humanities
@@ -160,19 +158,19 @@ The output will be something like this:
 
 Now, you might notice that this is not exactly the XML-encoding as shown
 above. (Can you spot the differences?) But you will probably believe me
-without further proof that it can easily be converted into the other
-version and contains all the information that the other version contains.
+without further proof that it can easily be converted into the other version
+and contains all the information that the other version contains.
 
 How does DHParser achieve this? Well, there is the rub. In order to convert
 the poem in the domain specific version into the XML-version, DHParser
-requires a structural description of the domain specific encoding. This
-is a bit similar to a document type definition (DTD) in XML. This
-structural description uses a slightly enhanced version of the
-[Extended-Backus-Naur-Form (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form),
-which is a well-established formalism for the structural description of
-formal languages in computer sciences. An excerpt of the EBNF-definition
-of our domain-specific encoding for the poem looks like this. (We leave out
-the meta-data here. See
+requires a structural description of the domain specific encoding. This is a
+bit similar to a document type definition (DTD) in XML. This structural
+description uses a slightly enhanced version of the [Extended-Backus-Naur-Form
+(EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form),
+which is a well-established formalism for the structural description of formal
+languages in computer sciences. An excerpt of the EBNF-definition of our
+domain-specific encoding for the poem looks like this. (We leave out the
+meta-data here. See
 [`examples/Tutorial/Lyrik.ebnf`](https://gitlab.lrz.de/badw-it/DHParser/blob/master/examples/Tutorial/Lyrik.ebnf)
 for the full EBNF):
 
@@ -192,48 +190,53 @@ for the full EBNF):
 
 Without going into too much detail here, let me just explain a few basics of
 this formal description: The slashes `/` enclose ordinary regular expressions.
-Thus, `NZ` for ("Neue Zeile", German for: "new line") is defined as `/\n/~` which
-is the newline-token `\n` in a regular expression, plus further horizontal
-whitespace (signified by the tilde `~`), if there is any.
+Thus, `NZ` for ("Neue Zeile", German for: "new line") is defined as `/\n/~`
+which is the newline-token `\n` in a regular expression, plus further
+horizontal whitespace (signified by the tilde `~`), if there is any.
 
-The braces `{` `}` enclose items that can be repeated zero or more times; with a
-`+` appended to the closing brace it means one or more times. Now, look at the
-definition of `text` in the 6th line: `{ strophe {LEERZEILE} }+`. This reads as
-follows: The text of the poem consists of a sequence of stanzas, each of which
-is followed by a sequence of empty lines (German: "Leerzeilen"). If you now look
-at the structural definition of a stanza, you find that it consists of a sequence
-of verses, each of which starts, i.e. is preceded by a new line.
+The braces `{` `}` enclose items that can be repeated zero or more times; with
+a `+` appended to the closing brace it means one or more times. Now, look at
+the definition of `text` in the 6th line: `{ strophe {LEERZEILE} }+`. This
+reads as follows: The text of the poem consists of a sequence of stanzas, each
+of which is followed by a sequence of empty lines (German: "Leerzeilen"). If
+you now look at the structural definition of a stanza, you find that it
+consists of a sequence of verses, each of which starts, i.e. is preceded by a
+new line.
 
-Can you figure out the rest? Hint: The angular brackets `[` and `]` mean that and
-item is optional and the `§` sign means that it is obligatory. (Strictly speaking,
-the §-signs are not necessary, because an item that is not optional is always
-obligatory, but the §-signs help the converter to produce more useful error
-messages.)
+Can you figure out the rest? Hint: The angular brackets `[` and `]` mean that
+and item is optional and the `§` sign means that it is obligatory. (Strictly
+speaking, the §-signs are not necessary, because an item that is not optional
+is always obligatory, but the §-signs help the converter to produce more
+useful error messages.)
 
 This should be enough for an introduction to the purpose of DSLs in the
-humanities. It has shown the probably most important use case of
-DHParser, i.e. as a frontend-technology form XML-encodings. Of course,
-it can just as well be used as a frontend for any other kind of
-structured data, like SQL or graph-structured data. The latter is by the
-way is a very reasonable alternative to XML for edition projects with a
-complex transmission history. See Andreas Kuczera's Blog-entry on
-["Graphdatenbanken für Historiker"](http://mittelalter.hypotheses.org/5995).
-
+humanities. It has shown the probably most important use case of DHParser,
+i.e. as a frontend-technology form XML-encodings. Of course, it can just as
+well be used as a frontend for any other kind of structured data, like SQL or
+graph-structured data. The latter is by the way is a very reasonable
+alternative to XML for edition projects with a complex transmission history.
+See Andreas Kuczera's Blog-entry on ["Graphdatenbanken für
+Historiker"](http://mittelalter.hypotheses.org/5995).
 
 Tutorial: First Steps with DHParser
 -----------------------------------
 
-Disclaimer: *You'll need to be able to use a shell and have some basic
-knowledge of Python programming to be able to follow this section!*
+*You'll need to be able to use a shell and have some basic knowledge of Python
+programming to be able to follow this section!* Also, you need to have
+[git](https://git-scm.com/) and [python 3](https://www.python.org/) installed
+on you system. It is important that you have at least python version 3.5.
+DHParser will not work with python 2. You can simply start python to find out
+which version you have got.
 
 In order to try the example above, you should fetch DHParsers from its
-git-repository:
+git-repository. Open a shell and type:
 
     $ git clone git@gitlab.lrz.de:badw-it/DHParser.git
 
-Now, if you enter the repo, you'll find three subdirectories:
+Now, if you enter the repo, you'll find among others these subdirectories:
 
     DHParser
+    documentation
     examples
     test
 
@@ -266,7 +269,7 @@ generated file that contains the actual parser. All other parts - we
 will come to that later what these are - can safely be edited by you.
 Now just run `recompile_grammar.py` from the command line:
 
-    $ python3 recompile_grammar.py
+    $ python recompile_grammar.py
 
 You'll find that `recompile_grammar.py` has generated a new script with
 the name `LyrikCompiler.py`. This script contains the Parser for the
@@ -274,7 +277,7 @@ the name `LyrikCompiler.py`. This script contains the Parser for the
 rather, a DSL-whatever compiler), which you can later fill in. Now let's
 see how this script works:
 
-    $ python3 LyrikCompiler.py Lyrisches_Intermezzo_IV.txt >result.xml
+    $ python LyrikCompiler.py Lyrisches_Intermezzo_IV.txt >result.xml
 
 The file `Lyrisches_Intermezzo_IV.txt` contains the fourth part of
 Heinrich Heine's Lyrisches Intermezzo encoded in our own human-readable
@@ -315,7 +318,6 @@ recognizable!) first verse of the poem:
         </ZEICHENFOLGE>
     </vers>
     ...
-
 
 How come it is so obfuscated, and where do all those pseudo-tags like
 `<:RegExp>` and `<:Whitespace>` come from? Well, this is probably the
@@ -390,8 +392,7 @@ keeps the specification of the AST-transformation simple and concise. At
 the same, we avoid adding hints for the AST-transformation in the
 grammar specification, which would render the grammar less readable.
 
-Next, I am going to explain step by step, how a domain specific language
-for poems like Heine's Lyrisches Intermezzo can be designed, specified,
-compiled and tested.
-
-*to be continued, stay tuned...*
+Now that you have seen how DHParser basically works, it is time to go
+through the process of desining and testing a domain specific notation
+step by step from the very start. Head over to the documentation in
+subdirectory and read the step by step guide.

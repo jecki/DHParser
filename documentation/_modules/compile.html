@@ -1,0 +1,488 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>compile &mdash; DHParser 0.8 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DHParser
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../StepByStepGuide.html">DHParser’s Step by Step Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../UserGuide.html">DHParser User’s Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ReferenceManual.html">DHParser Reference Manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ModuleReference.html">Module Reference</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DHParser</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>compile</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for compile</h1><div class="highlight"><pre>
+<span></span><span class="c1"># compile.py - Syntax driven compilation support for DHParser</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2016  by Eckhart Arnold (arnold@badw.de)</span>
+<span class="c1">#                 Bavarian Academy of Sciences an Humanities (badw.de)</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or</span>
+<span class="c1"># implied.  See the License for the specific language governing</span>
+<span class="c1"># permissions and limitations under the License.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module ``compile`` contains a skeleton class for syntax</span>
+<span class="sd">driven compilation support. Class ``Compiler`` can serve as base</span>
+<span class="sd">class for a compiler. Compiler objects</span>
+<span class="sd">are callable an receive the Abstract syntax tree (AST)</span>
+<span class="sd">as argument and yield whatever output the compiler produces. In</span>
+<span class="sd">most Digital Humanities applications this will be</span>
+<span class="sd">XML-code. However, it can also be anything else, like binary</span>
+<span class="sd">code or, as in the case of DHParser&#39;s EBNF-compiler, Python</span>
+<span class="sd">source code.</span>
+
+<span class="sd">Function ``compile_source`` invokes all stages of the compilation</span>
+<span class="sd">process, i.e. pre-processing, parsing, CST to AST-transformation</span>
+<span class="sd">and compilation.</span>
+
+<span class="sd">See module ``ebnf`` for a sample of the implementation of a</span>
+<span class="sd">compiler object.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">DHParser.preprocess</span> <span class="k">import</span> <span class="n">strip_tokens</span><span class="p">,</span> <span class="n">with_source_mapping</span><span class="p">,</span> <span class="n">PreprocessorFunc</span>
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span>
+<span class="kn">from</span> <span class="nn">DHParser.transform</span> <span class="k">import</span> <span class="n">TransformationFunc</span>
+<span class="kn">from</span> <span class="nn">DHParser.parse</span> <span class="k">import</span> <span class="n">Grammar</span>
+<span class="kn">from</span> <span class="nn">DHParser.error</span> <span class="k">import</span> <span class="n">adjust_error_locations</span><span class="p">,</span> <span class="n">is_error</span><span class="p">,</span> <span class="n">Error</span>
+<span class="kn">from</span> <span class="nn">DHParser.log</span> <span class="k">import</span> <span class="n">log_parsing_history</span><span class="p">,</span> <span class="n">log_ST</span><span class="p">,</span> <span class="n">is_logging</span><span class="p">,</span> <span class="n">logfile_basename</span>
+<span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">typing</span><span class="p">,</span> <span class="n">sane_parser_name</span><span class="p">,</span> <span class="n">load_if_file</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;CompilerError&#39;</span><span class="p">,</span> <span class="s1">&#39;Compiler&#39;</span><span class="p">,</span> <span class="s1">&#39;compile_source&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CompilerError"><a class="viewcode-back" href="../ModuleReference.html#compile.CompilerError">[docs]</a><span class="k">class</span> <span class="nc">CompilerError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Exception raised when an error of the compiler itself is detected.</span>
+<span class="sd">    Compiler errors are not to be confused with errors in the source</span>
+<span class="sd">    code to be compiled, which do not raise Exceptions but are merely</span>
+<span class="sd">    reported as an error.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="Compiler"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler">[docs]</a><span class="k">class</span> <span class="nc">Compiler</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class Compiler is the abstract base class for compilers. Compiler</span>
+<span class="sd">    objects are callable and take the root node of the abstract</span>
+<span class="sd">    syntax tree (AST) as argument and return the compiled code in a</span>
+<span class="sd">    format chosen by the compiler itself.</span>
+
+<span class="sd">    Subclasses implementing a compiler must define `on_XXX()`-methods</span>
+<span class="sd">    for each node name that can occur in the AST where &#39;XXX&#39; is the</span>
+<span class="sd">    node&#39;s name(for unnamed nodes it is the node&#39;s ptype without the</span>
+<span class="sd">    leading colon &#39;:&#39;).</span>
+
+<span class="sd">    These compiler methods take the node on which they are run as</span>
+<span class="sd">    argument. Other than in the AST transformation, which runs depth-first,</span>
+<span class="sd">    compiler methods are called forward moving starting with the root</span>
+<span class="sd">    node, and they are responsible for compiling the child nodes</span>
+<span class="sd">    themselves. This should be done by invoking the `compile(node)`-</span>
+<span class="sd">    method which will pick the right `on_XXX`-method. It is not</span>
+<span class="sd">    recommended to call the `on_XXX`-methods directly.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        context:  A list of parent nodes that ends with the currently</span>
+<span class="sd">                compiled node.</span>
+<span class="sd">        grammar_name:  The name of the grammar this compiler is related to</span>
+<span class="sd">        grammar_source:  The source code of the grammar this compiler is</span>
+<span class="sd">                related to.</span>
+<span class="sd">        _dirty_flag:  A flag indicating that the compiler has already been</span>
+<span class="sd">                called at least once and that therefore all compilation</span>
+<span class="sd">                variables must be reset when it is called again.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grammar_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_grammar_name</span><span class="p">(</span><span class="n">grammar_name</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># type: List[Node]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compiles the abstract syntax tree with the root node `node` and</span>
+<span class="sd">        returns the compiled code. It is up to subclasses implementing</span>
+<span class="sd">        the compiler to determine the format of the returned data.</span>
+<span class="sd">        (This very much depends on the kind and purpose of the</span>
+<span class="sd">        implemented compiler.)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">propagate_error_flags</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="Compiler.set_grammar_name"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.set_grammar_name">[docs]</a>    <span class="k">def</span> <span class="nf">set_grammar_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grammar_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Changes the grammar&#39;s name and the grammar&#39;s source.</span>
+
+<span class="sd">        The grammar name and the source text of the grammar are</span>
+<span class="sd">        metadata about the grammar that do not affect the compilation</span>
+<span class="sd">        process. Classes inheriting from `Compiler` can use this</span>
+<span class="sd">        information to name and annotate its output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">grammar_name</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\w+\Z&#39;</span><span class="p">,</span> <span class="n">grammar_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">grammar_name</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[\w/:</span><span class="se">\\</span><span class="s1">]+&#39;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">):</span>
+            <span class="n">grammar_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">grammar_source</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">=</span> <span class="n">grammar_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span> <span class="o">=</span> <span class="n">load_if_file</span><span class="p">(</span><span class="n">grammar_source</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Compiler.propagate_error_flags"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.propagate_error_flags">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">propagate_error_flags</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># See test_parser.TestCompilerClass.test_propagate_error()..</span>
+        <span class="sd">&quot;&quot;&quot;Propagates error flags from children to parent nodes to make sure</span>
+<span class="sd">        that the parent&#39;s error flag is always greater or equal the maximum</span>
+<span class="sd">        of the children&#39;s error flags.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">lazy</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">&lt;</span> <span class="n">Error</span><span class="o">.</span><span class="n">HIGHEST</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                <span class="n">Compiler</span><span class="o">.</span><span class="n">propagate_error_flags</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">lazy</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">&gt;=</span> <span class="n">Error</span><span class="o">.</span><span class="n">HIGHEST</span><span class="p">:</span>
+                    <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Compiler.method_name"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.method_name">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">method_name</span><span class="p">(</span><span class="n">node_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Returns the method name for `node_name`, e.g.::</span>
+
+<span class="sd">            &gt;&gt;&gt; Compiler.method_name(&#39;expression&#39;)</span>
+<span class="sd">            &#39;on_expression&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;on_&#39;</span> <span class="o">+</span> <span class="n">node_name</span></div>
+
+<div class="viewcode-block" id="Compiler.fallback_compiler"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.fallback_compiler">[docs]</a>    <span class="k">def</span> <span class="nf">fallback_compiler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;This is a generic compiler function which will be called on</span>
+<span class="sd">        all those node types for which no compiler method `on_XXX` has</span>
+<span class="sd">        been defined.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">nd</span><span class="p">)</span> <span class="k">for</span> <span class="n">nd</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">node</span></div>
+
+<div class="viewcode-block" id="Compiler.compile"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.compile">[docs]</a>    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calls the compilation method for the given node and returns the</span>
+<span class="sd">        result of the compilation.</span>
+
+<span class="sd">        The method&#39;s name is derived from either the node&#39;s parser</span>
+<span class="sd">        name or, if the parser is anonymous, the node&#39;s parser&#39;s class</span>
+<span class="sd">        name by adding the prefix ``on_``.</span>
+
+<span class="sd">        Note that ``compile`` does not call any compilation functions</span>
+<span class="sd">        for the parsers of the sub nodes by itself. Rather, this should</span>
+<span class="sd">        be done within the compilation methods.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elem</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sane_parser_name</span><span class="p">(</span><span class="n">elem</span><span class="p">):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;Reserved name &#39;</span><span class="si">%s</span><span class="s2">&#39; not allowed as parser &quot;</span>
+                           <span class="s2">&quot;name! &quot;</span> <span class="o">%</span> <span class="n">elem</span> <span class="o">+</span> <span class="s2">&quot;(Any name starting with &quot;</span>
+                           <span class="s2">&quot;&#39;_&#39; or &#39;__&#39; or ending with &#39;__&#39; is reserved.)&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">compiler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">method_name</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="n">compiler</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fallback_compiler</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">compiler</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">CompilerError</span><span class="p">(</span><span class="s1">&#39;Method on_</span><span class="si">%s</span><span class="s1"> returned `None` instead of a &#39;</span>
+                                    <span class="s1">&#39;valid compilation result!&#39;</span> <span class="o">%</span> <span class="n">elem</span><span class="p">)</span>
+            <span class="c1"># # the following statement makes sure that the error_flag</span>
+            <span class="c1"># # is propagated early on. Otherwise it is redundant, because</span>
+            <span class="c1"># # the __call__ method globally propagates the node&#39;s error_flag</span>
+            <span class="c1"># # later anyway. So, maybe it could be removed here.</span>
+            <span class="c1"># for child in node.children:</span>
+            <span class="c1">#     node.error_flag = node.error_flag or child.error_flag</span>
+            <span class="k">return</span> <span class="n">result</span></div></div>
+
+
+<div class="viewcode-block" id="compile_source"><a class="viewcode-back" href="../ModuleReference.html#compile.compile_source">[docs]</a><span class="k">def</span> <span class="nf">compile_source</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">preprocessor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PreprocessorFunc</span><span class="p">],</span>  <span class="c1"># str -&gt; str</span>
+                   <span class="n">parser</span><span class="p">:</span> <span class="n">Grammar</span><span class="p">,</span>  <span class="c1"># str -&gt; Node (concrete syntax tree (CST))</span>
+                   <span class="n">transformer</span><span class="p">:</span> <span class="n">TransformationFunc</span><span class="p">,</span>  <span class="c1"># Node -&gt; Node (abstract syntax tree (AST))</span>
+                   <span class="n">compiler</span><span class="p">:</span> <span class="n">Compiler</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Error</span><span class="p">],</span> <span class="n">Node</span><span class="p">]:</span>  <span class="c1"># Node (AST) -&gt; Any</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compiles a source in four stages:</span>
+<span class="sd">    1. Pre-Processing (if needed)</span>
+<span class="sd">    2. Parsing</span>
+<span class="sd">    3. AST-transformation</span>
+<span class="sd">    4. Compiling.</span>
+
+<span class="sd">    The compilations stage is only invoked if no errors occurred in</span>
+<span class="sd">    either of the two previous stages.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        source (str): The input text for compilation or a the name of a</span>
+<span class="sd">            file containing the input text.</span>
+<span class="sd">        preprocessor (function):  text -&gt; text. A preprocessor function</span>
+<span class="sd">            or None, if no preprocessor is needed.</span>
+<span class="sd">        parser (function):  A parsing function or grammar class</span>
+<span class="sd">        transformer (function):  A transformation function that takes</span>
+<span class="sd">            the root-node of the concrete syntax tree as an argument and</span>
+<span class="sd">            transforms it (in place) into an abstract syntax tree.</span>
+<span class="sd">        compiler (function): A compiler function or compiler class</span>
+<span class="sd">            instance</span>
+
+<span class="sd">    Returns (tuple):</span>
+<span class="sd">        The result of the compilation as a 3-tuple</span>
+<span class="sd">        (result, errors, abstract syntax tree). In detail:</span>
+<span class="sd">        1. The result as returned by the compiler or ``None`` in case of failure</span>
+<span class="sd">        2. A list of error or warning messages</span>
+<span class="sd">        3. The root-node of the abstract syntax tree</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">original_text</span> <span class="o">=</span> <span class="n">load_if_file</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="n">log_file_name</span> <span class="o">=</span> <span class="n">logfile_basename</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">compiler</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">preprocessor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">source_text</span> <span class="o">=</span> <span class="n">original_text</span>
+        <span class="n">source_mapping</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">source_text</span><span class="p">,</span> <span class="n">source_mapping</span> <span class="o">=</span> <span class="n">with_source_mapping</span><span class="p">(</span><span class="n">preprocessor</span><span class="p">(</span><span class="n">original_text</span><span class="p">))</span>
+    <span class="n">syntax_tree</span> <span class="o">=</span> <span class="n">parser</span><span class="p">(</span><span class="n">source_text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_logging</span><span class="p">():</span>
+        <span class="n">log_ST</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;.cst&#39;</span><span class="p">)</span>
+        <span class="n">log_parsing_history</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">log_file_name</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">is_error</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">)</span> <span class="o">==</span> <span class="n">strip_tokens</span><span class="p">(</span><span class="n">source_text</span><span class="p">)</span>
+    <span class="c1"># only compile if there were no syntax errors, for otherwise it is</span>
+    <span class="c1"># likely that error list gets littered with compile error messages</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">efl</span> <span class="o">=</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span>
+    <span class="n">messages</span> <span class="o">=</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(</span><span class="n">clear_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_error</span><span class="p">(</span><span class="n">efl</span><span class="p">):</span>
+        <span class="n">transformer</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">)</span>
+        <span class="n">efl</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">efl</span><span class="p">,</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(</span><span class="n">clear_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">is_logging</span><span class="p">():</span>
+            <span class="n">log_ST</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;.ast&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_error</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">compiler</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">)</span>
+        <span class="c1"># print(syntax_tree.as_sxpr())</span>
+        <span class="n">messages</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">())</span>
+        <span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">efl</span><span class="p">)</span>
+
+    <span class="n">adjust_error_locations</span><span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="n">original_text</span><span class="p">,</span> <span class="n">source_mapping</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">syntax_tree</span></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Eckhart Arnold.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.8',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

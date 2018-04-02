@@ -41,7 +41,6 @@ def recompile_grammar(grammar_src, force):
 
 def run_grammar_tests(glob_pattern):
     with DHParser.log.logging(False):
-        print(glob_pattern)
         error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
             fn_patterns=[glob_pattern], report=True, verbose=True)
     return error_report
@@ -52,7 +51,7 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar('LaTeX.ebnf', force=False)
+        recompile_grammar('LaTeX.ebnf', force=True)
         sys.path.append('.')
         from LaTeXCompiler import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)
@@ -61,3 +60,4 @@ if __name__ == '__main__':
             print(error_report)
             sys.exit(1)
         print('ready.')
+
