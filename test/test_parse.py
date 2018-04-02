@@ -36,7 +36,7 @@ from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
 
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion1(self):
-        minilang =""" 
+        minilang ="""
             expr = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
@@ -99,7 +99,7 @@ class TestInfiLoopsAndRecursion:
 class TestFlowControl:
     def setup(self):
         self.t1 = """
-        All work and no play 
+        All work and no play
         makes Jack a dull boy
         END
         """
@@ -363,7 +363,7 @@ class TestPopRetrieve:
         codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
         delimiter      = delimiter_sign  # never use delimiter between capture and pop except for retrival!
         delimiter_sign = /`+/
-        text           = /[^`]+/ 
+        text           = /[^`]+/
         """
     mini_lang2 = """
         @braces_filter=counterpart
@@ -379,7 +379,7 @@ class TestPopRetrieve:
         env            = (specialtag | opentag) text [closespecial | closetag]
         opentag        = "<" name ">"
         specialtag     = "<" /ABC/ !name ">"
-        closetag       = close_slash | close_star 
+        closetag       = close_slash | close_star
         close_slash    = "<" ::name "/>"
         close_star     = "<" ::name "*>"
         closespecial   = "<" /ABC/~ ">"

@@ -24,7 +24,7 @@ import os
 import sys
 
 from DHParser.compile import compile_source
-from DHParser.dsl import compileDSL, compile_on_disk
+from DHParser.dsl import compileDSL, compile_on_disk, recompile_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import logging
 from DHParser.toolkit import re
@@ -208,8 +208,12 @@ def create_project(path: str):
                 GRAMMAR_TEST_TEMPLATE.format(name=name, dhparserdir=dhparserdir))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
+    # The following is left to the user as an exercise
+    # print('Creating file "%s".' % (name + 'Compiler.py'))
+    # recompile_grammar(name + '.ebnf', force=True)
+    print('\nNow generate a DSL compiler from the EBNF-grammar by running\n'
+          '\n    python tst_%s_gramar.py\n' % name)
     os.chdir(curr_dir)
-    print('ready.\n')
 
 
 def selftest() -> bool:
