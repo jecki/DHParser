@@ -80,7 +80,7 @@ from functools import partial
 import os
 import sys
 
-sys.path.append('{dhparserdir}')
+sys.path.append(r'{dhparserdir}')
 
 try:
     import regex as re
@@ -315,7 +315,8 @@ def load_compiler_suite(compiler_suite: str) -> \
     and returns it as a tuple (preprocessor, parser, ast, compiler).
 
     Returns:
-        4-tuple (preprocessor function, parser class, ast transformer function, compiler class)
+        4-tuple (preprocessor function, parser class,
+                 ast transformer function, compiler class)
     """
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)

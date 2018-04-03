@@ -116,7 +116,7 @@ GRAMMAR_TEST_TEMPLATE = r'''#!/usr/bin/python3
 import os
 import sys
 
-sys.path.append('{dhparserdir}')
+sys.path.append(r'{dhparserdir}')
 
 scriptpath = os.path.dirname(__file__)
 
@@ -176,7 +176,7 @@ def create_project(path: str):
         """Create a file with `name` and write `content` to file."""
         if not os.path.exists(name):
             print('Creating file "%s".' % name)
-            with open(name, 'w') as f:
+            with open(name, 'w', encoding='utf-8') as f:
                 f.write(content)
         else:
             print('"%s" already exists! Not overwritten.' % name)

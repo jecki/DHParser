@@ -110,6 +110,7 @@ class StringView(collections.abc.Sized):
         return self.len
 
     def __str__(self):
+        # PERFORMANCE WARNING: This creates a copy of the string-slice
         if self.fullstring_flag:  # optimization: avoid slicing/copying
             return self.text
         # since the slice is being copyied now, anyway, the copy might

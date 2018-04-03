@@ -1885,5 +1885,3 @@ class Forward(Parser):
             return True
         return False
 
-
-
