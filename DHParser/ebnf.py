@@ -486,10 +486,10 @@ class EBNFCompiler(Compiler):
             method_name = Compiler.method_name(name)
             if name == self.root_symbol:
                 compiler += ['    def ' + method_name + '(self, node):',
-                             '        return node', '']
+                             '        return self.fallback_compiler(node)', '']
             else:
                 compiler += ['    # def ' + method_name + '(self, node):',
-                             '    #     return node', '']
+                             '    #     return self.fallback_compiler(node)', '']
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
