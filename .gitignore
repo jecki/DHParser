@@ -42,3 +42,5 @@ examples/Tutorial/LyrikCompiler.py
 _build
 _static
 _templates
+.vs
+OLDSTUFF

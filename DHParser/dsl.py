@@ -99,7 +99,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, \\
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \\
-    remove_anonymous_empty, keep_nodes, traverse_locally, strip
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip
 '''.format(dhparserdir=dhparserdir)
 
 
