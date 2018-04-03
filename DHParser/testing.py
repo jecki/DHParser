@@ -298,7 +298,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 cst = Node(ZOMBIE_PARSER, "").add_error(str(upe)).init_pos(0)
-            clean_test_name = test_name.replace('*', '')
+            clean_test_name = str(test_name).replace('*', '')
             log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
@@ -366,8 +366,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
 
 
 def reset_unit(test_unit):
-    """Resets the tests in ``test_unit`` by removing all results and
-    error messages."""
+    """
+    Resets the tests in ``test_unit`` by removing all results and error
+    messages.
+    """
     for parser, tests in test_unit.items():
         for key in list(tests.keys()):
             if key not in UNIT_STAGES:

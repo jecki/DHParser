@@ -63,12 +63,12 @@ a few drawbacks to this approach:
 
 On the other hand, there are good reasons why XML is used in the
 humanities: Important encoding standards like
-[TEI-XML](http://www.tei-c.org/index.xml) are defined in
-XML. Its strict syntax and the possibility to check data against
-schema help to detect and avoiding encoding errors. If the schema is
-well-defined, it is unambiguous, and it is easy to parse for a computer.
-Most of these advantages, however, are on a technical level and few of
-them are actually exclusive advantages of XML.
+[TEI-XML](http://www.tei-c.org/index.xml) are defined in XML. Its strict
+syntax and the possibility to check data against schema help to detect
+and avoiding encoding errors. If the schema is well-defined, it is
+unambiguous, and it is easy to parse for a computer. Most of these
+advantages, however, are on a technical level and few of them are
+actually exclusive advantages of XML.
 
 All in all this means, that while XML is a solid back-end-technology, it
 still is a pain to work with XML as a frontend-technology. This is where
@@ -107,11 +107,11 @@ same information as the XML version. How, for example, would the
 computer know for sure where a verse starts and ends or a stanza or what
 is title and what stanza? Well, for all these matters there exist
 conventions that poets have been using for several thousand years. For
-example, a verse always starts and ends on the same line. There
-is always a gap between stanzas. And the title is always written above
-the poem and not in the middle of it. So, if there is a title at all, we
-can be sure that what is written in the first line is the title and not
-a stanza.
+example, a verse always starts and ends on the same line. There is
+always a gap between stanzas. And the title is always written above the
+poem and not in the middle of it. So, if there is a title at all, we can
+be sure that what is written in the first line is the title and not a
+stanza.
 
 DHParser is able to exploit all those hints in order to gather much the
 same information as was encoded in the XML-Version. Don't believe it?
@@ -119,8 +119,8 @@ You can try: Download DHParser from the
 [gitlab-repository](https://gitlab.lrz.de/badw-it/DHParser) and enter
 the directory `examples/Tutorial` on the command line interface (shell).
 Just run `python LyrikCompiler_example.py` (you need to have installed
-[Python](https://www.python.org/) Version 3.4 or higher on your computer).
-The output will be something like this:
+[Python](https://www.python.org/) Version 3.4 or higher on your
+computer). The output will be something like this:
 
     <gedicht>
         <bibliographisches>
@@ -158,19 +158,21 @@ The output will be something like this:
 
 Now, you might notice that this is not exactly the XML-encoding as shown
 above. (Can you spot the differences?) But you will probably believe me
-without further proof that it can easily be converted into the other version
-and contains all the information that the other version contains.
+without further proof that it can easily be converted into the other
+version and contains all the information that the other version
+contains.
 
-How does DHParser achieve this? Well, there is the rub. In order to convert
-the poem in the domain specific version into the XML-version, DHParser
-requires a structural description of the domain specific encoding. This is a
-bit similar to a document type definition (DTD) in XML. This structural
-description uses a slightly enhanced version of the [Extended-Backus-Naur-Form
+How does DHParser achieve this? Well, there is the rub. In order to
+convert the poem in the domain specific version into the XML-version,
+DHParser requires a structural description of the domain specific
+encoding. This is a bit similar to a document type definition (DTD) in
+XML. This structural description uses a slightly enhanced version of the
+[Extended-Backus-Naur-Form
 (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form),
-which is a well-established formalism for the structural description of formal
-languages in computer sciences. An excerpt of the EBNF-definition of our
-domain-specific encoding for the poem looks like this. (We leave out the
-meta-data here. See
+which is a well-established formalism for the structural description of
+formal languages in computer sciences. An excerpt of the EBNF-definition
+of our domain-specific encoding for the poem looks like this. (We leave
+out the meta-data here. See
 [`examples/Tutorial/Lyrik.ebnf`](https://gitlab.lrz.de/badw-it/DHParser/blob/master/examples/Tutorial/Lyrik.ebnf)
 for the full EBNF):
 
@@ -188,45 +190,47 @@ for the full EBNF):
     LEERZEILE         = /\n[ \t]*(?=\n)/~
     ENDE              = !/./
 
-Without going into too much detail here, let me just explain a few basics of
-this formal description: The slashes `/` enclose ordinary regular expressions.
-Thus, `NZ` for ("Neue Zeile", German for: "new line") is defined as `/\n/~`
-which is the newline-token `\n` in a regular expression, plus further
-horizontal whitespace (signified by the tilde `~`), if there is any.
+Without going into too much detail here, let me just explain a few
+basics of this formal description: The slashes `/` enclose ordinary
+regular expressions. Thus, `NZ` for ("Neue Zeile", German for: "new
+line") is defined as `/\n/~` which is the newline-token `\n` in a
+regular expression, plus further horizontal whitespace (signified by the
+tilde `~`), if there is any.
 
-The braces `{` `}` enclose items that can be repeated zero or more times; with
-a `+` appended to the closing brace it means one or more times. Now, look at
-the definition of `text` in the 6th line: `{ strophe {LEERZEILE} }+`. This
-reads as follows: The text of the poem consists of a sequence of stanzas, each
-of which is followed by a sequence of empty lines (German: "Leerzeilen"). If
-you now look at the structural definition of a stanza, you find that it
-consists of a sequence of verses, each of which starts, i.e. is preceded by a
-new line.
+The braces `{` `}` enclose items that can be repeated zero or more
+times; with a `+` appended to the closing brace it means one or more
+times. Now, look at the definition of `text` in the 6th line: `{ strophe
+{LEERZEILE} }+`. This reads as follows: The text of the poem consists of
+a sequence of stanzas, each of which is followed by a sequence of empty
+lines (German: "Leerzeilen"). If you now look at the structural
+definition of a stanza, you find that it consists of a sequence of
+verses, each of which starts, i.e. is preceded by a new line.
 
-Can you figure out the rest? Hint: The angular brackets `[` and `]` mean that
-and item is optional and the `§` sign means that it is obligatory. (Strictly
-speaking, the §-signs are not necessary, because an item that is not optional
-is always obligatory, but the §-signs help the converter to produce more
-useful error messages.)
+Can you figure out the rest? Hint: The angular brackets `[` and `]` mean
+that and item is optional and the `§` sign means that it is obligatory.
+(Strictly speaking, the §-signs are not necessary, because an item that
+is not optional is always obligatory, but the §-signs help the converter
+to produce more useful error messages.)
 
 This should be enough for an introduction to the purpose of DSLs in the
-humanities. It has shown the probably most important use case of DHParser,
-i.e. as a frontend-technology form XML-encodings. Of course, it can just as
-well be used as a frontend for any other kind of structured data, like SQL or
-graph-structured data. The latter is by the way is a very reasonable
-alternative to XML for edition projects with a complex transmission history.
-See Andreas Kuczera's Blog-entry on ["Graphdatenbanken für
+humanities. It has shown the probably most important use case of
+DHParser, i.e. as a frontend-technology form XML-encodings. Of course,
+it can just as well be used as a frontend for any other kind of
+structured data, like SQL or graph-structured data. The latter is by the
+way is a very reasonable alternative to XML for edition projects with a
+complex transmission history. See Andreas Kuczera's Blog-entry on
+["Graphdatenbanken für
 Historiker"](http://mittelalter.hypotheses.org/5995).
 
 Tutorial: First Steps with DHParser
 -----------------------------------
 
-*You'll need to be able to use a shell and have some basic knowledge of Python
-programming to be able to follow this section!* Also, you need to have
-[git](https://git-scm.com/) and [python 3](https://www.python.org/) installed
-on you system. It is important that you have at least python version 3.5.
-DHParser will not work with python 2. You can simply start python to find out
-which version you have got.
+*You'll need to be able to use a shell and have some basic knowledge of
+Python programming to be able to follow this section!* Also, you need to
+have [git](https://git-scm.com/) and [python 3](https://www.python.org/)
+installed on you system. It is important that you have at least python
+version 3.5. DHParser will not work with python 2. You can simply start
+python to find out which version you have got.
 
 In order to try the example above, you should fetch DHParsers from its
 git-repository. Open a shell and type:
@@ -334,21 +338,21 @@ strictly separated steps:
    what you like.
 
 DHParser automatically only generates a parser for the very first step.
-The other steps have to be programmed by hand, though DHParser
-tries to make those parts as easy as possible. What you have just seen
-in your editor is a Pseudo-XML-representation of the concrete syntax
-tree. (The output of a parser is always a tree structure, just like
-XML.) It is called concrete syntax tree, because it contains all the
-syntactic details that have been described in the `Lyrik.ebnf`-grammar;
-and the grammar needs to describe all those details, because otherwise
-it would not be possible to parse the text. On the other hand most of
-these details do not carry any important information. This is the reason
-why in the second step the transformation into an abstract syntax tree
-that leaves out the unimportant details. There is now general rule of
-how to derive abstract syntax trees from concrete syntax trees, and
-there cannot be, because it depends on the particular domain of
-application which details are important and which not. For poems these
-might be different from, say, for a catalogue entry. Therefore, the
+The other steps have to be programmed by hand, though DHParser tries to
+make those parts as easy as possible. What you have just seen in your
+editor is a Pseudo-XML-representation of the concrete syntax tree. (The
+output of a parser is always a tree structure, just like XML.) It is
+called concrete syntax tree, because it contains all the syntactic
+details that have been described in the `Lyrik.ebnf`-grammar; and the
+grammar needs to describe all those details, because otherwise it would
+not be possible to parse the text. On the other hand most of these
+details do not carry any important information. This is the reason why
+in the second step the transformation into an abstract syntax tree that
+leaves out the unimportant details. There is now general rule of how to
+derive abstract syntax trees from concrete syntax trees, and there
+cannot be, because it depends on the particular domain of application
+which details are important and which not. For poems these might be
+different from, say, for a catalogue entry. Therefore, the
 AST-transformation has to be specified for each grammar separately, just
 as the grammar has to be specified for each application domain.
 
