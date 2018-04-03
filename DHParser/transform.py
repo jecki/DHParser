@@ -592,7 +592,7 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
     Applying flatten recursively will result in these kinds of
     structural transformation::
 
-        (1 (+ 2) (+ 3)     ->   (1 + 2 + 3)
+        (1 (+ 2) (+ 3))    ->   (1 + 2 + 3)
         (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
     """
     node = context[-1]

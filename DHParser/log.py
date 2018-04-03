@@ -378,7 +378,7 @@ LOG_SIZE_THRESHOLD = 100000   # maximum number of history records to log
 LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
 
 
-def log_parsing_history(grammar, log_file_name: str = '', html: bool=False) -> None:
+def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> None:
     """
     Writes a log of the parsing history of the most recently parsed document.
 

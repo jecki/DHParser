@@ -298,13 +298,14 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 cst = Node(ZOMBIE_PARSER, "").add_error(str(upe)).init_pos(0)
-            log_ST(cst, "match_%s_%s.cst" % (parser_name, test_name))
+            clean_test_name = test_name.replace('*', '')
+            log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                log_ST(ast, "match_%s_%s.ast" % (parser_name, test_name))
+                log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
             if is_error(cst.error_flag):
                 errors = adjust_error_locations(cst.collect_errors(), test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
@@ -313,7 +314,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
                 if is_logging():
-                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, test_name))
+                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
             elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
                 errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                               (test_name, parser_name, cst.as_sxpr()))
