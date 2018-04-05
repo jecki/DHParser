@@ -23,7 +23,8 @@ limitations under the License.
 import os
 import shutil
 import sys
-# sys.path.extend(['../', './'])
+
+sys.path.extend(['../', './'])
 
 
 class TestDHParserCommandLineTool:
@@ -44,3 +45,7 @@ class TestDHParserCommandLineTool:
             xml = f.read()
         assert xml.find('<document>') >= 0
         # os.chdir(cwd)
+
+if __name__ == "__main__":
+    from DHParser.testing import runner
+    runner("", globals())
