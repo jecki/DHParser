@@ -108,7 +108,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     dispatch on the first parameter after the context parameter.
 
     Decorating a transformation-function that has more than merely the
-    ``node``-parameter with ``transformation_factory`` creates a
+    ``context``-parameter with ``transformation_factory`` creates a
     function with the same name, which returns a partial-function that
     takes just the context-parameter.
 
