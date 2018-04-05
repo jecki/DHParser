@@ -54,7 +54,7 @@ def fail_on_error(src, result):
 
 
 def tst_func():
-    with DHParser.log.logging(True):
+    with DHParser.log.logging(False):
         if not os.path.exists('REPORT'):
             os.mkdir('REPORT')
         files = os.listdir('testdata')
