@@ -158,7 +158,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         f = singledispatch(f)
         try:
             if len(params) == 1 and issubclass(p1type, Container) \
-                    and not issubclass(p1type, Text) and not issubclass(p1type, ByteString):
+                    and not (issubclass(p1type, Text) or issubclass(p1type, ByteString)):
                 def gen_special(*args):
                     c = set(args) if issubclass(p1type, AbstractSet) else \
                         list(args) if issubclass(p1type, Sequence) else args
@@ -241,8 +241,8 @@ def traverse(root_node: Node,
     # Is this optimazation really needed?
     if '__cache__' in processing_table:
         # assume that processing table has already been expanded
-        table = processing_table
-        cache = processing_table['__cache__']
+        table = processing_table               # type: ProcessingTableType
+        cache = processing_table['__cache__']  # type: Dictionary[str, List[Callable]]
     else:
         # normalize processing_table entries by turning single values
         # into lists with a single value
@@ -261,6 +261,7 @@ def traverse(root_node: Node,
     # cache = {}  # type: Dict[str, List[Callable]]
 
     def traverse_recursive(context):
+        nonlocal cache
         node = context[-1]
         if node.children:
             for child in node.result:
@@ -385,8 +386,7 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     """Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
     and it's content matches one of the given tokens. Leading and trailing
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
-    any token is a match. If only ":" is given all anonymous tokens but no other
-    tokens are a match.
+    any token is a match.
     """
     def stripped(nd: Node) -> str:
         """Removes leading and trailing whitespace-nodes from content."""
