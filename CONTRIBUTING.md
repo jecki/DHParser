@@ -25,8 +25,8 @@ bigger projects, below:
 Ideas for further development
 =============================
 
-Better error reporting
-----------------------
+Better error reporting I
+------------------------
 
 A problem with error reporting consists in the fact that at best only the very
 first parsing error is reported accurately and then triggers a number of pure
@@ -47,6 +47,15 @@ left recursion stack, etc. without making the parser guard (see
 `parse.add_parser_guard`) more complex than it already is.
 
 Also, a good variety of test cases would be desirable.
+
+
+Better error reporting II
+-------------------------
+
+Yet another means to improve error reporting would be to supplement
+the required operator "&" with an its forbidden operator, say "!&"
+that would raise an error message, if some parser matches at a place
+where it really shouldn't. [Add some examples here.]
 
 
 Optimizations

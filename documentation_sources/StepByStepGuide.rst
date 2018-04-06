@@ -192,18 +192,27 @@ A resonable workflow for developing the grammar proceeds like this:
    errors easier.
 
 4. Next, you should run the test script. Usually, some test will fail at
-   the first attempt. So you'll keep revising the EBNF-grammar, adjusting and adding test cases until all tests pass.
+   the first attempt. So you'll keep revising the EBNF-grammar, adjusting and
+   adding test cases until all tests pass.
 
 5. Now it is time to try and compile the example documents. By this time the
    test-script should have generated the compile-script, which you can be
-   called with the example documents. Don't worry too much about the output, yet. What is important at this stage is merely whether the parser can
+   called with the example documents. Don't worry too much about the output,
+   yet. What is important at this stage is merely whether the parser can
    handle the examples or not. If not, further test cases and adjustments the
-   EBNF grammar will be needed - or revision of the examples in case you decide to use different syntactic constructs.
+   EBNF grammar will be needed - or revision of the examples in case you
+   decide to use different syntactic constructs.
 
-   If all examples can be parsed, you go back to step one and add further more complex examples, and continue to do so until you have the feeling that you DSL's grammar is rich enough for all intended application cases.
+   If all examples can be parsed, you go back to step one and add further more
+   complex examples, and continue to do so until you have the feeling that you
+   DSL's grammar is rich enough for all intended application cases.
 
-Let's try this with the trivial demo example that comes with creating a new project with the "dhparser.py"-script. Now, you have already seen that the
-"example.dsl"-document merely contains a simple sequence of words: "Life is but a walking shadow" Now, wouldn't it be nice, if we could end this sequence with a full stop to turn it into a proper sentence. So, open "examples.dsl" with a text editor and add a full stop::
+Let's try this with the trivial demo example that comes with creating a new
+project with the "dhparser.py"-script. Now, you have already seen that the
+"example.dsl"-document merely contains a simple sequence of words: "Life is
+but a walking shadow" Now, wouldn't it be nice, if we could end this sequence
+with a full stop to turn it into a proper sentence. So, open "examples.dsl"
+with a text editor and add a full stop::
 
    Life is but a walking shadow.
 
@@ -215,6 +224,12 @@ Now, try to compile "examples.dsl" with the compile-script::
 Since the grammar, obviously, did not allow full stops so far, the parser
 returns an error message. The error message is pretty self-explanatory in this
 case. (Often, you will unfortunately find that the error message are somewhat
-difficult to decipher. In particular, because it so happens that an error the parser complains about is just the consequence of an error made at an earlier location that the parser may not have been able to recognize as such. We will learn more about how to avoid such situations, later.) EOF is actually the name of a parser that captures the end of the file, thus "EOF"! But instead of the expected end of file an, as of now, unparsable construct, namely a full stop followed by a line feed, signified by "\n", was found.
+difficult to decipher. In particular, because it so happens that an error the
+parser complains about is just the consequence of an error made at an earlier
+location that the parser may not have been able to recognize as such. We will
+learn more about how to avoid such situations, later.) EOF is actually the
+name of a parser that captures the end of the file, thus "EOF"! But instead of
+the expected end of file an, as of now, unparsable construct, namely a full
+stop followed by a line feed, signified by "\n", was found.
 
 

@@ -30,7 +30,7 @@ for CST -> AST transformations.
 import inspect
 from functools import partial, reduce, singledispatch
 
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser, ZOMBIE_NODE
 from DHParser.toolkit import expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     List, Sequence, Union, Text
@@ -264,11 +264,12 @@ def traverse(root_node: Node,
         nonlocal cache
         node = context[-1]
         if node.children:
+            context.append(ZOMBIE_NODE)
             for child in node.result:
-                context.append(child)
+                context[-1] = child
                 traverse_recursive(context)  # depth first
                 node.error_flag = max(node.error_flag, child.error_flag)  # propagate error flag
-                context.pop()
+            context.pop()
 
         key = key_func(node)
         try:
@@ -453,26 +454,26 @@ def _reduce_child(node: Node, child: Node):
     node.result = child.result
 
 
-def _pick_child(context: List[Node], criteria: CriteriaType):
-    """Returns the first child that meets the criteria."""
-    if isinstance(criteria, int):
-        try:
-            return context[-1].children[criteria]
-        except IndexError:
-            return None
-    elif isinstance(criteria, str):
-        for child in context[-1].children:
-            if child.tag_name == criteria:
-                return child
-        return None
-    else:  # assume criteria has type ConditionFunc
-        for child in context[-1].children:
-            context.append(child)
-            evaluation = criteria(context)
-            context.pop()
-            if evaluation:
-                return child
-        return None
+# def _pick_child(context: List[Node], criteria: CriteriaType):
+#     """Returns the first child that meets the criteria."""
+#     if isinstance(criteria, int):
+#         try:
+#             return context[-1].children[criteria]
+#         except IndexError:
+#             return None
+#     elif isinstance(criteria, str):
+#         for child in context[-1].children:
+#             if child.tag_name == criteria:
+#                 return child
+#         return None
+#     else:  # assume criteria has type ConditionFunc
+#         for child in context[-1].children:
+#             context.append(child)
+#             evaluation = criteria(context)
+#             context.pop()
+#             if evaluation:
+#                 return child
+#         return None
 
 
 #######################################################################
@@ -598,15 +599,16 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
     node = context[-1]
     if node.children:
         new_result = []     # type: List[Node]
+        context.append(ZOMBIE_NODE)
         for child in node.children:
-            context.append(child)
+            context[-1] = child
             if child.children and condition(context):
                 if recursive:
                     flatten(context, condition, recursive)
                 new_result.extend(child.children)
             else:
                 new_result.append(child)
-            context.pop()
+        context.pop()
         node.result = tuple(new_result)
 
 

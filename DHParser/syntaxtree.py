@@ -39,6 +39,7 @@ __all__ = ('ParserBase',
            'MockParser',
            'ZombieParser',
            'ZOMBIE_PARSER',
+           'ZOMBIE_NODE',
            'Node',
            'mock_syntax_tree',
            'flatten_sxpr')
@@ -722,6 +723,9 @@ class Node(collections.abc.Sized):
         Recursively counts the number of nodes in the tree including the root node.
         """
         return sum(child.tree_size() for child in self.children) + 1
+
+
+ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
 
 
 def mock_syntax_tree(sxpr):
