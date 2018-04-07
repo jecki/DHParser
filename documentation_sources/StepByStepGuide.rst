@@ -173,8 +173,13 @@ is triggered by the test-script.
 The development workflow for DSLs
 ---------------------------------
 
-When developing a domain specific notation it is recommendable to first develop the grammar and the parser for that notation, then to the
-abstract syntax tree transformations and finally to implement the compiler. Of course one can always come back and change the grammar later. But in order to avoid revising the AST-transformations and the compiler time and again it helps if the grammar has been worked out before. A bit of interlocking between these steps does not hurt, though.
+When developing a domain specific notation it is recommendable to first
+develop the grammar and the parser for that notation, then to the abstract
+syntax tree transformations and finally to implement the compiler. Of course
+one can always come back and change the grammar later. But in order to avoid
+revising the AST-transformations and the compiler time and again it helps if
+the grammar has been worked out before. A bit of interlocking between these
+steps does not hurt, though.
 
 A resonable workflow for developing the grammar proceeds like this:
 
@@ -232,4 +237,14 @@ name of a parser that captures the end of the file, thus "EOF"! But instead of
 the expected end of file an, as of now, unparsable construct, namely a full
 stop followed by a line feed, signified by "\n", was found.
 
+Let's have look into the grammar description "poetry.ebnf". We ignore the
+beginning of the file, in particular all lines starting with "@" as these
+lines do not represent any grammar rules, but meta rules, so called
+"directives" that determine some general characteristics of the grammar, such
+as whitespace-handling or whether the parser is going to be case-sensitive.
+Now, there are exactly three rules that make up this grammar::
+
+   document = //~ { WORD } §EOF
+   WORD     =  /\w+/~
+   EOF      =  !/./
 
