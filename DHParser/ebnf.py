@@ -30,7 +30,7 @@ from functools import partial
 
 from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, RE, \
+from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, RE, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
@@ -132,6 +132,7 @@ class EBNFGrammar(Grammar):
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
+    whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
     whitespace = RE('~')
