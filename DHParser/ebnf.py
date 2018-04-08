@@ -77,56 +77,53 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 
 
 class EBNFGrammar(Grammar):
-    r"""
-    Parser for an EBNF source file, with this grammar::
+    r"""Parser for an EBNF source file, with this grammar:
 
-        # EBNF-Grammar in EBNF
+    # EBNF-Grammar in EBNF
 
-        @ comment    =  /#.*(?:\n|$)/                # comments start with '#' and
-                                                     # eat all chars up to and including '\n'
-        @ whitespace =  /\s*/                        # whitespace includes linefeed
-        @ literalws  =  right                        # trailing whitespace of literals will be
-                                                     # ignored tacitly
+    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace = /\s*/                            # whitespace includes linefeed
+    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 
-        syntax     =  [~//] { definition | directive } §EOF
-        definition =  symbol §"=" expression
-        directive  =  "@" §symbol "=" ( regexp | literal | list_ )
+    syntax     = [~//] { definition | directive } §EOF
+    definition = symbol §"=" expression
+    directive  = "@" §symbol "=" ( regexp | literal | list_ )
 
-        expression =  term { "|" term }
-        term       =  { ["§"] factor }+               # "§" means all following factors mandatory
-        factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure
-                                                              # it's not a definition
-                    | [flowmarker] literal
-                    | [flowmarker] regexp
-                    | [flowmarker] oneormore
-                    | [flowmarker] group
-                    | [flowmarker] unordered
-                    | repetition
-                    | option
+    expression = term { "|" term }
+    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+               | [flowmarker] literal
+               | [flowmarker] plaintext
+               | [flowmarker] regexp
+               | [flowmarker] whitespace
+               | [flowmarker] oneormore
+               | [flowmarker] group
+               | [flowmarker] unordered
+               | repetition
+               | option
 
-        flowmarker =  "!"  | "&"                     # '!' negative lookahead, '&' positive lookahead
-                    | "-!" | "-&"                    # '-' negative lookbehind, '-&' positive lookbehind
-        retrieveop =  "::" | ":"                     # '::' pop, ':' retrieve
+    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
 
-        group      =  "(" §expression ")"
-        unordered  =  "<" §expression ">"            # elements of expression in arbitrary order
-        oneormore  =  "{" expression "}+"
-        repetition =  "{" §expression "}"
-        option     =  "[" §expression "]"
+    group      = "(" §expression ")"
+    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+    oneormore  = "{" expression "}+"
+    repetition = "{" §expression "}"
+    option     = "[" §expression "]"
 
-        symbol     =  /(?!\d)\w+/~                   # e.g. expression, factor, parameter_list
-        literal    =  /"(?:[^"]|\\")*?"/~            # e.g. "(", '+', 'while'
-                    | /'(?:[^']|\\')*?'/~            # whitespace following literals will be ignored
-        regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                     # '~' is a whitespace-marker, if present leading
-                                                     # or trailing whitespace of a regular expression
-                                                     # will be ignored tacitly.
-        list_      =  /\w+/~ { "," /\w+/~ }          # comma separated list of symbols,
-                                                     # e.g. BEGIN_LIST, END_LIST,
-                                                     # BEGIN_QUOTE, END_QUOTE
-                                                     # see CommonMark/markdown.py for an exmaple
-        EOF =  !/./
-"""
+    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
+    regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                    # '~' is a whitespace-marker, if present leading or trailing
+                                                    # whitespace of a regular expression will be ignored tacitly.
+    whitespace = /~/~                               # implicit or default whitespace
+    list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                    # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+    EOF = !/./
+    """
     expression = Forward()
     source_hash__ = "3fc9f5a340f560e847d9af0b61a68743"
     parser_initialization__ = "upon instantiation"
@@ -137,7 +134,9 @@ class EBNFGrammar(Grammar):
     wspR__ = WSP__
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
+    whitespace = RE('~')
     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
+    plaintext = RE('`(?:[^"]|\\\\")*?`')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
     option = Series(Token("["), expression, Token("]"), mandatory=1)
@@ -147,18 +146,16 @@ class EBNFGrammar(Grammar):
     group = Series(Token("("), expression, Token(")"), mandatory=1)
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(
-        Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
-        Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp),
-        Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
-        Series(Option(flowmarker), unordered), repetition, option)
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+                         Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext),
+                         Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace),
+                         Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
+                         Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Token("§")), factor))
     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_),
-                       mandatory=1)
+    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
     definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)),
-                    EOF, mandatory=2)
+    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -385,6 +382,7 @@ class EBNFCompiler(Compiler):
     COMMENT_KEYWORD = "COMMENT__"
     WHITESPACE_KEYWORD = "WSP__"
     RAW_WS_KEYWORD = "WHITESPACE__"
+    WHITESPACE_PARSER_KEYWORD = "whitespace__"
     RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
@@ -494,6 +492,12 @@ class EBNFCompiler(Compiler):
         return '\n'.join(compiler)
 
     def verify_transformation_table(self, transtable):
+        """
+        Checks for symbols that occur in the transformation-table but have
+        never been defined in the grammar. Usually, this kind of
+        inconsistency results from an error like a typo in the transformation
+        table.
+        """
         assert self._dirty_flag
         table_entries = set(expand_table(transtable).keys()) - {'*', '+', '~'}
         symbols = self.rules.keys()
@@ -528,6 +532,8 @@ class EBNFCompiler(Compiler):
 
         # add special fields for Grammar class
 
+        definitions.append((self.WHITESPACE_PARSER_KEYWORD,
+                            'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
         definitions.append(('wspR__', self.WHITESPACE_KEYWORD
                             if 'right' in self.directives['literalws'] else "''"))
         definitions.append(('wspL__', self.WHITESPACE_KEYWORD
@@ -906,9 +912,13 @@ class EBNFCompiler(Compiler):
             return symbol
 
 
-    def on_literal(self, node) -> str:
-        return 'Token(' + node.content.replace('\\', r'\\') + ')'  # return 'Token(' + ',
-        # '.merge_children([node.result]) + ')' ?
+    def on_literal(self, node: Node) -> str:
+        return 'Token(' + node.content.replace('\\', r'\\') + ')'
+
+
+    def on_plaintext(self, node: Node) -> str:
+        return 'Token(' + node.content.replace('\\', r'\\').replace('`', '"') \
+               + ", wL='', wR='')"
 
 
     def on_regexp(self, node: Node) -> str:
@@ -940,6 +950,10 @@ class EBNFCompiler(Compiler):
             node.add_error(errmsg)
             return '"' + errmsg + '"'
         return parser + ', '.join([arg] + name) + ')'
+
+
+    def on_whitespace(self, node: Node) -> str:
+        return 'whitespace__'
 
 
     def on_list_(self, node) -> Set[str]:

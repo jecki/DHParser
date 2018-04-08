@@ -32,6 +32,7 @@ from DHParser.error import has_errors
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
+from DHParser.testing import grammar_unit
 
 
 class TestDirectives:
@@ -120,9 +121,9 @@ class TestEBNFParser:
                 3: "hund , katze"
             },
             "fail": {
-                1: "123",
-                2: '"literal"',
-                3: "/regexp/"
+                4: "123",
+                5: '"literal"',
+                6: "/regexp/"
             }
         }
     }
@@ -139,14 +140,24 @@ class TestEBNFParser:
         assert rx.match(r'\\')
 
     def test_literal(self):
-        snippet = '"literal" '
+        snippet = '"text" '
         result = self.EBNF(snippet, 'literal')
         assert not result.error_flag
         assert str(result) == snippet
         assert result.select(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
 
-        result = self.EBNF(' "literal"', 'literal')
+        result = self.EBNF('"text" ', 'literal')
+        assert not result.error_flag
+        result = self.EBNF(' "text"', 'literal')
         assert result.error_flag  # literals catch following, but not leading whitespace
+
+    def test_plaintext(self):
+        result = self.EBNF('`plain`', 'plaintext')
+        assert not result.error_flag
+
+    def test_list(self):
+        grammar_unit(self.cases, get_ebnf_grammar, get_ebnf_transformer)
+
 
 
 class TestParserNameOverwriteBug:
@@ -396,6 +407,34 @@ class TestFlowControlOperators:
         except CompilationError as error:
             pass
             # print(error)
+
+
+class TestWhitespace:
+    def test_whitespace(self):
+        tail = r"""
+            WORD     =  /\w+/~
+            EOF      =  !/./
+        """
+        lang1 = r'document = "DOC" { WORD } EOF' + tail
+        parser = grammar_provider(lang1)()
+        cst = parser("DOC Wörter Wörter Wörter")
+        assert not cst.error_flag
+        cst = parser("DOCWörter Wörter Wörter")
+        assert not cst.error_flag
+
+        lang2 = r'document = `DOC` { WORD } EOF' + tail
+        parser = grammar_provider(lang2)()
+        cst = parser("DOC Wörter Wörter Wörter")
+        assert cst.error_flag
+        cst = parser("DOCWörter Wörter Wörter")
+        assert not cst.error_flag
+
+        lang3 = r'document = `DOC` ~ { WORD } EOF' + tail
+        parser = grammar_provider(lang3)()
+        cst = parser("DOC Wörter Wörter Wörter")
+        assert not cst.error_flag
+        cst = parser("DOCWörter Wörter Wörter")
+        assert not cst.error_flag
 
 
 class TestAllSome:

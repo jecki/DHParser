@@ -48,6 +48,7 @@ __all__ = ('Parser',
            'Grammar',
            'PreprocessorToken',
            'RegExp',
+           'Whitespace',
            'RE',
            'Token',
            'mixin_comment',
@@ -591,18 +592,22 @@ class Grammar:
         # do so only arises during testing.
         self.root__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
 
-        if self.wspL__:
-            self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
-            self.wsp_left_parser__.grammar = self
-            self.all_parsers__.add(self.wsp_left_parser__)  # don't you forget about me...
+        if self.WSP__:
+            try:
+                probe = self.whitespace__
+                assert self.whitespace__.regexp.pattern == self.WSP__
+            except AttributeError:
+                self.whitespace__ = Whitespace(self.WSP__)
+            self.whitespace__.grammar = self
+            self.all_parsers__.add(self.whitespace__)   # don't you forget about me...
         else:
-            self.wsp_left_parser__ = ZOMBIE_PARSER
-        if self.wspR__:
-            self.wsp_right_parser__ = Whitespace(self.wspR__)  # type: ParserBase
-            self.wsp_right_parser__.grammar = self
-            self.all_parsers__.add(self.wsp_right_parser__)  # don't you forget about me...
-        else:
-            self.wsp_right_parser__ = ZOMBIE_PARSER
+            self.whitespace__ = ZOMBIE_PARSER
+
+        assert not self.wspL__ or self.wspL__ == self.WSP__
+        assert not self.wspR__ or self.wspR__ == self.WSP__
+        self.wsp_left_parser__ = self.whitespace__ if self.wspL__ else ZOMBIE_PARSER
+        self.wsp_right_parser__ = self.whitespace__ if self.wspR__ else ZOMBIE_PARSER
+
         self.root__.apply(self._add_parser__)
 
 
@@ -982,9 +987,8 @@ class RE(Parser):
             wL (str or regexp):  Left whitespace regular expression,
                 i.e. either ``None``, the empty string or a regular
                 expression (e.g. "\s*") that defines whitespace. An
-                empty string means no whitespace will be skipped,
-                ``None`` means that the default whitespace will be
-                used.
+                empty string means no whitespace will be skipped; ``None``
+                means that the default whitespace will be used.
             wR (str or regexp):  Right whitespace regular expression.
                 See above.
             name:  The optional name of the parser.
