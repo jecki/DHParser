@@ -239,12 +239,72 @@ stop followed by a line feed, signified by "\n", was found.
 
 Let's have look into the grammar description "poetry.ebnf". We ignore the
 beginning of the file, in particular all lines starting with "@" as these
-lines do not represent any grammar rules, but meta rules, so called
+lines do not represent any grammar rules, but meta rules or so-called
 "directives" that determine some general characteristics of the grammar, such
 as whitespace-handling or whether the parser is going to be case-sensitive.
 Now, there are exactly three rules that make up this grammar::
 
-   document = //~ { WORD } §EOF
+   document = ~ { WORD } §EOF
    WORD     =  /\w+/~
    EOF      =  !/./
 
+EBNF-Grammars describe the structure of a domain specific notation in top-down
+fashion. Thus, the first rule in the grammar describes the comonents out of
+which a text or document in the domain specific notation is composed as a
+whole. The following rules then break down the components into even smaller
+components until, finally, there a only atomic components left which are
+described be matching rules. Matching rules are rules that do not refer to
+other rules any more. They consist of string literals or regular expressions
+that "capture" the sequences of characters which form the atomic components of
+our DSL. Rules in general always consist of a symbol on the left hand side of
+a "="-sign (which in this context can be unterstood as a definition signifier)
+and the definition of the rule on the right hand side.
+
+In our case the text as a whole, conveniently named "document" (any other name
+would be allowed, too), consists of a leading whitespace, a possibly empty
+sequence of an arbitrary number of words words ending only if the end of file
+has been reached. Whitespace in DHParser-grammers is always denoted by a tilde
+"~". Thuse the definiens of the rule "document" starts with a "~" on the right
+hand side of the deifnition sign ("="). Next, you find the symbol "WORD"
+enclosed in braces. "WORD", like any symbol composed of letters in DHParser,
+refers to another rule further below that defines what words are. The meaning
+of the braces is that whatever is enclosed by braces may be repeated zero or
+more times. Thus the expression "{ WORD }" describes a seuqence of arbitrarily
+many repetitions of WORD, whatever WORD may be. Finally, EOF refers to yet
+another rule definied further below. We do not yet know what EOF is, but we
+know that when the sequence of words ends, it must be followed by an EOF. The
+paragraph sign "§" in front of EOF means that it is absolutely mandatory that
+the seuqence of WORDs is followed by an EOF. If it doesn't the program issues
+an error message. Without the "§"-sign the parser simply would not match,
+which in itself is not considered an error.
+
+Now, let's look at our two matching rules. Both of these rules contain regular
+expressions. If you do not know about regular expressions yet, you should head
+over to an explanation or tutorial on regular expressions, like
+https://docs.python.org/3/library/re.html, before continuing, because we are
+not going to discuss them here. In DHParser-Grammars regular expressions are
+enclosed by simple forawrd slashes "/". Everything between two forward slashes
+is a regular expression as it would be understood by Python's "re"-module.
+Thus the rule ``WORD = /\w+/~`` means that a word consists of a seuqence of
+letters, numbers or underscores '_' that must be at least one sign long. This
+is what the regular expression "\w+" inside the slashes means. In regular
+expressions, "\w" stands for word-characters and "+" means that the previous
+character can be repeated one or more times. The tile "~" following the
+regular expression, we already know. It means that a a word can be followed by
+whitespace. Strictly speaking that whitespace is part of "WORD" as it is
+defined here.
+
+Similarly, the EOF (for "end of line") symbol is defined by a rule that
+consists of a simple regular expression, namely ".". The dot in regular
+expressions means any character. However, the regular expression itself
+preceded by an exclamations mark "!". IN DHParser-Grammars, the explanation
+mark means "not". Therefore the whole rule means, that *no* character must
+follow. Since this is true only for the end of file, the parser looking for
+EOF will only match if the very end of the file has been reached.
+
+Now, what would be the easiest way to allow our sequence of words to be ended
+like a real sentence with a dot "."?  As always when defining grammars on can think of different choice to implement this requirement in our grammar. One possible solution is to add a dot-literal before the "§EOF"-component at the end of the definition of the "document"-rule. So let's do that. Change the line where the "document"-rule is defined to::
+
+   document = ~ { WORD } "." §EOF
+
+Now, before we can compile the file "example.dsl", we will have to regenerate the our parser, becaue we have changed the grammar. 

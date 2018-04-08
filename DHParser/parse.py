@@ -446,16 +446,18 @@ class Grammar:
         history_tracking__:  A flag indicating that the parsing history shall
                 be tracked
 
-        wsp_left_parser__:  A parser for the default left-adjacent-whitespace
-                or the :class:zombie-parser if the
-                default is empty. The default whitespace will be used by parsers
-                :class:`Token` and, if no other parsers are passed to its constructor,
-                by parser :class:`RE`.
+        whitespace__: A parser for the implicit optional whitespace (or the
+                :class:zombie-parser if the default is empty). The default
+                whitespace will be used by parsers :class:`Token` and, if no
+                other parsers are passed to its constructor, by parser
+                :class:`RE`. It can also be place explicitly in the
+                EBNF-Grammar via the "~"-sign.
 
-        wsp_right_parser__: The same for the default right-adjacent-whitespace.
-                Both wsp_left_parser__ and wsp_right_parser__ merely serve the
-                purpose to avoid having to specify the default whitespace
-                explicitly every time an :class:`RE`-parser-object is created.
+        wsp_left_parser__: The same as ``whitespace`` for
+               left-adjacent-whitespace.
+
+        wsp_right_parser__: The same as ``whitespace`` for
+               right-adjacent-whitespace.
 
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -944,6 +946,28 @@ class Whitespace(RegExp):
     """An variant of RegExp that signifies through its class name that it
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
+
+
+#######################################################################
+#######################################################################
+#
+# WARNING: The following code is hard to maintain, because it
+# introduces a special case, i.e. a parser with child parsers that is
+# not a descandent of the NaryOperator and, because it itneracts
+# With the constructor of the Grammar class (see the instantiations of
+# the Whitespace-class, there).
+#
+# That is all the more regrettable, as class RE basically just
+# introduces syntactical sugar for
+#
+#     Series(whitespace__, RegExp('something'), whitespace__)
+#
+# What to do? Throw the syntactical sugar out? :-( Or find a more
+# robust solution for that kind of syntactical sugar? Or just leave
+# it be?
+#
+######################################################################
+######################################################################
 
 
 class RE(Parser):
