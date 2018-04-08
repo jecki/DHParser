@@ -203,10 +203,10 @@ class HistoryRecord:
     FAIL = "FAIL"
     Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
 
-    COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col style="width:75"/>' \
-               '<col style="width:6%"/><col style="width:15%"/>\n</colgroup>'
-    HEADINGS = ('<tr><th>L</th><th>C</th><th>parser calling sequence</th>'
-        '<th>success</th><th>text to parse</th></tr>')
+    COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col ' \
+               'style="width:75%"/><col style="width:6%"/><col style="width:15%"/>\n</colgroup>'
+    HEADINGS = ('<tr><th>L</th><th>C</th><th>parser call sequence</th>'
+        '<th>success</th><th>text matched or failed</th></tr>')
     HTML_LEAD_IN = ('<!DOCTYPE html>\n'
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
         'td,th {font-family:monospace; '
@@ -289,7 +289,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join((p.repr if p.ptype == ':RegExp' else p.name or p.ptype)
+        return "->".join((p.repr if p.ptype in {':RegExp', ':PlainText'} else p.name or p.ptype)
                          for p in self.call_stack)
 
     @property

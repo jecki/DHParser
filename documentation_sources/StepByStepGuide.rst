@@ -425,9 +425,30 @@ located in the first column of the first line.
 
 Unfortunately, DHParser - like almost any other parser out there - is not
 always very good at spotting the exact location of an error. Because rules
-refer to other rules, a rule may fail to parse - or, what is just as bad -
-succeed to parse where it should indeed fail - as a consequence of an error in
-the definition of one of the rule's it refers to. But this means, if the rule for the whole document fails for match, the error can be located anywhere in the document!
+refer to other rules, a rule may fail to parse - or, what is just as bad,
+succeed to parse when it should indeed fail - as a consequence of an error in
+the definition of one of the rules it refers to. But this means if the rule
+for the whole document fails to match, the actual error can be located
+anywhere in the document! There a different approaches to dealing with this
+problem. A tool that DHParser offers is to write log-files that document the
+parsing history. The log-files allow to spot the location, where the parsing
+error occured. However, you will have to look for the error manually. A good
+starting point is usually either the end of the parsing process or the point
+where the parser reached the farthest into the text. In order to receive the
+parsing history, you need to run the compiler-script again with the debugging
+option::
+
+   $ python poetryCompiler.py macbeth.dsl
+
+You will receive the same error messages as before. but this time various kinds of debugging information have been written into a new created subdirectory "LOGS". (Beware that any files in the "LOGS" directory may be overwritten or deleted by any of the DHParser scripts upon the next run!
+So don't store any important data there.) The most interesting file in the "LGOS"-directory is the full parser log. We'll ignore the other files and just open the file "macbech_full_parser.log.html" in an internet-browser. As the parsing history tends to become quite long, this usually takes a while, but luckily not in the case of our short demo example::
+
+   $ firefox LOGS/macbeth_full_parser.log.html &
+
+   ..picture parsing_history.png
+
+What you see is a representation of the parsing history. It might look a bit tedious in the beginning, especially the this column that contains the parser call sequence. But it is all very straight forward: For every application of a match rule, there is a row in the table. Typically, match rules are applied at the end of a long sequence of parser calls that is displayed in the thirs column. 
+The first two columns display the position in the text in terms of lines and columns. 
 
 
 Controlling abstract-syntax-tree generation

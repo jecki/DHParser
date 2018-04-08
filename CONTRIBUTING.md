@@ -9,7 +9,7 @@ The best (and easiest) way to contribute at this stage is to try to implement
 a small DSL with DHParser and report bugs and problems and make suggestions
 for further development. Have a look at the README.md-file to get started.
 
-Please the code from the git repository. Because code still changes quickly,
+Please, use the code from the git repository. Because code still changes quickly,
 any prepackaged builds may be outdated. The repository is here:
 
     https://gitlab.lrz.de/badw-it/DHParser
@@ -58,10 +58,35 @@ that would raise an error message, if some parser matches at a place
 where it really shouldn't. [Add some examples here.]
 
 
-Optimizations
--------------
+Optimization and Enhancement: Two-way-Traversal for AST-Transformation
+----------------------------------------------------------------------
 
-**Early discarding of nodes**: 
+AST-transformation are done via a depth-first tree-traversal, that is,
+the traversal function first goes all the way up the tree to the leaf
+nodes and calls the transformation routines successively on the way
+down. The routines are picked from the transformation-table which is a
+dictionary mapping Node's tag names to sequences of transformation functions.
+
+The
+rationale for depth-first is that it is easier to transform a node, if
+all of its children have already been transformed, i.e. simplified.
+However, there are quite a few cases where depth-last would be better.
+For example if you know you are going to discard a whole branch starting
+from a certain node, it is a waste to transform all the child nodes
+first.
+
+As the tree is traversed anyway, there no good reason why certain
+transformation routines should not already be called on the way up.
+Of course, as most routines
+more or less assume depth first, we would need two transformation tables
+one for the routines that are called on the way up. And one for the
+routines that are called on the way down.
+
+This should be fairly easy to implement.
+
+
+Optimization: Early discarding of nodes
+---------------------------------------
 Reason: `traverse_recursive` and `Node.result-setter` are top time consumers!
 
 Allow to specify parsers/nodes, the result of which

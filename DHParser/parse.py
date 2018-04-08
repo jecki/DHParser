@@ -891,6 +891,9 @@ class PlainText(Parser):
             return Node(self, self.text, True), text[self.len:]
         return None, text
 
+    def __repr__(self):
+        return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % self.text
+
 
 class RegExp(Parser):
     r"""
