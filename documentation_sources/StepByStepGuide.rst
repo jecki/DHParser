@@ -307,4 +307,128 @@ like a real sentence with a dot "."?  As always when defining grammars on can th
 
    document = ~ { WORD } "." §EOF
 
-Now, before we can compile the file "example.dsl", we will have to regenerate the our parser, becaue we have changed the grammar. 
+As you can see, string-literals are simply denoted as strings between inverted
+commas in DHParser's variant of the EBNF-Grammar. Now, before we can compile
+the file "example.dsl", we will have to regenerate the our parser, because we
+have changed the grammar. In order to recompile, we simply run the test-script
+again::
+
+   $ python tst_poetry_grammar.py
+
+But what is that? A whole lot of errormessages? Well, this it not surprising,
+because we change the grammar, some of our old test-cases fail with the new grammar. So we will have to update our test-cases wird. (Actually, the
+grammar get's compiles never the less and we could just ignore the test failures and carry on with compiling our "example.dsl"-file again. But, for this time, we'll follow good practice and adjust the test cases. So open the
+test that failed, "grammar_tests/02_test_document.ini", in the editor and
+add full stops at the end of the "match"-cases and remove the full stop
+at the end of the "fail"-case::
+
+   [match:document]
+   M1: """This is a sequence of words
+       extending over several lines."""
+   M2: """  This sequence contains leading whitespace."""
+
+   [fail:document]
+   F1: """This test should fail, because neither
+       comma nor full have been defined anywhere"""
+
+The format of the test-files should be pretty self-explanatory. It is a simple
+ini-file, where the section markers hold the name of the grammar-rule to be
+tested which is either preceded by "match" or "fail". "match means" that the
+following examples should be matched by the grammar-rule. "fail" means they
+should *not* match. It is just as important that a parser or grammar-rules
+does not match those strings it should not match as it is that it matches
+those strings that it should match. The individual test-cases all get a name,
+in this case M1, M2, F2, but if you prefer more meaningful names this is also
+possible. (Beware, however, that the names for match-test different from the
+names for the fail tests for the same rule!). Now, run the test-script again
+and you'll see that no errors get reported any more.
+
+Finally, we can recompile out "example.dsl"-file, and by its XML output we can tell that it worked::
+
+   $ python poetryCompiler.py example.dsl
+
+So far, we have seen *in nuce* how the development workflow for a building up
+DSL-grammar goes. Let's take this a step further by adding more capabilities
+to our grammr.
+
+Extending the example DSL further
+---------------------------------
+
+A grammar that can only digest single sentences is certainly a rather boring.
+So we'll extend our grammar a little further so that it can capture paragraphs
+of sentences. To see, where we are heading, let's first start a new example
+file, let's call it "macbeth.dsl" and enter the following lines::
+
+   Life’s but a walking shadow, a poor player that struts and frets his hour
+   upon the stage and then is heard no more. It is a tale told by an idiot,
+   full of sound and fury, signifying nothing.
+
+What have we got, there? We've got a paragraph that consists of several sentences each of which ends with a full stop. The sentences themselves can consist of different parts which a separated by a comma. If, so far, we have got a clear idea (in verbal terms) of the structure of texts in our DSL, we can now try to formulate this in the grammar.
+
+   document = ~ { sentence } §EOF
+   sentence = part {"," part } "."
+   part     = { WORD }              # a subtle mistake, right here!
+   WORD     =  /\w+/~               # something forgotten, here!
+   EOF      =  !/./
+
+The most important new part is the grammar rule "sentence". It reads as this: A sentence is a part of a sentence potentially followed by a repeated sequence of a comma and another part of a sentence and ultimately ending with a full stop. (Understandable? If you have ever read Russell's "Introduction to Mathematical Philosophy" you will be used to this kind of prose. Other than that I find the formal definition easier to understand. However, for learning EBNF or any other formalism, it helps in the beginning to translate the meaning of its statements into plain old Englisch.)
+
+There is are two subtle mistakes in this grammar. If you can figure them out just by thinking about it, feel free to correct the grammar right now. (Would you really have noticed the mistakes if they hadn't already been marked in the code above?) For all less intelligent people, like me: Let's be prudent and - since the grammar has become more complex - add a few test cases. This should make it easier to locate any errors. So open up an editor with a new file in the tests subdirectory, say ``grammar_tests/03_test_sentence.ini`` (Test files should always contain the component "test_" in the filename, otherwise they will be overlooked by DHParser's unit testing subsystem) and enter a few test-cases like these::
+
+   [match:sentence]
+   M1: """It is a tale told by an idiot,
+      full of sound and fury, signifying nothing."""
+   M2: """Plain old sentence."""
+
+   [fail:sentence]
+   F1: """Ups, a full stop is missing"""
+   F2: """No commas at the end,."""
+
+Again, we recompile the grammar and run the test at the same time by running the testing-script::
+
+   $ python tst_poetry_grammar.py
+   Errors found by unit test "03_test_sentence.ini":
+   Fail test "F2" for parser "sentence" yields match instead of expected failure!
+
+Too bad, something went wrong here. But what? Didn't the definition of the rule "sentence" make sure that parts of sentences are, if at all, only be followed by a sequence of a comma *and* another part of a sentence. So, how come that between the last comma and the full stop there is nothing but empty space? Ah, there's the rub! If we look into our grammar, how parts of sentences have been defined, we find that the rule::
+
+   part = { WORD }
+
+definies a part of a sentence as a sequence of *zero* or more WORDs. This means that a string of length zero also counts as a valid part of a sentence. Now in order to avoid this, we could write::
+
+   part = WORD { WORD }
+
+This definition makes sure that there is at least on WORD in a part. Since the case that at least one item is needed occurs rather frequently in grammars, DHParser offers a special syntax for this case::
+
+   part = { WORD }+
+
+(The plus sign "+" must always follow directly after the curly brace "}" without any whitespcae in between, otherwise DHParser won't understannd it.) At this point the worry may arise that the same problem could reoccur at another level, if the rule for WORD would match empty strings as well. Let's quickly add a test case for this to the file ``grammar_tests/01_test_word.ini``::
+
+   [fail:WORD]
+   F1: two words
+   F2: ""
+
+Thus, we are sure to be warned in case the definition of rule "WORD" matches
+the empty string. Luckily, it does not do so now. But it might happen that we
+change this definition later again for some reason, we might have forgotton
+about this subtlety and introduce the same error again. With a test case we
+can reduce the risk of such a regression error. This time the tests run
+through, nicely. So let's try the parser on our new example::
+
+   $ python poetryCompiler.py macbeth.dsl
+   macbeth.dsl:1:1: Error: EOF expected; "Life’s but" found!
+
+That is strange. Obviously, there is an error right at the beginning (line 1
+column 1). But what coul possibly be wrong with the word "Life". Now you might
+already have guessed what the error is and that the error is not exactly
+located in the first column of the first line.
+
+Unfortunately, DHParser - like almost any other parser out there - is not
+always very good at spotting the exact location of an error. Because rules
+refer to other rules, a rule may fail to parse - or, what is just as bad -
+succeed to parse where it should indeed fail - as a consequence of an error in
+the definition of one of the rule's it refers to. But this means, if the rule for the whole document fails for match, the error can be located anywhere in the document!
+
+
+Controlling abstract-syntax-tree generation
+-------------------------------------------

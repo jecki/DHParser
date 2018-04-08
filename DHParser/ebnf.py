@@ -414,7 +414,7 @@ class EBNFCompiler(Compiler):
         self.definitions = {}       # type: Dict[str, str]
         self.deferred_tasks = []    # type: List[Callable]
         self.root_symbol = ""       # type: str
-        self.directives = {'whitespace': self.WHITESPACE['horizontal'],
+        self.directives = {'whitespace': self.WHITESPACE['vertical'],
                            'comment': '',
                            'literalws': {'right'},
                            'tokens': set(),  # alt. 'preprocessor_tokens'
