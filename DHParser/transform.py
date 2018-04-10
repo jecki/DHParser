@@ -621,6 +621,27 @@ def collapse(context: List[Node]):
     node.result = node.content
 
 
+# @transformation_factory
+# def collect_leaves(context: List[Node], whitespace: str=''):
+#     """
+#     Collects all leave nodes dropping any intermediary nodes.
+#     Optionally adds whitespace between the nodes.
+#     """
+#     assert context[-1].children
+#     node = context[-1]
+#     leaves_iterator = node.select(lambda nd: not nd.children, include_root=False)
+#     if whitespace:
+#         mock_ws_parser = MockParser('', WHITESPACE_PTYPE)
+#         result = []
+#         for leave in leaves_iterator:
+#             result.append(leave)
+#             result.append(Node(mock_ws_parser, whitespace, leafhint=True))
+#         result.pop()
+#         node.result = tuple(result)
+#     else:
+#         node.result = (nd for nd in leaves_iterator)
+
+
 @transformation_factory
 def merge_children(context: List[Node], tag_names: List[str]):
     """
