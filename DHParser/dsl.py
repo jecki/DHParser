@@ -90,7 +90,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \\
     Node, TransformationFunc, TransformationDict, \\
     traverse, remove_children_if, merge_children, is_anonymous, \\
@@ -311,8 +311,10 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
         language defined by ``ebnf_src``.
     """
     grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
-                             get_ebnf_transformer(), get_ebnf_compiler(branding))
-    return compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
+                             get_ebnf_transformer(), get_ebnf_compiler(branding, ebnf_src))
+    grammar_obj = compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
+    grammar_obj.python_src__ = grammar_src
+    return grammar_obj
 
 
 def load_compiler_suite(compiler_suite: str) -> \
@@ -347,7 +349,8 @@ def load_compiler_suite(compiler_suite: str) -> \
         # Is there really any reasonable application case for this?
         with logging(False):
             compiler_py, messages, n = compile_source(source, None, get_ebnf_grammar(),
-                                                      get_ebnf_transformer(), get_ebnf_compiler())
+                                                      get_ebnf_transformer(),
+                                                      get_ebnf_compiler(compiler_suite, source))
         if has_errors(messages):
             raise GrammarError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor

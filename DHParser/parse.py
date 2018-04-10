@@ -63,6 +63,7 @@ __all__ = ('Parser',
            'AllOf',
            'SomeOf',
            'Unordered',
+           'Required',
            'Lookahead',
            'NegativeLookahead',
            'Lookbehind',
@@ -440,6 +441,10 @@ class Grammar:
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
 
+        python__src__:  For the purpose of debugging and inspection, this field can
+                 take the python src of the concrete grammar class
+                 (see `dsl.grammar_provider`).
+
     Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
 
@@ -524,6 +529,7 @@ class Grammar:
                 If turned off, a recursion error will result in case of left
                 recursion.
     """
+    python_src__ = ''  # type: str
     root__ = ZOMBIE_PARSER  # type: ParserBase
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
@@ -566,8 +572,8 @@ class Grammar:
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     if not parser.name:
                         parser._name = entry
-                    if isinstance(parser, Forward) and (not parser.parser._name):
-                        parser.parser._name = entry
+                    if isinstance(parser, Forward) and (not cast(Forward, parser).parser.name):
+                        cast(Forward, parser).parser._name = entry
             cls.parser_initialization__ = "done"
 
 
@@ -1594,6 +1600,10 @@ class FlowOperator(UnaryOperator):
     def sign(self, bool_value) -> bool:
         """Returns the value. Can be overriden to return the inverted bool."""
         return bool_value
+
+
+def Required(parser: Parser) -> Parser:
+    return Series(parser, mandatory=0)
 
 
 # class Required(FlowOperator):

@@ -789,23 +789,24 @@ class EBNFCompiler(Compiler):
         # mandatory §-operator
         mandatory_marker = []
         filtered_children = []
-        i = 0
         for nd in node.children:
             if nd.parser.ptype == TOKEN_PTYPE and nd.content == "§":
-                mandatory_marker.append(i)
-                if i == 0:
-                    nd.add_error('First item of a series should not be mandatory.',
-                                 Error.WARNING)
-                elif len(mandatory_marker) > 1:
+                mandatory_marker.append(len(filtered_children))
+                # if len(filtered_children) == 0:
+                #     nd.add_error('First item of a series should not be mandatory.',
+                #                  Error.WARNING)
+                if len(mandatory_marker) > 1:
                     nd.add_error('One mandatory marker (§) sufficient to declare the '
                                  'rest of the series as mandatory.', Error.WARNING)
             else:
                 filtered_children.append(nd)
-                i += 1
         saved_result = node.result
         node.result = tuple(filtered_children)
-        custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
-        compiled = self.non_terminal(node, 'Series', custom_args)
+        if len(filtered_children) == 1:
+            compiled = self.non_terminal(node, 'Required')
+        else:
+            custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
+            compiled = self.non_terminal(node, 'Series', custom_args)
         node.result = saved_result
         return compiled
 

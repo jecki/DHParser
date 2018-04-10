@@ -112,20 +112,21 @@ class Compiler:
         self.propagate_error_flags(node, lazy=True)
         return result
 
-    def set_grammar_name(self, grammar_name="", grammar_source=""):
+    def set_grammar_name(self, grammar_name: str="", grammar_source: str=""):
         """
         Changes the grammar's name and the grammar's source.
 
         The grammar name and the source text of the grammar are
         metadata about the grammar that do not affect the compilation
         process. Classes inheriting from `Compiler` can use this
-        information to name and annotate its output.
+        information to name and annotate its output. Returns `self`.
         """
         assert grammar_name == "" or re.match(r'\w+\Z', grammar_name)
         if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
         self.grammar_name = grammar_name
         self.grammar_source = load_if_file(grammar_source)
+        return self
 
     @staticmethod
     def propagate_error_flags(node: Node, lazy: bool = True) -> None:
