@@ -400,13 +400,11 @@ class TestFlowControlOperators:
             assert False, "Compilation error expected."
         except CompilationError as error:
             pass
-            # print(error)
         try:
             parser_class = grammar_provider(lang2)
             assert False, "Compilation error expected."
         except CompilationError as error:
             pass
-            # print(error)
 
 
 class TestWhitespace:

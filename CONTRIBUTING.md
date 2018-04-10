@@ -25,6 +25,13 @@ bigger projects, below:
 Ideas for further development
 =============================
 
+Testing for specific error messages
+-----------------------------------
+
+Allow testing of error reporting by extending testing.grammar_unit in such a way
+that it is possible to test for specific error codes
+
+
 Better error reporting I
 ------------------------
 
