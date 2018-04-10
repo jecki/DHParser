@@ -54,47 +54,51 @@ class EBNFGrammar(Grammar):
     
     # EBNF-Grammar in EBNF
     
-    @ comment    =  /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace =  /\s*/                            # whitespace includes linefeed
-    @ literalws  =  right                            # trailing whitespace of literals will be ignored tacitly
+    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace = /\s*/                            # whitespace includes linefeed
+    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
     
-    syntax     =  [~//] { definition | directive } §EOF
-    definition =  symbol §"=" expression
-    directive  =  "@" §symbol "=" ( regexp | literal | list_ )
+    syntax     = [~//] { definition | directive } §EOF
+    definition = symbol §"=" expression
+    directive  = "@" §symbol "=" ( regexp | literal | list_ )
     
-    expression =  term { "|" term }
-    term       =  { ["§"] factor }+                       # "§" means all following factors mandatory
-    factor     =  [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-                | [flowmarker] literal
-                | [flowmarker] regexp
-                | [flowmarker] oneormore
-                | [flowmarker] group
-                | [flowmarker] unordered
-                | repetition
-                | option
+    expression = term { "|" term }
+    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+               | [flowmarker] literal
+               | [flowmarker] plaintext
+               | [flowmarker] regexp
+               | [flowmarker] whitespace
+               | [flowmarker] oneormore
+               | [flowmarker] group
+               | [flowmarker] unordered
+               | repetition
+               | option
     
-    flowmarker =  "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-                | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop =  "::" | ":"                         # '::' pop, ':' retrieve
+    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
     
-    group      =  "(" §expression ")"
-    unordered  =  "<" §expression ">"                # elements of expression in arbitrary order
-    oneormore  =  "{" expression "}+"
-    repetition =  "{" §expression "}"
-    option     =  "[" §expression "]"
+    group      = "(" §expression ")"
+    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+    oneormore  = "{" expression "}+"
+    repetition = "{" §expression "}"
+    option     = "[" §expression "]"
     
-    symbol     =  /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-    literal    =  /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                     # '~' is a whitespace-marker, if present leading or trailing
-                                                     # whitespace of a regular expression will be ignored tacitly.
-    list_      =  /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                     # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-    EOF =  !/./
+    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
+    regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                    # '~' is a whitespace-marker, if present leading or trailing
+                                                    # whitespace of a regular expression will be ignored tacitly.
+    whitespace = /~/~                               # implicit or default whitespace
+    list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                    # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+    EOF = !/./
     """
     expression = Forward()
-    source_hash__ = "084a572ffab147ee44ac8f2268793f63"
+    source_hash__ = "d807c57c29ef6c674abe1addfce146c4"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
@@ -103,7 +107,9 @@ class EBNFGrammar(Grammar):
     wspR__ = WSP__
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
+    whitespace = RE('~')
     regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
+    plaintext = RE('`(?:[^"]|\\\\")*?`')
     literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
     symbol = RE('(?!\\d)\\w+')
     option = Series(Token("["), expression, Token("]"), mandatory=1)
@@ -113,7 +119,7 @@ class EBNFGrammar(Grammar):
     group = Series(Token("("), expression, Token(")"), mandatory=1)
     retrieveop = Alternative(Token("::"), Token(":"))
     flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), regexp), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Token("§")), factor))
     expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
     directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)

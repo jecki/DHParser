@@ -51,7 +51,7 @@ EBNF_TEMPLATE = r"""-grammar
 #
 #######################################################################
 
-document = //~ { WORD } §EOF    # root parser: a sequence of words preceded by whitespace
+document = ~ { WORD } §EOF    # root parser: a sequence of words preceded by whitespace
                                 # until the end of file
 
 #######################################################################
@@ -75,6 +75,7 @@ F1: two words
 TEST_DOCUMENT_TEMPLATE = r'''[match:document]
 M1: """This is a sequence of words
     extending over several lines"""
+M2: """  This sequence contains leading whitespace"""
 
 [fail:document]
 F1: """This test should fail, because neither
@@ -282,7 +283,12 @@ def main():
     parameter) or runs a quick self-test.
     """
     if len(sys.argv) > 1:
-        if os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
+        if sys.argv[1].lower() == "--selftest":
+            if not selftest():
+                print("Selftest FAILED :-(\n")
+                sys.exit(1)
+            print("Selftest SUCCEEDED :-)\n")
+        elif os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
             _errors = compile_on_disk(sys.argv[1],
                                       sys.argv[2] if len(sys.argv) > 2 else "")
             if _errors:

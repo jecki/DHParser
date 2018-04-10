@@ -30,7 +30,7 @@ for CST -> AST transformations.
 import inspect
 from functools import partial, reduce, singledispatch
 
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser, ZOMBIE_NODE
 from DHParser.toolkit import expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     List, Sequence, Union, Text
@@ -108,7 +108,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     dispatch on the first parameter after the context parameter.
 
     Decorating a transformation-function that has more than merely the
-    ``node``-parameter with ``transformation_factory`` creates a
+    ``context``-parameter with ``transformation_factory`` creates a
     function with the same name, which returns a partial-function that
     takes just the context-parameter.
 
@@ -158,7 +158,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         f = singledispatch(f)
         try:
             if len(params) == 1 and issubclass(p1type, Container) \
-                    and not issubclass(p1type, Text) and not issubclass(p1type, ByteString):
+                    and not (issubclass(p1type, Text) or issubclass(p1type, ByteString)):
                 def gen_special(*args):
                     c = set(args) if issubclass(p1type, AbstractSet) else \
                         list(args) if issubclass(p1type, Sequence) else args
@@ -241,8 +241,8 @@ def traverse(root_node: Node,
     # Is this optimazation really needed?
     if '__cache__' in processing_table:
         # assume that processing table has already been expanded
-        table = processing_table
-        cache = processing_table['__cache__']
+        table = processing_table               # type: ProcessingTableType
+        cache = processing_table['__cache__']  # type: Dictionary[str, List[Callable]]
     else:
         # normalize processing_table entries by turning single values
         # into lists with a single value
@@ -261,13 +261,15 @@ def traverse(root_node: Node,
     # cache = {}  # type: Dict[str, List[Callable]]
 
     def traverse_recursive(context):
+        nonlocal cache
         node = context[-1]
         if node.children:
+            context.append(ZOMBIE_NODE)
             for child in node.result:
-                context.append(child)
+                context[-1] = child
                 traverse_recursive(context)  # depth first
                 node.error_flag = max(node.error_flag, child.error_flag)  # propagate error flag
-                context.pop()
+            context.pop()
 
         key = key_func(node)
         try:
@@ -385,8 +387,7 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     """Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
     and it's content matches one of the given tokens. Leading and trailing
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
-    any token is a match. If only ":" is given all anonymous tokens but no other
-    tokens are a match.
+    any token is a match.
     """
     def stripped(nd: Node) -> str:
         """Removes leading and trailing whitespace-nodes from content."""
@@ -453,26 +454,26 @@ def _reduce_child(node: Node, child: Node):
     node.result = child.result
 
 
-def _pick_child(context: List[Node], criteria: CriteriaType):
-    """Returns the first child that meets the criteria."""
-    if isinstance(criteria, int):
-        try:
-            return context[-1].children[criteria]
-        except IndexError:
-            return None
-    elif isinstance(criteria, str):
-        for child in context[-1].children:
-            if child.tag_name == criteria:
-                return child
-        return None
-    else:  # assume criteria has type ConditionFunc
-        for child in context[-1].children:
-            context.append(child)
-            evaluation = criteria(context)
-            context.pop()
-            if evaluation:
-                return child
-        return None
+# def _pick_child(context: List[Node], criteria: CriteriaType):
+#     """Returns the first child that meets the criteria."""
+#     if isinstance(criteria, int):
+#         try:
+#             return context[-1].children[criteria]
+#         except IndexError:
+#             return None
+#     elif isinstance(criteria, str):
+#         for child in context[-1].children:
+#             if child.tag_name == criteria:
+#                 return child
+#         return None
+#     else:  # assume criteria has type ConditionFunc
+#         for child in context[-1].children:
+#             context.append(child)
+#             evaluation = criteria(context)
+#             context.pop()
+#             if evaluation:
+#                 return child
+#         return None
 
 
 #######################################################################
@@ -598,15 +599,16 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
     node = context[-1]
     if node.children:
         new_result = []     # type: List[Node]
+        context.append(ZOMBIE_NODE)
         for child in node.children:
-            context.append(child)
+            context[-1] = child
             if child.children and condition(context):
                 if recursive:
                     flatten(context, condition, recursive)
                 new_result.extend(child.children)
             else:
                 new_result.append(child)
-            context.pop()
+        context.pop()
         node.result = tuple(new_result)
 
 

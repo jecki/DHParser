@@ -48,6 +48,7 @@ __all__ = ('Parser',
            'Grammar',
            'PreprocessorToken',
            'RegExp',
+           'Whitespace',
            'RE',
            'Token',
            'mixin_comment',
@@ -445,16 +446,18 @@ class Grammar:
         history_tracking__:  A flag indicating that the parsing history shall
                 be tracked
 
-        wsp_left_parser__:  A parser for the default left-adjacent-whitespace
-                or the :class:zombie-parser if the
-                default is empty. The default whitespace will be used by parsers
-                :class:`Token` and, if no other parsers are passed to its constructor,
-                by parser :class:`RE`.
+        whitespace__: A parser for the implicit optional whitespace (or the
+                :class:zombie-parser if the default is empty). The default
+                whitespace will be used by parsers :class:`Token` and, if no
+                other parsers are passed to its constructor, by parser
+                :class:`RE`. It can also be place explicitly in the
+                EBNF-Grammar via the "~"-sign.
 
-        wsp_right_parser__: The same for the default right-adjacent-whitespace.
-                Both wsp_left_parser__ and wsp_right_parser__ merely serve the
-                purpose to avoid having to specify the default whitespace
-                explicitly every time an :class:`RE`-parser-object is created.
+        wsp_left_parser__: The same as ``whitespace`` for
+               left-adjacent-whitespace.
+
+        wsp_right_parser__: The same as ``whitespace`` for
+               right-adjacent-whitespace.
 
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -591,18 +594,22 @@ class Grammar:
         # do so only arises during testing.
         self.root__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
 
-        if self.wspL__:
-            self.wsp_left_parser__ = Whitespace(self.wspL__)  # type: ParserBase
-            self.wsp_left_parser__.grammar = self
-            self.all_parsers__.add(self.wsp_left_parser__)  # don't you forget about me...
+        if self.WSP__:
+            try:
+                probe = self.whitespace__
+                assert self.whitespace__.regexp.pattern == self.WSP__
+            except AttributeError:
+                self.whitespace__ = Whitespace(self.WSP__)
+            self.whitespace__.grammar = self
+            self.all_parsers__.add(self.whitespace__)   # don't you forget about me...
         else:
-            self.wsp_left_parser__ = ZOMBIE_PARSER
-        if self.wspR__:
-            self.wsp_right_parser__ = Whitespace(self.wspR__)  # type: ParserBase
-            self.wsp_right_parser__.grammar = self
-            self.all_parsers__.add(self.wsp_right_parser__)  # don't you forget about me...
-        else:
-            self.wsp_right_parser__ = ZOMBIE_PARSER
+            self.whitespace__ = ZOMBIE_PARSER
+
+        assert not self.wspL__ or self.wspL__ == self.WSP__
+        assert not self.wspR__ or self.wspR__ == self.WSP__
+        self.wsp_left_parser__ = self.whitespace__ if self.wspL__ else ZOMBIE_PARSER
+        self.wsp_right_parser__ = self.whitespace__ if self.wspR__ else ZOMBIE_PARSER
+
         self.root__.apply(self._add_parser__)
 
 
@@ -884,6 +891,9 @@ class PlainText(Parser):
             return Node(self, self.text, True), text[self.len:]
         return None, text
 
+    def __repr__(self):
+        return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % self.text
+
 
 class RegExp(Parser):
     r"""
@@ -941,6 +951,28 @@ class Whitespace(RegExp):
     assert WHITESPACE_PTYPE == ":Whitespace"
 
 
+#######################################################################
+#######################################################################
+#
+# WARNING: The following code is hard to maintain, because it
+# introduces a special case, i.e. a parser with child parsers that is
+# not a descandent of the NaryOperator and, because it itneracts
+# With the constructor of the Grammar class (see the instantiations of
+# the Whitespace-class, there).
+#
+# That is all the more regrettable, as class RE basically just
+# introduces syntactical sugar for
+#
+#     Series(whitespace__, RegExp('something'), whitespace__)
+#
+# What to do? Throw the syntactical sugar out? :-( Or find a more
+# robust solution for that kind of syntactical sugar? Or just leave
+# it be?
+#
+######################################################################
+######################################################################
+
+
 class RE(Parser):
     r"""
     Regular Expressions with optional leading or trailing whitespace.
@@ -982,9 +1014,8 @@ class RE(Parser):
             wL (str or regexp):  Left whitespace regular expression,
                 i.e. either ``None``, the empty string or a regular
                 expression (e.g. "\s*") that defines whitespace. An
-                empty string means no whitespace will be skipped,
-                ``None`` means that the default whitespace will be
-                used.
+                empty string means no whitespace will be skipped; ``None``
+                means that the default whitespace will be used.
             wR (str or regexp):  Right whitespace regular expression.
                 See above.
             name:  The optional name of the parser.

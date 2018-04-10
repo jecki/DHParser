@@ -87,11 +87,11 @@ try:
 except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \\
-    last_value, counterpart, accumulate, PreprocessorFunc, \\
+    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \\
     Node, TransformationFunc, TransformationDict, \\
     traverse, remove_children_if, merge_children, is_anonymous, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
@@ -120,6 +120,14 @@ def compile_src(source, log_dir=''):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
+        try:
+            grammar_file_name = os.path.basename(__file__).replace('Compiler.py', '.ebnf')
+            if grammar_changed({NAME}Grammar, grammar_file_name):
+                print("Grammar has changed. Please recompile Grammar first.")
+                sys.exit(1)
+        except FileNotFoundError:
+            print('Could not check for changed grammar, because grammar file "%s" was not found!'
+                  % grammar_file_name)    
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'

@@ -173,8 +173,13 @@ is triggered by the test-script.
 The development workflow for DSLs
 ---------------------------------
 
-When developing a domain specific notation it is recommendable to first develop the grammar and the parser for that notation, then to the
-abstract syntax tree transformations and finally to implement the compiler. Of course one can always come back and change the grammar later. But in order to avoid revising the AST-transformations and the compiler time and again it helps if the grammar has been worked out before. A bit of interlocking between these steps does not hurt, though.
+When developing a domain specific notation it is recommendable to first
+develop the grammar and the parser for that notation, then to the abstract
+syntax tree transformations and finally to implement the compiler. Of course
+one can always come back and change the grammar later. But in order to avoid
+revising the AST-transformations and the compiler time and again it helps if
+the grammar has been worked out before. A bit of interlocking between these
+steps does not hurt, though.
 
 A resonable workflow for developing the grammar proceeds like this:
 
@@ -192,18 +197,27 @@ A resonable workflow for developing the grammar proceeds like this:
    errors easier.
 
 4. Next, you should run the test script. Usually, some test will fail at
-   the first attempt. So you'll keep revising the EBNF-grammar, adjusting and adding test cases until all tests pass.
+   the first attempt. So you'll keep revising the EBNF-grammar, adjusting and
+   adding test cases until all tests pass.
 
 5. Now it is time to try and compile the example documents. By this time the
    test-script should have generated the compile-script, which you can be
-   called with the example documents. Don't worry too much about the output, yet. What is important at this stage is merely whether the parser can
+   called with the example documents. Don't worry too much about the output,
+   yet. What is important at this stage is merely whether the parser can
    handle the examples or not. If not, further test cases and adjustments the
-   EBNF grammar will be needed - or revision of the examples in case you decide to use different syntactic constructs.
+   EBNF grammar will be needed - or revision of the examples in case you
+   decide to use different syntactic constructs.
 
-   If all examples can be parsed, you go back to step one and add further more complex examples, and continue to do so until you have the feeling that you DSL's grammar is rich enough for all intended application cases.
+   If all examples can be parsed, you go back to step one and add further more
+   complex examples, and continue to do so until you have the feeling that you
+   DSL's grammar is rich enough for all intended application cases.
 
-Let's try this with the trivial demo example that comes with creating a new project with the "dhparser.py"-script. Now, you have already seen that the
-"example.dsl"-document merely contains a simple sequence of words: "Life is but a walking shadow" Now, wouldn't it be nice, if we could end this sequence with a full stop to turn it into a proper sentence. So, open "examples.dsl" with a text editor and add a full stop::
+Let's try this with the trivial demo example that comes with creating a new
+project with the "dhparser.py"-script. Now, you have already seen that the
+"example.dsl"-document merely contains a simple sequence of words: "Life is
+but a walking shadow" Now, wouldn't it be nice, if we could end this sequence
+with a full stop to turn it into a proper sentence. So, open "examples.dsl"
+with a text editor and add a full stop::
 
    Life is but a walking shadow.
 
@@ -215,6 +229,297 @@ Now, try to compile "examples.dsl" with the compile-script::
 Since the grammar, obviously, did not allow full stops so far, the parser
 returns an error message. The error message is pretty self-explanatory in this
 case. (Often, you will unfortunately find that the error message are somewhat
-difficult to decipher. In particular, because it so happens that an error the parser complains about is just the consequence of an error made at an earlier location that the parser may not have been able to recognize as such. We will learn more about how to avoid such situations, later.) EOF is actually the name of a parser that captures the end of the file, thus "EOF"! But instead of the expected end of file an, as of now, unparsable construct, namely a full stop followed by a line feed, signified by "\n", was found.
+difficult to decipher. In particular, because it so happens that an error the
+parser complains about is just the consequence of an error made at an earlier
+location that the parser may not have been able to recognize as such. We will
+learn more about how to avoid such situations, later.) EOF is actually the
+name of a parser that captures the end of the file, thus "EOF"! But instead of
+the expected end of file an, as of now, unparsable construct, namely a full
+stop followed by a line feed, signified by "\n", was found.
 
+Let's have look into the grammar description "poetry.ebnf". We ignore the
+beginning of the file, in particular all lines starting with "@" as these
+lines do not represent any grammar rules, but meta rules or so-called
+"directives" that determine some general characteristics of the grammar, such
+as whitespace-handling or whether the parser is going to be case-sensitive.
+Now, there are exactly three rules that make up this grammar::
 
+   document = ~ { WORD } §EOF
+   WORD     =  /\w+/~
+   EOF      =  !/./
+
+EBNF-Grammars describe the structure of a domain specific notation in top-down
+fashion. Thus, the first rule in the grammar describes the comonents out of
+which a text or document in the domain specific notation is composed as a
+whole. The following rules then break down the components into even smaller
+components until, finally, there a only atomic components left which are
+described be matching rules. Matching rules are rules that do not refer to
+other rules any more. They consist of string literals or regular expressions
+that "capture" the sequences of characters which form the atomic components of
+our DSL. Rules in general always consist of a symbol on the left hand side of
+a "="-sign (which in this context can be unterstood as a definition signifier)
+and the definition of the rule on the right hand side.
+
+In our case the text as a whole, conveniently named "document" (any other name
+would be allowed, too), consists of a leading whitespace, a possibly empty
+sequence of an arbitrary number of words words ending only if the end of file
+has been reached. Whitespace in DHParser-grammers is always denoted by a tilde
+"~". Thuse the definiens of the rule "document" starts with a "~" on the right
+hand side of the deifnition sign ("="). Next, you find the symbol "WORD"
+enclosed in braces. "WORD", like any symbol composed of letters in DHParser,
+refers to another rule further below that defines what words are. The meaning
+of the braces is that whatever is enclosed by braces may be repeated zero or
+more times. Thus the expression "{ WORD }" describes a seuqence of arbitrarily
+many repetitions of WORD, whatever WORD may be. Finally, EOF refers to yet
+another rule definied further below. We do not yet know what EOF is, but we
+know that when the sequence of words ends, it must be followed by an EOF. The
+paragraph sign "§" in front of EOF means that it is absolutely mandatory that
+the seuqence of WORDs is followed by an EOF. If it doesn't the program issues
+an error message. Without the "§"-sign the parser simply would not match,
+which in itself is not considered an error.
+
+Now, let's look at our two matching rules. Both of these rules contain regular
+expressions. If you do not know about regular expressions yet, you should head
+over to an explanation or tutorial on regular expressions, like
+https://docs.python.org/3/library/re.html, before continuing, because we are
+not going to discuss them here. In DHParser-Grammars regular expressions are
+enclosed by simple forawrd slashes "/". Everything between two forward slashes
+is a regular expression as it would be understood by Python's "re"-module.
+Thus the rule ``WORD = /\w+/~`` means that a word consists of a seuqence of
+letters, numbers or underscores '_' that must be at least one sign long. This
+is what the regular expression "\w+" inside the slashes means. In regular
+expressions, "\w" stands for word-characters and "+" means that the previous
+character can be repeated one or more times. The tile "~" following the
+regular expression, we already know. It means that a a word can be followed by
+whitespace. Strictly speaking that whitespace is part of "WORD" as it is
+defined here.
+
+Similarly, the EOF (for "end of line") symbol is defined by a rule that
+consists of a simple regular expression, namely ".". The dot in regular
+expressions means any character. However, the regular expression itself
+preceded by an exclamations mark "!". IN DHParser-Grammars, the explanation
+mark means "not". Therefore the whole rule means, that *no* character must
+follow. Since this is true only for the end of file, the parser looking for
+EOF will only match if the very end of the file has been reached.
+
+Now, what would be the easiest way to allow our sequence of words to be ended
+like a real sentence with a dot "."?  As always when defining grammars on can
+think of different choice to implement this requirement in our grammar. One
+possible solution is to add a dot-literal before the "§EOF"-component at the
+end of the definition of the "document"-rule. So let's do that. Change the
+line where the "document"-rule is defined to::
+
+   document = ~ { WORD } "." §EOF
+
+As you can see, string-literals are simply denoted as strings between inverted
+commas in DHParser's variant of the EBNF-Grammar. Now, before we can compile
+the file "example.dsl", we will have to regenerate the our parser, because we
+have changed the grammar. In order to recompile, we simply run the test-script
+again::
+
+   $ python tst_poetry_grammar.py
+
+But what is that? A whole lot of errormessages? Well, this it not surprising,
+because we change the grammar, some of our old test-cases fail with the new
+grammar. So we will have to update our test-cases wird. (Actually, the grammar
+get's compiles never the less and we could just ignore the test failures and
+carry on with compiling our "example.dsl"-file again. But, for this time,
+we'll follow good practice and adjust the test cases. So open the test that
+failed, "grammar_tests/02_test_document.ini", in the editor and add full stops
+at the end of the "match"-cases and remove the full stop at the end of the
+"fail"-case::
+
+   [match:document]
+   M1: """This is a sequence of words
+       extending over several lines."""
+   M2: """  This sequence contains leading whitespace."""
+
+   [fail:document]
+   F1: """This test should fail, because neither
+       comma nor full have been defined anywhere"""
+
+The format of the test-files should be pretty self-explanatory. It is a simple
+ini-file, where the section markers hold the name of the grammar-rule to be
+tested which is either preceded by "match" or "fail". "match means" that the
+following examples should be matched by the grammar-rule. "fail" means they
+should *not* match. It is just as important that a parser or grammar-rules
+does not match those strings it should not match as it is that it matches
+those strings that it should match. The individual test-cases all get a name,
+in this case M1, M2, F2, but if you prefer more meaningful names this is also
+possible. (Beware, however, that the names for match-test different from the
+names for the fail tests for the same rule!). Now, run the test-script again
+and you'll see that no errors get reported any more.
+
+Finally, we can recompile out "example.dsl"-file, and by its XML output we can
+tell that it worked::
+
+   $ python poetryCompiler.py example.dsl
+
+So far, we have seen *in nuce* how the development workflow for a building up
+DSL-grammar goes. Let's take this a step further by adding more capabilities
+to our grammr.
+
+Extending the example DSL further
+---------------------------------
+
+A grammar that can only digest single sentences is certainly a rather boring.
+So we'll extend our grammar a little further so that it can capture paragraphs
+of sentences. To see, where we are heading, let's first start a new example
+file, let's call it "macbeth.dsl" and enter the following lines::
+
+   Life’s but a walking shadow, a poor player that struts and frets his hour
+   upon the stage and then is heard no more. It is a tale told by an idiot,
+   full of sound and fury, signifying nothing.
+
+What have we got, there? We've got a paragraph that consists of several
+sentences each of which ends with a full stop. The sentences themselves can
+consist of different parts which a separated by a comma. If, so far, we have
+got a clear idea (in verbal terms) of the structure of texts in our DSL, we
+can now try to formulate this in the grammar.
+
+   document = ~ { sentence } §EOF
+   sentence = part {"," part } "."
+   part     = { WORD }              # a subtle mistake, right here!
+   WORD     =  /\w+/~               # something forgotten, here!
+   EOF      =  !/./
+
+The most important new part is the grammar rule "sentence". It reads as this:
+A sentence is a part of a sentence potentially followed by a repeated sequence
+of a comma and another part of a sentence and ultimately ending with a full
+stop. (Understandable? If you have ever read Russell's "Introduction to
+Mathematical Philosophy" you will be used to this kind of prose. Other than
+that I find the formal definition easier to understand. However, for learning
+EBNF or any other formalism, it helps in the beginning to translate the
+meaning of its statements into plain old Englisch.)
+
+There is are two subtle mistakes in this grammar. If you can figure them out
+just by thinking about it, feel free to correct the grammar right now. (Would
+you really have noticed the mistakes if they hadn't already been marked in the
+code above?) For all less intelligent people, like me: Let's be prudent and -
+since the grammar has become more complex - add a few test cases. This should
+make it easier to locate any errors. So open up an editor with a new file in
+the tests subdirectory, say ``grammar_tests/03_test_sentence.ini`` (Test files
+should always contain the component "test_" in the filename, otherwise they
+will be overlooked by DHParser's unit testing subsystem) and enter a few
+test-cases like these::
+
+   [match:sentence]
+   M1: """It is a tale told by an idiot,
+      full of sound and fury, signifying nothing."""
+   M2: """Plain old sentence."""
+
+   [fail:sentence]
+   F1: """Ups, a full stop is missing"""
+   F2: """No commas at the end,."""
+
+Again, we recompile the grammar and run the test at the same time by running
+the testing-script::
+
+   $ python tst_poetry_grammar.py
+   Errors found by unit test "03_test_sentence.ini":
+   Fail test "F2" for parser "sentence" yields match instead of expected failure!
+
+Too bad, something went wrong here. But what? Didn't the definition of the
+rule "sentence" make sure that parts of sentences are, if at all, only be
+followed by a sequence of a comma *and* another part of a sentence. So, how
+come that between the last comma and the full stop there is nothing but empty
+space? Ah, there's the rub! If we look into our grammar, how parts of
+sentences have been defined, we find that the rule::
+
+   part = { WORD }
+
+definies a part of a sentence as a sequence of *zero* or more WORDs. This
+means that a string of length zero also counts as a valid part of a sentence.
+Now in order to avoid this, we could write::
+
+   part = WORD { WORD }
+
+This definition makes sure that there is at least on WORD in a part. Since the
+case that at least one item is needed occurs rather frequently in grammars,
+DHParser offers a special syntax for this case::
+
+   part = { WORD }+
+
+(The plus sign "+" must always follow directly after the curly brace "}"
+without any whitespcae in between, otherwise DHParser won't understannd it.)
+At this point the worry may arise that the same problem could reoccur at
+another level, if the rule for WORD would match empty strings as well. Let's
+quickly add a test case for this to the file
+``grammar_tests/01_test_word.ini``::
+
+   [fail:WORD]
+   F1: two words
+   F2: ""
+
+Thus, we are sure to be warned in case the definition of rule "WORD" matches
+the empty string. Luckily, it does not do so now. But it might happen that we
+change this definition later again for some reason, we might have forgotton
+about this subtlety and introduce the same error again. With a test case we
+can reduce the risk of such a regression error. This time the tests run
+through, nicely. So let's try the parser on our new example::
+
+   $ python poetryCompiler.py macbeth.dsl
+   macbeth.dsl:1:1: Error: EOF expected; "Life’s but" found!
+
+That is strange. Obviously, there is an error right at the beginning (line 1
+column 1). But what coul possibly be wrong with the word "Life". Now you might
+already have guessed what the error is and that the error is not exactly
+located in the first column of the first line.
+
+Unfortunately, DHParser - like almost any other parser out there - is not
+always very good at spotting the exact location of an error. Because rules
+refer to other rules, a rule may fail to parse - or, what is just as bad,
+succeed to parse when it should indeed fail - as a consequence of an error in
+the definition of one of the rules it refers to. But this means if the rule
+for the whole document fails to match, the actual error can be located
+anywhere in the document! There a different approaches to dealing with this
+problem. A tool that DHParser offers is to write log-files that document the
+parsing history. The log-files allow to spot the location, where the parsing
+error occured. However, you will have to look for the error manually. A good
+starting point is usually either the end of the parsing process or the point
+where the parser reached the farthest into the text. In order to receive the
+parsing history, you need to run the compiler-script again with the debugging
+option::
+
+   $ python poetryCompiler.py macbeth.dsl
+
+You will receive the same error messages as before. but this time various
+kinds of debugging information have been written into a new created
+subdirectory "LOGS". (Beware that any files in the "LOGS" directory may be
+overwritten or deleted by any of the DHParser scripts upon the next run! So
+don't store any important data there.) The most interesting file in the
+"LGOS"-directory is the full parser log. We'll ignore the other files and just
+open the file "macbech_full_parser.log.html" in an internet-browser. As the
+parsing history tends to become quite long, this usually takes a while, but
+luckily not in the case of our short demo example::
+
+   $ firefox LOGS/macbeth_full_parser.log.html &
+
+   ..picture parsing_history.png
+
+What you see is a representation of the parsing history. It might look a bit
+tedious in the beginning, especially the this column that contains the parser
+call sequence. But it is all very straight forward: For every application of a
+match rule, there is a row in the table. Typically, match rules are applied at
+the end of a long sequence of parser calls that is displayed in the third
+column. You will recognise the parsers that represent rules by their names,
+e.g. "document", "sentence" etc. Those parsers that merely represent
+constructs of the EBNF grammar within a rule do not have a name and are
+represented by theis type, which always begins with a colon, like
+":ZeroOrMore". Finally, the regular expression or literal parsers are
+represented by the regular expression pattern or the string literal
+themselves. (Arguably, it can be confusing that parsers are represented in
+three different ways in the parer call sequence. I am still figuring out a
+better way to display the parser call sequence. Any suggestions welcome!) The
+first two columns display the position in the text in terms of lines and
+columns. The second but last column, labeled "success" shows wether the last
+parser in the sequence matched or failed or produced an error. In case of an
+error, the error message is displayed in the third column as well. In case the
+parser matched, the last column displays exactly that section of the text that
+the parser did match. If the parser did not match, the last column displays
+the text that still lies ahead and has not yet been parsed. 
+
+In our concrete example, we can see that the parser "WORD" matches "Life", but not "Life’s" or "’s". And this ultimately leads to the failure of the parsing process as a whole.   
+
+Controlling abstract-syntax-tree generation
+-------------------------------------------
