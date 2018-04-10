@@ -237,7 +237,7 @@ class Parser(ParserBase):
     def __init__(self, name: str = '') -> None:
         # assert isinstance(name, str), str(name)
         super().__init__(name)
-        self._grammar = None  # type: 'Grammar'
+        self._grammar = None  # type: Optional['Grammar']
         self.reset()
 
         # add "aspect oriented" wrapper around parser calls
@@ -602,14 +602,14 @@ class Grammar:
 
         if self.WSP__:
             try:
-                probe = self.whitespace__
+                probe = self.whitespace__  # type: RegExp
                 assert self.whitespace__.regexp.pattern == self.WSP__
             except AttributeError:
-                self.whitespace__ = Whitespace(self.WSP__)
+                self.whitespace__ = Whitespace(self.WSP__)  # type: RegExp
             self.whitespace__.grammar = self
             self.all_parsers__.add(self.whitespace__)   # don't you forget about me...
         else:
-            self.whitespace__ = ZOMBIE_PARSER
+            self.whitespace__ = cast(RegExp, ZOMBIE_PARSER)
 
         assert not self.wspL__ or self.wspL__ == self.WSP__
         assert not self.wspR__ or self.wspR__ == self.WSP__

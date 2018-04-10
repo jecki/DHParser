@@ -30,7 +30,7 @@ import copy
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, typing
-from typing import Callable, cast, Iterator, List, Set, Union, Tuple, Optional
+from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional
 
 
 __all__ = ('ParserBase',
@@ -257,7 +257,7 @@ class Node(collections.abc.Sized):
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType
-            self._content = None        # type: str
+            self._content = None        # type: Optional[str]
             self.children = NoChildren  # type: ChildrenType
             self._len = -1              # type: int  # lazy evaluation
         else:
@@ -413,7 +413,7 @@ class Node(collections.abc.Sized):
 
 
     @property
-    def content(self) -> Union[StringView, str]:
+    def content(self) -> str:
         """
         Returns content as string, omitting error messages.
         """
@@ -670,7 +670,7 @@ class Node(collections.abc.Sized):
                     yield node
 
 
-    def select_by_tag(self, tag_names: Union[str, Set[str]],
+    def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
                       include_root: bool=True) -> Iterator['Node']:
         """
         Returns an iterator that runs through all descendants that have one
@@ -699,7 +699,7 @@ class Node(collections.abc.Sized):
             Node: All nodes which have a given tag name.
         """
         if isinstance(tag_names, str):
-            tag_names = frozenset(tag_names)
+            tag_names = frozenset({tag_names})
         return self.select(lambda node: node.tag_name in tag_names, include_root)
 
 

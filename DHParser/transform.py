@@ -242,14 +242,15 @@ def traverse(root_node: Node,
     if '__cache__' in processing_table:
         # assume that processing table has already been expanded
         table = processing_table               # type: ProcessingTableType
-        cache = processing_table['__cache__']  # type: Dictionary[str, List[Callable]]
+        cache = cast(TransformationDict, processing_table['__cache__'])  # type: TransformationDict
     else:
         # normalize processing_table entries by turning single values
         # into lists with a single value
         table = {name: cast(Sequence[Callable], smart_list(call))
                  for name, call in list(processing_table.items())}
         table = expand_table(table)
-        cache = table.setdefault('__cache__', cast(TransformationDict, dict()))
+        cache = cast(TransformationDict,
+                     table.setdefault('__cache__', cast(TransformationDict, dict())))
         # change processing table in place, so its already expanded and cache filled next time
         processing_table.clear()
         processing_table.update(table)

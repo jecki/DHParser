@@ -311,16 +311,16 @@ class TestSeries:
         st = parser("DEAB_");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
 
-    def test_boundary_cases(self):
-        lang = """
-        document = series | §!single | /.*/
-        series = "A" "B" §"C" "D"
-        single = "E"
-        """
-        parser_class = grammar_provider(lang)
-        parser = parser_class()
-        print(parser.python_src__)
-        print(parser_class.python_src__)
+    # def test_boundary_cases(self):
+    #     lang = """
+    #     document = series | §!single | /.*/
+    #     series = "A" "B" §"C" "D"
+    #     single = "E"
+    #     """
+    #     parser_class = grammar_provider(lang)
+    #     parser = parser_class()
+    #     print(parser.python_src__)
+    #     print(parser_class.python_src__)
 
 
 class TestAllOfSomeOf:

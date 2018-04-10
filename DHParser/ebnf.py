@@ -788,7 +788,7 @@ class EBNFCompiler(Compiler):
         # What makes it (look) more complicated is the handling of the
         # mandatory §-operator
         mandatory_marker = []
-        filtered_children = []
+        filtered_children = []  # type: List[Node]
         for nd in node.children:
             if nd.parser.ptype == TOKEN_PTYPE and nd.content == "§":
                 mandatory_marker.append(len(filtered_children))
