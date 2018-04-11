@@ -32,6 +32,8 @@ import DHParser.log
 from DHParser.log import log_parsing_history
 
 
+LOGGING = True
+
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
     with open('LaTeX_ebnf_ERRORS.txt', encoding="utf-8") as f:
@@ -54,7 +56,7 @@ def fail_on_error(src, result):
 
 
 def tst_func():
-    with DHParser.log.logging(False):
+    with DHParser.log.logging(LOGGING):
         if not os.path.exists('REPORT'):
             os.mkdir('REPORT')
         files = os.listdir('testdata')

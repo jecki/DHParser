@@ -149,7 +149,7 @@ class LaTeXGrammar(Grammar):
     generic_inline_env  = begin_inline_env //~ paragraph §end_inline_env
     begin_inline_env    = (-!LB begin_environment) | (begin_environment !LFF)
     end_inline_env      = end_environment
-                          ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with genric_block when EOF
+                          ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
     begin_environment   = /\\begin{/ §NAME /}/
     end_environment     = /\\end{/ §::NAME /}/
     
@@ -237,7 +237,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "8dcbc88ac7db7a9bee51f440394aaa18"
+    source_hash__ = "79c6f2eaa821f7e92346e0ff24e7c5f8"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
@@ -376,6 +376,8 @@ flatten_structure = flatten(lambda context: is_anonymous(context) or is_one_of(
 
 
 def is_commandname(context):
+    """Returns True, if last node in the content represents a (potentially
+    unknown) LaTeX-command."""
     node = context[-1]
     if node.parser.ptype == TOKEN_PTYPE:
         parent = context[-2]
@@ -400,6 +402,7 @@ LaTeX_AST_transformation_table = {
     "latexdoc": [],
     "preamble": [traverse_locally({'+': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],
+    "pdfinfo": [],
     "frontpages": reduce_single_child,
     "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
     "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph": [],
@@ -675,6 +678,10 @@ class LaTeXCompiler(Compiler):
     #     return node
 
     def on_documentclass(self, node):
+        """
+        Saves the documentclass (if known) and the language (if given)
+        in the metadata dictionary.
+        """
         if 'config' in node:
             for it in {part.strip() for part in node['config'].content.split(',')}:
                 if it in self.KNOWN_LANGUAGES:
