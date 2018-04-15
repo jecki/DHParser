@@ -26,7 +26,7 @@ from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import mock_syntax_tree, flatten_sxpr, TOKEN_PTYPE
+from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
@@ -240,25 +240,25 @@ class TestSExpr:
 
     def test_mock_syntax_tree(self):
         sexpr = '(a (b c) (d e) (f (g h)))'
-        tree = mock_syntax_tree(sexpr)
+        tree = parse_sxpr(sexpr)
         assert flatten_sxpr(tree.as_sxpr().replace('"', '')) == sexpr
 
         # test different quotation marks
         sexpr = '''(a (b """c""" 'k' "l") (d e) (f (g h)))'''
         sexpr_stripped = '(a (b c k l) (d e) (f (g h)))'
-        tree = mock_syntax_tree(sexpr)
+        tree = parse_sxpr(sexpr)
         assert flatten_sxpr(tree.as_sxpr().replace('"', '')) == sexpr_stripped
 
         sexpr_clean = '(a (b "c" "k" "l") (d "e") (f (g "h")))'
-        tree = mock_syntax_tree(sexpr_clean)
+        tree = parse_sxpr(sexpr_clean)
         assert flatten_sxpr(tree.as_sxpr()) == sexpr_clean
 
-        tree = mock_syntax_tree(sexpr_stripped)
+        tree = parse_sxpr(sexpr_stripped)
         assert flatten_sxpr(tree.as_sxpr()) == '(a (b "c k l") (d "e") (f (g "h")))'
 
     def test_mock_syntax_tree_with_classes(self):
         sexpr = '(a:class1 (b:class2 x) (:class3 y) (c z))'
-        tree = mock_syntax_tree(sexpr)
+        tree = parse_sxpr(sexpr)
         assert tree.tag_name == 'a'
         assert tree.result[0].tag_name == 'b'
         assert tree.result[1].tag_name == ':class3'

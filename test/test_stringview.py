@@ -123,12 +123,16 @@ class TestStringView:
         assert EMPTY_STRING_VIEW.match(re.compile(r'.*'))
         assert len(EMPTY_STRING_VIEW[0:1]) == 0
 
-
-    def text_strip(self):
+    def test_strip(self):
         s = StringView('  test  ', 1, -1)
         assert s.strip() == "test"
+        assert s.lstrip() == "test "
+        assert s.rstrip() == " test"
         s = StringView(' test ', 1, -1)
         assert s.strip() == "test"
+        s = StringView('(a (b c))')
+        assert s.strip() == '(a (b c))'
+        assert s[1:].strip() == 'a (b c))'
 
     def text_split(self):
         s = StringView(' 1,2,3,4,5 ', 1, -1)

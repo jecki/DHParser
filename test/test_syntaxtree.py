@@ -24,7 +24,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.error import Error
-from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -33,11 +33,13 @@ from DHParser.dsl import grammar_provider
 
 class TestMockSyntaxTree:
     def test_mock_syntax_tree(self):
-        tree = mock_syntax_tree('(a (b c))')
-        tree = mock_syntax_tree('(a i\nj\nk)')
+        tree = parse_sxpr('(a (b c))')
+        assert flatten_sxpr(tree.as_sxpr()) == '(a (b "c"))', flatten_sxpr(tree.as_sxpr())
+        tree = parse_sxpr('(a i\nj\nk)')
+        assert flatten_sxpr(tree.as_sxpr()) == '(a "i" "j" "k")', flatten_sxpr(tree.as_sxpr())
         try:
-            tree = mock_syntax_tree('a b c')
-            assert False, "mock_syntax_tree() should raise a ValueError " \
+            tree = parse_sxpr('a b c')
+            assert False, "parse_sxpr() should raise a ValueError " \
                           "if argument is not a tree!"
         except ValueError:
             pass
@@ -49,9 +51,9 @@ class TestNode:
     """
     def setup(self):
         self.unique_nodes_sexpr = '(a (b c) (d e) (f (g h)))'
-        self.unique_tree = mock_syntax_tree(self.unique_nodes_sexpr)
+        self.unique_tree = parse_sxpr(self.unique_nodes_sexpr)
         self.recurring_nodes_sexpr = '(a (b x) (c (d e) (b y)))'
-        self.recurr_tree = mock_syntax_tree(self.recurring_nodes_sexpr)
+        self.recurr_tree = parse_sxpr(self.recurring_nodes_sexpr)
 
     def test_str(self):
         assert str(self.unique_tree) == "ceh"
@@ -68,8 +70,8 @@ class TestNode:
     def test_equality1(self):
         assert self.unique_tree == self.unique_tree
         assert self.recurr_tree != self.unique_tree
-        assert mock_syntax_tree('(a (b c))') != mock_syntax_tree('(a (b d))')
-        assert mock_syntax_tree('(a (b c))') == mock_syntax_tree('(a (b c))')
+        assert parse_sxpr('(a (b c))') != parse_sxpr('(a (b d))')
+        assert parse_sxpr('(a (b c))') == parse_sxpr('(a (b c))')
 
     def test_equality2(self):
         ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
@@ -80,7 +82,7 @@ class TestNode:
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
-        compare_tree = mock_syntax_tree("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
+        compare_tree = parse_sxpr("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
         assert tree == compare_tree, tree.as_sxpr()
 
     def test_copy(self):
@@ -126,7 +128,7 @@ class TestNode:
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
 
     def test_collect_errors(self):
-        tree = mock_syntax_tree('(A (B 1) (C (D (E 2) (F 3))))')
+        tree = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))))')
         A = tree
         B = next(tree.select(lambda node: str(node) == "1"))
         D = next(tree.select(lambda node: node.parser.name == "D"))
@@ -145,7 +147,7 @@ class TestNode:
 
 class TestErrorHandling:
     def test_error_flag_propagation(self):
-        tree = mock_syntax_tree('(a (b c) (d (e (f (g h)))))')
+        tree = parse_sxpr('(a (b c) (d (e (f (g h)))))')
 
         def find_h(context):
             node = context[-1]
@@ -154,7 +156,7 @@ class TestErrorHandling:
 
         assert not tree.error_flag
         traverse(tree, {"*": find_h})
-        assert tree.error_flag
+        assert tree.error_flag, tree.as_sxpr()
 
 
 class TestNodeFind():
@@ -165,33 +167,34 @@ class TestNodeFind():
         def match_tag_name(node, tag_name):
             return node.tag_name == tag_name
         matchf = lambda node: match_tag_name(node, "X")
-        tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
+        tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
         matches = list(tree.select(matchf))
         assert len(matches) == 2, len(matches)
         assert str(matches[0]) == 'd', str(matches[0])
         assert str(matches[1]) == 'F', str(matches[1])
-        assert matches[0] == mock_syntax_tree('(X (c d))')
-        assert matches[1] == mock_syntax_tree('(X F)')
+        assert matches[0] == parse_sxpr('(X (c d))')
+        assert matches[1] == parse_sxpr('(X F)')
         # check default: root is included in search:
         matchf2 = lambda node: match_tag_name(node, 'a')
         assert list(tree.select(matchf2))
         assert not list(tree.select(matchf2, include_root=False))
 
     def test_getitem(self):
-        tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
-        assert tree[0] == mock_syntax_tree('(b X)')
-        assert tree[2] == mock_syntax_tree('(e (X F))')
+        tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
+        # print(tree.as_sxpr())
+        assert tree[0] == parse_sxpr('(b X)')
+        assert tree[2] == parse_sxpr('(e (X F))')
         try:
             node = tree[3]
             assert False, "IndexError expected!"
         except IndexError:
             pass
         matches = list(tree.select_by_tag('X', False))
-        assert matches[0] == mock_syntax_tree('(X (c d))')
-        assert matches[1] == mock_syntax_tree('(X F)')
+        assert matches[0] == parse_sxpr('(X (c d))')
+        assert matches[1] == parse_sxpr('(X F)')
 
     def test_contains(self):
-        tree = mock_syntax_tree('(a (b X) (X (c d)) (e (X F)))')
+        tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
         assert 'a' not in tree
         assert any(tree.select_by_tag('a', True))
         assert not any(tree.select_by_tag('a', False))
@@ -204,12 +207,12 @@ class TestNodeFind():
 
 class TestSerialization:
     def test_attributes(self):
-        tree = mock_syntax_tree('(A "B")')
+        tree = parse_sxpr('(A "B")')
         tree.attributes['attr'] = "value"
-        tree2 = mock_syntax_tree('(A `(attr "value") "B")')
+        tree2 = parse_sxpr('(A `(attr "value") "B")')
         assert tree.as_sxpr() ==  tree2.as_sxpr()
         tree.attributes['attr2'] = "value2"
-        tree3 = mock_syntax_tree('(A `(attr "value") `(attr2 "value2") "B")')
+        tree3 = parse_sxpr('(A `(attr "value") `(attr2 "value2") "B")')
         assert tree.as_sxpr() == tree3.as_sxpr()
 
 

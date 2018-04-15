@@ -39,7 +39,7 @@ import sys
 from DHParser.error import is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
 from DHParser.parse import UnknownParserError
-from DHParser.syntaxtree import Node, mock_syntax_tree, flatten_sxpr, ZOMBIE_PARSER
+from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, ZOMBIE_PARSER
 from DHParser.toolkit import re, typing
 
 from typing import Tuple
@@ -315,12 +315,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 # write parsing-history log only in case of failure!
                 if is_logging():
                     log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
-            elif "cst" in tests and mock_syntax_tree(tests["cst"][test_name]) != cst:
+            elif "cst" in tests and parse_sxpr(tests["cst"][test_name]) != cst:
                 errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                               (test_name, parser_name, cst.as_sxpr()))
             elif "ast" in tests:
                 try:
-                    compare = mock_syntax_tree(tests["ast"][test_name])
+                    compare = parse_sxpr(tests["ast"][test_name])
                 except KeyError:
                     pass
                 if compare != ast:

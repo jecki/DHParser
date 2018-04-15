@@ -42,7 +42,7 @@ __all__ = ('ParserBase',
            'ZOMBIE_PARSER',
            'ZOMBIE_NODE',
            'Node',
-           'mock_syntax_tree',
+           'parse_sxpr',
            'flatten_sxpr')
 
 
@@ -318,7 +318,7 @@ class Node(collections.abc.Sized):
         Returns the child node with the given index if ``index_or_tagname`` is
         an integer or the first child node with the given tag name. Examples::
 
-            >>> tree = mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
             >>> flatten_sxpr(tree[0].as_sxpr())
             '(b "X")'
             >>> flatten_sxpr(tree["X"].as_sxpr())
@@ -591,13 +591,13 @@ class Node(collections.abc.Sized):
             txt = [left_bracket,  node.tag_name]
             # s += " '(pos %i)" % node.pos
             if hasattr(node, '_xml_attr'):
-                txt.extend(""" `(%s "%s")""" % (k, v) for k, v in node.attributes.items())
+                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
             if src:
                 txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(src, node.pos)))
             # if node.error_flag:   # just for debugging error collecting
             #     txt += " HAS ERRORS"
             if showerrors and node.errors:
-                txt.append(" `(err %s)" % ' '.join(str(err) for err in node.errors))
+                txt.append(" `(err `%s)" % ' '.join(str(err) for err in node.errors))
             return "".join(txt) + '\n'
 
         def closing(node) -> str:
@@ -680,7 +680,7 @@ class Node(collections.abc.Sized):
 
         Examples::
 
-            >>> tree = mock_syntax_tree('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
             >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag("X", False))
             ['(X (c "d"))', '(X "F")']
             >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag({"X", "b"}, False))
@@ -730,17 +730,22 @@ class Node(collections.abc.Sized):
 ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
 
 
-def mock_syntax_tree(sxpr: str) -> Node:
+def parse_sxpr(sxpr: str) -> Node:
     """
-    Generates a tree of nodes from an S-expression. The main purpose of this is
-    to generate test data.
+    Generates a tree of nodes from an S-expression.
+
+    This can - among other things - be used for deserialization of trees that
+    have been serialized with `Node.as_sxpr()` or as a convenient way to
+    generate test data.
 
     Example:
-    >>> mock_syntax_tree("(a (b c))").as_sxpr()
+    >>> parse_sxpr("(a (b c))").as_sxpr()
     '(a\\n    (b\\n        "c"\\n    )\\n)'
     """
+    sxpr = StringView(sxpr).strip()
+    mock_parsers = dict()
 
-    def next_block(s):
+    def next_block(s: StringView):
         """Generator that yields all characters until the next closing bracket
         that does not match an opening bracket matched earlier within the same
         package."""
@@ -765,63 +770,146 @@ def mock_syntax_tree(sxpr: str) -> Node:
                 else 'Malformed S-expression. Closing bracket(s) ")" missing.'
             raise AssertionError(errmsg)
 
-    sxpr = StringView(sxpr).strip()
-    if sxpr[0] != '(':
-        raise ValueError('"(" expected, not ' + sxpr[:10])
-    # assert sxpr[0] == '(', sxpr
-    sxpr = sxpr[1:].strip()
-    match = re.match(r'[\w:]+', sxpr)
-    if match is None:
-        raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
-                             'not "%s"' % sxpr[:40].replace('\n', ''))
-    name, class_name = (sxpr[:match.end()].split(':') + [''])[:2]
-    sxpr = sxpr[match.end():].strip()
-    pos = 0
-    attributes = OrderedDict()
-    if sxpr[0] == '(':
-        result = tuple(mock_syntax_tree(block) for block in next_block(sxpr))
-        for node in result:
-            node._pos = pos
-            pos += len(node)
-    else:
-        lines = []
-        while sxpr and sxpr[0] != ')':
-            # parse attributes
-            while sxpr[:2] == "`(":
-                i = sxpr.find('"')
-                k = sxpr.find(')')
-                if sxpr[2:5] == "pos" and (i < 0 or k < i):
-                    pos = int(sxpr[5:k].strip().split(' ')[0])
-                elif sxpr[2:5] == "err":
-                    m = sxpr.find('(', 5)
-                    while m >= 0 and m < k:
-                        m = sxpr.find('(', k)
-                        k = max(k, sxpr.find(')', max(m, 0)))
+    def inner_parser(sxpr: StringView) -> Node:
+        if sxpr[0] != '(':
+            raise ValueError('"(" expected, not ' + sxpr[:10])
+        # assert sxpr[0] == '(', sxpr
+        sxpr = sxpr[1:].strip()
+        match = sxpr.match(re.compile(r'[\w:]+'))
+        if match is None:
+            raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
+                                 'not "%s"' % sxpr[:40].replace('\n', ''))
+        end = match.end() - sxpr.begin
+        tagname = sxpr[:end]
+        name, class_name = (tagname.split(':') + [''])[:2]
+        sxpr = sxpr[end:].strip()
+        pos = 0
+        attributes = OrderedDict()
+        if sxpr[0] == '(':
+            result = tuple(inner_parser(block) for block in next_block(sxpr))
+            for node in result:
+                node._pos = pos
+                pos += len(node)
+        else:
+            lines = []
+            while sxpr and sxpr[0:1] != ')':
+                # parse attributes
+                while sxpr[:2] == "`(":
+                    i = sxpr.find('"')
+                    k = sxpr.find(')')
+                    # read very special attribute pos
+                    if sxpr[2:5] == "pos" and 0 < i < k:
+                        pos = int(sxpr[5:k].strip().split(' ')[0])
+                    # ignore very special attribute err
+                    elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
+                        m = sxpr.find('(', 5)
+                        while m >= 0 and m < k:
+                            m = sxpr.find('(', k)
+                            k = max(k, sxpr.find(')', max(m, 0)))
+                    # read attributes
+                    else:
+                        attr = sxpr[2:i].strip()
+                        value = sxpr[i:k].strip()[1:-1]
+                        attributes[attr] = value
+                    sxpr = sxpr[k+1:].strip()
+                # parse content
+                for qtmark in ['"""', "'''", '"', "'"]:
+                    match = sxpr.match(re.compile(qtmark + r'.*?' + qtmark, re.DOTALL))
+                    if match:
+                        end = match.end() - sxpr.begin
+                        i = len(qtmark)
+                        lines.append(str(sxpr[i:end - i]))
+                        sxpr = sxpr[end:].strip()
+                        break
                 else:
-                    attr = sxpr[2:i].strip()
-                    value = sxpr[i:k].strip()[1:-1]
-                    attributes[attr] = value
-                sxpr = sxpr[k+1:].strip()
-            # parse content
-            for qtmark in ['"""', "'''", '"', "'"]:
-                match = re.match(qtmark + r'.*?' + qtmark, sxpr, re.DOTALL)
-                if match:
-                    i = len(qtmark)
-                    lines.append(sxpr[i:match.end() - i])
-                    sxpr = sxpr[match.end():].strip()
-                    break
-            else:
-                match = re.match(r'(?:(?!\)).)*', sxpr, re.DOTALL)
-                lines.append(sxpr[:match.end()])
-                sxpr = sxpr[match.end():]
-        result = "\n".join(lines)
-    node = Node(MockParser(name, ':' + class_name), result)
-    if attributes:
-        node.attributes.update(attributes)
-    node._pos = pos
-    return node
+                    match = sxpr.match(re.compile(r'(?:(?!\)).)*', re.DOTALL))
+                    end = match.end() - sxpr.begin
+                    lines.append(str(sxpr[:end]))
+                    sxpr = sxpr[end:]
+            result = "\n".join(lines)
+        node = Node(mock_parsers.setdefault(tagname, MockParser(name, ':' + class_name)), result)
+        if attributes:
+            node.attributes.update(attributes)
+        node._pos = pos
+        return node
+
+    return inner_parser(sxpr)
+
+
+def parse_xml(xml: str) -> Node:
+    """
+    Generates a tree of nodes from a (Pseudo-)XML-source.
+    """
+    xml = StringView(xml)
+    PlainText = MockParser('', 'PlainText')
+    mock_parsers = {':PlainText': PlainText}
+
+    def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
+        """Parses a sqeuence of XML-Attributes. Returns the string-slice
+        beginning after the end of the attributes."""
+        attributes = OrderedDict()
+        restart = 0
+        for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
+            d = match.groupdict()
+            attributes[d['attr']] = d['value']
+            restart = match.end() - s.begin
+        return (s[restart:], attributes)
+
+    def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
+        """Parses an opening tag. Returns the string segment following the
+        the opening tag, the tag name, a dictionary of attributes and
+        a flag indicating whether the tag is actually a solitary tag as
+        indicated by a slash at the end, i.e. <br/>."""
+        match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))
+        assert match
+        tagname = match.groupdict()['tagname']
+        s, attributes = parse_attributes(s[match.end() - s.begin:])
+        i = s.find('>')
+        assert i >= 0
+        return s[i+1,], tagname, attributes, s[i-1] == "/"
+
+    def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
+        """Parses a closing tag returns the string segment, just after
+        the closing tag."""
+        match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
+        assert match
+        tagname = match.groupdict()['tagname']
+        return s[match.end() - s.begin:], tagname
+
+    def parse_leaf_content(s: StringView) -> Tuple[StringView, str]:
+        """Parses a piece of the content of a tag, just until the next opening,
+        closing or solitary tag is reached."""
+        i = 0
+        while s[i] != "<" or s[max(0, i-1)] == "\\":
+            i = s.find("<", i)
+        return s[i:], s[:i]
+
+    def parse_full_content(s: StringView) -> Tuple[StringView, Node]:
+        """Parses the full content of a tag, starting right at the beginning
+        of the opening tag and ending right after the closing tag.
+        """
+        result = []
+        s, tagname, attributes, solitary = parse_opening_tag(s)
+        name, class_name = (tagname.split(":") + [''])[:2]
+        if not solitary:
+            while s and not s[:2] == "</":
+                s, leaf = parse_leaf_content(s)
+                if not s.match(re.compile("\s*$")):
+                    result.append(Node(PlainText, leaf))
+                if s[:1] == "<" and s[:2] != "</":
+                    s, child = parse_full_content(s)
+                    result.append(child)
+            s, closing_tagname = parse_closing_tag(s)
+            assert tagname == closing_tagname
+        if len(result) == 1 and isinstance(result[0].parser == PlainText):
+            result = result[0].result
+        else:
+            result = tuple(result)
+        return Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
+
+    return parse_full_content(xml[xml.search(re.compile(r'<(?!\?)')):])
 
 # if __name__ == "__main__":
-#     st = mock_syntax_tree("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
+#     st = parse_sxpr("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
 #     print(st.as_sxpr())
 #     print(st.as_xml())

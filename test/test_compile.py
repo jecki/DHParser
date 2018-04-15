@@ -20,12 +20,12 @@ limitations under the License.
 """
 
 
-from DHParser import mock_syntax_tree, Compiler
+from DHParser import parse_sxpr, Compiler
 
 
 class TestCompilerClass:
     def test_error_propagations(self):
-        tree = mock_syntax_tree('(A (B 1) (C (D (E 2) (F 3))))')
+        tree = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))))')
         A = tree
         B = next(tree.select(lambda node: str(node) == "1"))
         D = next(tree.select(lambda node: node.parser.name == "D"))

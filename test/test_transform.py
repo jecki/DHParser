@@ -24,7 +24,7 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import mock_syntax_tree
+from DHParser.syntaxtree import parse_sxpr
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
     traverse_locally, collapse, lstrip, rstrip, remove_content
 
@@ -33,46 +33,46 @@ class TestRemoval:
     """Tests removing transformations."""
 
     def test_lstrip(self):
-        cst = mock_syntax_tree('(Token (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(Token (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
         sxpr1 = cst.as_sxpr()
         lstrip([cst])
         assert sxpr1 == cst.as_sxpr()
-        cst = mock_syntax_tree('(Token)')
+        cst = parse_sxpr('(Token)')
         lstrip([cst])
         assert cst.as_sxpr() == '(Token)'
-        cst = mock_syntax_tree('(Token (:Whitespace " ") (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(Token (:Whitespace " ") (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = mock_syntax_tree('(Token (:Whitespace " ") (Deeper (:Whitespace " ")) '
+        cst = parse_sxpr('(Token (:Whitespace " ") (Deeper (:Whitespace " ")) '
                                '(:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = mock_syntax_tree('(Token (:Re ein) (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(Token (:Re ein) (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") >= 0
 
     def test_rstrip(self):
-        cst = mock_syntax_tree('(Token (:Re test) (:Whitespace " "))')
+        cst = parse_sxpr('(Token (:Re test) (:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
         sxpr1 = cst.as_sxpr()
         rstrip([cst])
         assert sxpr1 == cst.as_sxpr()
-        cst = mock_syntax_tree('(Token)')
+        cst = parse_sxpr('(Token)')
         rstrip([cst])
         assert cst.as_sxpr() == '(Token)'
-        cst = mock_syntax_tree('(Token  (:Re test) (:Whitespace " ") (:Whitespace " "))')
+        cst = parse_sxpr('(Token  (:Re test) (:Whitespace " ") (:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = mock_syntax_tree('(Token  (:Re test) (:Whitespace " ") (Deeper (:Whitespace " ")) '
+        cst = parse_sxpr('(Token  (:Re test) (:Whitespace " ") (Deeper (:Whitespace " ")) '
                                '(:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
 
     def test_remove_content(self):
-        cst = mock_syntax_tree('(BelegLemma (:Series (:RegExp "#") (LAT_WORT (:RegExp "facitergula"))))')
+        cst = parse_sxpr('(BelegLemma (:Series (:RegExp "#") (LAT_WORT (:RegExp "facitergula"))))')
         remove_content([cst], '#')
         assert cst.content == "#facitergula", str(cst.content)
         reduce_single_child([cst])
@@ -84,7 +84,7 @@ class TestConditionalTransformations:
     """Tests conditional transformations."""
 
     def test_traverse_locally(self):
-        cst = mock_syntax_tree("""
+        cst = parse_sxpr("""
             (Lemma
                 (LemmaVariante
                     (LAT_WORT

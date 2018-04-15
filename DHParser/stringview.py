@@ -54,7 +54,7 @@ def last_char(text, begin: int, end: int) -> int:
     """Returns the index of the first non-whitespace character in string
     `text` within the bounds [begin, end].
     """
-    while end > begin and text[end] in ' \n\t':
+    while end > begin and text[end-1] in ' \n\t':
         end -= 1
     return end
 
@@ -94,14 +94,17 @@ class StringView(collections.abc.Sized):
     copying, i.e. slices are just a view on a section of the sliced
     string.
     """
-    __slots__ = ['text', 'begin', 'end', 'len', 'fullstring_flag']
+    __slots__ = ['text', 'begin', 'end', 'len', 'fullstring']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
-        assert isinstance(text, str)
+        # assert isinstance(text, str)
         self.text = text  # type: str
         self.begin, self.end = real_indices(begin, end, len(text))
         self.len = max(self.end - self.begin, 0)  # type: int
-        self.fullstring_flag = (self.begin == 0 and self.len == len(self.text))  # type: bool
+        if (self.begin == 0 and self.len == len(self.text)):
+            self.fullstring = self.text  # type: str
+        else:
+            self.fullstring = ''
 
     def __bool__(self):
         return self.end > self.begin  # and bool(self.text)
@@ -111,16 +114,12 @@ class StringView(collections.abc.Sized):
 
     def __str__(self):
         # PERFORMANCE WARNING: This creates a copy of the string-slice
-        if self.fullstring_flag:  # optimization: avoid slicing/copying
-            return self.text
+        if self.fullstring:  # optimization: avoid slicing/copying
+            return self.fullstring
         # since the slice is being copyied now, anyway, the copy might
         # as well be stored in the string view
-        self.text = self.text[self.begin:self.end]
-        self.begin = 0
-        self.len = len(self.text)
-        self.end = self.len
-        self.fullstring_flag = True
-        return self.text
+        self.fullstring = self.text[self.begin:self.end]
+        return self.fullstring
 
     def __eq__(self, other):
         # PERFORMANCE WARNING: This creates copies of the strings
@@ -146,16 +145,19 @@ class StringView(collections.abc.Sized):
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
-        start, stop = real_indices(index.start, index.stop, self.len)
-        return StringView(self.text, self.begin + start, self.begin + stop)
+        try:
+            start, stop = real_indices(index.start, index.stop, self.len)
+            return StringView(self.text, self.begin + start, self.begin + stop)
+        except AttributeError:
+            return self.text[self.begin + index]
 
     def count(self, sub: str, start=None, end=None) -> int:
         """Returns the number of non-overlapping occurrences of substring
         `sub` in StringView S[start:end].  Optional arguments start and end
         are interpreted as in slice notation.
         """
-        if self.fullstring_flag:
-            return self.text.count(sub, start, end)
+        if self.fullstring:
+            return self.fullstring.count(sub, start, end)
         elif start is None and end is None:
             return self.text.count(sub, self.begin, self.end)
         else:
@@ -168,8 +170,8 @@ class StringView(collections.abc.Sized):
         arguments `start` and `end` are interpreted as in slice notation.
         Returns -1 on failure.
         """
-        if self.fullstring_flag:
-            return self.text.find(sub, start, end)
+        if self.fullstring:
+            return self.fullstring.find(sub, start, end)
         elif start is None and end is None:
             return self.text.find(sub, self.begin, self.end) - self.begin
         else:
@@ -182,8 +184,8 @@ class StringView(collections.abc.Sized):
         arguments `start` and `end` are interpreted as in slice notation.
         Returns -1 on failure.
         """
-        if self.fullstring_flag:
-            return self.text.rfind(sub, start, end)
+        if self.fullstring:
+            return self.fullstring.rfind(sub, start, end)
         if start is None and end is None:
             return self.text.rfind(sub, self.begin, self.end) - self.begin
         else:
@@ -203,9 +205,11 @@ class StringView(collections.abc.Sized):
         end = self.end if end is None else self.begin + end
         return self.text.startswith(prefix, start, end)
 
-    def match(self, regex):
+    def match(self, regex, flags=0):
         """Executes `regex.match` on the StringView object and returns the
         result, which is either a match-object or None.
+        WARNING:  match.end(), match.span() etc. are mapped to the underlying text,
+                  not the StringView-object!!!
         """
         return regex.match(self.text, pos=self.begin, endpos=self.end)
 
@@ -232,19 +236,36 @@ class StringView(collections.abc.Sized):
     def search(self, regex):
         """Executes regex.search on the StringView object and returns the
         result, which is either a match-object or None.
+        WARNING:  match.end(), match.span() etc. are mapped to the underlying text,
+                  not the StringView-object!!!
         """
         return regex.search(self.text, pos=self.begin, endpos=self.end)
+
+    def finditer(self, regex):
+        """Executes regex.finditer on the StringView object and returns the
+        iterator of match objects.
+        WARNING:  match.end(), match.span() etc. are mapped to the underlying text,
+                  not the StringView-object!!!
+        """
+        return regex.finditer(self.text, pos=self.begin, endpos=self.end)
 
     def strip(self):
         """Returns a copy of the StringView `self` with leading and trailing
         whitespace removed.
         """
-        if self.fullstring_flag:
-            return self.text.strip()
-        else:
-            begin = first_char(self.text, self.begin, self.end)
-            end = last_char(self.text, self.begin, self.end)
-            return self.text[begin:end]
+        begin = first_char(self.text, self.begin, self.end) - self.begin
+        end = last_char(self.text, self.begin, self.end) - self.begin
+        return self if begin == 0 and end == self.len else self[begin:end]
+
+    def lstrip(self):
+        """Returns a copy of `self` with leading whitespace removed."""
+        begin = first_char(self.text, self.begin, self.end) - self.begin
+        return self if begin == 0 else self[begin:]
+
+    def rstrip(self):
+        """Returns a copy of `self` with trailing whitespace removed."""
+        end = last_char(self.text, self.begin, self.end) - self.begin
+        return self if end == self.len else self[:end]
 
     def split(self, sep=None):
         """Returns a list of the words in `self`, using `sep` as the
@@ -252,8 +273,8 @@ class StringView(collections.abc.Sized):
         whitespace string is a separator and empty strings are
         removed from the result.
         """
-        if self.fullstring_flag:
-            return self.text.split(sep)
+        if self.fullstring:
+            return self.fullstring.split(sep)
         else:
             pieces = []
             l = len(sep)
