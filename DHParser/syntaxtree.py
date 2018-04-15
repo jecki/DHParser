@@ -25,6 +25,7 @@ parser classes are defined in the ``parse`` module.
 
 
 import collections.abc
+from collections import OrderedDict
 import copy
 
 from DHParser.error import Error, linebreaks, line_col
@@ -516,6 +517,13 @@ class Node(collections.abc.Sized):
         return errors
 
 
+    @property
+    def attributes(self):
+        """Returns a dictionary of XML-Attributes attached to the Node."""
+        if not hasattr(self, '_xml_attr'):
+            self._xml_attr = OrderedDict()
+        return self._xml_attr
+
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i, density=0) -> str:
         """
@@ -580,16 +588,17 @@ class Node(collections.abc.Sized):
 
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""
-            txt = left_bracket + node.tag_name
+            txt = [left_bracket,  node.tag_name]
             # s += " '(pos %i)" % node.pos
+            if hasattr(node, '_xml_attr'):
+                txt.extend(""" `(%s "%s")""" % (k, v) for k, v in node.attributes.items())
             if src:
-                txt += " '(pos %i " % node.pos  # + " %i %i)" % line_col(src, node.pos)
+                txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(src, node.pos)))
             # if node.error_flag:   # just for debugging error collecting
             #     txt += " HAS ERRORS"
             if showerrors and node.errors:
-                txt += " '(err '(%s))" % ' '.join(str(err).replace('"', r'\"')
-                                                  for err in node.errors)
-            return txt + '\n'
+                txt.append(" `(err %s)" % ' '.join(str(err) for err in node.errors))
+            return "".join(txt) + '\n'
 
         def closing(node) -> str:
             """Returns the closing string for the representation of `node`."""
@@ -602,14 +611,6 @@ class Node(collections.abc.Sized):
                 else '"%s"' % strg.replace('"', r'\"')
 
         return self._tree_repr('    ', opening, closing, pretty, density=density)
-
-
-    @property
-    def attributes(self):
-        """Returns a dictionary of XML-Attributes attached to the Node."""
-        if not hasattr(self, '_xml_attr'):
-            self._xml_attr = dict()
-        return self._xml_attr
 
 
     def as_xml(self, src: str = None, showerrors: bool = True) -> str:
@@ -625,12 +626,13 @@ class Node(collections.abc.Sized):
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""            
             txt = ['<', node.tag_name]
-            # s += ' pos="%i"' % node.pos
+            has_reserved_attrs = hasattr(node, '_xml_attr') \
+                and any (r in node.attributes for r in {'err', 'line', 'col'})
             if hasattr(node, '_xml_attr'):
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
-            if src:
+            if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
-            if showerrors and node.errors:
+            if showerrors and node.errors and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in node.errors))
             return "".join(txt + [">\n"])
@@ -728,7 +730,7 @@ class Node(collections.abc.Sized):
 ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
 
 
-def mock_syntax_tree(sxpr):
+def mock_syntax_tree(sxpr: str) -> Node:
     """
     Generates a tree of nodes from an S-expression. The main purpose of this is
     to generate test data.
@@ -763,7 +765,7 @@ def mock_syntax_tree(sxpr):
                 else 'Malformed S-expression. Closing bracket(s) ")" missing.'
             raise AssertionError(errmsg)
 
-    sxpr = sxpr.strip()
+    sxpr = StringView(sxpr).strip()
     if sxpr[0] != '(':
         raise ValueError('"(" expected, not ' + sxpr[:10])
     # assert sxpr[0] == '(', sxpr
@@ -774,15 +776,33 @@ def mock_syntax_tree(sxpr):
                              'not "%s"' % sxpr[:40].replace('\n', ''))
     name, class_name = (sxpr[:match.end()].split(':') + [''])[:2]
     sxpr = sxpr[match.end():].strip()
+    pos = 0
+    attributes = OrderedDict()
     if sxpr[0] == '(':
         result = tuple(mock_syntax_tree(block) for block in next_block(sxpr))
-        pos = 0
         for node in result:
             node._pos = pos
             pos += len(node)
     else:
         lines = []
         while sxpr and sxpr[0] != ')':
+            # parse attributes
+            while sxpr[:2] == "`(":
+                i = sxpr.find('"')
+                k = sxpr.find(')')
+                if sxpr[2:5] == "pos" and (i < 0 or k < i):
+                    pos = int(sxpr[5:k].strip().split(' ')[0])
+                elif sxpr[2:5] == "err":
+                    m = sxpr.find('(', 5)
+                    while m >= 0 and m < k:
+                        m = sxpr.find('(', k)
+                        k = max(k, sxpr.find(')', max(m, 0)))
+                else:
+                    attr = sxpr[2:i].strip()
+                    value = sxpr[i:k].strip()[1:-1]
+                    attributes[attr] = value
+                sxpr = sxpr[k+1:].strip()
+            # parse content
             for qtmark in ['"""', "'''", '"', "'"]:
                 match = re.match(qtmark + r'.*?' + qtmark, sxpr, re.DOTALL)
                 if match:
@@ -796,7 +816,9 @@ def mock_syntax_tree(sxpr):
                 sxpr = sxpr[match.end():]
         result = "\n".join(lines)
     node = Node(MockParser(name, ':' + class_name), result)
-    node._pos = 0
+    if attributes:
+        node.attributes.update(attributes)
+    node._pos = pos
     return node
 
 # if __name__ == "__main__":

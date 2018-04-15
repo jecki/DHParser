@@ -59,10 +59,10 @@ class new2Grammar(Grammar):
     document = ~ { sentence } §EOF
     sentence = part {"," part } "."
     part     = { WORD }+
-    WORD     =  /\w+/~
+    WORD     =  /[\w’]+/~
     EOF      =  !/./
     """
-    source_hash__ = "42443aabc6dfc68ae4567289b74ab085"
+    source_hash__ = "7a9984368b1c959222099d389d18c54f"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'
@@ -71,7 +71,7 @@ class new2Grammar(Grammar):
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
-    WORD = RE('\\w+')
+    WORD = RE('[\\w’]+')
     part = OneOrMore(WORD)
     sentence = Series(part, ZeroOrMore(Series(Token(","), part)), Token("."))
     document = Series(whitespace__, ZeroOrMore(sentence), EOF, mandatory=2)

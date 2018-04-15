@@ -202,6 +202,17 @@ class TestNodeFind():
         assert any(tree.select_by_tag('c', False))
 
 
+class TestSerialization:
+    def test_attributes(self):
+        tree = mock_syntax_tree('(A "B")')
+        tree.attributes['attr'] = "value"
+        tree2 = mock_syntax_tree('(A `(attr "value") "B")')
+        assert tree.as_sxpr() ==  tree2.as_sxpr()
+        tree.attributes['attr2'] = "value2"
+        tree3 = mock_syntax_tree('(A `(attr "value") `(attr2 "value2") "B")')
+        assert tree.as_sxpr() == tree3.as_sxpr()
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

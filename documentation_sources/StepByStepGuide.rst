@@ -260,6 +260,22 @@ our DSL. Rules in general always consist of a symbol on the left hand side of
 a "="-sign (which in this context can be unterstood as a definition signifier)
 and the definition of the rule on the right hand side.
 
+.. note:: Traditional parser technology for context-free grammars often
+   distinguishes two phases, *scanning* and *parsing*, where a lexical scanner
+   would take a stream of characters and yield a sequence of tokens and the
+   actual parser would then operate on the stream of tokens. DHParser,
+   however, is an instance of a *scannerless parser* where the functionality
+   of the lexical scanner is seamlessly integrated into the
+   parser. This is done by allowing regular expressions in the definiendum of
+   grammar symbols. The regular expressions do the work of the lexical
+   scanner. 
+
+   Theoretically, one could do without scanners or regular expressions.
+   Because regular languages are a subset of context-free languages, parsers
+   for context-free languages can do all the work that regular expressions can
+   do. But it makes things easier - and, in the case of DHParser, also faster
+   - to have them.  
+
 In our case the text as a whole, conveniently named "document" (any other name
 would be allowed, too), consists of a leading whitespace, a possibly empty
 sequence of an arbitrary number of words words ending only if the end of file
@@ -495,7 +511,7 @@ luckily not in the case of our short demo example::
 
    $ firefox LOGS/macbeth_full_parser.log.html &
 
-   ..picture parsing_history.png
+   .. image:: parsing_history.png
 
 What you see is a representation of the parsing history. It might look a bit
 tedious in the beginning, especially the this column that contains the parser
@@ -519,7 +535,90 @@ parser matched, the last column displays exactly that section of the text that
 the parser did match. If the parser did not match, the last column displays
 the text that still lies ahead and has not yet been parsed. 
 
-In our concrete example, we can see that the parser "WORD" matches "Life", but not "Life’s" or "’s". And this ultimately leads to the failure of the parsing process as a whole.   
+In our concrete example, we can see that the parser "WORD" matches "Life", but
+not "Life’s" or "’s". And this ultimately leads to the failure of the parsing
+process as a whole. The simplemost solution would be to add the apostrophe to
+the list of allowed characters in a word by changeing the respective line in
+the grammar definition to ``WORD = /[\w’]+/``. Now, before we even change the
+grammar we first add another test case to capture this kind of error. Since we
+have decided that "Life’s" should be parsed as a singe word, let's open the
+file "grammar_tests/01_test_word.ini" and add the following test::
+
+   [match:WORD]
+   M3: Life’s
+
+To be sure that the new tests captures the error we have found you might want
+to run the script "tst_poetry_grammar.py" and verify that it reports the
+failure of test "M3" in the suite "01_test_word.ini". After that, change the
+regular expression for the symbol WORD in the grammar file "poetry.ebnf" as
+just described. Now both the tests and the compilation of the file
+"macbeth.dsl" should run through smoothly. 
+
+.. caution:: Depending on the purpose of your DSL, the simple solution of
+   allowing apostrophes within words, might not be what you want. After all
+   "Life’s" is but a shorthand for the two word phrase "Life is". Now,
+   whatever alternative solution now comes to your mind, be aware that there
+   are also cases like Irish names, say "O’Dolan" where the apostrophe is
+   actually a part of a word and cases like "don’t" which, if expanded, would
+   be two words *not* separated at the position of the apostrophe.
+
+   We leave that as an exercise, first to figure out, what different cases for
+   the use of apostrophes in the middle of a word exist. Secondly, to make a
+   reasonable decision which of these should be treated as a single and which
+   as separate words and, finally, if possible, to write a grammar that
+   provides for these cases. These steps are quite typical for the kind of
+   challenges that occur during the design of a DSL for a
+   Digital-Humanities-Project. 
+
 
 Controlling abstract-syntax-tree generation
 -------------------------------------------
+
+Compiling the example "macbeth.dsl" with the command ``python poetryCompier.py
+macbeth.dsl``, you might find yourself not being able to avoid the impression
+that the output is rather verbose. Just looking at the beginning of the
+output, we find:: 
+
+   <document>
+       <:ZeroOrMore>
+           <sentence>
+               <part>
+                   <WORD>
+                       <:RegExp>Life’s</:RegExp>
+                       <:Whitespace> </:Whitespace>
+                   </WORD>
+                   <WORD>
+                       <:RegExp>but</:RegExp>
+                       <:Whitespace> </:Whitespace>
+                   </WORD>
+   ...
+
+But why do we need to know all those details! Why would we need a
+":ZeroOrMore" element inside the "<document>" element, if the
+"<sentence>"-elements could just as well be direct descendants of the
+"<document>"-element? Why do we need the information that "Life’s" has been
+captured by a regular expression parser? Wouldn't it suffice to know that the
+word captured is "Life’s"? And is the whitespace really needed at all? If the
+words in a sequence are separated by definition by whitespace, then it would
+suffice to have the word without whitespace in our tree, and to add whitespace
+only later when transforming the tree into some kind of output format. (On the
+other hand, it might be convenient to have it in the tree never the less...)
+
+Well, the answer to most most of these questions is that what our compilation
+script yields is more or less the output that the parser yields which in turn
+is the *concrete syntax tree* of the parsed text. Being a concrete syntax tree
+it is by its very nature very verbose, because it captures every minute
+syntactic detail described in the grammar and found in the text, no matter how
+irrelevant it is, if we are primarily interested in the structure of our text.
+In order for our tree to become more handy we have to transform it into an
+*abstract syntax tree* first, which is called thus because it abstracts from
+all details that deem us irrelevant. Now, which details we consider as
+irrelevant is almost entirely up to ourselves. And we should think carefully
+about what features must be included in the abstract syntax tree, because the
+abstract syntax tree more or less reflects the data model (or is at most one
+step away from it) with which want to capture our material.
+
+For the sake of our example, let's assume that we are not interested that we
+are not interested in whitespace and that we want to get rid of all
+uniformative Nodes, i.e. 
+

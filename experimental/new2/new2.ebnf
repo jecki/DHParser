@@ -1,5 +1,5 @@
 document = ~ { sentence } §EOF
 sentence = part {"," part } "."
 part     = { WORD }+
-WORD     =  /\w+/~
+WORD     =  /[\w’]+/~
 EOF      =  !/./
