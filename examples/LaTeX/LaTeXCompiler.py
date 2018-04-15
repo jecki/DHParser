@@ -23,8 +23,8 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
-    flatten, is_empty, collapse, replace_content, remove_brackets, is_one_of, remove_first, \
-    traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error
+    flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
+    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error
 from DHParser.log import logging
 
 
@@ -458,6 +458,8 @@ LaTeX_AST_transformation_table = {
     "LB": [],
     "BACKSLASH": [],
     "EOF": [],
+    # "PARSEP": [replace_content_by('\n\n')],
+    # "WSPC": [replace_content_by(' ')],
     ":Token":
         [remove_whitespace, reduce_single_child],
     ":RE": replace_by_single_child,
