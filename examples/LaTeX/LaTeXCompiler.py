@@ -690,9 +690,9 @@ class LaTeXCompiler(Compiler):
                     if 'language' in node.attributes:
                         self.metadata['language'] = it
                     else:
-                        node.add_error('Only one document language supported. '
-                                       'Using %s, ignoring %s.'
-                                       % (self.metadata['language'], it), Error.WARNING)
+                        self.tree.add_error(node, 'Only one document language supported. '
+                                            'Using %s, ignoring %s.'
+                                            % (self.metadata['language'], it), Error.WARNING)
         if node['text'] in self.KNOWN_DOCUMENT_CLASSES:
             self.metadata['documentclass'] = node['text']
         return node

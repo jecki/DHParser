@@ -553,11 +553,22 @@ Fail-test "20"
     
         Like this one.
 
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "21"
 --------------
 
 ### Test-code:
     \begin{enumerate}
+
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 Fail-test "22"
 --------------
@@ -565,11 +576,22 @@ Fail-test "22"
 ### Test-code:
     \item
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "23"
 --------------
 
 ### Test-code:
     und Vieh; \paragraph
+
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 Fail-test "24"
 --------------
@@ -580,6 +602,10 @@ Fail-test "24"
     at block environments
     \end{quotation}
     like block quotes.
+
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser stopped before end too often! Terminating parser.
 
 
 Test of parser: "sequence"

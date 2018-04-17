@@ -102,6 +102,12 @@ Fail-test "10"
     \begin{generic}inline environment\end{generic}
     
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93488>, {'NAME': ['generic']})
+
 Fail-test "11"
 --------------
 
@@ -110,6 +116,15 @@ Fail-test "11"
     \end{generic}
     
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93598>, {'NAME': ['generic']})
+
 Fail-test "12"
 --------------
 
@@ -117,6 +132,10 @@ Fail-test "12"
     \begin{generic}
     invalid enivronment \end{generic}
     
+
+### Messages:
+Error: -&LB end_environment LFF expected; "\end{gener" found!
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93488>, {'NAME': ['generic']})
 
 
 Test of parser: "inline_environment"
@@ -188,6 +207,15 @@ Fail-test "10"
     \begin{generic}
     invalid enivronment \end{generic}
     
+
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93488>, {'NAME': ['generic']})
 
 
 Test of parser: "itemize"
@@ -307,6 +335,13 @@ Fail-test "11"
     \begin{itemize}
     Free text is not allowed within an itemized environment!
     \end{itemize}
+
+### Messages:
+Error: "\end{itemize}" expected; "Free text " found!
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 
 Test of parser: "enumerate"

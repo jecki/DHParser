@@ -23,6 +23,11 @@ Fail-test "10"
 ### Test-code:
      
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 
 Test of parser: "GAP"
 =====================
@@ -99,6 +104,11 @@ Fail-test "10"
     
     
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "11"
 --------------
 
@@ -109,6 +119,12 @@ Fail-test "11"
     
         % Comment
         
+
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 
 Test of parser: "PARSEP"
@@ -202,12 +218,22 @@ Fail-test "10"
 ### Test-code:
      
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "11"
 --------------
 
 ### Test-code:
     
     
+
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 Fail-test "12"
 --------------
@@ -216,6 +242,17 @@ Fail-test "12"
     
     % Comment
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "13"
 --------------
 
@@ -223,6 +260,17 @@ Fail-test "13"
      % Comment
     % Comment
     % Comment
+
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 
 Test of parser: "WSPC"
@@ -354,6 +402,11 @@ Fail-test "10"
 ### Test-code:
     X
 
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 
 Test of parser: "LFF"
 =====================
@@ -419,6 +472,11 @@ Fail-test "10"
 
 ### Test-code:
      
+
+### Messages:
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 
 Test of parser: "LF"
@@ -496,3 +554,9 @@ Fail-test "10"
     
     
         
+
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;

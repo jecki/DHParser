@@ -21,11 +21,23 @@ Fail-test "10"
 ### Test-code:
     Low-level text must not contain \& escaped characters.
 
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "11"
 --------------
 
 ### Test-code:
     Low-level text must not contain ] [ brackets.
+
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 Fail-test "12"
 --------------
@@ -33,11 +45,23 @@ Fail-test "12"
 ### Test-code:
     Low-level text must not contain { environments }.
 
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
+
 Fail-test "13"
 --------------
 
 ### Test-code:
     Low-level text must not contain any \commands.
+
+### Messages:
+Error: Parser stopped before end! trying to recover...
+Error: Parser did not match! Invalid source file?
+    Most advanced: None
+    Last match:    None;
 
 
 Test of parser: "text_element"
