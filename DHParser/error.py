@@ -58,6 +58,7 @@ class Error:
 
     # error levels
 
+    NO_ERROR  = 0
     WARNING   = 1
     ERROR     = 1000
     HIGHEST   = ERROR

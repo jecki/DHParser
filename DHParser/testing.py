@@ -216,7 +216,7 @@ def get_report(test_unit):
     The purpose of the latter is to help constructing and debugging
     of AST-Transformations. It is better to switch the CST-output on and off
     with the asterix marker when needed than to output the CST for all tests
-    which would unneccesarily bloat the test reports.
+    which would unnecessarily bloat the test reports.
     """
     def indent(txt):
         lines = txt.split('\n')
@@ -248,6 +248,10 @@ def get_report(test_unit):
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:')
             report.append(indent(test_code))
+            messages = tests.get('__msg__', {}).get(test_name, "")
+            if messages:
+                report.append('\n### Messages:')
+                report.append(messages)
             error = tests.get('__err__', {}).get(test_name, "")
             if error:
                 report.append('\n### Error:')
@@ -269,6 +273,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     errata = []
     parser = parser_factory()
     transform = transformer_factory()
+
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
         assert not any (test_type in RESULT_STAGES for test_type in tests), \
@@ -290,6 +295,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if not cst_tests <= match_tests:
                 raise AssertionError('CST-Tests %s lack corresponding match-tests!'
                                      % str(cst_tests - match_tests))
+
+        # run match tests
+
         for test_name, test_code in tests.get('match', dict()).items():
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
@@ -335,6 +343,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
 
         if verbose and 'fail' in tests:
             print('  Fail-Tests for parser "' + parser_name + '"')
+
+        # run fail tests
+
         for test_name, test_code in tests.get('fail', dict()).items():
             if verbose:
                 infostr = '    fail-test  "' + test_name + '" ... '
@@ -351,6 +362,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 # write parsing-history log only in case of test-failure
                 if is_logging():
                     log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
+            if cst.error_flag:
+                tests.setdefault('__msg__', {})[test_name] = \
+                    "\n".join(str(e) for e in cst.collect_errors())
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
