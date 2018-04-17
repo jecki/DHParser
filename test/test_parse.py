@@ -535,6 +535,31 @@ class TestWhitespaceHandling:
         assert st.error_flag
 
 
+class TestErrorReporting:
+    grammar = """
+        root      = series alpha | anything
+        series    = subseries &alpha 
+        subseries = alpha §beta
+        alpha     = /[a-z]+/
+        beta      = /[A-Z]+/
+        anything  = /.*/
+        """
+
+    def setup(self):
+        self.parser = grammar_provider(self.grammar)()
+
+    def test_error_propagation(self):
+        testcode1 = "halloB"
+        testcode2 = "XYZ"
+        testcode3 = "hallo "
+        cst = self.parser(testcode1)
+        assert not cst.error_flag, str(cst.collect_errors())
+        cst = self.parser(testcode2)
+        assert not cst.error_flag
+        cst = self.parser(testcode3)
+        assert cst.error_flag
+
+
 class TestBorderlineCases:
     def test_not_matching(self):
         minilang = """parser = /X/"""

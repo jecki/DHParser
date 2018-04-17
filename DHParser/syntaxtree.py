@@ -42,6 +42,7 @@ __all__ = ('ParserBase',
            'ZOMBIE_PARSER',
            'ZOMBIE_NODE',
            'Node',
+           'RootNode',
            'parse_sxpr',
            'flatten_sxpr')
 
@@ -207,13 +208,6 @@ class Node(collections.abc.Sized):
             parsing (i.e. AST-transformation and compiling), for
             example by calling ``isinstance(node.parer, ...)``.
 
-        errors (list):  A list of parser- or compiler-errors:
-            tuple(position, string) attached to this node
-
-        error_flag (int):  0 if no error occurred in either the node
-            itself or any of its descendants. Otherwise contains the
-            highest warning or error level or all errors that occurred.
-
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the concatenated string
             result's of its descendants. The figure always represents
@@ -243,16 +237,13 @@ class Node(collections.abc.Sized):
         _parent (Node): SLOT RESERVED FOR FUTURE USE!
     """
 
-    __slots__ = ['_result', 'children', '_errors', '_len', '_pos', 'parser', 'error_flag',
-                 '_xml_attr', '_content', '_parent']
+    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', '_xml_attr', '_content']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self.error_flag = 0             # type: int
-        self._errors = []               # type: List[Error]
         self._pos = -1                  # type: int
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
@@ -469,53 +460,13 @@ class Node(collections.abc.Sized):
         return self
 
 
-    @property
-    def errors(self) -> List[Error]:
-        """
-        Returns the errors that occurred at this Node,
-        not including any errors from child nodes.
-        """
-        return self._errors.copy()
-
-
-    def add_error(self,
-                  message: str,
-                  code: int = Error.ERROR) -> 'Node':
-        """
-        Adds an error to this Node.
-        Parameters:
-            message(str): A string with the error message.abs
-            code(int):    An error code to identify the kind of error
-        """
-        self._errors.append(Error(message, code))
-        self.error_flag = max(self.error_flag, self._errors[-1].code)
-        return self
-
-
-    def collect_errors(self, clear_errors=False) -> List[Error]:
-        """
-        Recursively adds line- and column-numbers to all error objects.
-        Returns all errors of this node or any child node in the form
-        of a set of tuples (position, error_message), where position
-        is always relative to this node.
-        """
-        errors = self.errors
-        for err in errors:
-            err.pos = self.pos
-        if self.children:
-            for child in self.children:
-                errors.extend(child.collect_errors(clear_errors))
-        if clear_errors:
-            self._errors = []
-            self.error_flag = 0
-        else:
-            if self._errors:
-                self.error_flag = max(err.code for err in self.errors)
-            if self.children:
-                max_child_error = max(child.error_flag for child in self.children)
-                self.error_flag = max(self.error_flag, max_child_error)
-        return errors
-
+    # @property
+    # def errors(self) -> List[Error]:
+    #     """
+    #     Returns the errors that occurred at this Node,
+    #     not including any errors from child nodes.
+    #     """
+    #     return self._errors.copy()
 
     @property
     def attributes(self):
@@ -725,6 +676,56 @@ class Node(collections.abc.Sized):
         Recursively counts the number of nodes in the tree including the root node.
         """
         return sum(child.tree_size() for child in self.children) + 1
+
+
+class RootNode(Node):
+    """
+
+        errors (list):  A list of parser- or compiler-errors:
+            tuple(position, string) attached to this node
+
+        error_flag (int):  0 if no error occurred in either the node
+            itself or any of its descendants. Otherwise contains the
+            highest warning or error level or all errors that occurred.
+    """
+    def __init__(self):
+        super().__init__(ZOMBIE_PARSER, '')
+        self.errors = []
+        self.error_flag = 0
+
+    def swallow(self, node):
+        self._result = node._result
+        self.children = node.children
+        self._len = node._len
+        self._pos = node._pos
+        self.parser = node.parser
+        self._xml_attr = node._xml_attr
+        self._content = node._content
+
+    def add_error(self,
+                  pos: int,
+                  message: str,
+                  code: int = Error.ERROR) -> 'Node':
+        """
+        Adds an error to this tree.
+        Parameters:
+            pos(int):     The position of the error in the source text
+            message(str): A string with the error message.abs
+            code(int):    An error code to identify the kind of error
+        """
+        self.errors.append(Error(message, code, pos))
+        self.error_flag = max(self.error_flag, code)
+        return self
+
+    def collect_errors(self, clear_errors=False) -> List[Error]:
+        """Returns the list of errors, ordered bv their position.
+        """
+        self.errors.sort(key=lambda e: e.pos)
+        errors = self.errors
+        if clear_errors:
+            self.errors = []
+            self.error_flag = 0
+        return errors
 
 
 ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')

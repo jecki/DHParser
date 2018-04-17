@@ -24,7 +24,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.error import Error
-from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, RootNode, parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -127,6 +127,34 @@ class TestNode:
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
 
+
+class TestRootNode:
+    def test_error_handling(self):
+        root = RootNode()
+        root.add_error(4, "error B")
+        root.add_error(2, "error A")
+        assert root.error_flag
+        errors = root.collect_errors(False)
+        assert root.error_flag
+        assert errors == root.collect_errors(True)
+        assert not root.error_flag and not root.collect_errors()
+        error_str = "\n".join(str(e) for e in errors)
+        assert error_str.find("A") < error_str.find("B")
+
+
+class TestErrorHandling:
+    def test_error_flag_propagation(self):
+        tree = parse_sxpr('(a (b c) (d (e (f (g h)))))')
+
+        def find_h(context):
+            node = context[-1]
+            if node.result == "h":
+                node.add_error("an error deep inside the syntax tree")
+
+        assert not tree.error_flag
+        traverse(tree, {"*": find_h})
+        assert tree.error_flag, tree.as_sxpr()
+
     def test_collect_errors(self):
         tree = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))))')
         A = tree
@@ -143,20 +171,6 @@ class TestNode:
         errors = tree.collect_errors(clear_errors=True)
         assert len(errors) == 2
         assert not D.error_flag
-
-
-class TestErrorHandling:
-    def test_error_flag_propagation(self):
-        tree = parse_sxpr('(a (b c) (d (e (f (g h)))))')
-
-        def find_h(context):
-            node = context[-1]
-            if node.result == "h":
-                node.add_error("an error deep inside the syntax tree")
-
-        assert not tree.error_flag
-        traverse(tree, {"*": find_h})
-        assert tree.error_flag, tree.as_sxpr()
 
 
 class TestNodeFind():
@@ -206,7 +220,10 @@ class TestNodeFind():
 
 
 class TestSerialization:
-    def test_attributes(self):
+    def test_sxpr_roundtrip(self):
+        pass
+
+    def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')
         tree.attributes['attr'] = "value"
         tree2 = parse_sxpr('(A `(attr "value") "B")')
@@ -214,6 +231,7 @@ class TestSerialization:
         tree.attributes['attr2'] = "value2"
         tree3 = parse_sxpr('(A `(attr "value") `(attr2 "value2") "B")')
         assert tree.as_sxpr() == tree3.as_sxpr()
+
 
 
 if __name__ == "__main__":
