@@ -613,9 +613,9 @@
         <span class="k">if</span> <span class="n">overwrite</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">pos</span>
             <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="p">:</span>
-                <span class="n">err</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span>
+                <span class="n">err</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">add_pos</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">==</span> <span class="n">pos</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%i</span><span class="s2"> != </span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pos</span><span class="p">,</span> <span class="n">pos</span><span class="p">))</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">==</span> <span class="n">pos</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%i</span><span class="s2"> != </span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pos</span><span class="p">,</span> <span class="n">add_pos</span><span class="p">))</span>
         <span class="c1"># recursively adjust pos-values of all children</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
         <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
@@ -656,7 +656,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span>
         <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">:</span>
-            <span class="n">err</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
+            <span class="n">err</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_pos</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
                 <span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(</span><span class="n">clear_errors</span><span class="p">))</span>
@@ -737,9 +737,9 @@
         <span class="k">def</span> <span class="nf">opening</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;Returns the opening string for the representation of `node`.&quot;&quot;&quot;</span>
             <span class="n">txt</span> <span class="o">=</span> <span class="n">left_bracket</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span>
-            <span class="c1"># s += &quot; &#39;(pos %i)&quot; % node.pos</span>
+            <span class="c1"># s += &quot; &#39;(pos %i)&quot; % node.add_pos</span>
             <span class="k">if</span> <span class="n">src</span><span class="p">:</span>
-                <span class="n">txt</span> <span class="o">+=</span> <span class="s2">&quot; &#39;(pos </span><span class="si">%i</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span>  <span class="c1"># + &quot; %i %i)&quot; % line_col(src, node.pos)</span>
+                <span class="n">txt</span> <span class="o">+=</span> <span class="s2">&quot; &#39;(pos </span><span class="si">%i</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="n">node</span><span class="o">.</span><span class="n">add_pos</span>  <span class="c1"># + &quot; %i %i)&quot; % line_col(src, node.add_pos)</span>
             <span class="c1"># if node.error_flag:   # just for debugging error collecting</span>
             <span class="c1">#     txt += &quot; HAS ERRORS&quot;</span>
             <span class="k">if</span> <span class="n">showerrors</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
@@ -781,7 +781,7 @@
         <span class="k">def</span> <span class="nf">opening</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;Returns the opening string for the representation of `node`.&quot;&quot;&quot;</span>            
             <span class="n">txt</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span><span class="p">]</span>
-            <span class="c1"># s += &#39; pos=&quot;%i&quot;&#39; % node.pos</span>
+            <span class="c1"># s += &#39; pos=&quot;%i&quot;&#39; % node.add_pos</span>
             <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">):</span>
                 <span class="n">txt</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39; </span><span class="si">%s</span><span class="s1">=&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
             <span class="k">if</span> <span class="n">src</span><span class="p">:</span>

@@ -38,7 +38,7 @@ import os
 import re
 
 from DHParser.preprocess import strip_tokens, with_source_mapping, PreprocessorFunc
-from DHParser.syntaxtree import Node
+from DHParser.syntaxtree import Node, RootNode
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
@@ -94,10 +94,11 @@ class Compiler:
         self.set_grammar_name(grammar_name, grammar_source)
 
     def _reset(self):
+        self.tree = None   # type: Optional[RootNode]
         self.context = []  # type: List[Node]
         self._dirty_flag = False
 
-    def __call__(self, node: Node) -> Any:
+    def __call__(self, root: RootNode) -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
         returns the compiled code. It is up to subclasses implementing
@@ -108,8 +109,8 @@ class Compiler:
         if self._dirty_flag:
             self._reset()
         self._dirty_flag = True
-        result = self.compile(node)
-        self.propagate_error_flags(node, lazy=True)
+        self.tree = root
+        result = self.compile(root)
         return result
 
     def set_grammar_name(self, grammar_name: str="", grammar_source: str=""):
@@ -128,18 +129,18 @@ class Compiler:
         self.grammar_source = load_if_file(grammar_source)
         return self
 
-    @staticmethod
-    def propagate_error_flags(node: Node, lazy: bool = True) -> None:
-        # See test_parser.TestCompilerClass.test_propagate_error()..
-        """Propagates error flags from children to parent nodes to make sure
-        that the parent's error flag is always greater or equal the maximum
-        of the children's error flags."""
-        if not lazy or node.error_flag < Error.HIGHEST:
-            for child in node.children:
-                Compiler.propagate_error_flags(child)
-                node.error_flag = max(node.error_flag, child.error_flag)
-                if lazy and node.error_flag >= Error.HIGHEST:
-                    return
+    # @staticmethod
+    # def propagate_error_flags(node: Node, lazy: bool = True) -> None:
+    #     # See test_parser.TestCompilerClass.test_propagate_error()..
+    #     """Propagates error flags from children to parent nodes to make sure
+    #     that the parent's error flag is always greater or equal the maximum
+    #     of the children's error flags."""
+    #     if not lazy or node.error_flag < Error.HIGHEST:
+    #         for child in node.children:
+    #             Compiler.propagate_error_flags(child)
+    #             node.error_flag = max(node.error_flag, child.error_flag)
+    #             if lazy and node.error_flag >= Error.HIGHEST:
+    #                 return
 
     @staticmethod
     def method_name(node_name: str) -> str:

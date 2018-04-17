@@ -235,7 +235,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
         <span class="k">assert</span> <span class="n">code</span> <span class="o">&gt;=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">code</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">add_pos</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">orig_pos</span> <span class="o">=</span> <span class="n">orig_pos</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">line</span> <span class="o">=</span> <span class="n">line</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
@@ -319,7 +319,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">lbreaks</span> <span class="ow">and</span> <span class="n">pos</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="n">pos</span>
-    <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">pos</span> <span class="o">&gt;</span> <span class="n">lbreaks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># one character behind EOF is still an allowed position!</span>
+    <span class="k">if</span> <span class="n">pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">add_pos</span> <span class="o">&gt;</span> <span class="n">lbreaks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>  <span class="c1"># one character behind EOF is still an allowed position!</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Position </span><span class="si">%i</span><span class="s1"> outside text of length </span><span class="si">%s</span><span class="s1"> !&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">lbreaks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
     <span class="n">line</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">lbreaks</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
     <span class="n">column</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">-</span> <span class="n">lbreaks</span><span class="p">[</span><span class="n">line</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
@@ -330,10 +330,10 @@
 <span class="c1">#     &quot;&quot;&quot;</span>
 <span class="c1">#     Returns the position within a text as (line, column)-tuple.</span>
 <span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     if pos &lt; 0 or pos &gt; len(text):  # one character behind EOF is still an allowed position!</span>
+<span class="c1">#     if pos &lt; 0 or add_pos &gt; len(text):  # one character behind EOF is still an allowed position!</span>
 <span class="c1">#         raise ValueError(&#39;Position %i outside text of length %s !&#39; % (pos, len(text)))</span>
 <span class="c1">#     line = text.count(&quot;\n&quot;, 0, pos) + 1</span>
-<span class="c1">#     column = pos - text.rfind(&quot;\n&quot;, 0, pos)</span>
+<span class="c1">#     column = pos - text.rfind(&quot;\n&quot;, 0, add_pos)</span>
 <span class="c1">#     return line, column</span>
 
 

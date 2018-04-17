@@ -581,7 +581,8 @@ class EBNFCompiler(Compiler):
         defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
         for symbol in self.symbols:
             if symbol not in defined_symbols:
-                self.symbols[symbol].add_error("Missing definition for symbol '%s'" % symbol)
+                self.tree.add_error(self.symbols[symbol],
+                               "Missing definition for symbol '%s'" % symbol)
                 # root_node.error_flag = True
 
         # check for unconnected rules
@@ -598,7 +599,7 @@ class EBNFCompiler(Compiler):
 
         remove_connections(self.root_symbol)
         for leftover in defined_symbols:
-            self.rules[leftover][0].add_error(
+            self.tree.add_error(self.rules[leftover][0],
                 ('Rule "%s" is not connected to parser root "%s" !') %
                 (leftover, self.root_symbol), Error.WARNING)
 
@@ -628,7 +629,7 @@ class EBNFCompiler(Compiler):
             else:
                 assert nd.parser.name == "directive", nd.as_sxpr()
                 self.compile(nd)
-            node.error_flag = max(node.error_flag, nd.error_flag)
+            # node.error_flag = max(node.error_flag, nd.error_flag)
         self.definitions.update(definitions)
 
         return self.assemble_parser(definitions, node)
@@ -639,19 +640,19 @@ class EBNFCompiler(Compiler):
         if rule in self.rules:
             first = self.rules[rule][0]
             if not first._errors:
-                first.add_error('First definition of rule "%s" '
-                                'followed by illegal redefinitions.' % rule)
-            node.add_error('A rule with name "%s" has already been defined earlier.' % rule)
+                self.tree.add_error(first, 'First definition of rule "%s" '
+                               'followed by illegal redefinitions.' % rule)
+            self.tree.add_error(node, 'A rule "%s" has already been defined earlier.' % rule)
         elif rule in EBNFCompiler.RESERVED_SYMBOLS:
-            node.add_error('Symbol "%s" is a reserved symbol.' % rule)
+            self.tree.add_error(node, 'Symbol "%s" is a reserved symbol.' % rule)
         elif not sane_parser_name(rule):
-            node.add_error('Illegal symbol "%s". Symbols must not start or '
+            self.tree.add_error(node, 'Illegal symbol "%s". Symbols must not start or '
                            ' end with a doube underscore "__".' % rule)
         elif rule in self.directives['tokens']:
-            node.add_error('Symbol "%s" has already been defined as '
+            self.add_error(node, 'Symbol "%s" has already been defined as '
                            'a preprocessor token.' % rule)
         elif keyword.iskeyword(rule):
-            node.add_error('Python keyword "%s" may not be used as a symbol. '
+            self.add_error(node, 'Python keyword "%s" may not be used as a symbol. '
                            % rule + '(This may change in the future.)')
         try:
             self.current_symbols = [node]
@@ -668,7 +669,7 @@ class EBNFCompiler(Compiler):
             trace = str(extract_tb(error.__traceback__)[-1])
             errmsg = "%s (TypeError: %s; %s)\n%s" \
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
-            node.add_error(errmsg)
+            self.add_error(node, errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
         return rule, defn
 
@@ -684,7 +685,7 @@ class EBNFCompiler(Compiler):
         try:
             re.compile(rx)
         except Exception as re_error:
-            node.add_error("malformed regular expression %s: %s" %
+            self.add_error(node, "malformed regular expression %s: %s" %
                            (repr(rx), str(re_error)))
         return rx
 
@@ -695,8 +696,8 @@ class EBNFCompiler(Compiler):
 
         if key not in self.REPEATABLE_DIRECTIVES:
             if key in self.defined_directives:
-                node.add_error('Directive "%s" has already been defined earlier. ' % key + \
-                               'Later definition will be ignored!',
+                self.add_error(node, 'Directive "%s" has already been defined earlier. '
+                               % key + 'Later definition will be ignored!',
                                code=Error.REDEFINED_DIRECTIVE_WARNING)
                 return ""
             self.defined_directives.add(key)
@@ -704,26 +705,27 @@ class EBNFCompiler(Compiler):
         if key in {'comment', 'whitespace'}:
             if node.children[1].parser.name == "list_":
                 if len(node.children[1].result) != 1:
-                    node.add_error('Directive "%s" must have one, but not %i values.' %
-                                   (key, len(node.children[1].result)))
+                    self.add_error(node, 'Directive "%s" must have one, but not %i values.'
+                                   % (key, len(node.children[1].result)))
                 value = self.compile(node.children[1]).pop()
                 if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
                     value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
                 else:
-                    node.add_error('Value "%s" not allowed for directive "%s".' % (value, key))
+                    self.add_error(node,
+                                   'Value "%s" not allowed for directive "%s".' % (value, key))
             else:
                 value = node.children[1].content.strip("~")  # cast(str, node.children[
                 # 1].result).strip("~")
                 if value != node.children[1].content:  # cast(str, node.children[1].result):
-                    node.add_error("Whitespace marker '~' not allowed in definition of "
+                    self.add_error(node, "Whitespace marker '~' not allowed in definition of "
                                    "%s regular expression." % key)
                 if value[0] + value[-1] in {'""', "''"}:
                     value = escape_re(value[1:-1])
                 elif value[0] + value[-1] == '//':
                     value = self._check_rx(node, value[1:-1])
                 if key == 'whitespace' and not re.match(value, ''):
-                    node.add_error("Implicit whitespace should always match the empty string, "
-                                   "/%s/ does not." % value)
+                    self.add_error(node, "Implicit whitespace should always "
+                                   "match the empty string, /%s/ does not." % value)
             self.directives[key] = value
 
         elif key == 'ignorecase':
@@ -738,9 +740,8 @@ class EBNFCompiler(Compiler):
             value = {item.lower() for item in self.compile(node.children[1])}
             if ((value - {'left', 'right', 'both', 'none'})
                     or ('none' in value and len(value) > 1)):
-                node.add_error('Directive "literalws" allows the values '
-                               '`left`, `right`, `both` or `none`, '
-                               'but not `%s`' % ", ".join(value))
+                self.add_error(node, 'Directive "literalws" allows only '
+                               '`left`, `right`, `both` or `none`, not `%s`' % ", ".join(value))
             wsp = {'left', 'right'} if 'both' in value \
                 else {} if 'none' in value else value
             self.directives[key] = list(wsp)
@@ -749,7 +750,7 @@ class EBNFCompiler(Compiler):
             tokens = self.compile(node.children[1])
             redeclared = self.directives['tokens'] & tokens
             if redeclared:
-                node.add_error('Tokens %s have already been declared earlier. '
+                self.add_error(node, 'Tokens %s have already been declared earlier. '
                                % str(redeclared) + 'Later declaration will be ignored',
                                code=Error.REDECLARED_TOKEN_WARNING)
             self.directives['tokens'] |= tokens - redeclared
@@ -757,12 +758,12 @@ class EBNFCompiler(Compiler):
         elif key.endswith('_filter'):
             filter_set = self.compile(node.children[1])
             if not isinstance(filter_set, set) or len(filter_set) != 1:
-                node.add_error('Directive "%s" accepts exactly on symbol, not %s'
+                self.add_error(node.pos, 'Directive "%s" accepts exactly on symbol, not %s'
                                % (key, str(filter_set)))
             self.directives['filter'][key[:-7]] = filter_set.pop()
 
         else:
-            node.add_error('Unknown directive %s ! (Known ones are %s .)' %
+            self.add_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
                            (key, ', '.join(list(self.directives.keys()))))
         return ""
 
@@ -773,7 +774,7 @@ class EBNFCompiler(Compiler):
         name for the particular non-terminal.
         """
         arguments = [self.compile(r) for r in node.children] + custom_args
-        node.error_flag = max(node.error_flag, max(t.error_flag for t in node.children))
+        # node.error_flag = max(node.error_flag, max(t.error_flag for t in node.children))
         return parser_class + '(' + ', '.join(arguments) + ')'
 
 
@@ -793,11 +794,11 @@ class EBNFCompiler(Compiler):
             if nd.parser.ptype == TOKEN_PTYPE and nd.content == "§":
                 mandatory_marker.append(len(filtered_children))
                 # if len(filtered_children) == 0:
-                #     nd.add_error('First item of a series should not be mandatory.',
-                #                  Error.WARNING)
+                #     self.add_error(nd.pos, 'First item of a series should not be mandatory.',
+                #                    Error.WARNING)
                 if len(mandatory_marker) > 1:
-                    nd.add_error('One mandatory marker (§) sufficient to declare the '
-                                 'rest of the series as mandatory.', Error.WARNING)
+                    self.add_error(nd, 'One mandatory marker (§) sufficient to declare the '
+                                   'rest of the series as mandatory.', Error.WARNING)
             else:
                 filtered_children.append(nd)
         saved_result = node.result
@@ -821,8 +822,8 @@ class EBNFCompiler(Compiler):
             assert len(node.children) == 2
             arg = node.children[-1]
             if arg.parser.name != 'symbol':
-                node.add_error(('Retrieve Operator "%s" requires a symbol, '
-                                'and not a %s.') % (prefix, str(arg.parser)))
+                self.add_error(node, ('Retrieve Operator "%s" requires a symbol, '
+                               'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
             if str(arg) in self.directives['filter']:
                 custom_args = ['rfilter=%s' % self.directives['filter'][str(arg)]]
@@ -855,14 +856,14 @@ class EBNFCompiler(Compiler):
                             break
                     if (nd.parser.name != "regexp" or nd.content[:1] != '/'
                             or nd.content[-1:] != '/'):
-                        node.add_error("Lookbehind-parser can only be used with plain RegExp-"
+                        self.add_error(node, "Lookbehind-parser can only be used with RegExp-"
                                        "parsers, not with: " + nd.parser.name + nd.parser.ptype)
 
                 if not result.startswith('RegExp('):
                     self.deferred_tasks.append(lambda: check(node))
             return result
         except KeyError:
-            node.add_error('Unknown prefix "%s".' % prefix)
+            self.add_error(node, 'Unknown prefix "%s".' % prefix)
         return ""
 
 
@@ -888,14 +889,15 @@ class EBNFCompiler(Compiler):
         nd = node.children[0]
         for child in nd.children:
             if child.parser.ptype == TOKEN_PTYPE and nd.content == "§":
-                node.add_error("Unordered parser lists cannot contain mandatory (§) items.")
+                self.add_error(node, "Unordered sequences can't contain mandatory (§) items.")
         args = ', '.join(self.compile(child) for child in nd.children)
         if nd.parser.name == "term":
             return "AllOf(" + args + ")"
         elif nd.parser.name == "expression":
             return "SomeOf(" + args + ")"
         else:
-            node.add_error("Unordered sequence or alternative requires at least two elements.")
+            self.add_error(node,
+                           "Unordered sequence or alternative requires at least two elements.")
             return ""
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
@@ -949,7 +951,7 @@ class EBNFCompiler(Compiler):
             trace = str(extract_tb(error.__traceback__)[-1])
             errmsg = "%s (AttributeError: %s; %s)\n%s" \
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
-            node.add_error(errmsg)
+            self.add_error(node, errmsg)
             return '"' + errmsg + '"'
         return parser + ', '.join([arg] + name) + ')'
 

@@ -283,9 +283,7 @@ class HistoryRecord:
                                    for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(
-            str(e) for e in (self.node._errors if self.node._errors else
-                             self.node.collect_errors()[:2]))
+        return self.ERROR + ": " + "; ".join(str(e) for e in (self.node.errors))
 
     @property
     def stack(self) -> str:
@@ -295,7 +293,7 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            ('"%s"' % self.err_msg()) if self.node.error_flag else self.MATCH
+            ('"%s"' % self.err_msg()) if self.node.errors else self.MATCH
             # has_errors(self.node._errors)
 
     @property
@@ -448,7 +446,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> No
         append_line(full_history, line)
         if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
             append_line(match_history, line)
-            if record.node.error_flag:
+            if record.node.errors:
                 append_line(errors_only, line)
     write_log(full_history, log_file_name + '_full')
     if len(full_history) > LOG_TAIL_THRESHOLD + 10:

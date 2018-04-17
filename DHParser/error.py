@@ -174,10 +174,10 @@ def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
 #     """
 #     Returns the position within a text as (line, column)-tuple.
 #     """
-#     if pos < 0 or pos > len(text):  # one character behind EOF is still an allowed position!
+#     if pos < 0 or add_pos > len(text):  # one character behind EOF is still an allowed position!
 #         raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
 #     line = text.count("\n", 0, pos) + 1
-#     column = pos - text.rfind("\n", 0, pos)
+#     column = pos - text.rfind("\n", 0, add_pos)
 #     return line, column
 
 
