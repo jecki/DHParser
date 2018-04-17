@@ -84,10 +84,12 @@ class Error:
         self.orig_pos = orig_pos
         self.line = line
         self.column = column
-        self._node = node
-        if node is not None:
+        if node is not None and node._pos >= 0:
             assert self._pos < 0 or self._pos == node._pos
             self._pos = node._pos
+            self._node = None      # if node is not needed, if pos has been set
+        else:
+            self._node = node
 
     def __str__(self):
         prefix = ''
@@ -102,11 +104,10 @@ class Error:
     @property
     def pos(self):
         if self._pos < 0:
-            assert self._node and self._node.pos >= 0
+            assert self._node and self._node.pos >= 0, "pos value not ready yet"
             self._pos = self._node.pos   # lazy evaluation of position
         self._node = None  # forget node to allow GC to free memory
         return self._pos
-
 
     @property
     def severity(self):

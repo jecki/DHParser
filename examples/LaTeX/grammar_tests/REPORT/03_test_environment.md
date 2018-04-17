@@ -106,7 +106,7 @@ Fail-test "10"
 Error: Parser did not match! Invalid source file?
     Most advanced: None
     Last match:    None;
-Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93488>, {'NAME': ['generic']})
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x7f2f0767de18>, {'NAME': ['generic']})
 
 Fail-test "11"
 --------------
@@ -123,7 +123,7 @@ Error: Parser did not match! Invalid source file?
 Error: Parser did not match! Invalid source file?
     Most advanced: None
     Last match:    None;
-Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93598>, {'NAME': ['generic']})
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x7f2f0767dd90>, {'NAME': ['generic']})
 
 Fail-test "12"
 --------------
@@ -135,7 +135,7 @@ Fail-test "12"
 
 ### Messages:
 Error: -&LB end_environment LFF expected; "\end{gener" found!
-Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93488>, {'NAME': ['generic']})
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x7f2f0767de18>, {'NAME': ['generic']})
 
 
 Test of parser: "inline_environment"
@@ -215,7 +215,7 @@ Error: Parser did not match! Invalid source file?
 Error: Parser did not match! Invalid source file?
     Most advanced: None
     Last match:    None;
-Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x0000000003A93488>, {'NAME': ['generic']})
+Error: Capture-retrieve-stack not empty after end of parsing: defaultdict(<function Grammar._reset__.<locals>.<lambda> at 0x7f2f0767de18>, {'NAME': ['generic']})
 
 
 Test of parser: "itemize"

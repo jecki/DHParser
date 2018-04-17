@@ -751,6 +751,8 @@ class RootNode(Node):
         #         err.pos = node.pos
         self.all_errors.sort(key=lambda e: e.pos)
         errors = self.all_errors
+        for error in self.all_errors:
+            _ = error.pos
         if clear_errors:
             self.all_errors = []
             self.error_flag = 0
