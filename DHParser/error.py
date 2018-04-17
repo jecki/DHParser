@@ -41,7 +41,7 @@ import bisect
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
 from DHParser.toolkit import typing
-from typing import Iterable, Iterator, Union, Tuple, List
+from typing import Iterable, Iterator, Union, Tuple, List, Optional
 
 __all__ = ('Error',
            'is_error',
@@ -54,7 +54,7 @@ __all__ = ('Error',
 
 
 class Error:
-    __slots__ = ['message', 'level', 'code', 'pos', 'orig_pos', 'line', 'column']
+    __slots__ = ['message', 'level', 'code', '_pos', 'orig_pos', 'line', 'column', '_node']
 
     # error levels
 
@@ -75,14 +75,19 @@ class Error:
     MANDATORY_CONTINUATION = 1001
 
     def __init__(self, message: str, code: int = ERROR, pos: int = -1,
-                 orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
+                 orig_pos: int = -1, line: int = -1, column: int = -1,
+                 node: Optional['Node'] = None) -> None:
         self.message = message
         assert code >= 0
         self.code = code
-        self.pos = pos
+        self._pos = pos
         self.orig_pos = orig_pos
         self.line = line
         self.column = column
+        self._node = node
+        if node is not None:
+            assert self._pos < 0 or self._pos == node._pos
+            self._pos = node._pos
 
     def __str__(self):
         prefix = ''
@@ -93,6 +98,15 @@ class Error:
     def __repr__(self):
         return 'Error("%s", %s, %i, %i, %i, %i)' \
                % (self.message, repr(self.code), self.pos, self.orig_pos, self.line, self.column)
+
+    @property
+    def pos(self):
+        if self._pos < 0:
+            assert self._node and self._node.pos >= 0
+            self._pos = self._node.pos   # lazy evaluation of position
+        self._node = None  # forget node to allow GC to free memory
+        return self._pos
+
 
     @property
     def severity(self):

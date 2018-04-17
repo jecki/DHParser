@@ -1,3 +1,5 @@
+@ whitespace = horizontal
+
 gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text /\s*/ ENDE
 
 bibliographisches = autor §"," [NZ] werk "," [NZ] ort "," [NZ] jahr "."

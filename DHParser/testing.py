@@ -39,7 +39,7 @@ import sys
 from DHParser.error import is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
 from DHParser.parse import UnknownParserError
-from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, ZOMBIE_PARSER
+from DHParser.syntaxtree import Node, RootNode, parse_sxpr, flatten_sxpr, ZOMBIE_PARSER
 from DHParser.toolkit import re, typing
 
 from typing import Tuple
@@ -354,7 +354,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             try:
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
-                cst = Node(ZOMBIE_PARSER, "").add_error(str(upe)).init_pos(0)
+                node = Node(ZOMBIE_PARSER, "").init_pos(0)
+                cst = RootNode().swallow(node).add_error(node, str(upe))
             if not is_error(cst.error_flag):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))

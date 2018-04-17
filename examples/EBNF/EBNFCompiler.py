@@ -105,6 +105,7 @@ class EBNFGrammar(Grammar):
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
+    whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
     whitespace = RE('~')

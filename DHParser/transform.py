@@ -888,8 +888,8 @@ assert_has_children = error_on(lambda nd: nd.children, 'Element "%s" has no chil
 def assert_content(context: List[Node], regexp: str):
     node = context[-1]
     if not has_content(context, regexp):
-        node.add_error('Element "%s" violates %s on %s' %
-                       (node.parser.name, str(regexp), node.content))
+        context[0].add_error(node, 'Element "%s" violates %s on %s' %
+                             (node.parser.name, str(regexp), node.content))
 
 
 @transformation_factory
@@ -897,8 +897,8 @@ def require(context: List[Node], child_tags: AbstractSet[str]):
     node = context[-1]
     for child in node.children:
         if child.tag_name not in child_tags:
-            node.add_error('Element "%s" is not allowed inside "%s".' %
-                           (child.parser.name, node.parser.name))
+            context[0].add_error(node, 'Element "%s" is not allowed inside "%s".' %
+                                 (child.parser.name, node.parser.name))
 
 
 @transformation_factory
@@ -906,6 +906,6 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
     node = context[-1]
     for child in node.children:
         if child.tag_name in child_tags:
-            node.add_error('Element "%s" cannot be nested inside "%s".' %
-                           (child.parser.name, node.parser.name))
+            context[0].add_error(node, 'Element "%s" cannot be nested inside "%s".' %
+                                 (child.parser.name, node.parser.name))
 

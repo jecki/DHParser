@@ -432,7 +432,7 @@ class Node(collections.abc.Sized):
         return self._pos
 
 
-    def init_pos(self, pos: int, overwrite: bool = True) -> 'Node':
+    def init_pos(self, pos: int) -> 'Node':
         """
         (Re-)initialize position value. Usually, the parser guard
         (`parsers.add_parser_guard()`) takes care of assigning the
@@ -442,16 +442,12 @@ class Node(collections.abc.Sized):
         This function recursively reassigns the position values
         of the child nodes, too.
         """
-        if overwrite or self._pos < 0:
-            self._pos = pos
-            for err in self.errors:
-                err.pos = pos
-        else:
-            assert self._pos == pos, str("%i != %i" % (self._pos, pos))
+        assert self._pos < 0 or self.pos == pos, str("pos mismatch %i != %i" % (self._pos, pos))
+        self._pos = pos
         # recursively adjust pos-values of all children
         offset = self.pos
         for child in self.children:
-            child.init_pos(offset, overwrite)
+            child.init_pos(offset)
             offset = child.pos + len(child)
         return self
 
@@ -534,6 +530,7 @@ class Node(collections.abc.Sized):
         """
 
         left_bracket, right_bracket, density = ('', '', 1) if compact else ('(', '\n)', 0)
+        lbreaks = linebreaks(src) if src else []  # type: List[int]
 
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""
@@ -542,7 +539,7 @@ class Node(collections.abc.Sized):
             if hasattr(node, '_xml_attr'):
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
             if src:
-                txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(src, node.add_pos)))
+                txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
             # if node.error_flag:   # just for debugging error collecting
             #     txt += " HAS ERRORS"
             if showerrors and node.errors:
@@ -686,12 +683,13 @@ class RootNode(Node):
         error_flag (int):  the highest warning or error level of all errors
                 that occurred.
     """
-    def __init__(self):
+    def __init__(self, node: Optional[Node] = None) -> 'RootNode':
         super().__init__(ZOMBIE_PARSER, '')
         self.all_errors = []
         self.err_nodes = []
         self.error_flag = 0
-        self.error_propagation = False
+        if node is not None:
+            self.swallow(node)
 
     # def _propagate_errors(self):
     #     if not self.all_errors or not self.error_propagation:
@@ -738,7 +736,7 @@ class RootNode(Node):
             message(str): A string with the error message.abs
             code(int):    An error code to identify the kind of error
         """
-        error = Error(message, code)
+        error = Error(message, code, node=node)
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, code)
         node._errors.append(error)
@@ -748,9 +746,9 @@ class RootNode(Node):
     def collect_errors(self, clear_errors=False) -> List[Error]:
         """Returns the list of errors, ordered bv their position.
         """
-        for node in self.err_nodes:  # lazy evaluation of positions
-            for err in node.errors:
-                err.pos = node.pos
+        # for node in self.err_nodes:  # lazy evaluation of positions
+        #     for err in node.errors:  # moved to error.Error.pos
+        #         err.pos = node.pos
         self.all_errors.sort(key=lambda e: e.pos)
         errors = self.all_errors
         if clear_errors:
@@ -817,13 +815,9 @@ def parse_sxpr(sxpr: str) -> Node:
         tagname = sxpr[:end]
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
-        pos = 0
         attributes = OrderedDict()
         if sxpr[0] == '(':
             result = tuple(inner_parser(block) for block in next_block(sxpr))
-            for node in result:
-                node._pos = pos
-                pos += len(node)
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
@@ -864,7 +858,6 @@ def parse_sxpr(sxpr: str) -> Node:
         node = Node(mock_parsers.setdefault(tagname, MockParser(name, ':' + class_name)), result)
         if attributes:
             node.attributes.update(attributes)
-        node._pos = pos
         return node
 
     return inner_parser(sxpr)

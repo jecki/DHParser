@@ -23,7 +23,7 @@ from DHParser import is_filename, load_if_file, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationDict, TRUE_CONDITION, \
+    Node, TransformationDict, Whitespace, \
     traverse, remove_children_if, merge_children, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
@@ -106,13 +106,14 @@ class BibTeXGrammar(Grammar):
     CONTENT_STRING = { /[^{}%]+/ | /(?=%)/~ }+
     """
     text = Forward()
-    source_hash__ = "9c5e3c56e3d420e2ea5885612c07de46"
+    source_hash__ = "5ce8838ebbb255548cf3e14cd90bae6d"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?i)%.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
+    whitespace__ = Whitespace(WSP__)
     CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), RE('(?i)(?=%)')))
     COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), RE('(?i)(?=%)')))
     NO_BLANK_STRING = RE('(?i)[^ \\t\\n,%]+')
