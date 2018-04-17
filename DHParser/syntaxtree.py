@@ -236,14 +236,14 @@ class Node(collections.abc.Sized):
             S-Expression-output.
     """
 
-    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', 'errors' '_xml_attr', '_content']
+    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', '_errors' '_xml_attr', '_content']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self.errors = []                # type: List[Error]
+        self._errors = []                # type: List[Error]
         self._pos = -1                  # type: int
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
@@ -259,9 +259,9 @@ class Node(collections.abc.Sized):
 
     def __str__(self):
         s = "".join(str(child) for child in self.children) if self.children else self.content
-        if self.errors:
+        if self._errors:
             return ' <<< Error on "%s" | %s >>> ' % \
-                   (s, '; '.join(e.message for e in self.errors))
+                   (s, '; '.join(e.message for e in self._errors))
         return s
 
 
@@ -456,13 +456,14 @@ class Node(collections.abc.Sized):
         return self
 
 
-    # @property
-    # def errors(self) -> List[Error]:
-    #     """
-    #     Returns the errors that occurred at this Node,
-    #     not including any errors from child nodes.
-    #     """
-    #     return self.errors.copy()
+    @property
+    def errors(self) -> List[Error]:
+        """
+        Returns the errors that occurred at this Node, not including any
+        errors from child nodes. Works only, if error propagation has been
+        enabled when calling `swallow` from the root node.
+        """
+        return self._errors
 
     @property
     def attributes(self):
@@ -686,32 +687,36 @@ class RootNode(Node):
     """
     def __init__(self):
         super().__init__(ZOMBIE_PARSER, '')
-        self.errors = []
+        self.all_errors = []
         self.error_flag = 0
+        self.error_propagation = False
 
     def _propagate_errors(self):
         assert self.children
-        if not self.errors:
+        if not self.all_errors or not self.error_propagation:
             return
-        self.errors.sort(key=lambda e: e.pos)
-        errlist = copy.copy(self.errors)
+        self.all_errors.sort(key=lambda e: e.pos)
+        i = 0
         for leaf in self.select(lambda nd: not nd.children, False):
             leaf.errors = []
-            while errlist and leaf.pos <= errlist[0].pos < leaf.pos + leaf.len:
-                leaf.errors.append(errlist[0])
-                del errlist[0]
-            if not errlist:
+            while i < len(self.all_errors) \
+                    and leaf.pos <= self.all_errors[i].pos < leaf.pos + leaf.len:
+                leaf._errors.append(self.all_errors[i])
+                i += 1
+            if i >= len(self.all_errors):
                 break
 
     def _propagate_new_error(self, error):
-        for leaf in self.select(lambda nd: not nd.children, False):
-            if leaf.pos <= error.pos < leaf.pos + leaf.len:
-                leaf.errord.append(error)
-                break
-        else:
-            assert False, "Error %s at pos %i out of bounds" % (str(error), error.pos)
+        if self.error_propagation:
+            for leaf in self.select(lambda nd: not nd.children, False):
+                if leaf.pos <= error.pos < leaf.pos + leaf.len:
+                    leaf._errors.append(error)
+                    break
+            else:
+                assert False, "Error %s at pos %i out of bounds" % (str(error), error.pos)
 
-    def swallow(self, node):
+    def swallow(self, node, error_propagation=False):
+        assert not node.errors, "Node has already been swallowed!?"
         self._result = node._result
         self.children = node.children
         self._len = node._len
@@ -720,6 +725,7 @@ class RootNode(Node):
         if hasattr(node, '_xml_attr'):
             self._xml_attr = node._xml_attr
         self._content = node._content
+        self.error_propagation = error_propagation
         self._propagate_errors()
 
     def add_error(self,
@@ -734,7 +740,7 @@ class RootNode(Node):
             code(int):    An error code to identify the kind of error
         """
         error = Error(message, code, pos)
-        self.errors.append(error)
+        self.all_errors.append(error)
         self.error_flag = max(self.error_flag, code)
         if self.children:
             self._propagate_new_error(error)
