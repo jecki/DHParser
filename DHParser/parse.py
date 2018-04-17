@@ -782,10 +782,16 @@ class Grammar:
         self.tree__.swallow(result)
         return self.tree__
 
-    def add_error(self, text, error_msg, code=Error.ERROR):
-        """Adds an error at the location of `text` whithin the whole document that is
+    def location(self, remaining: str) -> int:
+        """Returns the location of the `remaining` text within the currently
+        parsed document.
+        """
+        self.document_length__ - len(remaining)
+
+    def add_error(self, location, error_msg, code=Error.ERROR):
+        """Adds an error at the location of `text` within the whole document that is
         currently being parsed."""
-        self.tree__.add_errr(self.document_length__ - len(text), error_msg, code)
+        self.tree__.add_error(location, error_msg, code)
 
     def push_rollback__(self, location, func):
         """
@@ -863,18 +869,18 @@ class PreprocessorToken(Parser):
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
-                self.grammar.add_error(text,
+                self.grammar.add_error(self.grammar.location(text),
                     'END_TOKEN delimiter missing from preprocessor token. '
                     '(Most likely due to a preprocessor bug!)')  # type: Node
                 return Node(self, ''), text[1:]
             elif end == 0:
-                self.grammar.add_error(text,
+                self.grammar.add_error(self.grammar.location(text),
                     'Preprocessor-token cannot have zero length. '
                     '(Most likely due to a preprocessor bug!)')
                 return Node(self, ''), text[2:]
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
                 node = Node(self, text[len(self.name) + 1:end])
-                self.grammar.add_error(text,
+                self.grammar.add_error(self.grammar.location(text),
                     'Preprocessor-tokens must not be nested or contain '
                     'BEGIN_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a preprocessor bug!)')
@@ -1256,7 +1262,8 @@ class ZeroOrMore(Option):
             if not node:
                 break
             if len(text) == n:
-                self.grammar.add_error(text, dsl_error_msg(self, 'Infinite Loop detected.'))
+                self.grammar.add_error(self.grammar.location(text),
+                                       dsl_error_msg(self, 'Infinite Loop detected.'))
             results += (node,)
         return Node(self, results), text
 
@@ -1300,7 +1307,8 @@ class OneOrMore(UnaryOperator):
             if not node:
                 break
             if len(text_) == n:
-                self.grammar.add_error(text, dsl_error_msg(self, 'Infinite Loop detected.'))
+                self.grammar.add_error(self.grammar.location(text),
+                                       dsl_error_msg(self, 'Infinite Loop detected.'))
             results += (node,)
         if results == ():
             return None, text
@@ -1360,7 +1368,7 @@ class Series(NaryOperator):
                     i = max(1, text.index(match.regs[1][0])) if match else 1
                     node = Node(self, text_[:i]).init_pos(self.grammar.document_length__
                                                           - len(text_))
-                    self.grammar.add_error(text, '%s expected; "%s" found!'
+                    self.grammar.add_error(self.grammar.location(text), '%s expected; "%s" found!'
                                            % (parser.repr, text_[:10].replace('\n', '\\n ')),
                                            code=Error.MANDATORY_CONTINUATION)
                     text_ = text_[i:]
@@ -1629,7 +1637,8 @@ def Required(parser: Parser) -> Parser:
 #             i = max(1, text.index(m.regs[1][0])) if m else 1
 #             node = Node(self, text[:i])
 #             text_ = text[i:]
-#             self.grammar.add_error(text, '%s expected; "%s" found!' % (str(self.parser),
+#             self.grammar.add_error(self.grammar.location(text),
+#                                    '%s expected; "%s" found!' % (str(self.parser),
 #                                    text[:10]), code=Error.MANDATORY_CONTINUATION)
 #         return node, text_
 #
@@ -1803,7 +1812,7 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            self.grammar.add_error(text,
+            self.grammar.add_error(self.grammar.location(text),
                 dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.name))
             return Node(self, ''), text
         if text.startswith(value):

@@ -228,22 +228,22 @@ class Node(collections.abc.Sized):
             At any rate, it should only be reassigned during the parsing
             stage and never during or after the AST-transformation.
 
+        errors (list):  A list of all errors that occured on this node.
+
         attributes (dict): An optional dictionary of XML-attributes. This
             dictionary is created lazily upon first usage. The attributes
             will only be shown in the XML-Representation, not in the
             S-Expression-output.
-
-
-        _parent (Node): SLOT RESERVED FOR FUTURE USE!
     """
 
-    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', '_xml_attr', '_content']
+    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', 'errors' '_xml_attr', '_content']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
+        self.errors = []                # type: List[Error]
         self._pos = -1                  # type: int
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
@@ -259,9 +259,9 @@ class Node(collections.abc.Sized):
 
     def __str__(self):
         s = "".join(str(child) for child in self.children) if self.children else self.content
-        if self._errors:
+        if self.errors:
             return ' <<< Error on "%s" | %s >>> ' % \
-                   (s, '; '.join(e.message for e in self._errors))
+                   (s, '; '.join(e.message for e in self.errors))
         return s
 
 
@@ -391,14 +391,10 @@ class Node(collections.abc.Sized):
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
-            self.error_flag = result.error_flag
         else:
             if isinstance(result, tuple):
                 self.children = result
                 self._result = result or ''
-                if result:
-                    if self.error_flag == 0:
-                        self.error_flag = max(child.error_flag for child in self.children)
             else:
                 self.children = NoChildren
                 self._result = result
@@ -448,7 +444,7 @@ class Node(collections.abc.Sized):
         """
         if overwrite or self._pos < 0:
             self._pos = pos
-            for err in self._errors:
+            for err in self.errors:
                 err.pos = pos
         else:
             assert self._pos == pos, str("%i != %i" % (self._pos, pos))
@@ -466,7 +462,7 @@ class Node(collections.abc.Sized):
     #     Returns the errors that occurred at this Node,
     #     not including any errors from child nodes.
     #     """
-    #     return self._errors.copy()
+    #     return self.errors.copy()
 
     @property
     def attributes(self):
@@ -681,17 +677,39 @@ class Node(collections.abc.Sized):
 class RootNode(Node):
     """
 
-        errors (list):  A list of parser- or compiler-errors:
-            tuple(position, string) attached to this node
+        errors (list):  A list of all errors that have occured so far during
+                processing (i.e. parsing, AST-transformation, compiling)
+                of this tree.
 
-        error_flag (int):  0 if no error occurred in either the node
-            itself or any of its descendants. Otherwise contains the
-            highest warning or error level or all errors that occurred.
+        error_flag (int):  the highest warning or error level of all errors
+                that occurred.
     """
     def __init__(self):
         super().__init__(ZOMBIE_PARSER, '')
         self.errors = []
         self.error_flag = 0
+
+    def _propagate_errors(self):
+        assert self.children
+        if not self.errors:
+            return
+        self.errors.sort(key=lambda e: e.pos)
+        errlist = copy.copy(self.errors)
+        for leaf in self.select(lambda nd: not nd.children, False):
+            leaf.errors = []
+            while errlist and leaf.pos <= errlist[0].pos < leaf.pos + leaf.len:
+                leaf.errors.append(errlist[0])
+                del errlist[0]
+            if not errlist:
+                break
+
+    def _propagate_new_error(self, error):
+        for leaf in self.select(lambda nd: not nd.children, False):
+            if leaf.pos <= error.pos < leaf.pos + leaf.len:
+                leaf.errord.append(error)
+                break
+        else:
+            assert False, "Error %s at pos %i out of bounds" % (str(error), error.pos)
 
     def swallow(self, node):
         self._result = node._result
@@ -699,8 +717,10 @@ class RootNode(Node):
         self._len = node._len
         self._pos = node._pos
         self.parser = node.parser
-        self._xml_attr = node._xml_attr
+        if hasattr(node, '_xml_attr'):
+            self._xml_attr = node._xml_attr
         self._content = node._content
+        self._propagate_errors()
 
     def add_error(self,
                   pos: int,
@@ -713,8 +733,11 @@ class RootNode(Node):
             message(str): A string with the error message.abs
             code(int):    An error code to identify the kind of error
         """
-        self.errors.append(Error(message, code, pos))
+        error = Error(message, code, pos)
+        self.errors.append(error)
         self.error_flag = max(self.error_flag, code)
+        if self.children:
+            self._propagate_new_error(error)
         return self
 
     def collect_errors(self, clear_errors=False) -> List[Error]:
