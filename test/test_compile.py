@@ -30,8 +30,8 @@ from DHParser import parse_sxpr, Compiler
 #         B = next(tree.select(lambda node: str(node) == "1"))
 #         D = next(tree.select(lambda node: node.parser.name == "D"))
 #         F = next(tree.select(lambda node: str(node) == "3"))
-#         B.add_error("Error in child node")
-#         F.add_error("Error in child's child node")
+#         B.new_error("Error in child node")
+#         F.new_error("Error in child's child node")
 #         Compiler.propagate_error_flags(tree, lazy=True)
 #         assert A.error_flag
 #         assert not D.error_flag

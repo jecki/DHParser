@@ -133,8 +133,8 @@ class TestRootNode:
         tree = parse_sxpr('(A (B D) (C E))')
         tree.init_pos(0)
         root = RootNode()
-        root.add_error(tree.children[1], "error C")
-        root.add_error(tree.children[0], "error B")
+        root.new_error(tree.children[1], "error C")
+        root.new_error(tree.children[0], "error B")
         root.swallow(tree)
         assert root.error_flag
         errors = root.collect_errors()
@@ -152,7 +152,7 @@ class TestRootNode:
 #         def find_h(context):
 #             node = context[-1]
 #             if node.result == "h":
-#                 node.add_error("an error deep inside the syntax tree")
+#                 node.new_error("an error deep inside the syntax tree")
 #
 #         assert not tree.error_flag
 #         traverse(tree, {"*": find_h})
@@ -164,8 +164,8 @@ class TestRootNode:
 #         B = next(tree.select(lambda node: str(node) == "1"))
 #         D = next(tree.select(lambda node: node.parser.name == "D"))
 #         F = next(tree.select(lambda node: str(node) == "3"))
-#         B.add_error("Error in child node")
-#         F.add_error("Error in child's child node")
+#         B.new_error("Error in child node")
+#         F.new_error("Error in child's child node")
 #         tree.error_flag = Error.ERROR
 #         errors = tree.collect_errors()
 #         assert len(errors) == 2, str(errors)

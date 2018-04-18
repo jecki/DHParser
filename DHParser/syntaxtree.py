@@ -717,26 +717,28 @@ class RootNode(Node):
         self._content = node._content
         return self
 
-    def add_error_obj(self, node: Node, error: Error) -> 'RootNode':
+    def add_error(self, node: Node, error: Error) -> 'RootNode':
+        """Adds an Error object to the tree, locating it at a specific node."""
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         node.errors.append(error)
         self.err_nodes_keep.append(node)
         return self
 
-    def add_error(self,
+    def new_error(self,
                   node: Node,
                   message: str,
                   code: int = Error.ERROR) -> 'RootNode':
         """
-        Adds an error to this tree.
+        Adds an error to this tree, locating it at a specific node.
         Parameters:
             pos(int):     The position of the error in the source text
             message(str): A string with the error message.abs
             code(int):    An error code to identify the kind of error
         """
         error = Error(message, code, node=node)
-        self.add_error_obj(node, error)
+        self.add_error(node, error)
+        return self
 
 
     def collect_errors(self) -> List[Error]:
@@ -748,7 +750,7 @@ class RootNode(Node):
         self.all_errors.sort(key=lambda e: e.pos)
         for node in self.err_nodes_keep:  # redundant: consider removing Error.Error._node_keep
             for error in node.errors:
-                # assert error._pos < 0 or node.pos <= error._pos <= node.len
+                assert error._pos < 0 or node.pos <= error._pos <= node.pos + len(node)
                 error._pos = node.pos
         self.err_nodes_keep = []
         errors = self.all_errors

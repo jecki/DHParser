@@ -355,7 +355,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_PARSER, "").init_pos(0)
-                cst = RootNode().swallow(node).add_error(node, str(upe))
+                cst = RootNode(node).new_error(node, str(upe))
             if not is_error(cst.error_flag):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))

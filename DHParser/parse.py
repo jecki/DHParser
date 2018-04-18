@@ -166,7 +166,7 @@ def add_parser_guard(parser_func):
         except RecursionError:
             node = Node(None, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node._pos = location
-            grammar.tree__.add_error(node, "maximum recursion depth of parser reached; "
+            grammar.tree__.new_error(node, "maximum recursion depth of parser reached; "
                                      "potentially due to too many errors!")
             rest = EMPTY_STRING_VIEW
 
@@ -728,7 +728,7 @@ class Grammar:
             result, _ = parser(rest)
             if result is None:
                 result = Node(None, '').init_pos(0)
-                self.tree__.add_error(result,
+                self.tree__.new_error(result,
                                       'Parser "%s" did not match empty document.' % str(parser))
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
@@ -749,7 +749,7 @@ class Grammar:
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
                 stitches.append(Node(None, skip).init_pos(tail_pos(stitches)))
-                self.tree__.add_error(stitches[-1], error_msg)
+                self.tree__.new_error(stitches[-1], error_msg)
                 if self.history_tracking__:
                     # # some parsers may have matched and left history records with nodes != None.
                     # # Because these are not connected to the stitched root node, their pos-
@@ -775,10 +775,10 @@ class Grammar:
                     # of the error will be the end of the text. Otherwise, the error
                     # message above ("...after end of parsing") would appear illogical.
                     error_node = Node(ZOMBIE_PARSER, '').init_pos(tail_pos(result.children))
-                    self.tree__.add_error(error_node, error_str)
+                    self.tree__.new_error(error_node, error_str)
                     result.result = result.children + (error_node,)
                 else:
-                    self.tree__.add_error(result, error_str)
+                    self.tree__.new_error(result, error_str)
         # result.pos = 0  # calculate all positions
         # result.collect_errors(self.document__)
         self.tree__.swallow(result)
@@ -862,19 +862,19 @@ class PreprocessorToken(Parser):
             end = text.find(END_TOKEN, 1)
             if end < 0:
                 node = Node(self, '')
-                self.grammar.tree__.add_error(node,
+                self.grammar.tree__.new_error(node,
                     'END_TOKEN delimiter missing from preprocessor token. '
                     '(Most likely due to a preprocessor bug!)')  # type: Node
                 return node, text[1:]
             elif end == 0:
                 node = Node(self, '')
-                self.grammar.tree__.add_error(node,
+                self.grammar.tree__.new_error(node,
                     'Preprocessor-token cannot have zero length. '
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[2:]
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
                 node = Node(self, text[len(self.name) + 1:end])
-                self.grammar.tree__.add_error(node,
+                self.grammar.tree__.new_error(node,
                     'Preprocessor-tokens must not be nested or contain '
                     'BEGIN_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a preprocessor bug!)')
@@ -1257,13 +1257,13 @@ class ZeroOrMore(Option):
             if not node:
                 break
             if len(text) == n:
-                err_msg = dsl_error_msg(self, 'Infinite Loop encountered.')
-                node.errors.append(Error(err_msg, Error.MESSAGE, node=node))
-                infinite_loop_error = Error(err_msg, node=node)
+                node.errors.append(Error("Infinite loop!", Error.MESSAGE, node=node))
+                infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
+                                            node=node)
             results += (node,)
         node = Node(self, results)
         if infinite_loop_error:
-            self.grammar.tree__.add_error_obj(node, infinite_loop_error)
+            self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text
 
     def __repr__(self):
@@ -1307,15 +1307,15 @@ class OneOrMore(UnaryOperator):
             if not node:
                 break
             if len(text_) == n:
-                err_msg = dsl_error_msg(self, 'Infinite Loop encountered.')
-                node.errors.append(Error(err_msg, Error.MESSAGE, node=node))
-                infinite_loop_error = Error(err_msg, node=node)
+                node.errors.append(Error("Infinite loop!", Error.MESSAGE, node=node))
+                infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
+                                            node=node)
             results += (node,)
         if results == ():
             return None, text
         node = Node(self, results)
         if infinite_loop_error:
-            self.grammar.tree__.add_error_obj(node, infinite_loop_error)
+            self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text_
 
     def __repr__(self):
@@ -1387,7 +1387,7 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers)
         node = Node(self, results)
         if mandatory_violation:
-            self.grammar.tree__.add_error_obj(node, mandatory_violation)
+            self.grammar.tree__.add_error(node, mandatory_violation)
         return node, text_
 
     def __repr__(self):
@@ -1648,7 +1648,7 @@ def Required(parser: Parser) -> Parser:
 #             i = max(1, text.index(m.regs[1][0])) if m else 1
 #             node = Node(self, text[:i])
 #             text_ = text[i:]
-#             self.grammar.tree__.add_error(node,
+#             self.grammar.tree__.new_error(node,
 #                                           '%s expected; "%s" found!' % (str(self.parser),
 #                                           text[:10]), code=Error.MANDATORY_CONTINUATION)
 #         return node, text_
@@ -1824,7 +1824,7 @@ class Retrieve(Parser):
             value = self.filter(stack)
         except (KeyError, IndexError):
             node = Node(self, '')
-            self.grammar.tree__.add_error(
+            self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.name))
             return node, text
         if text.startswith(value):
