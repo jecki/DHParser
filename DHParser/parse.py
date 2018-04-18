@@ -1263,7 +1263,7 @@ class ZeroOrMore(Option):
             results += (node,)
         node = Node(self, results)
         if infinite_loop_error:
-            self.grammar.tree__.add_error(node, infinite_loop_error)
+            self.grammar.tree__.add_error_obj(node, infinite_loop_error)
         return node, text
 
     def __repr__(self):
@@ -1315,7 +1315,7 @@ class OneOrMore(UnaryOperator):
             return None, text
         node = Node(self, results)
         if infinite_loop_error:
-            self.grammar.tree__.add_error(node, infinite_loop_error)
+            self.grammar.tree__.add_error_obj(node, infinite_loop_error)
         return node, text_
 
     def __repr__(self):
@@ -1373,11 +1373,12 @@ class Series(NaryOperator):
                     i = max(1, text.index(match.regs[1][0])) if match else 1
                     location = self.grammar.document_length__ - len(text_)
                     node = Node(self, text_[:i]).init_pos(location)
-                    msg = '%s expected, "%s" found!' \
-                          % (parser.repr, text_[:10].replace('\n', '\\n '))
-                    node.errors.append(Error(msg, Error.MESSAGE, location))
+                    node.errors.append(Error("§ %s violation" % parser.repr,
+                                             Error.MESSAGE, location))
                     if not mandatory_violation:
-                        mandatory_violation = Error(msg, Error.ERROR, location)
+                        msg = '%s expected, "%s" found!' \
+                              % (parser.repr, text_[:10].replace('\n', '\\n '))
+                        mandatory_violation = Error(msg, Error.MANDATORY_CONTINUATION, location)
                     text_ = text_[i:]
             results += (node,)
             # if node.error_flag:  # break on first error

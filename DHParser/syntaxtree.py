@@ -736,7 +736,7 @@ class RootNode(Node):
             code(int):    An error code to identify the kind of error
         """
         error = Error(message, code, node=node)
-        self.add_error_obj(error)
+        self.add_error_obj(node, error)
 
 
     def collect_errors(self) -> List[Error]:
@@ -748,7 +748,7 @@ class RootNode(Node):
         self.all_errors.sort(key=lambda e: e.pos)
         for node in self.err_nodes_keep:  # redundant: consider removing Error.Error._node_keep
             for error in node.errors:
-                assert error._pos < 0 or error._pos == node.pos
+                # assert error._pos < 0 or node.pos <= error._pos <= node.len
                 error._pos = node.pos
         self.err_nodes_keep = []
         errors = self.all_errors
