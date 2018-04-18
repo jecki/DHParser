@@ -717,10 +717,17 @@ class RootNode(Node):
         self._content = node._content
         return self
 
+    def add_error_obj(self, node: Node, error: Error) -> 'RootNode':
+        self.all_errors.append(error)
+        self.error_flag = max(self.error_flag, error.code)
+        node.errors.append(error)
+        self.err_nodes_keep.append(node)
+        return self
+
     def add_error(self,
                   node: Node,
                   message: str,
-                  code: int = Error.ERROR) -> 'Node':
+                  code: int = Error.ERROR) -> 'RootNode':
         """
         Adds an error to this tree.
         Parameters:
@@ -729,11 +736,8 @@ class RootNode(Node):
             code(int):    An error code to identify the kind of error
         """
         error = Error(message, code, node=node)
-        self.all_errors.append(error)
-        self.error_flag = max(self.error_flag, code)
-        node.errors.append(error)
-        self.err_nodes_keep.append(node)
-        return self
+        self.add_error_obj(error)
+
 
     def collect_errors(self) -> List[Error]:
         """Returns the list of errors, ordered bv their position.

@@ -156,7 +156,7 @@ def add_parser_guard(parser_func):
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)
-                if grammar.moving_forward__ or (node and node.errors):
+                if (grammar.moving_forward__ or (node and node.errors)):
                     record = HistoryRecord(grammar.call_stack__, node, text)
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
@@ -1249,17 +1249,22 @@ class ZeroOrMore(Option):
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
-        n = len(text) + 1
+        n = len(text) + 1  # type: int
+        infinite_loop_error = None  # type: Optional[Error]
         while text and len(text) < n:
             n = len(text)
             node, text = self.parser(text)
             if not node:
                 break
             if len(text) == n:
-                self.grammar.tree__.add_error(node,
-                                              dsl_error_msg(self, 'Infinite Loop encountered.'))
+                err_msg = dsl_error_msg(self, 'Infinite Loop encountered.')
+                node.errors.append(Error(err_msg, Error.MESSAGE, node=node))
+                infinite_loop_error = Error(err_msg, node=node)
             results += (node,)
-        return Node(self, results), text
+        node = Node(self, results)
+        if infinite_loop_error:
+            self.grammar.tree__.add_error(node, infinite_loop_error)
+        return node, text
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1294,19 +1299,24 @@ class OneOrMore(UnaryOperator):
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
-        n = len(text) + 1
+        n = len(text) + 1  # type: int
+        infinite_loop_error = None  # type: Optional[Error]
         while text_ and len(text_) < n:
             n = len(text_)
             node, text_ = self.parser(text_)
             if not node:
                 break
             if len(text_) == n:
-                self.grammar.tree__.add_error(node,
-                                              dsl_error_msg(self, 'Infinite Loop encountered.'))
+                err_msg = dsl_error_msg(self, 'Infinite Loop encountered.')
+                node.errors.append(Error(err_msg, Error.MESSAGE, node=node))
+                infinite_loop_error = Error(err_msg, node=node)
             results += (node,)
         if results == ():
             return None, text
-        return Node(self, results), text_
+        node = Node(self, results)
+        if infinite_loop_error:
+            self.grammar.tree__.add_error(node, infinite_loop_error)
+        return node, text_
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1351,6 +1361,7 @@ class Series(NaryOperator):
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         pos = 0
+        mandatory_violation = None
         for parser in self.parsers:
             node, text_ = parser(text_)
             if not node:
@@ -1360,19 +1371,23 @@ class Series(NaryOperator):
                     # Provide useful error messages
                     match = text.search(Series.RX_ARGUMENT)
                     i = max(1, text.index(match.regs[1][0])) if match else 1
-                    node = Node(self, text_[:i]).init_pos(self.grammar.document_length__
-                                                          - len(text_))
-                    self.grammar.tree__.add_error(
-                        node, '%s expected; "%s" found!'
-                              % (parser.repr, text_[:10].replace('\n', '\\n ')),
-                        code=Error.MANDATORY_CONTINUATION)
+                    location = self.grammar.document_length__ - len(text_)
+                    node = Node(self, text_[:i]).init_pos(location)
+                    msg = '%s expected, "%s" found!' \
+                          % (parser.repr, text_[:10].replace('\n', '\\n '))
+                    node.errors.append(Error(msg, Error.MESSAGE, location))
+                    if not mandatory_violation:
+                        mandatory_violation = Error(msg, Error.ERROR, location)
                     text_ = text_[i:]
             results += (node,)
             # if node.error_flag:  # break on first error
             #    break
             pos += 1
         assert len(results) <= len(self.parsers)
-        return Node(self, results), text_
+        node = Node(self, results)
+        if mandatory_violation:
+            self.grammar.tree__.add_error_obj(node, mandatory_violation)
+        return node, text_
 
     def __repr__(self):
         return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
