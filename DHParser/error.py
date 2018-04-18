@@ -54,7 +54,7 @@ __all__ = ('Error',
 
 
 class Error:
-    __slots__ = ['message', 'level', 'code', '_pos', 'orig_pos', 'line', 'column', '_node']
+    __slots__ = ['message', 'level', 'code', '_pos', 'orig_pos', 'line', 'column', '_node_keep']
 
     # error levels
 
@@ -87,9 +87,9 @@ class Error:
         if node is not None and node._pos >= 0:
             assert self._pos < 0 or self._pos == node._pos
             self._pos = node._pos
-            self._node = None      # if node is not needed, if pos has been set
+            self._node_keep = None  # if node is not needed, if pos has been set
         else:
-            self._node = node
+            self._node_keep = node  # redundant: consider removing, see RootNode.collect_errors
 
     def __str__(self):
         prefix = ''
@@ -104,9 +104,9 @@ class Error:
     @property
     def pos(self):
         if self._pos < 0:
-            assert self._node and self._node.pos >= 0, "pos value not ready yet"
-            self._pos = self._node.pos   # lazy evaluation of position
-        self._node = None  # forget node to allow GC to free memory
+            assert self._node_keep and self._node_keep.pos >= 0, "pos value not ready yet"
+            self._pos = self._node_keep.pos   # lazy evaluation of position
+        self._node_keep = None  # forget node to allow GC to free memory
         return self._pos
 
     @property

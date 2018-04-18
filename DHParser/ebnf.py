@@ -639,7 +639,7 @@ class EBNFCompiler(Compiler):
         rule = node.children[0].content
         if rule in self.rules:
             first = self.rules[rule][0]
-            if not first._errors:
+            if not first.errors:
                 self.tree.add_error(first, 'First definition of rule "%s" '
                                'followed by illegal redefinitions.' % rule)
             self.tree.add_error(node, 'A rule "%s" has already been defined earlier.' % rule)

@@ -448,12 +448,12 @@ def _replace_by(node: Node, child: Node):
         child.parser = MockParser(node.parser.name, child.parser.ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node.parser = child.parser
-    node._errors.extend(child._errors)
+    node.errors.extend(child.errors)
     node.result = child.result
 
 
 def _reduce_child(node: Node, child: Node):
-    node._errors.extend(child._errors)
+    node.errors.extend(child.errors)
     node.result = child.result
 
 

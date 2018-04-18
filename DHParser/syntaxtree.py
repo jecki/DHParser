@@ -236,14 +236,14 @@ class Node(collections.abc.Sized):
             S-Expression-output.
     """
 
-    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', '_errors', '_xml_attr', '_content']
+    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', 'errors', '_xml_attr', '_content']
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self._errors = []               # type: List[Error]
+        self.errors = []               # type: List[Error]
         self._pos = -1                  # type: int
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
@@ -259,9 +259,9 @@ class Node(collections.abc.Sized):
 
     def __str__(self):
         s = "".join(str(child) for child in self.children) if self.children else self.content
-        if self._errors:
+        if self.errors:
             return ' <<< Error on "%s" | %s >>> ' % \
-                   (s, '; '.join(e.message for e in self._errors))
+                   (s, '; '.join(e.message for e in self.errors))
         return s
 
 
@@ -451,14 +451,6 @@ class Node(collections.abc.Sized):
             offset = child.pos + len(child)
         return self
 
-
-    @property
-    def errors(self) -> List[Error]:
-        """
-        Returns the errors that occurred at this Node, not including any
-        errors from child nodes.
-        """
-        return self._errors
 
     @property
     def attributes(self):
@@ -686,7 +678,7 @@ class RootNode(Node):
     def __init__(self, node: Optional[Node] = None) -> 'RootNode':
         super().__init__(ZOMBIE_PARSER, '')
         self.all_errors = []
-        self.err_nodes = []
+        self.err_nodes_keep = []
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
@@ -739,25 +731,25 @@ class RootNode(Node):
         error = Error(message, code, node=node)
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, code)
-        node._errors.append(error)
-        self.err_nodes.append(node)
+        node.errors.append(error)
+        self.err_nodes_keep.append(node)
         return self
 
-    def collect_errors(self, clear_errors=False) -> List[Error]:
+    def collect_errors(self) -> List[Error]:
         """Returns the list of errors, ordered bv their position.
         """
         # for node in self.err_nodes:  # lazy evaluation of positions
         #     for err in node.errors:  # moved to error.Error.pos
         #         err.pos = node.pos
         self.all_errors.sort(key=lambda e: e.pos)
+        for node in self.err_nodes_keep:  # redundant: consider removing Error.Error._node_keep
+            for error in node.errors:
+                assert error._pos < 0 or error._pos == node.pos
+                error._pos = node.pos
+        self.err_nodes_keep = []
         errors = self.all_errors
-        for error in self.all_errors:
-            _ = error.pos
-        if clear_errors:
-            self.all_errors = []
-            self.error_flag = 0
-            for node in self.select(lambda nd: True, True):
-                node._errors = []
+        # for error in self.all_errors:
+        #     _ = error.pos
         return errors
 
 

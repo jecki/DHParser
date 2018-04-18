@@ -156,7 +156,7 @@ def add_parser_guard(parser_func):
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)
-                if grammar.moving_forward__ or (node and node._errors):
+                if grammar.moving_forward__ or (node and node.errors):
                     record = HistoryRecord(grammar.call_stack__, node, text)
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
