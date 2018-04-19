@@ -751,7 +751,8 @@ class RootNode(Node):
         for node in self.err_nodes_keep:  # redundant: consider removing Error.Error._node_keep
             for error in node.errors:
                 assert error._pos < 0 or node.pos <= error._pos <= node.pos + len(node)
-                error._pos = node.pos
+                if error._pos < 0:
+                    error._pos = node.pos
         self.err_nodes_keep = []
         errors = self.all_errors
         # for error in self.all_errors:
