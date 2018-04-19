@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
-        <link rel="up" title="Module code" href="index.html"/> 
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -214,7 +205,7 @@
 <span class="kn">from</span> <span class="nn">DHParser.stringview</span> <span class="k">import</span> <span class="n">StringView</span>
 <span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span>
 <span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">is_filename</span><span class="p">,</span> <span class="n">escape_control_characters</span><span class="p">,</span> <span class="n">typing</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;log_dir&#39;</span><span class="p">,</span>
            <span class="s1">&#39;logging&#39;</span><span class="p">,</span>
@@ -360,10 +351,10 @@
     <span class="n">FAIL</span> <span class="o">=</span> <span class="s2">&quot;FAIL&quot;</span>
     <span class="n">Snapshot</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;Snapshot&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="s1">&#39;column&#39;</span><span class="p">,</span> <span class="s1">&#39;stack&#39;</span><span class="p">,</span> <span class="s1">&#39;status&#39;</span><span class="p">,</span> <span class="s1">&#39;text&#39;</span><span class="p">])</span>
 
-    <span class="n">COLGROUP</span> <span class="o">=</span> <span class="s1">&#39;&lt;colgroup&gt;</span><span class="se">\n</span><span class="s1">&lt;col style=&quot;width:2%&quot;/&gt;&lt;col style=&quot;width:2%&quot;/&gt;&lt;col style=&quot;width:75&quot;/&gt;&#39;</span> \
-               <span class="s1">&#39;&lt;col style=&quot;width:6%&quot;/&gt;&lt;col style=&quot;width:15%&quot;/&gt;</span><span class="se">\n</span><span class="s1">&lt;/colgroup&gt;&#39;</span>
-    <span class="n">HEADINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;&lt;tr&gt;&lt;th&gt;L&lt;/th&gt;&lt;th&gt;C&lt;/th&gt;&lt;th&gt;parser calling sequence&lt;/th&gt;&#39;</span>
-        <span class="s1">&#39;&lt;th&gt;success&lt;/th&gt;&lt;th&gt;text to parse&lt;/th&gt;&lt;/tr&gt;&#39;</span><span class="p">)</span>
+    <span class="n">COLGROUP</span> <span class="o">=</span> <span class="s1">&#39;&lt;colgroup&gt;</span><span class="se">\n</span><span class="s1">&lt;col style=&quot;width:2%&quot;/&gt;&lt;col style=&quot;width:2%&quot;/&gt;&lt;col &#39;</span> \
+               <span class="s1">&#39;style=&quot;width:75%&quot;/&gt;&lt;col style=&quot;width:6%&quot;/&gt;&lt;col style=&quot;width:15%&quot;/&gt;</span><span class="se">\n</span><span class="s1">&lt;/colgroup&gt;&#39;</span>
+    <span class="n">HEADINGS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;&lt;tr&gt;&lt;th&gt;L&lt;/th&gt;&lt;th&gt;C&lt;/th&gt;&lt;th&gt;parser call sequence&lt;/th&gt;&#39;</span>
+        <span class="s1">&#39;&lt;th&gt;success&lt;/th&gt;&lt;th&gt;text matched or failed&lt;/th&gt;&lt;/tr&gt;&#39;</span><span class="p">)</span>
     <span class="n">HTML_LEAD_IN</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;&lt;!DOCTYPE html&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
         <span class="s1">&#39;&lt;html&gt;</span><span class="se">\n</span><span class="s1">&lt;head&gt;</span><span class="se">\n</span><span class="s1">&lt;meta charset=&quot;utf-8&quot;/&gt;</span><span class="se">\n</span><span class="s1">&lt;style&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
         <span class="s1">&#39;td,th {font-family:monospace; &#39;</span>
@@ -440,19 +431,17 @@
                                    <span class="k">for</span> <span class="bp">cls</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">tpl</span><span class="o">.</span><span class="n">_fields</span><span class="p">,</span> <span class="n">tpl</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;&lt;/tr&gt;&#39;</span><span class="p">])</span></div>
 
     <span class="k">def</span> <span class="nf">err_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ERROR</span> <span class="o">+</span> <span class="s2">&quot;: &quot;</span> <span class="o">+</span> <span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">_errors</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">_errors</span> <span class="k">else</span>
-                             <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">()[:</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ERROR</span> <span class="o">+</span> <span class="s2">&quot;: &quot;</span> <span class="o">+</span> <span class="s2">&quot;; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">))</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">stack</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;-&gt;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">p</span><span class="o">.</span><span class="n">repr</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="s1">&#39;:RegExp&#39;</span> <span class="k">else</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">ptype</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;-&gt;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">p</span><span class="o">.</span><span class="n">repr</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">ptype</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;:RegExp&#39;</span><span class="p">,</span> <span class="s1">&#39;:PlainText&#39;</span><span class="p">}</span> <span class="k">else</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">ptype</span><span class="p">)</span>
                          <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_stack</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">FAIL</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> \
-            <span class="p">(</span><span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">err_msg</span><span class="p">())</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">MATCH</span>
+            <span class="p">(</span><span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">err_msg</span><span class="p">())</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">errors</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">MATCH</span>
             <span class="c1"># has_errors(self.node._errors)</span>
 
     <span class="nd">@property</span>
@@ -535,7 +524,7 @@
 <span class="n">LOG_TAIL_THRESHOLD</span> <span class="o">=</span> <span class="mi">500</span>      <span class="c1"># maximum number of history recors for &quot;tail log&quot;</span>
 
 
-<div class="viewcode-block" id="log_parsing_history"><a class="viewcode-back" href="../ModuleReference.html#log.log_parsing_history">[docs]</a><span class="k">def</span> <span class="nf">log_parsing_history</span><span class="p">(</span><span class="n">grammar</span><span class="p">,</span> <span class="n">log_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">html</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="log_parsing_history"><a class="viewcode-back" href="../ModuleReference.html#log.log_parsing_history">[docs]</a><span class="k">def</span> <span class="nf">log_parsing_history</span><span class="p">(</span><span class="n">grammar</span><span class="p">,</span> <span class="n">log_file_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">html</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Writes a log of the parsing history of the most recently parsed document.</span>
 
@@ -605,7 +594,7 @@
         <span class="n">append_line</span><span class="p">(</span><span class="n">full_history</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">!=</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">:</span>
             <span class="n">append_line</span><span class="p">(</span><span class="n">match_history</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
                 <span class="n">append_line</span><span class="p">(</span><span class="n">errors_only</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
     <span class="n">write_log</span><span class="p">(</span><span class="n">full_history</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;_full&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">full_history</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">LOG_TAIL_THRESHOLD</span> <span class="o">+</span> <span class="mi">10</span><span class="p">:</span>
@@ -618,9 +607,7 @@
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -633,7 +620,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -652,6 +639,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -670,14 +658,13 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

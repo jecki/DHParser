@@ -26,24 +26,17 @@
   
 
   
-  
     <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="#"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="index.html"/> 
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +95,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">DHParser</a>
@@ -110,9 +103,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -185,11 +179,9 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#compile.Compiler._dirty_flag">_dirty_flag (Compiler attribute)</a>
 </li>
-      <li><a href="ModuleReference.html#parse.Grammar._dirty_flag__">_dirty_flag__ (Grammar attribute)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="ModuleReference.html#syntaxtree.Node._parent">_parent (Node attribute)</a>
+      <li><a href="ModuleReference.html#parse.Grammar._dirty_flag__">_dirty_flag__ (Grammar attribute)</a>
 </li>
       <li><a href="ModuleReference.html#parse.Grammar._reversed__">_reversed__ (Grammar attribute)</a>
 </li>
@@ -199,7 +191,7 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="ModuleReference.html#syntaxtree.Node.add_error">new_error() (Node method)</a>
+      <li><a href="ModuleReference.html#syntaxtree.RootNode.add_error">add_error() (RootNode method)</a>
 </li>
       <li><a href="ModuleReference.html#error.adjust_error_locations">adjust_error_locations() (in module error)</a>
 </li>
@@ -219,10 +211,10 @@
         <li><a href="ModuleReference.html#parse.RE.apply">(RE method)</a>
 </li>
       </ul></li>
-      <li><a href="ModuleReference.html#transform.apply_if">apply_if() (in module transform)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ModuleReference.html#transform.apply_if">apply_if() (in module transform)</a>
+</li>
       <li><a href="ModuleReference.html#transform.apply_unless">apply_unless() (in module transform)</a>
 </li>
       <li><a href="ModuleReference.html#parse.Parser.ApplyFunc">ApplyFunc (Parser attribute)</a>
@@ -238,8 +230,6 @@
       <li><a href="ModuleReference.html#syntaxtree.Node.as_xml">as_xml() (Node method)</a>
 </li>
       <li><a href="ModuleReference.html#ebnf.EBNFCompiler.assemble_parser">assemble_parser() (EBNFCompiler method)</a>
-</li>
-      <li><a href="ModuleReference.html#transform.assert_condition">assert_condition() (in module transform)</a>
 </li>
       <li><a href="ModuleReference.html#syntaxtree.Node.attributes">attributes (Node attribute)</a>, <a href="ModuleReference.html#syntaxtree.Node.attributes">[1]</a>
 </li>
@@ -261,7 +251,7 @@
 </li>
       <li><a href="ModuleReference.html#transform.collapse">collapse() (in module transform)</a>
 </li>
-      <li><a href="ModuleReference.html#syntaxtree.Node.collect_errors">collect_errors() (Node method)</a>
+      <li><a href="ModuleReference.html#syntaxtree.RootNode.collect_errors">collect_errors() (RootNode method)</a>
 </li>
       <li><a href="ModuleReference.html#log.HistoryRecord.Snapshot.column">column (HistoryRecord.Snapshot attribute)</a>
 </li>
@@ -349,9 +339,9 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="ModuleReference.html#syntaxtree.Node.error_flag">error_flag (Node attribute)</a>
+      <li><a href="ModuleReference.html#transform.error_on">error_on() (in module transform)</a>
 </li>
-      <li><a href="ModuleReference.html#syntaxtree.Node.errors">errors (Node attribute)</a>, <a href="ModuleReference.html#syntaxtree.Node.errors">[1]</a>
+      <li><a href="ModuleReference.html#syntaxtree.Node.errors">errors (Node attribute)</a>
 </li>
       <li><a href="ModuleReference.html#toolkit.escape_control_characters">escape_control_characters() (in module toolkit)</a>
 </li>
@@ -368,6 +358,8 @@
       <li><a href="ModuleReference.html#compile.Compiler.fallback_compiler">fallback_compiler() (Compiler method)</a>
 </li>
       <li><a href="ModuleReference.html#stringview.StringView.find">find() (StringView method)</a>
+</li>
+      <li><a href="ModuleReference.html#stringview.StringView.finditer">finditer() (StringView method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -517,10 +509,10 @@
 </li>
       <li><a href="ModuleReference.html#toolkit.load_if_file">load_if_file() (in module toolkit)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#module-log">log (module)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#log.log_dir">log_dir() (in module log)</a>
 </li>
       <li><a href="ModuleReference.html#log.log_parsing_history">log_parsing_history() (in module log)</a>
@@ -536,7 +528,11 @@
       <li><a href="ModuleReference.html#parse.Lookbehind">Lookbehind (class in parse)</a>
 </li>
       <li><a href="ModuleReference.html#transform.lstrip">lstrip() (in module transform)</a>
+
+      <ul>
+        <li><a href="ModuleReference.html#stringview.StringView.lstrip">(StringView method)</a>
 </li>
+      </ul></li>
       <li><a href="ModuleReference.html#toolkit.lstrip_docstring">lstrip_docstring() (in module toolkit)</a>
 </li>
   </ul></td>
@@ -561,8 +557,6 @@
 </li>
       <li><a href="ModuleReference.html#parse.mixin_comment">mixin_comment() (in module parse)</a>
 </li>
-      <li><a href="ModuleReference.html#syntaxtree.mock_syntax_tree">parse_sxpr() (in module syntaxtree)</a>
-</li>
       <li><a href="ModuleReference.html#syntaxtree.MockParser">MockParser (class in syntaxtree)</a>
 </li>
       <li><a href="ModuleReference.html#log.HistoryRecord.most_advanced_match">most_advanced_match() (HistoryRecord static method)</a>
@@ -583,6 +577,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ModuleReference.html#syntaxtree.RootNode.new_error">new_error() (RootNode method)</a>
+</li>
       <li><a href="ModuleReference.html#preprocess.nil_preprocessor">nil_preprocessor() (in module preprocess)</a>
 </li>
       <li><a href="ModuleReference.html#syntaxtree.Node">Node (class in syntaxtree)</a>
@@ -613,6 +609,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#module-parse">parse (module)</a>
 </li>
+      <li><a href="ModuleReference.html#syntaxtree.parse_sxpr">parse_sxpr() (in module syntaxtree)</a>
+</li>
       <li><a href="ModuleReference.html#parse.Parser">Parser (class in parse)</a>
 </li>
       <li><a href="ModuleReference.html#syntaxtree.Node.parser">parser (Node attribute)</a>
@@ -629,7 +627,7 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="ModuleReference.html#syntaxtree.Node.pos">add_pos (Node attribute)</a>, <a href="ModuleReference.html#syntaxtree.Node.add_pos">[1]</a>
+      <li><a href="ModuleReference.html#syntaxtree.Node.pos">pos (Node attribute)</a>, <a href="ModuleReference.html#syntaxtree.Node.pos">[1]</a>
 </li>
       <li><a href="ModuleReference.html#preprocess.SourceMap.positions">positions (SourceMap attribute)</a>
 </li>
@@ -641,11 +639,11 @@
 </li>
       <li><a href="ModuleReference.html#preprocess.prettyprint_tokenized">prettyprint_tokenized() (in module preprocess)</a>
 </li>
-      <li><a href="ModuleReference.html#compile.Compiler.propagate_error_flags">propagate_error_flags() (Compiler static method)</a>
-</li>
       <li><a href="ModuleReference.html#syntaxtree.ParserBase.ptype">ptype (ParserBase attribute)</a>
 </li>
       <li><a href="ModuleReference.html#parse.Grammar.push_rollback__">push_rollback__() (Grammar method)</a>
+</li>
+      <li><a href="ModuleReference.html#parse.Grammar.python__src__">python__src__ (Grammar attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -683,6 +681,8 @@
 </li>
       <li><a href="ModuleReference.html#transform.replace_content">replace_content() (in module transform)</a>
 </li>
+      <li><a href="ModuleReference.html#transform.replace_content_by">replace_content_by() (in module transform)</a>
+</li>
       <li><a href="ModuleReference.html#transform.replace_or_reduce">replace_or_reduce() (in module transform)</a>
 </li>
       <li><a href="ModuleReference.html#transform.replace_parser">replace_parser() (in module transform)</a>
@@ -719,8 +719,14 @@
 </li>
       <li><a href="ModuleReference.html#parse.Grammar.root__">root__ (Grammar attribute)</a>
 </li>
-      <li><a href="ModuleReference.html#transform.rstrip">rstrip() (in module transform)</a>
+      <li><a href="ModuleReference.html#syntaxtree.RootNode">RootNode (class in syntaxtree)</a>
 </li>
+      <li><a href="ModuleReference.html#transform.rstrip">rstrip() (in module transform)</a>
+
+      <ul>
+        <li><a href="ModuleReference.html#stringview.StringView.rstrip">(StringView method)</a>
+</li>
+      </ul></li>
       <li><a href="ModuleReference.html#ebnf.EBNFCompiler.rules">rules (EBNFCompiler attribute)</a>
 </li>
       <li><a href="ModuleReference.html#testing.runner">runner() (in module testing)</a>
@@ -823,6 +829,8 @@
 </li>
       <li><a href="ModuleReference.html#transform.traverse_locally">traverse_locally() (in module transform)</a>
 </li>
+      <li><a href="ModuleReference.html#parse.Grammar.tree__">tree__ (Grammar attribute)</a>
+</li>
       <li><a href="ModuleReference.html#syntaxtree.Node.tree_size">tree_size() (Node method)</a>
 </li>
   </ul></td>
@@ -851,9 +859,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#ebnf.EBNFCompiler.variables">variables (EBNFCompiler attribute)</a>
 </li>
+      <li><a href="ModuleReference.html#parse.Grammar.variables__">variables__ (Grammar attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="ModuleReference.html#parse.Grammar.variables__">variables__ (Grammar attribute)</a>
+      <li><a href="ModuleReference.html#ebnf.EBNFCompiler.verify_transformation_table">verify_transformation_table() (EBNFCompiler method)</a>
 </li>
       <li><a href="ModuleReference.html#module-versionnumber">versionnumber (module)</a>
 </li>
@@ -863,14 +873,20 @@
 <h2 id="W">W</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="ModuleReference.html#transform.warn_on">warn_on() (in module transform)</a>
+</li>
+      <li><a href="ModuleReference.html#parse.Whitespace">Whitespace (class in parse)</a>
+</li>
+      <li><a href="ModuleReference.html#parse.Grammar.whitespace__">whitespace__ (Grammar attribute)</a>
+</li>
       <li><a href="ModuleReference.html#preprocess.with_source_mapping">with_source_mapping() (in module preprocess)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#parse.Grammar.WSP__">WSP__ (Grammar attribute)</a>
 </li>
       <li><a href="ModuleReference.html#parse.Grammar.wsp_left_parser__">wsp_left_parser__ (Grammar attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="ModuleReference.html#parse.Grammar.wsp_right_parser__">wsp_right_parser__ (Grammar attribute)</a>
 </li>
       <li><a href="ModuleReference.html#parse.Grammar.wspL__">wspL__ (Grammar attribute)</a>
@@ -895,9 +911,7 @@
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -910,7 +924,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -929,6 +943,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -947,14 +962,13 @@
     <script type="text/javascript" src="_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

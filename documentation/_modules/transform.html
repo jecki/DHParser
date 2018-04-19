@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
-        <link rel="up" title="Module code" href="index.html"/> 
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -187,7 +178,8 @@
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span><span class="p">,</span> <span class="n">reduce</span><span class="p">,</span> <span class="n">singledispatch</span>
 
-<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> <span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">MockParser</span>
+<span class="kn">from</span> <span class="nn">DHParser.error</span> <span class="k">import</span> <span class="n">Error</span>
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> <span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">MockParser</span><span class="p">,</span> <span class="n">ZOMBIE_NODE</span>
 <span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">expand_table</span><span class="p">,</span> <span class="n">smart_list</span><span class="p">,</span> <span class="n">re</span><span class="p">,</span> <span class="n">typing</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">AbstractSet</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ByteString</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">Container</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> \
     <span class="n">List</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Text</span>
@@ -209,6 +201,7 @@
            <span class="s1">&#39;collapse&#39;</span><span class="p">,</span>
            <span class="s1">&#39;merge_children&#39;</span><span class="p">,</span>
            <span class="s1">&#39;replace_content&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;replace_content_by&#39;</span><span class="p">,</span>
            <span class="s1">&#39;apply_if&#39;</span><span class="p">,</span>
            <span class="s1">&#39;apply_unless&#39;</span><span class="p">,</span>
            <span class="s1">&#39;traverse_locally&#39;</span><span class="p">,</span>
@@ -247,7 +240,8 @@
            <span class="s1">&#39;forbid&#39;</span><span class="p">,</span>
            <span class="s1">&#39;require&#39;</span><span class="p">,</span>
            <span class="s1">&#39;assert_content&#39;</span><span class="p">,</span>
-           <span class="s1">&#39;assert_condition&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;error_on&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;warn_on&#39;</span><span class="p">,</span>
            <span class="s1">&#39;assert_has_children&#39;</span><span class="p">)</span>
 
 
@@ -265,7 +259,7 @@
 <span class="sd">    dispatch on the first parameter after the context parameter.</span>
 
 <span class="sd">    Decorating a transformation-function that has more than merely the</span>
-<span class="sd">    ``node``-parameter with ``transformation_factory`` creates a</span>
+<span class="sd">    ``context``-parameter with ``transformation_factory`` creates a</span>
 <span class="sd">    function with the same name, which returns a partial-function that</span>
 <span class="sd">    takes just the context-parameter.</span>
 
@@ -315,7 +309,7 @@
         <span class="n">f</span> <span class="o">=</span> <span class="n">singledispatch</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Container</span><span class="p">)</span> \
-                    <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Text</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">ByteString</span><span class="p">):</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Text</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">ByteString</span><span class="p">)):</span>
                 <span class="k">def</span> <span class="nf">gen_special</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
                     <span class="n">c</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">AbstractSet</span><span class="p">)</span> <span class="k">else</span> \
                         <span class="nb">list</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">p1type</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span> <span class="k">else</span> <span class="n">args</span>
@@ -398,15 +392,16 @@
     <span class="c1"># Is this optimazation really needed?</span>
     <span class="k">if</span> <span class="s1">&#39;__cache__&#39;</span> <span class="ow">in</span> <span class="n">processing_table</span><span class="p">:</span>
         <span class="c1"># assume that processing table has already been expanded</span>
-        <span class="n">table</span> <span class="o">=</span> <span class="n">processing_table</span>
-        <span class="n">cache</span> <span class="o">=</span> <span class="n">processing_table</span><span class="p">[</span><span class="s1">&#39;__cache__&#39;</span><span class="p">]</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">processing_table</span>               <span class="c1"># type: ProcessingTableType</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">TransformationDict</span><span class="p">,</span> <span class="n">processing_table</span><span class="p">[</span><span class="s1">&#39;__cache__&#39;</span><span class="p">])</span>  <span class="c1"># type: TransformationDict</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># normalize processing_table entries by turning single values</span>
         <span class="c1"># into lists with a single value</span>
         <span class="n">table</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">cast</span><span class="p">(</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span> <span class="n">smart_list</span><span class="p">(</span><span class="n">call</span><span class="p">))</span>
                  <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">call</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">processing_table</span><span class="o">.</span><span class="n">items</span><span class="p">())}</span>
         <span class="n">table</span> <span class="o">=</span> <span class="n">expand_table</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
-        <span class="n">cache</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__cache__&#39;</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="n">TransformationDict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">()))</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">TransformationDict</span><span class="p">,</span>
+                     <span class="n">table</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__cache__&#39;</span><span class="p">,</span> <span class="n">cast</span><span class="p">(</span><span class="n">TransformationDict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">())))</span>
         <span class="c1"># change processing table in place, so its already expanded and cache filled next time</span>
         <span class="n">processing_table</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
         <span class="n">processing_table</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
@@ -418,13 +413,14 @@
     <span class="c1"># cache = {}  # type: Dict[str, List[Callable]]</span>
 
     <span class="k">def</span> <span class="nf">traverse_recursive</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="k">nonlocal</span> <span class="n">cache</span>
         <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ZOMBIE_NODE</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">result</span><span class="p">:</span>
-                <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">child</span>
                 <span class="n">traverse_recursive</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>  <span class="c1"># depth first</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>  <span class="c1"># propagate error flag</span>
-                <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
 
         <span class="n">key</span> <span class="o">=</span> <span class="n">key_func</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
@@ -542,8 +538,7 @@
     <span class="sd">&quot;&quot;&quot;Checks whether the last node in the context has `ptype == TOKEN_PTYPE`</span>
 <span class="sd">    and it&#39;s content matches one of the given tokens. Leading and trailing</span>
 <span class="sd">    whitespace-tokens will be ignored. In case an empty set of tokens is passed,</span>
-<span class="sd">    any token is a match. If only &quot;:&quot; is given all anonymous tokens but no other</span>
-<span class="sd">    tokens are a match.</span>
+<span class="sd">    any token is a match.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">stripped</span><span class="p">(</span><span class="n">nd</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;Removes leading and trailing whitespace-nodes from content.&quot;&quot;&quot;</span>
@@ -601,35 +596,35 @@
         <span class="n">child</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span><span class="p">)</span>
         <span class="c1"># parser names must not be overwritten, else: child.parser.name = node.parser.name</span>
     <span class="n">node</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">parser</span>
-    <span class="n">node</span><span class="o">.</span><span class="n">_errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">_errors</span><span class="p">)</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
     <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">result</span>
 
 
 <span class="k">def</span> <span class="nf">_reduce_child</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">child</span><span class="p">:</span> <span class="n">Node</span><span class="p">):</span>
-    <span class="n">node</span><span class="o">.</span><span class="n">_errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">_errors</span><span class="p">)</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
     <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">result</span>
 
 
-<span class="k">def</span> <span class="nf">_pick_child</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">criteria</span><span class="p">:</span> <span class="n">CriteriaType</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Returns the first child that meets the criteria.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">criteria</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">[</span><span class="n">criteria</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">criteria</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag_name</span> <span class="o">==</span> <span class="n">criteria</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">child</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">else</span><span class="p">:</span>  <span class="c1"># assume criteria has type ConditionFunc</span>
-        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-            <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
-            <span class="n">evaluation</span> <span class="o">=</span> <span class="n">criteria</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
-            <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">evaluation</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">child</span>
-        <span class="k">return</span> <span class="kc">None</span>
+<span class="c1"># def _pick_child(context: List[Node], criteria: CriteriaType):</span>
+<span class="c1">#     &quot;&quot;&quot;Returns the first child that meets the criteria.&quot;&quot;&quot;</span>
+<span class="c1">#     if isinstance(criteria, int):</span>
+<span class="c1">#         try:</span>
+<span class="c1">#             return context[-1].children[criteria]</span>
+<span class="c1">#         except IndexError:</span>
+<span class="c1">#             return None</span>
+<span class="c1">#     elif isinstance(criteria, str):</span>
+<span class="c1">#         for child in context[-1].children:</span>
+<span class="c1">#             if child.tag_name == criteria:</span>
+<span class="c1">#                 return child</span>
+<span class="c1">#         return None</span>
+<span class="c1">#     else:  # assume criteria has type ConditionFunc</span>
+<span class="c1">#         for child in context[-1].children:</span>
+<span class="c1">#             context.append(child)</span>
+<span class="c1">#             evaluation = criteria(context)</span>
+<span class="c1">#             context.pop()</span>
+<span class="c1">#             if evaluation:</span>
+<span class="c1">#                 return child</span>
+<span class="c1">#         return None</span>
 
 
 <span class="c1">#######################################################################</span>
@@ -749,21 +744,22 @@
 <span class="sd">    Applying flatten recursively will result in these kinds of</span>
 <span class="sd">    structural transformation::</span>
 
-<span class="sd">        (1 (+ 2) (+ 3)     -&gt;   (1 + 2 + 3)</span>
+<span class="sd">        (1 (+ 2) (+ 3))    -&gt;   (1 + 2 + 3)</span>
 <span class="sd">        (1 (+ (2 + (3))))  -&gt;   (1 + 2 + 3)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
         <span class="n">new_result</span> <span class="o">=</span> <span class="p">[]</span>     <span class="c1"># type: List[Node]</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ZOMBIE_NODE</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-            <span class="n">context</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">child</span>
             <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">children</span> <span class="ow">and</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">recursive</span><span class="p">:</span>
                     <span class="n">flatten</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">condition</span><span class="p">,</span> <span class="n">recursive</span><span class="p">)</span>
                 <span class="n">new_result</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">new_result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
-            <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
         <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">new_result</span><span class="p">)</span></div>
 
 
@@ -774,6 +770,27 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span></div>
+
+
+<span class="c1"># @transformation_factory</span>
+<span class="c1"># def collect_leaves(context: List[Node], whitespace: str=&#39;&#39;):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     Collects all leave nodes dropping any intermediary nodes.</span>
+<span class="c1">#     Optionally adds whitespace between the nodes.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     assert context[-1].children</span>
+<span class="c1">#     node = context[-1]</span>
+<span class="c1">#     leaves_iterator = node.select(lambda nd: not nd.children, include_root=False)</span>
+<span class="c1">#     if whitespace:</span>
+<span class="c1">#         mock_ws_parser = MockParser(&#39;&#39;, WHITESPACE_PTYPE)</span>
+<span class="c1">#         result = []</span>
+<span class="c1">#         for leave in leaves_iterator:</span>
+<span class="c1">#             result.append(leave)</span>
+<span class="c1">#             result.append(Node(mock_ws_parser, whitespace, leafhint=True))</span>
+<span class="c1">#         result.pop()</span>
+<span class="c1">#         node.result = tuple(result)</span>
+<span class="c1">#     else:</span>
+<span class="c1">#         node.result = (nd for nd in leaves_iterator)</span>
 
 
 <div class="viewcode-block" id="merge_children"><a class="viewcode-back" href="../ModuleReference.html#transform.merge_children">[docs]</a><span class="nd">@transformation_factory</span>
@@ -812,6 +829,14 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="replace_content_by"><a class="viewcode-back" href="../ModuleReference.html#transform.replace_content_by">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">replace_content_by</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># Callable[[Node], ResultType]</span>
+    <span class="sd">&quot;&quot;&quot;Replaces the content of the node with the given text content.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">content</span></div>
 
 
 <span class="c1">#######################################################################</span>
@@ -970,9 +995,11 @@
 <span class="c1">#</span>
 <span class="c1">########################################################################</span>
 
-<div class="viewcode-block" id="assert_condition"><a class="viewcode-back" href="../ModuleReference.html#transform.assert_condition">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">assert_condition</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Checks for `condition`; adds an error message if condition is not met.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="error_on"><a class="viewcode-back" href="../ModuleReference.html#transform.error_on">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">error_on</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">error_msg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks for `condition`; adds an error message if condition is not met.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">error_msg</span><span class="p">:</span>
@@ -981,18 +1008,36 @@
             <span class="n">cond_name</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="s1">&#39;__name__&#39;</span><span class="p">)</span> \
                         <span class="k">else</span> <span class="n">condition</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="s1">&#39;__class__&#39;</span><span class="p">)</span> \
                         <span class="k">else</span> <span class="s1">&#39;&lt;unknown&gt;&#39;</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;transform.assert_condition: Failed to meet condition &quot;</span> <span class="o">+</span> <span class="n">cond_name</span><span class="p">)</span></div>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;transform.error_on: Failed to meet condition &quot;</span> <span class="o">+</span> <span class="n">cond_name</span><span class="p">)</span></div>
 
 
-<span class="n">assert_has_children</span> <span class="o">=</span> <span class="n">assert_condition</span><span class="p">(</span><span class="k">lambda</span> <span class="n">nd</span><span class="p">:</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">,</span> <span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; has no children&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="warn_on"><a class="viewcode-back" href="../ModuleReference.html#transform.warn_on">[docs]</a><span class="nd">@transformation_factory</span><span class="p">(</span><span class="n">Callable</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">warn_on</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">condition</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">warning</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks for `condition`; adds an warning message if condition is not met.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">condition</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">warning</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">warning</span> <span class="o">%</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span> <span class="k">if</span> <span class="n">warning</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">warning</span><span class="p">,</span>
+                           <span class="n">Error</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cond_name</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="s1">&#39;__name__&#39;</span><span class="p">)</span> \
+                        <span class="k">else</span> <span class="n">condition</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="s1">&#39;__class__&#39;</span><span class="p">)</span> \
+                        <span class="k">else</span> <span class="s1">&#39;&lt;unknown&gt;&#39;</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;transform.warn_on: Failed to meet condition &quot;</span> <span class="o">+</span> <span class="n">cond_name</span><span class="p">,</span>
+                           <span class="n">Error</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span></div>
+
+
+<span class="n">assert_has_children</span> <span class="o">=</span> <span class="n">error_on</span><span class="p">(</span><span class="k">lambda</span> <span class="n">nd</span><span class="p">:</span> <span class="n">nd</span><span class="o">.</span><span class="n">children</span><span class="p">,</span> <span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; has no children&#39;</span><span class="p">)</span>
 
 
 <span class="nd">@transformation_factory</span>
 <span class="k">def</span> <span class="nf">assert_content</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">regexp</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">has_content</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">regexp</span><span class="p">):</span>
-        <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; violates </span><span class="si">%s</span><span class="s1"> on </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
-                       <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">regexp</span><span class="p">),</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span><span class="p">))</span>
+        <span class="n">context</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; violates </span><span class="si">%s</span><span class="s1"> on </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">regexp</span><span class="p">),</span> <span class="n">node</span><span class="o">.</span><span class="n">content</span><span class="p">))</span>
 
 
 <span class="nd">@transformation_factory</span>
@@ -1000,8 +1045,8 @@
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">child_tags</span><span class="p">:</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; is not allowed inside &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span>
-                           <span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="n">context</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; is not allowed inside &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
 
 
 <span class="nd">@transformation_factory</span>
@@ -1009,15 +1054,13 @@
     <span class="n">node</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">child_tags</span><span class="p">:</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; cannot be nested inside &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span>
-                           <span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="n">context</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;Element &quot;</span><span class="si">%s</span><span class="s1">&quot; cannot be nested inside &quot;</span><span class="si">%s</span><span class="s1">&quot;.&#39;</span> <span class="o">%</span>
+                                 <span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
 
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -1030,7 +1073,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -1049,6 +1092,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -1067,14 +1111,13 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

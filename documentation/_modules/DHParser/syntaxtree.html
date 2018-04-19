@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../../genindex.html"/>
-        <link rel="search" title="Search" href="../../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../../index.html"/>
-        <link rel="up" title="Module code" href="../index.html"/> 
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -182,12 +173,13 @@
 
 
 <span class="kn">import</span> <span class="nn">collections.abc</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 
 <span class="kn">from</span> <span class="nn">DHParser.error</span> <span class="k">import</span> <span class="n">Error</span><span class="p">,</span> <span class="n">linebreaks</span><span class="p">,</span> <span class="n">line_col</span>
 <span class="kn">from</span> <span class="nn">DHParser.stringview</span> <span class="k">import</span> <span class="n">StringView</span>
 <span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">re</span><span class="p">,</span> <span class="n">typing</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">AbstractSet</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span>
 
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;ParserBase&#39;</span><span class="p">,</span>
@@ -196,8 +188,10 @@
            <span class="s1">&#39;MockParser&#39;</span><span class="p">,</span>
            <span class="s1">&#39;ZombieParser&#39;</span><span class="p">,</span>
            <span class="s1">&#39;ZOMBIE_PARSER&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;ZOMBIE_NODE&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Node&#39;</span><span class="p">,</span>
-           <span class="s1">&#39;mock_syntax_tree&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;RootNode&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;parse_sxpr&#39;</span><span class="p">,</span>
            <span class="s1">&#39;flatten_sxpr&#39;</span><span class="p">)</span>
 
 
@@ -362,13 +356,6 @@
 <span class="sd">            parsing (i.e. AST-transformation and compiling), for</span>
 <span class="sd">            example by calling ``isinstance(node.parer, ...)``.</span>
 
-<span class="sd">        errors (list):  A list of parser- or compiler-errors:</span>
-<span class="sd">            tuple(position, string) attached to this node</span>
-
-<span class="sd">        error_flag (int):  0 if no error occurred in either the node</span>
-<span class="sd">            itself or any of its descendants. Otherwise contains the</span>
-<span class="sd">            highest warning or error level or all errors that occurred.</span>
-
 <span class="sd">        len (int):  The full length of the node&#39;s string result if the</span>
 <span class="sd">            node is a leaf node or, otherwise, the concatenated string</span>
 <span class="sd">            result&#39;s of its descendants. The figure always represents</span>
@@ -389,31 +376,28 @@
 <span class="sd">            At any rate, it should only be reassigned during the parsing</span>
 <span class="sd">            stage and never during or after the AST-transformation.</span>
 
+<span class="sd">        errors (list):  A list of all errors that occured on this node.</span>
+
 <span class="sd">        attributes (dict): An optional dictionary of XML-attributes. This</span>
 <span class="sd">            dictionary is created lazily upon first usage. The attributes</span>
 <span class="sd">            will only be shown in the XML-Representation, not in the</span>
 <span class="sd">            S-Expression-output.</span>
-
-
-<span class="sd">        _parent (Node): SLOT RESERVED FOR FUTURE USE!</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_result&#39;</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">,</span> <span class="s1">&#39;_errors&#39;</span><span class="p">,</span> <span class="s1">&#39;_len&#39;</span><span class="p">,</span> <span class="s1">&#39;_pos&#39;</span><span class="p">,</span> <span class="s1">&#39;parser&#39;</span><span class="p">,</span> <span class="s1">&#39;error_flag&#39;</span><span class="p">,</span>
-                 <span class="s1">&#39;_xml_attr&#39;</span><span class="p">,</span> <span class="s1">&#39;_content&#39;</span><span class="p">,</span> <span class="s1">&#39;_parent&#39;</span><span class="p">]</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_result&#39;</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">,</span> <span class="s1">&#39;_len&#39;</span><span class="p">,</span> <span class="s1">&#39;_pos&#39;</span><span class="p">,</span> <span class="s1">&#39;parser&#39;</span><span class="p">,</span> <span class="s1">&#39;errors&#39;</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">,</span> <span class="s1">&#39;_content&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">ResultType</span><span class="p">,</span> <span class="n">leafhint</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the ``Node``-object with the ``Parser``-Instance</span>
 <span class="sd">        that generated the node and the parser&#39;s result.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="mi">0</span>             <span class="c1"># type: int</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span> <span class="o">=</span> <span class="p">[]</span>               <span class="c1"># type: List[Error]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>               <span class="c1"># type: List[Error]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>                  <span class="c1"># type: int</span>
         <span class="c1"># Assignment to self.result initializes the attributes _result, children and _len</span>
         <span class="c1"># The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes</span>
         <span class="k">if</span> <span class="n">leafhint</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="n">result</span>       <span class="c1"># type: StrictResultType</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_content</span> <span class="o">=</span> <span class="kc">None</span>        <span class="c1"># type: str</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_content</span> <span class="o">=</span> <span class="kc">None</span>        <span class="c1"># type: Optional[str]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="n">NoChildren</span>  <span class="c1"># type: ChildrenType</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_len</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>              <span class="c1"># type: int  # lazy evaluation</span>
         <span class="k">else</span><span class="p">:</span>
@@ -423,9 +407,9 @@
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">s</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
             <span class="k">return</span> <span class="s1">&#39; &lt;&lt;&lt; Error on &quot;</span><span class="si">%s</span><span class="s1">&quot; | </span><span class="si">%s</span><span class="s1"> &gt;&gt;&gt; &#39;</span> <span class="o">%</span> \
-                   <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="s1">&#39;; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="p">))</span>
+                   <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="s1">&#39;; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">s</span>
 
 
@@ -473,7 +457,7 @@
 <span class="sd">        Returns the child node with the given index if ``index_or_tagname`` is</span>
 <span class="sd">        an integer or the first child node with the given tag name. Examples::</span>
 
-<span class="sd">            &gt;&gt;&gt; tree = mock_syntax_tree(&#39;(a (b &quot;X&quot;) (X (c &quot;d&quot;)) (e (X &quot;F&quot;)))&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; tree = parse_sxpr(&#39;(a (b &quot;X&quot;) (X (c &quot;d&quot;)) (e (X &quot;F&quot;)))&#39;)</span>
 <span class="sd">            &gt;&gt;&gt; flatten_sxpr(tree[0].as_sxpr())</span>
 <span class="sd">            &#39;(b &quot;X&quot;)&#39;</span>
 <span class="sd">            &gt;&gt;&gt; flatten_sxpr(tree[&quot;X&quot;].as_sxpr())</span>
@@ -555,21 +539,17 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Node</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="p">,)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">error_flag</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="n">result</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="n">result</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span>
-                <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">error_flag</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="n">NoChildren</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="n">result</span>
 
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">content</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">content</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns content as string, omitting error messages.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -600,7 +580,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span>
 
 
-    <span class="k">def</span> <span class="nf">init_pos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Node&#39;</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">init_pos</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Node&#39;</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        (Re-)initialize position value. Usually, the parser guard</span>
 <span class="sd">        (`parsers.add_parser_guard()`) takes care of assigning the</span>
@@ -610,67 +590,24 @@
 <span class="sd">        This function recursively reassigns the position values</span>
 <span class="sd">        of the child nodes, too.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">overwrite</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">pos</span>
-            <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="p">:</span>
-                <span class="n">err</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">add_pos</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">==</span> <span class="n">pos</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%i</span><span class="s2"> != </span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pos</span><span class="p">,</span> <span class="n">add_pos</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">==</span> <span class="n">pos</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;pos mismatch </span><span class="si">%i</span><span class="s2"> != </span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pos</span><span class="p">,</span> <span class="n">pos</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">pos</span>
         <span class="c1"># recursively adjust pos-values of all children</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
         <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-            <span class="n">child</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">)</span>
+            <span class="n">child</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
             <span class="n">offset</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">errors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Error</span><span class="p">]:</span>
+    <span class="k">def</span> <span class="nf">attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns the errors that occurred at this Node,</span>
-<span class="sd">        not including any errors from child nodes.</span>
+<span class="sd">        Returns a dictionary of XML-Attributes attached to the Node.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-
-
-    <span class="k">def</span> <span class="nf">add_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                  <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                  <span class="n">code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Error</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Node&#39;</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Adds an error to this Node.</span>
-<span class="sd">        Parameters:</span>
-<span class="sd">            message(str): A string with the error message.abs</span>
-<span class="sd">            code(int):    An error code to identify the kind of error</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">code</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span>
-
-
-    <span class="k">def</span> <span class="nf">collect_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clear_errors</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Error</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Recursively adds line- and column-numbers to all error objects.</span>
-<span class="sd">        Returns all errors of this node or any child node in the form</span>
-<span class="sd">        of a set of tuples (position, error_message), where position</span>
-<span class="sd">        is always relative to this node.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span>
-        <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">:</span>
-            <span class="n">err</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_pos</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(</span><span class="n">clear_errors</span><span class="p">))</span>
-        <span class="k">if</span> <span class="n">clear_errors</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_errors</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">code</span> <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-                <span class="n">max_child_error</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">error_flag</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">max_child_error</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">errors</span>
-
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_xml_attr</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xml_attr</span>
 
 
     <span class="k">def</span> <span class="nf">_tree_repr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tab</span><span class="p">,</span> <span class="n">open_fn</span><span class="p">,</span> <span class="n">close_fn</span><span class="p">,</span> <span class="n">data_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -733,19 +670,21 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">left_bracket</span><span class="p">,</span> <span class="n">right_bracket</span><span class="p">,</span> <span class="n">density</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">compact</span> <span class="k">else</span> <span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">)&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">lbreaks</span> <span class="o">=</span> <span class="n">linebreaks</span><span class="p">(</span><span class="n">src</span><span class="p">)</span> <span class="k">if</span> <span class="n">src</span> <span class="k">else</span> <span class="p">[]</span>  <span class="c1"># type: List[int]</span>
 
         <span class="k">def</span> <span class="nf">opening</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;Returns the opening string for the representation of `node`.&quot;&quot;&quot;</span>
-            <span class="n">txt</span> <span class="o">=</span> <span class="n">left_bracket</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span>
+            <span class="n">txt</span> <span class="o">=</span> <span class="p">[</span><span class="n">left_bracket</span><span class="p">,</span>  <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span><span class="p">]</span>
             <span class="c1"># s += &quot; &#39;(pos %i)&quot; % node.add_pos</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">):</span>
+                <span class="n">txt</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39; `(</span><span class="si">%s</span><span class="s1"> &quot;</span><span class="si">%s</span><span class="s1">&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
             <span class="k">if</span> <span class="n">src</span><span class="p">:</span>
-                <span class="n">txt</span> <span class="o">+=</span> <span class="s2">&quot; &#39;(pos </span><span class="si">%i</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="n">node</span><span class="o">.</span><span class="n">add_pos</span>  <span class="c1"># + &quot; %i %i)&quot; % line_col(src, node.add_pos)</span>
+                <span class="n">txt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; `(pos </span><span class="si">%i</span><span class="s2"> </span><span class="si">%i</span><span class="s2"> </span><span class="si">%i</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="o">*</span><span class="n">line_col</span><span class="p">(</span><span class="n">lbreaks</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span><span class="p">)))</span>
             <span class="c1"># if node.error_flag:   # just for debugging error collecting</span>
             <span class="c1">#     txt += &quot; HAS ERRORS&quot;</span>
             <span class="k">if</span> <span class="n">showerrors</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
-                <span class="n">txt</span> <span class="o">+=</span> <span class="s2">&quot; &#39;(err &#39;(</span><span class="si">%s</span><span class="s2">))&quot;</span> <span class="o">%</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\&quot;&#39;</span><span class="p">)</span>
-                                                  <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">txt</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">txt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; `(err `</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">))</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">txt</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
 
         <span class="k">def</span> <span class="nf">closing</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;Returns the closing string for the representation of `node`.&quot;&quot;&quot;</span>
@@ -758,14 +697,6 @@
                 <span class="k">else</span> <span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">strg</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\&quot;&#39;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree_repr</span><span class="p">(</span><span class="s1">&#39;    &#39;</span><span class="p">,</span> <span class="n">opening</span><span class="p">,</span> <span class="n">closing</span><span class="p">,</span> <span class="n">pretty</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="n">density</span><span class="p">)</span>
-
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Returns a dictionary of XML-Attributes attached to the Node.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_xml_attr</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xml_attr</span>
 
 
     <span class="k">def</span> <span class="nf">as_xml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">showerrors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -781,12 +712,13 @@
         <span class="k">def</span> <span class="nf">opening</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="sd">&quot;&quot;&quot;Returns the opening string for the representation of `node`.&quot;&quot;&quot;</span>            
             <span class="n">txt</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;&#39;</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span><span class="p">]</span>
-            <span class="c1"># s += &#39; pos=&quot;%i&quot;&#39; % node.add_pos</span>
+            <span class="n">has_reserved_attrs</span> <span class="o">=</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">)</span> \
+                <span class="ow">and</span> <span class="nb">any</span> <span class="p">(</span><span class="n">r</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">attributes</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;err&#39;</span><span class="p">,</span> <span class="s1">&#39;line&#39;</span><span class="p">,</span> <span class="s1">&#39;col&#39;</span><span class="p">})</span>
             <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">):</span>
                 <span class="n">txt</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s1">&#39; </span><span class="si">%s</span><span class="s1">=&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
-            <span class="k">if</span> <span class="n">src</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">src</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">has_reserved_attrs</span><span class="p">:</span>
                 <span class="n">txt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; line=&quot;</span><span class="si">%i</span><span class="s1">&quot; col=&quot;</span><span class="si">%i</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">line_col</span><span class="p">(</span><span class="n">line_breaks</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">showerrors</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">showerrors</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">has_reserved_attrs</span><span class="p">:</span>
                 <span class="n">txt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; err=&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\&quot;&#39;</span><span class="p">)</span>
                                                  <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">))</span>
             <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">txt</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;&gt;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">])</span>
@@ -826,7 +758,7 @@
                     <span class="k">yield</span> <span class="n">node</span>
 
 
-    <span class="k">def</span> <span class="nf">select_by_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag_names</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="k">def</span> <span class="nf">select_by_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag_names</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AbstractSet</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
                       <span class="n">include_root</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns an iterator that runs through all descendants that have one</span>
@@ -834,7 +766,7 @@
 
 <span class="sd">        Examples::</span>
 
-<span class="sd">            &gt;&gt;&gt; tree = mock_syntax_tree(&#39;(a (b &quot;X&quot;) (X (c &quot;d&quot;)) (e (X &quot;F&quot;)))&#39;)</span>
+<span class="sd">            &gt;&gt;&gt; tree = parse_sxpr(&#39;(a (b &quot;X&quot;) (X (c &quot;d&quot;)) (e (X &quot;F&quot;)))&#39;)</span>
 <span class="sd">            &gt;&gt;&gt; list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag(&quot;X&quot;, False))</span>
 <span class="sd">            [&#39;(X (c &quot;d&quot;))&#39;, &#39;(X &quot;F&quot;)&#39;]</span>
 <span class="sd">            &gt;&gt;&gt; list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag({&quot;X&quot;, &quot;b&quot;}, False))</span>
@@ -855,7 +787,7 @@
 <span class="sd">            Node: All nodes which have a given tag name.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tag_names</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">tag_names</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">tag_names</span><span class="p">)</span>
+            <span class="n">tag_names</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="n">tag_names</span><span class="p">})</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="k">lambda</span> <span class="n">node</span><span class="p">:</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span> <span class="ow">in</span> <span class="n">tag_names</span><span class="p">,</span> <span class="n">include_root</span><span class="p">)</span>
 
 
@@ -881,17 +813,119 @@
         <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">tree_size</span><span class="p">()</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
 
 
-<span class="k">def</span> <span class="nf">mock_syntax_tree</span><span class="p">(</span><span class="n">sxpr</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">RootNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Generates a tree of nodes from an S-expression. The main purpose of this is</span>
-<span class="sd">    to generate test data.</span>
+
+<span class="sd">        errors (list):  A list of all errors that have occured so far during</span>
+<span class="sd">                processing (i.e. parsing, AST-transformation, compiling)</span>
+<span class="sd">                of this tree.</span>
+
+<span class="sd">        error_flag (int):  the highest warning or error level of all errors</span>
+<span class="sd">                that occurred.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Node</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;RootNode&#39;</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_errors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_nodes_keep</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">swallow</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+    <span class="c1"># def _propagate_errors(self):</span>
+    <span class="c1">#     if not self.all_errors or not self.error_propagation:</span>
+    <span class="c1">#         return</span>
+    <span class="c1">#     self.all_errors.sort(key=lambda e: e.pos)</span>
+    <span class="c1">#     i = 0</span>
+    <span class="c1">#     for leaf in self.select(lambda nd: not nd.children, False):</span>
+    <span class="c1">#         leaf.errors = []</span>
+    <span class="c1">#         while i &lt; len(self.all_errors) \</span>
+    <span class="c1">#                 and leaf.pos &lt;= self.all_errors[i].add_pos &lt; leaf.add_pos + leaf.len:</span>
+    <span class="c1">#             leaf._errors.append(self.all_errors[i])</span>
+    <span class="c1">#             i += 1</span>
+    <span class="c1">#         if i &gt;= len(self.all_errors):</span>
+    <span class="c1">#             break</span>
+    <span class="c1">#</span>
+    <span class="c1"># def _propagate_new_error(self, error):</span>
+    <span class="c1">#     if self.error_propagation:</span>
+    <span class="c1">#         for leaf in self.select(lambda nd: not nd.children, True):</span>
+    <span class="c1">#             if leaf.pos &lt;= error.add_pos &lt; leaf.add_pos + leaf.len:</span>
+    <span class="c1">#                 leaf._errors.append(error)</span>
+    <span class="c1">#                 break</span>
+    <span class="c1">#         else:</span>
+    <span class="c1">#             assert False, &quot;Error %s at pos %i out of bounds&quot; % (str(error), error.add_pos)</span>
+
+    <span class="k">def</span> <span class="nf">swallow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;RootNode&#39;</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_result</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_len</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_len</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_pos</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parser</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parser</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s1">&#39;_xml_attr&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_xml_attr</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_xml_attr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_content</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_content</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">add_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="n">Error</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;RootNode&#39;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Adds an Error object to the tree, locating it at a specific node.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">error</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_nodes_keep</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">new_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
+                  <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Error</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;RootNode&#39;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds an error to this tree, locating it at a specific node.</span>
+<span class="sd">        Parameters:</span>
+<span class="sd">            pos(int):     The position of the error in the source text</span>
+<span class="sd">            message(str): A string with the error message.abs</span>
+<span class="sd">            code(int):    An error code to identify the kind of error</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">Error</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+
+    <span class="k">def</span> <span class="nf">collect_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Error</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Returns the list of errors, ordered bv their position.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># for node in self.err_nodes:  # lazy evaluation of positions</span>
+        <span class="c1">#     for err in node.errors:  # moved to error.Error.pos</span>
+        <span class="c1">#         err.pos = node.pos</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_errors</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">err_nodes_keep</span><span class="p">:</span>  <span class="c1"># redundant: consider removing Error.Error._node_keep</span>
+            <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span> <span class="o">&lt;=</span> <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;=</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_nodes_keep</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_errors</span>
+        <span class="c1"># for error in self.all_errors:</span>
+        <span class="c1">#     _ = error.pos</span>
+        <span class="k">return</span> <span class="n">errors</span>
+
+
+<span class="n">ZOMBIE_NODE</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">parse_sxpr</span><span class="p">(</span><span class="n">sxpr</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a tree of nodes from an S-expression.</span>
+
+<span class="sd">    This can - among other things - be used for deserialization of trees that</span>
+<span class="sd">    have been serialized with `Node.as_sxpr()` or as a convenient way to</span>
+<span class="sd">    generate test data.</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">    &gt;&gt;&gt; mock_syntax_tree(&quot;(a (b c))&quot;).as_sxpr()</span>
+<span class="sd">    &gt;&gt;&gt; parse_sxpr(&quot;(a (b c))&quot;).as_sxpr()</span>
 <span class="sd">    &#39;(a\\n    (b\\n        &quot;c&quot;\\n    )\\n)&#39;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">StringView</span><span class="p">(</span><span class="n">sxpr</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">mock_parsers</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">next_block</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">next_block</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Generator that yields all characters until the next closing bracket</span>
 <span class="sd">        that does not match an opening bracket matched earlier within the same</span>
 <span class="sd">        package.&quot;&quot;&quot;</span>
@@ -916,52 +950,148 @@
                 <span class="k">else</span> <span class="s1">&#39;Malformed S-expression. Closing bracket(s) &quot;)&quot; missing.&#39;</span>
             <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
 
-    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;(&#39;</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;(&quot; expected, not &#39;</span> <span class="o">+</span> <span class="n">sxpr</span><span class="p">[:</span><span class="mi">10</span><span class="p">])</span>
-    <span class="c1"># assert sxpr[0] == &#39;(&#39;, sxpr</span>
-    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[\w:]+&#39;</span><span class="p">,</span> <span class="n">sxpr</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s1">&#39;Malformed S-expression Node-tagname or identifier expected, &#39;</span>
-                             <span class="s1">&#39;not &quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">sxpr</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
-    <span class="n">name</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="p">(</span><span class="n">sxpr</span><span class="p">[:</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">])[:</span><span class="mi">2</span><span class="p">]</span>
-    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">():]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;(&#39;</span><span class="p">:</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">mock_syntax_tree</span><span class="p">(</span><span class="n">block</span><span class="p">)</span> <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">next_block</span><span class="p">(</span><span class="n">sxpr</span><span class="p">))</span>
-        <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">pos</span>
-            <span class="n">pos</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">while</span> <span class="n">sxpr</span> <span class="ow">and</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;)&#39;</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">qtmark</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;&quot;&quot;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&#39;&#39;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">]:</span>
-                <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">qtmark</span> <span class="o">+</span> <span class="sa">r</span><span class="s1">&#39;.*?&#39;</span> <span class="o">+</span> <span class="n">qtmark</span><span class="p">,</span> <span class="n">sxpr</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
-                    <span class="n">i</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qtmark</span><span class="p">)</span>
-                    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sxpr</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">i</span><span class="p">])</span>
-                    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">():]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                    <span class="k">break</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?:(?!\)).)*&#39;</span><span class="p">,</span> <span class="n">sxpr</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
-                <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sxpr</span><span class="p">[:</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()])</span>
-                <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">():]</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
-    <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="n">class_name</span><span class="p">),</span> <span class="n">result</span><span class="p">)</span>
-    <span class="n">node</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">return</span> <span class="n">node</span>
+    <span class="k">def</span> <span class="nf">inner_parser</span><span class="p">(</span><span class="n">sxpr</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;(&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;(&quot; expected, not &#39;</span> <span class="o">+</span> <span class="n">sxpr</span><span class="p">[:</span><span class="mi">10</span><span class="p">])</span>
+        <span class="c1"># assert sxpr[0] == &#39;(&#39;, sxpr</span>
+        <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[\w:]+&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s1">&#39;Malformed S-expression Node-tagname or identifier expected, &#39;</span>
+                                 <span class="s1">&#39;not &quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">sxpr</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">begin</span>
+        <span class="n">tagname</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[:</span><span class="n">end</span><span class="p">]</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="p">(</span><span class="n">tagname</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">])[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">end</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">attributes</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;(&#39;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">inner_parser</span><span class="p">(</span><span class="n">block</span><span class="p">)</span> <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">next_block</span><span class="p">(</span><span class="n">sxpr</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">while</span> <span class="n">sxpr</span> <span class="ow">and</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;)&#39;</span><span class="p">:</span>
+                <span class="c1"># parse attributes</span>
+                <span class="k">while</span> <span class="n">sxpr</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;`(&quot;</span><span class="p">:</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                    <span class="n">k</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)</span>
+                    <span class="c1"># read very special attribute pos</span>
+                    <span class="k">if</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pos&quot;</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">:</span>
+                        <span class="n">pos</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sxpr</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="c1"># ignore very special attribute err</span>
+                    <span class="k">elif</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;err&quot;</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;`&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">:</span>
+                        <span class="n">m</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+                        <span class="k">while</span> <span class="n">m</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">m</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">:</span>
+                            <span class="n">m</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+                            <span class="n">k</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
+                    <span class="c1"># read attributes</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">attr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">attributes</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="c1"># parse content</span>
+                <span class="k">for</span> <span class="n">qtmark</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;&quot;&quot;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&#39;&#39;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">]:</span>
+                    <span class="n">match</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">qtmark</span> <span class="o">+</span> <span class="sa">r</span><span class="s1">&#39;.*?&#39;</span> <span class="o">+</span> <span class="n">qtmark</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                        <span class="n">end</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">begin</span>
+                        <span class="n">i</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qtmark</span><span class="p">)</span>
+                        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sxpr</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">end</span> <span class="o">-</span> <span class="n">i</span><span class="p">]))</span>
+                        <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">end</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">match</span> <span class="o">=</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?:(?!\)).)*&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">))</span>
+                    <span class="n">end</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">sxpr</span><span class="o">.</span><span class="n">begin</span>
+                    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">sxpr</span><span class="p">[:</span><span class="n">end</span><span class="p">]))</span>
+                    <span class="n">sxpr</span> <span class="o">=</span> <span class="n">sxpr</span><span class="p">[</span><span class="n">end</span><span class="p">:]</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">mock_parsers</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;:&#39;</span> <span class="o">+</span> <span class="n">class_name</span><span class="p">)),</span> <span class="n">result</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">attributes</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">attributes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span>
+
+    <span class="k">return</span> <span class="n">inner_parser</span><span class="p">(</span><span class="n">sxpr</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">parse_xml</span><span class="p">(</span><span class="n">xml</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a tree of nodes from a (Pseudo-)XML-source.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xml</span> <span class="o">=</span> <span class="n">StringView</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
+    <span class="n">PlainText</span> <span class="o">=</span> <span class="n">MockParser</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;PlainText&#39;</span><span class="p">)</span>
+    <span class="n">mock_parsers</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;:PlainText&#39;</span><span class="p">:</span> <span class="n">PlainText</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">parse_attributes</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="n">OrderedDict</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Parses a sqeuence of XML-Attributes. Returns the string-slice</span>
+<span class="sd">        beginning after the end of the attributes.&quot;&quot;&quot;</span>
+        <span class="n">attributes</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="n">restart</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s*(?P&lt;attr&gt;\w+)\s*=\s*&quot;(?P&lt;value&gt;.*)&quot;\s*&#39;</span><span class="p">)):</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groupdict</span><span class="p">()</span>
+            <span class="n">attributes</span><span class="p">[</span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;attr&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span>
+            <span class="n">restart</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">begin</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">restart</span><span class="p">:],</span> <span class="n">attributes</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">parse_opening_tag</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Parses an opening tag. Returns the string segment following the</span>
+<span class="sd">        the opening tag, the tag name, a dictionary of attributes and</span>
+<span class="sd">        a flag indicating whether the tag is actually a solitary tag as</span>
+<span class="sd">        indicated by a slash at the end, i.e. &lt;br/&gt;.&quot;&quot;&quot;</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;\s*(?P&lt;tagname&gt;[\w:]+)\s*&#39;</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="n">match</span>
+        <span class="n">tagname</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groupdict</span><span class="p">()[</span><span class="s1">&#39;tagname&#39;</span><span class="p">]</span>
+        <span class="n">s</span><span class="p">,</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">parse_attributes</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">begin</span><span class="p">:])</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;&gt;&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,],</span> <span class="n">tagname</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;/&quot;</span>
+
+    <span class="k">def</span> <span class="nf">parse_closing_tag</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Parses a closing tag returns the string segment, just after</span>
+<span class="sd">        the closing tag.&quot;&quot;&quot;</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;/\s*(?P&lt;tagname&gt;[\w:]+)&gt;&#39;</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="n">match</span>
+        <span class="n">tagname</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groupdict</span><span class="p">()[</span><span class="s1">&#39;tagname&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">begin</span><span class="p">:],</span> <span class="n">tagname</span>
+
+    <span class="k">def</span> <span class="nf">parse_leaf_content</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Parses a piece of the content of a tag, just until the next opening,</span>
+<span class="sd">        closing or solitary tag is reached.&quot;&quot;&quot;</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&lt;&quot;</span> <span class="ow">or</span> <span class="n">s</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;&lt;&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">:],</span> <span class="n">s</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">parse_full_content</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="n">Node</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Parses the full content of a tag, starting right at the beginning</span>
+<span class="sd">        of the opening tag and ending right after the closing tag.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">s</span><span class="p">,</span> <span class="n">tagname</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span> <span class="n">solitary</span> <span class="o">=</span> <span class="n">parse_opening_tag</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">class_name</span> <span class="o">=</span> <span class="p">(</span><span class="n">tagname</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">])[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">solitary</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">s</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">s</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&lt;/&quot;</span><span class="p">:</span>
+                <span class="n">s</span><span class="p">,</span> <span class="n">leaf</span> <span class="o">=</span> <span class="n">parse_leaf_content</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;\s*$&quot;</span><span class="p">)):</span>
+                    <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Node</span><span class="p">(</span><span class="n">PlainText</span><span class="p">,</span> <span class="n">leaf</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">s</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&lt;&quot;</span> <span class="ow">and</span> <span class="n">s</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&lt;/&quot;</span><span class="p">:</span>
+                    <span class="n">s</span><span class="p">,</span> <span class="n">child</span> <span class="o">=</span> <span class="n">parse_full_content</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+                    <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">s</span><span class="p">,</span> <span class="n">closing_tagname</span> <span class="o">=</span> <span class="n">parse_closing_tag</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">tagname</span> <span class="o">==</span> <span class="n">closing_tagname</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span> <span class="o">==</span> <span class="n">PlainText</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="n">mock_parsers</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="n">class_name</span><span class="p">)),</span> <span class="n">result</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parse_full_content</span><span class="p">(</span><span class="n">xml</span><span class="p">[</span><span class="n">xml</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;(?!\?)&#39;</span><span class="p">)):])</span>
 
 <span class="c1"># if __name__ == &quot;__main__&quot;:</span>
-<span class="c1">#     st = mock_syntax_tree(&quot;(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))&quot;)</span>
+<span class="c1">#     st = parse_sxpr(&quot;(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))&quot;)</span>
 <span class="c1">#     print(st.as_sxpr())</span>
 <span class="c1">#     print(st.as_xml())</span>
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -974,7 +1104,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -993,6 +1123,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -1011,14 +1142,13 @@
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

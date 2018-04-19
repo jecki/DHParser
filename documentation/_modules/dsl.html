@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
-        <link rel="up" title="Module code" href="index.html"/> 
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -237,18 +228,18 @@
 <span class="s1">import os</span>
 <span class="s1">import sys</span>
 
-<span class="s1">sys.path.append(&#39;</span><span class="si">{dhparserdir}</span><span class="s1">&#39;)</span>
+<span class="s1">sys.path.append(r&#39;</span><span class="si">{dhparserdir}</span><span class="s1">&#39;)</span>
 
 <span class="s1">try:</span>
 <span class="s1">    import regex as re</span>
 <span class="s1">except ImportError:</span>
 <span class="s1">    import re</span>
 <span class="s1">from DHParser import logging, is_filename, load_if_file, </span><span class="se">\\</span><span class="s1"></span>
-<span class="s1">    Grammar, Compiler, nil_preprocessor, PreprocessorToken, </span><span class="se">\\</span><span class="s1"></span>
+<span class="s1">    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, </span><span class="se">\\</span><span class="s1"></span>
-<span class="s1">    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, </span><span class="se">\\</span><span class="s1"></span>
-<span class="s1">    last_value, counterpart, accumulate, PreprocessorFunc, </span><span class="se">\\</span><span class="s1"></span>
+<span class="s1">    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, </span><span class="se">\\</span><span class="s1"></span>
+<span class="s1">    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    Node, TransformationFunc, TransformationDict, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    traverse, remove_children_if, merge_children, is_anonymous, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, </span><span class="se">\\</span><span class="s1"></span>
@@ -256,7 +247,7 @@
 <span class="s1">    is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    remove_nodes, remove_content, remove_brackets, replace_parser, </span><span class="se">\\</span><span class="s1"></span>
 <span class="s1">    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, </span><span class="se">\\</span><span class="s1"></span>
-<span class="s1">    remove_anonymous_empty, keep_nodes, traverse_locally, strip</span>
+<span class="s1">    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip</span>
 <span class="s1">&#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dhparserdir</span><span class="o">=</span><span class="n">dhparserdir</span><span class="p">)</span>
 
 
@@ -277,6 +268,14 @@
 
 <span class="s1">if __name__ == &quot;__main__&quot;:</span>
 <span class="s1">    if len(sys.argv) &gt; 1:</span>
+<span class="s1">        try:</span>
+<span class="s1">            grammar_file_name = os.path.basename(__file__).replace(&#39;Compiler.py&#39;, &#39;.ebnf&#39;)</span>
+<span class="s1">            if grammar_changed(</span><span class="si">{NAME}</span><span class="s1">Grammar, grammar_file_name):</span>
+<span class="s1">                print(&quot;Grammar has changed. Please recompile Grammar first.&quot;)</span>
+<span class="s1">                sys.exit(1)</span>
+<span class="s1">        except FileNotFoundError:</span>
+<span class="s1">            print(&#39;Could not check for changed grammar, because grammar file &quot;</span><span class="si">%s</span><span class="s1">&quot; was not found!&#39;</span>
+<span class="s1">                  </span><span class="si">% g</span><span class="s1">rammar_file_name)    </span>
 <span class="s1">        file_name, log_dir = sys.argv[1], &#39;&#39;</span>
 <span class="s1">        if file_name in [&#39;-d&#39;, &#39;--debug&#39;] and len(sys.argv) &gt; 2:</span>
 <span class="s1">            file_name, log_dir = sys.argv[2], &#39;LOGS&#39;</span>
@@ -460,8 +459,10 @@
 <span class="sd">        language defined by ``ebnf_src``.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">grammar_src</span> <span class="o">=</span> <span class="n">compileDSL</span><span class="p">(</span><span class="n">ebnf_src</span><span class="p">,</span> <span class="n">nil_preprocessor</span><span class="p">,</span> <span class="n">get_ebnf_grammar</span><span class="p">(),</span>
-                             <span class="n">get_ebnf_transformer</span><span class="p">(),</span> <span class="n">get_ebnf_compiler</span><span class="p">(</span><span class="n">branding</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">compile_python_object</span><span class="p">(</span><span class="n">DHPARSER_IMPORTS</span> <span class="o">+</span> <span class="n">grammar_src</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;get_(?:\w+_)?grammar$&#39;</span><span class="p">)</span></div>
+                             <span class="n">get_ebnf_transformer</span><span class="p">(),</span> <span class="n">get_ebnf_compiler</span><span class="p">(</span><span class="n">branding</span><span class="p">,</span> <span class="n">ebnf_src</span><span class="p">))</span>
+    <span class="n">grammar_obj</span> <span class="o">=</span> <span class="n">compile_python_object</span><span class="p">(</span><span class="n">DHPARSER_IMPORTS</span> <span class="o">+</span> <span class="n">grammar_src</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;get_(?:\w+_)?grammar$&#39;</span><span class="p">)</span>
+    <span class="n">grammar_obj</span><span class="o">.</span><span class="n">python_src__</span> <span class="o">=</span> <span class="n">grammar_src</span>
+    <span class="k">return</span> <span class="n">grammar_obj</span></div>
 
 
 <div class="viewcode-block" id="load_compiler_suite"><a class="viewcode-back" href="../ModuleReference.html#dsl.load_compiler_suite">[docs]</a><span class="k">def</span> <span class="nf">load_compiler_suite</span><span class="p">(</span><span class="n">compiler_suite</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> \
@@ -472,7 +473,8 @@
 <span class="sd">    and returns it as a tuple (preprocessor, parser, ast, compiler).</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        4-tuple (preprocessor function, parser class, ast transformer function, compiler class)</span>
+<span class="sd">        4-tuple (preprocessor function, parser class,</span>
+<span class="sd">                 ast transformer function, compiler class)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">RX_SECTION_MARKER</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">compiler_suite</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
@@ -495,7 +497,8 @@
         <span class="c1"># Is there really any reasonable application case for this?</span>
         <span class="k">with</span> <span class="n">logging</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
             <span class="n">compiler_py</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">compile_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">get_ebnf_grammar</span><span class="p">(),</span>
-                                                      <span class="n">get_ebnf_transformer</span><span class="p">(),</span> <span class="n">get_ebnf_compiler</span><span class="p">())</span>
+                                                      <span class="n">get_ebnf_transformer</span><span class="p">(),</span>
+                                                      <span class="n">get_ebnf_compiler</span><span class="p">(</span><span class="n">compiler_suite</span><span class="p">,</span> <span class="n">source</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">has_errors</span><span class="p">(</span><span class="n">messages</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">GrammarError</span><span class="p">(</span><span class="n">only_errors</span><span class="p">(</span><span class="n">messages</span><span class="p">),</span> <span class="n">source</span><span class="p">)</span>
         <span class="n">preprocessor</span> <span class="o">=</span> <span class="n">get_ebnf_preprocessor</span>
@@ -740,9 +743,7 @@
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -755,7 +756,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -774,6 +775,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -792,14 +794,13 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

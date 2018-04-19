@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
-        <link rel="up" title="Module code" href="index.html"/> 
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -194,7 +185,7 @@
 <span class="kn">from</span> <span class="nn">DHParser.log</span> <span class="k">import</span> <span class="n">is_logging</span><span class="p">,</span> <span class="n">HistoryRecord</span>
 <span class="kn">from</span> <span class="nn">DHParser.preprocess</span> <span class="k">import</span> <span class="n">BEGIN_TOKEN</span><span class="p">,</span> <span class="n">END_TOKEN</span><span class="p">,</span> <span class="n">RX_TOKEN_NAME</span>
 <span class="kn">from</span> <span class="nn">DHParser.stringview</span> <span class="k">import</span> <span class="n">StringView</span><span class="p">,</span> <span class="n">EMPTY_STRING_VIEW</span>
-<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">ParserBase</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> \
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">RootNode</span><span class="p">,</span> <span class="n">ParserBase</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> \
     <span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">ZOMBIE_PARSER</span>
 <span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">sane_parser_name</span><span class="p">,</span> <span class="n">escape_control_characters</span><span class="p">,</span> <span class="n">re</span><span class="p">,</span> <span class="n">typing</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">DefaultDict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
@@ -205,6 +196,7 @@
            <span class="s1">&#39;Grammar&#39;</span><span class="p">,</span>
            <span class="s1">&#39;PreprocessorToken&#39;</span><span class="p">,</span>
            <span class="s1">&#39;RegExp&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;Whitespace&#39;</span><span class="p">,</span>
            <span class="s1">&#39;RE&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Token&#39;</span><span class="p">,</span>
            <span class="s1">&#39;mixin_comment&#39;</span><span class="p">,</span>
@@ -219,6 +211,7 @@
            <span class="s1">&#39;AllOf&#39;</span><span class="p">,</span>
            <span class="s1">&#39;SomeOf&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Unordered&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;Required&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Lookahead&#39;</span><span class="p">,</span>
            <span class="s1">&#39;NegativeLookahead&#39;</span><span class="p">,</span>
            <span class="s1">&#39;Lookbehind&#39;</span><span class="p">,</span>
@@ -311,7 +304,7 @@
             <span class="k">if</span> <span class="n">grammar</span><span class="o">.</span><span class="n">history_tracking__</span><span class="p">:</span>
                 <span class="c1"># don&#39;t track returning parsers except in case an error has occurred</span>
                 <span class="c1"># remaining = len(rest)</span>
-                <span class="k">if</span> <span class="n">grammar</span><span class="o">.</span><span class="n">moving_forward__</span> <span class="ow">or</span> <span class="p">(</span><span class="n">node</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">):</span>  <span class="c1"># node._errors</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">grammar</span><span class="o">.</span><span class="n">moving_forward__</span> <span class="ow">or</span> <span class="p">(</span><span class="n">node</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">)):</span>
                     <span class="n">record</span> <span class="o">=</span> <span class="n">HistoryRecord</span><span class="p">(</span><span class="n">grammar</span><span class="o">.</span><span class="n">call_stack__</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
                     <span class="n">grammar</span><span class="o">.</span><span class="n">history__</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
                     <span class="c1"># print(record.stack, record.status, rest[:20].replace(&#39;\n&#39;, &#39;|&#39;))</span>
@@ -320,8 +313,9 @@
 
         <span class="k">except</span> <span class="n">RecursionError</span><span class="p">:</span>
             <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">text</span><span class="p">[:</span><span class="nb">min</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)))])</span> <span class="o">+</span> <span class="s2">&quot; ...&quot;</span><span class="p">)</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s2">&quot;maximum recursion depth of parser reached; &quot;</span>
-                           <span class="s2">&quot;potentially due to too many errors!&quot;</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">location</span>
+            <span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s2">&quot;maximum recursion depth of parser reached; &quot;</span>
+                                     <span class="s2">&quot;potentially due to too many errors!&quot;</span><span class="p">)</span>
             <span class="n">rest</span> <span class="o">=</span> <span class="n">EMPTY_STRING_VIEW</span>
 
         <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">rest</span>
@@ -392,7 +386,7 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># assert isinstance(name, str), str(name)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_grammar</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: &#39;Grammar&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_grammar</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: Optional[&#39;Grammar&#39;]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
         <span class="c1"># add &quot;aspect oriented&quot; wrapper around parser calls</span>
@@ -596,22 +590,28 @@
 <span class="sd">                 field contains a value other than &quot;done&quot;. A value of &quot;done&quot; indicates</span>
 <span class="sd">                 that the class has already been initialized.</span>
 
+<span class="sd">        python__src__:  For the purpose of debugging and inspection, this field can</span>
+<span class="sd">                 take the python src of the concrete grammar class</span>
+<span class="sd">                 (see `dsl.grammar_provider`).</span>
+
 <span class="sd">    Attributes:</span>
 <span class="sd">        all_parsers__:  A set of all parsers connected to this grammar object</span>
 
 <span class="sd">        history_tracking__:  A flag indicating that the parsing history shall</span>
 <span class="sd">                be tracked</span>
 
-<span class="sd">        wsp_left_parser__:  A parser for the default left-adjacent-whitespace</span>
-<span class="sd">                or the :class:zombie-parser if the</span>
-<span class="sd">                default is empty. The default whitespace will be used by parsers</span>
-<span class="sd">                :class:`Token` and, if no other parsers are passed to its constructor,</span>
-<span class="sd">                by parser :class:`RE`.</span>
+<span class="sd">        whitespace__: A parser for the implicit optional whitespace (or the</span>
+<span class="sd">                :class:zombie-parser if the default is empty). The default</span>
+<span class="sd">                whitespace will be used by parsers :class:`Token` and, if no</span>
+<span class="sd">                other parsers are passed to its constructor, by parser</span>
+<span class="sd">                :class:`RE`. It can also be place explicitly in the</span>
+<span class="sd">                EBNF-Grammar via the &quot;~&quot;-sign.</span>
 
-<span class="sd">        wsp_right_parser__: The same for the default right-adjacent-whitespace.</span>
-<span class="sd">                Both wsp_left_parser__ and wsp_right_parser__ merely serve the</span>
-<span class="sd">                purpose to avoid having to specify the default whitespace</span>
-<span class="sd">                explicitly every time an :class:`RE`-parser-object is created.</span>
+<span class="sd">        wsp_left_parser__: The same as ``whitespace`` for</span>
+<span class="sd">               left-adjacent-whitespace.</span>
+
+<span class="sd">        wsp_right_parser__: The same as ``whitespace`` for</span>
+<span class="sd">               right-adjacent-whitespace.</span>
 
 <span class="sd">        _dirty_flag__:  A flag indicating that the Grammar has been called at</span>
 <span class="sd">                least once so that the parsing-variables need to be reset</span>
@@ -626,6 +626,11 @@
 <span class="sd">                with -1 and ending with EOF. This helps generating line</span>
 <span class="sd">                and column number for history recording and will only be</span>
 <span class="sd">                initialized if :attr:`history_tracking__` is true.</span>
+
+<span class="sd">        tree__: The root-node of the parsing tree. This variable is available</span>
+<span class="sd">               for error-reporting already during parsing  via</span>
+<span class="sd">               ``self.grammar.tree__.add_error``, but it references the full</span>
+<span class="sd">               parsing tree only after parsing has been finished.</span>
 
 <span class="sd">        _reversed__:  the same text in reverse order - needed by the `Lookbehind`-</span>
 <span class="sd">                parsers.</span>
@@ -678,6 +683,7 @@
 <span class="sd">                If turned off, a recursion error will result in case of left</span>
 <span class="sd">                recursion.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">python_src__</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>  <span class="c1"># type: str</span>
     <span class="n">root__</span> <span class="o">=</span> <span class="n">ZOMBIE_PARSER</span>  <span class="c1"># type: ParserBase</span>
     <span class="c1"># root__ must be overwritten with the root-parser by grammar subclass</span>
     <span class="n">parser_initialization__</span> <span class="o">=</span> <span class="s2">&quot;pending&quot;</span>  <span class="c1"># type: str</span>
@@ -720,8 +726,8 @@
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">Parser</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sane_parser_name</span><span class="p">(</span><span class="n">entry</span><span class="p">):</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
                         <span class="n">parser</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">entry</span>
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">Forward</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">parser</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">_name</span><span class="p">):</span>
-                        <span class="n">parser</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">entry</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">Forward</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">cast</span><span class="p">(</span><span class="n">Forward</span><span class="p">,</span> <span class="n">parser</span><span class="p">)</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+                        <span class="n">cast</span><span class="p">(</span><span class="n">Forward</span><span class="p">,</span> <span class="n">parser</span><span class="p">)</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">entry</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">parser_initialization__</span> <span class="o">=</span> <span class="s2">&quot;done&quot;</span>
 
 
@@ -748,18 +754,22 @@
         <span class="c1"># do so only arises during testing.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">root__</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="k">if</span> <span class="n">root</span> <span class="k">else</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">root__</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspL__</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wsp_left_parser__</span> <span class="o">=</span> <span class="n">Whitespace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wspL__</span><span class="p">)</span>  <span class="c1"># type: ParserBase</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wsp_left_parser__</span><span class="o">.</span><span class="n">grammar</span> <span class="o">=</span> <span class="bp">self</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">all_parsers__</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wsp_left_parser__</span><span class="p">)</span>  <span class="c1"># don&#39;t you forget about me...</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">WSP__</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">probe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span>  <span class="c1"># type: RegExp</span>
+                <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span><span class="o">.</span><span class="n">regexp</span><span class="o">.</span><span class="n">pattern</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">WSP__</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span> <span class="o">=</span> <span class="n">Whitespace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">WSP__</span><span class="p">)</span>  <span class="c1"># type: RegExp</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span><span class="o">.</span><span class="n">grammar</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">all_parsers__</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span><span class="p">)</span>   <span class="c1"># don&#39;t you forget about me...</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wsp_left_parser__</span> <span class="o">=</span> <span class="n">ZOMBIE_PARSER</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspR__</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wsp_right_parser__</span> <span class="o">=</span> <span class="n">Whitespace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wspR__</span><span class="p">)</span>  <span class="c1"># type: ParserBase</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wsp_right_parser__</span><span class="o">.</span><span class="n">grammar</span> <span class="o">=</span> <span class="bp">self</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">all_parsers__</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wsp_right_parser__</span><span class="p">)</span>  <span class="c1"># don&#39;t you forget about me...</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wsp_right_parser__</span> <span class="o">=</span> <span class="n">ZOMBIE_PARSER</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">RegExp</span><span class="p">,</span> <span class="n">ZOMBIE_PARSER</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspL__</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspL__</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">WSP__</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspR__</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspR__</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">WSP__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wsp_left_parser__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspL__</span> <span class="k">else</span> <span class="n">ZOMBIE_PARSER</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wsp_right_parser__</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">whitespace__</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wspR__</span> <span class="k">else</span> <span class="n">ZOMBIE_PARSER</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">root__</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_add_parser__</span><span class="p">)</span>
 
 
@@ -778,6 +788,7 @@
 
 
     <span class="k">def</span> <span class="nf">_reset__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span> <span class="o">=</span> <span class="n">RootNode</span><span class="p">()</span>              <span class="c1"># type: RootNode</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">document__</span> <span class="o">=</span> <span class="n">EMPTY_STRING_VIEW</span>   <span class="c1"># type: StringView</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_reversed__</span> <span class="o">=</span> <span class="n">EMPTY_STRING_VIEW</span>  <span class="c1"># type: StringView</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">document_length__</span> <span class="o">=</span> <span class="mi">0</span>            <span class="c1"># type: int</span>
@@ -865,7 +876,8 @@
             <span class="n">result</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                <span class="n">result</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;Parser &quot;</span><span class="si">%s</span><span class="s1">&quot; did not match empty document.&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">parser</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">result</span><span class="p">,</span>
+                                      <span class="s1">&#39;Parser &quot;</span><span class="si">%s</span><span class="s1">&quot; did not match empty document.&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">parser</span><span class="p">))</span>
         <span class="k">while</span> <span class="n">rest</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">stitches</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">MAX_DROPOUTS</span><span class="p">:</span>
             <span class="n">result</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">parser</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">rest</span><span class="p">:</span>
@@ -885,7 +897,7 @@
                                  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stitches</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">MAX_DROPOUTS</span>
                                  <span class="k">else</span> <span class="s2">&quot; too often! Terminating parser.&quot;</span><span class="p">)</span>
                 <span class="n">stitches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Node</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">skip</span><span class="p">)</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="n">tail_pos</span><span class="p">(</span><span class="n">stitches</span><span class="p">)))</span>
-                <span class="n">stitches</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">stitches</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">error_msg</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">history_tracking__</span><span class="p">:</span>
                     <span class="c1"># # some parsers may have matched and left history records with nodes != None.</span>
                     <span class="c1"># # Because these are not connected to the stitched root node, their pos-</span>
@@ -911,13 +923,14 @@
                     <span class="c1"># of the error will be the end of the text. Otherwise, the error</span>
                     <span class="c1"># message above (&quot;...after end of parsing&quot;) would appear illogical.</span>
                     <span class="n">error_node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="n">tail_pos</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">children</span><span class="p">))</span>
-                    <span class="n">error_node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">error_str</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">error_node</span><span class="p">,</span> <span class="n">error_str</span><span class="p">)</span>
                     <span class="n">result</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">children</span> <span class="o">+</span> <span class="p">(</span><span class="n">error_node</span><span class="p">,)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">result</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">error_str</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">error_str</span><span class="p">)</span>
         <span class="c1"># result.pos = 0  # calculate all positions</span>
         <span class="c1"># result.collect_errors(self.document__)</span>
-        <span class="k">return</span> <span class="n">result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">swallow</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree__</span>
 
 
 <div class="viewcode-block" id="Grammar.push_rollback__"><a class="viewcode-back" href="../ModuleReference.html#parse.Grammar.push_rollback__">[docs]</a>    <span class="k">def</span> <span class="nf">push_rollback__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
@@ -996,18 +1009,20 @@
         <span class="k">if</span> <span class="n">text</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">BEGIN_TOKEN</span><span class="p">:</span>
             <span class="n">end</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">END_TOKEN</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">end</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span>
                     <span class="s1">&#39;END_TOKEN delimiter missing from preprocessor token. &#39;</span>
                     <span class="s1">&#39;(Most likely due to a preprocessor bug!)&#39;</span><span class="p">)</span>  <span class="c1"># type: Node</span>
                 <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
             <span class="k">elif</span> <span class="n">end</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span>
                     <span class="s1">&#39;Preprocessor-token cannot have zero length. &#39;</span>
                     <span class="s1">&#39;(Most likely due to a preprocessor bug!)&#39;</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">text</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
             <span class="k">elif</span> <span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">BEGIN_TOKEN</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span>
                     <span class="s1">&#39;Preprocessor-tokens must not be nested or contain &#39;</span>
                     <span class="s1">&#39;BEGIN_TOKEN delimiter as part of their argument. &#39;</span>
                     <span class="s1">&#39;(Most likely due to a preprocessor bug!)&#39;</span><span class="p">)</span>
@@ -1040,6 +1055,9 @@
         <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span> <span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">len</span><span class="p">:]</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">text</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span>
 
 
 <div class="viewcode-block" id="RegExp"><a class="viewcode-back" href="../ModuleReference.html#parse.RegExp">[docs]</a><span class="k">class</span> <span class="nc">RegExp</span><span class="p">(</span><span class="n">Parser</span><span class="p">):</span>
@@ -1092,10 +1110,32 @@
         <span class="k">return</span> <span class="n">escape_control_characters</span><span class="p">(</span><span class="s1">&#39;/</span><span class="si">%s</span><span class="s1">/&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">regexp</span><span class="o">.</span><span class="n">pattern</span><span class="p">)</span></div>
 
 
-<span class="k">class</span> <span class="nc">Whitespace</span><span class="p">(</span><span class="n">RegExp</span><span class="p">):</span>
+<div class="viewcode-block" id="Whitespace"><a class="viewcode-back" href="../ModuleReference.html#parse.Whitespace">[docs]</a><span class="k">class</span> <span class="nc">Whitespace</span><span class="p">(</span><span class="n">RegExp</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;An variant of RegExp that signifies through its class name that it</span>
 <span class="sd">    is a RegExp-parser for whitespace.&quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">WHITESPACE_PTYPE</span> <span class="o">==</span> <span class="s2">&quot;:Whitespace&quot;</span>
+    <span class="k">assert</span> <span class="n">WHITESPACE_PTYPE</span> <span class="o">==</span> <span class="s2">&quot;:Whitespace&quot;</span></div>
+
+
+<span class="c1">#######################################################################</span>
+<span class="c1">#######################################################################</span>
+<span class="c1">#</span>
+<span class="c1"># WARNING: The following code is hard to maintain, because it</span>
+<span class="c1"># introduces a special case, i.e. a parser with child parsers that is</span>
+<span class="c1"># not a descandent of the NaryOperator and, because it itneracts</span>
+<span class="c1"># With the constructor of the Grammar class (see the instantiations of</span>
+<span class="c1"># the Whitespace-class, there).</span>
+<span class="c1">#</span>
+<span class="c1"># That is all the more regrettable, as class RE basically just</span>
+<span class="c1"># introduces syntactical sugar for</span>
+<span class="c1">#</span>
+<span class="c1">#     Series(whitespace__, RegExp(&#39;something&#39;), whitespace__)</span>
+<span class="c1">#</span>
+<span class="c1"># What to do? Throw the syntactical sugar out? :-( Or find a more</span>
+<span class="c1"># robust solution for that kind of syntactical sugar? Or just leave</span>
+<span class="c1"># it be?</span>
+<span class="c1">#</span>
+<span class="c1">######################################################################</span>
+<span class="c1">######################################################################</span>
 
 
 <div class="viewcode-block" id="RE"><a class="viewcode-back" href="../ModuleReference.html#parse.RE">[docs]</a><span class="k">class</span> <span class="nc">RE</span><span class="p">(</span><span class="n">Parser</span><span class="p">):</span>
@@ -1139,9 +1179,8 @@
 <span class="sd">            wL (str or regexp):  Left whitespace regular expression,</span>
 <span class="sd">                i.e. either ``None``, the empty string or a regular</span>
 <span class="sd">                expression (e.g. &quot;\s*&quot;) that defines whitespace. An</span>
-<span class="sd">                empty string means no whitespace will be skipped,</span>
-<span class="sd">                ``None`` means that the default whitespace will be</span>
-<span class="sd">                used.</span>
+<span class="sd">                empty string means no whitespace will be skipped; ``None``</span>
+<span class="sd">                means that the default whitespace will be used.</span>
 <span class="sd">            wR (str or regexp):  Right whitespace regular expression.</span>
 <span class="sd">                See above.</span>
 <span class="sd">            name:  The optional name of the parser.</span>
@@ -1358,16 +1397,22 @@
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">StringView</span><span class="p">]:</span>
         <span class="n">results</span> <span class="o">=</span> <span class="p">()</span>  <span class="c1"># type: Tuple[Node, ...]</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># type: int</span>
+        <span class="n">infinite_loop_error</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: Optional[Error]</span>
         <span class="k">while</span> <span class="n">text</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
             <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
             <span class="n">node</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="p">:</span>
                 <span class="k">break</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">==</span> <span class="n">n</span><span class="p">:</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">dsl_error_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Infinite Loop detected.&#39;</span><span class="p">))</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="s2">&quot;Infinite loop!&quot;</span><span class="p">,</span> <span class="n">Error</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">))</span>
+                <span class="n">infinite_loop_error</span> <span class="o">=</span> <span class="n">Error</span><span class="p">(</span><span class="n">dsl_error_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Infinite Loop encountered.&#39;</span><span class="p">),</span>
+                                            <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
             <span class="n">results</span> <span class="o">+=</span> <span class="p">(</span><span class="n">node</span><span class="p">,)</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">),</span> <span class="n">text</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">infinite_loop_error</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">infinite_loop_error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">text</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s1">&#39;{&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">repr</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="p">,</span> <span class="n">Alternative</span><span class="p">)</span>
@@ -1402,18 +1447,24 @@
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">StringView</span><span class="p">]:</span>
         <span class="n">results</span> <span class="o">=</span> <span class="p">()</span>  <span class="c1"># type: Tuple[Node, ...]</span>
         <span class="n">text_</span> <span class="o">=</span> <span class="n">text</span>  <span class="c1"># type: StringView</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># type: int</span>
+        <span class="n">infinite_loop_error</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: Optional[Error]</span>
         <span class="k">while</span> <span class="n">text_</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">text_</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
             <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text_</span><span class="p">)</span>
             <span class="n">node</span><span class="p">,</span> <span class="n">text_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="p">(</span><span class="n">text_</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="p">:</span>
                 <span class="k">break</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text_</span><span class="p">)</span> <span class="o">==</span> <span class="n">n</span><span class="p">:</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">dsl_error_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Infinite Loop detected.&#39;</span><span class="p">))</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="s2">&quot;Infinite loop!&quot;</span><span class="p">,</span> <span class="n">Error</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">))</span>
+                <span class="n">infinite_loop_error</span> <span class="o">=</span> <span class="n">Error</span><span class="p">(</span><span class="n">dsl_error_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Infinite Loop encountered.&#39;</span><span class="p">),</span>
+                                            <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">)</span>
             <span class="n">results</span> <span class="o">+=</span> <span class="p">(</span><span class="n">node</span><span class="p">,)</span>
         <span class="k">if</span> <span class="n">results</span> <span class="o">==</span> <span class="p">():</span>
             <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">text</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">),</span> <span class="n">text_</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">infinite_loop_error</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">infinite_loop_error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">text_</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s1">&#39;{&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">repr</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parser</span><span class="p">,</span> <span class="n">Alternative</span><span class="p">)</span>
@@ -1458,6 +1509,7 @@
         <span class="n">results</span> <span class="o">=</span> <span class="p">()</span>  <span class="c1"># type: Tuple[Node, ...]</span>
         <span class="n">text_</span> <span class="o">=</span> <span class="n">text</span>  <span class="c1"># type: StringView</span>
         <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mandatory_violation</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">parser</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parsers</span><span class="p">:</span>
             <span class="n">node</span><span class="p">,</span> <span class="n">text_</span> <span class="o">=</span> <span class="n">parser</span><span class="p">(</span><span class="n">text_</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="p">:</span>
@@ -1467,18 +1519,24 @@
                     <span class="c1"># Provide useful error messages</span>
                     <span class="n">match</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">Series</span><span class="o">.</span><span class="n">RX_ARGUMENT</span><span class="p">)</span>
                     <span class="n">i</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">regs</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">match</span> <span class="k">else</span> <span class="mi">1</span>
-                    <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text_</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">document_length__</span>
-                                                          <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">text_</span><span class="p">))</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> expected; &quot;</span><span class="si">%s</span><span class="s1">&quot;... found!&#39;</span>
-                                   <span class="o">%</span> <span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">repr</span><span class="p">,</span> <span class="n">text_</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n &#39;</span><span class="p">)),</span>
-                                   <span class="n">code</span><span class="o">=</span><span class="n">Error</span><span class="o">.</span><span class="n">MANDATORY_CONTINUATION</span><span class="p">)</span>
+                    <span class="n">location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">document_length__</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">text_</span><span class="p">)</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text_</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Error</span><span class="p">(</span><span class="s2">&quot;§ </span><span class="si">%s</span><span class="s2"> violation&quot;</span> <span class="o">%</span> <span class="n">parser</span><span class="o">.</span><span class="n">repr</span><span class="p">,</span>
+                                             <span class="n">Error</span><span class="o">.</span><span class="n">MESSAGE</span><span class="p">,</span> <span class="n">location</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">mandatory_violation</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> expected, &quot;</span><span class="si">%s</span><span class="s1">&quot; found!&#39;</span> \
+                              <span class="o">%</span> <span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">repr</span><span class="p">,</span> <span class="n">text_</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">n &#39;</span><span class="p">))</span>
+                        <span class="n">mandatory_violation</span> <span class="o">=</span> <span class="n">Error</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">Error</span><span class="o">.</span><span class="n">MANDATORY_CONTINUATION</span><span class="p">,</span> <span class="n">location</span><span class="p">)</span>
                     <span class="n">text_</span> <span class="o">=</span> <span class="n">text_</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span>
             <span class="n">results</span> <span class="o">+=</span> <span class="p">(</span><span class="n">node</span><span class="p">,)</span>
             <span class="c1"># if node.error_flag:  # break on first error</span>
             <span class="c1">#    break</span>
             <span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parsers</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">),</span> <span class="n">text_</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mandatory_violation</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">mandatory_violation</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">text_</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">parser</span><span class="o">.</span><span class="n">repr</span> <span class="k">for</span> <span class="n">parser</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parsers</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">mandatory</span><span class="p">]]</span>
@@ -1722,6 +1780,10 @@
         <span class="k">return</span> <span class="n">bool_value</span>
 
 
+<span class="k">def</span> <span class="nf">Required</span><span class="p">(</span><span class="n">parser</span><span class="p">:</span> <span class="n">Parser</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Parser</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Series</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">mandatory</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+
 <span class="c1"># class Required(FlowOperator):</span>
 <span class="c1">#     &quot;&quot;&quot;OBSOLETE. Use mandatory-parameter of Series-parser instead!</span>
 <span class="c1">#     &quot;&quot;&quot;</span>
@@ -1734,8 +1796,9 @@
 <span class="c1">#             i = max(1, text.index(m.regs[1][0])) if m else 1</span>
 <span class="c1">#             node = Node(self, text[:i])</span>
 <span class="c1">#             text_ = text[i:]</span>
-<span class="c1">#             node.add_error(&#39;%s expected; &quot;%s&quot; found!&#39; % (str(self.parser), text[:10]),</span>
-<span class="c1">#                            code=Error.MANDATORY_CONTINUATION)</span>
+<span class="c1">#             self.grammar.tree__.new_error(node,</span>
+<span class="c1">#                                           &#39;%s expected; &quot;%s&quot; found!&#39; % (str(self.parser),</span>
+<span class="c1">#                                           text[:10]), code=Error.MANDATORY_CONTINUATION)</span>
 <span class="c1">#         return node, text_</span>
 <span class="c1">#</span>
 <span class="c1">#     def __repr__(self):</span>
@@ -1908,8 +1971,10 @@
             <span class="n">stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">variables__</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
             <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
-                <span class="n">dsl_error_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39; undefined or exhausted.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">)),</span> <span class="n">text</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">tree__</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span>
+                <span class="n">node</span><span class="p">,</span> <span class="n">dsl_error_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39; undefined or exhausted.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">node</span><span class="p">,</span> <span class="n">text</span>
         <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span> <span class="n">text</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">):]</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1930,7 +1995,7 @@
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">StringView</span><span class="p">]:</span>
         <span class="n">node</span><span class="p">,</span> <span class="n">txt</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">retrieve_and_match</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">node</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">node</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
             <span class="n">stack</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">variables__</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
             <span class="n">value</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
             <span class="n">location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grammar</span><span class="o">.</span><span class="n">document_length__</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
@@ -2042,14 +2107,10 @@
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">return</span> <span class="kc">False</span></div></div>
 
-
-
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -2062,7 +2123,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -2081,6 +2142,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -2099,14 +2161,13 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

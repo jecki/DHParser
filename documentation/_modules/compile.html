@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
-        <link rel="up" title="Module code" href="index.html"/> 
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -195,7 +186,7 @@
 <span class="kn">import</span> <span class="nn">re</span>
 
 <span class="kn">from</span> <span class="nn">DHParser.preprocess</span> <span class="k">import</span> <span class="n">strip_tokens</span><span class="p">,</span> <span class="n">with_source_mapping</span><span class="p">,</span> <span class="n">PreprocessorFunc</span>
-<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span>
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">RootNode</span>
 <span class="kn">from</span> <span class="nn">DHParser.transform</span> <span class="k">import</span> <span class="n">TransformationFunc</span>
 <span class="kn">from</span> <span class="nn">DHParser.parse</span> <span class="k">import</span> <span class="n">Grammar</span>
 <span class="kn">from</span> <span class="nn">DHParser.error</span> <span class="k">import</span> <span class="n">adjust_error_locations</span><span class="p">,</span> <span class="n">is_error</span><span class="p">,</span> <span class="n">Error</span>
@@ -251,10 +242,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_grammar_name</span><span class="p">(</span><span class="n">grammar_name</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># type: Optional[RootNode]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># type: List[Node]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span> <span class="o">=</span> <span class="kc">False</span>
 
-    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">RootNode</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compiles the abstract syntax tree with the root node `node` and</span>
 <span class="sd">        returns the compiled code. It is up to subclasses implementing</span>
@@ -265,37 +257,38 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_reset</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dirty_flag</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">propagate_error_flags</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="n">root</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span>
 
-<div class="viewcode-block" id="Compiler.set_grammar_name"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.set_grammar_name">[docs]</a>    <span class="k">def</span> <span class="nf">set_grammar_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grammar_name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="Compiler.set_grammar_name"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.set_grammar_name">[docs]</a>    <span class="k">def</span> <span class="nf">set_grammar_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grammar_name</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Changes the grammar&#39;s name and the grammar&#39;s source.</span>
 
 <span class="sd">        The grammar name and the source text of the grammar are</span>
 <span class="sd">        metadata about the grammar that do not affect the compilation</span>
 <span class="sd">        process. Classes inheriting from `Compiler` can use this</span>
-<span class="sd">        information to name and annotate its output.</span>
+<span class="sd">        information to name and annotate its output. Returns `self`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span> <span class="n">grammar_name</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\w+\Z&#39;</span><span class="p">,</span> <span class="n">grammar_name</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">grammar_name</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[\w/:</span><span class="se">\\</span><span class="s1">]+&#39;</span><span class="p">,</span> <span class="n">grammar_source</span><span class="p">):</span>
             <span class="n">grammar_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">grammar_source</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grammar_name</span> <span class="o">=</span> <span class="n">grammar_name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span> <span class="o">=</span> <span class="n">load_if_file</span><span class="p">(</span><span class="n">grammar_source</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grammar_source</span> <span class="o">=</span> <span class="n">load_if_file</span><span class="p">(</span><span class="n">grammar_source</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
 
-<div class="viewcode-block" id="Compiler.propagate_error_flags"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.propagate_error_flags">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">propagate_error_flags</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># See test_parser.TestCompilerClass.test_propagate_error()..</span>
-        <span class="sd">&quot;&quot;&quot;Propagates error flags from children to parent nodes to make sure</span>
-<span class="sd">        that the parent&#39;s error flag is always greater or equal the maximum</span>
-<span class="sd">        of the children&#39;s error flags.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">lazy</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">&lt;</span> <span class="n">Error</span><span class="o">.</span><span class="n">HIGHEST</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-                <span class="n">Compiler</span><span class="o">.</span><span class="n">propagate_error_flags</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">lazy</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">&gt;=</span> <span class="n">Error</span><span class="o">.</span><span class="n">HIGHEST</span><span class="p">:</span>
-                    <span class="k">return</span></div>
+    <span class="c1"># @staticmethod</span>
+    <span class="c1"># def propagate_error_flags(node: Node, lazy: bool = True) -&gt; None:</span>
+    <span class="c1">#     # See test_parser.TestCompilerClass.test_propagate_error()..</span>
+    <span class="c1">#     &quot;&quot;&quot;Propagates error flags from children to parent nodes to make sure</span>
+    <span class="c1">#     that the parent&#39;s error flag is always greater or equal the maximum</span>
+    <span class="c1">#     of the children&#39;s error flags.&quot;&quot;&quot;</span>
+    <span class="c1">#     if not lazy or node.error_flag &lt; Error.HIGHEST:</span>
+    <span class="c1">#         for child in node.children:</span>
+    <span class="c1">#             Compiler.propagate_error_flags(child)</span>
+    <span class="c1">#             node.error_flag = max(node.error_flag, child.error_flag)</span>
+    <span class="c1">#             if lazy and node.error_flag &gt;= Error.HIGHEST:</span>
+    <span class="c1">#                 return</span>
 
 <div class="viewcode-block" id="Compiler.method_name"><a class="viewcode-back" href="../ModuleReference.html#compile.Compiler.method_name">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">method_name</span><span class="p">(</span><span class="n">node_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -404,28 +397,27 @@
     <span class="c1"># only compile if there were no syntax errors, for otherwise it is</span>
     <span class="c1"># likely that error list gets littered with compile error messages</span>
     <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">efl</span> <span class="o">=</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span>
-    <span class="n">messages</span> <span class="o">=</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(</span><span class="n">clear_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_error</span><span class="p">(</span><span class="n">efl</span><span class="p">):</span>
+    <span class="c1"># efl = syntax_tree.error_flag</span>
+    <span class="c1"># messages = syntax_tree.collect_errors(clear_errors=True)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_error</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">):</span>
         <span class="n">transformer</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">)</span>
-        <span class="n">efl</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">efl</span><span class="p">,</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">)</span>
-        <span class="n">messages</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(</span><span class="n">clear_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="c1"># efl = max(efl, syntax_tree.error_flag)</span>
+        <span class="c1"># messages.extend(syntax_tree.collect_errors(clear_errors=True))</span>
         <span class="k">if</span> <span class="n">is_logging</span><span class="p">():</span>
             <span class="n">log_ST</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;.ast&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">is_error</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">):</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">compiler</span><span class="p">(</span><span class="n">syntax_tree</span><span class="p">)</span>
         <span class="c1"># print(syntax_tree.as_sxpr())</span>
-        <span class="n">messages</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">())</span>
-        <span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">syntax_tree</span><span class="o">.</span><span class="n">error_flag</span><span class="p">,</span> <span class="n">efl</span><span class="p">)</span>
+        <span class="c1"># messages.extend(syntax_tree.collect_errors())</span>
+        <span class="c1"># syntax_tree.error_flag = max(syntax_tree.error_flag, efl)</span>
 
+    <span class="n">messages</span> <span class="o">=</span> <span class="n">syntax_tree</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">()</span>
     <span class="n">adjust_error_locations</span><span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="n">original_text</span><span class="p">,</span> <span class="n">source_mapping</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">syntax_tree</span></div>
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -438,7 +430,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -457,6 +449,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -475,14 +468,13 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

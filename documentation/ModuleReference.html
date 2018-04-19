@@ -25,25 +25,18 @@
   
 
   
-  
     <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="genindex.html"/>
-        <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="index.html"/>
-        <link rel="prev" title="DHParser Reference Manual" href="ReferenceManual.html"/> 
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="DHParser Reference Manual" href="ReferenceManual.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -87,6 +80,7 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="StepByStepGuide.html">DHParser’s Step by Step Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="UserGuide.html">DHParser User’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ReferenceManual.html">DHParser Reference Manual</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Module Reference</a><ul>
@@ -125,7 +119,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">DHParser</a>
@@ -133,9 +127,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -470,21 +465,6 @@ example by calling <code class="docutils literal notranslate"><span class="pre">
 </dd></dl>
 
 <dl class="attribute">
-<dt id="syntaxtree.Node.errors">
-<code class="descname">errors</code><a class="headerlink" href="#syntaxtree.Node.errors" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list</em> – A list of parser- or compiler-errors:
-tuple(position, string) attached to this node</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="syntaxtree.Node.error_flag">
-<code class="descname">error_flag</code><a class="headerlink" href="#syntaxtree.Node.error_flag" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>int</em> – 0 if no error occurred in either the node
-itself or any of its descendants. Otherwise contains the
-highest warning or error level or all errors that occurred.</p>
-</dd></dl>
-
-<dl class="attribute">
 <dt id="syntaxtree.Node.len">
 <code class="descname">len</code><a class="headerlink" href="#syntaxtree.Node.len" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>int</em> – The full length of the node’s string result if the
@@ -496,7 +476,7 @@ through AST-transformation. READ ONLY!</p>
 
 <dl class="attribute">
 <dt id="syntaxtree.Node.pos">
-<code class="descname">pos</code><a class="headerlink" href="#syntaxtree.Node.add_pos" title="Permalink to this definition">¶</a></dt>
+<code class="descname">pos</code><a class="headerlink" href="#syntaxtree.Node.pos" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>int</em> – the position of the node within the parsed text.</p>
 <p>The value of <code class="docutils literal notranslate"><span class="pre">pos</span></code> is -1 meaning invalid by default.
 Setting this value will set the positions of all child
@@ -510,28 +490,18 @@ stage and never during or after the AST-transformation.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="syntaxtree.Node.errors">
+<code class="descname">errors</code><a class="headerlink" href="#syntaxtree.Node.errors" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> – A list of all errors that occured on this node.</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="syntaxtree.Node.attributes">
 <code class="descname">attributes</code><a class="headerlink" href="#syntaxtree.Node.attributes" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> – An optional dictionary of XML-attributes. This
 dictionary is created lazily upon first usage. The attributes
 will only be shown in the XML-Representation, not in the
 S-Expression-output.</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="syntaxtree.Node._parent">
-<code class="descname">_parent</code><a class="headerlink" href="#syntaxtree.Node._parent" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>Node</em> – SLOT RESERVED FOR FUTURE USE!</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="syntaxtree.Node.add_error">
-<code class="descname">add_error</code><span class="sig-paren">(</span><em>message: str</em>, <em>code: int = 1000</em><span class="sig-paren">)</span> &#x2192; syntaxtree.Node<a class="reference internal" href="_modules/syntaxtree.html#Node.new_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.new_error" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adds an error to this Node.
-:param message: A string with the error message.abs
-:type message: str
-:param code: An error code to identify the kind of error
-:type code: int</p>
 </dd></dl>
 
 <dl class="method">
@@ -578,31 +548,15 @@ column.</td>
 <dd><p>Returns a dictionary of XML-Attributes attached to the Node.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="syntaxtree.Node.collect_errors">
-<code class="descname">collect_errors</code><span class="sig-paren">(</span><em>clear_errors=False</em><span class="sig-paren">)</span> &#x2192; List[DHParser.error.Error]<a class="reference internal" href="_modules/syntaxtree.html#Node.collect_errors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.collect_errors" title="Permalink to this definition">¶</a></dt>
-<dd><p>Recursively adds line- and column-numbers to all error objects.
-Returns all errors of this node or any child node in the form
-of a set of tuples (position, error_message), where position
-is always relative to this node.</p>
-</dd></dl>
-
 <dl class="attribute">
 <dt>
 <code class="descname">content</code></dt>
 <dd><p>Returns content as string, omitting error messages.</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt>
-<code class="descname">errors</code></dt>
-<dd><p>Returns the errors that occurred at this Node,
-not including any errors from child nodes.</p>
-</dd></dl>
-
 <dl class="method">
 <dt id="syntaxtree.Node.init_pos">
-<code class="descname">init_pos</code><span class="sig-paren">(</span><em>pos: int</em>, <em>overwrite: bool = False</em><span class="sig-paren">)</span> &#x2192; syntaxtree.Node<a class="reference internal" href="_modules/syntaxtree.html#Node.init_pos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.init_pos" title="Permalink to this definition">¶</a></dt>
+<code class="descname">init_pos</code><span class="sig-paren">(</span><em>pos: int</em><span class="sig-paren">)</span> &#x2192; syntaxtree.Node<a class="reference internal" href="_modules/syntaxtree.html#Node.init_pos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.init_pos" title="Permalink to this definition">¶</a></dt>
 <dd><p>(Re-)initialize position value. Usually, the parser guard
 (<cite>parsers.add_parser_guard()</cite>) takes care of assigning the
 position in the document to newly created nodes. However,
@@ -666,11 +620,11 @@ checked for a match.</li>
 
 <dl class="method">
 <dt id="syntaxtree.Node.select_by_tag">
-<code class="descname">select_by_tag</code><span class="sig-paren">(</span><em>tag_names: Union[str, typing.Set[str]], include_root: bool = True</em><span class="sig-paren">)</span> &#x2192; Iterator[_ForwardRef('Node')]<a class="reference internal" href="_modules/syntaxtree.html#Node.select_by_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.select_by_tag" title="Permalink to this definition">¶</a></dt>
+<code class="descname">select_by_tag</code><span class="sig-paren">(</span><em>tag_names: Union[str, typing.AbstractSet[str]], include_root: bool = True</em><span class="sig-paren">)</span> &#x2192; Iterator[_ForwardRef('Node')]<a class="reference internal" href="_modules/syntaxtree.html#Node.select_by_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.select_by_tag" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns an iterator that runs through all descendants that have one
 of the given tag names.</p>
 <p>Examples:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tree</span> <span class="o">=</span> <span class="n">mock_syntax_tree</span><span class="p">(</span><span class="s1">&#39;(a (b &quot;X&quot;) (X (c &quot;d&quot;)) (e (X &quot;F&quot;)))&#39;</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tree</span> <span class="o">=</span> <span class="n">parse_sxpr</span><span class="p">(</span><span class="s1">&#39;(a (b &quot;X&quot;) (X (c &quot;d&quot;)) (e (X &quot;F&quot;)))&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">flatten_sxpr</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">())</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">tree</span><span class="o">.</span><span class="n">select_by_tag</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
 <span class="go">[&#39;(X (c &quot;d&quot;))&#39;, &#39;(X &quot;F&quot;)&#39;]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">flatten_sxpr</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">())</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">tree</span><span class="o">.</span><span class="n">select_by_tag</span><span class="p">({</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">},</span> <span class="kc">False</span><span class="p">))</span>
@@ -726,13 +680,51 @@ node’s parser’s <cite>ptype</cite>.</p>
 
 </dd></dl>
 
+<dl class="class">
+<dt id="syntaxtree.RootNode">
+<em class="property">class </em><code class="descname">RootNode</code><span class="sig-paren">(</span><em>node: Union[syntaxtree.Node</em>, <em>NoneType] = None</em><span class="sig-paren">)</span> &#x2192; syntaxtree.RootNode<a class="reference internal" href="_modules/syntaxtree.html#RootNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.RootNode" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>errors (list):  A list of all errors that have occured so far during</dt>
+<dd>processing (i.e. parsing, AST-transformation, compiling)
+of this tree.</dd>
+<dt>error_flag (int):  the highest warning or error level of all errors</dt>
+<dd>that occurred.</dd>
+</dl>
+<dl class="method">
+<dt id="syntaxtree.RootNode.add_error">
+<code class="descname">add_error</code><span class="sig-paren">(</span><em>node: syntaxtree.Node</em>, <em>error: DHParser.error.Error</em><span class="sig-paren">)</span> &#x2192; syntaxtree.RootNode<a class="reference internal" href="_modules/syntaxtree.html#RootNode.add_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.RootNode.add_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds an Error object to the tree, locating it at a specific node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="syntaxtree.RootNode.collect_errors">
+<code class="descname">collect_errors</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List[DHParser.error.Error]<a class="reference internal" href="_modules/syntaxtree.html#RootNode.collect_errors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.RootNode.collect_errors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of errors, ordered bv their position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="syntaxtree.RootNode.new_error">
+<code class="descname">new_error</code><span class="sig-paren">(</span><em>node: syntaxtree.Node</em>, <em>message: str</em>, <em>code: int = 1000</em><span class="sig-paren">)</span> &#x2192; syntaxtree.RootNode<a class="reference internal" href="_modules/syntaxtree.html#RootNode.new_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.RootNode.new_error" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds an error to this tree, locating it at a specific node.
+:param pos: The position of the error in the source text
+:type pos: int
+:param message: A string with the error message.abs
+:type message: str
+:param code: An error code to identify the kind of error
+:type code: int</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="function">
-<dt id="syntaxtree.mock_syntax_tree">
-<code class="descname">mock_syntax_tree</code><span class="sig-paren">(</span><em>sxpr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/syntaxtree.html#parse_sxpr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.parse_sxpr" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generates a tree of nodes from an S-expression. The main purpose of this is
-to generate test data.</p>
+<dt id="syntaxtree.parse_sxpr">
+<code class="descname">parse_sxpr</code><span class="sig-paren">(</span><em>sxpr: str</em><span class="sig-paren">)</span> &#x2192; syntaxtree.Node<a class="reference internal" href="_modules/syntaxtree.html#parse_sxpr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.parse_sxpr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a tree of nodes from an S-expression.</p>
+<p>This can - among other things - be used for deserialization of trees that
+have been serialized with <cite>Node.as_sxpr()</cite> or as a convenient way to
+generate test data.</p>
 <p>Example:
-&gt;&gt;&gt; mock_syntax_tree(“(a (b c))”).as_sxpr()
+&gt;&gt;&gt; parse_sxpr(“(a (b c))”).as_sxpr()
 ‘(an    (bn        “c”n    )n)’</p>
 </dd></dl>
 
@@ -863,7 +855,7 @@ connected to an instance object of class Grammar. There exist two
 ways of connecting parsers to grammar objects: Either by passing
 the root parser object to the constructor of a Grammar object
 (“direct instantiation”), or by assigning the root parser to the
-class variable “<a href="#id1"><span class="problematic" id="id2">root__</span></a>” of a descendant class of class Grammar.</p>
+class variable “<a href="#id3"><span class="problematic" id="id4">root__</span></a>” of a descendant class of class Grammar.</p>
 <p>Example for direct instantiation of a grammar:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">number</span> <span class="o">=</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\d+&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\.&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\d+&#39;</span><span class="p">)</span> <span class="o">|</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\d+&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">number_parser</span> <span class="o">=</span> <span class="n">Grammar</span><span class="p">(</span><span class="n">number</span><span class="p">)</span>
@@ -940,14 +932,14 @@ whitespace and comments that should be overwritten, if the defaults
 <dt id="parse.Grammar.wspL__">
 <code class="descname">wspL__</code><a class="headerlink" href="#parse.Grammar.wspL__" title="Permalink to this definition">¶</a></dt>
 <dd><p>regular expression string for left aligned whitespace,
-which either equals <a href="#id1"><span class="problematic" id="id3">WSP__</span></a> or is empty.</p>
+which either equals <a href="#id3"><span class="problematic" id="id5">WSP__</span></a> or is empty.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="parse.Grammar.wspR__">
 <code class="descname">wspR__</code><a class="headerlink" href="#parse.Grammar.wspR__" title="Permalink to this definition">¶</a></dt>
 <dd><p>regular expression string for right aligned whitespace,
-which either equals <a href="#id1"><span class="problematic" id="id4">WSP__</span></a> or is empty.</p>
+which either equals <a href="#id3"><span class="problematic" id="id6">WSP__</span></a> or is empty.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -970,6 +962,14 @@ that the class has already been initialized.</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="parse.Grammar.python__src__">
+<code class="descname">python__src__</code><a class="headerlink" href="#parse.Grammar.python__src__" title="Permalink to this definition">¶</a></dt>
+<dd><p>For the purpose of debugging and inspection, this field can
+take the python src of the concrete grammar class
+(see <cite>dsl.grammar_provider</cite>).</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="parse.Grammar.all_parsers__">
 <code class="descname">all_parsers__</code><a class="headerlink" href="#parse.Grammar.all_parsers__" title="Permalink to this definition">¶</a></dt>
 <dd><p>A set of all parsers connected to this grammar object</p>
@@ -983,22 +983,28 @@ be tracked</p>
 </dd></dl>
 
 <dl class="attribute">
+<dt id="parse.Grammar.whitespace__">
+<code class="descname">whitespace__</code><a class="headerlink" href="#parse.Grammar.whitespace__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A parser for the implicit optional whitespace (or the
+:class:zombie-parser if the default is empty). The default
+whitespace will be used by parsers <a class="reference internal" href="#parse.Token" title="parse.Token"><code class="xref py py-class docutils literal notranslate"><span class="pre">Token</span></code></a> and, if no
+other parsers are passed to its constructor, by parser
+<a class="reference internal" href="#parse.RE" title="parse.RE"><code class="xref py py-class docutils literal notranslate"><span class="pre">RE</span></code></a>. It can also be place explicitly in the
+EBNF-Grammar via the “~”-sign.</p>
+</dd></dl>
+
+<dl class="attribute">
 <dt id="parse.Grammar.wsp_left_parser__">
 <code class="descname">wsp_left_parser__</code><a class="headerlink" href="#parse.Grammar.wsp_left_parser__" title="Permalink to this definition">¶</a></dt>
-<dd><p>A parser for the default left-adjacent-whitespace
-or the :class:zombie-parser if the
-default is empty. The default whitespace will be used by parsers
-<a class="reference internal" href="#parse.Token" title="parse.Token"><code class="xref py py-class docutils literal notranslate"><span class="pre">Token</span></code></a> and, if no other parsers are passed to its constructor,
-by parser <a class="reference internal" href="#parse.RE" title="parse.RE"><code class="xref py py-class docutils literal notranslate"><span class="pre">RE</span></code></a>.</p>
+<dd><p>The same as <code class="docutils literal notranslate"><span class="pre">whitespace</span></code> for
+left-adjacent-whitespace.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="parse.Grammar.wsp_right_parser__">
 <code class="descname">wsp_right_parser__</code><a class="headerlink" href="#parse.Grammar.wsp_right_parser__" title="Permalink to this definition">¶</a></dt>
-<dd><p>The same for the default right-adjacent-whitespace.
-Both <a href="#id1"><span class="problematic" id="id5">wsp_left_parser__</span></a> and <a href="#id1"><span class="problematic" id="id6">wsp_right_parser__</span></a> merely serve the
-purpose to avoid having to specify the default whitespace
-explicitly every time an <a class="reference internal" href="#parse.RE" title="parse.RE"><code class="xref py py-class docutils literal notranslate"><span class="pre">RE</span></code></a>-parser-object is created.</p>
+<dd><p>The same as <code class="docutils literal notranslate"><span class="pre">whitespace</span></code> for
+right-adjacent-whitespace.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1029,6 +1035,15 @@ currently being parsed.</p>
 with -1 and ending with EOF. This helps generating line
 and column number for history recording and will only be
 initialized if <a class="reference internal" href="#parse.Grammar.history_tracking__" title="parse.Grammar.history_tracking__"><code class="xref py py-attr docutils literal notranslate"><span class="pre">history_tracking__</span></code></a> is true.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="parse.Grammar.tree__">
+<code class="descname">tree__</code><a class="headerlink" href="#parse.Grammar.tree__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The root-node of the parsing tree. This variable is available
+for error-reporting already during parsing  via
+<code class="docutils literal notranslate"><span class="pre">self.grammar.tree__.add_error</span></code>, but it references the full
+parsing tree only after parsing has been finished.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1175,6 +1190,13 @@ but do not match text directly.</p>
 </div>
 <p>EBNF-Notation:  <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">...</span> <span class="pre">/</span></code></p>
 <p>EBNF-Example:   <code class="docutils literal notranslate"><span class="pre">word</span> <span class="pre">=</span> <span class="pre">/\w+/</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="parse.Whitespace">
+<em class="property">class </em><code class="descname">Whitespace</code><span class="sig-paren">(</span><em>regexp</em>, <em>name: str = ''</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/parse.html#Whitespace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#parse.Whitespace" title="Permalink to this definition">¶</a></dt>
+<dd><p>An variant of RegExp that signifies through its class name that it
+is a RegExp-parser for whitespace.</p>
 </dd></dl>
 
 <dl class="class">
@@ -1589,7 +1611,7 @@ for CST -&gt; AST transformations.</p>
 <dd><p>Creates factory functions from transformation-functions that
 dispatch on the first parameter after the context parameter.</p>
 <p>Decorating a transformation-function that has more than merely the
-<code class="docutils literal notranslate"><span class="pre">node</span></code>-parameter with <code class="docutils literal notranslate"><span class="pre">transformation_factory</span></code> creates a
+<code class="docutils literal notranslate"><span class="pre">context</span></code>-parameter with <code class="docutils literal notranslate"><span class="pre">transformation_factory</span></code> creates a
 function with the same name, which returns a partial-function that
 takes just the context-parameter.</p>
 <p>Additionally, there is some some syntactic sugar for
@@ -1746,6 +1768,12 @@ as an argument an returns the mapped result.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="transform.replace_content_by">
+<code class="descname">replace_content_by</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], content: str</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#replace_content_by"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.replace_content_by" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replaces the content of the node with the given text content.</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="transform.apply_if">
 <code class="descname">apply_if</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], transformation: Callable, condition: Callable</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#apply_if"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.apply_if" title="Permalink to this definition">¶</a></dt>
 <dd><p>Applies a transformation only if a certain condition is met.</p>
@@ -1798,8 +1826,7 @@ whitespace or an empty node.</p>
 <dd><p>Checks whether the last node in the context has <cite>ptype == TOKEN_PTYPE</cite>
 and it’s content matches one of the given tokens. Leading and trailing
 whitespace-tokens will be ignored. In case an empty set of tokens is passed,
-any token is a match. If only “:” is given all anonymous tokens but no other
-tokens are a match.</p>
+any token is a match.</p>
 </dd></dl>
 
 <dl class="function">
@@ -1912,16 +1939,22 @@ this node and its child nodes are collected in-order as direct
 children of this node.</p>
 <p>Applying flatten recursively will result in these kinds of
 structural transformation:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">1</span> <span class="p">(</span><span class="o">+</span> <span class="mi">2</span><span class="p">)</span> <span class="p">(</span><span class="o">+</span> <span class="mi">3</span><span class="p">)</span>     <span class="o">-&gt;</span>   <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">1</span> <span class="p">(</span><span class="o">+</span> <span class="mi">2</span><span class="p">)</span> <span class="p">(</span><span class="o">+</span> <span class="mi">3</span><span class="p">))</span>    <span class="o">-&gt;</span>   <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)</span>
 <span class="p">(</span><span class="mi">1</span> <span class="p">(</span><span class="o">+</span> <span class="p">(</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mi">3</span><span class="p">))))</span>  <span class="o">-&gt;</span>   <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="function">
-<dt id="transform.assert_condition">
-<code class="descname">assert_condition</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], condition: Callable, error_msg: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#assert_condition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.assert_condition" title="Permalink to this definition">¶</a></dt>
+<dt id="transform.error_on">
+<code class="descname">error_on</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], condition: Callable, error_msg: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#error_on"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.error_on" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks for <cite>condition</cite>; adds an error message if condition is not met.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="transform.warn_on">
+<code class="descname">warn_on</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], condition: Callable, warning: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#warn_on"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.warn_on" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks for <cite>condition</cite>; adds an warning message if condition is not met.</p>
 </dd></dl>
 
 </div>
@@ -2027,22 +2060,14 @@ been defined.</p>
 <p>‘on_expression’</p>
 </dd></dl>
 
-<dl class="staticmethod">
-<dt id="compile.Compiler.propagate_error_flags">
-<em class="property">static </em><code class="descname">propagate_error_flags</code><span class="sig-paren">(</span><em>lazy: bool = True</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/compile.html#Compiler.propagate_error_flags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#compile.Compiler.propagate_error_flags" title="Permalink to this definition">¶</a></dt>
-<dd><p>Propagates error flags from children to parent nodes to make sure
-that the parent’s error flag is always greater or equal the maximum
-of the children’s error flags.</p>
-</dd></dl>
-
 <dl class="method">
 <dt id="compile.Compiler.set_grammar_name">
-<code class="descname">set_grammar_name</code><span class="sig-paren">(</span><em>grammar_name=''</em>, <em>grammar_source=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/compile.html#Compiler.set_grammar_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#compile.Compiler.set_grammar_name" title="Permalink to this definition">¶</a></dt>
+<code class="descname">set_grammar_name</code><span class="sig-paren">(</span><em>grammar_name: str = ''</em>, <em>grammar_source: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/compile.html#Compiler.set_grammar_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#compile.Compiler.set_grammar_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Changes the grammar’s name and the grammar’s source.</p>
 <p>The grammar name and the source text of the grammar are
 metadata about the grammar that do not affect the compilation
 process. Classes inheriting from <cite>Compiler</cite> can use this
-information to name and annotate its output.</p>
+information to name and annotate its output. Returns <cite>self</cite>.</p>
 </dd></dl>
 
 </dd></dl>
@@ -2198,54 +2223,59 @@ conforming to this grammar into contrete syntax trees.</p>
 <dt id="ebnf.EBNFGrammar">
 <em class="property">class </em><code class="descname">EBNFGrammar</code><span class="sig-paren">(</span><em>root: DHParser.parse.Parser = None</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/ebnf.html#EBNFGrammar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ebnf.EBNFGrammar" title="Permalink to this definition">¶</a></dt>
 <dd><p>Parser for an EBNF source file, with this grammar:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># EBNF-Grammar in EBNF
-
-@ comment    =  /#.*(?:\n|$)/                # comments start with &#39;#&#39; and
-                                             # eat all chars up to and including &#39;\n&#39;
-@ whitespace =  /\s*/                        # whitespace includes linefeed
-@ literalws  =  right                        # trailing whitespace of literals will be
-                                             # ignored tacitly
-
-syntax     =  [~//] { definition | directive } §EOF
-definition =  symbol §&quot;=&quot; expression
-directive  =  &quot;@&quot; §symbol &quot;=&quot; ( regexp | literal | list_ )
-
-expression =  term { &quot;|&quot; term }
-term       =  { [&quot;§&quot;] factor }+               # &quot;§&quot; means all following factors mandatory
-factor     =  [flowmarker] [retrieveop] symbol !&quot;=&quot;   # negative lookahead to be sure
-                                                      # it&#39;s not a definition
-            | [flowmarker] literal
-            | [flowmarker] regexp
-            | [flowmarker] oneormore
-            | [flowmarker] group
-            | [flowmarker] unordered
-            | repetition
-            | option
-
-flowmarker =  &quot;!&quot;  | &quot;&amp;&quot;                     # &#39;!&#39; negative lookahead, &#39;&amp;&#39; positive lookahead
-            | &quot;-!&quot; | &quot;-&amp;&quot;                    # &#39;-&#39; negative lookbehind, &#39;-&amp;&#39; positive lookbehind
-retrieveop =  &quot;::&quot; | &quot;:&quot;                     # &#39;::&#39; pop, &#39;:&#39; retrieve
-
-group      =  &quot;(&quot; §expression &quot;)&quot;
-unordered  =  &quot;&lt;&quot; §expression &quot;&gt;&quot;            # elements of expression in arbitrary order
-oneormore  =  &quot;{&quot; expression &quot;}+&quot;
-repetition =  &quot;{&quot; §expression &quot;}&quot;
-option     =  &quot;[&quot; §expression &quot;]&quot;
-
-symbol     =  /(?!\d)\w+/~                   # e.g. expression, factor, parameter_list
-literal    =  /&quot;(?:[^&quot;]|\\&quot;)*?&quot;/~            # e.g. &quot;(&quot;, &#39;+&#39;, &#39;while&#39;
-            | /&#39;(?:[^&#39;]|\\&#39;)*?&#39;/~            # whitespace following literals will be ignored
-regexp     =  /~?\/(?:\\\/|[^\/])*?\/~?/~    # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                             # &#39;~&#39; is a whitespace-marker, if present leading
-                                             # or trailing whitespace of a regular expression
-                                             # will be ignored tacitly.
-list_      =  /\w+/~ { &quot;,&quot; /\w+/~ }          # comma separated list of symbols,
-                                             # e.g. BEGIN_LIST, END_LIST,
-                                             # BEGIN_QUOTE, END_QUOTE
-                                             # see CommonMark/markdown.py for an exmaple
-EOF =  !/./
-</pre></div>
+<p># EBNF-Grammar in EBNF</p>
+<p>&#64; comment    = /#.*(?:n|$)/                    # comments start with ‘#’ and eat all chars up to and including ‘n’
+&#64; whitespace = /s*/                            # whitespace includes linefeed
+&#64; literalws  = right                            # trailing whitespace of literals will be ignored tacitly</p>
+<p>syntax     = [~//] { definition | directive } §EOF
+definition = symbol §”=” expression
+directive  = “&#64;” §symbol “=” ( regexp | literal | <a href="#id7"><span class="problematic" id="id8">list_</span></a> )</p>
+<p>expression = term { “|” term }
+term       = { [“§”] factor }+                       # “§” means all following factors mandatory
+factor     = [flowmarker] [retrieveop] symbol !”=”   # negative lookahead to be sure it’s not a definition</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">[flowmarker] literal</div>
+<div class="line">[flowmarker] plaintext</div>
+<div class="line">[flowmarker] regexp</div>
+<div class="line">[flowmarker] whitespace</div>
+<div class="line">[flowmarker] oneormore</div>
+<div class="line">[flowmarker] group</div>
+<div class="line">[flowmarker] unordered</div>
+<div class="line">repetition</div>
+<div class="line">option</div>
 </div>
+</div></blockquote>
+<dl class="docutils">
+<dt>flowmarker = “!”  | “&amp;”                         # ‘!’ negative lookahead, ‘&amp;’ positive lookahead</dt>
+<dd><div class="first last line-block">
+<div class="line">“-!” | “-&amp;”                        # ‘-‘ negative lookbehind, ‘-&amp;’ positive lookbehind</div>
+</div>
+</dd>
+</dl>
+<p>retrieveop = “::” | “:”                         # ‘::’ pop, ‘:’ retrieve</p>
+<p>group      = “(” §expression “)”
+unordered  = “&lt;” §expression “&gt;”                # elements of expression in arbitrary order
+oneormore  = “{” expression “}+”
+repetition = “{” §expression “}”
+option     = “[” §expression “]”</p>
+<p>symbol     = /(?!d)w+/~                       # e.g. expression, factor, parameter_list
+literal    = /”(?:[^”]|&quot;)*?”/~                # e.g. “(“, ‘+’, ‘while’</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">/’(?:[^’]|')*?’/~                # whitespace following literals will be ignored tacitly.</div>
+</div>
+</div></blockquote>
+<p>plaintext  = /<cite>(?:[^”]|&quot;)*?</cite>/~                # like literal but does not eat whitespace
+regexp     = /~?/(?:\/<a href="#id1"><span class="problematic" id="id2">|</span></a>[^/])*?/~?/~        # e.g. /w+/, ~/#.*(?:n|$)/~</p>
+<blockquote>
+<div># ‘~’ is a whitespace-marker, if present leading or trailing
+# whitespace of a regular expression will be ignored tacitly.</div></blockquote>
+<p>whitespace = /~/~                               # implicit or default whitespace
+<a href="#id9"><span class="problematic" id="id10">list_</span></a>      = /w+/~ { “,” /w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,</p>
+<blockquote>
+<div># BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple</div></blockquote>
+<p>EOF = !/./</p>
 </dd></dl>
 
 <dl class="exception">
@@ -2386,6 +2416,15 @@ previously compiled formal language.</p>
 name for the particular non-terminal.</p>
 </dd></dl>
 
+<dl class="method">
+<dt id="ebnf.EBNFCompiler.verify_transformation_table">
+<code class="descname">verify_transformation_table</code><span class="sig-paren">(</span><em>transtable</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ebnf.html#EBNFCompiler.verify_transformation_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ebnf.EBNFCompiler.verify_transformation_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks for symbols that occur in the transformation-table but have
+never been defined in the grammar. Usually, this kind of
+inconsistency results from an error like a typo in the transformation
+table.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="function">
@@ -2466,7 +2505,11 @@ and returns it as a tuple (preprocessor, parser, ast, compiler).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">4-tuple (preprocessor function, parser class, ast transformer function, compiler class)</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><dl class="docutils">
+<dt>4-tuple (preprocessor function, parser class,</dt>
+<dd>ast transformer function, compiler class)</dd>
+</dl>
+</td>
 </tr>
 </tbody>
 </table>
@@ -2684,7 +2727,7 @@ tree will also be added to the report in this particular case.</p>
 <p>The purpose of the latter is to help constructing and debugging
 of AST-Transformations. It is better to switch the CST-output on and off
 with the asterix marker when needed than to output the CST for all tests
-which would unneccesarily bloat the test reports.</p>
+which would unnecessarily bloat the test reports.</p>
 </dd></dl>
 
 <dl class="function">
@@ -2703,8 +2746,8 @@ unit, if it has the word “test” in its name.</p>
 <dl class="function">
 <dt id="testing.reset_unit">
 <code class="descname">reset_unit</code><span class="sig-paren">(</span><em>test_unit</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/testing.html#reset_unit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#testing.reset_unit" title="Permalink to this definition">¶</a></dt>
-<dd><p>Resets the tests in <code class="docutils literal notranslate"><span class="pre">test_unit</span></code> by removing all results and
-error messages.</p>
+<dd><p>Resets the tests in <code class="docutils literal notranslate"><span class="pre">test_unit</span></code> by removing all results and error
+messages.</p>
 </dd></dl>
 
 <dl class="function">
@@ -2945,7 +2988,7 @@ the given information.</p>
 
 <dl class="function">
 <dt id="log.clear_logs">
-<code class="descname">clear_logs</code><span class="sig-paren">(</span><em>logfile_types=frozenset({'.log'</em>, <em>'.ast'</em>, <em>'.cst'})</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/log.html#clear_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.clear_logs" title="Permalink to this definition">¶</a></dt>
+<code class="descname">clear_logs</code><span class="sig-paren">(</span><em>logfile_types=frozenset({'.cst'</em>, <em>'.ast'</em>, <em>'.log'})</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/log.html#clear_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.clear_logs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Removes all logs from the log-directory and removes the
 log-directory if it is empty.</p>
 </dd></dl>
@@ -3058,7 +3101,7 @@ if logging is turned on.</p>
 
 <dl class="function">
 <dt id="log.log_parsing_history">
-<code class="descname">log_parsing_history</code><span class="sig-paren">(</span><em>grammar</em>, <em>log_file_name: str = ''</em>, <em>html: bool = False</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/log.html#log_parsing_history"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.log_parsing_history" title="Permalink to this definition">¶</a></dt>
+<code class="descname">log_parsing_history</code><span class="sig-paren">(</span><em>grammar</em>, <em>log_file_name: str = ''</em>, <em>html: bool = True</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/log.html#log_parsing_history"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.log_parsing_history" title="Permalink to this definition">¶</a></dt>
 <dd><p>Writes a log of the parsing history of the most recently parsed document.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -3083,37 +3126,18 @@ minutes to display the table for long histories.)</li>
 </div>
 <div class="section" id="module-stringview">
 <span id="module-stringview"></span><h3>Module <code class="docutils literal notranslate"><span class="pre">stringview</span></code><a class="headerlink" href="#module-stringview" title="Permalink to this headline">¶</a></h3>
-<dl class="docutils">
-<dt>stringview.py - a string class where slices are views not copies as</dt>
-<dd><blockquote class="first">
-<div>with the standard Python strings.</div></blockquote>
-<dl class="last docutils">
-<dt>stringview.pxd - declarations for the cython Python to C compiler</dt>
-<dd>to speed up handling of StringViews.</dd>
-</dl>
-</dd>
-<dt>Copyright 2016  by Eckhart Arnold (<a class="reference external" href="mailto:arnold&#37;&#52;&#48;badw&#46;de">arnold<span>&#64;</span>badw<span>&#46;</span>de</a>)</dt>
-<dd>Bavarian Academy of Sciences an Humanities (badw.de)</dd>
-</dl>
-<p>Licensed under the Apache License, Version 2.0 (the “License”);
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at</p>
-<blockquote>
-<div><a class="reference external" href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a></div></blockquote>
-<p>Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an “AS IS” BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-implied.  See the License for the specific language governing
-permissions and limitations under the License.</p>
 <p>StringView provides string-slicing without copying.
 Slicing Python-strings always yields copies of a segment of the original
 string. See: <a class="reference external" href="https://mail.python.org/pipermail/python-dev/2008-May/079699.html">https://mail.python.org/pipermail/python-dev/2008-May/079699.html</a>
 However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python’s <cite>memoryview</cite>
 does not work for unicode strings. Hence, the StringView class.</p>
+<p>It is recommended to compile this modules with the Cython-compiler for
+speedup. The modules comes with a <code class="docutils literal notranslate"><span class="pre">stringview.pxd</span></code> that contains some type
+declarations to fully exploit the potential of the Cython-compiler.</p>
 <dl class="class">
 <dt id="stringview.StringView">
-<em class="property">class </em><code class="descname">StringView</code><a class="headerlink" href="#stringview.StringView" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descname">StringView</code><span class="sig-paren">(</span><em>text: str</em>, <em>begin: Union[int</em>, <em>NoneType] = 0</em>, <em>end: Union[int</em>, <em>NoneType] = None</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/stringview.html#StringView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView" title="Permalink to this definition">¶</a></dt>
 <dd><p>A rudimentary StringView class, just enough for the use cases
 in parse.py. The difference between a StringView and the python
 builtin strings is that StringView-objects do slicing without
@@ -3121,7 +3145,7 @@ copying, i.e. slices are just a view on a section of the sliced
 string.</p>
 <dl class="method">
 <dt id="stringview.StringView.count">
-<code class="descname">count</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.count" title="Permalink to this definition">¶</a></dt>
+<code class="descname">count</code><span class="sig-paren">(</span><em>sub: str</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.count" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the number of non-overlapping occurrences of substring
 <cite>sub</cite> in StringView S[start:end].  Optional arguments start and end
 are interpreted as in slice notation.</p>
@@ -3129,7 +3153,7 @@ are interpreted as in slice notation.</p>
 
 <dl class="method">
 <dt id="stringview.StringView.find">
-<code class="descname">find</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.find" title="Permalink to this definition">¶</a></dt>
+<code class="descname">find</code><span class="sig-paren">(</span><em>sub: str</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.find" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the lowest index in S where substring <cite>sub</cite> is found,
 such that <cite>sub</cite> is contained within S[start:end].  Optional
 arguments <cite>start</cite> and <cite>end</cite> are interpreted as in slice notation.
@@ -3137,8 +3161,18 @@ Returns -1 on failure.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="stringview.StringView.finditer">
+<code class="descname">finditer</code><span class="sig-paren">(</span><em>regex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.finditer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.finditer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes regex.finditer on the StringView object and returns the
+iterator of match objects.
+WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
+<blockquote>
+<div>not the StringView-object!!!</div></blockquote>
+</dd></dl>
+
+<dl class="method">
 <dt id="stringview.StringView.index">
-<code class="descname">index</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.index" title="Permalink to this definition">¶</a></dt>
+<code class="descname">index</code><span class="sig-paren">(</span><em>absolute_index: int</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.index" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts an index for a string watched by a StringView object
 to an index relative to the string view object, e.g.:
 &gt;&gt;&gt; import re
@@ -3152,27 +3186,36 @@ to an index relative to the string view object, e.g.:
 
 <dl class="method">
 <dt id="stringview.StringView.indices">
-<code class="descname">indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.indices" title="Permalink to this definition">¶</a></dt>
+<code class="descname">indices</code><span class="sig-paren">(</span><em>absolute_indices: Iterable[int]</em><span class="sig-paren">)</span> &#x2192; Tuple[int, ...]<a class="reference internal" href="_modules/stringview.html#StringView.indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.indices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts indices for a string watched by a StringView object
 to indices relative to the string view object. See also: <cite>sv_index()</cite></p>
 </dd></dl>
 
 <dl class="method">
+<dt id="stringview.StringView.lstrip">
+<code class="descname">lstrip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.lstrip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.lstrip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of <cite>self</cite> with leading whitespace removed.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="stringview.StringView.match">
-<code class="descname">match</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.match" title="Permalink to this definition">¶</a></dt>
+<code class="descname">match</code><span class="sig-paren">(</span><em>regex</em>, <em>flags=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.match" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes <cite>regex.match</cite> on the StringView object and returns the
-result, which is either a match-object or None.</p>
+result, which is either a match-object or None.
+WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
+<blockquote>
+<div>not the StringView-object!!!</div></blockquote>
 </dd></dl>
 
 <dl class="method">
 <dt id="stringview.StringView.replace">
-<code class="descname">replace</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.replace" title="Permalink to this definition">¶</a></dt>
+<code class="descname">replace</code><span class="sig-paren">(</span><em>old</em>, <em>new</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.replace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.replace" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a string where <cite>old</cite> is replaced by <cite>new</cite>.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="stringview.StringView.rfind">
-<code class="descname">rfind</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.rfind" title="Permalink to this definition">¶</a></dt>
+<code class="descname">rfind</code><span class="sig-paren">(</span><em>sub: str</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.rfind"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.rfind" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the highest index in S where substring <cite>sub</cite> is found,
 such that <cite>sub</cite> is contained within S[start:end].  Optional
 arguments <cite>start</cite> and <cite>end</cite> are interpreted as in slice notation.
@@ -3180,15 +3223,24 @@ Returns -1 on failure.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="stringview.StringView.rstrip">
+<code class="descname">rstrip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.rstrip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.rstrip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of <cite>self</cite> with trailing whitespace removed.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="stringview.StringView.search">
-<code class="descname">search</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.search" title="Permalink to this definition">¶</a></dt>
+<code class="descname">search</code><span class="sig-paren">(</span><em>regex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.search" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes regex.search on the StringView object and returns the
-result, which is either a match-object or None.</p>
+result, which is either a match-object or None.
+WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
+<blockquote>
+<div>not the StringView-object!!!</div></blockquote>
 </dd></dl>
 
 <dl class="method">
 <dt id="stringview.StringView.split">
-<code class="descname">split</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.split" title="Permalink to this definition">¶</a></dt>
+<code class="descname">split</code><span class="sig-paren">(</span><em>sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.split"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.split" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a list of the words in <cite>self</cite>, using <cite>sep</cite> as the
 delimiter string.  If <cite>sep</cite> is not specified or is None, any
 whitespace string is a separator and empty strings are
@@ -3197,7 +3249,7 @@ removed from the result.</p>
 
 <dl class="method">
 <dt id="stringview.StringView.startswith">
-<code class="descname">startswith</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.startswith" title="Permalink to this definition">¶</a></dt>
+<code class="descname">startswith</code><span class="sig-paren">(</span><em>prefix: Union[str, typing.Tuple[str, ...]], start: int = 0, end: Union[int, NoneType] = None</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/stringview.html#StringView.startswith"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.startswith" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return True if S starts with the specified prefix, False otherwise.
 With optional <cite>start</cite>, test S beginning at that position.
 With optional <cite>end</cite>, stop comparing S at that position.
@@ -3206,7 +3258,7 @@ prefix can also be a tuple of strings to try.</p>
 
 <dl class="method">
 <dt id="stringview.StringView.strip">
-<code class="descname">strip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stringview.StringView.strip" title="Permalink to this definition">¶</a></dt>
+<code class="descname">strip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.strip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.strip" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a copy of the StringView <cite>self</cite> with leading and trailing
 whitespace removed.</p>
 </dd></dl>
@@ -3222,9 +3274,7 @@ whitespace removed.</p>
 
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -3244,7 +3294,7 @@ whitespace removed.</p>
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -3263,6 +3313,7 @@ whitespace removed.</p>
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -3281,14 +3332,13 @@ whitespace removed.</p>
     <script type="text/javascript" src="_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>

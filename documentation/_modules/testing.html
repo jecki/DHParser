@@ -25,25 +25,17 @@
   
 
   
-  
     <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="DHParser 0.8 documentation" href="../index.html"/>
-        <link rel="up" title="Module code" href="index.html"/> 
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
@@ -102,7 +94,7 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+      <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">DHParser</a>
@@ -110,9 +102,10 @@
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
 
@@ -141,8 +134,6 @@
     
     
       <li class="wy-breadcrumbs-aside">
-        
-            
         
       </li>
     
@@ -196,7 +187,7 @@
 <span class="kn">from</span> <span class="nn">DHParser.error</span> <span class="k">import</span> <span class="n">is_error</span><span class="p">,</span> <span class="n">adjust_error_locations</span>
 <span class="kn">from</span> <span class="nn">DHParser.log</span> <span class="k">import</span> <span class="n">is_logging</span><span class="p">,</span> <span class="n">clear_logs</span><span class="p">,</span> <span class="n">log_ST</span><span class="p">,</span> <span class="n">log_parsing_history</span>
 <span class="kn">from</span> <span class="nn">DHParser.parse</span> <span class="k">import</span> <span class="n">UnknownParserError</span>
-<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">mock_syntax_tree</span><span class="p">,</span> <span class="n">flatten_sxpr</span><span class="p">,</span> <span class="n">ZOMBIE_PARSER</span>
+<span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">RootNode</span><span class="p">,</span> <span class="n">parse_sxpr</span><span class="p">,</span> <span class="n">flatten_sxpr</span><span class="p">,</span> <span class="n">ZOMBIE_PARSER</span>
 <span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">re</span><span class="p">,</span> <span class="n">typing</span>
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Tuple</span>
@@ -373,7 +364,7 @@
 <span class="sd">    The purpose of the latter is to help constructing and debugging</span>
 <span class="sd">    of AST-Transformations. It is better to switch the CST-output on and off</span>
 <span class="sd">    with the asterix marker when needed than to output the CST for all tests</span>
-<span class="sd">    which would unneccesarily bloat the test reports.</span>
+<span class="sd">    which would unnecessarily bloat the test reports.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">indent</span><span class="p">(</span><span class="n">txt</span><span class="p">):</span>
         <span class="n">lines</span> <span class="o">=</span> <span class="n">txt</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -405,6 +396,10 @@
             <span class="n">report</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">heading</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">heading</span><span class="p">)))</span>
             <span class="n">report</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;### Test-code:&#39;</span><span class="p">)</span>
             <span class="n">report</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">indent</span><span class="p">(</span><span class="n">test_code</span><span class="p">))</span>
+            <span class="n">messages</span> <span class="o">=</span> <span class="n">tests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;__msg__&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">test_name</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">messages</span><span class="p">:</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">### Messages:&#39;</span><span class="p">)</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">messages</span><span class="p">)</span>
             <span class="n">error</span> <span class="o">=</span> <span class="n">tests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;__err__&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">test_name</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
                 <span class="n">report</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">### Error:&#39;</span><span class="p">)</span>
@@ -426,6 +421,7 @@
     <span class="n">errata</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">parser_factory</span><span class="p">()</span>
     <span class="n">transform</span> <span class="o">=</span> <span class="n">transformer_factory</span><span class="p">()</span>
+
     <span class="k">for</span> <span class="n">parser_name</span><span class="p">,</span> <span class="n">tests</span> <span class="ow">in</span> <span class="n">test_unit</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">assert</span> <span class="n">parser_name</span><span class="p">,</span> <span class="s2">&quot;Missing parser name in test </span><span class="si">%s</span><span class="s2">!&quot;</span> <span class="o">%</span> <span class="n">unit_name</span>
         <span class="k">assert</span> <span class="ow">not</span> <span class="nb">any</span> <span class="p">(</span><span class="n">test_type</span> <span class="ow">in</span> <span class="n">RESULT_STAGES</span> <span class="k">for</span> <span class="n">test_type</span> <span class="ow">in</span> <span class="n">tests</span><span class="p">),</span> \
@@ -447,6 +443,9 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">cst_tests</span> <span class="o">&lt;=</span> <span class="n">match_tests</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s1">&#39;CST-Tests </span><span class="si">%s</span><span class="s1"> lack corresponding match-tests!&#39;</span>
                                      <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">cst_tests</span> <span class="o">-</span> <span class="n">match_tests</span><span class="p">))</span>
+
+        <span class="c1"># run match tests</span>
+
         <span class="k">for</span> <span class="n">test_name</span><span class="p">,</span> <span class="n">test_code</span> <span class="ow">in</span> <span class="n">tests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;match&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">())</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="n">infostr</span> <span class="o">=</span> <span class="s1">&#39;    match-test &quot;&#39;</span> <span class="o">+</span> <span class="n">test_name</span> <span class="o">+</span> <span class="s1">&#39;&quot; ... &#39;</span>
@@ -454,14 +453,15 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">cst</span> <span class="o">=</span> <span class="n">parser</span><span class="p">(</span><span class="n">test_code</span><span class="p">,</span> <span class="n">parser_name</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">UnknownParserError</span> <span class="k">as</span> <span class="n">upe</span><span class="p">:</span>
-                <span class="n">cst</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">upe</span><span class="p">))</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">log_ST</span><span class="p">(</span><span class="n">cst</span><span class="p">,</span> <span class="s2">&quot;match_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.cst&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">test_name</span><span class="p">))</span>
+                <span class="n">cst</span> <span class="o">=</span> <span class="n">cst</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">Node</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">upe</span><span class="p">))</span>
+            <span class="n">clean_test_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">test_name</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;*&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">log_ST</span><span class="p">(</span><span class="n">cst</span><span class="p">,</span> <span class="s2">&quot;match_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.cst&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">clean_test_name</span><span class="p">))</span>
             <span class="n">tests</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__cst__&#39;</span><span class="p">,</span> <span class="p">{})[</span><span class="n">test_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cst</span>
             <span class="k">if</span> <span class="s2">&quot;ast&quot;</span> <span class="ow">in</span> <span class="n">tests</span> <span class="ow">or</span> <span class="n">report</span><span class="p">:</span>
                 <span class="n">ast</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">cst</span><span class="p">)</span>
                 <span class="n">transform</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span>
                 <span class="n">tests</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__ast__&#39;</span><span class="p">,</span> <span class="p">{})[</span><span class="n">test_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ast</span>
-                <span class="n">log_ST</span><span class="p">(</span><span class="n">ast</span><span class="p">,</span> <span class="s2">&quot;match_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.ast&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">test_name</span><span class="p">))</span>
+                <span class="n">log_ST</span><span class="p">(</span><span class="n">ast</span><span class="p">,</span> <span class="s2">&quot;match_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.ast&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">clean_test_name</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">is_error</span><span class="p">(</span><span class="n">cst</span><span class="o">.</span><span class="n">error_flag</span><span class="p">):</span>
                 <span class="n">errors</span> <span class="o">=</span> <span class="n">adjust_error_locations</span><span class="p">(</span><span class="n">cst</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">(),</span> <span class="n">test_code</span><span class="p">)</span>
                 <span class="n">errata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Match test &quot;</span><span class="si">%s</span><span class="s1">&quot; for parser &quot;</span><span class="si">%s</span><span class="s1">&quot; failed:</span><span class="se">\n\t</span><span class="s1">Expr.:  </span><span class="si">%s</span><span class="se">\n\n\t</span><span class="si">%s</span><span class="se">\n\n</span><span class="s1">&#39;</span> <span class="o">%</span>
@@ -470,13 +470,13 @@
                 <span class="n">tests</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__err__&#39;</span><span class="p">,</span> <span class="p">{})[</span><span class="n">test_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">errata</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
                 <span class="c1"># write parsing-history log only in case of failure!</span>
                 <span class="k">if</span> <span class="n">is_logging</span><span class="p">():</span>
-                    <span class="n">log_parsing_history</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="s2">&quot;match_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">test_name</span><span class="p">))</span>
-            <span class="k">elif</span> <span class="s2">&quot;cst&quot;</span> <span class="ow">in</span> <span class="n">tests</span> <span class="ow">and</span> <span class="n">mock_syntax_tree</span><span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="s2">&quot;cst&quot;</span><span class="p">][</span><span class="n">test_name</span><span class="p">])</span> <span class="o">!=</span> <span class="n">cst</span><span class="p">:</span>
+                    <span class="n">log_parsing_history</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="s2">&quot;match_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">clean_test_name</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="s2">&quot;cst&quot;</span> <span class="ow">in</span> <span class="n">tests</span> <span class="ow">and</span> <span class="n">parse_sxpr</span><span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="s2">&quot;cst&quot;</span><span class="p">][</span><span class="n">test_name</span><span class="p">])</span> <span class="o">!=</span> <span class="n">cst</span><span class="p">:</span>
                 <span class="n">errata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Concrete syntax tree test &quot;</span><span class="si">%s</span><span class="s1">&quot; for parser &quot;</span><span class="si">%s</span><span class="s1">&quot; failed:</span><span class="se">\n</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
                               <span class="p">(</span><span class="n">test_name</span><span class="p">,</span> <span class="n">parser_name</span><span class="p">,</span> <span class="n">cst</span><span class="o">.</span><span class="n">as_sxpr</span><span class="p">()))</span>
             <span class="k">elif</span> <span class="s2">&quot;ast&quot;</span> <span class="ow">in</span> <span class="n">tests</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="n">compare</span> <span class="o">=</span> <span class="n">mock_syntax_tree</span><span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="s2">&quot;ast&quot;</span><span class="p">][</span><span class="n">test_name</span><span class="p">])</span>
+                    <span class="n">compare</span> <span class="o">=</span> <span class="n">parse_sxpr</span><span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="s2">&quot;ast&quot;</span><span class="p">][</span><span class="n">test_name</span><span class="p">])</span>
                 <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
                     <span class="k">pass</span>
                 <span class="k">if</span> <span class="n">compare</span> <span class="o">!=</span> <span class="n">ast</span><span class="p">:</span>
@@ -491,6 +491,9 @@
 
         <span class="k">if</span> <span class="n">verbose</span> <span class="ow">and</span> <span class="s1">&#39;fail&#39;</span> <span class="ow">in</span> <span class="n">tests</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Fail-Tests for parser &quot;&#39;</span> <span class="o">+</span> <span class="n">parser_name</span> <span class="o">+</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+
+        <span class="c1"># run fail tests</span>
+
         <span class="k">for</span> <span class="n">test_name</span><span class="p">,</span> <span class="n">test_code</span> <span class="ow">in</span> <span class="n">tests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fail&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">())</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="n">infostr</span> <span class="o">=</span> <span class="s1">&#39;    fail-test  &quot;&#39;</span> <span class="o">+</span> <span class="n">test_name</span> <span class="o">+</span> <span class="s1">&#39;&quot; ... &#39;</span>
@@ -499,7 +502,8 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">cst</span> <span class="o">=</span> <span class="n">parser</span><span class="p">(</span><span class="n">test_code</span><span class="p">,</span> <span class="n">parser_name</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">UnknownParserError</span> <span class="k">as</span> <span class="n">upe</span><span class="p">:</span>
-                <span class="n">cst</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">upe</span><span class="p">))</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">ZOMBIE_PARSER</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">init_pos</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">cst</span> <span class="o">=</span> <span class="n">RootNode</span><span class="p">(</span><span class="n">node</span><span class="p">)</span><span class="o">.</span><span class="n">new_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">upe</span><span class="p">))</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">is_error</span><span class="p">(</span><span class="n">cst</span><span class="o">.</span><span class="n">error_flag</span><span class="p">):</span>
                 <span class="n">errata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;Fail test &quot;</span><span class="si">%s</span><span class="s1">&quot; for parser &quot;</span><span class="si">%s</span><span class="s1">&quot; yields match instead of &#39;</span>
                               <span class="s1">&#39;expected failure!&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">test_name</span><span class="p">,</span> <span class="n">parser_name</span><span class="p">))</span>
@@ -507,6 +511,9 @@
                 <span class="c1"># write parsing-history log only in case of test-failure</span>
                 <span class="k">if</span> <span class="n">is_logging</span><span class="p">():</span>
                     <span class="n">log_parsing_history</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="s2">&quot;fail_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parser_name</span><span class="p">,</span> <span class="n">test_name</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">cst</span><span class="o">.</span><span class="n">error_flag</span><span class="p">:</span>
+                <span class="n">tests</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;__msg__&#39;</span><span class="p">,</span> <span class="p">{})[</span><span class="n">test_name</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">cst</span><span class="o">.</span><span class="n">collect_errors</span><span class="p">())</span>
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">infostr</span> <span class="o">+</span> <span class="p">(</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">errata</span><span class="p">)</span> <span class="o">==</span> <span class="n">errflag</span> <span class="k">else</span> <span class="s2">&quot;FAIL&quot;</span><span class="p">))</span>
 
@@ -522,8 +529,10 @@
 
 
 <div class="viewcode-block" id="reset_unit"><a class="viewcode-back" href="../ModuleReference.html#testing.reset_unit">[docs]</a><span class="k">def</span> <span class="nf">reset_unit</span><span class="p">(</span><span class="n">test_unit</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Resets the tests in ``test_unit`` by removing all results and</span>
-<span class="sd">    error messages.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resets the tests in ``test_unit`` by removing all results and error</span>
+<span class="sd">    messages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">parser</span><span class="p">,</span> <span class="n">tests</span> <span class="ow">in</span> <span class="n">test_unit</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">tests</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">UNIT_STAGES</span><span class="p">:</span>
@@ -658,9 +667,7 @@
 </pre></div>
 
            </div>
-           <div class="articleComments">
-            
-           </div>
+           
           </div>
           <footer>
   
@@ -673,7 +680,7 @@
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -692,6 +699,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.8',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
@@ -710,14 +718,13 @@
     <script type="text/javascript" src="../_static/js/theme.js"></script>
   
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          
+          SphinxRtdTheme.Navigation.enableSticky();
+          
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>
