@@ -508,7 +508,8 @@ class Node(collections.abc.Sized):
             return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str = None, compact: bool = False, showerrors: bool = True) -> str:
+    def as_sxpr(self, src: str = None, compact: bool = False, showerrors: bool = True,
+                indentation: int = 2) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -548,10 +549,10 @@ class Node(collections.abc.Sized):
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
-        return self._tree_repr('    ', opening, closing, pretty, density=density)
+        return self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
 
 
-    def as_xml(self, src: str = None, showerrors: bool = True) -> str:
+    def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2) -> str:
         """
         Returns content as XML-tree.
 
@@ -580,7 +581,7 @@ class Node(collections.abc.Sized):
             return '\n</' + node.tag_name + '>'
 
         line_breaks = linebreaks(src) if src else []
-        return self._tree_repr('    ', opening, closing, density=1)
+        return self._tree_repr(' ' * indentation, opening, closing, density=1)
 
 
     def select(self, match_function: Callable, include_root: bool=True) -> Iterator['Node']:
@@ -666,7 +667,7 @@ class Node(collections.abc.Sized):
 
 
 class RootNode(Node):
-    """
+    """TODO: Add Documentation!!!
 
         errors (list):  A list of all errors that have occured so far during
                 processing (i.e. parsing, AST-transformation, compiling)
@@ -739,7 +740,6 @@ class RootNode(Node):
         error = Error(message, code, node=node)
         self.add_error(node, error)
         return self
-
 
     def collect_errors(self) -> List[Error]:
         """Returns the list of errors, ordered bv their position.
