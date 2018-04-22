@@ -24,15 +24,15 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.error import Error
-from DHParser.syntaxtree import Node, RootNode, parse_sxpr, flatten_sxpr, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, flatten_xml, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider
 
 
-class TestMockSyntaxTree:
-    def test_mock_syntax_tree(self):
+class TestParseSxpression:
+    def test_parse_s_expression(self):
         tree = parse_sxpr('(a (b c))')
         assert flatten_sxpr(tree.as_sxpr()) == '(a (b "c"))', flatten_sxpr(tree.as_sxpr())
         tree = parse_sxpr('(a i\nj\nk)')
@@ -44,6 +44,14 @@ class TestMockSyntaxTree:
         except ValueError:
             pass
 
+class TestParseXML:
+    def test_roundtrip(self):
+        tree = parse_sxpr('(a (b c) (d (e f) (h i)))')
+        xml = tree.as_xml()
+        fxml = flatten_xml(xml)
+        assert fxml == '<a><b>c</b><d><e>f</e><h>i</h></d></a>'
+        tree2 = parse_xml(fxml)
+        print(tree2.as_sxpr())
 
 class TestNode:
     """

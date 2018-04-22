@@ -44,7 +44,9 @@ __all__ = ('ParserBase',
            'Node',
            'RootNode',
            'parse_sxpr',
-           'flatten_sxpr')
+           'parse_xml',
+           'flatten_sxpr',
+           'flatten_xml')
 
 
 #######################################################################
@@ -180,6 +182,13 @@ def flatten_sxpr(sxpr: str) -> str:
     '(a (b c))'
     """
     return re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
+
+
+def flatten_xml(xml: str) -> str:
+    """Returns an XML-tree as a one linter without unnecessary whitespace,
+    i.e. only whitespace within leaf-nodes is preserved.
+    """
+    return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
 
 
 class Node(collections.abc.Sized):
@@ -869,7 +878,7 @@ def parse_xml(xml: str) -> Node:
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
     xml = StringView(xml)
-    PlainText = MockParser('', 'PlainText')
+    PlainText = MockParser('', ':PlainText')
     mock_parsers = {':PlainText': PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
@@ -894,10 +903,10 @@ def parse_xml(xml: str) -> Node:
         s, attributes = parse_attributes(s[match.end() - s.begin:])
         i = s.find('>')
         assert i >= 0
-        return s[i+1,], tagname, attributes, s[i-1] == "/"
+        return s[i+1:], tagname, attributes, s[i-1] == "/"
 
     def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
-        """Parses a closing tag returns the string segment, just after
+        """Parses a closing tag and returns the string segment, just after
         the closing tag."""
         match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
         assert match
@@ -935,7 +944,9 @@ def parse_xml(xml: str) -> Node:
             result = tuple(result)
         return Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
 
-    return parse_full_content(xml[xml.search(re.compile(r'<(?!\?)')):])
+    match_header = xml.search(re.compile(r'<(?!\?)'))
+    start = match_header.start() if match_header else 0
+    return parse_full_content(xml[start:])
 
 # if __name__ == "__main__":
 #     st = parse_sxpr("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
