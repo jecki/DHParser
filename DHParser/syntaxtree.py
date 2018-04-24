@@ -36,6 +36,7 @@ from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tupl
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',
+           'PLAINTEXT_PTYPE',
            'TOKEN_PTYPE',
            'MockParser',
            'ZombieParser',
@@ -109,6 +110,7 @@ class ParserBase:
 
 
 WHITESPACE_PTYPE = ':Whitespace'
+PLAINTEXT_PTYPE = ':PlainText'
 TOKEN_PTYPE = ':Token'
 
 
@@ -873,13 +875,16 @@ def parse_sxpr(sxpr: str) -> Node:
     return inner_parser(sxpr)
 
 
+RX_WHITESPACE_TAIL = re.compile(r'\s*$')
+
+
 def parse_xml(xml: str) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
     xml = StringView(xml)
-    PlainText = MockParser('', ':PlainText')
-    mock_parsers = {':PlainText': PlainText}
+    PlainText = MockParser('', PLAINTEXT_PTYPE)
+    mock_parsers = {PLAINTEXT_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
@@ -900,7 +905,8 @@ def parse_xml(xml: str) -> Node:
         match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))
         assert match
         tagname = match.groupdict()['tagname']
-        s, attributes = parse_attributes(s[match.end() - s.begin:])
+        section = s[match.end() - s.begin:]
+        s, attributes = parse_attributes(section)
         i = s.find('>')
         assert i >= 0
         return s[i+1:], tagname, attributes, s[i-1] == "/"
@@ -931,22 +937,24 @@ def parse_xml(xml: str) -> Node:
         if not solitary:
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
-                if not s.match(re.compile("\s*$")):
+                if not leaf.match(RX_WHITESPACE_TAIL):
                     result.append(Node(PlainText, leaf))
                 if s[:1] == "<" and s[:2] != "</":
                     s, child = parse_full_content(s)
                     result.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname
-        if len(result) == 1 and isinstance(result[0].parser == PlainText):
+        if len(result) == 1 and result[0].parser.ptype == PLAINTEXT_PTYPE:
             result = result[0].result
         else:
             result = tuple(result)
-        return Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
+        return s, Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
 
     match_header = xml.search(re.compile(r'<(?!\?)'))
     start = match_header.start() if match_header else 0
-    return parse_full_content(xml[start:])
+    _, tree = parse_full_content(xml[start:])
+    assert _.match(RX_WHITESPACE_TAIL)
+    return tree
 
 # if __name__ == "__main__":
 #     st = parse_sxpr("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")

@@ -118,6 +118,7 @@ class StringView(collections.abc.Sized):
             return self.fullstring
         # since the slice is being copyied now, anyway, the copy might
         # as well be stored in the string view
+        # return self.text[self.begin:self.end]  # use this for debugging!
         self.fullstring = self.text[self.begin:self.end]
         return self.fullstring
 

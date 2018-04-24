@@ -51,7 +51,15 @@ class TestParseXML:
         fxml = flatten_xml(xml)
         assert fxml == '<a><b>c</b><d><e>f</e><h>i</h></d></a>'
         tree2 = parse_xml(fxml)
-        print(tree2.as_sxpr())
+        assert fxml == flatten_xml(tree2.as_xml())
+
+    def test_plaintext_handling(self):
+        tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
+        assert flatten_sxpr(tree.as_sxpr()) == \
+               '(a (:PlainText "alpha ") (b "beta") (:PlainText " gamma"))'
+        tree = parse_xml(' <a>   <b>beta</b>   </a> ')
+        assert flatten_xml(tree.as_xml()) == '<a><b>beta</b></a>'
+
 
 class TestNode:
     """

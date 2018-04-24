@@ -38,7 +38,7 @@ from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_PARSER
+    PLAINTEXT_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
 from typing import Callable, cast, Dict, DefaultDict, List, Set, Tuple, Union, Optional
 
@@ -894,6 +894,7 @@ class PlainText(Parser):
         >>> Grammar(while_token)("while").content
         'while'
     """
+    assert PLAINTEXT_PTYPE == ":PlainText"
 
     def __init__(self, text: str, name: str = '') -> None:
         super().__init__(name)
