@@ -424,8 +424,8 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> No
         log_file_name = log_file_name[:-4]
 
     full_history = ['<h1>Full parsing history of "%s"</h1>' % log_file_name]  # type: List[str]
-    match_history = ['<h1>Match history of parsing "%s"</h1>' % log_file_name]  # type: List[str]
-    errors_only = ['<h1>Errors when parsing "%s"</h1>' % log_file_name]  # type: List[str]
+    # match_history = ['<h1>Match history of parsing "%s"</h1>' % log_file_name]  # type: List[str]
+    # errors_only = ['<h1>Errors when parsing "%s"</h1>' % log_file_name]  # type: List[str]
 
     if len(grammar.history__) > LOG_SIZE_THRESHOLD:
         warning =('Sorry, man, %iK history records is just too many! '
@@ -433,26 +433,26 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> No
                   % (len(grammar.history__)//1000, LOG_SIZE_THRESHOLD//1000))
         html_warning = '<p><strong>' + warning + '</strong></p>'
         full_history.append(html_warning)
-        match_history.append(html_warning)
-        errors_only.append(html_warning)
+        # match_history.append(html_warning)
+        # errors_only.append(html_warning)
 
     lead_in = '\n'. join(['<table>', HistoryRecord.COLGROUP, HistoryRecord.HEADINGS])
     full_history.append(lead_in)
-    match_history.append(lead_in)
-    errors_only.append(lead_in)
+    # match_history.append(lead_in)
+    # errors_only.append(lead_in)
 
     for record in grammar.history__[-LOG_SIZE_THRESHOLD:]:
         line = record.as_html_tr() if html else str(record)
         append_line(full_history, line)
-        if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
-            append_line(match_history, line)
-            if record.node.errors:
-                append_line(errors_only, line)
+        # if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
+        #     append_line(match_history, line)
+        #     if record.node.errors:
+        #         append_line(errors_only, line)
     write_log(full_history, log_file_name + '_full')
     if len(full_history) > LOG_TAIL_THRESHOLD + 10:
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
-    write_log(match_history, log_file_name + '_match')
-    if (len(errors_only) > 3 or (len(grammar.history__) <= LOG_SIZE_THRESHOLD
-                                 and len(errors_only) > 2)):
-        write_log(errors_only, log_file_name + '_errors')
+    # write_log(match_history, log_file_name + '_match')
+    # if (len(errors_only) > 3 or (len(grammar.history__) <= LOG_SIZE_THRESHOLD
+    #                              and len(errors_only) > 2)):
+    #     write_log(errors_only, log_file_name + '_errors')

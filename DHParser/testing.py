@@ -307,13 +307,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             except UnknownParserError as upe:
                 cst = cst.new_error(Node(ZOMBIE_PARSER, "").init_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
-            log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
+            # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
+                # log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
             if is_error(cst.error_flag):
                 errors = adjust_error_locations(cst.collect_errors(), test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
