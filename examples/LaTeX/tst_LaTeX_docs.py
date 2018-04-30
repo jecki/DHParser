@@ -86,7 +86,7 @@ def tst_func():
 
                 print('\nCompiling document: "%s"' % file)
                 output = compiler(result)
-                print(output)
+                # print(output)
 
 
 def cpu_profile(func):

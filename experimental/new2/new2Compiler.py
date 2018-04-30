@@ -55,7 +55,7 @@ def get_preprocessor() -> PreprocessorFunc:
 
 class new2Grammar(Grammar):
     r"""Parser for a new2 source file, with this grammar:
-    
+
     document = ~ { sentence } §EOF
     sentence = part {"," part } "."
     part     = { WORD }+
@@ -76,7 +76,7 @@ class new2Grammar(Grammar):
     sentence = Series(part, ZeroOrMore(Series(Token(","), part)), Token("."))
     document = Series(whitespace__, ZeroOrMore(sentence), EOF, mandatory=2)
     root__ = document
-    
+
 def get_grammar() -> new2Grammar:
     global thread_local_new2_grammar_singleton
     try:
@@ -96,10 +96,13 @@ def get_grammar() -> new2Grammar:
 new2_AST_transformation_table = {
     # AST Transformations for the new2-grammar
     "+": remove_empty,
-    "document": [],
-    "WORD": [],
+    "document": [remove_whitespace, reduce_single_child],
+    "sentence": [flatten],
+    "part": [],
+    "WORD": [remove_whitespace, reduce_single_child],
     "EOF": [],
-    ":Token, :RE": reduce_single_child,
+    ":Token": [remove_whitespace, reduce_single_child],
+    ":RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

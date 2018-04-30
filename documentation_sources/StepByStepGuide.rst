@@ -268,13 +268,13 @@ and the definition of the rule on the right hand side.
    of the lexical scanner is seamlessly integrated into the
    parser. This is done by allowing regular expressions in the definiendum of
    grammar symbols. The regular expressions do the work of the lexical
-   scanner. 
+   scanner.
 
    Theoretically, one could do without scanners or regular expressions.
    Because regular languages are a subset of context-free languages, parsers
    for context-free languages can do all the work that regular expressions can
    do. But it makes things easier - and, in the case of DHParser, also faster
-   - to have them.  
+   - to have them.
 
 In our case the text as a whole, conveniently named "document" (any other name
 would be allowed, too), consists of a leading whitespace, a possibly empty
@@ -533,7 +533,7 @@ parser in the sequence matched or failed or produced an error. In case of an
 error, the error message is displayed in the third column as well. In case the
 parser matched, the last column displays exactly that section of the text that
 the parser did match. If the parser did not match, the last column displays
-the text that still lies ahead and has not yet been parsed. 
+the text that still lies ahead and has not yet been parsed.
 
 In our concrete example, we can see that the parser "WORD" matches "Life", but
 not "Life’s" or "’s". And this ultimately leads to the failure of the parsing
@@ -547,12 +547,12 @@ file "grammar_tests/01_test_word.ini" and add the following test::
    [match:WORD]
    M3: Life’s
 
-To be sure that the new tests captures the error we have found you might want
+To be sure that the new test captures the error we have found you might want
 to run the script "tst_poetry_grammar.py" and verify that it reports the
 failure of test "M3" in the suite "01_test_word.ini". After that, change the
 regular expression for the symbol WORD in the grammar file "poetry.ebnf" as
 just described. Now both the tests and the compilation of the file
-"macbeth.dsl" should run through smoothly. 
+"macbeth.dsl" should run through smoothly.
 
 .. caution:: Depending on the purpose of your DSL, the simple solution of
    allowing apostrophes within words, might not be what you want. After all
@@ -568,7 +568,7 @@ just described. Now both the tests and the compilation of the file
    as separate words and, finally, if possible, to write a grammar that
    provides for these cases. These steps are quite typical for the kind of
    challenges that occur during the design of a DSL for a
-   Digital-Humanities-Project. 
+   Digital-Humanities-Project.
 
 
 Controlling abstract-syntax-tree generation
@@ -577,7 +577,7 @@ Controlling abstract-syntax-tree generation
 Compiling the example "macbeth.dsl" with the command ``python poetryCompier.py
 macbeth.dsl``, you might find yourself not being able to avoid the impression
 that the output is rather verbose. Just looking at the beginning of the
-output, we find:: 
+output, we find::
 
    <document>
        <:ZeroOrMore>
@@ -618,7 +618,207 @@ about what features must be included in the abstract syntax tree, because the
 abstract syntax tree more or less reflects the data model (or is at most one
 step away from it) with which want to capture our material.
 
-For the sake of our example, let's assume that we are not interested that we
-are not interested in whitespace and that we want to get rid of all
-uniformative Nodes, i.e. 
+For the sake of our example, let's assume that we are not interested in
+whitespace and that we want to get rid of all uniformative nodes, i.e. nodes
+that merely demark syntactic structures but not semantic entities.
 
+DHParser supports the transformation of the concrete syntax tree (CST) into the
+abstract syntax tree (AST) with a simple technology that (in theory) allows to
+specify the necessary transformations in an almost delcarative fashion: You
+simply fill in a Python-dictionary of tag-names with transformation *operators*.
+Technically, these operators are simply Python-functions. DHParser comes with a
+rich set of predefined operators. Should these not suffice, you
+can easily write your own. How does this look like? ::
+
+   poetry_AST_transformation_table = {
+       "+": remove_empty,
+       "document": [],
+       "sentence": [],
+       "part": [],
+       "WORD": [],
+       "EOF": [],
+       ":Token, :RE": reduce_single_child,
+       "*": replace_by_single_child
+   }
+
+You'll find this table in the script ``poetryCompiler.py``, which is also the
+place where you edit the table, because then it is automatically used when
+compiling your DSL-sources. Now, AST-Transformation works as follows: The whole
+tree is scanned, starting at the deepest level and applying the specified
+operators and then working its way upward. This means that the operators
+specified for "WORD"-nodes will be applied before the operators of "part"-nodes
+and "sentence"-nodes. This has the advantage that when a particular node is
+reached the transformations for its descendant nodes have already been applied.
+
+As you can see, the transformation-table contains an entry for every known
+parser, i.e. "document", "sentence", "part", "WORD", "EOF". (If any of these are
+missing in the table of your ``poetryCompiler.py``, add them now!) In the
+template you'll also find transformations for two anonymous parsers, i.e.
+":Token" and ":RE" as well as some curious entries such as "*" and "+". The
+latter are considered to be "jokers". The transformations related to the
+"+"-sign will be applied on any node, before any other transformation is
+applied. In this case, all empty nodes will be removed first (transformation:
+``remove_empty``). The "*"-joker contains a list of transformations that will be
+applied to all those tags that have not been entered explicitly into the
+transformation table. For example, if the transformation reaches a node with the
+tag-name ":ZeroOrMore" (i.e. an anonymous node that has been generated by the
+parser ":ZeroOrmore"), the "*"-joker-operators will be applied. In this
+case it is just one transformation, namely, ``replace_by_single_child`` which
+replaces a node that has but one child by its child. In contrast, the
+transformation ``reduce_single_child`` eliminates a single child node by
+attaching the child's children or content directly to the parent node. We'll see
+what this means and how this works, briefly.
+
+.. caution:: Once the compiler-script "xxxxCompiler.py" has been generated, the
+   *only* part that is changed after editing and extending the grammar is the
+   parser-part of this script (i.e. the class derived from class Grammar),
+   because this part is completly auto-generated and can therefore be
+   overwritten safely. The other parts of that script, including the
+   AST-transformation-dictionary, if never changed once it has been generated,
+   because it needs to be filled in by hand by the designer of the DSL and the
+   hand-made changes should not be overwritten. There it is left as it is when
+   regenerating the parser. However, this means, if you add symbols to your
+   grammar later, you will not find them as keys in the
+   AST-transformation-table, but you'll have to add them yourself.
+
+   The comments in the compiler-script clearly indicate which parts can be
+   edited by hand safely, i.e. without running the risk of being overwritten, an
+   which cannot.
+
+We can either specify no operator (empty list), a single operator or a list of
+operators for transforming a node. There is a different between specifying an
+empty list for a particular tag-name or leaving out a tag-name completly. In the
+latter case the "*"-joker is applied, in place of the missing list of operators.
+In the former case only the "+"-joker is applied. If a list of operators is
+specified, these operator will be applied in sequence one after the other. We
+also call the list of operators or the single operator if there is only one the
+*transformation* for a particular tag (or parser name or parser type for that
+matter).
+
+Because the AST-transfomation works through the table from the inside to the
+outside, it is reasonable to do the same when designing the AST-transformations,
+to proceed in the same order. The innermost nodes that concern us are the nodes
+captured by the <WORD>-parser, or simply, <WORD>-nodes. As we can see, these
+nodes usually contain a <:RegExp>-node and a <:Whitespace>-node. As the "WORD"
+parser is defined as a simple regular expresseion with followed by optional
+whitespace in our grammar, we now that this must always be the case, although
+the whitespace may occasionally be empty. Thus, we can eliminate the
+uninformative child nodes by removing whitespace first and the reducing the
+single left over child node. The respective line in the AST-transformation-table
+in the compiler-script should be changed as follows::
+
+   "WORD": [remove_whitespace, reduce_single_child],
+
+Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
+
+   <document>
+     <:ZeroOrMore>
+       <sentence>
+         <part>
+           <WORD>Life’s</WORD>
+           <WORD>but</WORD>
+           <WORD>a</WORD>
+           <WORD>walking</WORD>
+           <WORD>shadow</WORD>
+         </part>
+         <:Series>
+           <:Token>
+             <:PlainText>,</:PlainText>
+             <:Whitespace> </:Whitespace>
+           </:Token>
+           <part>
+             <WORD>a</WORD>
+   ...
+
+It starts to become more readble and concise, but there are sill some oddities.
+Firstly, the Tokens that deliminate parts of sentences still contain whitespace.
+Secondly, if several <part>-nodes follow each other in a <sentence>-node, the
+<part>-nodes after the first one are enclosed by a <:Series>-node or even a
+cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:Token>-nodes, have
+can do the same trick as with the WORD-nodes::
+
+   ":Token": [remove_whitespace, reduce_single_child],
+   ":RE": reduce_single_child,
+
+As to the nested structure of the <part>-nodes within the <sentence>-node, this
+a rather typical case of syntactic artefacts that can be found in concrete
+syntax trees. It is obviously a consequence of the grammar definition::
+
+    sentence = part {"," part } "."
+
+We'd of course prefer to have flat structure of parts and punctuation marks
+following each other within the sentence. Since this is a standard case,
+DHParser includes a special operator to "flatten" nested structures of this
+kind::
+
+   "sentence" = [flatten],
+
+The ``flatten`` operator recursively eliminates all intermediary anonymous child
+nodes. We do not need to do anything in particular for transforming the
+<part>-node, except that we should explicitly assign an empty operator-list to
+it, because we do not want the "*" to step in. The reason is that a <part> with
+a single <WORD> should still be visible as a part a not replaced by the
+<WORD>-node, because we would like our data model to have has regular a form as
+possible. (This does of course imply a decision that we have taken on the form
+of our data model, which would lead too far to discuss here. Suffice it to say
+that depending on the occasion and purpose, such decisions can also be taken
+otherwise.)
+
+The only kind of nodes left are the <document>-nodes. In the output of the
+compiler-script (see above), the <document>-node had a single childe node
+":ZeroOrMore". Since this child node does not have any particular semantic
+meaning it would reasonable to eliminate it and attach its children directly to
+"document". We could do so by entering ``reduce_single_child`` in the lost of
+transformations for "document"-nodes. However, when designing the
+AST-transformations, it is important not only to consider the concrete output
+that a particular text yields, but all possible outputs. Therefore, before
+specifying a transformation, we should also take a careful look at the grammar
+again, where "document" is defined as follows::
+
+   document = ~ { sentence } §EOF
+
+As we can see a "document"-node may also contain whitespace and an EOF-marker.
+The reason why we don't find these in the output is that empty nodes have been
+eliminated by the ``remove_empty``-transformation specified in the "+"-joker,
+before. While EOF is always empty (little exercise: explain why!). But there
+could be ":Whitespace"-nodes next to the zero or more sentences in the document
+node, in which case the "reduce_single_child"-operator would do nothing, because
+there is more than a single child. (We could of course also use the
+"flatten"-operator, instead. Try this as an exercise.) Test cases help to
+capture those different scenarios, so adding test cases and examining the output
+in the test report halp to get a grip on this, if just looking at the grammar
+strains you imagination too much.
+
+Since we have decided, that we do not want to include whitespace in our data
+model, we can simply eliminate any whitespace before we apply the
+``reduce_single_child``-operator, so we change the "document"-entry in the
+AST-transformation-table as thus::
+
+   "document": [remove_whitespace, reduce_single_child],
+
+Now that everything is set, let's have a look at the result::
+
+   <document>
+     <sentence>
+       <part>
+         <WORD>Life’s</WORD>
+         <WORD>but</WORD>
+         <WORD>a</WORD>
+         <WORD>walking</WORD>
+         <WORD>shadow</WORD>
+       </part>
+       <:Token>,</:Token>
+       <part>
+         <WORD>a</WORD>
+         <WORD>poor</WORD>
+         <WORD>player</WORD>
+   ...
+
+That is much better. There is but one slight blemish in the output: While all
+nodes left a named nodes, i.e. nodes associated with a named parser, there are a
+few anonymous <:Token> nodes. Here is a little exercise: Do away with those
+<:Token>-nodes by replacing them by something semantically more meaningful.
+Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". An
+alternative strategy to extending the grammar would be to use the
+``replace_parser`` operator. Which of the strategy is the better one? Explain
+why.
