@@ -19,14 +19,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import copy
+import collections.abc
 import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import parse_sxpr
+from DHParser.syntaxtree import Node, parse_sxpr, ZOMBIE_NODE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
-    traverse_locally, collapse, lstrip, rstrip, remove_content, remove_tokens
+    traverse_locally, collapse, lstrip, rstrip, remove_content, remove_tokens, \
+    transformation_factory
+from DHParser.toolkit import typing
+from typing import AbstractSet, List, Sequence, Tuple
 
 
 class TestRemoval:
@@ -86,7 +89,68 @@ class TestRemoval:
             "*": []
         }
         traverse(cst, ast_table)
-        print(cst.as_sxpr())
+        cst1 = cst.as_sxpr()
+        assert cst1.find('et') < 0
+        ast_table = {
+            "wortarten": [remove_tokens("et")],
+            "*": []
+        }
+        traverse(cst, ast_table)
+        assert cst1 == cst.as_sxpr()
+
+
+class TestTransformationFactory:
+    def test_mismatching_types(self):
+        @transformation_factory(tuple)
+        def good_transformation(context: List[Node], parameters: Tuple[str]):
+            pass
+        try:
+            @transformation_factory(tuple)
+            def bad_transformation(context: List[Node], parameters: AbstractSet[str]):
+                pass
+            assert False, "mismatching types not recognized by transform.transformation_factory()"
+        except TypeError:
+            pass
+
+    def test_forbidden_generic_types_in_decorator(self):
+        try:
+            @transformation_factory(AbstractSet[str])
+            def forbidden_transformation(context: List[Node], parameters: AbstractSet[str]):
+                pass
+            assert False, "use of generics not recognized in transform.transformation_factory()"
+        except TypeError:
+            pass
+
+    def test_forbidden_mutable_sequence_types_in_decorator(self):
+        try:
+            @transformation_factory(collections.abc.Sequence)
+            def parameterized_transformation(context: List[Node], parameters: Sequence[str]):
+                pass
+            _ = parameterized_transformation('a', 'b', 'c')
+            assert False, ("use of mutable sequences not recognized in "
+                           "transform.transformation_factory()")
+        except TypeError:
+            pass
+
+    def test_parameter_set_expansion1(self):
+        save = None
+        @transformation_factory(collections.abc.Set)
+        def parameterized_transformation(context: List[Node], parameters: AbstractSet[str]):
+            nonlocal save
+            save = parameters
+        transformation = parameterized_transformation('a', 'b', 'c')
+        transformation([ZOMBIE_NODE])
+        assert save == {'a', 'b', 'c'}
+
+    def test_parameter_set_expansion2(self):
+        save = None
+        @transformation_factory(tuple)
+        def parameterized_transformation(context: List[Node], parameters: Tuple[str]):
+            nonlocal save
+            save = parameters
+        transformation = parameterized_transformation('a', 'b', 'c')
+        transformation([ZOMBIE_NODE])
+        assert save == ('a', 'b', 'c'), str(save)
 
 
 class TestConditionalTransformations:
