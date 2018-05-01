@@ -225,52 +225,53 @@
 
 
 <div class="viewcode-block" id="EBNFGrammar"><a class="viewcode-back" href="../ModuleReference.html#ebnf.EBNFGrammar">[docs]</a><span class="k">class</span> <span class="nc">EBNFGrammar</span><span class="p">(</span><span class="n">Grammar</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;Parser for an EBNF source file, with this grammar:</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parser for an EBNF source file, with this grammar::</span>
 
-<span class="sd">    # EBNF-Grammar in EBNF</span>
+<span class="sd">        # EBNF-Grammar in EBNF</span>
 
-<span class="sd">    @ comment    = /#.*(?:\n|$)/                    # comments start with &#39;#&#39; and eat all chars up to and including &#39;\n&#39;</span>
-<span class="sd">    @ whitespace = /\s*/                            # whitespace includes linefeed</span>
-<span class="sd">    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly</span>
+<span class="sd">        @ comment    = /#.*(?:\n|$)/                    # comments start with &#39;#&#39; and eat all chars up to and including &#39;\n&#39;</span>
+<span class="sd">        @ whitespace = /\s*/                            # whitespace includes linefeed</span>
+<span class="sd">        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly</span>
 
-<span class="sd">    syntax     = [~//] { definition | directive } §EOF</span>
-<span class="sd">    definition = symbol §&quot;=&quot; expression</span>
-<span class="sd">    directive  = &quot;@&quot; §symbol &quot;=&quot; ( regexp | literal | list_ )</span>
+<span class="sd">        syntax     = [~//] { definition | directive } §EOF</span>
+<span class="sd">        definition = symbol §&quot;=&quot; expression</span>
+<span class="sd">        directive  = &quot;@&quot; §symbol &quot;=&quot; ( regexp | literal | list_ )</span>
 
-<span class="sd">    expression = term { &quot;|&quot; term }</span>
-<span class="sd">    term       = { [&quot;§&quot;] factor }+                       # &quot;§&quot; means all following factors mandatory</span>
-<span class="sd">    factor     = [flowmarker] [retrieveop] symbol !&quot;=&quot;   # negative lookahead to be sure it&#39;s not a definition</span>
-<span class="sd">               | [flowmarker] literal</span>
-<span class="sd">               | [flowmarker] plaintext</span>
-<span class="sd">               | [flowmarker] regexp</span>
-<span class="sd">               | [flowmarker] whitespace</span>
-<span class="sd">               | [flowmarker] oneormore</span>
-<span class="sd">               | [flowmarker] group</span>
-<span class="sd">               | [flowmarker] unordered</span>
-<span class="sd">               | repetition</span>
-<span class="sd">               | option</span>
+<span class="sd">        expression = term { &quot;|&quot; term }</span>
+<span class="sd">        term       = { [&quot;§&quot;] factor }+                       # &quot;§&quot; means all following factors mandatory</span>
+<span class="sd">        factor     = [flowmarker] [retrieveop] symbol !&quot;=&quot;   # negative lookahead to be sure it&#39;s not a definition</span>
+<span class="sd">                   | [flowmarker] literal</span>
+<span class="sd">                   | [flowmarker] plaintext</span>
+<span class="sd">                   | [flowmarker] regexp</span>
+<span class="sd">                   | [flowmarker] whitespace</span>
+<span class="sd">                   | [flowmarker] oneormore</span>
+<span class="sd">                   | [flowmarker] group</span>
+<span class="sd">                   | [flowmarker] unordered</span>
+<span class="sd">                   | repetition</span>
+<span class="sd">                   | option</span>
 
-<span class="sd">    flowmarker = &quot;!&quot;  | &quot;&amp;&quot;                         # &#39;!&#39; negative lookahead, &#39;&amp;&#39; positive lookahead</span>
-<span class="sd">               | &quot;-!&quot; | &quot;-&amp;&quot;                        # &#39;-&#39; negative lookbehind, &#39;-&amp;&#39; positive lookbehind</span>
-<span class="sd">    retrieveop = &quot;::&quot; | &quot;:&quot;                         # &#39;::&#39; pop, &#39;:&#39; retrieve</span>
+<span class="sd">        flowmarker = &quot;!&quot;  | &quot;&amp;&quot;                         # &#39;!&#39; negative lookahead, &#39;&amp;&#39; positive lookahead</span>
+<span class="sd">                   | &quot;-!&quot; | &quot;-&amp;&quot;                        # &#39;-&#39; negative lookbehind, &#39;-&amp;&#39; positive lookbehind</span>
+<span class="sd">        retrieveop = &quot;::&quot; | &quot;:&quot;                         # &#39;::&#39; pop, &#39;:&#39; retrieve</span>
 
-<span class="sd">    group      = &quot;(&quot; §expression &quot;)&quot;</span>
-<span class="sd">    unordered  = &quot;&lt;&quot; §expression &quot;&gt;&quot;                # elements of expression in arbitrary order</span>
-<span class="sd">    oneormore  = &quot;{&quot; expression &quot;}+&quot;</span>
-<span class="sd">    repetition = &quot;{&quot; §expression &quot;}&quot;</span>
-<span class="sd">    option     = &quot;[&quot; §expression &quot;]&quot;</span>
+<span class="sd">        group      = &quot;(&quot; §expression &quot;)&quot;</span>
+<span class="sd">        unordered  = &quot;&lt;&quot; §expression &quot;&gt;&quot;                # elements of expression in arbitrary order</span>
+<span class="sd">        oneormore  = &quot;{&quot; expression &quot;}+&quot;</span>
+<span class="sd">        repetition = &quot;{&quot; §expression &quot;}&quot;</span>
+<span class="sd">        option     = &quot;[&quot; §expression &quot;]&quot;</span>
 
-<span class="sd">    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list</span>
-<span class="sd">    literal    = /&quot;(?:[^&quot;]|\\&quot;)*?&quot;/~                # e.g. &quot;(&quot;, &#39;+&#39;, &#39;while&#39;</span>
-<span class="sd">               | /&#39;(?:[^&#39;]|\\&#39;)*?&#39;/~                # whitespace following literals will be ignored tacitly.</span>
-<span class="sd">    plaintext  = /`(?:[^&quot;]|\\&quot;)*?`/~                # like literal but does not eat whitespace</span>
-<span class="sd">    regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~</span>
-<span class="sd">                                                    # &#39;~&#39; is a whitespace-marker, if present leading or trailing</span>
-<span class="sd">                                                    # whitespace of a regular expression will be ignored tacitly.</span>
-<span class="sd">    whitespace = /~/~                               # implicit or default whitespace</span>
-<span class="sd">    list_      = /\w+/~ { &quot;,&quot; /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,</span>
-<span class="sd">                                                    # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple</span>
-<span class="sd">    EOF = !/./</span>
+<span class="sd">        symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list</span>
+<span class="sd">        literal    = /&quot;(?:[^&quot;]|\\&quot;)*?&quot;/~                # e.g. &quot;(&quot;, &#39;+&#39;, &#39;while&#39;</span>
+<span class="sd">                   | /&#39;(?:[^&#39;]|\\&#39;)*?&#39;/~                # whitespace following literals will be ignored tacitly.</span>
+<span class="sd">        plaintext  = /`(?:[^&quot;]|\\&quot;)*?`/~                # like literal but does not eat whitespace</span>
+<span class="sd">        regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~</span>
+<span class="sd">                                                        # &#39;~&#39; is a whitespace-marker, if present leading or trailing</span>
+<span class="sd">                                                        # whitespace of a regular expression will be ignored tacitly.</span>
+<span class="sd">        whitespace = /~/~                               # implicit or default whitespace</span>
+<span class="sd">        list_      = /\w+/~ { &quot;,&quot; /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,</span>
+<span class="sd">                                                        # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple</span>
+<span class="sd">        EOF = !/./</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">expression</span> <span class="o">=</span> <span class="n">Forward</span><span class="p">()</span>
     <span class="n">source_hash__</span> <span class="o">=</span> <span class="s2">&quot;3fc9f5a340f560e847d9af0b61a68743&quot;</span>

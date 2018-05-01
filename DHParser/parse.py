@@ -354,7 +354,7 @@ class Grammar:
     ("direct instantiation"), or by assigning the root parser to the
     class variable "root__" of a descendant class of class Grammar.
 
-    Example for direct instantiation of a grammar:
+    Example for direct instantiation of a grammar::
 
         >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
         >>> number_parser = Grammar(number)

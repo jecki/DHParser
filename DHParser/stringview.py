@@ -215,16 +215,16 @@ class StringView(collections.abc.Sized):
         return regex.match(self.text, pos=self.begin, endpos=self.end)
 
     def index(self, absolute_index: int) -> int:
-        """
-        Converts an index for a string watched by a StringView object
-        to an index relative to the string view object, e.g.:
-        >>> import re
-        >>> sv = StringView('xxIxx')[2:3]
-        >>> match = sv.match(re.compile('I'))
-        >>> match.end()
-        3
-        >>> sv.index(match.end())
-        1
+        """Converts an index for a string watched by a StringView object
+        to an index relative to the string view object, e.g.::
+
+            >>> import re
+            >>> sv = StringView('xxIxx')[2:3]
+            >>> match = sv.match(re.compile('I'))
+            >>> match.end()
+            3
+            >>> sv.index(match.end())
+            1
         """
         return absolute_index - self.begin
 

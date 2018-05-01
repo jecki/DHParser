@@ -186,7 +186,7 @@
 <span class="kn">from</span> <span class="nn">DHParser.preprocess</span> <span class="k">import</span> <span class="n">BEGIN_TOKEN</span><span class="p">,</span> <span class="n">END_TOKEN</span><span class="p">,</span> <span class="n">RX_TOKEN_NAME</span>
 <span class="kn">from</span> <span class="nn">DHParser.stringview</span> <span class="k">import</span> <span class="n">StringView</span><span class="p">,</span> <span class="n">EMPTY_STRING_VIEW</span>
 <span class="kn">from</span> <span class="nn">DHParser.syntaxtree</span> <span class="k">import</span> <span class="n">Node</span><span class="p">,</span> <span class="n">RootNode</span><span class="p">,</span> <span class="n">ParserBase</span><span class="p">,</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">,</span> \
-    <span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">ZOMBIE_PARSER</span>
+    <span class="n">PLAINTEXT_PTYPE</span><span class="p">,</span> <span class="n">TOKEN_PTYPE</span><span class="p">,</span> <span class="n">ZOMBIE_PARSER</span>
 <span class="kn">from</span> <span class="nn">DHParser.toolkit</span> <span class="k">import</span> <span class="n">sane_parser_name</span><span class="p">,</span> <span class="n">escape_control_characters</span><span class="p">,</span> <span class="n">re</span><span class="p">,</span> <span class="n">typing</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">cast</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">DefaultDict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
 
@@ -502,7 +502,7 @@
 <span class="sd">    (&quot;direct instantiation&quot;), or by assigning the root parser to the</span>
 <span class="sd">    class variable &quot;root__&quot; of a descendant class of class Grammar.</span>
 
-<span class="sd">    Example for direct instantiation of a grammar:</span>
+<span class="sd">    Example for direct instantiation of a grammar::</span>
 
 <span class="sd">        &gt;&gt;&gt; number = RE(&#39;\d+&#39;) + RE(&#39;\.&#39;) + RE(&#39;\d+&#39;) | RE(&#39;\d+&#39;)</span>
 <span class="sd">        &gt;&gt;&gt; number_parser = Grammar(number)</span>
@@ -1042,6 +1042,7 @@
 <span class="sd">        &gt;&gt;&gt; Grammar(while_token)(&quot;while&quot;).content</span>
 <span class="sd">        &#39;while&#39;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">PLAINTEXT_PTYPE</span> <span class="o">==</span> <span class="s2">&quot;:PlainText&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>

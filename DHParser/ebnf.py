@@ -77,52 +77,53 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 
 
 class EBNFGrammar(Grammar):
-    r"""Parser for an EBNF source file, with this grammar:
+    r"""
+    Parser for an EBNF source file, with this grammar::
 
-    # EBNF-Grammar in EBNF
+        # EBNF-Grammar in EBNF
 
-    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace = /\s*/                            # whitespace includes linefeed
-    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+        @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+        @ whitespace = /\s*/                            # whitespace includes linefeed
+        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 
-    syntax     = [~//] { definition | directive } §EOF
-    definition = symbol §"=" expression
-    directive  = "@" §symbol "=" ( regexp | literal | list_ )
+        syntax     = [~//] { definition | directive } §EOF
+        definition = symbol §"=" expression
+        directive  = "@" §symbol "=" ( regexp | literal | list_ )
 
-    expression = term { "|" term }
-    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-               | [flowmarker] literal
-               | [flowmarker] plaintext
-               | [flowmarker] regexp
-               | [flowmarker] whitespace
-               | [flowmarker] oneormore
-               | [flowmarker] group
-               | [flowmarker] unordered
-               | repetition
-               | option
+        expression = term { "|" term }
+        term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+        factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+                   | [flowmarker] literal
+                   | [flowmarker] plaintext
+                   | [flowmarker] regexp
+                   | [flowmarker] whitespace
+                   | [flowmarker] oneormore
+                   | [flowmarker] group
+                   | [flowmarker] unordered
+                   | repetition
+                   | option
 
-    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+        flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+                   | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+        retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
 
-    group      = "(" §expression ")"
-    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-    oneormore  = "{" expression "}+"
-    repetition = "{" §expression "}"
-    option     = "[" §expression "]"
+        group      = "(" §expression ")"
+        unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+        oneormore  = "{" expression "}+"
+        repetition = "{" §expression "}"
+        option     = "[" §expression "]"
 
-    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-    regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                    # '~' is a whitespace-marker, if present leading or trailing
-                                                    # whitespace of a regular expression will be ignored tacitly.
-    whitespace = /~/~                               # implicit or default whitespace
-    list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                    # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-    EOF = !/./
+        symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+        literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+                   | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+        plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
+        regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                        # '~' is a whitespace-marker, if present leading or trailing
+                                                        # whitespace of a regular expression will be ignored tacitly.
+        whitespace = /~/~                               # implicit or default whitespace
+        list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                        # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+        EOF = !/./
     """
     expression = Forward()
     source_hash__ = "3fc9f5a340f560e847d9af0b61a68743"

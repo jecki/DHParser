@@ -184,6 +184,7 @@
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;ParserBase&#39;</span><span class="p">,</span>
            <span class="s1">&#39;WHITESPACE_PTYPE&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;PLAINTEXT_PTYPE&#39;</span><span class="p">,</span>
            <span class="s1">&#39;TOKEN_PTYPE&#39;</span><span class="p">,</span>
            <span class="s1">&#39;MockParser&#39;</span><span class="p">,</span>
            <span class="s1">&#39;ZombieParser&#39;</span><span class="p">,</span>
@@ -192,7 +193,9 @@
            <span class="s1">&#39;Node&#39;</span><span class="p">,</span>
            <span class="s1">&#39;RootNode&#39;</span><span class="p">,</span>
            <span class="s1">&#39;parse_sxpr&#39;</span><span class="p">,</span>
-           <span class="s1">&#39;flatten_sxpr&#39;</span><span class="p">)</span>
+           <span class="s1">&#39;parse_xml&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;flatten_sxpr&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;flatten_xml&#39;</span><span class="p">)</span>
 
 
 <span class="c1">#######################################################################</span>
@@ -255,6 +258,7 @@
 
 
 <span class="n">WHITESPACE_PTYPE</span> <span class="o">=</span> <span class="s1">&#39;:Whitespace&#39;</span>
+<span class="n">PLAINTEXT_PTYPE</span> <span class="o">=</span> <span class="s1">&#39;:PlainText&#39;</span>
 <span class="n">TOKEN_PTYPE</span> <span class="o">=</span> <span class="s1">&#39;:Token&#39;</span>
 
 
@@ -328,6 +332,13 @@
 <span class="sd">    &#39;(a (b c))&#39;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s(?=\))&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s+&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">sxpr</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">flatten_xml</span><span class="p">(</span><span class="n">xml</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Returns an XML-tree as a one linter without unnecessary whitespace,</span>
+<span class="sd">    i.e. only whitespace within leaf-nodes is preserved.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s+(?=&lt;\w)&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;=&lt;/\w+&gt;)\s+&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">xml</span><span class="p">))</span>
 
 
 <span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Sized</span><span class="p">):</span>
@@ -656,7 +667,8 @@
             <span class="k">return</span> <span class="n">head</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">tab</span> <span class="o">+</span> <span class="n">data_fn</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)])</span> <span class="o">+</span> <span class="n">tail</span>
 
 
-    <span class="k">def</span> <span class="nf">as_sxpr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compact</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">showerrors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">as_sxpr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">compact</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">showerrors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">indentation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns content as S-expression, i.e. in lisp-like form.</span>
 
@@ -696,10 +708,10 @@
                 <span class="k">else</span> <span class="s2">&quot;&#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span> <span class="n">strg</span> <span class="k">if</span> <span class="n">strg</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span> \
                 <span class="k">else</span> <span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">strg</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;\&quot;&#39;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree_repr</span><span class="p">(</span><span class="s1">&#39;    &#39;</span><span class="p">,</span> <span class="n">opening</span><span class="p">,</span> <span class="n">closing</span><span class="p">,</span> <span class="n">pretty</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="n">density</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree_repr</span><span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="n">indentation</span><span class="p">,</span> <span class="n">opening</span><span class="p">,</span> <span class="n">closing</span><span class="p">,</span> <span class="n">pretty</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="n">density</span><span class="p">)</span>
 
 
-    <span class="k">def</span> <span class="nf">as_xml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">showerrors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">as_xml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">showerrors</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">indentation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns content as XML-tree.</span>
 
@@ -728,7 +740,7 @@
             <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&lt;/&#39;</span> <span class="o">+</span> <span class="n">node</span><span class="o">.</span><span class="n">tag_name</span> <span class="o">+</span> <span class="s1">&#39;&gt;&#39;</span>
 
         <span class="n">line_breaks</span> <span class="o">=</span> <span class="n">linebreaks</span><span class="p">(</span><span class="n">src</span><span class="p">)</span> <span class="k">if</span> <span class="n">src</span> <span class="k">else</span> <span class="p">[]</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree_repr</span><span class="p">(</span><span class="s1">&#39;    &#39;</span><span class="p">,</span> <span class="n">opening</span><span class="p">,</span> <span class="n">closing</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tree_repr</span><span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="n">indentation</span><span class="p">,</span> <span class="n">opening</span><span class="p">,</span> <span class="n">closing</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
 
     <span class="k">def</span> <span class="nf">select</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">match_function</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">include_root</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="s1">&#39;Node&#39;</span><span class="p">]:</span>
@@ -814,7 +826,7 @@
 
 
 <span class="k">class</span> <span class="nc">RootNode</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;TODO: Add Documentation!!!</span>
 
 <span class="sd">        errors (list):  A list of all errors that have occured so far during</span>
 <span class="sd">                processing (i.e. parsing, AST-transformation, compiling)</span>
@@ -888,7 +900,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
-
     <span class="k">def</span> <span class="nf">collect_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Error</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Returns the list of errors, ordered bv their position.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -899,7 +910,8 @@
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">err_nodes_keep</span><span class="p">:</span>  <span class="c1"># redundant: consider removing Error.Error._node_keep</span>
             <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
                 <span class="k">assert</span> <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span> <span class="o">&lt;=</span> <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;=</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span>
+                <span class="k">if</span> <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">error</span><span class="o">.</span><span class="n">_pos</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">pos</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">err_nodes_keep</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_errors</span>
         <span class="c1"># for error in self.all_errors:</span>
@@ -1011,13 +1023,16 @@
     <span class="k">return</span> <span class="n">inner_parser</span><span class="p">(</span><span class="n">sxpr</span><span class="p">)</span>
 
 
+<span class="n">RX_WHITESPACE_TAIL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s*$&#39;</span><span class="p">)</span>
+
+
 <span class="k">def</span> <span class="nf">parse_xml</span><span class="p">(</span><span class="n">xml</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generates a tree of nodes from a (Pseudo-)XML-source.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">xml</span> <span class="o">=</span> <span class="n">StringView</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
-    <span class="n">PlainText</span> <span class="o">=</span> <span class="n">MockParser</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;PlainText&#39;</span><span class="p">)</span>
-    <span class="n">mock_parsers</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;:PlainText&#39;</span><span class="p">:</span> <span class="n">PlainText</span><span class="p">}</span>
+    <span class="n">PlainText</span> <span class="o">=</span> <span class="n">MockParser</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">PLAINTEXT_PTYPE</span><span class="p">)</span>
+    <span class="n">mock_parsers</span> <span class="o">=</span> <span class="p">{</span><span class="n">PLAINTEXT_PTYPE</span><span class="p">:</span> <span class="n">PlainText</span><span class="p">}</span>
 
     <span class="k">def</span> <span class="nf">parse_attributes</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="n">OrderedDict</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;Parses a sqeuence of XML-Attributes. Returns the string-slice</span>
@@ -1038,13 +1053,14 @@
         <span class="n">match</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;\s*(?P&lt;tagname&gt;[\w:]+)\s*&#39;</span><span class="p">))</span>
         <span class="k">assert</span> <span class="n">match</span>
         <span class="n">tagname</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groupdict</span><span class="p">()[</span><span class="s1">&#39;tagname&#39;</span><span class="p">]</span>
-        <span class="n">s</span><span class="p">,</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">parse_attributes</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">begin</span><span class="p">:])</span>
+        <span class="n">section</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">()</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">begin</span><span class="p">:]</span>
+        <span class="n">s</span><span class="p">,</span> <span class="n">attributes</span> <span class="o">=</span> <span class="n">parse_attributes</span><span class="p">(</span><span class="n">section</span><span class="p">)</span>
         <span class="n">i</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39;&gt;&#39;</span><span class="p">)</span>
         <span class="k">assert</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">0</span>
-        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,],</span> <span class="n">tagname</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;/&quot;</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:],</span> <span class="n">tagname</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;/&quot;</span>
 
     <span class="k">def</span> <span class="nf">parse_closing_tag</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="n">StringView</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">StringView</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Parses a closing tag returns the string segment, just after</span>
+        <span class="sd">&quot;&quot;&quot;Parses a closing tag and returns the string segment, just after</span>
 <span class="sd">        the closing tag.&quot;&quot;&quot;</span>
         <span class="n">match</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;/\s*(?P&lt;tagname&gt;[\w:]+)&gt;&#39;</span><span class="p">))</span>
         <span class="k">assert</span> <span class="n">match</span>
@@ -1069,20 +1085,24 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">solitary</span><span class="p">:</span>
             <span class="k">while</span> <span class="n">s</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">s</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&lt;/&quot;</span><span class="p">:</span>
                 <span class="n">s</span><span class="p">,</span> <span class="n">leaf</span> <span class="o">=</span> <span class="n">parse_leaf_content</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;\s*$&quot;</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">leaf</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">RX_WHITESPACE_TAIL</span><span class="p">):</span>
                     <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Node</span><span class="p">(</span><span class="n">PlainText</span><span class="p">,</span> <span class="n">leaf</span><span class="p">))</span>
                 <span class="k">if</span> <span class="n">s</span><span class="p">[:</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&lt;&quot;</span> <span class="ow">and</span> <span class="n">s</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&lt;/&quot;</span><span class="p">:</span>
                     <span class="n">s</span><span class="p">,</span> <span class="n">child</span> <span class="o">=</span> <span class="n">parse_full_content</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
                     <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
             <span class="n">s</span><span class="p">,</span> <span class="n">closing_tagname</span> <span class="o">=</span> <span class="n">parse_closing_tag</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
             <span class="k">assert</span> <span class="n">tagname</span> <span class="o">==</span> <span class="n">closing_tagname</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span> <span class="o">==</span> <span class="n">PlainText</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">==</span> <span class="n">PLAINTEXT_PTYPE</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">result</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span><span class="n">mock_parsers</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="n">class_name</span><span class="p">)),</span> <span class="n">result</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">,</span> <span class="n">Node</span><span class="p">(</span><span class="n">mock_parsers</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">MockParser</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="n">class_name</span><span class="p">)),</span> <span class="n">result</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">parse_full_content</span><span class="p">(</span><span class="n">xml</span><span class="p">[</span><span class="n">xml</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;(?!\?)&#39;</span><span class="p">)):])</span>
+    <span class="n">match_header</span> <span class="o">=</span> <span class="n">xml</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;(?!\?)&#39;</span><span class="p">))</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">match_header</span><span class="o">.</span><span class="n">start</span><span class="p">()</span> <span class="k">if</span> <span class="n">match_header</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">tree</span> <span class="o">=</span> <span class="n">parse_full_content</span><span class="p">(</span><span class="n">xml</span><span class="p">[</span><span class="n">start</span><span class="p">:])</span>
+    <span class="k">assert</span> <span class="n">_</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">RX_WHITESPACE_TAIL</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tree</span>
 
 <span class="c1"># if __name__ == &quot;__main__&quot;:</span>
 <span class="c1">#     st = parse_sxpr(&quot;(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))&quot;)</span>

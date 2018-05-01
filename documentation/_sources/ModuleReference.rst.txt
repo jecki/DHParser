@@ -19,14 +19,14 @@ However, in order to add or change the source code of DHParser, its module
 structure must be understood. DHParser's modules can roughly be sorted into
 three different categories:
 
-1. Modules that contain the basic funcionality for packrat-parsing,
+1. Modules that contain the basic functionality for packrat-parsing,
    AST-transformation and the skeleton for a DSL-compilers.
 
 2. Modules for EBNF-Grammars and DSL compilation.
 
 3. Support or "toolkit"-modules that contain different helpful functions
 
-The import-order of DHParser's modules runs accross these categories. In the
+The import-order of DHParser's modules runs across these categories. In the
 following list the modules further below in the list may import one or
 more of the modules further above in the list, but not the other way round:
 
@@ -44,14 +44,14 @@ more of the modules further above in the list, but not the other way round:
 - syntaxtree.py -- syntax tree classes for DHParser
 
 - transform.py -- transformation functions for converting the concrete
-                  into the abstract syntax tree
+   into the abstract syntax tree
 
 - logging.py -- logging and debugging for DHParser
 
 - parse.py -- parser combinators for for DHParser
 
 - compile.py -- abstract base class for compilers that transform an AST
-                into something useful
+   into something useful
 
 - ebnf.py -- EBNF -> Python-Parser compilation for DHParser
 

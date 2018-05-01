@@ -190,12 +190,12 @@ namespace form which all of its symbols can be imported, e.g.:</p>
 structure must be understood. DHParser’s modules can roughly be sorted into
 three different categories:</p>
 <ol class="arabic simple">
-<li>Modules that contain the basic funcionality for packrat-parsing,
+<li>Modules that contain the basic functionality for packrat-parsing,
 AST-transformation and the skeleton for a DSL-compilers.</li>
 <li>Modules for EBNF-Grammars and DSL compilation.</li>
 <li>Support or “toolkit”-modules that contain different helpful functions</li>
 </ol>
-<p>The import-order of DHParser’s modules runs accross these categories. In the
+<p>The import-order of DHParser’s modules runs across these categories. In the
 following list the modules further below in the list may import one or
 more of the modules further above in the list, but not the other way round:</p>
 <ul class="simple">
@@ -506,7 +506,7 @@ S-Expression-output.</p>
 
 <dl class="method">
 <dt id="syntaxtree.Node.as_sxpr">
-<code class="descname">as_sxpr</code><span class="sig-paren">(</span><em>src: str = None</em>, <em>compact: bool = False</em>, <em>showerrors: bool = True</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/syntaxtree.html#Node.as_sxpr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.as_sxpr" title="Permalink to this definition">¶</a></dt>
+<code class="descname">as_sxpr</code><span class="sig-paren">(</span><em>src: str = None</em>, <em>compact: bool = False</em>, <em>showerrors: bool = True</em>, <em>indentation: int = 2</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/syntaxtree.html#Node.as_sxpr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.as_sxpr" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns content as S-expression, i.e. in lisp-like form.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -528,7 +528,7 @@ tree structure.</li>
 
 <dl class="method">
 <dt id="syntaxtree.Node.as_xml">
-<code class="descname">as_xml</code><span class="sig-paren">(</span><em>src: str = None</em>, <em>showerrors: bool = True</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/syntaxtree.html#Node.as_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.as_xml" title="Permalink to this definition">¶</a></dt>
+<code class="descname">as_xml</code><span class="sig-paren">(</span><em>src: str = None</em>, <em>showerrors: bool = True</em>, <em>indentation: int = 2</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/syntaxtree.html#Node.as_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.Node.as_xml" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns content as XML-tree.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -683,7 +683,8 @@ node’s parser’s <cite>ptype</cite>.</p>
 <dl class="class">
 <dt id="syntaxtree.RootNode">
 <em class="property">class </em><code class="descname">RootNode</code><span class="sig-paren">(</span><em>node: Union[syntaxtree.Node</em>, <em>NoneType] = None</em><span class="sig-paren">)</span> &#x2192; syntaxtree.RootNode<a class="reference internal" href="_modules/syntaxtree.html#RootNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.RootNode" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="docutils">
+<dd><p>TODO: Add Documentation!!!</p>
+<dl class="docutils">
 <dt>errors (list):  A list of all errors that have occured so far during</dt>
 <dd>processing (i.e. parsing, AST-transformation, compiling)
 of this tree.</dd>
@@ -729,6 +730,12 @@ generate test data.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="syntaxtree.parse_xml">
+<code class="descname">parse_xml</code><span class="sig-paren">(</span><em>xml: str</em><span class="sig-paren">)</span> &#x2192; syntaxtree.Node<a class="reference internal" href="_modules/syntaxtree.html#parse_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.parse_xml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a tree of nodes from a (Pseudo-)XML-source.</p>
+</dd></dl>
+
+<dl class="function">
 <dt id="syntaxtree.flatten_sxpr">
 <code class="descname">flatten_sxpr</code><span class="sig-paren">(</span><em>sxpr: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/syntaxtree.html#flatten_sxpr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.flatten_sxpr" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns S-expression <code class="docutils literal notranslate"><span class="pre">sxpr</span></code> as a one-liner without unnecessary
@@ -736,6 +743,13 @@ whitespace.</p>
 <p>Example:
 &gt;&gt;&gt; flatten_sxpr(‘(an    (bn        cn    )n)n’)
 ‘(a (b c))’</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="syntaxtree.flatten_xml">
+<code class="descname">flatten_xml</code><span class="sig-paren">(</span><em>xml: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/syntaxtree.html#flatten_xml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#syntaxtree.flatten_xml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an XML-tree as a one linter without unnecessary whitespace,
+i.e. only whitespace within leaf-nodes is preserved.</p>
 </dd></dl>
 
 </div>
@@ -855,7 +869,7 @@ connected to an instance object of class Grammar. There exist two
 ways of connecting parsers to grammar objects: Either by passing
 the root parser object to the constructor of a Grammar object
 (“direct instantiation”), or by assigning the root parser to the
-class variable “<a href="#id3"><span class="problematic" id="id4">root__</span></a>” of a descendant class of class Grammar.</p>
+class variable “<a href="#id1"><span class="problematic" id="id2">root__</span></a>” of a descendant class of class Grammar.</p>
 <p>Example for direct instantiation of a grammar:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">number</span> <span class="o">=</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\d+&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\.&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\d+&#39;</span><span class="p">)</span> <span class="o">|</span> <span class="n">RE</span><span class="p">(</span><span class="s1">&#39;\d+&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">number_parser</span> <span class="o">=</span> <span class="n">Grammar</span><span class="p">(</span><span class="n">number</span><span class="p">)</span>
@@ -932,14 +946,14 @@ whitespace and comments that should be overwritten, if the defaults
 <dt id="parse.Grammar.wspL__">
 <code class="descname">wspL__</code><a class="headerlink" href="#parse.Grammar.wspL__" title="Permalink to this definition">¶</a></dt>
 <dd><p>regular expression string for left aligned whitespace,
-which either equals <a href="#id3"><span class="problematic" id="id5">WSP__</span></a> or is empty.</p>
+which either equals <a href="#id1"><span class="problematic" id="id3">WSP__</span></a> or is empty.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="parse.Grammar.wspR__">
 <code class="descname">wspR__</code><a class="headerlink" href="#parse.Grammar.wspR__" title="Permalink to this definition">¶</a></dt>
 <dd><p>regular expression string for right aligned whitespace,
-which either equals <a href="#id3"><span class="problematic" id="id6">WSP__</span></a> or is empty.</p>
+which either equals <a href="#id1"><span class="problematic" id="id4">WSP__</span></a> or is empty.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1365,7 +1379,7 @@ the series.</p>
 <p>EBNF-Example:  <code class="docutils literal notranslate"><span class="pre">series</span> <span class="pre">=</span> <span class="pre">letter</span> <span class="pre">letter_or_digit</span></code></p>
 <dl class="staticmethod">
 <dt id="parse.Series.combined_mandatory">
-<em class="property">static </em><code class="descname">combined_mandatory</code><span class="sig-paren">(</span><em>right: parse.Parser</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/parse.html#Series.combined_mandatory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#parse.Series.combined_mandatory" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">combined_mandatory</code><span class="sig-paren">(</span><em>left: parse.Parser</em>, <em>right: parse.Parser</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/parse.html#Series.combined_mandatory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#parse.Series.combined_mandatory" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the position of the first mandatory element (if any) when
 parsers <cite>left</cite> and <cite>right</cite> are joined to a sequence.</p>
 </dd></dl>
@@ -1754,7 +1768,7 @@ string representation of the node.</p>
 
 <dl class="function">
 <dt id="transform.merge_children">
-<code class="descname">merge_children</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], tag_names: List[str]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#merge_children"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.merge_children" title="Permalink to this definition">¶</a></dt>
+<code class="descname">merge_children</code><span class="sig-paren">(</span><em>context: List[DHParser.syntaxtree.Node], tag_names: Tuple[str]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/transform.html#merge_children"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transform.merge_children" title="Permalink to this definition">¶</a></dt>
 <dd><p>Joins all children next to each other and with particular tag-names
 into a single child node with a mock-parser with the name of the
 first tag-name in the list.</p>
@@ -2052,12 +2066,12 @@ been defined.</p>
 
 <dl class="staticmethod">
 <dt id="compile.Compiler.method_name">
-<em class="property">static </em><code class="descname">method_name</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/compile.html#Compiler.method_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#compile.Compiler.method_name" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">method_name</code><span class="sig-paren">(</span><em>node_name: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/compile.html#Compiler.method_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#compile.Compiler.method_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the method name for <cite>node_name</cite>, e.g.:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Compiler</span><span class="o">.</span><span class="n">method_name</span><span class="p">(</span><span class="s1">&#39;expression&#39;</span><span class="p">)</span>
+<span class="go">&#39;on_expression&#39;</span>
 </pre></div>
 </div>
-<p>‘on_expression’</p>
 </dd></dl>
 
 <dl class="method">
@@ -2223,59 +2237,52 @@ conforming to this grammar into contrete syntax trees.</p>
 <dt id="ebnf.EBNFGrammar">
 <em class="property">class </em><code class="descname">EBNFGrammar</code><span class="sig-paren">(</span><em>root: DHParser.parse.Parser = None</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/ebnf.html#EBNFGrammar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ebnf.EBNFGrammar" title="Permalink to this definition">¶</a></dt>
 <dd><p>Parser for an EBNF source file, with this grammar:</p>
-<p># EBNF-Grammar in EBNF</p>
-<p>&#64; comment    = /#.*(?:n|$)/                    # comments start with ‘#’ and eat all chars up to and including ‘n’
-&#64; whitespace = /s*/                            # whitespace includes linefeed
-&#64; literalws  = right                            # trailing whitespace of literals will be ignored tacitly</p>
-<p>syntax     = [~//] { definition | directive } §EOF
-definition = symbol §”=” expression
-directive  = “&#64;” §symbol “=” ( regexp | literal | <a href="#id7"><span class="problematic" id="id8">list_</span></a> )</p>
-<p>expression = term { “|” term }
-term       = { [“§”] factor }+                       # “§” means all following factors mandatory
-factor     = [flowmarker] [retrieveop] symbol !”=”   # negative lookahead to be sure it’s not a definition</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line">[flowmarker] literal</div>
-<div class="line">[flowmarker] plaintext</div>
-<div class="line">[flowmarker] regexp</div>
-<div class="line">[flowmarker] whitespace</div>
-<div class="line">[flowmarker] oneormore</div>
-<div class="line">[flowmarker] group</div>
-<div class="line">[flowmarker] unordered</div>
-<div class="line">repetition</div>
-<div class="line">option</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span># EBNF-Grammar in EBNF
+
+@ comment    = /#.*(?:\n|$)/                    # comments start with &#39;#&#39; and eat all chars up to and including &#39;\n&#39;
+@ whitespace = /\s*/                            # whitespace includes linefeed
+@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+
+syntax     = [~//] { definition | directive } §EOF
+definition = symbol §&quot;=&quot; expression
+directive  = &quot;@&quot; §symbol &quot;=&quot; ( regexp | literal | list_ )
+
+expression = term { &quot;|&quot; term }
+term       = { [&quot;§&quot;] factor }+                       # &quot;§&quot; means all following factors mandatory
+factor     = [flowmarker] [retrieveop] symbol !&quot;=&quot;   # negative lookahead to be sure it&#39;s not a definition
+           | [flowmarker] literal
+           | [flowmarker] plaintext
+           | [flowmarker] regexp
+           | [flowmarker] whitespace
+           | [flowmarker] oneormore
+           | [flowmarker] group
+           | [flowmarker] unordered
+           | repetition
+           | option
+
+flowmarker = &quot;!&quot;  | &quot;&amp;&quot;                         # &#39;!&#39; negative lookahead, &#39;&amp;&#39; positive lookahead
+           | &quot;-!&quot; | &quot;-&amp;&quot;                        # &#39;-&#39; negative lookbehind, &#39;-&amp;&#39; positive lookbehind
+retrieveop = &quot;::&quot; | &quot;:&quot;                         # &#39;::&#39; pop, &#39;:&#39; retrieve
+
+group      = &quot;(&quot; §expression &quot;)&quot;
+unordered  = &quot;&lt;&quot; §expression &quot;&gt;&quot;                # elements of expression in arbitrary order
+oneormore  = &quot;{&quot; expression &quot;}+&quot;
+repetition = &quot;{&quot; §expression &quot;}&quot;
+option     = &quot;[&quot; §expression &quot;]&quot;
+
+symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+literal    = /&quot;(?:[^&quot;]|\\&quot;)*?&quot;/~                # e.g. &quot;(&quot;, &#39;+&#39;, &#39;while&#39;
+           | /&#39;(?:[^&#39;]|\\&#39;)*?&#39;/~                # whitespace following literals will be ignored tacitly.
+plaintext  = /`(?:[^&quot;]|\\&quot;)*?`/~                # like literal but does not eat whitespace
+regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                # &#39;~&#39; is a whitespace-marker, if present leading or trailing
+                                                # whitespace of a regular expression will be ignored tacitly.
+whitespace = /~/~                               # implicit or default whitespace
+list_      = /\w+/~ { &quot;,&quot; /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
+                                                # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+EOF = !/./
+</pre></div>
 </div>
-</div></blockquote>
-<dl class="docutils">
-<dt>flowmarker = “!”  | “&amp;”                         # ‘!’ negative lookahead, ‘&amp;’ positive lookahead</dt>
-<dd><div class="first last line-block">
-<div class="line">“-!” | “-&amp;”                        # ‘-‘ negative lookbehind, ‘-&amp;’ positive lookbehind</div>
-</div>
-</dd>
-</dl>
-<p>retrieveop = “::” | “:”                         # ‘::’ pop, ‘:’ retrieve</p>
-<p>group      = “(” §expression “)”
-unordered  = “&lt;” §expression “&gt;”                # elements of expression in arbitrary order
-oneormore  = “{” expression “}+”
-repetition = “{” §expression “}”
-option     = “[” §expression “]”</p>
-<p>symbol     = /(?!d)w+/~                       # e.g. expression, factor, parameter_list
-literal    = /”(?:[^”]|&quot;)*?”/~                # e.g. “(“, ‘+’, ‘while’</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line">/’(?:[^’]|')*?’/~                # whitespace following literals will be ignored tacitly.</div>
-</div>
-</div></blockquote>
-<p>plaintext  = /<cite>(?:[^”]|&quot;)*?</cite>/~                # like literal but does not eat whitespace
-regexp     = /~?/(?:\/<a href="#id1"><span class="problematic" id="id2">|</span></a>[^/])*?/~?/~        # e.g. /w+/, ~/#.*(?:n|$)/~</p>
-<blockquote>
-<div># ‘~’ is a whitespace-marker, if present leading or trailing
-# whitespace of a regular expression will be ignored tacitly.</div></blockquote>
-<p>whitespace = /~/~                               # implicit or default whitespace
-<a href="#id9"><span class="problematic" id="id10">list_</span></a>      = /w+/~ { “,” /w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,</p>
-<blockquote>
-<div># BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple</div></blockquote>
-<p>EOF = !/./</p>
 </dd></dl>
 
 <dl class="exception">
@@ -2988,7 +2995,7 @@ the given information.</p>
 
 <dl class="function">
 <dt id="log.clear_logs">
-<code class="descname">clear_logs</code><span class="sig-paren">(</span><em>logfile_types=frozenset({'.cst'</em>, <em>'.ast'</em>, <em>'.log'})</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/log.html#clear_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.clear_logs" title="Permalink to this definition">¶</a></dt>
+<code class="descname">clear_logs</code><span class="sig-paren">(</span><em>logfile_types=frozenset({'.ast'</em>, <em>'.log'</em>, <em>'.cst'})</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/log.html#clear_logs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.clear_logs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Removes all logs from the log-directory and removes the
 log-directory if it is empty.</p>
 </dd></dl>
@@ -3060,7 +3067,7 @@ or ERROR.</p>
 
 <dl class="staticmethod">
 <dt id="log.HistoryRecord.last_match">
-<em class="property">static </em><code class="descname">last_match</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Union[_ForwardRef('HistoryRecord'), NoneType]<a class="reference internal" href="_modules/log.html#HistoryRecord.last_match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.HistoryRecord.last_match" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">last_match</code><span class="sig-paren">(</span><em>history: List[_ForwardRef('HistoryRecord')]</em><span class="sig-paren">)</span> &#x2192; Union[_ForwardRef('HistoryRecord'), NoneType]<a class="reference internal" href="_modules/log.html#HistoryRecord.last_match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.HistoryRecord.last_match" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the last match from the parsing-history.
 :param history: the parsing-history as a list of HistoryRecord objects</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -3076,7 +3083,7 @@ empty or no parser could match</td>
 
 <dl class="staticmethod">
 <dt id="log.HistoryRecord.most_advanced_match">
-<em class="property">static </em><code class="descname">most_advanced_match</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Union[_ForwardRef('HistoryRecord'), NoneType]<a class="reference internal" href="_modules/log.html#HistoryRecord.most_advanced_match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.HistoryRecord.most_advanced_match" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="descname">most_advanced_match</code><span class="sig-paren">(</span><em>history: List[_ForwardRef('HistoryRecord')]</em><span class="sig-paren">)</span> &#x2192; Union[_ForwardRef('HistoryRecord'), NoneType]<a class="reference internal" href="_modules/log.html#HistoryRecord.most_advanced_match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#log.HistoryRecord.most_advanced_match" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the closest-to-the-end-match from the parsing-history.
 :param history: the parsing-history as a list of HistoryRecord objects</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -3137,32 +3144,32 @@ speedup. The modules comes with a <code class="docutils literal notranslate"><sp
 declarations to fully exploit the potential of the Cython-compiler.</p>
 <dl class="class">
 <dt id="stringview.StringView">
-<em class="property">class </em><code class="descname">StringView</code><span class="sig-paren">(</span><em>text: str</em>, <em>begin: Union[int</em>, <em>NoneType] = 0</em>, <em>end: Union[int</em>, <em>NoneType] = None</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/stringview.html#StringView"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descname">StringView</code><a class="headerlink" href="#stringview.StringView" title="Permalink to this definition">¶</a></dt>
 <dd><p>A rudimentary StringView class, just enough for the use cases
 in parse.py. The difference between a StringView and the python
 builtin strings is that StringView-objects do slicing without
 copying, i.e. slices are just a view on a section of the sliced
 string.</p>
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.count">
-<code class="descname">count</code><span class="sig-paren">(</span><em>sub: str</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.count" title="Permalink to this definition">¶</a></dt>
+<code class="descname">count</code><a class="headerlink" href="#stringview.StringView.count" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the number of non-overlapping occurrences of substring
 <cite>sub</cite> in StringView S[start:end].  Optional arguments start and end
 are interpreted as in slice notation.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.find">
-<code class="descname">find</code><span class="sig-paren">(</span><em>sub: str</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.find" title="Permalink to this definition">¶</a></dt>
+<code class="descname">find</code><a class="headerlink" href="#stringview.StringView.find" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the lowest index in S where substring <cite>sub</cite> is found,
 such that <cite>sub</cite> is contained within S[start:end].  Optional
 arguments <cite>start</cite> and <cite>end</cite> are interpreted as in slice notation.
 Returns -1 on failure.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.finditer">
-<code class="descname">finditer</code><span class="sig-paren">(</span><em>regex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.finditer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.finditer" title="Permalink to this definition">¶</a></dt>
+<code class="descname">finditer</code><a class="headerlink" href="#stringview.StringView.finditer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes regex.finditer on the StringView object and returns the
 iterator of match objects.
 WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
@@ -3170,9 +3177,9 @@ WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
 <div>not the StringView-object!!!</div></blockquote>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.index">
-<code class="descname">index</code><span class="sig-paren">(</span><em>absolute_index: int</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.index" title="Permalink to this definition">¶</a></dt>
+<code class="descname">index</code><a class="headerlink" href="#stringview.StringView.index" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts an index for a string watched by a StringView object
 to an index relative to the string view object, e.g.:
 &gt;&gt;&gt; import re
@@ -3184,22 +3191,22 @@ to an index relative to the string view object, e.g.:
 1</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.indices">
-<code class="descname">indices</code><span class="sig-paren">(</span><em>absolute_indices: Iterable[int]</em><span class="sig-paren">)</span> &#x2192; Tuple[int, ...]<a class="reference internal" href="_modules/stringview.html#StringView.indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.indices" title="Permalink to this definition">¶</a></dt>
+<code class="descname">indices</code><a class="headerlink" href="#stringview.StringView.indices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts indices for a string watched by a StringView object
 to indices relative to the string view object. See also: <cite>sv_index()</cite></p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.lstrip">
-<code class="descname">lstrip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.lstrip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.lstrip" title="Permalink to this definition">¶</a></dt>
+<code class="descname">lstrip</code><a class="headerlink" href="#stringview.StringView.lstrip" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a copy of <cite>self</cite> with leading whitespace removed.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.match">
-<code class="descname">match</code><span class="sig-paren">(</span><em>regex</em>, <em>flags=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.match" title="Permalink to this definition">¶</a></dt>
+<code class="descname">match</code><a class="headerlink" href="#stringview.StringView.match" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes <cite>regex.match</cite> on the StringView object and returns the
 result, which is either a match-object or None.
 WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
@@ -3207,30 +3214,30 @@ WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
 <div>not the StringView-object!!!</div></blockquote>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.replace">
-<code class="descname">replace</code><span class="sig-paren">(</span><em>old</em>, <em>new</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.replace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.replace" title="Permalink to this definition">¶</a></dt>
+<code class="descname">replace</code><a class="headerlink" href="#stringview.StringView.replace" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a string where <cite>old</cite> is replaced by <cite>new</cite>.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.rfind">
-<code class="descname">rfind</code><span class="sig-paren">(</span><em>sub: str</em>, <em>start=None</em>, <em>end=None</em><span class="sig-paren">)</span> &#x2192; int<a class="reference internal" href="_modules/stringview.html#StringView.rfind"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.rfind" title="Permalink to this definition">¶</a></dt>
+<code class="descname">rfind</code><a class="headerlink" href="#stringview.StringView.rfind" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the highest index in S where substring <cite>sub</cite> is found,
 such that <cite>sub</cite> is contained within S[start:end].  Optional
 arguments <cite>start</cite> and <cite>end</cite> are interpreted as in slice notation.
 Returns -1 on failure.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.rstrip">
-<code class="descname">rstrip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.rstrip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.rstrip" title="Permalink to this definition">¶</a></dt>
+<code class="descname">rstrip</code><a class="headerlink" href="#stringview.StringView.rstrip" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a copy of <cite>self</cite> with trailing whitespace removed.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.search">
-<code class="descname">search</code><span class="sig-paren">(</span><em>regex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.search" title="Permalink to this definition">¶</a></dt>
+<code class="descname">search</code><a class="headerlink" href="#stringview.StringView.search" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes regex.search on the StringView object and returns the
 result, which is either a match-object or None.
 WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
@@ -3238,27 +3245,27 @@ WARNING:  match.end(), match.span() etc. are mapped to the underlying text,</p>
 <div>not the StringView-object!!!</div></blockquote>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.split">
-<code class="descname">split</code><span class="sig-paren">(</span><em>sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.split"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.split" title="Permalink to this definition">¶</a></dt>
+<code class="descname">split</code><a class="headerlink" href="#stringview.StringView.split" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a list of the words in <cite>self</cite>, using <cite>sep</cite> as the
 delimiter string.  If <cite>sep</cite> is not specified or is None, any
 whitespace string is a separator and empty strings are
 removed from the result.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.startswith">
-<code class="descname">startswith</code><span class="sig-paren">(</span><em>prefix: Union[str, typing.Tuple[str, ...]], start: int = 0, end: Union[int, NoneType] = None</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="_modules/stringview.html#StringView.startswith"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.startswith" title="Permalink to this definition">¶</a></dt>
+<code class="descname">startswith</code><a class="headerlink" href="#stringview.StringView.startswith" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return True if S starts with the specified prefix, False otherwise.
 With optional <cite>start</cite>, test S beginning at that position.
 With optional <cite>end</cite>, stop comparing S at that position.
 prefix can also be a tuple of strings to try.</p>
 </dd></dl>
 
-<dl class="method">
+<dl class="attribute">
 <dt id="stringview.StringView.strip">
-<code class="descname">strip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/stringview.html#StringView.strip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#stringview.StringView.strip" title="Permalink to this definition">¶</a></dt>
+<code class="descname">strip</code><a class="headerlink" href="#stringview.StringView.strip" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a copy of the StringView <cite>self</cite> with leading and trailing
 whitespace removed.</p>
 </dd></dl>

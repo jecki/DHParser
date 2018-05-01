@@ -511,7 +511,7 @@ luckily not in the case of our short demo example::
 
    $ firefox LOGS/macbeth_full_parser.log.html &
 
-   .. image:: parsing_history.png
+.. image:: parsing_history.png
 
 What you see is a representation of the parsing history. It might look a bit
 tedious in the beginning, especially the this column that contains the parser

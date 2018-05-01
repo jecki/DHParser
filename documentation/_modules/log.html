@@ -572,8 +572,8 @@
         <span class="n">log_file_name</span> <span class="o">=</span> <span class="n">log_file_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
 
     <span class="n">full_history</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;h1&gt;Full parsing history of &quot;</span><span class="si">%s</span><span class="s1">&quot;&lt;/h1&gt;&#39;</span> <span class="o">%</span> <span class="n">log_file_name</span><span class="p">]</span>  <span class="c1"># type: List[str]</span>
-    <span class="n">match_history</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;h1&gt;Match history of parsing &quot;</span><span class="si">%s</span><span class="s1">&quot;&lt;/h1&gt;&#39;</span> <span class="o">%</span> <span class="n">log_file_name</span><span class="p">]</span>  <span class="c1"># type: List[str]</span>
-    <span class="n">errors_only</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;h1&gt;Errors when parsing &quot;</span><span class="si">%s</span><span class="s1">&quot;&lt;/h1&gt;&#39;</span> <span class="o">%</span> <span class="n">log_file_name</span><span class="p">]</span>  <span class="c1"># type: List[str]</span>
+    <span class="c1"># match_history = [&#39;&lt;h1&gt;Match history of parsing &quot;%s&quot;&lt;/h1&gt;&#39; % log_file_name]  # type: List[str]</span>
+    <span class="c1"># errors_only = [&#39;&lt;h1&gt;Errors when parsing &quot;%s&quot;&lt;/h1&gt;&#39; % log_file_name]  # type: List[str]</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">grammar</span><span class="o">.</span><span class="n">history__</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">LOG_SIZE_THRESHOLD</span><span class="p">:</span>
         <span class="n">warning</span> <span class="o">=</span><span class="p">(</span><span class="s1">&#39;Sorry, man, </span><span class="si">%i</span><span class="s1">K history records is just too many! &#39;</span>
@@ -581,29 +581,29 @@
                   <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">grammar</span><span class="o">.</span><span class="n">history__</span><span class="p">)</span><span class="o">//</span><span class="mi">1000</span><span class="p">,</span> <span class="n">LOG_SIZE_THRESHOLD</span><span class="o">//</span><span class="mi">1000</span><span class="p">))</span>
         <span class="n">html_warning</span> <span class="o">=</span> <span class="s1">&#39;&lt;p&gt;&lt;strong&gt;&#39;</span> <span class="o">+</span> <span class="n">warning</span> <span class="o">+</span> <span class="s1">&#39;&lt;/strong&gt;&lt;/p&gt;&#39;</span>
         <span class="n">full_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">html_warning</span><span class="p">)</span>
-        <span class="n">match_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">html_warning</span><span class="p">)</span>
-        <span class="n">errors_only</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">html_warning</span><span class="p">)</span>
+        <span class="c1"># match_history.append(html_warning)</span>
+        <span class="c1"># errors_only.append(html_warning)</span>
 
     <span class="n">lead_in</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span> <span class="n">join</span><span class="p">([</span><span class="s1">&#39;&lt;table&gt;&#39;</span><span class="p">,</span> <span class="n">HistoryRecord</span><span class="o">.</span><span class="n">COLGROUP</span><span class="p">,</span> <span class="n">HistoryRecord</span><span class="o">.</span><span class="n">HEADINGS</span><span class="p">])</span>
     <span class="n">full_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lead_in</span><span class="p">)</span>
-    <span class="n">match_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lead_in</span><span class="p">)</span>
-    <span class="n">errors_only</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lead_in</span><span class="p">)</span>
+    <span class="c1"># match_history.append(lead_in)</span>
+    <span class="c1"># errors_only.append(lead_in)</span>
 
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">grammar</span><span class="o">.</span><span class="n">history__</span><span class="p">[</span><span class="o">-</span><span class="n">LOG_SIZE_THRESHOLD</span><span class="p">:]:</span>
         <span class="n">line</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">as_html_tr</span><span class="p">()</span> <span class="k">if</span> <span class="n">html</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
         <span class="n">append_line</span><span class="p">(</span><span class="n">full_history</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ptype</span> <span class="o">!=</span> <span class="n">WHITESPACE_PTYPE</span><span class="p">:</span>
-            <span class="n">append_line</span><span class="p">(</span><span class="n">match_history</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
-                <span class="n">append_line</span><span class="p">(</span><span class="n">errors_only</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+        <span class="c1"># if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:</span>
+        <span class="c1">#     append_line(match_history, line)</span>
+        <span class="c1">#     if record.node.errors:</span>
+        <span class="c1">#         append_line(errors_only, line)</span>
     <span class="n">write_log</span><span class="p">(</span><span class="n">full_history</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;_full&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">full_history</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">LOG_TAIL_THRESHOLD</span> <span class="o">+</span> <span class="mi">10</span><span class="p">:</span>
         <span class="n">heading</span> <span class="o">=</span> <span class="s1">&#39;&lt;h1&gt;Last 500 records of parsing history of &quot;</span><span class="si">%s</span><span class="s1">&quot;&lt;/h1&gt;&#39;</span> <span class="o">%</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="n">lead_in</span>
-        <span class="n">write_log</span><span class="p">([</span><span class="n">heading</span><span class="p">]</span> <span class="o">+</span> <span class="n">full_history</span><span class="p">[</span><span class="o">-</span><span class="n">LOG_TAIL_THRESHOLD</span><span class="p">:],</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;_full.tail&#39;</span><span class="p">)</span>
-    <span class="n">write_log</span><span class="p">(</span><span class="n">match_history</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;_match&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">errors_only</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">grammar</span><span class="o">.</span><span class="n">history__</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">LOG_SIZE_THRESHOLD</span>
-                                 <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">errors_only</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">)):</span>
-        <span class="n">write_log</span><span class="p">(</span><span class="n">errors_only</span><span class="p">,</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;_errors&#39;</span><span class="p">)</span></div>
+        <span class="n">write_log</span><span class="p">([</span><span class="n">heading</span><span class="p">]</span> <span class="o">+</span> <span class="n">full_history</span><span class="p">[</span><span class="o">-</span><span class="n">LOG_TAIL_THRESHOLD</span><span class="p">:],</span> <span class="n">log_file_name</span> <span class="o">+</span> <span class="s1">&#39;_full.tail&#39;</span><span class="p">)</span></div>
+    <span class="c1"># write_log(match_history, log_file_name + &#39;_match&#39;)</span>
+    <span class="c1"># if (len(errors_only) &gt; 3 or (len(grammar.history__) &lt;= LOG_SIZE_THRESHOLD</span>
+    <span class="c1">#                              and len(errors_only) &gt; 2)):</span>
+    <span class="c1">#     write_log(errors_only, log_file_name + &#39;_errors&#39;)</span>
 </pre></div>
 
            </div>

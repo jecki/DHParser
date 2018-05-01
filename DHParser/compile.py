@@ -144,7 +144,8 @@ class Compiler:
 
     @staticmethod
     def method_name(node_name: str) -> str:
-        """Returns the method name for `node_name`, e.g.::
+        """
+        Returns the method name for `node_name`, e.g.::
 
             >>> Compiler.method_name('expression')
             'on_expression'
