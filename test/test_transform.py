@@ -26,7 +26,7 @@ sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import parse_sxpr
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
-    traverse_locally, collapse, lstrip, rstrip, remove_content
+    traverse_locally, collapse, lstrip, rstrip, remove_content, remove_tokens
 
 
 class TestRemoval:
@@ -78,6 +78,15 @@ class TestRemoval:
         reduce_single_child([cst])
         remove_content([cst], '#')
         assert cst.content == "facitergula"
+
+    def test_remove_tokens(self):
+        cst = parse_sxpr('(wortarten (:Token "ajektiv") (:Token "et") (:Token "praeposition"))')
+        ast_table = {
+            "wortarten": [remove_tokens({"et"})],
+            "*": []
+        }
+        traverse(cst, ast_table)
+        print(cst.as_sxpr())
 
 
 class TestConditionalTransformations:
