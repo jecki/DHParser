@@ -161,7 +161,9 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         if issubclass(List[Node], t):
             raise TypeError("Sequence type %s not permitted\nin transformation_factory "
                             "decorator, because it could be mistaken for a base class "
-                            "of List[Node].\nTry 'tuple' instead!" % str(t))
+                            "of List[Node]\nwhich is the type of the canonical first "
+                            "argument of transformation functions. Try 'tuple' instead!"
+                            % str(t))
         return t
 
     def decorator(f):
