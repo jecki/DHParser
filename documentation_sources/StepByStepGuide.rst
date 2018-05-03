@@ -3,7 +3,7 @@ DHParser's Step by Step Guide
 
 This step by step guide goes through the whole process of desining and testing
 a domain specific notation from the very start. (The terms "domain specific
-noation" and "domain specific language" are used interchangeably in the
+notation" and "domain specific language" are used interchangeably in the
 following. Both will abbreviated by "DSL", however.) We will design a simple
 domain specific notation for poems as a teaching example. On the way we will
 learn:
@@ -279,18 +279,18 @@ and the definition of the rule on the right hand side.
 In our case the text as a whole, conveniently named "document" (any other name
 would be allowed, too), consists of a leading whitespace, a possibly empty
 sequence of an arbitrary number of words words ending only if the end of file
-has been reached. Whitespace in DHParser-grammers is always denoted by a tilde
-"~". Thuse the definiens of the rule "document" starts with a "~" on the right
-hand side of the deifnition sign ("="). Next, you find the symbol "WORD"
+has been reached. Whitespace in DHParser-grammars is always denoted by a tilde
+"~". Thus, the definiens of the rule "document" starts with a "~" on the right
+hand side of the definition sign ("="). Next, you find the symbol "WORD"
 enclosed in braces. "WORD", like any symbol composed of letters in DHParser,
 refers to another rule further below that defines what words are. The meaning
 of the braces is that whatever is enclosed by braces may be repeated zero or
-more times. Thus the expression "{ WORD }" describes a seuqence of arbitrarily
+more times. Thus the expression "{ WORD }" describes a sequence of arbitrarily
 many repetitions of WORD, whatever WORD may be. Finally, EOF refers to yet
-another rule definied further below. We do not yet know what EOF is, but we
+another rule defined further below. We do not yet know what EOF is, but we
 know that when the sequence of words ends, it must be followed by an EOF. The
 paragraph sign "§" in front of EOF means that it is absolutely mandatory that
-the seuqence of WORDs is followed by an EOF. If it doesn't the program issues
+the sequence of WORDs is followed by an EOF. If it doesn't the program issues
 an error message. Without the "§"-sign the parser simply would not match,
 which in itself is not considered an error.
 
@@ -301,7 +301,7 @@ https://docs.python.org/3/library/re.html, before continuing, because we are
 not going to discuss them here. In DHParser-Grammars regular expressions are
 enclosed by simple forawrd slashes "/". Everything between two forward slashes
 is a regular expression as it would be understood by Python's "re"-module.
-Thus the rule ``WORD = /\w+/~`` means that a word consists of a seuqence of
+Thus the rule ``WORD = /\w+/~`` means that a word consists of a sequence of
 letters, numbers or underscores '_' that must be at least one sign long. This
 is what the regular expression "\w+" inside the slashes means. In regular
 expressions, "\w" stands for word-characters and "+" means that the previous
