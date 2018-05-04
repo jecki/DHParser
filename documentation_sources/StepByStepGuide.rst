@@ -45,7 +45,7 @@ Installing DHParser from the git repository
 In order to install DHParser from the git repository, open up a shell window
 and type::
 
-   $ git clone git@gitlab.lrz.de:badw-it/DHParser.git
+   $ git clone https://gitlab.lrz.de/badw-it/DHParser.git
    $ cd DHParser
 
 The second command changes to the DHParser directory. Within this directory
