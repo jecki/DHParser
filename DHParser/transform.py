@@ -920,4 +920,3 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
         if child.tag_name in child_tags:
             context[0].new_error(node, 'Element "%s" cannot be nested inside "%s".' %
                                  (child.parser.name, node.parser.name))
-
