@@ -1947,6 +1947,11 @@ class Forward(Parser):
     def __str__(self):
         return self.__cycle_guard(lambda: str(self.parser), '...')
 
+    @property
+    def repr(self) -> str:
+        """Returns the parser's name if it has a name and repr()"""
+        return self.parser.name if self.parser.name else repr(self)
+
     def set(self, parser: Parser):
         """
         Sets the parser to which the calls to this Forward-object
