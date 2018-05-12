@@ -208,9 +208,9 @@ class StringView(collections.abc.Sized):
 
     def match(self, regex, flags=0):
         """Executes `regex.match` on the StringView object and returns the
-        result, which is either a match-object or None.
-        WARNING:  match.end(), match.span() etc. are mapped to the underlying text,
-                  not the StringView-object!!!
+        result, which is either a match-object or None. Keep in mind that
+        match.end(), match.span() etc. are mapped to the underlying text,
+        not the StringView-object!!!
         """
         return regex.match(self.text, pos=self.begin, endpos=self.end)
 
@@ -236,17 +236,16 @@ class StringView(collections.abc.Sized):
 
     def search(self, regex):
         """Executes regex.search on the StringView object and returns the
-        result, which is either a match-object or None.
-        WARNING:  match.end(), match.span() etc. are mapped to the underlying text,
-                  not the StringView-object!!!
+        result, which is either a match-object or None. Keep in mind that
+        match.end(), match.span() etc. are mapped to the underlying text,
+        not the StringView-object!!!
         """
         return regex.search(self.text, pos=self.begin, endpos=self.end)
 
     def finditer(self, regex):
         """Executes regex.finditer on the StringView object and returns the
-        iterator of match objects.
-        WARNING:  match.end(), match.span() etc. are mapped to the underlying text,
-                  not the StringView-object!!!
+        iterator of match objects. Keep in mind that match.end(), match.span()
+        etc. are mapped to the underlying text, not the StringView-object!!!
         """
         return regex.finditer(self.text, pos=self.begin, endpos=self.end)
 

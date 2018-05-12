@@ -45,23 +45,23 @@ Installing DHParser from the git repository
 In order to install DHParser from the git repository, open up a shell window
 and type::
 
-   $ git clone git@gitlab.lrz.de:badw-it/DHParser.git
-   $ cd DHParser
+    $ git clone https://gitlab.lrz.de/badw-it/DHParser.git
+    $ cd DHParser
 
 The second command changes to the DHParser directory. Within this directory
 you should recognise the following subdirectories and files. There are more
 files and directories for sure, but those will not concern us for now::
 
-   DHParser/            - the DHParser python packages
-   documentation/       - DHParser's documentation in html-form
-   documentation_source - DHParser's documentation in reStructedText-Format
-   examples/            - some exmamples for DHParser (mostly incomplete)
-   experimental/        - an empty directory for experimenting
-   test/                - DHParser's unit-tests
-   dhparser.py          - DHParser's command line tool for setting up projects
-   README.md            - General information about DHParser
-   LICENSE.txt          - DHParser's license. It's open source (hooray!)
-   Introduction.md      - An introduction and appetizer for DHParser
+    DHParser/            - the DHParser python packages
+    documentation/       - DHParser's documentation in html-form
+    documentation_source - DHParser's documentation in reStructedText-Format
+    examples/            - some exmamples for DHParser (mostly incomplete)
+    experimental/        - an empty directory for experimenting
+    test/                - DHParser's unit-tests
+    dhparser.py          - DHParser's command line tool for setting up projects
+    README.md            - General information about DHParser
+    LICENSE.txt          - DHParser's license. It's open source (hooray!)
+    Introduction.md      - An introduction and appetizer for DHParser
 
 In order to verify that the installation works, you can simply run the
 "dhparser.py" script and, when asked, chose "3" for the self-test. If the
@@ -73,8 +73,8 @@ Staring a new DHParser project
 In order to setup a new DHParser project, you run the ``dhparser.py``-script
 with the name of the new project. For the sake of the example, let's type::
 
-   $ python dhparser.py experimental/poetry
-   $ cd experimental/poetry
+    $ python dhparser.py experimental/poetry
+    $ cd experimental/poetry
 
 This creates a new DHParser-project with the name "poetry" in directory with
 the same name within the subdirectory "experimental". This new directory
@@ -95,7 +95,7 @@ grammar for sequences of words separated by whitespace. Now, since we alread
 have unit tests, our first exercise will be to run the unit tests by starting
 the script "tst_poetry_grammar.py"::
 
-   $ python tst_poetry_grammar.py
+    $ python tst_poetry_grammar.py
 
 This will run through the unit-tests in the grammar_tests directory and print
 their success or failure on the screen. If you check the contents of your
@@ -104,11 +104,11 @@ exists a new file "poetryCompiler.py" in the project directory. This is an
 auto-generated compiler-script for our DSL. You can use this script to compile
 any source file of your DSL, like "example.dsl". Let's try::
 
-   $ python poetryCompiler.py example.dsl
+    $ python poetryCompiler.py example.dsl
 
 The output is a block of pseudo-XML, looking like this::
 
-   <document>
+    <document>
      <:ZeroOrMore>
        <WORD>
          <:RegExp>Life</:RegExp>
@@ -219,12 +219,12 @@ but a walking shadow" Now, wouldn't it be nice, if we could end this sequence
 with a full stop to turn it into a proper sentence. So, open "examples.dsl"
 with a text editor and add a full stop::
 
-   Life is but a walking shadow.
+    Life is but a walking shadow.
 
 Now, try to compile "examples.dsl" with the compile-script::
 
-   $ python poetryCompiler.py example.dsl
-   example.dsl:1:29: Error: EOF expected; ".\n " found!
+    $ python poetryCompiler.py example.dsl
+    example.dsl:1:29: Error: EOF expected; ".\n " found!
 
 Since the grammar, obviously, did not allow full stops so far, the parser
 returns an error message. The error message is pretty self-explanatory in this
@@ -244,9 +244,9 @@ lines do not represent any grammar rules, but meta rules or so-called
 as whitespace-handling or whether the parser is going to be case-sensitive.
 Now, there are exactly three rules that make up this grammar::
 
-   document = ~ { WORD } §EOF
-   WORD     =  /\w+/~
-   EOF      =  !/./
+    document = ~ { WORD } §EOF
+    WORD     =  /\w+/~
+    EOF      =  !/./
 
 EBNF-Grammars describe the structure of a domain specific notation in top-down
 fashion. Thus, the first rule in the grammar describes the components out of
@@ -261,20 +261,20 @@ a "="-sign (which in this context can be understood as a definition signifier)
 and the definition of the rule on the right hand side.
 
 .. note:: Traditional parser technology for context-free grammars often
-   distinguishes two phases, *scanning* and *parsing*, where a lexical scanner
-   would take a stream of characters and yield a sequence of tokens and the
-   actual parser would then operate on the stream of tokens. DHParser,
-   however, is an instance of a *scannerless parser* where the functionality
-   of the lexical scanner is seamlessly integrated into the
-   parser. This is done by allowing regular expressions in the definiendum of
-   grammar symbols. The regular expressions do the work of the lexical
-   scanner.
+    distinguishes two phases, *scanning* and *parsing*, where a lexical scanner
+    would take a stream of characters and yield a sequence of tokens and the
+    actual parser would then operate on the stream of tokens. DHParser,
+    however, is an instance of a *scannerless parser* where the functionality
+    of the lexical scanner is seamlessly integrated into the
+    parser. This is done by allowing regular expressions in the definiendum of
+    grammar symbols. The regular expressions do the work of the lexical
+    scanner.
 
-   Theoretically, one could do without scanners or regular expressions.
-   Because regular languages are a subset of context-free languages, parsers
-   for context-free languages can do all the work that regular expressions can
-   do. But it makes things easier - and, in the case of DHParser, also faster
-   - to have them.
+    Theoretically, one could do without scanners or regular expressions.
+    Because regular languages are a subset of context-free languages, parsers
+    for context-free languages can do all the work that regular expressions can
+    do. But it makes things easier - and, in the case of DHParser, also faster
+    - to have them.
 
 In our case the text as a whole, conveniently named "document" (any other name
 would be allowed, too), consists of a leading whitespace, a possibly empty
@@ -325,7 +325,7 @@ possible solution is to add a dot-literal before the "§EOF"-component at the
 end of the definition of the "document"-rule. So let's do that. Change the
 line where the "document"-rule is defined to::
 
-   document = ~ { WORD } "." §EOF
+    document = ~ { WORD } "." §EOF
 
 As you can see, string-literals are simply denoted as strings between inverted
 commas in DHParser's variant of the EBNF-Grammar. Now, before we can compile
@@ -333,7 +333,7 @@ the file "example.dsl", we will have to regenerate the our parser, because we
 have changed the grammar. In order to recompile, we simply run the test-script
 again::
 
-   $ python tst_poetry_grammar.py
+    $ python tst_poetry_grammar.py
 
 But what is that? A whole lot of error messages? Well, this it not surprising,
 because we change the grammar, some of our old test-cases fail with the new
@@ -345,13 +345,13 @@ failed, "grammar_tests/02_test_document.ini", in the editor and add full stops
 at the end of the "match"-cases and remove the full stop at the end of the
 "fail"-case::
 
-   [match:document]
-   M1: """This is a sequence of words
+    [match:document]
+    M1: """This is a sequence of words
        extending over several lines."""
-   M2: """  This sequence contains leading whitespace."""
+    M2: """  This sequence contains leading whitespace."""
 
-   [fail:document]
-   F1: """This test should fail, because neither
+    [fail:document]
+    F1: """This test should fail, because neither
        comma nor full have been defined anywhere"""
 
 The format of the test-files should be pretty self-explanatory. It is a simple
@@ -369,7 +369,7 @@ and you'll see that no errors get reported any more.
 Finally, we can recompile out "example.dsl"-file, and by its XML output we can
 tell that it worked::
 
-   $ python poetryCompiler.py example.dsl
+    $ python poetryCompiler.py example.dsl
 
 So far, we have seen *in nuce* how the development workflow for a building up
 DSL-grammar goes. Let's take this a step further by adding more capabilities
@@ -383,21 +383,21 @@ So we'll extend our grammar a little further so that it can capture paragraphs
 of sentences. To see, where we are heading, let's first start a new example
 file, let's call it "macbeth.dsl" and enter the following lines::
 
-   Life’s but a walking shadow, a poor player that struts and frets his hour
-   upon the stage and then is heard no more. It is a tale told by an idiot,
-   full of sound and fury, signifying nothing.
+    Life’s but a walking shadow, a poor player that struts and frets his hour
+    upon the stage and then is heard no more. It is a tale told by an idiot,
+    full of sound and fury, signifying nothing.
 
 What have we got, there? We've got a paragraph that consists of several
 sentences each of which ends with a full stop. The sentences themselves can
 consist of different parts which a separated by a comma. If, so far, we have
 got a clear idea (in verbal terms) of the structure of texts in our DSL, we
-can now try to formulate this in the grammar.
+can now try to formulate this in the grammar.::
 
-   document = ~ { sentence } §EOF
-   sentence = part {"," part } "."
-   part     = { WORD }              # a subtle mistake, right here!
-   WORD     =  /\w+/~               # something forgotten, here!
-   EOF      =  !/./
+    document = ~ { sentence } §EOF
+    sentence = part {"," part } "."
+    part     = { WORD }              # a subtle mistake, right here!
+    WORD     =  /\w+/~               # something forgotten, here!
+    EOF      =  !/./
 
 The most important new part is the grammar rule "sentence". It reads as this:
 A sentence is a part of a sentence potentially followed by a repeated sequence
@@ -415,25 +415,25 @@ code above?) For all less intelligent people, like me: Let's be prudent and -
 since the grammar has become more complex - add a few test cases. This should
 make it easier to locate any errors. So open up an editor with a new file in
 the tests subdirectory, say ``grammar_tests/03_test_sentence.ini`` (Test files
-should always contain the component "test_" in the filename, otherwise they
+should always contain the component `test_` in the filename, otherwise they
 will be overlooked by DHParser's unit testing subsystem) and enter a few
 test-cases like these::
 
-   [match:sentence]
-   M1: """It is a tale told by an idiot,
+    [match:sentence]
+    M1: """It is a tale told by an idiot,
       full of sound and fury, signifying nothing."""
-   M2: """Plain old sentence."""
+    M2: """Plain old sentence."""
 
-   [fail:sentence]
-   F1: """Ups, a full stop is missing"""
-   F2: """No commas at the end,."""
+    [fail:sentence]
+    F1: """Ups, a full stop is missing"""
+    F2: """No commas at the end,."""
 
 Again, we recompile the grammar and run the test at the same time by running
 the testing-script::
 
-   $ python tst_poetry_grammar.py
-   Errors found by unit test "03_test_sentence.ini":
-   Fail test "F2" for parser "sentence" yields match instead of expected failure!
+    $ python tst_poetry_grammar.py
+    Errors found by unit test "03_test_sentence.ini":
+    Fail test "F2" for parser "sentence" yields match instead of expected failure!
 
 Too bad, something went wrong here. But what? Didn't the definition of the
 rule "sentence" make sure that parts of sentences are, if at all, only be
@@ -442,19 +442,19 @@ come that between the last comma and the full stop there is nothing but empty
 space? Ah, there's the rub! If we look into our grammar, how parts of
 sentences have been defined, we find that the rule::
 
-   part = { WORD }
+    part = { WORD }
 
 defines a part of a sentence as a sequence of *zero* or more WORDs. This
 means that a string of length zero also counts as a valid part of a sentence.
 Now in order to avoid this, we could write::
 
-   part = WORD { WORD }
+    part = WORD { WORD }
 
 This definition makes sure that there is at least on WORD in a part. Since the
 case that at least one item is needed occurs rather frequently in grammars,
 DHParser offers a special syntax for this case::
 
-   part = { WORD }+
+    part = { WORD }+
 
 (The plus sign "+" must always follow directly after the curly brace "}"
 without any whitespace in between, otherwise DHParser won't understannd it.)
@@ -463,9 +463,9 @@ another level, if the rule for WORD would match empty strings as well. Let's
 quickly add a test case for this to the file
 ``grammar_tests/01_test_word.ini``::
 
-   [fail:WORD]
-   F1: two words
-   F2: ""
+    [fail:WORD]
+    F1: two words
+    F2: ""
 
 Thus, we are sure to be warned in case the definition of rule "WORD" matches
 the empty string. Luckily, it does not do so now. But it might happen that we
@@ -474,8 +474,8 @@ about this subtlety and introduce the same error again. With a test case we
 can reduce the risk of such a regression error. This time the tests run
 through, nicely. So let's try the parser on our new example::
 
-   $ python poetryCompiler.py macbeth.dsl
-   macbeth.dsl:1:1: Error: EOF expected; "Life’s but" found!
+    $ python poetryCompiler.py macbeth.dsl
+    macbeth.dsl:1:1: Error: EOF expected; "Life’s but" found!
 
 That is strange. Obviously, there is an error right at the beginning (line 1
 column 1). But what could possibly be wrong with the word "Life". Now you might
@@ -497,7 +497,7 @@ where the parser reached the farthest into the text. In order to receive the
 parsing history, you need to run the compiler-script again with the debugging
 option::
 
-   $ python poetryCompiler.py macbeth.dsl
+    $ python poetryCompiler.py macbeth.dsl
 
 You will receive the same error messages as before. but this time various
 kinds of debugging information have been written into a new created
@@ -509,7 +509,7 @@ open the file "macbeth_full_parser.log.html" in an internet-browser. As the
 parsing history tends to become quite long, this usually takes a while, but
 luckily not in the case of our short demo example::
 
-   $ firefox LOGS/macbeth_full_parser.log.html &
+    $ firefox LOGS/macbeth_full_parser.log.html &
 
 .. image:: parsing_history.png
 
@@ -544,8 +544,8 @@ grammar we first add another test case to capture this kind of error. Since we
 have decided that "Life’s" should be parsed as a singe word, let's open the
 file "grammar_tests/01_test_word.ini" and add the following test::
 
-   [match:WORD]
-   M3: Life’s
+    [match:WORD]
+    M3: Life’s
 
 To be sure that the new test captures the error we have found you might want
 to run the script "tst_poetry_grammar.py" and verify that it reports the
@@ -579,7 +579,7 @@ macbeth.dsl``, you might find yourself not being able to avoid the impression
 that the output is rather verbose. Just looking at the beginning of the
 output, we find::
 
-   <document>
+    <document>
        <:ZeroOrMore>
            <sentence>
                <part>
@@ -591,7 +591,7 @@ output, we find::
                        <:RegExp>but</:RegExp>
                        <:Whitespace> </:Whitespace>
                    </WORD>
-   ...
+    ...
 
 But why do we need to know all those details! Why would we need a
 ":ZeroOrMore" element inside the "<document>" element, if the
@@ -630,7 +630,7 @@ Technically, these operators are simply Python-functions. DHParser comes with a
 rich set of predefined operators. Should these not suffice, you
 can easily write your own. How does this look like? ::
 
-   poetry_AST_transformation_table = {
+    poetry_AST_transformation_table = {
        "+": remove_empty,
        "document": [],
        "sentence": [],
@@ -639,7 +639,7 @@ can easily write your own. How does this look like? ::
        "EOF": [],
        ":Token, :RE": reduce_single_child,
        "*": replace_by_single_child
-   }
+    }
 
 You'll find this table in the script ``poetryCompiler.py``, which is also the
 place where you edit the table, because then it is automatically used when
@@ -670,20 +670,20 @@ attaching the child's children or content directly to the parent node. We'll see
 what this means and how this works, briefly.
 
 .. caution:: Once the compiler-script "xxxxCompiler.py" has been generated, the
-   *only* part that is changed after editing and extending the grammar is the
-   parser-part of this script (i.e. the class derived from class Grammar),
-   because this part is completely auto-generated and can therefore be
-   overwritten safely. The other parts of that script, including the
-   AST-transformation-dictionary, if never changed once it has been generated,
-   because it needs to be filled in by hand by the designer of the DSL and the
-   hand-made changes should not be overwritten. There it is left as it is when
-   regenerating the parser. However, this means, if you add symbols to your
-   grammar later, you will not find them as keys in the
-   AST-transformation-table, but you'll have to add them yourself.
+    *only* part that is changed after editing and extending the grammar is the
+    parser-part of this script (i.e. the class derived from class Grammar),
+    because this part is completely auto-generated and can therefore be
+    overwritten safely. The other parts of that script, including the
+    AST-transformation-dictionary, if never changed once it has been generated,
+    because it needs to be filled in by hand by the designer of the DSL and the
+    hand-made changes should not be overwritten. There it is left as it is when
+    regenerating the parser. However, this means, if you add symbols to your
+    grammar later, you will not find them as keys in the
+    AST-transformation-table, but you'll have to add them yourself.
 
-   The comments in the compiler-script clearly indicate which parts can be
-   edited by hand safely, i.e. without running the risk of being overwritten, an
-   which cannot.
+    The comments in the compiler-script clearly indicate which parts can be
+    edited by hand safely, i.e. without running the risk of being overwritten, an
+    which cannot.
 
 We can either specify no operator (empty list), a single operator or a list of
 operators for transforming a node. There is a difference between specifying an
@@ -707,11 +707,11 @@ uninformative child nodes by removing whitespace first and the reducing the
 single left over child node. The respective line in the AST-transformation-table
 in the compiler-script should be changed as follows::
 
-   "WORD": [remove_whitespace, reduce_single_child],
+    "WORD": [remove_whitespace, reduce_single_child],
 
 Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
 
-   <document>
+    <document>
      <:ZeroOrMore>
        <sentence>
          <part>
@@ -728,7 +728,7 @@ Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
            </:Token>
            <part>
              <WORD>a</WORD>
-   ...
+    ...
 
 It starts to become more readable and concise, but there are sill some oddities.
 Firstly, the Tokens that deliminate parts of sentences still contain whitespace.
@@ -737,8 +737,8 @@ Secondly, if several <part>-nodes follow each other in a <sentence>-node, the
 cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:Token>-nodes, have
 can do the same trick as with the WORD-nodes::
 
-   ":Token": [remove_whitespace, reduce_single_child],
-   ":RE": reduce_single_child,
+    ":Token": [remove_whitespace, reduce_single_child],
+    ":RE": reduce_single_child,
 
 As to the nested structure of the <part>-nodes within the <sentence>-node, this
 a rather typical case of syntactic artefacts that can be found in concrete
@@ -751,7 +751,7 @@ following each other within the sentence. Since this is a standard case,
 DHParser includes a special operator to "flatten" nested structures of this
 kind::
 
-   "sentence" = [flatten],
+    "sentence" = [flatten],
 
 The ``flatten`` operator recursively eliminates all intermediary anonymous child
 nodes. We do not need to do anything in particular for transforming the
@@ -775,7 +775,7 @@ that a particular text yields, but all possible outputs. Therefore, before
 specifying a transformation, we should also take a careful look at the grammar
 again, where "document" is defined as follows::
 
-   document = ~ { sentence } §EOF
+    document = ~ { sentence } §EOF
 
 As we can see a "document"-node may also contain whitespace and an EOF-marker.
 The reason why we don't find these in the output is that empty nodes have been
@@ -794,11 +794,11 @@ model, we can simply eliminate any whitespace before we apply the
 ``reduce_single_child``-operator, so we change the "document"-entry in the
 AST-transformation-table as thus::
 
-   "document": [remove_whitespace, reduce_single_child],
+    "document": [remove_whitespace, reduce_single_child],
 
 Now that everything is set, let's have a look at the result::
 
-   <document>
+    <document>
      <sentence>
        <part>
          <WORD>Life’s</WORD>
@@ -812,7 +812,7 @@ Now that everything is set, let's have a look at the result::
          <WORD>a</WORD>
          <WORD>poor</WORD>
          <WORD>player</WORD>
-   ...
+    ...
 
 That is much better. There is but one slight blemish in the output: While all
 nodes left a named nodes, i.e. nodes associated with a named parser, there are a
