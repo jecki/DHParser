@@ -138,7 +138,7 @@ class TestCompilerGeneration:
 
         sys.path.append(self.tmp)
         from TestCompilerGenerationCompiler import compile_src
-        # print(compile_src)
+        # print(kompiliere_mlw)
         result, errors, ast = compile_src(self.trivial_text)
 
 

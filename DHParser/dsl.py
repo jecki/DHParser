@@ -104,7 +104,7 @@ from DHParser import logging, is_filename, load_if_file, \\
 
 
 DHPARSER_MAIN = '''
-def compile_src(source, log_dir=''):
+def kompiliere_mlw(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     with logging(log_dir):
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, ast = compile_src(file_name, log_dir)
+        result, errors, ast = kompiliere_mlw(file_name, log_dir)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
