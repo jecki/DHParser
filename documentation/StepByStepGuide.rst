@@ -121,11 +121,11 @@ The output is a block of pseudo-XML, looking like this::
     ...
 
 Now, this does not look too helpful yet, partly, because it is cluttered with
-all sorts of seemingly superflous pseudo-XML-tags like "<:ZeroOrMore>".
+all sorts of seemingly superfluous pseudo-XML-tags like "<:ZeroOrMore>".
 However, you might notice that it contains the original sequence of words
-"Life is but a walkting shadow" in a structured form, where each word is
+"Life is but a walking shadow" in a structured form, where each word is
 (among other things) surrounded by <WORD>-tags. In fact, the output of the
-compiler script is a pseudo-XML-representation of the *contrete syntax tree*
+compiler script is a pseudo-XML-representation of the *concrete syntax tree*
 of our "example.dsl"-document according the grammar specified in "poetry.ebnf"
 (which we haven't looked into yet, but we will do so soon).
 
@@ -146,7 +146,7 @@ Generally speaking, the compilation process consists of three stages:
 3. Compiling. This turns the AST into anything you'd like, for example, an
    XML-representation or a relational database record.
 
-Now, DHParser can fully automize the generation of a parser from a
+Now, DHParser can fully automatize the generation of a parser from a
 syntax-description in EBNF-form, like our "poetry.ebnf", but it cannot
 automatize the transformation from the concrete into the abstract syntax tree
 (which for the sake of brevity we will simply call "AST-Transformation" in the
@@ -537,7 +537,7 @@ the text that still lies ahead and has not yet been parsed.
 
 In our concrete example, we can see that the parser "WORD" matches "Life", but
 not "Life’s" or "’s". And this ultimately leads to the failure of the parsing
-process as a whole. The simplemost solution would be to add the apostrophe to
+process as a whole. The most simple solution would be to add the apostrophe to
 the list of allowed characters in a word by changing the respective line in
 the grammar definition to ``WORD = /[\w’]+/``. Now, before we even change the
 grammar we first add another test case to capture this kind of error. Since we
