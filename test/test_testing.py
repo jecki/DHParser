@@ -202,7 +202,7 @@ class TestGrammarTest:
             files = os.listdir('REPORT')
             flag = False
             for file in files:
-                if re.match(r'\d+\.md', file):
+                if re.match(r'unit_test_\d+\.md', file):
                     os.remove(os.path.join('REPORT', file))
                 else:
                     flag = True

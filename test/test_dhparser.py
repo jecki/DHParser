@@ -26,25 +26,29 @@ import sys
 
 sys.path.extend(['../', './'])
 
+scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 class TestDHParserCommandLineTool:
     def setup(self):
+        self.cwd = os.getcwd()
+        os.chdir(scriptdir)
         if not os.path.exists('testdata'):
             os.mkdir('testdata')
 
     def teardown(self):
         if os.path.exists('testdata/neu') and os.path.isdir('testdata/neu'):
             shutil.rmtree('testdata/neu')
+        if os.path.exists('testdata') and not os.listdir('testdata'):
+            os.rmdir('testdata')
+        os.chdir(self.cwd)
 
     def test_dhparser(self):
-        # cwd = os.getcwd()
         os.system('python ../dhparser.py testdata/neu >/dev/null')
         os.system('python testdata/neu/tst_neu_grammar.py >/dev/null')
         os.system('python testdata/neu/neuCompiler.py testdata/neu/example.dsl >testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('<document>') >= 0
-        # os.chdir(cwd)
 
 if __name__ == "__main__":
     from DHParser.testing import runner
