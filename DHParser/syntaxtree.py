@@ -595,7 +595,7 @@ class Node(collections.abc.Sized):
         return self._tree_repr(' ' * indentation, opening, closing, density=1)
 
 
-    def select(self, match_function: Callable, include_root: bool=True) -> Iterator['Node']:
+    def select(self, match_function: Callable, include_root: bool=False) -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion.
 
@@ -623,7 +623,7 @@ class Node(collections.abc.Sized):
 
 
     def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
-                      include_root: bool=True) -> Iterator['Node']:
+                      include_root: bool=False) -> Iterator['Node']:
         """
         Returns an iterator that runs through all descendants that have one
         of the given tag names.

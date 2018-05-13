@@ -209,7 +209,7 @@ class TestNodeFind():
         assert matches[1] == parse_sxpr('(X F)')
         # check default: root is included in search:
         matchf2 = lambda node: match_tag_name(node, 'a')
-        assert list(tree.select(matchf2))
+        assert list(tree.select(matchf2, include_root=True))
         assert not list(tree.select(matchf2, include_root=False))
 
     def test_getitem(self):
