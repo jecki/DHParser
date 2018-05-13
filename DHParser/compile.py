@@ -90,8 +90,8 @@ class Compiler:
     """
 
     def __init__(self, grammar_name="", grammar_source=""):
-        self._reset()
         self.set_grammar_name(grammar_name, grammar_source)
+        self._reset()
 
     def _reset(self):
         self.tree = None   # type: Optional[RootNode]

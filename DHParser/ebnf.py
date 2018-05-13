@@ -481,7 +481,10 @@ class EBNFCompiler(Compiler):
                     self.grammar_name + '", grammar_source=""):',
                     '        super(' + self.grammar_name +
                     'Compiler, self).__init__(grammar_name, grammar_source)',
-                    r"        assert re.match('\w+\Z', grammar_name)", '']
+                    r"        assert re.match('\w+\Z', grammar_name)", '',
+                    '    def _reset(self):',
+                    '        super()._reset()',
+                    '        # initialize your variables here, not in the constructor!']
         for name in self.rules:
             method_name = Compiler.method_name(name)
             if name == self.root_symbol:
