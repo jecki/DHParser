@@ -75,6 +75,11 @@ class TestNode:
         assert str(self.unique_tree) == "ceh"
         assert str(self.recurr_tree) == "xey"
 
+    def test_select_subnodes(self):
+        tags = [node.tag_name
+                for node in self.unique_tree.select(lambda nd: True, include_root=True)]
+        assert ''.join(tags) == "abdfg", ''.join(tags)
+
     def test_find(self):
         found = list(self.unique_tree.select(lambda nd: not nd.children and nd.result == "e"))
         assert len(found) == 1

@@ -616,10 +616,9 @@ class Node(collections.abc.Sized):
         """
         if include_root and match_function(self):
             yield self
-        else:
-            for child in self.children:
-                for node in child.select(match_function, True):
-                    yield node
+        for child in self.children:
+            for node in child.select(match_function, True):
+                yield node
 
 
     def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
