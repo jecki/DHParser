@@ -308,13 +308,6 @@ class Node(collections.abc.Sized):
         return hash(self.tag_name)
 
 
-    def __deepcopy__(self, memodict={}):
-        result = copy.deepcopy(self.result)
-        other = Node(self.parser, result)
-        other._pos = self._pos
-        return other
-
-
     def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
         """
         Returns the child node with the given index if ``index_or_tagname`` is
