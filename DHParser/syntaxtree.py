@@ -566,23 +566,30 @@ class Node(collections.abc.Sized):
                 column.
         """
 
+        inline = False
+
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""            
             txt = ['<', node.tag_name]
             has_reserved_attrs = hasattr(node, '_xml_attr') \
                 and any (r in node.attributes for r in {'err', 'line', 'col'})
+            nonlocal inline
+            inline = False
             if hasattr(node, '_xml_attr'):
+                if '_inline' in node.attributes:
+                    inline = True
+                    del node.attributes['_inline']
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in node.errors))
-            return "".join(txt + [">\n"])
+            return "".join(txt + [">" if inline else ">\n"])
 
         def closing(node):
             """Returns the closing string for the representation of `node`."""            
-            return '\n</' + node.tag_name + '>'
+            return ('</' if inline else '\n</') + node.tag_name + '>'
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing, density=1)
