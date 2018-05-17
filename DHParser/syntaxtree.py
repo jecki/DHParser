@@ -466,7 +466,8 @@ class Node(collections.abc.Sized):
         return self._xml_attr
 
 
-    def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i, density=0) -> str:
+    def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
+                   density=0, inline=False) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -496,15 +497,17 @@ class Node(collections.abc.Sized):
 
         tail = tail.lstrip(None if density & 2 else '')
 
-        sep, inner_tab = ('', '') if hasattr(self, '_xml_attr') and '_inline' in self.attributes \
-            else ('\n', tab)
+        outer_tab = '' if inline else tab
+        inline = inline or hasattr(self, '_xml_attr') and '_inline' in self.attributes
+        sep, inner_tab = ('', '') if inline else ('\n', tab)
 
         if self.children:
             content = []
             for child in self.children:
-                subtree = child._tree_repr(tab, open_fn, close_fn, data_fn, density).split('\n')
+                subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
+                                           density, inline).split('\n')
                 content.append((sep + inner_tab).join(s for s in subtree))
-            return head + tab + (sep + inner_tab).join(content) + tail
+            return head + outer_tab + (sep + inner_tab).join(content) + tail
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
