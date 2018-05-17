@@ -219,7 +219,6 @@ class TestNodeFind():
 
     def test_getitem(self):
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
-        # print(tree.as_sxpr())
         assert tree[0] == parse_sxpr('(b X)')
         assert tree[2] == parse_sxpr('(e (X F))')
         try:
@@ -255,6 +254,12 @@ class TestSerialization:
         tree.attributes['attr2'] = "value2"
         tree3 = parse_sxpr('(A `(attr "value") `(attr2 "value2") "B")')
         assert tree.as_sxpr() == tree3.as_sxpr()
+
+    def test_xml_inlining(self):
+        tree = parse_sxpr('(A (B "C") (D "E"))')
+        tree.attributes['_inline'] = "1"
+        xml = tree.as_xml()
+        assert xml == "<A>\n  <B>C</B><D>E</D>\n</A>"
 
 
 

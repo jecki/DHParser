@@ -496,12 +496,15 @@ class Node(collections.abc.Sized):
 
         tail = tail.lstrip(None if density & 2 else '')
 
+        sep, inner_tab = ('', '') if hasattr(self, '_xml_attr') and '_inline' in self.attributes \
+            else ('\n', tab)
+
         if self.children:
             content = []
             for child in self.children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn, density).split('\n')
-                content.append('\n'.join((tab + s) for s in subtree))
-            return head + '\n'.join(content) + tail
+                content.append((sep + inner_tab).join(s for s in subtree))
+            return head + tab + (sep + inner_tab).join(content) + tail
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
@@ -534,7 +537,8 @@ class Node(collections.abc.Sized):
             txt = [left_bracket,  node.tag_name]
             # s += " '(pos %i)" % node.add_pos
             if hasattr(node, '_xml_attr'):
-                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
+                txt.extend(' `(%s "%s")' % (k, v)
+                           for k, v in node.attributes.items() if k != '_inline')
             if src:
                 txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
             # if node.error_flag:   # just for debugging error collecting
@@ -566,30 +570,24 @@ class Node(collections.abc.Sized):
                 column.
         """
 
-        inline = False
-
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""            
             txt = ['<', node.tag_name]
             has_reserved_attrs = hasattr(node, '_xml_attr') \
                 and any (r in node.attributes for r in {'err', 'line', 'col'})
-            nonlocal inline
-            inline = False
             if hasattr(node, '_xml_attr'):
-                if '_inline' in node.attributes:
-                    inline = True
-                    del node.attributes['_inline']
-                txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
+                txt.extend(' %s="%s"' % (k, v)
+                           for k, v in node.attributes.items() if k != '_inline')
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in node.errors))
-            return "".join(txt + [">" if inline else ">\n"])
+            return "".join(txt + [">\n"])
 
         def closing(node):
             """Returns the closing string for the representation of `node`."""            
-            return ('</' if inline else '\n</') + node.tag_name + '>'
+            return ('\n</') + node.tag_name + '>'
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing, density=1)
