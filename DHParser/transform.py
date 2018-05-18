@@ -462,11 +462,15 @@ def _replace_by(node: Node, child: Node):
     node.parser = child.parser
     node.errors.extend(child.errors)
     node.result = child.result
+    if hasattr(child, '_xml_attr'):
+        node.attributes.update(child.attributes)
 
 
 def _reduce_child(node: Node, child: Node):
     node.errors.extend(child.errors)
     node.result = child.result
+    if hasattr(child, '_xml_attr'):
+        node.attributes.update(child.attributes)
 
 
 # def _pick_child(context: List[Node], criteria: CriteriaType):
@@ -826,11 +830,42 @@ remove_expendables = remove_children_if(is_expendable)
 remove_anonymous_expendables = remove_children_if(lambda ctx: is_anonymous(ctx)
                                                   and is_expendable(ctx))
 remove_anonymous_tokens = remove_children_if(lambda ctx: is_token(ctx) and is_anonymous(ctx))
-remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
-remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
-remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)
+# remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
+# remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
+# remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)
 remove_infix_operator = keep_children(slice(0, None, 2))
 remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
+
+
+def remove_first(context: List[Node]):
+    """Removes the first non-whitespace child."""
+    node = context[-1]
+    if node.children:
+        for i, child in enumerate(node.children):
+            if child.parser.ptype != WHITESPACE_PTYPE:
+                break
+        else:
+            return
+        node.result = node.children[:i] + node.children[i+1:]
+
+
+def remove_last(context: List[Node]):
+    """Removes the last non-whitespace child."""
+    node = context[-1]
+    if node.children:
+        for i, child in enumerate(reversed(node.children)):
+            if child.parser.ptype != WHITESPACE_PTYPE:
+                break
+        else:
+            return
+        i = len(node.children) - i - 1
+        node.result = node.children[:i] + node.children[i+1:]
+
+
+def remove_brackets(context: List[Node]):
+    """Removes the first and the last non-whitespace child."""
+    remove_first(context)
+    remove_last(context)
 
 
 @transformation_factory(collections.abc.Set)
