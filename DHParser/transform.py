@@ -293,7 +293,7 @@ def traverse(root_node: Node,
         node = context[-1]
         if node.children:
             context.append(ZOMBIE_NODE)
-            for child in node.result:
+            for child in node.children:
                 context[-1] = child
                 traverse_recursive(context)  # depth first
             context.pop()
