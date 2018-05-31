@@ -467,7 +467,7 @@ class Node(collections.abc.Sized):
 
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
-                   density=0, inline=False) -> str:
+                   density=0, inline=False, inline_fn=lambda node: False) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -498,14 +498,14 @@ class Node(collections.abc.Sized):
         tail = tail.lstrip(None if density & 2 else '')
 
         outer_tab = '' if inline else tab
-        inline = inline or hasattr(self, '_xml_attr') and '_inline' in self.attributes
+        inline = inline or inline_fn(self)
         sep, inner_tab = ('', '') if inline else ('\n', tab)
 
         if self.children:
             content = []
             for child in self.children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline).split('\n')
+                                           density, inline, inline_fn).split('\n')
                 content.append((sep + inner_tab).join(s for s in subtree))
             return head + outer_tab + (sep + inner_tab).join(content) + tail
 
@@ -518,8 +518,8 @@ class Node(collections.abc.Sized):
             return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str = None, compact: bool = False, showerrors: bool = True,
-                indentation: int = 2) -> str:
+    def as_sxpr(self, src: str = None, showerrors: bool = True, indentation: int = 2,
+                compact: bool = False) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
 
@@ -540,8 +540,7 @@ class Node(collections.abc.Sized):
             txt = [left_bracket,  node.tag_name]
             # s += " '(pos %i)" % node.add_pos
             if hasattr(node, '_xml_attr'):
-                txt.extend(' `(%s "%s")' % (k, v)
-                           for k, v in node.attributes.items() if k != '_inline')
+                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
             if src:
                 txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
             # if node.error_flag:   # just for debugging error collecting
@@ -563,7 +562,8 @@ class Node(collections.abc.Sized):
         return self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
 
 
-    def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2) -> str:
+    def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2,
+               inline_tags: Set[str]=set(), omit_tags: Set[str]=set()) -> str:
         """
         Returns content as XML-tree.
 
@@ -571,16 +571,24 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position will also be reported as line and
                 column.
+            inline_tags:  A set of tag names, the content of which will always be written
+                on a single line, unless it contains explicit line feeds ('\n').
+            omit_tags:  A set of tags from which only the content will be printed, but
+                neither the opening tag nor its attributes nor the closing tag. This
+                allows producing a mix of plain text and child tags in the output,
+                which otherwise is not supported by the Node object, because it
+                requires its content to be either a tuple of children or string content.
         """
 
         def opening(node) -> str:
-            """Returns the opening string for the representation of `node`."""            
+            """Returns the opening string for the representation of `node`."""
+            if node.tag_name in omit_tags:
+                return ''
             txt = ['<', node.tag_name]
             has_reserved_attrs = hasattr(node, '_xml_attr') \
                 and any (r in node.attributes for r in {'err', 'line', 'col'})
             if hasattr(node, '_xml_attr'):
-                txt.extend(' %s="%s"' % (k, v)
-                           for k, v in node.attributes.items() if k != '_inline')
+                txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors and not has_reserved_attrs:
@@ -589,11 +597,21 @@ class Node(collections.abc.Sized):
             return "".join(txt + [">\n"])
 
         def closing(node):
-            """Returns the closing string for the representation of `node`."""            
+            """Returns the closing string for the representation of `node`."""
+            if node.tag_name in omit_tags:
+                return ''
             return ('\n</') + node.tag_name + '>'
 
+        def inlining(node):
+            """Returns True, if `node`'s tag name is contained in `inline_tags`,
+            thereby signalling that the children of this node shall not be
+            printed on several lines to avoid unwanted gaps in the output.
+            """
+            return node.tag_name in inline_tags
+
         line_breaks = linebreaks(src) if src else []
-        return self._tree_repr(' ' * indentation, opening, closing, density=1)
+        return self._tree_repr(' ' * indentation, opening, closing,
+                               density=1, inline_fn=inlining)
 
 
     def select(self, match_function: Callable, include_root: bool=False) -> Iterator['Node']:

@@ -257,12 +257,12 @@ class TestSerialization:
 
     def test_xml_inlining(self):
         tree = parse_sxpr('(A (B "C") (D "E"))')
-        tree.attributes['_inline'] = "1"
-        xml = tree.as_xml()
+        # obsolete: tree.attributes['_inline'] = "1"
+        xml = tree.as_xml(inline_tags={'A'})
         assert xml == "<A>\n  <B>C</B><D>E</D>\n</A>"
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
-        tree.attributes['_inline'] = "1"
-        xml = tree.as_xml()
+        # obsolete: tree.attributes['_inline'] = "1"
+        xml = tree.as_xml(inline_tags={'A'})
         assert xml == "<A>\n  <B><C>D</C><E>F</E></B><G>H</G>\n</A>"
 
 
