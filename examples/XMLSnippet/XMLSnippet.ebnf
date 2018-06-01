@@ -1,0 +1,43 @@
+# XMLSnippet-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
+@ literalws   = right           # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/           # comments range from a '#'-character to the end of the line
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+
+
+#######################################################################
+#
+#  Structure and Components
+#
+#######################################################################
+
+
+document        = prolog element EOF
+prolog          = ""
+xml             = { element | text | comment }
+element         = single_tag | tag_pair
+single_tag      = "<" name attributes "/>"
+tag_pair        = opening_tag xml closing_tag
+opening_tag     = "<" tag_name attributes ">"
+closing_tag     = "</" ::tag_name ">"
+attributes      = { attribute }
+attribute       = name "=" '"' content '"'
+
+name            = IDENTIFIER
+tag_name        = IDENTIFIER
+
+#######################################################################
+#
+#  Regular Expressions
+#
+#######################################################################
+
+WORD     =  /\w+/~      # a sequence of letters, optional trailing whitespace
+EOF      =  !/./        # no more characters ahead, end of file reached

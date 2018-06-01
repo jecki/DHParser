@@ -1,13 +1,14 @@
-# XML
+# XMLSnippet
 
-This is a complete XML-Parser, see: https://www.w3.org/TR/REC-xml/
+A strongly simplified XML parser that can be used for inline XML within
+other markup languages like markdown.
 
 Author: Eckhart Arnold <eckhart.arnold@posteo.de>
 
 
 ## License
 
-XML is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
+XMLSnippet is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
 
 Copyright YEAR AUTHOR'S NAME <EMAIL>, AFFILIATION
 

@@ -974,7 +974,7 @@ class Whitespace(RegExp):
 #
 # WARNING: The following code is hard to maintain, because it
 # introduces a special case, i.e. a parser with child parsers that is
-# not a descandent of the NaryOperator and, because it itneracts
+# not a descendant of the NaryOperator and because it interacts
 # With the constructor of the Grammar class (see the instantiations of
 # the Whitespace-class, there).
 #

@@ -155,6 +155,22 @@ class TestRegex:
         assert node.parser.name == "regex"
         assert str(node) == 'abc+def'
 
+    def test_multilineRegex_wo_Comments(self):
+        mlregex = r"""
+        regex =  /\w+ 
+                  [+]  
+                  \w* /
+        """
+        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+        assert result
+        assert not messages, str(messages)
+        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        node = parser('abc+def', parser.regex)
+        assert not node.error_flag
+        assert node.parser.name == "regex"
+        assert str(node) == 'abc+def'
+
     def text_ignore_case(self):
         mlregex = r"""
         @ ignorecase = True
