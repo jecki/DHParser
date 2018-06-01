@@ -54,7 +54,7 @@ ignoreSectContents = IgnoreChars {'<![' ignoreSectContents ']]>' IgnoreChars}
 extParsedEnt    = [TextDecl] content
 TextDecl        = '<?xml' [VersionInfo] EncodingDecl ~ '?>'
 
-elementdecl     = '<!ELEMENT' S Name S contentspec ~ '>'
+elementdecl     = '<!ELEMENT' §S Name ~ contentspec ~ '>'
 contentspec     = EMPTY | ANY | Mixed | children
 EMPTY           = 'EMPTY'
 ANY             = 'ANY'
@@ -67,8 +67,8 @@ choice          = '(' ~ { ~ '|' ~ cp }+ ~ ')'
 cp              = (Name | choice | seq) ['?' | '*' | '+']
 seq             = '(' ~ cp { ~ ',' ~ cp } ~ ')'
 
-AttlistDecl     = '<!ATTLIST' S Name { S AttDef } ~ '>'
-AttDef          = Name S AttType S DefaultDecl
+AttlistDecl     = '<!ATTLIST' §S Name { ~ AttDef } ~ '>'
+AttDef          = Name ~ §AttType S DefaultDecl
 AttType         = StringType | TokenizedType | EnumeratedType
 StringType      = 'CDATA'
 TokenizedType   = ID | IDREF | IDREFS | ENTITY | ENTITIES | NMTOKEN | NMTOKENS
@@ -90,16 +90,16 @@ IMPLIED         = '#IMPLIED'
 FIXED           = ['#FIXED' S] AttValue
 
 EntityDecl      = GEDecl | PEDecl
-GEDecl          = '<!ENTITY' S Name S EntityDef ~ '>'
-PEDecl          = '<!ENTITY' S '%' S Name S PEDef ~ '>'
+GEDecl          = '<!ENTITY' S Name §S EntityDef ~ '>'
+PEDecl          = '<!ENTITY' S '%' §S Name S PEDef ~ '>'
 EntityDef       = EntityValue | ExternalID [NDataDecl]
 PEDef           = EntityValue | ExternalID
 
-NotationDecl    = '<!NOTATION' S Name ~ (ExternalID | PublicID) ~ '>'
+NotationDecl    = '<!NOTATION' §S Name ~ (ExternalID | PublicID) ~ '>'
 
-ExternalID      = 'SYSTEM' S SystemLiteral
-PublicID        = 'PUBLIC' S PubidLiteral
-NDataDecl       = 'NData' S Name
+ExternalID      = 'SYSTEM' §S SystemLiteral
+PublicID        = 'PUBLIC' §S PubidLiteral
+NDataDecl       = 'NData' §S Name
 
 
 #######################################################################
@@ -108,14 +108,14 @@ NDataDecl       = 'NData' S Name
 #
 #######################################################################
 
-element         = EmptyElemTag | STag content ETag
+element         = EmptyElemTag | STag §content ETag
 STag            = '<' TagName { ~ Attribute } ~ '>'
-ETag            = '</' ::TagName ~ '>'
+ETag            = '</' §::TagName ~ '>'
 
 EmptyElemTag    = '<' Name { ~ Attribute } ~ '/>'
 
 TagName         = Name
-Attribute       = Name ~ '=' ~ AttValue
+Attribute       = Name ~ §'=' ~ AttValue
 
 content         = [ CharData ]
                   { (element | Reference | CDSect | PI | Comment)
