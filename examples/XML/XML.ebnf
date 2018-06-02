@@ -19,11 +19,11 @@
 #######################################################################
 
 document        = prolog element [Misc] EOF
-prolog          = [ XMLDecl ] [Misc] [doctypedecl [Misc]]
+prolog          = [ ~ XMLDecl ] [Misc] [doctypedecl [Misc]]
 XMLDecl         = '<?xml' VersionInfo [EncodingDecl] [SDDecl] ~ '?>'
 
 VersionInfo     = ~ 'version' ~ '=' ~ ("'" VersionNum "'" | '"' VersionNum '"')
-VersionNum      = '1.' /[0-9]+/
+VersionNum      = /[0-9]+\.[0-9]+/
 
 EncodingDecl    = ~ 'encoding' ~ '=' ~ ("'" EncName "'" | '"' EncName '"')
 EncName         = /[A-Za-z][A-Za-z0-9._\-]*/
@@ -108,11 +108,11 @@ NDataDecl       = 'NData' §S Name
 #
 #######################################################################
 
-element         = EmptyElemTag | STag §content ETag
+element         = emptyElement | STag §content ETag
 STag            = '<' TagName { ~ Attribute } ~ '>'
 ETag            = '</' §::TagName ~ '>'
 
-EmptyElemTag    = '<' Name { ~ Attribute } ~ '/>'
+emptyElement    = '<' Name { ~ Attribute } ~ '/>'
 
 TagName         = Name
 Attribute       = Name ~ §'=' ~ AttValue
@@ -128,10 +128,10 @@ content         = [ CharData ]
 #
 #######################################################################
 
-EntityValue     = '"' { /[^%&"]/ | PEReference | Reference } '"'
-			    | "'" { /[^%&']/ | PEReference | Reference } "'"
-AttValue        = '"' { /[^<&"]/ | Reference } '"'
-			    | "'" { /[^<&']/ | Reference } "'"
+EntityValue     = '"' { /[^%&"]+/ | PEReference | Reference } '"'
+			    | "'" { /[^%&']+/ | PEReference | Reference } "'"
+AttValue        = '"' { /[^<&"]+/ | Reference } '"'
+			    | "'" { /[^<&']+/ | Reference } "'"
 SystemLiteral	= '"' /[^"]*/ '"' | "'" /[^']*/ "'"
 PubidLiteral    = '"' [PubidChars] '"'
                 | "'" [PubidCharsSingleQuoted] "'"

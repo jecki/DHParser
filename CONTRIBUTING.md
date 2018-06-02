@@ -76,7 +76,7 @@ For example if you know you are going to discard a whole branch starting
 from a certain node, it is a waste to transform all the child nodes
 first.
 
-As the tree is traversed anyway, there no good reason why certain
+As the tree is traversed anyway, there is no good reason why certain
 transformation routines should not already be called on the way up. Of
 course, as most routines more or less assume depth first, we would need
 two transformation tables one for the routines that are called on the
