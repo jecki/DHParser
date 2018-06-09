@@ -290,7 +290,7 @@ class TestSelfHosting:
         return errors
 
     def test_multiprocessing(self):
-        with Pool(processes=2) as pool:
+        with Pool() as pool:
             res = [pool.apply_async(self.multiprocessing_task, ()) for i in range(4)]
             errors = [r.get(timeout=10) for r in res]
         for i, e in enumerate(errors):
