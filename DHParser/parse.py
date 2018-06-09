@@ -1190,7 +1190,7 @@ class Option(UnaryOperator):
     with no content and does not move forward in the text.
 
     If the child-parser did match, ``Option`` returns the a node
-    with the node returnd by the child-parser as its single
+    with the node returned by the child-parser as its single
     child and the text at the position where the child-parser
     left it.
 
