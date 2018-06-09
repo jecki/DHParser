@@ -103,6 +103,8 @@ def unit_from_configfile(config_filename):
     Returns:
         A dictionary representing the unit tests.
     """
+    # TODO: issue a warning if the same match:xxx or fail:xxx block appears more than once
+
     def eat_comments(txt, pos):
         m = RX_COMMENT.match(txt, pos)
         while m:
