@@ -512,7 +512,7 @@ class Node(collections.abc.Sized):
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
-            gap = ' ' if head.rstrip()[-1] != '>' else ''
+            gap = ' ' if head and head.rstrip()[-1:] != '>' else ''
             return head.rstrip() + gap + data_fn(self.result) + tail.lstrip()
         else:
             return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
