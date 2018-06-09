@@ -713,30 +713,17 @@ class RootNode(Node):
         if node is not None:
             self.swallow(node)
 
-    # def _propagate_errors(self):
-    #     if not self.all_errors or not self.error_propagation:
-    #         return
-    #     self.all_errors.sort(key=lambda e: e.pos)
-    #     i = 0
-    #     for leaf in self.select(lambda nd: not nd.children, False):
-    #         leaf.errors = []
-    #         while i < len(self.all_errors) \
-    #                 and leaf.pos <= self.all_errors[i].add_pos < leaf.add_pos + leaf.len:
-    #             leaf._errors.append(self.all_errors[i])
-    #             i += 1
-    #         if i >= len(self.all_errors):
-    #             break
-    #
-    # def _propagate_new_error(self, error):
-    #     if self.error_propagation:
-    #         for leaf in self.select(lambda nd: not nd.children, True):
-    #             if leaf.pos <= error.add_pos < leaf.add_pos + leaf.len:
-    #                 leaf._errors.append(error)
-    #                 break
-    #         else:
-    #             assert False, "Error %s at pos %i out of bounds" % (str(error), error.add_pos)
-
     def swallow(self, node: Node) -> 'RootNode':
+        """Put `self` in the place of `node` by copying all its data.
+        Returns self.
+
+        This is done by the parse.Grammar object after
+        parsing has finished, so that the Grammar object always
+        returns a syntax tree rooted in a RootNode object.
+
+        It is possible to add errors to a RootNode object, before it
+        has actually swallowed the root of the syntax tree.
+        """
         self._result = node._result
         self.children = node.children
         self._len = node._len
