@@ -593,7 +593,7 @@ def replace_parser(context: List[Node], name: str):
     """
     node = context[-1]
     name, ptype = (name.split(':') + [''])[:2]
-    node.parser = MockParser(name, ptype)
+    node.parser = MockParser(name, ':' + ptype)
 
 
 @transformation_factory(collections.abc.Callable)
