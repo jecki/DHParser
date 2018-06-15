@@ -682,6 +682,7 @@ class XMLCompiler(Compiler):
 
     def on_document(self, node):
         self.tree.omit_tags.add('CharData')
+
         return self.fallback_compiler(node)
 
     def extract_attributes(self, node_sequence):
