@@ -259,7 +259,7 @@ class Node(collections.abc.Sized):
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self.errors = []               # type: List[Error]
+        self.errors = []                # type: List[Error]
         self._pos = -1                  # type: int
         # Assignment to self.result initializes the attributes _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
