@@ -63,6 +63,8 @@ class ParserBase:
     It is defined here, because Node objects require a parser object
     for instantiation.
     """
+    __slots__ = '_name', '_ptype'
+
     def __init__(self, name=''):  # , pbases=frozenset()):
         self._name = name  # type: str
         self._ptype = ':' + self.__class__.__name__  # type: str
@@ -124,6 +126,8 @@ class MockParser(ParserBase):
     syntax tree (re-)construction. In all other cases where a parser
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
+    __slots__ = ()
+
     def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
         assert not ptype or ptype[0] == ':'
         super().__init__(name)
@@ -141,6 +145,7 @@ class ZombieParser(MockParser):
     object is instantiated.
     """
     alive = False
+    __slots__ = ()
 
     def __init__(self):
         super(ZombieParser, self).__init__("__ZOMBIE__")
@@ -247,7 +252,7 @@ class Node(collections.abc.Sized):
             S-Expression-output.
     """
 
-    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', 'errors', '_xml_attr', '_content']
+    __slots__ = '_result', 'children', '_len', '_pos', 'parser', 'errors', '_xml_attr', '_content'
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -563,7 +568,7 @@ class Node(collections.abc.Sized):
 
 
     def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2,
-               inline_tags: Set[str]=set(), omit_tags: Set[str]=set()) -> str:
+               inline_tags: Set[str]=set(), omit_tags: Set[str]=set(), ) -> str:
         """
         Returns content as XML-tree.
 

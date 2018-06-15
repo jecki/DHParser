@@ -460,14 +460,14 @@ def _replace_by(node: Node, child: Node):
         child.parser = MockParser(node.parser.name, child.parser.ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node.parser = child.parser
-    node.errors.extend(child.errors)
+    # node.errors.extend(child.errors)
     node.result = child.result
     if hasattr(child, '_xml_attr'):
         node.attributes.update(child.attributes)
 
 
 def _reduce_child(node: Node, child: Node):
-    node.errors.extend(child.errors)
+    # node.errors.extend(child.errors)
     node.result = child.result
     if hasattr(child, '_xml_attr'):
         node.attributes.update(child.attributes)

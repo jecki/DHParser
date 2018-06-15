@@ -7,9 +7,11 @@
 #######################################################################
 
 
+from collections import OrderedDict
 from functools import partial
 import os
 import sys
+
 
 sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
 
@@ -675,9 +677,23 @@ class XMLCompiler(Compiler):
 
     def _reset(self):
         super()._reset()
-        # initialize your variables here, not in the constructor!
+        self.mock_parsers = dict()
+
     def on_document(self, node):
         return self.fallback_compiler(node)
+
+    def extract_attributes(self, node_sequence):
+        attributes = OrderedDict()
+        for node in node_sequence:
+            if node.tag_name == "Attribute":
+                assert node[0].tag_name == "Name"
+                assert node[1].tag_name == "ATTValue"
+                attributes[node[0].content] = node[1].content
+        return attributes
+
+    def get_parser(self, tag_name):
+        """Returns a mock parser with the given tag_name as parser name."""
+        return self.mock_parsers.setdefault(tag_name, MockParser(tag_name))
 
     # def on_prolog(self, node):
     #     return node
@@ -853,8 +869,14 @@ class XMLCompiler(Compiler):
     # def on_NDataDecl(self, node):
     #     return node
 
-    # def on_element(self, node):
-    #     return node
+    def on_element(self, node):
+        stag = node['STag']
+        attributes = self.extract_attributes(stag.children)
+        if attributes:
+            node.attributes.update(attributes)
+        node.parser = self.get_parser(stag['Name'].content)
+        node.result = node['content'].result
+        return node
 
     # def on_STag(self, node):
     #     return node
@@ -862,8 +884,13 @@ class XMLCompiler(Compiler):
     # def on_ETag(self, node):
     #     return node
 
-    # def on_EmptyElemTag(self, node):
-    #     return node
+    def on_emptyElement(self, node):
+        attributes = self.extract_attributes(node.children)
+        if attributes:
+            node.attributes.update(attributes)
+        node.parser = self.get_parser(node['Name'].content)
+        node.result = ''
+        return node
 
     # def on_TagName(self, node):
     #     return node
