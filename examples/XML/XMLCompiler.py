@@ -32,7 +32,8 @@ from DHParser import logging, is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, MockParser
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, MockParser, \
+    ZOMBIE_NODE
 
 
 #######################################################################
@@ -680,14 +681,15 @@ class XMLCompiler(Compiler):
         self.mock_parsers = dict()
 
     def on_document(self, node):
+        self.tree.omit_tags.add('CharData')
         return self.fallback_compiler(node)
 
     def extract_attributes(self, node_sequence):
         attributes = OrderedDict()
         for node in node_sequence:
             if node.tag_name == "Attribute":
-                assert node[0].tag_name == "Name"
-                assert node[1].tag_name == "ATTValue"
+                assert node[0].tag_name == "Name", node.as_sexpr()
+                assert node[1].tag_name == "AttValue", node.as_sxpr()
                 attributes[node[0].content] = node[1].content
         return attributes
 
@@ -875,7 +877,7 @@ class XMLCompiler(Compiler):
         if attributes:
             node.attributes.update(attributes)
         node.parser = self.get_parser(stag['Name'].content)
-        node.result = node['content'].result
+        node.result = self.compile_children(node.get('content', ZOMBIE_NODE))
         return node
 
     # def on_STag(self, node):
@@ -890,6 +892,7 @@ class XMLCompiler(Compiler):
             node.attributes.update(attributes)
         node.parser = self.get_parser(node['Name'].content)
         node.result = ''
+        self.tree.empty_tags.add(node.tag_name)
         return node
 
     # def on_TagName(self, node):
@@ -1046,6 +1049,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.customized_XML() if isinstance(result, Node) else result)
     else:
         print("Usage: XMLCompiler.py [FILENAME]")

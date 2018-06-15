@@ -368,6 +368,20 @@ class Node(collections.abc.Sized):
         #     return False
 
 
+    def get(self, index_or_tagname: Union[int, str],
+            surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
+        """Returns the child node with the given index if ``index_or_tagname``
+        is an integer or the first child node with the given tag name. If no
+        child with the given index or tag_name exists, the ``surrogate`` is
+        returned instead. This mimics the behaviour of Python's dictionary's
+        get-method.
+        """
+        try:
+            return self[index_or_tagname]
+        except KeyError:
+            return surrogate
+
+
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
     def tag_name(self) -> str:
         """
@@ -525,7 +539,9 @@ class Node(collections.abc.Sized):
             return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str = None, showerrors: bool = True, indentation: int = 2,
+    def as_sxpr(self, src: str = None,
+                showerrors: bool = True,
+                indentation: int = 2,
                 compact: bool = False) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
@@ -534,7 +550,9 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
-            compact:  If True a compact representation is returned where
+            showerrors: If True, error messages will be shown.
+            indentation: The number of whitespaces for indentation
+            compact:  If True, a compact representation is returned where
                 brackets are omitted and only the indentation indicates the
                 tree structure.
         """
@@ -567,8 +585,12 @@ class Node(collections.abc.Sized):
         return self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
 
 
-    def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2,
-               inline_tags: Set[str]=set(), omit_tags: Set[str]=set()) -> str:
+    def as_xml(self, src: str = None,
+               showerrors: bool = True,
+               indentation: int = 2,
+               inline_tags: Set[str]=set(),
+               omit_tags: Set[str]=set(),
+               empty_tags: Set[str]=set()) -> str:
         """
         Returns content as XML-tree.
 
@@ -576,6 +598,8 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position will also be reported as line and
                 column.
+            showerrors: If True, error messages will be shown.
+            indentation: The number of whitespaces for indentation
             inline_tags:  A set of tag names, the content of which will always be written
                 on a single line, unless it contains explicit line feeds ('\n').
             omit_tags:  A set of tags from which only the content will be printed, but
@@ -583,6 +607,8 @@ class Node(collections.abc.Sized):
                 allows producing a mix of plain text and child tags in the output,
                 which otherwise is not supported by the Node object, because it
                 requires its content to be either a tuple of children or string content.
+            empty_tags:  A set of tags which shall be rendered as empty elements, e.g.
+                "<empty/>" instead of "<empty><empty>".
         """
 
         def opening(node) -> str:
@@ -599,11 +625,17 @@ class Node(collections.abc.Sized):
             if showerrors and node.errors and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in node.errors))
-            return "".join(txt + [">\n"])
+            if node.tag_name in empty_tags:
+                assert not node.result, ("Node %s with content %s is not an empty element!" %
+                                         (node.tag_name, str(node)))
+                ending = "/>\n"
+            else:
+                ending = ">\n"
+            return "".join(txt + [ending])
 
         def closing(node):
             """Returns the closing string for the representation of `node`."""
-            if node.tag_name in omit_tags:
+            if node.tag_name in omit_tags or node.tag_name in empty_tags:
                 return ''
             return ('\n</') + node.tag_name + '>'
 
@@ -716,6 +748,10 @@ class RootNode(Node):
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
+        # customization for XML-Representation
+        self.inline_tags = set()
+        self.omit_tags = set()
+        self.empty_tags = set()
 
     def swallow(self, node: Node) -> 'RootNode':
         """Put `self` in the place of `node` by copying all its data.
@@ -765,6 +801,14 @@ class RootNode(Node):
         """
         self.all_errors.sort(key=lambda e: e.pos)
         return self.all_errors
+
+    def customized_XML(self):
+        """Returns a customized XML representation of the tree.
+        See the docstring of `Node.as_xml()` for an explanation of the
+        customizations."""
+        return self.as_xml(inline_tags = self.inline_tags,
+                           omit_tags=self.omit_tags,
+                           empty_tags=self.empty_tags)
 
 
 ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')

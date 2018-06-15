@@ -207,7 +207,7 @@ def create_project(path: str):
     create_file('README.md', README_TEMPLATE.format(name=name))
     create_file('tst_%s_grammar.py' % name,
                 GRAMMAR_TEST_TEMPLATE.format(name=name, dhparserdir=dhparserdir))
-    create_file('example.dsl', 'Life is but a walking shadow\n')
+    create_file('example.xml', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     # The following is left to the user as an exercise
     # print('Creating file "%s".' % (name + 'Compiler.py'))

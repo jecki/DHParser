@@ -38,7 +38,7 @@ import os
 import re
 
 from DHParser.preprocess import strip_tokens, with_source_mapping, PreprocessorFunc
-from DHParser.syntaxtree import Node, RootNode
+from DHParser.syntaxtree import Node, RootNode, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
@@ -151,6 +151,16 @@ class Compiler:
             'on_expression'
         """
         return 'on_' + node_name
+
+    def compile_children(self, node: Node) -> StrictResultType:
+        """Compiles all children of the given node and returns the tuple
+        of the compiled children or the node's (potentially empty) result
+        in case the node does not have any children.
+        """
+        if node.children:
+            return tuple(self.compile(child) for child in node.children)
+        else:
+            return node.result
 
     def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on
