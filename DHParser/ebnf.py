@@ -511,7 +511,7 @@ class EBNFCompiler(Compiler):
             if entry not in symbols and not entry.startswith(":"):
                 messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
                                        'the transformation table!') % (entry, self.grammar_name),
-                                      Error.UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE, 0))
+                                      0, Error.UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE))
         return messages
 
 

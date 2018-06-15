@@ -274,7 +274,9 @@ class Node(collections.abc.Sized):
 
 
     def __str__(self):
-        s = "".join(str(child) for child in self.children) if self.children else self.content
+        # s = self._content if self._content is not None else \
+        #     "".join(str(child) for child in self.children) if self.children else self.content
+        s = self.content
         if self.errors:
             return ' <<< Error on "%s" | %s >>> ' % \
                    (s, '; '.join(e.message for e in self.errors))
@@ -548,8 +550,6 @@ class Node(collections.abc.Sized):
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
             if src:
                 txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
-            # if node.error_flag:   # just for debugging error collecting
-            #     txt += " HAS ERRORS"
             if showerrors and node.errors:
                 txt.append(" `(err `%s)" % ' '.join(str(err) for err in node.errors))
             return "".join(txt) + '\n'
@@ -568,7 +568,7 @@ class Node(collections.abc.Sized):
 
 
     def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2,
-               inline_tags: Set[str]=set(), omit_tags: Set[str]=set(), ) -> str:
+               inline_tags: Set[str]=set(), omit_tags: Set[str]=set()) -> str:
         """
         Returns content as XML-tree.
 
@@ -703,7 +703,7 @@ class Node(collections.abc.Sized):
 class RootNode(Node):
     """TODO: Add Documentation!!!
 
-        errors (list):  A list of all errors that have occured so far during
+        all_errors (list):  A list of all errors that have occured so far during
                 processing (i.e. parsing, AST-transformation, compiling)
                 of this tree.
 
@@ -713,7 +713,6 @@ class RootNode(Node):
     def __init__(self, node: Optional[Node] = None) -> 'RootNode':
         super().__init__(ZOMBIE_PARSER, '')
         self.all_errors = []
-        self.err_nodes_keep = []
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
@@ -744,7 +743,6 @@ class RootNode(Node):
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         node.errors.append(error)
-        self.err_nodes_keep.append(node)
         return self
 
     def new_error(self,
@@ -758,27 +756,15 @@ class RootNode(Node):
             message(str): A string with the error message.abs
             code(int):    An error code to identify the kind of error
         """
-        error = Error(message, code, node=node)
+        error = Error(message, node.pos, code)
         self.add_error(node, error)
         return self
 
     def collect_errors(self) -> List[Error]:
         """Returns the list of errors, ordered bv their position.
         """
-        # for node in self.err_nodes:  # lazy evaluation of positions
-        #     for err in node.errors:  # moved to error.Error.pos
-        #         err.pos = node.pos
         self.all_errors.sort(key=lambda e: e.pos)
-        for node in self.err_nodes_keep:  # redundant: consider removing Error.Error._node_keep
-            for error in node.errors:
-                assert error._pos < 0 or node.pos <= error._pos <= node.pos + len(node)
-                if error._pos < 0:
-                    error._pos = node.pos
-        self.err_nodes_keep = []
-        errors = self.all_errors
-        # for error in self.all_errors:
-        #     _ = error.pos
-        return errors
+        return self.all_errors
 
 
 ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')

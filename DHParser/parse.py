@@ -1258,9 +1258,9 @@ class ZeroOrMore(Option):
             if not node:
                 break
             if len(text) == n:
-                node.errors.append(Error("Infinite loop!", Error.MESSAGE, node=node))
+                node.errors.append(Error("Infinite loop!", node.pos, Error.MESSAGE))
                 infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
-                                            node=node)
+                                            node.pos)
             results += (node,)
         node = Node(self, results)
         if infinite_loop_error:
@@ -1308,9 +1308,9 @@ class OneOrMore(UnaryOperator):
             if not node:
                 break
             if len(text_) == n:
-                node.errors.append(Error("Infinite loop!", Error.MESSAGE, node=node))
+                node.errors.append(Error("Infinite loop!", node.pos, Error.MESSAGE))
                 infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
-                                            node=node)
+                                            node.pos)
             results += (node,)
         if results == ():
             return None, text
@@ -1375,11 +1375,11 @@ class Series(NaryOperator):
                     location = self.grammar.document_length__ - len(text_)
                     node = Node(self, text_[:i]).init_pos(location)
                     node.errors.append(Error("§ %s violation" % parser.repr,
-                                             Error.MESSAGE, location))
+                                             location, Error.MESSAGE))
                     if not mandatory_violation:
                         msg = '%s expected, "%s" found!' \
                               % (parser.repr, text_[:10].replace('\n', '\\n '))
-                        mandatory_violation = Error(msg, Error.MANDATORY_CONTINUATION, location)
+                        mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)
                     text_ = text_[i:]
             results += (node,)
             # if node.error_flag:  # break on first error
