@@ -255,6 +255,20 @@ class TestSerialization:
         tree3 = parse_sxpr('(A `(attr "value") `(attr2 "value2") "B")')
         assert tree.as_sxpr() == tree3.as_sxpr()
 
+    def test_sexpr(self):
+        tree = parse_sxpr('(A (B "C") (D "E"))')
+        s = tree.as_sxpr()
+        assert s == '(A\n  (B\n    "C"\n  )\n  (D\n    "E"\n  )\n)', s
+        tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
+        s = tree.as_sxpr()
+        assert s == '(A\n  (B\n    (C\n      "D"\n    )\n    (E\n      "F"\n    )' \
+            '\n  )\n  (G\n    "H"\n  )\n)', s
+        tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+        s = tree.as_sxpr()
+        assert s == '(A\n  (B\n    (C\n      "D"\n      "X"\n    )' \
+            '\n    (E\n      "F"\n    )\n  )\n  (G\n    " H "\n    " Y "\n  )\n)', s
+
+
     def test_xml_inlining(self):
         tree = parse_sxpr('(A (B "C") (D "E"))')
 

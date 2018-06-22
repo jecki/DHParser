@@ -530,15 +530,18 @@ class Node(collections.abc.Sized):
             for child in self.children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn)
-                subtree = [subtree] if inline else subtree.split('\n')
-                content.append((sep + usetab).join(s for s in subtree))
+                if subtree:
+                    subtree = [subtree] if inline else subtree.split('\n')
+                    content.append((sep + usetab).join(s for s in subtree))
             return head + usetab + (sep + usetab).join(content) + tail
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
+        if not inline and not head:
+            res = res.strip()
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
             gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
-            return head.rstrip() + gap + data_fn(self.result) + tail.lstrip()
+            return head.rstrip() + gap + data_fn(res) + tail.lstrip()
         else:
             return head + '\n'.join([usetab + data_fn(s) for s in res.split('\n')]) + tail
 
