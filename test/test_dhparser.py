@@ -45,10 +45,11 @@ class TestDHParserCommandLineTool:
     def test_dhparser(self):
         os.system('python ../dhparser.py testdata/neu >/dev/null')
         os.system('python testdata/neu/tst_neu_grammar.py >/dev/null')
-        os.system('python testdata/neu/neuCompiler.py testdata/neu/example.xml >testdata/neu/example.xml')
+        os.system('python testdata/neu/neuCompiler.py testdata/neu/example.dsl '
+                  '>testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
-        assert xml.find('<document>') >= 0
+        assert xml.find('<document>') >= 0, xml
 
 if __name__ == "__main__":
     from DHParser.testing import runner
