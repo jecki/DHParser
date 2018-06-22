@@ -644,7 +644,8 @@ class Node(collections.abc.Sized):
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
             """
-            return node.tag_name in inline_tags
+            return node.tag_name in inline_tags or (hasattr(node, '_xml_attr') \
+                and node.attributes.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing,
