@@ -26,7 +26,6 @@ parser classes are defined in the ``parse`` module.
 
 import collections.abc
 from collections import OrderedDict
-import copy
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
@@ -518,25 +517,30 @@ class Node(collections.abc.Sized):
 
         tail = tail.lstrip(None if density & 2 else '')
 
-        outer_tab = '' if inline else tab
         inline = inline or inline_fn(self)
-        sep, inner_tab = ('', '') if inline else ('\n', tab)
+        if inline:
+            head = head.rstrip()
+            tail = tail.lstrip()
+            usetab, sep = '', ''
+        else:
+            usetab, sep = tab, '\n'
 
         if self.children:
             content = []
             for child in self.children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline, inline_fn).split('\n')
-                content.append((sep + inner_tab).join(s for s in subtree))
-            return head + outer_tab + (sep + inner_tab).join(content) + tail
+                                           density, inline, inline_fn)
+                subtree = [subtree] if inline else subtree.split('\n')
+                content.append((sep + usetab).join(s for s in subtree))
+            return head + usetab + (sep + usetab).join(content) + tail
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
-            gap = ' ' if head and head.rstrip()[-1:] != '>' else ''
+            gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
             return head.rstrip() + gap + data_fn(self.result) + tail.lstrip()
         else:
-            return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
+            return head + '\n'.join([usetab + data_fn(s) for s in res.split('\n')]) + tail
 
 
     def as_sxpr(self, src: str = None,

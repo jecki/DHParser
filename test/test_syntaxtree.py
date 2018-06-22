@@ -259,18 +259,32 @@ class TestSerialization:
         tree = parse_sxpr('(A (B "C") (D "E"))')
 
         xml = tree.as_xml(inline_tags={'A'})
-        assert xml == "<A>\n  <B>C</B><D>E</D>\n</A>", xml
+        assert xml == "<A><B>C</B><D>E</D></A>", xml
 
-        assert tree.as_xml() != "<A>\n  <B>C</B><D>E</D>\n</A>", xml
+        assert tree.as_xml() == "<A>\n  <B>C</B>\n  <D>E</D>\n</A>", xml
 
         tree.attributes['xml:space'] = 'preserve'
         xml = tree.as_xml()
-        assert xml == '<A xml:space="preserve">\n  <B>C</B><D>E</D>\n</A>', xml
+        assert xml == '<A xml:space="preserve"><B>C</B><D>E</D></A>', xml
 
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
 
+        xml = tree.as_xml(inline_tags={'B'})
+        assert xml == "<A>\n  <B><C>D</C><E>F</E></B>\n  <G>H</G>\n</A>", xml
         xml = tree.as_xml(inline_tags={'A'})
-        assert xml == "<A>\n  <B><C>D</C><E>F</E></B><G>H</G>\n</A>", xml
+        assert xml == "<A><B><C>D</C><E>F</E></B><G>H</G></A>", xml
+
+        tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+        xml = tree.as_xml()
+        assert xml == '<A>\n  <B>\n    <C>\n      D\n      X\n    </C>\n    ' \
+            '<E>F</E>\n  </B>\n  <G>\n     H \n     Y \n  </G>\n</A>', xml
+        xml = tree.as_xml(inline_tags={'A'})
+        assert xml == '<A><B><C>D\nX</C><E>F</E></B><G> H \n Y </G></A>', xml
+
+    # def test_xml2(self):
+    #     tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+    #     print(tree.as_xml())
+    #     print(tree.as_xml(inline_tags={'A'}))
 
 
 if __name__ == "__main__":
