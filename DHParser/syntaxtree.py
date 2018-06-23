@@ -523,7 +523,8 @@ class Node(collections.abc.Sized):
             tail = tail.lstrip()
             usetab, sep = '', ''
         else:
-            usetab, sep = tab, '\n'
+            usetab = tab if head else ''    # no indentation if tag is already omitted
+            sep = '\n'
 
         if self.children:
             content = []
@@ -537,6 +538,7 @@ class Node(collections.abc.Sized):
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
         if not inline and not head:
+            # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
             res = res.strip()
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
@@ -635,7 +637,7 @@ class Node(collections.abc.Sized):
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
-                ending = "/>\n"
+                ending = "/>\n" if not node.tag_name[0] == '?' else "?>\n"
             else:
                 ending = ">\n"
             return "".join(txt + [ending])

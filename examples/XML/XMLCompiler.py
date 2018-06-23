@@ -527,7 +527,7 @@ def get_transformer() -> TransformationFunc:
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
     "+": [remove_empty, remove_anonymous_tokens, remove_whitespace, remove_nodes("S")],
-    "document": [],
+    "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
     "prolog": [],
     "XMLDecl": [],
     "VersionInfo": [reduce_single_child],
@@ -675,15 +675,11 @@ class XMLCompiler(Compiler):
     def __init__(self, grammar_name="XML", grammar_source=""):
         super(XMLCompiler, self).__init__(grammar_name, grammar_source)
         assert re.match('\w+\Z', grammar_name)
+        self.cleanup_whitespace = True  # remove empty CharData from mixed elements
 
     def _reset(self):
         super()._reset()
         self.mock_parsers = dict()
-
-    def on_document(self, node):
-        self.tree.omit_tags.add('CharData')
-        self.tree.inline_tags.update({'to', 'from', 'heading', 'body', 'remark'})
-        return self.fallback_compiler(node)
 
     def extract_attributes(self, node_sequence):
         attributes = OrderedDict()
@@ -698,11 +694,42 @@ class XMLCompiler(Compiler):
         """Returns a mock parser with the given tag_name as parser name."""
         return self.mock_parsers.setdefault(tag_name, MockParser(tag_name))
 
+    def validity_constraint(self, node, condition, err_msg):
+        """If `condition` is False an error is issued."""
+        if not condition:
+            self.tree.add_error(node, err_msg)
+
+    def value_constraint(self, node, value, allowed):
+        """If value is not in allowed, an error is issued."""
+        self.constraint(node, value in allowed,
+            'Invalid value "%s" for "standalone"! Must be one of %s.' % (value, str(allowed)))
+
+    def on_document(self, node):
+        self.tree.omit_tags.update({'CharData', 'document'})
+        # TODO: Remove the following line. It is specific for testing with example.xml!
+        self.tree.inline_tags.update({'to', 'from', 'heading', 'body', 'remark'})
+        return self.fallback_compiler(node)
+
     # def on_prolog(self, node):
     #     return node
 
-    # def on_XMLDecl(self, node):
-    #     return node
+    def on_XMLDecl(self, node):
+        attributes = dict()
+        for child in node.children:
+            s = child.content
+            if child.tag_name == "VersionInfo":
+                attributes['version'] = s
+            elif child.tag_name == "EncodingDecl":
+                attributes['encoding'] = s
+            elif child.tag_name == "SDDecl":
+                attributes['standalone'] = s
+                self.value_constraint(node, s, {'yes', 'no'})
+        if attributes:
+            node.attributes.update(attributes)
+        node.result = ''
+        self.tree.empty_tags.add('?xml')
+        node.parser = self.get_parser('?xml')
+        return node
 
     # def on_VersionInfo(self, node):
     #     return node
@@ -874,11 +901,23 @@ class XMLCompiler(Compiler):
 
     def on_element(self, node):
         stag = node['STag']
+        tag_name = stag['Name'].content
         attributes = self.extract_attributes(stag.children)
+        preserve_whitespace = tag_name in self.tree.inline_tags
         if attributes:
             node.attributes.update(attributes)
-        node.parser = self.get_parser(stag['Name'].content)
-        node.result = self.compile_children(node.get('content', ZOMBIE_NODE))
+            preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
+        node.parser = self.get_parser(tag_name)
+        content = self.compile_children(node.get('content', ZOMBIE_NODE))
+        if len(content) == 1:
+            if content[0].tag_name == "CharData":
+                # reduce single CharData children
+                content = content[0].content
+        elif self.cleanup_whitespace and not preserve_whitespace:
+            # remove CharData that consists only of whitespace from mixed elements
+            content = tuple(child for child in content
+                            if child.tag_name != "CharData" or child.content.strip() != '')
+        node.result = content
         return node
 
     # def on_STag(self, node):
@@ -1050,6 +1089,7 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
+            print(result.as_sxpr(compact=True))
             print(result.customized_XML() if isinstance(result, Node) else result)
     else:
         print("Usage: XMLCompiler.py [FILENAME]")
