@@ -1,3 +1,24 @@
+DHParser Version 0.8.0 (24.6.2018)
+..................................
+
+- refactoring of error reporting: it is now done centrally through the
+  (newly introduced) syntaxtree.RootNode object; makes it faster and easier
+- "step by step" guide added to the documentation
+- XML is now a first class citizen for serialization next to S-expressions:
+  xml serialization can now also be read with syntaxtree.parse_xml() plus
+  better serialization with syntaxtree.Node.as_xml()
+- added example: XML-Parser
+- added optional CST-reporting on a case by case basis to the testing
+  framework, using the "*"-marker to indicate which test should add CSTs to
+  the report
+- moved compilation support to a separate module: compile.py
+- source mapping added if preprocessor changes source code
+  (see module preprocess.py)
+- new semantics for syntaxtree.Node.__str__: now includes error messages;
+  use Node.content to retrieve the content without any error messages
+- LaTeX-example: better AST-transformations.
+
+
 DHParser Version 0.7.8 (29.11.2017)
 ...................................
 
