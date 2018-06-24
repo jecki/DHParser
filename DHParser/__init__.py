@@ -33,6 +33,7 @@ from .toolkit import *
 from .transform import *
 from .versionnumber import __version__
 
+name = "DHParser"
 __author__ = "Eckhart Arnold <arnold@badw.de>"
 __copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
 # __all__ = ['toolkit', 'stringview', 'error', 'syntaxtree', 'preprocess', 'parse',

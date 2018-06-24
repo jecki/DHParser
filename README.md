@@ -31,6 +31,32 @@ Python 3.5 source code in order for DHParser to be backwards compatible
 with Python 3.4. The module ``DHParser/foreign_typing.py`` is licensed under the
 [Python Software Foundation License Version 2](https://docs.python.org/3.5/license.html)
 
+Installation
+------------
+
+You can install DHParser from the Python package index (https://pypi.org)*:
+
+    python -m pip install --user --upgrade DHParser
+
+However, as the software is still in an early beta stage, it is
+recommended that you pull it directly from gitlab (see below).
+
+Post-Installaton
+----------------
+
+It is recommended that you install the `regex`-module
+(https://bitbucket.org/mrabarnett/mrab-regex). If present, DHParser
+will use `regex` instead of the built-in `re`-module for regular
+expressions. `regex` is faster and more powerful than `re`.
+
+In order to speed up DHParser even more, it is recommended that you
+run the `buildpackages.sh`-script (or `buildpackages.bat` on
+Windows-systems) after installation. This script compiles the
+`stringview.py`-module to C-Code with the cython C to Python compiler
+(https://cython.org). This requires that you have cython and a
+C-compiler installed on your system.
+
+
 Sources
 -------
 
@@ -113,6 +139,7 @@ Further (intended) use cases are:
   Mark and Markdown also go beyond what is feasible with pure
   EBNF-based-parsers.)
 * EBNF itself. DHParser is already self-hosting ;-)
+* XML-parser, just for the fun of it ;-)
 * Digital and cross-media editions
 * Digital dictionaries
 
