@@ -150,6 +150,7 @@ class Compiler:
             >>> Compiler.method_name('expression')
             'on_expression'
         """
+        assert re.match(r'\w+$', node_name)
         return 'on_' + node_name
 
     def compile_children(self, node: Node) -> StrictResultType:
