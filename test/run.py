@@ -6,4 +6,4 @@ if __name__ == "__main__":
     if os.getcwd().endswith('test'):
         os.chdir('..')
     print("Running nosetests:")
-    os.system("nosetests")
+    os.system("nosetests test")

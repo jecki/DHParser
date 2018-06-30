@@ -119,7 +119,7 @@ class MockParser(ParserBase):
     """
     MockParser objects can be used to reconstruct syntax trees from a
     serialized form like S-expressions or XML. Mock objects can mimic
-    different parser types by assigning them a ptype on initialization.
+    different parser types by assigning them a `ptype` on initialization.
 
     Mock objects should not be used for anything other than
     syntax tree (re-)construction. In all other cases where a parser

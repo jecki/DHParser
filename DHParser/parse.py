@@ -336,9 +336,9 @@ def mixin_comment(whitespace: str, comment: str) -> str:
 
 
 class UnknownParserError(KeyError):
-    """UnknownParserError is raised if a Grammer object is called with a
+    """UnknownParserError is raised if a Grammar object is called with a
     parser that does not exist or if in the course of parsing a parser
-    is reffered to that does not exist."""
+    is referred to that does not exist."""
 
 
 class Grammar:
