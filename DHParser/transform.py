@@ -151,7 +151,24 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     """
 
     def issubtype(sub_type, base_type):
-        return base_type in inspect.getmro(sub_type)
+        # Because of changes in thy typing system, the following doesn't
+        # work any more in Python 3.7:
+        #
+        #     return base_type in inspect.getmro(subtype)
+        #
+        # Therefore it has all gotten a bit more complicated...
+        try:
+            base_type = base_type.__origin__
+        except AttributeError:
+            pass
+        try:
+            mro = inspect.getmro(sub_type)
+        except AttributeError:
+            mro = []
+            for t in sub_type.__mro_entries__([sub_type]):
+                mro.extend(inspect.getmro(t))
+        print(" " if base_type in mro else "!", base_type, sub_type, mro)
+        return base_type in mro
 
     def isgenerictype(t):
         return str(t).endswith(']')
@@ -191,14 +208,13 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             t1 = type_guard(p1type)
         elif issubtype(p1type, type_guard(t1)):
             try:
-                if len(params) == 1 and issubclass(p1type, Container) \
+                if len(params) == 1 and issubtype(p1type, Container) \
                         and not (issubtype(p1type, Text) or issubtype(p1type, ByteString)):
                     def gen_special(*args):
                         c = set(args) if issubtype(p1type, AbstractSet) else \
                             tuple(args) if issubtype(p1type, Sequence) else args
                         d = {params[0].name: c}
                         return partial(f, **d)
-
                     f.register(type_guard(p1type.__args__[0]), gen_special)
             except AttributeError:
                 pass  # Union Type does not allow subclassing, but is not needed here
