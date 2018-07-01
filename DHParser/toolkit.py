@@ -24,6 +24,7 @@ so that they are best defined in a toolkit-module.
 
 import codecs
 import hashlib
+import inspect
 import io
 import parser
 
@@ -45,6 +46,8 @@ __all__ = ('escape_re',
            'escape_control_characters',
            'is_filename',
            'lstrip_docstring',
+           'issubtype',
+           'isgenerictype',
            'load_if_file',
            'is_python_code',
            'md5',
@@ -99,6 +102,34 @@ def is_filename(strg: str) -> bool:
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
     #   and strg.select('*') < 0 and strg.select('?') < 0
+
+
+#######################################################################
+#
+# type system support
+#
+#######################################################################
+
+
+def issubtype(sub_type, base_type):
+    if sys.version_info.major <= 3 and sys.version_info.minor <= 6:
+        return issubclass(sub_type, base_type)
+    try:
+        base_type = base_type.__origin__
+    except AttributeError:
+        pass
+    try:
+        mro = inspect.getmro(sub_type)
+    except AttributeError:
+        mro = []
+        for t in sub_type.__mro_entries__([sub_type]):
+            mro.extend(inspect.getmro(t))
+    # print(" " if base_type in mro else "!", base_type, sub_type, mro)
+    return base_type in mro
+
+
+def isgenerictype(t):
+    return str(t).endswith(']')
 
 
 #######################################################################

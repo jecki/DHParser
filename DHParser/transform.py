@@ -33,7 +33,7 @@ from functools import partial, reduce, singledispatch
 
 from DHParser.error import Error
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser, ZOMBIE_NODE
-from DHParser.toolkit import expand_table, smart_list, re, typing
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text, Generic
 
@@ -149,29 +149,6 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             only necessary if the transformation functions' parameter list
             does not have type annotations.
     """
-
-    def issubtype(sub_type, base_type):
-        # Because of changes in thy typing system, the following doesn't
-        # work any more in Python 3.7:
-        #
-        #     return base_type in inspect.getmro(subtype)
-        #
-        # Therefore it has all gotten a bit more complicated...
-        try:
-            base_type = base_type.__origin__
-        except AttributeError:
-            pass
-        try:
-            mro = inspect.getmro(sub_type)
-        except AttributeError:
-            mro = []
-            for t in sub_type.__mro_entries__([sub_type]):
-                mro.extend(inspect.getmro(t))
-        print(" " if base_type in mro else "!", base_type, sub_type, mro)
-        return base_type in mro
-
-    def isgenerictype(t):
-        return str(t).endswith(']')
 
     def type_guard(t):
         """Raises an error if type `t` is a generic type or could be mistaken
