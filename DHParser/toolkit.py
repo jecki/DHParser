@@ -112,20 +112,23 @@ def is_filename(strg: str) -> bool:
 
 
 def issubtype(sub_type, base_type):
-    if sys.version_info.major <= 3 and sys.version_info.minor <= 6:
-        return issubclass(sub_type, base_type)
-    try:
-        base_type = base_type.__origin__
-    except AttributeError:
-        pass
-    try:
-        mro = inspect.getmro(sub_type)
-    except AttributeError:
-        mro = []
-        for t in sub_type.__mro_entries__([sub_type]):
-            mro.extend(inspect.getmro(t))
-    # print(" " if base_type in mro else "!", base_type, sub_type, mro)
-    return base_type in mro
+    # if sys.version_info.major <= 3 and sys.version_info.minor <= 6:
+    #     return issubclass(sub_type, base_type)
+    # try:
+    #     base_type = base_type.__origin__
+    # except AttributeError:
+    #     pass
+    # try:
+    #     sub_type = sub_type.__origin__
+    # except AttributeError:
+    #     pass
+    def origin(t):
+        try:
+            ot = t.__origin__
+        except AttributeError:
+            return t
+        return ot if ot is not None else t
+    return issubclass(origin(sub_type), origin(base_type))
 
 
 def isgenerictype(t):
