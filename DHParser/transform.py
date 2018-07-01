@@ -35,7 +35,7 @@ from DHParser.error import Error
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser, ZOMBIE_NODE
 from DHParser.toolkit import expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Text, GenericMeta
+    Tuple, List, Sequence, Union, Text, Generic
 
 __all__ = ('TransformationDict',
            'TransformationProc',
@@ -154,11 +154,15 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         """Raises an error if type `t` is a generic type or could be mistaken
         for the type of the canonical first parameter "List[Node] of
         transformation functions. Returns `t`."""
-        if isinstance(t, GenericMeta):
+        # if isinstance(t, GenericMeta):
+        #     raise TypeError("Generic Type %s not permitted\n in transformation_factory "
+        #                     "decorator. Use the equivalent non-generic type instead!"
+        #                     % str(t))
+        if hasattr(t, '__parameters__') and t.__parameters:
             raise TypeError("Generic Type %s not permitted\n in transformation_factory "
                             "decorator. Use the equivalent non-generic type instead!"
                             % str(t))
-        if issubclass(List[Node], t):
+        if t == List[Node]:  #  issubclass(List[Node], t)
             raise TypeError("Sequence type %s not permitted\nin transformation_factory "
                             "decorator, because it could be mistaken for a base class "
                             "of List[Node]\nwhich is the type of the canonical first "
