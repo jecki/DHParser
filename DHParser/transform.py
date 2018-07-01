@@ -150,6 +150,12 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             does not have type annotations.
     """
 
+    def issubtype(sub_type, base_type):
+        return base_type in inspect.getmro(sub_type)
+
+    def isgenerictype(t):
+        return str(t).endswith(']')
+
     def type_guard(t):
         """Raises an error if type `t` is a generic type or could be mistaken
         for the type of the canonical first parameter "List[Node] of
@@ -158,11 +164,11 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         #     raise TypeError("Generic Type %s not permitted\n in transformation_factory "
         #                     "decorator. Use the equivalent non-generic type instead!"
         #                     % str(t))
-        if hasattr(t, '__parameters__') and t.__parameters:
+        if isgenerictype(t):
             raise TypeError("Generic Type %s not permitted\n in transformation_factory "
                             "decorator. Use the equivalent non-generic type instead!"
                             % str(t))
-        if t == List[Node]:  #  issubclass(List[Node], t)
+        if issubtype(List[Node], t):
             raise TypeError("Sequence type %s not permitted\nin transformation_factory "
                             "decorator, because it could be mistaken for a base class "
                             "of List[Node]\nwhich is the type of the canonical first "
@@ -183,13 +189,13 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         p1type = params[0].annotation
         if t1 is None:
             t1 = type_guard(p1type)
-        elif issubclass(p1type, type_guard(t1)):
+        elif issubtype(p1type, type_guard(t1)):
             try:
                 if len(params) == 1 and issubclass(p1type, Container) \
-                        and not (issubclass(p1type, Text) or issubclass(p1type, ByteString)):
+                        and not (issubtype(p1type, Text) or issubtype(p1type, ByteString)):
                     def gen_special(*args):
-                        c = set(args) if issubclass(p1type, AbstractSet) else \
-                            tuple(args) if issubclass(p1type, Sequence) else args
+                        c = set(args) if issubtype(p1type, AbstractSet) else \
+                            tuple(args) if issubtype(p1type, Sequence) else args
                         d = {params[0].name: c}
                         return partial(f, **d)
 
