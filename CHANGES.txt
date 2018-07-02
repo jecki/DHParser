@@ -1,3 +1,9 @@
+DHParser Version 0.8.1 (2.7.2018)
+.................................
+
+- compatibility fixes for Python 3.7
+
+
 DHParser Version 0.8.0 (24.6.2018)
 ..................................
 
