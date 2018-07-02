@@ -59,6 +59,11 @@ class TestParseXML:
         tree = parse_xml(' <a>   <b>beta</b>   </a> ')
         assert flatten_xml(tree.as_xml()) == '<a><b>beta</b></a>'
 
+    def test_flatten_xml(self):
+        tree = parse_xml('<alpha>\n  <beta>gamma</beta>\n</alpha>')
+        flat_xml = flatten_xml(tree.as_xml())
+        assert flat_xml == '<alpha><beta>gamma</beta></alpha>', flat_xml
+
 
 class TestNode:
     """
