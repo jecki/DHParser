@@ -65,7 +65,7 @@ class Error:
 
     NO_ERROR  = ErrorCode(0)
     MESSAGE   = ErrorCode(1)
-    WARNING   = ErrorCode(10)
+    WARNING   = ErrorCode(100)
     ERROR     = ErrorCode(1000)
     HIGHEST   = ERROR
 
