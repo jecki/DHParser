@@ -29,6 +29,7 @@ for CST -> AST transformations.
 
 import collections.abc
 import inspect
+import fnmatch
 from functools import partial, reduce, singledispatch
 
 from DHParser.error import Error
@@ -64,6 +65,7 @@ __all__ = ('TransformationDict',
            'is_expendable',
            'is_token',
            'is_one_of',
+           'matches_re',
            'has_content',
            'has_parent',
            'lstrip',
@@ -426,6 +428,29 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
 def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's tag_name is one of the given tag names."""
     return context[-1].tag_name in tag_name_set
+
+
+# @transformation_factory(collections.abc.Set)
+# def matches_wildcard(context: List[Node], wildcards: AbstractSet[str]) -> bool:
+#     """Retruns true, if the node's tag_name matches one of the glob patterns
+#     in `wildcards`. For example, ':*' matches all anonymous nodes. """
+#     tn = context[-1].tag_name
+#     for pattern in wildcards:
+#         if fnmatch.fnmatch(tn, pattern):
+#             return True
+#     return False
+
+
+@transformation_factory(collections.abc.Set)
+def matches_re(context: List[Node], patterns: AbstractSet[str]) -> bool:
+    """Retruns true, if the node's tag_name matches one of the regular
+    expressions in `patterns`. For example, ':.*' matches all anonymous nodes.
+    """
+    tn = context[-1].tag_name
+    for pattern in patterns:
+        if re.match(pattern, tn):
+            return True
+    return False
 
 
 @transformation_factory
