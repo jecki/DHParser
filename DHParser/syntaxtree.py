@@ -277,9 +277,7 @@ class Node(collections.abc.Sized):
 
 
     def __str__(self):
-        # s = self._content if self._content is not None else \
-        #     "".join(str(child) for child in self.children) if self.children else self.content
-        s = self.content
+        s = "".join(str(child) for child in self.children) if self.children else self.content
         if self.errors:
             return ' <<< Error on "%s" | %s >>> ' % \
                    (s, '; '.join(e.message for e in self.errors))
@@ -838,7 +836,7 @@ def parse_sxpr(sxpr: str) -> Node:
 
     Example:
     >>> parse_sxpr("(a (b c))").as_sxpr()
-    '(a\\n    (b\\n        "c"\\n    )\\n)'
+    '(a\\n  (b\\n    "c"\\n  )\\n)'
     """
     sxpr = StringView(sxpr).strip()
     mock_parsers = dict()
