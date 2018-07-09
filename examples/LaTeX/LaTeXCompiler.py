@@ -17,8 +17,8 @@ try:
 except ImportError:
     import re
 from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
-    Token, Synonym, Whitespace, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
+    _Token, Synonym, Whitespace, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
@@ -249,38 +249,38 @@ class LaTeXGrammar(Grammar):
     BACKSLASH = RegExp('[\\\\]')
     LB = RegExp('\\s*?\\n|$')
     NEW_LINE = Series(RegExp('[ \\t]*'), Option(RegExp(COMMENT__)), RegExp('\\n'))
-    GAP = RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
+    GAP = _RE('[ \\t]*(?:\\n[ \\t]*)+\\n')
     WSPC = OneOrMore(Alternative(RegExp(COMMENT__), RegExp('\\s+')))
     PARSEP = Series(ZeroOrMore(Series(RegExp(WHITESPACE__), RegExp(COMMENT__))), GAP, Option(WSPC))
     LFF = Series(NEW_LINE, Option(WSPC))
     LF = Series(NEW_LINE, ZeroOrMore(Series(RegExp(COMMENT__), RegExp(WHITESPACE__))))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
-    INTEGER = RE('\\d+')
-    NAME = Capture(RE('\\w+'))
+    INTEGER = _RE('\\d+')
+    NAME = Capture(_RE('\\w+'))
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_\\\\\\\\/]')
     ESCAPED = RegExp('\\\\[%$&_/{}]')
     TXTCOMMAND = RegExp('\\\\text\\w+')
-    CMDNAME = RE('\\\\(?:(?!_)\\w)+')
-    structural = Alternative(Token("subsection"), Token("section"), Token("chapter"), Token("subsubsection"), Token("paragraph"), Token("subparagraph"), Token("item"))
-    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Token("begin{"), Token("end{")), Alternative(Token("enumerate"), Token("itemize"), Token("figure"), Token("quote"), Token("quotation"), Token("tabular")), Token("}")), structural, begin_generic_block, end_generic_block))
-    no_command = Alternative(Token("\\begin{"), Token("\\end"), Series(BACKSLASH, structural))
-    text = Series(TEXTCHUNK, ZeroOrMore(Series(RE(''), TEXTCHUNK)))
-    block = Series(RegExp('{'), RE(''), ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))), RegExp('}'), mandatory=3)
-    cfg_text = ZeroOrMore(Alternative(Series(Option(RE('')), text), CMDNAME, SPECIAL))
-    config = Series(Token("["), cfg_text, Token("]"), mandatory=2)
-    pdfinfo = Series(Token("\\pdfinfo"), block)
-    documentclass = Series(Token("\\documentclass"), Option(config), block)
-    cline = Series(Token("\\cline{"), INTEGER, Token("-"), INTEGER, Token("}"))
-    hline = Token("\\hline")
-    multicolumn = Series(Token("\\multicolumn"), Token("{"), INTEGER, Token("}"), tabular_config, block_of_paragraphs)
-    caption = Series(Token("\\caption"), block)
-    includegraphics = Series(Token("\\includegraphics"), Option(config), block)
-    footnote = Series(Token("\\footnote"), block_of_paragraphs)
-    citep = Series(Alternative(Token("\\citep"), Token("\\cite")), Option(config), block)
-    citet = Series(Token("\\citet"), Option(config), block)
-    generic_command = Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(RE(''), config)), RE(''), block)))
+    CMDNAME = _RE('\\\\(?:(?!_)\\w)+')
+    structural = Alternative(_Token("subsection"), _Token("section"), _Token("chapter"), _Token("subsubsection"), _Token("paragraph"), _Token("subparagraph"), _Token("item"))
+    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(_Token("begin{"), _Token("end{")), Alternative(_Token("enumerate"), _Token("itemize"), _Token("figure"), _Token("quote"), _Token("quotation"), _Token("tabular")), _Token("}")), structural, begin_generic_block, end_generic_block))
+    no_command = Alternative(_Token("\\begin{"), _Token("\\end"), Series(BACKSLASH, structural))
+    text = Series(TEXTCHUNK, ZeroOrMore(Series(_RE(''), TEXTCHUNK)))
+    block = Series(RegExp('{'), _RE(''), ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, _RE(''))), RegExp('}'), mandatory=3)
+    cfg_text = ZeroOrMore(Alternative(Series(Option(_RE('')), text), CMDNAME, SPECIAL))
+    config = Series(_Token("["), cfg_text, _Token("]"), mandatory=2)
+    pdfinfo = Series(_Token("\\pdfinfo"), block)
+    documentclass = Series(_Token("\\documentclass"), Option(config), block)
+    cline = Series(_Token("\\cline{"), INTEGER, _Token("-"), INTEGER, _Token("}"))
+    hline = _Token("\\hline")
+    multicolumn = Series(_Token("\\multicolumn"), _Token("{"), INTEGER, _Token("}"), tabular_config, block_of_paragraphs)
+    caption = Series(_Token("\\caption"), block)
+    includegraphics = Series(_Token("\\includegraphics"), Option(config), block)
+    footnote = Series(_Token("\\footnote"), block_of_paragraphs)
+    citep = Series(Alternative(_Token("\\citep"), _Token("\\cite")), Option(config), block)
+    citet = Series(_Token("\\citet"), Option(config), block)
+    generic_command = Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(_RE(''), config)), _RE(''), block)))
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo)
     command = Alternative(known_command, text_command, generic_command)
@@ -289,46 +289,46 @@ class LaTeXGrammar(Grammar):
     begin_environment = Series(RegExp('\\\\begin{'), NAME, RegExp('}'), mandatory=1)
     end_inline_env = Synonym(end_environment)
     begin_inline_env = Alternative(Series(NegativeLookbehind(LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
-    generic_inline_env = Series(begin_inline_env, RE(''), paragraph, end_inline_env, mandatory=3)
+    generic_inline_env = Series(begin_inline_env, _RE(''), paragraph, end_inline_env, mandatory=3)
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     line_element = Alternative(text, block, inline_environment, command)
     text_element.set(Alternative(line_element, LINEFEED))
-    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, RE(''))))
+    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, _RE(''))))
     sequence = Series(Option(WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(PARSEP))))
-    block_of_paragraphs.set(Series(Token("{"), Option(sequence), Token("}"), mandatory=2))
-    tabular_config.set(Series(Token("{"), RE('[lcr|]+'), Token("}"), mandatory=2))
-    tabular_cell = ZeroOrMore(Series(line_element, RE('')))
-    tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Token("&"), Alternative(multicolumn, tabular_cell))), Token("\\\\"), Alternative(hline, ZeroOrMore(cline)))
-    tabular = Series(Token("\\begin{tabular}"), tabular_config, ZeroOrMore(tabular_row), Token("\\end{tabular}"), mandatory=3)
-    verbatim = Series(Token("\\begin{verbatim}"), sequence, Token("\\end{verbatim}"), mandatory=2)
-    quotation = Alternative(Series(Token("\\begin{quotation}"), sequence, Token("\\end{quotation}"), mandatory=2), Series(Token("\\begin{quote}"), sequence, Token("\\end{quote}"), mandatory=2))
-    figure = Series(Token("\\begin{figure}"), sequence, Token("\\end{figure}"), mandatory=2)
-    item = Series(Token("\\item"), sequence)
-    enumerate = Series(Token("\\begin{enumerate}"), Option(WSPC), ZeroOrMore(item), Token("\\end{enumerate}"), mandatory=3)
-    itemize = Series(Token("\\begin{itemize}"), Option(WSPC), ZeroOrMore(item), Token("\\end{itemize}"), mandatory=3)
+    block_of_paragraphs.set(Series(_Token("{"), Option(sequence), _Token("}"), mandatory=2))
+    tabular_config.set(Series(_Token("{"), _RE('[lcr|]+'), _Token("}"), mandatory=2))
+    tabular_cell = ZeroOrMore(Series(line_element, _RE('')))
+    tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(_Token("&"), Alternative(multicolumn, tabular_cell))), _Token("\\\\"), Alternative(hline, ZeroOrMore(cline)))
+    tabular = Series(_Token("\\begin{tabular}"), tabular_config, ZeroOrMore(tabular_row), _Token("\\end{tabular}"), mandatory=3)
+    verbatim = Series(_Token("\\begin{verbatim}"), sequence, _Token("\\end{verbatim}"), mandatory=2)
+    quotation = Alternative(Series(_Token("\\begin{quotation}"), sequence, _Token("\\end{quotation}"), mandatory=2), Series(_Token("\\begin{quote}"), sequence, _Token("\\end{quote}"), mandatory=2))
+    figure = Series(_Token("\\begin{figure}"), sequence, _Token("\\end{figure}"), mandatory=2)
+    item = Series(_Token("\\item"), sequence)
+    enumerate = Series(_Token("\\begin{enumerate}"), Option(WSPC), ZeroOrMore(item), _Token("\\end{enumerate}"), mandatory=3)
+    itemize = Series(_Token("\\begin{itemize}"), Option(WSPC), ZeroOrMore(item), _Token("\\end{itemize}"), mandatory=3)
     end_generic_block.set(Series(Lookbehind(LB), end_environment, LFF))
     begin_generic_block.set(Series(Lookbehind(LB), begin_environment, LFF))
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))
     heading = Synonym(block)
-    Index = Series(Option(WSPC), Token("\\printindex"))
-    Bibliography = Series(Option(WSPC), Token("\\bibliography"), heading)
-    SubParagraph = Series(Token("\\subparagraph"), heading, Option(sequence))
+    Index = Series(Option(WSPC), _Token("\\printindex"))
+    Bibliography = Series(Option(WSPC), _Token("\\bibliography"), heading)
+    SubParagraph = Series(_Token("\\subparagraph"), heading, Option(sequence))
     SubParagraphs = OneOrMore(Series(Option(WSPC), SubParagraph))
-    Paragraph = Series(Token("\\paragraph"), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraph = Series(_Token("\\paragraph"), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
     Paragraphs = OneOrMore(Series(Option(WSPC), Paragraph))
-    SubSubSection = Series(Token("\\subsubsection"), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSection = Series(_Token("\\subsubsection"), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
     SubSubSections = OneOrMore(Series(Option(WSPC), SubSubSection))
-    SubSection = Series(Token("\\subsection"), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSection = Series(_Token("\\subsection"), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
     SubSections = OneOrMore(Series(Option(WSPC), SubSection))
-    Section = Series(Token("\\section"), heading, ZeroOrMore(Alternative(sequence, SubSections)))
+    Section = Series(_Token("\\section"), heading, ZeroOrMore(Alternative(sequence, SubSections)))
     Sections = OneOrMore(Series(Option(WSPC), Section))
-    Chapter = Series(Token("\\chapter"), heading, ZeroOrMore(Alternative(sequence, Sections)))
+    Chapter = Series(_Token("\\chapter"), heading, ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Option(WSPC), Chapter))
     frontpages = Synonym(sequence)
-    document = Series(Option(WSPC), Token("\\begin{document}"), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(WSPC), Token("\\end{document}"), Option(WSPC), EOF, mandatory=9)
+    document = Series(Option(WSPC), _Token("\\begin{document}"), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(WSPC), _Token("\\end{document}"), Option(WSPC), EOF, mandatory=9)
     preamble = OneOrMore(Series(Option(WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc
@@ -351,7 +351,7 @@ def get_grammar() -> LaTeXGrammar:
 
 
 def streamline_whitespace(context):
-    if context[-2].parser.ptype == ":Token":
+    if context[-2].parser.ptype == ":_Token":
         return
     node = context[-1]
     assert node.tag_name in ['WSPC', ':Whitespace']
@@ -460,9 +460,9 @@ LaTeX_AST_transformation_table = {
     "EOF": [],
     # "PARSEP": [replace_content_by('\n\n')],
     # "WSPC": [replace_content_by(' ')],
-    ":Token":
+    ":_Token":
         [remove_whitespace, reduce_single_child],
-    ":RE": replace_by_single_child,
+    ":_RE": replace_by_single_child,
     ":Whitespace": streamline_whitespace,
     "*": replace_by_single_child
 }

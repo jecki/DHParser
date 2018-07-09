@@ -112,7 +112,7 @@ class ParserBase:
 
 WHITESPACE_PTYPE = ':Whitespace'
 PLAINTEXT_PTYPE = ':PlainText'
-TOKEN_PTYPE = ':Token'
+TOKEN_PTYPE = ':_Token'
 
 
 class MockParser(ParserBase):

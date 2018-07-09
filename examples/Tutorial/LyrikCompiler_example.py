@@ -17,8 +17,8 @@ try:
 except ImportError:
     import re
 from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
-    Alternative, Pop, Token, Synonym, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
+    Alternative, Pop, _Token, Synonym, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, remove_empty, reduce_single_child, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
@@ -90,12 +90,12 @@ class LyrikGrammar(Grammar):
     wspL__ = ''
     wspR__ = WSP__
     ENDE = NegativeLookahead(RegExp('.'))
-    JAHRESZAHL = RE('\\d\\d\\d\\d')
-    LEERZEILE = RE('\\n[ \\t]*(?=\\n)')
-    NZ = RE('\\n')
-    ZEICHENFOLGE = RE('[^ \\n<>]+')
-    NAME = RE('\\w+\\.?')
-    WORT = RE('\\w+')
+    JAHRESZAHL = _RE('\\d\\d\\d\\d')
+    LEERZEILE = _RE('\\n[ \\t]*(?=\\n)')
+    NZ = _RE('\\n')
+    ZEICHENFOLGE = _RE('[^ \\n<>]+')
+    NAME = _RE('\\w+\\.?')
+    WORT = _RE('\\w+')
     vers = OneOrMore(ZEICHENFOLGE)
     strophe = OneOrMore(Series(NZ, vers))
     text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
@@ -103,15 +103,15 @@ class LyrikGrammar(Grammar):
     titel = Series(OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     ziel = Synonym(ZEICHENFOLGE)
-    verknüpfung = Series(Token("<"), ziel, Token(">"))
+    verknüpfung = Series(_Token("<"), ziel, _Token(">"))
     namenfolge = OneOrMore(NAME)
     wortfolge = OneOrMore(WORT)
     jahr = Synonym(JAHRESZAHL)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Token("."), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(_Token("."), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Token(","), Option(NZ), werk, Token(","), Option(NZ), ort, Token(","), Option(NZ), jahr, Token("."), mandatory=1)
+    bibliographisches = Series(autor, _Token(","), Option(NZ), werk, _Token(","), Option(NZ), ort, _Token(","), Option(NZ), jahr, _Token("."), mandatory=1)
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
@@ -172,7 +172,7 @@ Lyrik_AST_transformation_table = {
     "ENDE": [],
     ":Whitespace":
         replace_content(lambda node : " "),
-    ":Token, :RE":
+    ":_Token, :_RE":
         reduce_single_child,
     "*": replace_by_single_child
 }

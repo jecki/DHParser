@@ -36,40 +36,40 @@ class TestRemoval:
     """Tests removing transformations."""
 
     def test_lstrip(self):
-        cst = parse_sxpr('(Token (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(_Token (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
         sxpr1 = cst.as_sxpr()
         lstrip([cst])
         assert sxpr1 == cst.as_sxpr()
-        cst = parse_sxpr('(Token)')
+        cst = parse_sxpr('(_Token)')
         lstrip([cst])
-        assert cst.as_sxpr() == '(Token)'
-        cst = parse_sxpr('(Token (:Whitespace " ") (:Whitespace " ") (:Re test))')
+        assert cst.as_sxpr() == '(_Token)'
+        cst = parse_sxpr('(_Token (:Whitespace " ") (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = parse_sxpr('(Token (:Whitespace " ") (Deeper (:Whitespace " ")) '
+        cst = parse_sxpr('(_Token (:Whitespace " ") (Deeper (:Whitespace " ")) '
                                '(:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = parse_sxpr('(Token (:Re ein) (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(_Token (:Re ein) (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") >= 0
 
     def test_rstrip(self):
-        cst = parse_sxpr('(Token (:Re test) (:Whitespace " "))')
+        cst = parse_sxpr('(_Token (:Re test) (:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
         sxpr1 = cst.as_sxpr()
         rstrip([cst])
         assert sxpr1 == cst.as_sxpr()
-        cst = parse_sxpr('(Token)')
+        cst = parse_sxpr('(_Token)')
         rstrip([cst])
-        assert cst.as_sxpr() == '(Token)'
-        cst = parse_sxpr('(Token  (:Re test) (:Whitespace " ") (:Whitespace " "))')
+        assert cst.as_sxpr() == '(_Token)'
+        cst = parse_sxpr('(_Token  (:Re test) (:Whitespace " ") (:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = parse_sxpr('(Token  (:Re test) (:Whitespace " ") (Deeper (:Whitespace " ")) '
+        cst = parse_sxpr('(_Token  (:Re test) (:Whitespace " ") (Deeper (:Whitespace " ")) '
                                '(:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
@@ -83,7 +83,7 @@ class TestRemoval:
         assert cst.content == "facitergula"
 
     def test_remove_tokens(self):
-        cst = parse_sxpr('(wortarten (:Token "ajektiv") (:Token "et") (:Token "praeposition"))')
+        cst = parse_sxpr('(wortarten (:_Token "ajektiv") (:_Token "et") (:_Token "praeposition"))')
         ast_table = {
             "wortarten": [remove_tokens({"et"})],
             "*": []

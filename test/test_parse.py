@@ -27,7 +27,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compile_python_object
 from DHParser.log import logging, is_logging, log_ST
 from DHParser.error import Error
-from DHParser.parse import Retrieve, Grammar, Forward, Token, ZeroOrMore, RE, \
+from DHParser.parse import Retrieve, Grammar, Forward, _Token, ZeroOrMore, _RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, UnknownParserError
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -261,10 +261,10 @@ class TestGrammar:
             INTEGER    =  /\d+/~
             '''
             expression = Forward()
-            INTEGER = RE('\\d+')
-            factor = INTEGER | Token("(") + expression + Token(")")
-            term = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
-            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            INTEGER = _RE('\\d+')
+            factor = INTEGER | _Token("(") + expression + _Token(")")
+            term = factor + ZeroOrMore((_Token("*") | _Token("/")) + factor)
+            expression.set(term + ZeroOrMore((_Token("+") | _Token("-")) + term))
             root__ = expression
 
         grammar = Arithmetic()
@@ -304,7 +304,7 @@ class TestSeries:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
 
     def test_series_composition(self):
-        TA, TB, TC, TD, TE = (Token(b) for b in "ABCDE")
+        TA, TB, TC, TD, TE = (_Token(b) for b in "ABCDE")
         s1 = Series(TA, TB, TC, mandatory=2)
         s2 = Series(TD, TE)
 
@@ -342,23 +342,23 @@ class TestSeries:
 class TestAllOfSomeOf:
     def test_allOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
-        prefixes = AllOf(Token("A"), Token("B"))
+        prefixes = AllOf(_Token("A"), _Token("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
         # aternative Form
-        prefixes = AllOf(Series(Token("B"), Token("A")))
+        prefixes = AllOf(Series(_Token("B"), _Token("A")))
         assert Grammar(prefixes)('A B').content == 'A B'
 
     def test_allOf_completeness(self):
         """Test that an error is raised if not  all parsers of an AllOf-List
         match."""
-        prefixes = AllOf(Token("A"), Token("B"))
+        prefixes = AllOf(_Token("A"), _Token("B"))
         assert Grammar(prefixes)('B').error_flag
 
     def test_allOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
-        prefixes = AllOf(Token("A"), Token("B"), Token("A"))
+        prefixes = AllOf(_Token("A"), _Token("B"), _Token("A"))
         assert Grammar(prefixes)('A A B').content == 'A A B'
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
@@ -366,18 +366,18 @@ class TestAllOfSomeOf:
 
     def test_someOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
-        prefixes = SomeOf(Token("A"), Token("B"))
+        prefixes = SomeOf(_Token("A"), _Token("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
         # aternative Form
-        prefixes = SomeOf(Alternative(Token("B"), Token("A")))
+        prefixes = SomeOf(Alternative(_Token("B"), _Token("A")))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B').content == 'B'
 
     def test_someOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
-        prefixes = SomeOf(Token("A"), Token("B"), Token("A"))
+        prefixes = SomeOf(_Token("A"), _Token("B"), _Token("A"))
         assert Grammar(prefixes)('A A B').content == 'A A B'
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'

@@ -162,9 +162,9 @@ class TestGrammarTest:
                 3: "20 / 4 * 3"
             },
             "ast": {
-                '1*': "(term (factor 4) (:Token *) (factor 5))",
-                2: "(term (factor 20) (:Token /) (factor 4))",
-                3: "(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))"
+                '1*': "(term (factor 4) (:_Token *) (factor 5))",
+                2: "(term (factor 20) (:_Token /) (factor 4))",
+                3: "(term (term (factor 20) (:_Token /) (factor 4)) (:_Token *) (factor 3))"
             },
             "fail": {
                 4: "4 + 5",
@@ -186,9 +186,9 @@ class TestGrammarTest:
                 3: "20 / 4 * 3"
             },
             "ast": {
-                1: "(term (factor 4) (:Token *) (factor 5))",
-                2: "(term (factor 20) (:Token /) (factor 4))",
-                3: "(term (term (factor 19) (:Token /) (factor 4)) (:Token *) (factor 3))"  # error 19 != 20
+                1: "(term (factor 4) (:_Token *) (factor 5))",
+                2: "(term (factor 20) (:_Token /) (factor 4))",
+                3: "(term (term (factor 19) (:_Token /) (factor 4)) (:_Token *) (factor 3))"  # error 19 != 20
             },
             "fail": {
                 4: "4 * 5",     # error: this should match

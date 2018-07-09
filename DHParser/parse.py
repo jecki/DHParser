@@ -49,8 +49,8 @@ __all__ = ('Parser',
            'PreprocessorToken',
            'RegExp',
            'Whitespace',
-           'RE',
-           'Token',
+           '_RE',
+           '_Token',
            'mixin_comment',
            # 'UnaryOperator',
            # 'NaryOperator',
@@ -356,7 +356,7 @@ class Grammar:
 
     Example for direct instantiation of a grammar::
 
-        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number = _RE('\d+') + _RE('\.') + _RE('\d+') | _RE('\d+')
         >>> number_parser = Grammar(number)
         >>> number_parser("3.1416").content
         '3.1416'
@@ -392,9 +392,9 @@ class Grammar:
             # parsers
             expression = Forward()
             INTEGER = RE('\\d+')
-            factor = INTEGER | Token("(") + expression + Token(")")
-            term = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
-            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            factor = INTEGER | _Token("(") + expression + _Token(")")
+            term = factor + ZeroOrMore((_Token("*") | _Token("/")) + factor)
+            expression.set(term + ZeroOrMore((_Token("+") | _Token("-")) + term))
             root__ = expression
 
     Upon instantiation the parser objects are deep-copied to the
@@ -454,9 +454,9 @@ class Grammar:
 
         whitespace__: A parser for the implicit optional whitespace (or the
                 :class:zombie-parser if the default is empty). The default
-                whitespace will be used by parsers :class:`Token` and, if no
+                whitespace will be used by parsers :class:`_Token` and, if no
                 other parsers are passed to its constructor, by parser
-                :class:`RE`. It can also be place explicitly in the
+                :class:`_RE`. It can also be place explicitly in the
                 EBNF-Grammar via the "~"-sign.
 
         wsp_left_parser__: The same as ``whitespace`` for
@@ -555,7 +555,7 @@ class Grammar:
 
             class Grammar(Grammar):
                 ...
-                symbol = RE('(?!\\d)\\w+')
+                symbol = _RE('(?!\\d)\\w+')
 
         After the call of this method symbol.name == "symbol"
         holds. Names assigned via the ``name``-parameter of the
@@ -836,7 +836,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
 
 ########################################################################
 #
-# Token and Regular Expression parser classes (i.e. leaf classes)
+# _Token and Regular Expression parser classes (i.e. leaf classes)
 #
 ########################################################################
 
@@ -969,6 +969,19 @@ class Whitespace(RegExp):
     assert WHITESPACE_PTYPE == ":Whitespace"
 
 
+def RE(regexp, wL=None, wR=None) -> Series:
+    def rxp(regex):
+        return regex if isinstance(regex, RegExp) else RegExp(regex)
+    if wL is None and wR is None:
+        return rxp(regexp)
+    elif wL is None:
+        return Series(rxp(regexp), rxp(wR))
+    elif wR is None:
+        return Series(rxp(wL), rxp(regexp))
+    else:
+        return Series(rxp(wL), rxp(regexp), rxp(wR))
+
+
 #######################################################################
 #######################################################################
 #
@@ -978,7 +991,7 @@ class Whitespace(RegExp):
 # With the constructor of the Grammar class (see the instantiations of
 # the Whitespace-class, there).
 #
-# That is all the more regrettable, as class RE basically just
+# That is all the more regrettable, as class _RE basically just
 # introduces syntactical sugar for
 #
 #     Series(whitespace__, RegExp('something'), whitespace__)
@@ -991,8 +1004,10 @@ class Whitespace(RegExp):
 ######################################################################
 
 
-class RE(Parser):
+class _RE(Parser):
     r"""
+    DEPRECATED
+
     Regular Expressions with optional leading or trailing whitespace.
 
     The RE-parser parses pieces of text that match a given regular
@@ -1008,7 +1023,7 @@ class RE(Parser):
     Example (allowing whitespace on the right hand side, but not on
     the left hand side of a regular expression)::
 
-        >>> word = RE(r'\w+', wR=r'\s*')
+        >>> word = _RE(r'\w+', wR=r'\s*')
         >>> parser = Grammar(word)
         >>> result = parser('Haus ')
         >>> result.content
@@ -1024,7 +1039,7 @@ class RE(Parser):
     """
 
     def __init__(self, regexp, wL=None, wR=None, name: str='') -> None:
-        r"""Constructor for class RE.
+        r"""Constructor for class _RE.
 
         Args:
             regexp (str or regex object):  The regular expression to be
@@ -1091,17 +1106,19 @@ class RE(Parser):
         return RegExp(arg)
 
 
-class Token(RE):
+class _Token(_RE):
     """
-    Class Token parses simple strings. Any regular regular expression
+    DEPRECATED!
+
+    Class _Token parses simple strings. Any regular regular expression
     commands will be interpreted as simple sequence of characters.
 
-    Other than that class Token is essentially a renamed version of
-    class RE. Because tokens often have a particular semantic different
+    Other than that class _Token is essentially a renamed version of
+    class _RE. Because tokens often have a particular semantic different
     from other REs, parsing them with a separate parser class allows to
     distinguish them by their parser type.
     """
-    assert TOKEN_PTYPE == ":Token"
+    assert TOKEN_PTYPE == ":_Token"
 
     def __init__(self, token: str, wL=None, wR=None, name: str = '') -> None:
         self.token = token
@@ -1196,7 +1213,7 @@ class Option(UnaryOperator):
 
     Examples::
 
-        >>> number = Option(Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
+        >>> number = Option(_Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
         >>> Grammar(number)('3.14159').content
         '3.14159'
         >>> Grammar(number)('3.14159').structure
@@ -1237,7 +1254,7 @@ class ZeroOrMore(Option):
 
     Examples::
 
-        >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
+        >>> sentence = ZeroOrMore(_RE(r'\w+,?')) + _Token('.')
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
@@ -1280,7 +1297,7 @@ class OneOrMore(UnaryOperator):
 
     Examples::
 
-        >>> sentence = OneOrMore(RE(r'\w+,?')) + Token('.')
+        >>> sentence = OneOrMore(_RE(r'\w+,?')) + _Token('.')
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
@@ -1331,7 +1348,7 @@ class Series(NaryOperator):
 
     Example::
 
-        >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
+        >>> variable_name = RegExp('(?!\d)\w') + _RE('\w*')
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
@@ -1397,7 +1414,7 @@ class Series(NaryOperator):
                         + [parser.repr for parser in self.parsers[self.mandatory:]])
 
     # The following operator definitions add syntactical sugar, so one can write:
-    # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
+    # `_RE('\d+') + Optional(_RE('\.\d+)` instead of `Series(_RE('\d+'), Optional(_RE('\.\d+))`
 
     @staticmethod
     def combined_mandatory(left: Parser, right: Parser):
@@ -1444,12 +1461,12 @@ class Alternative(NaryOperator):
     are broken by selecting the first match.::
 
         # the order of the sub-expression matters!
-        >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+        >>> number = _RE('\d+') | _RE('\d+') + _RE('\.') + _RE('\d+')
         >>> str(Grammar(number)("3.1416"))
         '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
 
         # the most selective expression should be put first:
-        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number = _RE('\d+') + _RE('\.') + _RE('\d+') | _RE('\d+')
         >>> Grammar(number)("3.1416").content
         '3.1416'
 
@@ -1480,8 +1497,8 @@ class Alternative(NaryOperator):
         return self
 
     # The following operator definitions add syntactical sugar, so one can write:
-    # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
-    # `Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))`
+    # `_RE('\d+') + _RE('\.') + _RE('\d+') | _RE('\d+')` instead of:
+    # `Alternative(Series(_RE('\d+'), _RE('\.'), _RE('\d+')), _RE('\d+'))`
 
     def __or__(self, other: Parser) -> 'Alternative':
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
@@ -1508,7 +1525,7 @@ class AllOf(NaryOperator):
 
     Example::
 
-        >>> prefixes = AllOf(Token("A"), Token("B"))
+        >>> prefixes = AllOf(_Token("A"), _Token("B"))
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
@@ -1559,7 +1576,7 @@ class SomeOf(NaryOperator):
 
     Example::
 
-        >>> prefixes = SomeOf(Token("A"), Token("B"))
+        >>> prefixes = SomeOf(_Token("A"), _Token("B"))
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
@@ -1689,7 +1706,7 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowOperator):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp, RE, PlainText or Token parser.
+    the contained parser to be a RegExp, _RE, PlainText or _Token parser.
 
     EXPERIMENTAL
     """
@@ -1697,14 +1714,14 @@ class Lookbehind(FlowOperator):
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
-        assert isinstance(p, RegExp) or isinstance(p, PlainText) or isinstance(p, RE), str(type(p))
+        assert isinstance(p, RegExp) or isinstance(p, PlainText) or isinstance(p, _RE), str(type(p))
         self.regexp = None
         self.text = None
-        if isinstance(p, RE):
-            if isinstance(cast(RE, p).main, RegExp):
-                self.regexp = cast(RegExp, cast(RE, p).main).regexp
+        if isinstance(p, _RE):
+            if isinstance(cast(_RE, p).main, RegExp):
+                self.regexp = cast(RegExp, cast(_RE, p).main).regexp
             else:  # p.main is of type PlainText
-                self.text = cast(PlainText, cast(RE, p).main).text
+                self.text = cast(PlainText, cast(_RE, p).main).text
         elif isinstance(p, RegExp):
             self.regexp = cast(RegExp, p).regexp
         else:  # p is of type PlainText
@@ -1878,7 +1895,7 @@ class Synonym(UnaryOperator):
 
     Otherwise the first line could not be represented by any parser
     class, in which case it would be unclear whether the parser
-    RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
+    _RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1905,10 +1922,10 @@ class Forward(Parser):
             INTEGER    =  /\d+/~
             '''
             expression = Forward()
-            INTEGER    = RE('\\d+')
-            factor     = INTEGER | Token("(") + expression + Token(")")
-            term       = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
-            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            INTEGER    = _RE('\\d+')
+            factor     = INTEGER | _Token("(") + expression + _Token(")")
+            term       = factor + ZeroOrMore((_Token("*") | _Token("/")) + factor)
+            expression.set(term + ZeroOrMore((_Token("+") | _Token("-")) + term))
             root__     = expression
     """
 

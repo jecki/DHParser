@@ -30,8 +30,8 @@ from functools import partial
 
 from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, RE, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
+from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, _RE, \
+    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, _Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -135,29 +135,29 @@ class EBNFGrammar(Grammar):
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-    whitespace = RE('~')
-    regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
-    plaintext = RE('`(?:[^"]|\\\\")*?`')
-    literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
-    symbol = RE('(?!\\d)\\w+')
-    option = Series(Token("["), expression, Token("]"), mandatory=1)
-    repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
-    oneormore = Series(Token("{"), expression, Token("}+"))
-    unordered = Series(Token("<"), expression, Token(">"), mandatory=1)
-    group = Series(Token("("), expression, Token(")"), mandatory=1)
-    retrieveop = Alternative(Token("::"), Token(":"))
-    flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+    list_ = Series(_RE('\\w+'), ZeroOrMore(Series(_Token(","), _RE('\\w+'))))
+    whitespace = _RE('~')
+    regexp = _RE('~?/(?:\\\\/|[^/])*?/~?')
+    plaintext = _RE('`(?:[^"]|\\\\")*?`')
+    literal = Alternative(_RE('"(?:[^"]|\\\\")*?"'), _RE("'(?:[^']|\\\\')*?'"))
+    symbol = _RE('(?!\\d)\\w+')
+    option = Series(_Token("["), expression, _Token("]"), mandatory=1)
+    repetition = Series(_Token("{"), expression, _Token("}"), mandatory=1)
+    oneormore = Series(_Token("{"), expression, _Token("}+"))
+    unordered = Series(_Token("<"), expression, _Token(">"), mandatory=1)
+    group = Series(_Token("("), expression, _Token(")"), mandatory=1)
+    retrieveop = Alternative(_Token("::"), _Token(":"))
+    flowmarker = Alternative(_Token("!"), _Token("&"), _Token("-!"), _Token("-&"))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(_Token("="))),
                          Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext),
                          Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace),
                          Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
                          Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Token("§")), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
-    definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    term = OneOrMore(Series(Option(_Token("§")), factor))
+    expression.set(Series(term, ZeroOrMore(Series(_Token("|"), term))))
+    directive = Series(_Token("@"), symbol, _Token("="), Alternative(regexp, literal, list_), mandatory=1)
+    definition = Series(symbol, _Token("="), expression, mandatory=1)
+    syntax = Series(Option(_RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -459,7 +459,7 @@ class EBNFCompiler(Compiler):
             elif rule.startswith('Synonym'):
                 transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        transtable.append('    ":Token, :RE": reduce_single_child,')
+        transtable.append('    ":_Token, :_RE": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
@@ -921,11 +921,11 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node: Node) -> str:
-        return 'Token(' + node.content.replace('\\', r'\\') + ')'
+        return '_Token(' + node.content.replace('\\', r'\\') + ')'
 
 
     def on_plaintext(self, node: Node) -> str:
-        return 'Token(' + node.content.replace('\\', r'\\').replace('`', '"') \
+        return '_Token(' + node.content.replace('\\', r'\\').replace('`', '"') \
                + ", wL='', wR='')"
 
 
@@ -935,7 +935,7 @@ class EBNFCompiler(Compiler):
         if rx[0] == '/' and rx[-1] == '/':
             parser = 'RegExp('
         else:
-            parser = 'RE('
+            parser = '_RE('
             if rx[:2] == '~/':
                 if not 'left' in self.directives['literalws']:
                     name = ['wL=' + self.WHITESPACE_KEYWORD] + name

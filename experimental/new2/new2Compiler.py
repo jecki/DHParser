@@ -19,8 +19,8 @@ except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, _Token, Synonym, AllOf, SomeOf, Unordered, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
@@ -71,9 +71,9 @@ class new2Grammar(Grammar):
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
-    WORD = RE('[\\w’]+')
+    WORD = _RE('[\\w’]+')
     part = OneOrMore(WORD)
-    sentence = Series(part, ZeroOrMore(Series(Token(","), part)), Token("."))
+    sentence = Series(part, ZeroOrMore(Series(_Token(","), part)), _Token("."))
     document = Series(whitespace__, ZeroOrMore(sentence), EOF, mandatory=2)
     root__ = document
 
@@ -101,8 +101,8 @@ new2_AST_transformation_table = {
     "part": [],
     "WORD": [remove_whitespace, reduce_single_child],
     "EOF": [],
-    ":Token": [remove_whitespace, reduce_single_child],
-    ":RE": reduce_single_child,
+    ":_Token": [remove_whitespace, reduce_single_child],
+    ":_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

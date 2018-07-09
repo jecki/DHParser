@@ -107,7 +107,7 @@ class TestNode:
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
-        compare_tree = parse_sxpr("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
+        compare_tree = parse_sxpr("(term (term (factor 20) (:_Token /) (factor 4)) (:_Token *) (factor 3))")
         assert tree == compare_tree, tree.as_sxpr()
 
     def test_copy(self):

@@ -16,8 +16,8 @@ except ImportError:
     import re
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, _Token, Synonym, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \
@@ -107,25 +107,25 @@ class EBNFGrammar(Grammar):
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-    whitespace = RE('~')
-    regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
-    plaintext = RE('`(?:[^"]|\\\\")*?`')
-    literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
-    symbol = RE('(?!\\d)\\w+')
-    option = Series(Token("["), expression, Token("]"), mandatory=1)
-    repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
-    oneormore = Series(Token("{"), expression, Token("}+"))
-    unordered = Series(Token("<"), expression, Token(">"), mandatory=1)
-    group = Series(Token("("), expression, Token(")"), mandatory=1)
-    retrieveop = Alternative(Token("::"), Token(":"))
-    flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Token("§")), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
-    definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    list_ = Series(_RE('\\w+'), ZeroOrMore(Series(_Token(","), _RE('\\w+'))))
+    whitespace = _RE('~')
+    regexp = _RE('~?/(?:\\\\/|[^/])*?/~?')
+    plaintext = _RE('`(?:[^"]|\\\\")*?`')
+    literal = Alternative(_RE('"(?:[^"]|\\\\")*?"'), _RE("'(?:[^']|\\\\')*?'"))
+    symbol = _RE('(?!\\d)\\w+')
+    option = Series(_Token("["), expression, _Token("]"), mandatory=1)
+    repetition = Series(_Token("{"), expression, _Token("}"), mandatory=1)
+    oneormore = Series(_Token("{"), expression, _Token("}+"))
+    unordered = Series(_Token("<"), expression, _Token(">"), mandatory=1)
+    group = Series(_Token("("), expression, _Token(")"), mandatory=1)
+    retrieveop = Alternative(_Token("::"), _Token(":"))
+    flowmarker = Alternative(_Token("!"), _Token("&"), _Token("-!"), _Token("-&"))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(_Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    term = OneOrMore(Series(Option(_Token("§")), factor))
+    expression.set(Series(term, ZeroOrMore(Series(_Token("|"), term))))
+    directive = Series(_Token("@"), symbol, _Token("="), Alternative(regexp, literal, list_), mandatory=1)
+    definition = Series(symbol, _Token("="), expression, mandatory=1)
+    syntax = Series(Option(_RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
@@ -164,7 +164,7 @@ EBNF_AST_transformation_table = {
     "regexp": [],
     "list_": [],
     "EOF": [],
-    ":Token, :RE": reduce_single_child,
+    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

@@ -95,7 +95,7 @@ Allow to specify parsers/nodes, the result of which will be dropped
 right away, so that the nodes they produce do not need to be removed
 during the AST-Transformations. Typical candidates would be:
 
-1. Tokens ":Token"
+1. Tokens ":_Token"
 2. Whitespace ":Whitespace" (in some cases)
 3. empty Nodes
 
@@ -143,8 +143,8 @@ parsers:
   "contains" another parser without its calls being run through the
   parser guard, but that records every call of the parser and its
   results, e.g. to trace the `option`-parser from the ebnf-parser (see
-  DHParser/ebnf.py) you'd write: `option = Trace(Series(Token("["),
-  expression, Token("]"), mandatory=1))`
+  DHParser/ebnf.py) you'd write: `option = Trace(Series(_Token("["),
+  expression, _Token("]"), mandatory=1))`
 
 - For the ebnf-representation a tracing-prefix could be added, say `?`,
   e.g. `option = ?("[" §expression "]")` or, alternatively, `?option =

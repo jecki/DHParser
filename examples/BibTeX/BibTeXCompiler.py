@@ -19,8 +19,8 @@ sys.path.extend(['../../', '../', './'])
 
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, _Token, Synonym, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationDict, Whitespace, \
@@ -114,21 +114,21 @@ class BibTeXGrammar(Grammar):
     wspL__ = ''
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
-    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), RE('(?i)(?=%)')))
-    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), RE('(?i)(?=%)')))
-    NO_BLANK_STRING = RE('(?i)[^ \\t\\n,%]+')
-    WORD_ = RE('(?i)\\w+')
+    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), _RE('(?i)(?=%)')))
+    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), _RE('(?i)(?=%)')))
+    NO_BLANK_STRING = _RE('(?i)[^ \\t\\n,%]+')
+    WORD_ = _RE('(?i)\\w+')
     WORD = RegExp('(?i)\\w+')
-    text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Token("{"), text, Token("}")))))
+    text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(_Token("{"), text, _Token("}")))))
     plain_content = Synonym(COMMA_TERMINATED_STRING)
-    content = Alternative(Series(Token("{"), text, Token("}")), plain_content)
+    content = Alternative(Series(_Token("{"), text, _Token("}")), plain_content)
     field = Synonym(WORD_)
     key = Synonym(NO_BLANK_STRING)
     type = Synonym(WORD)
-    entry = Series(RegExp('(?i)@'), type, Token("{"), key, ZeroOrMore(Series(Token(","), field, Token("="), content, mandatory=2)), Token("}"), mandatory=5)
-    comment = Series(Token("@Comment{"), text, Token("}"), mandatory=2)
+    entry = Series(RegExp('(?i)@'), type, _Token("{"), key, ZeroOrMore(Series(_Token(","), field, _Token("="), content, mandatory=2)), _Token("}"), mandatory=5)
+    comment = Series(_Token("@Comment{"), text, _Token("}"), mandatory=2)
     pre_code = ZeroOrMore(Alternative(RegExp('(?i)[^"%]+'), RegExp('(?i)%.*\\n')))
-    preamble = Series(Token("@Preamble{"), RegExp('(?i)"'), pre_code, RE('(?i)"'), Token("}"), mandatory=4)
+    preamble = Series(_Token("@Preamble{"), RegExp('(?i)"'), pre_code, _RE('(?i)"'), _Token("}"), mandatory=4)
     bibliography = ZeroOrMore(Alternative(preamble, comment, entry))
     root__ = bibliography
     
@@ -162,7 +162,7 @@ BibTeX_AST_transformation_table = {
     "content": [replace_or_reduce],
     "plain_content": [],
     "text": [],
-    ":Token, :RE": reduce_single_child,
+    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

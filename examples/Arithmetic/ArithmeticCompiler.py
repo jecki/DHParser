@@ -16,8 +16,8 @@ except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, _Token, Synonym, AllOf, SomeOf, Unordered, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
@@ -72,12 +72,12 @@ class ArithmeticGrammar(Grammar):
     wspL__ = ''
     wspR__ = WSP__
     test = Series(digit, constant, variable)
-    digit.set(Alternative(Token("0"), Token("1"), Token("..."), Token("9")))
+    digit.set(Alternative(_Token("0"), _Token("1"), _Token("..."), _Token("9")))
     constant.set(Series(digit, ZeroOrMore(digit)))
-    variable.set(Alternative(Token("x"), Token("y"), Token("z")))
-    factor = Alternative(constant, variable, Series(Token("("), expression, Token(")")))
-    term = Series(factor, ZeroOrMore(Series(Alternative(Token("*"), Token("/")), factor)))
-    expression.set(Series(term, ZeroOrMore(Series(Alternative(Token("+"), Token("-")), term))))
+    variable.set(Alternative(_Token("x"), _Token("y"), _Token("z")))
+    factor = Alternative(constant, variable, Series(_Token("("), expression, _Token(")")))
+    term = Series(factor, ZeroOrMore(Series(Alternative(_Token("*"), _Token("/")), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(_Token("+"), _Token("-")), term))))
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
@@ -106,7 +106,7 @@ Arithmetic_AST_transformation_table = {
     "constant": [],
     "digit": [replace_or_reduce],
     "test": [],
-    ":Token, :RE": reduce_single_child,
+    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 
