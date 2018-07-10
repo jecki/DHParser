@@ -250,8 +250,8 @@ class Node(collections.abc.Sized):
 
         errors (list):  A list of all errors that occured on this node.
 
-        attributes (dict): An optional dictionary of XML-attributes. This
-            dictionary is created lazily upon first usage. The attributes
+        attr (dict): An optional dictionary of XML-attr. This
+            dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
             S-Expression-output.
     """
@@ -265,7 +265,7 @@ class Node(collections.abc.Sized):
         """
         self.errors = []                # type: List[Error]
         self._pos = -1                  # type: int
-        # Assignment to self.result initializes the attributes _result, children and _len
+        # Assignment to self.result initializes the attr _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType
@@ -480,9 +480,9 @@ class Node(collections.abc.Sized):
 
 
     @property
-    def attributes(self):
+    def attr(self):
         """
-        Returns a dictionary of XML-Attributes attached to the Node.
+        Returns a dictionary of XML-attr attached to the node.
         """
         if not hasattr(self, '_xml_attr'):
             self._xml_attr = OrderedDict()
@@ -577,7 +577,7 @@ class Node(collections.abc.Sized):
             txt = [left_bracket,  node.tag_name]
             # s += " '(pos %i)" % node.add_pos
             if hasattr(node, '_xml_attr'):
-                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
+                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
                 txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
             if showerrors and node.errors:
@@ -615,7 +615,7 @@ class Node(collections.abc.Sized):
             inline_tags:  A set of tag names, the content of which will always be written
                 on a single line, unless it contains explicit line feeds ('\n').
             omit_tags:  A set of tags from which only the content will be printed, but
-                neither the opening tag nor its attributes nor the closing tag. This
+                neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,
                 which otherwise is not supported by the Node object, because it
                 requires its content to be either a tuple of children or string content.
@@ -629,9 +629,9 @@ class Node(collections.abc.Sized):
                 return ''
             txt = ['<', node.tag_name]
             has_reserved_attrs = hasattr(node, '_xml_attr') \
-                and any (r in node.attributes for r in {'err', 'line', 'col'})
+                and any (r in node.attr for r in {'err', 'line', 'col'})
             if hasattr(node, '_xml_attr'):
-                txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
+                txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors and not has_reserved_attrs:
@@ -657,7 +657,7 @@ class Node(collections.abc.Sized):
             printed on several lines to avoid unwanted gaps in the output.
             """
             return node.tag_name in inline_tags or (hasattr(node, '_xml_attr') \
-                and node.attributes.get('xml:space', 'default') == 'preserve')
+                                                    and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing,
@@ -886,7 +886,7 @@ def parse_sxpr(sxpr: str) -> Node:
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
-                # parse attributes
+                # parse attr
                 while sxpr[:2] == "`(":
                     i = sxpr.find('"')
                     k = sxpr.find(')')
@@ -899,7 +899,7 @@ def parse_sxpr(sxpr: str) -> Node:
                         while m >= 0 and m < k:
                             m = sxpr.find('(', k)
                             k = max(k, sxpr.find(')', max(m, 0)))
-                    # read attributes
+                    # read attr
                     else:
                         attr = sxpr[2:i].strip()
                         value = sxpr[i:k].strip()[1:-1]
@@ -922,7 +922,7 @@ def parse_sxpr(sxpr: str) -> Node:
             result = "\n".join(lines)
         node = Node(mock_parsers.setdefault(tagname, MockParser(name, ':' + class_name)), result)
         if attributes:
-            node.attributes.update(attributes)
+            node.attr.update(attributes)
         return node
 
     return inner_parser(sxpr)
@@ -941,7 +941,7 @@ def parse_xml(xml: str) -> Node:
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
-        beginning after the end of the attributes."""
+        beginning after the end of the attr."""
         attributes = OrderedDict()
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
@@ -952,7 +952,7 @@ def parse_xml(xml: str) -> Node:
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
         """Parses an opening tag. Returns the string segment following the
-        the opening tag, the tag name, a dictionary of attributes and
+        the opening tag, the tag name, a dictionary of attr and
         a flag indicating whether the tag is actually a solitary tag as
         indicated by a slash at the end, i.e. <br/>."""
         match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))

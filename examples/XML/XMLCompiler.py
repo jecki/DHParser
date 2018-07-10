@@ -650,7 +650,7 @@ def get_transformer() -> TransformationFunc:
 
 # def internalize(context):
 #     """Sets the node's parser type to the tag name and internalizes
-#     XML attributes."""
+#     XML attr."""
 #     node = context[-1]
 #     if node.parser.name == 'element':
 #         node.parser = MockParser(node['STag']['Name'].content, ':element')
@@ -660,11 +660,11 @@ def get_transformer() -> TransformationFunc:
 #         node.result = node.result[1:]
 #     else:
 #         assert node.parser.ptype in [':element', ':emptyElement'], \
-#             "Tried to internalize tag name and attributes for non element component!"
+#             "Tried to internalize tag name and attr for non element component!"
 #         return
 #     for nd in node.result:
 #         if nd.parser.name == 'Attribute':
-#             node.attributes[nd['Name'].content] = nd['AttValue'].content
+#             node.attr[nd['Name'].content] = nd['AttValue'].content
 #     remove_nodes(context, {'Attribute'})
 
 
@@ -725,7 +725,7 @@ class XMLCompiler(Compiler):
                 attributes['standalone'] = s
                 self.value_constraint(node, s, {'yes', 'no'})
         if attributes:
-            node.attributes.update(attributes)
+            node.attr.update(attributes)
         node.result = ''
         self.tree.empty_tags.add('?xml')
         node.parser = self.get_parser('?xml')
@@ -905,7 +905,7 @@ class XMLCompiler(Compiler):
         attributes = self.extract_attributes(stag.children)
         preserve_whitespace = tag_name in self.tree.inline_tags
         if attributes:
-            node.attributes.update(attributes)
+            node.attr.update(attributes)
             preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
         node.parser = self.get_parser(tag_name)
         content = self.compile_children(node.get('content', ZOMBIE_NODE))
@@ -929,7 +929,7 @@ class XMLCompiler(Compiler):
     def on_emptyElement(self, node):
         attributes = self.extract_attributes(node.children)
         if attributes:
-            node.attributes.update(attributes)
+            node.attr.update(attributes)
         node.parser = self.get_parser(node['Name'].content)
         node.result = ''
         self.tree.empty_tags.add(node.tag_name)

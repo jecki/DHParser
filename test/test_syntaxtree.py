@@ -220,10 +220,10 @@ class TestSerialization:
 
     def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')
-        tree.attributes['attr'] = "value"
+        tree.attr['attr'] = "value"
         tree2 = parse_sxpr('(A `(attr "value") "B")')
         assert tree.as_sxpr() ==  tree2.as_sxpr()
-        tree.attributes['attr2'] = "value2"
+        tree.attr['attr2'] = "value2"
         tree3 = parse_sxpr('(A `(attr "value") `(attr2 "value2") "B")')
         assert tree.as_sxpr() == tree3.as_sxpr()
 
@@ -257,7 +257,7 @@ class TestSerialization:
 
         assert tree.as_xml() == "<A>\n  <B>C</B>\n  <D>E</D>\n</A>", xml
 
-        tree.attributes['xml:space'] = 'preserve'
+        tree.attr['xml:space'] = 'preserve'
         xml = tree.as_xml()
         assert xml == '<A xml:space="preserve"><B>C</B><D>E</D></A>', xml
 

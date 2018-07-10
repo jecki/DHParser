@@ -494,14 +494,14 @@ def _replace_by(node: Node, child: Node):
     # node.errors.extend(child.errors)
     node.result = child.result
     if hasattr(child, '_xml_attr'):
-        node.attributes.update(child.attributes)
+        node.attr.update(child.attr)
 
 
 def _reduce_child(node: Node, child: Node):
     # node.errors.extend(child.errors)
     node.result = child.result
     if hasattr(child, '_xml_attr'):
-        node.attributes.update(child.attributes)
+        node.attr.update(child.attr)
 
 
 # def _pick_child(context: List[Node], criteria: CriteriaType):

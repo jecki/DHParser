@@ -74,7 +74,7 @@ with both SGML and HTML.</a></p></div><div><a name="abstract" id="abstract" data
  documents which were not well-formed according to previous editions of this
  specification are now well-formed, and previously invalid documents
 using the newly-allowed name characters in, for example, ID
-attributes, are now valid.</p><p>This edition supersedes the previous <a href="http://www.w3.org/TR/2006/REC-xml-20060816/" data-ss1529144233="1">W3C Recommendation
+attr, are now valid.</p><p>This edition supersedes the previous <a href="http://www.w3.org/TR/2006/REC-xml-20060816/" data-ss1529144233="1">W3C Recommendation
 				of 16 August 2006</a>.</p><p>Please report errors in this document to
 the public <a href="mailto:xml-editor@w3.org" data-ss1529144233="1">xml-editor@w3.org</a> mail list; public
 				<a href="http://lists.w3.org/Archives/Public/xml-editor/" data-ss1529144233="1">archives</a> are available. For the convenience of readers,
@@ -372,7 +372,7 @@ and <a href="#NT-Nmtokens" data-ss1529144233="1">Nmtokens</a> productions are us
 of tokenized attribute values after normalization (see <a href="#sec-attribute-types" data-ss1529144233="1"><b>3.3.1 Attribute Types</b></a>).</p></div><p>Literal data is any quoted string not containing the quotation mark used
 as a delimiter for that string. Literals are used for specifying the content
 of internal entities (<a href="#NT-EntityValue" data-ss1529144233="1">EntityValue</a>), the values
-of attributes (<a href="#NT-AttValue" data-ss1529144233="1">AttValue</a>), and external identifiers
+of attr (<a href="#NT-AttValue" data-ss1529144233="1">AttValue</a>), and external identifiers
 (<a href="#NT-SystemLiteral" data-ss1529144233="1">SystemLiteral</a>). Note that a <a href="#NT-SystemLiteral" data-ss1529144233="1">SystemLiteral</a>
 can be parsed without scanning for markup.</p>
 <h5><a name="d0e888" id="d0e888" data-ss1529144233="1">Literals</a></h5><table class="scrap" summary="Scrap"><tbody><tr valign="baseline"><td><a name="NT-EntityValue" id="NT-EntityValue" data-ss1529144233="1">[9]&nbsp;&nbsp;&nbsp;</a></td><td><code>EntityValue</code></td><td>&nbsp;&nbsp;&nbsp;::=&nbsp;&nbsp;&nbsp;</td><td><code>'"' ([^%&amp;"] | <a href="#NT-PEReference" data-ss1529144233="1">PEReference</a>
@@ -631,14 +631,14 @@ standalone document declaration, the value "no" is assumed.</p><p>Any XML docume
 algorithmically to a standalone document, which may be desirable for some
 network delivery applications.</p><div class="constraint"><p class="prefix"><a name="vc-check-rmd" id="vc-check-rmd" data-ss1529144233="1"><b>Validity constraint: Standalone Document Declaration</b></a></p><p><a name="vc-check-rmd" id="vc-check-rmd" data-ss1529144233="1">The
 standalone document declaration <em class="rfc2119" title="Keyword in RFC 2119 context">MUST</em> have the value "no" if
-any external markup declarations contain declarations of:</a></p><ul><li><p><a name="vc-check-rmd" id="vc-check-rmd" data-ss1529144233="1">attributes with </a><a title="Attribute Default" href="#dt-default" data-ss1529144233="1">default</a> values,
-if elements to which these attributes apply appear in the document without
-specifications of values for these attributes, or</p></li><li><p>entities (other than <code>amp</code>,
+any external markup declarations contain declarations of:</a></p><ul><li><p><a name="vc-check-rmd" id="vc-check-rmd" data-ss1529144233="1">attr with </a><a title="Attribute Default" href="#dt-default" data-ss1529144233="1">default</a> values,
+if elements to which these attr apply appear in the document without
+specifications of values for these attr, or</p></li><li><p>entities (other than <code>amp</code>,
 <code>lt</code>,
 <code>gt</code>,
 <code>apos</code>,
 <code>quot</code>), if <a title="Entity Reference" href="#dt-entref" data-ss1529144233="1">references</a>
-to those entities appear in the document, or</p></li><li><p>attributes with
+to those entities appear in the document, or</p></li><li><p>attr with
 tokenized types, where the
 attribute appears in the document with a value such that
 <a href="#AVNormalize" data-ss1529144233="1"><cite>normalization</cite></a>
@@ -703,7 +703,7 @@ for the Identification of Languages</cite>; in addition, the empty string may be
   &lt;l&gt;und leider auch Theologie&lt;/l&gt;
   &lt;l&gt;durchaus studiert mit heißem Bemüh'n.&lt;/l&gt;
 &lt;/sp&gt;</pre></div><p>The language specified by <code>xml:lang</code> applies to the element where it is specified
-		 (including the values of its attributes), and  to all elements in its content unless
+		 (including the values of its attr), and  to all elements in its content unless
      overridden with another instance of <code>xml:lang</code>. In particular, the empty value of <code>xml:lang</code> is used on an element B to override
 		 a specification of <code>xml:lang</code> on an enclosing element A, without specifying another language. Within B,
 		 it is considered that there is no language information available, just as if <code>xml:lang</code> had not been specified
@@ -733,7 +733,7 @@ and a <a title="Attribute Value" href="#dt-attrval" data-ss1529144233="1">value<
 						<a href="#NT-ETag" data-ss1529144233="1">ETag</a>
 					</code></td><td><a href="#GIMatch" data-ss1529144233="1">[WFC: Element Type Match]</a></td></tr><tr valign="baseline"><td></td><td></td><td></td><td></td><td><a href="#elementvalid" data-ss1529144233="1">[VC: Element Valid]</a></td></tr></tbody></table><p><a name="d0e2130" id="d0e2130" data-ss1529144233="1">This specification does not constrain the
 			application semantics, use, or (beyond syntax)
-names of the element types and attributes, except that names beginning with
+names of the element types and attr, except that names beginning with
 a match to <code>(('X'|'x')('M'|'m')('L'|'l'))</code> are reserved for standardization
 in this or future versions of this specification.</a></p><div class="constraint"><p class="prefix"><a name="GIMatch" id="GIMatch" data-ss1529144233="1"><b>Well-formedness constraint: Element Type Match</b></a></p><p><a name="GIMatch" id="GIMatch" data-ss1529144233="1">The </a><a href="#NT-Name" data-ss1529144233="1">Name</a>
 in an element's end-tag <em class="rfc2119" title="Keyword in RFC 2119 context">MUST</em> match the element type in the start-tag.</p></div><div class="constraint"><p class="prefix"><a name="elementvalid" id="elementvalid" data-ss1529144233="1"><b>Validity constraint: Element Valid</b></a></p><p><a name="elementvalid" id="elementvalid" data-ss1529144233="1">An element is valid
@@ -900,8 +900,8 @@ same name <em class="rfc2119" title="Keyword in RFC 2119 context">MUST NOT</em> 
 pairs with <a title="Element" href="#dt-element" data-ss1529144233="1">elements</a>. Attribute specifications
 <em class="rfc2119" title="Keyword in RFC 2119 context">MUST NOT</em> appear outside of <a title="Start-Tag" href="#dt-stag" data-ss1529144233="1">start-tags</a> and <a title="empty-element tag" href="#dt-eetag" data-ss1529144233="1">empty-element tags</a>; thus, the productions used to
 recognize them appear in <a href="#sec-starttags" data-ss1529144233="1"><b>3.1 Start-Tags, End-Tags, and Empty-Element Tags</b></a>. Attribute-list declarations
-may be used:</p><ul><li><p>To define the set of attributes pertaining to a given element type.</p></li><li><p>To establish type constraints for these attributes.</p></li><li><p>To provide <a title="Attribute Default" href="#dt-default" data-ss1529144233="1">default values</a> for
-attributes.</p></li></ul><p>
+may be used:</p><ul><li><p>To define the set of attr pertaining to a given element type.</p></li><li><p>To establish type constraints for these attr.</p></li><li><p>To provide <a title="Attribute Default" href="#dt-default" data-ss1529144233="1">default values</a> for
+attr.</p></li></ul><p>
 					[<a name="dt-attdecl" id="dt-attdecl" title="Attribute-List Declaration" data-ss1529144233="1">Definition</a>: 
 						<b>Attribute-list
 declarations</b> specify the name, data type, and default value (if any)
@@ -918,7 +918,7 @@ of each attribute associated with a given element type:]
 							<a href="#NT-DefaultDecl" data-ss1529144233="1">DefaultDecl</a>
 						</code></td></tr></tbody></table><p><a name="d0e2926" id="d0e2926" data-ss1529144233="1">The </a><a href="#NT-Name" data-ss1529144233="1">Name</a> in the <a href="#NT-AttlistDecl" data-ss1529144233="1">AttlistDecl</a>
 rule is the type of an element. At user option, an XML processor <em class="rfc2119" title="Keyword in RFC 2119 context">MAY</em> issue
-a warning if attributes are declared for an element type not itself declared,
+a warning if attr are declared for an element type not itself declared,
 but this is not an error. The <a href="#NT-Name" data-ss1529144233="1">Name</a> in the <a href="#NT-AttDef" data-ss1529144233="1">AttDef</a>
 rule is the name of the attribute.</p><p>When more than one <a href="#NT-AttlistDecl" data-ss1529144233="1">AttlistDecl</a> is provided
 for a given element type, the contents of all those provided are merged. When
@@ -956,7 +956,7 @@ declared in the <a title="Document Type Declaration" href="#dt-doctype" data-ss1
 							<em class="rfc2119" title="Keyword in RFC 2119 context">MUST</em> match the </a><a href="#NT-Nmtoken" data-ss1529144233="1">Nmtoken</a> production; values of type <b>NMTOKENS</b>
 							<em class="rfc2119" title="Keyword in RFC 2119 context">MUST</em> match <a href="#NT-Nmtokens" data-ss1529144233="1">Nmtokens</a>.</p></div><p>
 						[<a name="dt-enumerated" id="dt-enumerated" title="Enumerated Attribute Values" data-ss1529144233="1">Definition</a>: 
-							<b>Enumerated attributes</b>
+							<b>Enumerated attr</b>
 							have a list of allowed values in their declaration
 						]. They <em class="rfc2119" title="Keyword in RFC 2119 context">MUST</em> take one of those values.  There are two kinds of enumerated attribute types:</p>
 <h5><a name="d0e3200" id="d0e3200" data-ss1529144233="1">Enumerated Attribute Types</a></h5><table class="scrap" summary="Scrap"><tbody><tr valign="baseline"><td><a name="NT-EnumeratedType" id="NT-EnumeratedType" data-ss1529144233="1">[57]&nbsp;&nbsp;&nbsp;</a></td><td><code>EnumeratedType</code></td><td>&nbsp;&nbsp;&nbsp;::=&nbsp;&nbsp;&nbsp;</td><td><code>
@@ -1040,7 +1040,7 @@ reference), which is replaced with a space character (#x20) in the normalized
 value and also contrasts with the case where the unnormalized value contains
 an entity reference whose replacement text contains a white space character;
 being recursively processed, the white space character is replaced with a
-space character (#x20) in the normalized value.</p><p>All attributes for which no declaration has been read <em class="rfc2119" title="Keyword in RFC 2119 context">SHOULD</em> be treated
+space character (#x20) in the normalized value.</p><p>All attr for which no declaration has been read <em class="rfc2119" title="Keyword in RFC 2119 context">SHOULD</em> be treated
 by a non-validating processor as if declared <b>CDATA</b>.</p><p>It is an error if an <a title="Attribute Value" href="#dt-attrval" data-ss1529144233="1">attribute
 value</a> contains a <a title="Entity Reference" href="#dt-entref" data-ss1529144233="1">reference</a> to an
 entity for which no declaration has been read.</p><p>Following are examples of attribute normalization. Given the following
@@ -1136,7 +1136,7 @@ that an XML processor make the identifiers for the entity and notation available
 to the application, XML places no constraints on the contents of unparsed
 entities.]
 			</p><p>Parsed entities are invoked by name using entity references; unparsed entities
-by name, given in the value of <b>ENTITY</b> or <b>ENTITIES</b> attributes.</p><p>
+by name, given in the value of <b>ENTITY</b> or <b>ENTITIES</b> attr.</p><p>
 				[<a name="gen-entity" id="gen-entity" title="general entity" data-ss1529144233="1">Definition</a>: 
 					<b>General entities</b>
 are entities for use within the document content. In this specification, general
@@ -1739,7 +1739,7 @@ in external or parameter entities<span>, or in the internal subset after an unre
 parameter entity reference</span>.</p></li></ul><p>For maximum reliability in interoperating between different XML processors,
 applications which use non-validating processors <em class="rfc2119" title="Keyword in RFC 2119 context">SHOULD NOT</em> rely on any behaviors
 not required of such processors. Applications which require DTD facilities not related to validation (such
-as the declaration of default attributes and internal entities that are or may be specified in
+as the declaration of default attr and internal entities that are or may be specified in
 external entities) <em class="rfc2119" title="Keyword in RFC 2119 context">SHOULD</em> use validating XML processors.</p></div></div><div class="div1">
 <h2><a name="sec-notation" id="sec-notation" data-ss1529144233="1">6 Notation</a></h2><p><a name="sec-notation" id="sec-notation" data-ss1529144233="1">The formal grammar of XML is given in this specification using a simple
 Extended Backus-Naur Form (EBNF) notation. Each rule in the grammar defines
@@ -2204,7 +2204,7 @@ XSLT stylesheets.</p></div><div class="div1">
 <h2><a name="sec-suggested-names" id="sec-suggested-names" data-ss1529144233="1">J Suggestions for XML Names (Non-Normative)</a></h2><p><a name="sec-suggested-names" id="sec-suggested-names" data-ss1529144233="1">The following suggestions define what is believed to be best
 				practice in the construction of XML names used as element names,
 				attribute names, processing instruction targets, entity names,
-				notation names, and the values of attributes of type ID, and are
+				notation names, and the values of attr of type ID, and are
 				intended as guidance for document authors and schema designers.
 				All references to Unicode are understood with respect to
 				a particular version of the Unicode Standard greater than or equal

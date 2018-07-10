@@ -684,7 +684,7 @@ class LaTeXCompiler(Compiler):
         if 'config' in node:
             for it in {part.strip() for part in node['config'].content.split(',')}:
                 if it in self.KNOWN_LANGUAGES:
-                    if 'language' in node.attributes:
+                    if 'language' in node.attr:
                         self.metadata['language'] = it
                     else:
                         self.tree.new_error(node, 'Only one document language supported. '

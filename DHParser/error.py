@@ -209,7 +209,7 @@ def adjust_error_locations(errors: List[Error],
 
     Returns:
         The list of errors. (Returning the list of errors is just syntactical
-        sugar. Be aware that the line, col and orig_pos attributes have been
+        sugar. Be aware that the line, col and orig_pos attr have been
         changed in place.)
     """
     line_breaks = linebreaks(original_text)
