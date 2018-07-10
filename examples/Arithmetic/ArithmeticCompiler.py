@@ -17,11 +17,11 @@ except ImportError:
 from DHParser import logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, \
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
-    traverse, remove_children_if, merge_children, is_anonymous, \
+    traverse, remove_children_if, merge_children, is_anonymous, Whitespace, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -64,20 +64,21 @@ class ArithmeticGrammar(Grammar):
     digit = Forward()
     expression = Forward()
     variable = Forward()
-    source_hash__ = "3064cea87c9ceb59ade35566a31c3d75"
+    source_hash__ = "385a94a70cb629d46a13e15305692667"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
-    WHITESPACE__ = r'[\t ]*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WHITESPACE__ = r'\s*'
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
-    wspR__ = WSP__
+    wspR__ = WSP_RE__
+    wsp__ = Whitespace(WSP_RE__)
     test = Series(digit, constant, variable)
-    digit.set(Alternative(Token("0"), Token("1"), Token("..."), Token("9")))
+    digit.set(Alternative(Series(Token("0"), wsp__), Series(Token("1"), wsp__), Series(Token("..."), wsp__), Series(Token("9"), wsp__)))
     constant.set(Series(digit, ZeroOrMore(digit)))
-    variable.set(Alternative(Token("x"), Token("y"), Token("z")))
-    factor = Alternative(constant, variable, Series(Token("("), expression, Token(")")))
-    term = Series(factor, ZeroOrMore(Series(Alternative(Token("*"), Token("/")), factor)))
-    expression.set(Series(term, ZeroOrMore(Series(Alternative(Token("+"), Token("-")), term))))
+    variable.set(Alternative(Series(Token("x"), wsp__), Series(Token("y"), wsp__), Series(Token("z"), wsp__)))
+    factor = Alternative(constant, variable, Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__)))
+    term = Series(factor, ZeroOrMore(Series(Alternative(Series(Token("*"), wsp__), Series(Token("/"), wsp__)), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(Series(Token("+"), wsp__), Series(Token("-"), wsp__)), term))))
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
@@ -106,7 +107,7 @@ Arithmetic_AST_transformation_table = {
     "constant": [],
     "digit": [replace_or_reduce],
     "test": [],
-    ":Token, :RE": reduce_single_child,
+    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

@@ -38,7 +38,7 @@ from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
-    PLAINTEXT_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER
+    TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
 from typing import Callable, cast, Dict, DefaultDict, List, Set, Tuple, Union, Optional
 
@@ -47,10 +47,11 @@ __all__ = ('Parser',
            'UnknownParserError',
            'Grammar',
            'PreprocessorToken',
-           'RegExp',
-           'Whitespace',
-           'RE',
            'Token',
+           'RegExp',
+           'RE',
+           'TKN',
+           'Whitespace',
            'mixin_comment',
            # 'UnaryOperator',
            # 'NaryOperator',
@@ -235,15 +236,15 @@ class Parser(ParserBase):
 
     ApplyFunc = Callable[['Parser'], None]
 
-    def __init__(self, name: str = '') -> None:
+    def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
-        super().__init__(name)
+        super().__init__()
         self._grammar = None  # type: Optional['Grammar']
         self.reset()
 
         # add "aspect oriented" wrapper around parser calls
         # for memoizing, left recursion and tracing
-        if not isinstance(self, Forward):  # should Forward-Parser no be guarded? Not sure...
+        if not isinstance(self, Forward):  # should Forward-Parser not be guarded? Not sure...
             guarded_parser_call = add_parser_guard(self.__class__.__call__)
             # The following check is necessary for classes that don't override
             # the __call__() method, because in these cases the non-overridden
@@ -258,7 +259,10 @@ class Parser(ParserBase):
         `__deepcopy__`-method must be replaced (i.e. overridden without
         calling the same method from the superclass) by the derived class.
         """
-        return self.__class__(self.name)
+        duplicate = self.__class__()
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def reset(self):
         """Initializes or resets any parser variables. If overwritten,
@@ -392,9 +396,9 @@ class Grammar:
             # parsers
             expression = Forward()
             INTEGER = RE('\\d+')
-            factor = INTEGER | Token("(") + expression + Token(")")
-            term = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
-            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            factor = INTEGER | TKN("(") + expression + TKN(")")
+            term = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
+            expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
             root__ = expression
 
     Upon instantiation the parser objects are deep-copied to the
@@ -421,16 +425,6 @@ class Grammar:
     (no comments, horizontal right aligned whitespace) don't fit:
 
     Attributes:
-        COMMENT__:  regular expression string for matching comments
-
-        WSP__:   regular expression for whitespace and comments
-
-        wspL__:  regular expression string for left aligned whitespace,
-                 which either equals WSP__ or is empty.
-
-        wspR__:  regular expression string for right aligned whitespace,
-                 which either equals WSP__ or is empty.
-
         root__:  The root parser of the grammar. Theoretically, all parsers of the
                  grammar should be reachable by the root parser. However, for testing
                  of yet incomplete grammars class Grammar does not assume that this
@@ -451,19 +445,6 @@ class Grammar:
 
         history_tracking__:  A flag indicating that the parsing history shall
                 be tracked
-
-        whitespace__: A parser for the implicit optional whitespace (or the
-                :class:zombie-parser if the default is empty). The default
-                whitespace will be used by parsers :class:`Token` and, if no
-                other parsers are passed to its constructor, by parser
-                :class:`RE`. It can also be place explicitly in the
-                EBNF-Grammar via the "~"-sign.
-
-        wsp_left_parser__: The same as ``whitespace`` for
-               left-adjacent-whitespace.
-
-        wsp_right_parser__: The same as ``whitespace`` for
-               right-adjacent-whitespace.
 
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -540,10 +521,8 @@ class Grammar:
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
     # some default values
-    COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
-    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
-    wspL__ = ''     # type: str
-    wspR__ = WSP__  # type: str
+    # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
+    # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
 
 
     @classmethod
@@ -557,11 +536,9 @@ class Grammar:
                 ...
                 symbol = RE('(?!\\d)\\w+')
 
-        After the call of this method symbol.name == "symbol"
-        holds. Names assigned via the ``name``-parameter of the
-        constructor will not be overwritten. Parser names starting or
-        ending with a double underscore like ``root__`` will be
-        ignored. See :func:`sane_parser_name()`
+        After the call of this method symbol.name == "symbol" holds.
+        Parser names starting or ending with a double underscore like
+        ``root__`` will be ignored. See :func:`sane_parser_name()`
 
         This is done only once, upon the first instantiation of the
         grammar class!
@@ -576,10 +553,11 @@ class Grammar:
             cdict = cls.__dict__
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
-                    if not parser.name:
-                        parser._name = entry
-                    if isinstance(parser, Forward) and (not cast(Forward, parser).parser.name):
-                        cast(Forward, parser).parser._name = entry
+                    if isinstance(parser, Forward):
+                        if  not cast(Forward, parser).parser.name:
+                            cast(Forward, parser).parser.name = entry
+                    else:   # if not parser.name:
+                        parser.name = entry
             cls.parser_initialization__ = "done"
 
 
@@ -605,23 +583,6 @@ class Grammar:
         # on demand (see Grammar.__getitem__()). Usually, the need to
         # do so only arises during testing.
         self.root__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
-
-        if self.WSP__:
-            try:
-                probe = self.whitespace__  # type: RegExp
-                assert self.whitespace__.regexp.pattern == self.WSP__
-            except AttributeError:
-                self.whitespace__ = Whitespace(self.WSP__)  # type: RegExp
-            self.whitespace__.grammar = self
-            self.all_parsers__.add(self.whitespace__)   # don't you forget about me...
-        else:
-            self.whitespace__ = cast(RegExp, ZOMBIE_PARSER)
-
-        assert not self.wspL__ or self.wspL__ == self.WSP__
-        assert not self.wspR__ or self.wspR__ == self.WSP__
-        self.wsp_left_parser__ = self.whitespace__ if self.wspL__ else ZOMBIE_PARSER
-        self.wsp_right_parser__ = self.whitespace__ if self.wspR__ else ZOMBIE_PARSER
-
         self.root__.apply(self._add_parser__)
 
 
@@ -680,7 +641,8 @@ class Grammar:
             assert parser.name not in self.__dict__ or \
                 isinstance(self.__dict__[parser.name], parser.__class__), \
                 ('Cannot add parser "%s" because a field with the same name '
-                 'already exists in grammar object!' % parser.name)
+                 'already exists in grammar object: %s!'
+                 % (parser.name, str(self.__dict__[parser.name])))
             setattr(self, parser.name, parser)
         self.all_parsers__.add(parser)
         parser.grammar = self
@@ -836,7 +798,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
 
 ########################################################################
 #
-# Token and Regular Expression parser classes (i.e. leaf classes)
+# _Token and Regular Expression parser classes (i.e. leaf classes)
 #
 ########################################################################
 
@@ -855,7 +817,14 @@ class PreprocessorToken(Parser):
     def __init__(self, token: str) -> None:
         assert token and token.isupper()
         assert RX_TOKEN_NAME.match(token)
-        super().__init__(token)
+        super().__init__()
+        self.name = token
+
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__(self.name)
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text[0:1] == BEGIN_TOKEN:
@@ -884,25 +853,28 @@ class PreprocessorToken(Parser):
         return None, text
 
 
-class PlainText(Parser):
+class Token(Parser):
     """
     Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
     Example::
 
-        >>> while_token = PlainText("while")
+        >>> while_token = Token("while")
         >>> Grammar(while_token)("while").content
         'while'
     """
-    assert PLAINTEXT_PTYPE == ":PlainText"
+    assert TOKEN_PTYPE == ":Token"
 
-    def __init__(self, text: str, name: str = '') -> None:
-        super().__init__(name)
+    def __init__(self, text: str) -> None:
+        super().__init__()
         self.text = text
         self.len = len(text)
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.text, self.name)
+        duplicate = self.__class__(self.text)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
@@ -933,8 +905,8 @@ class RegExp(Parser):
     EBNF-Example:   ``word = /\w+/``
     """
 
-    def __init__(self, regexp, name: str = '') -> None:
-        super().__init__(name)
+    def __init__(self, regexp) -> None:
+        super().__init__()
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -943,7 +915,10 @@ class RegExp(Parser):
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        return self.__class__(regexp, self.name)
+        duplicate = self.__class__(regexp)
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         match = text.match(self.regexp)
@@ -963,158 +938,37 @@ class RegExp(Parser):
         return escape_control_characters('/%s/' % self.regexp.pattern)
 
 
+def withWS(parser_factory, wsL='', wsR='\s*'):
+    """Syntactic Sugar for 'Series(Whitespace(wsL), parser_factory(), Whitespace(wsR))'.
+    """
+    if wsL and isinstance(wsL, str):
+        wsL = Whitespace(wsL)
+    if wsR and isinstance(wsR, str):
+        wsR = Whitespace(wsR)
+    if wsL and wsR:
+        return Series(wsL, parser_factory(), wsR)
+    elif wsL:
+        return Series(wsL, parser_factory())
+    elif wsR:
+        return Series(parser_factory(), wsR)
+    else:
+        return parser_factory()
+
+
+def RE(regexp, wsL='', wsR='\s*'):
+    """Syntactic Sugar for 'Series(Whitespace(wsL), RegExp(regexp), Whitespace(wsR))'"""
+    return withWS(lambda : RegExp(regexp), wsL, wsR)
+
+
+def TKN(token, wsL='', wsR='\s*'):
+    """Syntactic Sugar for 'Series(Whitespace(wsL), Token(token), Whitespace(wsR))'"""
+    return withWS(lambda: Token(token), wsL, wsR)
+
+
 class Whitespace(RegExp):
     """An variant of RegExp that signifies through its class name that it
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
-
-
-#######################################################################
-#######################################################################
-#
-# WARNING: The following code is hard to maintain, because it
-# introduces a special case, i.e. a parser with child parsers that is
-# not a descendant of the NaryOperator and because it interacts
-# With the constructor of the Grammar class (see the instantiations of
-# the Whitespace-class, there).
-#
-# That is all the more regrettable, as class RE basically just
-# introduces syntactical sugar for
-#
-#     Series(whitespace__, RegExp('something'), whitespace__)
-#
-# What to do? Throw the syntactical sugar out? :-( Or find a more
-# robust solution for that kind of syntactical sugar? Or just leave
-# it be?
-#
-######################################################################
-######################################################################
-
-
-class RE(Parser):
-    r"""
-    Regular Expressions with optional leading or trailing whitespace.
-
-    The RE-parser parses pieces of text that match a given regular
-    expression. Other than the ``RegExp``-Parser it can also skip
-    "implicit whitespace" before or after the matched text.
-
-    The whitespace is in turn defined by a regular expression. It should
-    be made sure that this expression also matches the empty string,
-    e.g. use r'\s*' or r'[\t ]+', but not r'\s+'. If the respective
-    parameters in the constructor are set to ``None`` the default
-    whitespace expression from the Grammar object will be used.
-
-    Example (allowing whitespace on the right hand side, but not on
-    the left hand side of a regular expression)::
-
-        >>> word = RE(r'\w+', wR=r'\s*')
-        >>> parser = Grammar(word)
-        >>> result = parser('Haus ')
-        >>> result.content
-        'Haus '
-        >>> result.structure
-        '(:RE (:RegExp "Haus") (:Whitespace " "))'
-        >>> str(parser(' Haus'))
-        ' <<< Error on " Haus" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
-
-    EBNF-Notation:  ``/ ... /~`  or  `~/ ... /`  or  `~/ ... /~``
-
-    EBNF-Example:   ``word = /\w+/~``
-    """
-
-    def __init__(self, regexp, wL=None, wR=None, name: str='') -> None:
-        r"""Constructor for class RE.
-
-        Args:
-            regexp (str or regex object):  The regular expression to be
-                used for parsing.
-            wL (str or regexp):  Left whitespace regular expression,
-                i.e. either ``None``, the empty string or a regular
-                expression (e.g. "\s*") that defines whitespace. An
-                empty string means no whitespace will be skipped; ``None``
-                means that the default whitespace will be used.
-            wR (str or regexp):  Right whitespace regular expression.
-                See above.
-            name:  The optional name of the parser.
-        """
-        super().__init__(name)
-        self.rx_wsl = wL
-        self.rx_wsr = wR
-        self.wsp_left = Whitespace(wL) if wL else ZOMBIE_PARSER
-        self.wsp_right = Whitespace(wR) if wR else ZOMBIE_PARSER
-        self.main = self.create_main_parser(regexp)
-
-    def __deepcopy__(self, memo={}):
-        try:
-            regexp = copy.deepcopy(self.main.regexp, memo)
-        except TypeError:
-            regexp = self.main.regexp.pattern
-        return self.__class__(regexp, self.rx_wsl, self.rx_wsr, self.name)
-
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        # assert self.main.regexp.pattern != "@"
-        txt = text    # type: StringView
-        wsl, txt = self.wsp_left(txt)
-        main, txt = self.main(txt)
-        if main:
-            wsr, txt = self.wsp_right(txt)
-            result = tuple(nd for nd in (wsl, main, wsr) if nd)
-            return Node(self, result), txt
-        return None, text
-
-    def __repr__(self):
-        wsl = '~' if self.wsp_left != ZOMBIE_PARSER else ''
-        wsr = '~' if self.wsp_right != ZOMBIE_PARSER else ''
-        return wsl + '/%s/' % self.main.regexp.pattern + wsr
-
-    def _grammar_assigned_notifier(self):
-        if self.grammar:
-            # use default whitespace parsers if not otherwise specified
-            if self.rx_wsl is None:
-                self.wsp_left = self.grammar.wsp_left_parser__
-            if self.rx_wsr is None:
-                self.wsp_right = self.grammar.wsp_right_parser__
-
-    def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super().apply(func):
-            if self.rx_wsl:
-                self.wsp_left.apply(func)
-            if self.rx_wsr:
-                self.wsp_right.apply(func)
-            self.main.apply(func)
-            return True
-        return False
-
-    def create_main_parser(self, arg) -> Parser:
-        """Creates the main parser of this compound parser. Can be overridden."""
-        return RegExp(arg)
-
-
-class Token(RE):
-    """
-    Class Token parses simple strings. Any regular regular expression
-    commands will be interpreted as simple sequence of characters.
-
-    Other than that class Token is essentially a renamed version of
-    class RE. Because tokens often have a particular semantic different
-    from other REs, parsing them with a separate parser class allows to
-    distinguish them by their parser type.
-    """
-    assert TOKEN_PTYPE == ":Token"
-
-    def __init__(self, token: str, wL=None, wR=None, name: str = '') -> None:
-        self.token = token
-        super().__init__(token, wL, wR, name)
-
-    def __deepcopy__(self, memo={}):
-        return self.__class__(self.token, self.rx_wsl, self.rx_wsr, self.name)
-
-    def __repr__(self):
-        return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
-
-    def create_main_parser(self, arg) -> Parser:
-        return PlainText(arg)
 
 
 ########################################################################
@@ -1136,14 +990,17 @@ class UnaryOperator(Parser):
     has additional parameters.
     """
 
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super(UnaryOperator, self).__init__(name)
+    def __init__(self, parser: Parser) -> None:
+        super(UnaryOperator, self).__init__()
         assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        return self.__class__(parser, self.name)
+        duplicate = self.__class__(parser)
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
         if super().apply(func):
@@ -1164,14 +1021,17 @@ class NaryOperator(Parser):
     additional parameters.
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super().__init__(name)
+    def __init__(self, *parsers: Parser) -> None:
+        super().__init__()
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        return self.__class__(*parsers, name=self.name)
+        duplicate = self.__class__(*parsers)
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
         if super().apply(func):
@@ -1196,7 +1056,7 @@ class Option(UnaryOperator):
 
     Examples::
 
-        >>> number = Option(Token('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
+        >>> number = Option(TKN('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
         >>> Grammar(number)('3.14159').content
         '3.14159'
         >>> Grammar(number)('3.14159').structure
@@ -1209,14 +1069,11 @@ class Option(UnaryOperator):
     EBNF-Example:  ``number = ["-"]  /\d+/  [ /\.\d+/ ]``
     """
 
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super().__init__(parser, name)
+    def __init__(self, parser: Parser) -> None:
+        super().__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
-            "Redundant nesting of options: %s(%s)" % (str(name), str(parser.name))
-        # assert not isinstance(parser, Required), \
-        #     "Nesting options with required elements is contradictory: " \
-        #     "%s(%s)" % (str(name), str(parser.name))
+            "Redundant nesting of options: %s" % (str(self.ptype), str(parser.name))
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
@@ -1237,7 +1094,7 @@ class ZeroOrMore(Option):
 
     Examples::
 
-        >>> sentence = ZeroOrMore(RE(r'\w+,?')) + Token('.')
+        >>> sentence = ZeroOrMore(RE(r'\w+,?')) + TKN('.')
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
@@ -1280,7 +1137,7 @@ class OneOrMore(UnaryOperator):
 
     Examples::
 
-        >>> sentence = OneOrMore(RE(r'\w+,?')) + Token('.')
+        >>> sentence = OneOrMore(RE(r'\w+,?')) + TKN('.')
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
@@ -1291,11 +1148,11 @@ class OneOrMore(UnaryOperator):
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
 
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super().__init__(parser, name)
+    def __init__(self, parser: Parser) -> None:
+        super().__init__(parser)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
-            "%s(%s)" % (str(name), str(parser.name))
+            "%s(%s)" % (str(self.ptype), str(parser.name))
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1344,8 +1201,8 @@ class Series(NaryOperator):
     RX_ARGUMENT = re.compile(r'\s(\S)')
     NOPE = 1000
 
-    def __init__(self, *parsers: Parser, mandatory: int = NOPE, name: str = '') -> None:
-        super().__init__(*parsers, name=name)
+    def __init__(self, *parsers: Parser, mandatory: int = NOPE) -> None:
+        super().__init__(*parsers)
         length = len(self.parsers)
         assert 1 <= length < Series.NOPE, \
             'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
@@ -1356,7 +1213,10 @@ class Series(NaryOperator):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        return self.__class__(*parsers, mandatory=self.mandatory, name=self.name)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1458,8 +1318,8 @@ class Alternative(NaryOperator):
     EBNF-Example:  ``sentence = /\d+\.\d+/ | /\d+/``
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super().__init__(*parsers, name=name)
+    def __init__(self, *parsers: Parser) -> None:
+        super().__init__(*parsers)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
@@ -1508,7 +1368,7 @@ class AllOf(NaryOperator):
 
     Example::
 
-        >>> prefixes = AllOf(Token("A"), Token("B"))
+        >>> prefixes = AllOf(TKN("A"), TKN("B"))
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
@@ -1519,7 +1379,7 @@ class AllOf(NaryOperator):
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
+    def __init__(self, *parsers: Parser) -> None:
         if len(parsers) == 1 and isinstance(parsers[0], Series):
             assert isinstance(parsers[0], Series), \
                 "Parser-specification Error: No single arguments other than a Series " \
@@ -1528,7 +1388,7 @@ class AllOf(NaryOperator):
             assert series.mandatory == Series.NOPE, \
                 "AllOf cannot contain mandatory (§) elements!"
             parsers = series.parsers
-        super().__init__(*parsers, name=name)
+        super().__init__(*parsers)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1559,7 +1419,7 @@ class SomeOf(NaryOperator):
 
     Example::
 
-        >>> prefixes = SomeOf(Token("A"), Token("B"))
+        >>> prefixes = SomeOf(TKN("A"), TKN("B"))
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
@@ -1572,14 +1432,14 @@ class SomeOf(NaryOperator):
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
+    def __init__(self, *parsers: Parser) -> None:
         if len(parsers) == 1:
             assert isinstance(parsers[0], Alternative), \
                 "Parser-specification Error: No single arguments other than a Alternative " \
                 "allowed as arguments for SomeOf-Parser !"
             alternative = cast(Alternative, parsers[0])
             parsers = alternative.parsers
-        super().__init__(*parsers, name=name)
+        super().__init__(*parsers)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1605,15 +1465,15 @@ class SomeOf(NaryOperator):
         return '<' + ' | '.join(parser.repr for parser in self.parsers) + '>'
 
 
-def Unordered(parser: NaryOperator, name: str = '') -> NaryOperator:
+def Unordered(parser: NaryOperator) -> NaryOperator:
     """
     Returns an AllOf- or SomeOf-parser depending on whether `parser`
     is a Series (AllOf) or an Alternative (SomeOf).
     """
     if isinstance(parser, Series):
-        return AllOf(parser, name=name)
+        return AllOf(parser)
     elif isinstance(parser, Alternative):
-        return SomeOf(parser, name=name)
+        return SomeOf(parser)
     else:
         raise AssertionError("Unordered can take only Series or Alternative as parser.")
 
@@ -1689,27 +1549,22 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowOperator):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp, RE, PlainText or Token parser.
+    the contained parser to be a RegExp, _RE, PlainText or _Token parser.
 
     EXPERIMENTAL
     """
-    def __init__(self, parser: Parser, name: str = '') -> None:
+    def __init__(self, parser: Parser) -> None:
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
-        assert isinstance(p, RegExp) or isinstance(p, PlainText) or isinstance(p, RE), str(type(p))
+        assert isinstance(p, RegExp) or isinstance(p, Token)
         self.regexp = None
         self.text = None
-        if isinstance(p, RE):
-            if isinstance(cast(RE, p).main, RegExp):
-                self.regexp = cast(RegExp, cast(RE, p).main).regexp
-            else:  # p.main is of type PlainText
-                self.text = cast(PlainText, cast(RE, p).main).text
-        elif isinstance(p, RegExp):
+        if isinstance(p, RegExp):
             self.regexp = cast(RegExp, p).regexp
         else:  # p is of type PlainText
-            self.text = cast(PlainText, p).text
-        super().__init__(parser, name)
+            self.text = cast(Token, p).text
+        super().__init__(parser)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[len(text):]
@@ -1793,13 +1648,16 @@ class Retrieve(Parser):
     used.
     """
 
-    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None, name: str = '') -> None:
-        super(Retrieve, self).__init__(name)
+    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
+        super().__init__()
         self.symbol = symbol
         self.filter = rfilter if rfilter else last_value
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.filter, self.name)
+        duplicate = self.__class__(self.symbol, self.filter)
+        duplicate.name = self.name
+        duplicate.ptype =   self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # the following indirection allows the call() method to be called
@@ -1878,7 +1736,7 @@ class Synonym(UnaryOperator):
 
     Otherwise the first line could not be represented by any parser
     class, in which case it would be unclear whether the parser
-    RE('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
+    RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1906,19 +1764,21 @@ class Forward(Parser):
             '''
             expression = Forward()
             INTEGER    = RE('\\d+')
-            factor     = INTEGER | Token("(") + expression + Token(")")
-            term       = factor + ZeroOrMore((Token("*") | Token("/")) + factor)
-            expression.set(term + ZeroOrMore((Token("+") | Token("-")) + term))
+            factor     = INTEGER | TKN("(") + expression + TKN(")")
+            term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
+            expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
             root__     = expression
     """
 
     def __init__(self):
-        Parser.__init__(self)
+        super().__init__()
         self.parser = None
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
+        # duplicate.name = self.name  # Forward-Parsers should never have a name!
+        duplicate.ptype =  self.ptype
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.set(parser)

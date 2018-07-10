@@ -12,17 +12,17 @@ Match-test "simple"
 
 ### AST
     (content
-        (:Token
-            "{"
+      (:Token
+        "{"
+      )
+      (text
+        (CONTENT_STRING
+          "Edward N. Zalta"
         )
-        (text
-            (CONTENT_STRING
-                "Edward N. Zalta"
-            )
-        )
-        (:Token
-            "}"
-        )
+      )
+      (:Token
+        "}"
+      )
     )
 
 Match-test "nested_braces"
@@ -33,28 +33,28 @@ Match-test "nested_braces"
 
 ### AST
     (content
-        (:Token
+      (:Token
+        "{"
+      )
+      (text
+        (CONTENT_STRING
+          "\url"
+        )
+        (:Series
+          (:Token
             "{"
-        )
-        (text
+          )
+          (text
             (CONTENT_STRING
-                "\url"
+              "https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/"
             )
-            (:Series
-                (:Token
-                    "{"
-                )
-                (text
-                    (CONTENT_STRING
-                        "https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/"
-                    )
-                )
-                (:Token
-                    "}"
-                )
-            )
-        )
-        (:Token
+          )
+          (:Token
             "}"
+          )
         )
+      )
+      (:Token
+        "}"
+      )
     )

@@ -30,7 +30,7 @@ from functools import partial
 
 from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, RE, \
+from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
@@ -117,7 +117,7 @@ class EBNFGrammar(Grammar):
         literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                    | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
         plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-        regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                         # '~' is a whitespace-marker, if present leading or trailing
                                                         # whitespace of a regular expression will be ignored tacitly.
         whitespace = /~/~                               # implicit or default whitespace
@@ -126,38 +126,39 @@ class EBNFGrammar(Grammar):
         EOF = !/./
     """
     expression = Forward()
-    source_hash__ = "3fc9f5a340f560e847d9af0b61a68743"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP__
-    whitespace__ = Whitespace(WSP__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-    whitespace = RE('~')
-    regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
-    plaintext = RE('`(?:[^"]|\\\\")*?`')
-    literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
-    symbol = RE('(?!\\d)\\w+')
-    option = Series(Token("["), expression, Token("]"), mandatory=1)
-    repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
-    oneormore = Series(Token("{"), expression, Token("}+"))
-    unordered = Series(Token("<"), expression, Token(">"), mandatory=1)
-    group = Series(Token("("), expression, Token(")"), mandatory=1)
-    retrieveop = Alternative(Token("::"), Token(":"))
-    flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))),
+    list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
+    whitespace = Series(RegExp('~'), wsp__)
+    regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
+    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
+    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
+    option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
+    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
+    oneormore = Series(Series(Token("{"), wsp__), expression, Series(Token("}+"), wsp__))
+    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
+    group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
+    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
+                             Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
+                                NegativeLookahead(Series(Token("="), wsp__))),
                          Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext),
                          Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace),
                          Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
                          Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Token("§")), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
-    definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
+    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
+    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
+                       Alternative(regexp, literal, list_), mandatory=1)
+    definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
+    syntax = Series(Option(Series(wsp__, RegExp(''))),
+                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -382,9 +383,9 @@ class EBNFCompiler(Compiler):
                 regular expressions found in the current parsing process
     """
     COMMENT_KEYWORD = "COMMENT__"
-    WHITESPACE_KEYWORD = "WSP__"
+    WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
-    WHITESPACE_PARSER_KEYWORD = "whitespace__"
+    WHITESPACE_PARSER_KEYWORD = "wsp__"
     RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
@@ -459,7 +460,7 @@ class EBNFCompiler(Compiler):
             elif rule.startswith('Synonym'):
                 transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        transtable.append('    ":Token, :RE": reduce_single_child,')
+        transtable.append('    ":Token": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
@@ -539,10 +540,10 @@ class EBNFCompiler(Compiler):
 
         definitions.append((self.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
-        definitions.append(('wspR__', self.WHITESPACE_KEYWORD
-                            if 'right' in self.directives['literalws'] else "''"))
-        definitions.append(('wspL__', self.WHITESPACE_KEYWORD
-                            if 'left' in self.directives['literalws'] else "''"))
+        # definitions.append(('wspR__', self.WHITESPACE_KEYWORD
+        #                     if 'right' in self.directives['literalws'] else "''"))
+        # definitions.append(('wspL__', self.WHITESPACE_KEYWORD
+        #                     if 'left' in self.directives['literalws'] else "''"))
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD +
                              ", comment=" + self.COMMENT_KEYWORD + ")")))
@@ -778,7 +779,6 @@ class EBNFCompiler(Compiler):
         name for the particular non-terminal.
         """
         arguments = [self.compile(r) for r in node.children] + custom_args
-        # node.error_flag = max(node.error_flag, max(t.error_flag for t in node.children))
         return parser_class + '(' + ', '.join(arguments) + ')'
 
 
@@ -921,12 +921,22 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node: Node) -> str:
-        return 'Token(' + node.content.replace('\\', r'\\') + ')'
+        center = 'Token(' + node.content.replace('\\', r'\\') + ')'
+        left = self.WHITESPACE_PARSER_KEYWORD if 'left' in self.directives['literalws'] else ''
+        right = self.WHITESPACE_PARSER_KEYWORD if 'right' in self.directives['literalws'] else ''
+        if left or right:
+            return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
+        return center
 
 
     def on_plaintext(self, node: Node) -> str:
-        return 'Token(' + node.content.replace('\\', r'\\').replace('`', '"') \
-               + ", wL='', wR='')"
+        tk = node.content.replace('\\', r'\\')
+        rpl = '"' if tk.find('"') < 0 else "'" if tk.find("'") < 0 else ''
+        if rpl:
+            tk = rpl + tk[1:-1] + rpl
+        else:
+            tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
+        return 'Token(' + tk + ')'
 
 
     def on_regexp(self, node: Node) -> str:
@@ -935,7 +945,7 @@ class EBNFCompiler(Compiler):
         if rx[0] == '/' and rx[-1] == '/':
             parser = 'RegExp('
         else:
-            parser = 'RE('
+            parser = '_RE('
             if rx[:2] == '~/':
                 if not 'left' in self.directives['literalws']:
                     name = ['wL=' + self.WHITESPACE_KEYWORD] + name
@@ -961,7 +971,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_whitespace(self, node: Node) -> str:
-        return 'whitespace__'
+        return self.WHITESPACE_PARSER_KEYWORD
 
 
     def on_list_(self, node) -> Set[str]:
