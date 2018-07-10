@@ -133,7 +133,8 @@ class TestEBNFParser:
 
     def test_RE(self):
         gr = get_ebnf_grammar()
-        m = gr.regexp.main.regexp.match(r'/[\\\\]/ xxx /')
+        print(gr.regexp.parsers)
+        m = gr.regexp.parsers[0].regexp.match(r'/[\\\\]/ xxx /')
         rs = m.group()
         assert rs.find('x') < 0, rs.group()
         rx = re.compile(rs[1:-1])
