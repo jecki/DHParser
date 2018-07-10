@@ -861,6 +861,12 @@ class PreprocessorToken(Parser):
         super().__init__()
         self.name = token
 
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__(self.name)
+        duplicate.name = self.name
+        # duplicate.ptype =  self.ptype
+        return duplicate
+
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
