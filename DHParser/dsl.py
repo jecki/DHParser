@@ -90,7 +90,7 @@ except ImportError:
 from DHParser import logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \\
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \\
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, \\

@@ -30,8 +30,8 @@ from functools import partial
 
 from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, _RE, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, _Token
+from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
+    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -132,32 +132,35 @@ class EBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP_RE__
-    whitespace__ = Whitespace(WSP_RE__)
+    wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RegExp('\\w+'), whitespace__, ZeroOrMore(Series(_Token(","), RegExp('\\w+'), whitespace__)))
-    whitespace = Series(RegExp('~'), whitespace__)
-    regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), whitespace__)
-    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), whitespace__)
-    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), whitespace__), Series(RegExp("'(?:[^']|\\\\')*?'"), whitespace__))
-    symbol = Series(RegExp('(?!\\d)\\w+'), whitespace__)
-    option = Series(_Token("["), expression, _Token("]"), mandatory=1)
-    repetition = Series(_Token("{"), expression, _Token("}"), mandatory=1)
-    oneormore = Series(_Token("{"), expression, _Token("}+"))
-    unordered = Series(_Token("<"), expression, _Token(">"), mandatory=1)
-    group = Series(_Token("("), expression, _Token(")"), mandatory=1)
-    retrieveop = Alternative(_Token("::"), _Token(":"))
-    flowmarker = Alternative(_Token("!"), _Token("&"), _Token("-!"), _Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(_Token("="))),
+    list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
+    whitespace = Series(RegExp('~'), wsp__)
+    regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
+    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
+    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
+    option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
+    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
+    oneormore = Series(Series(Token("{"), wsp__), expression, Series(Token("}+"), wsp__))
+    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
+    group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
+    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
+                             Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
+                                NegativeLookahead(Series(Token("="), wsp__))),
                          Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext),
                          Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace),
-                         Series(Option(flowmarker), oneormore),
-                         Series(Option(flowmarker), group),
+                         Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
                          Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(_Token("§")), factor))
-    expression.set(Series(term, ZeroOrMore(Series(_Token("|"), term))))
-    directive = Series(_Token("@"), symbol, _Token("="), Alternative(regexp, literal, list_), mandatory=1)
-    definition = Series(symbol, _Token("="), expression, mandatory=1)
-    syntax = Series(Option(Series(whitespace__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
+    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
+    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
+                       Alternative(regexp, literal, list_), mandatory=1)
+    definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
+    syntax = Series(Option(Series(wsp__, RegExp(''))),
+                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -459,7 +462,7 @@ class EBNFCompiler(Compiler):
             elif rule.startswith('Synonym'):
                 transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        transtable.append('    ":_Token, :_RE": reduce_single_child,')
+        transtable.append('    ":Token": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
@@ -777,9 +780,7 @@ class EBNFCompiler(Compiler):
         Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
-        # print(node.as_sxpr())
         arguments = [self.compile(r) for r in node.children] + custom_args
-        # node.error_flag = max(node.error_flag, max(t.error_flag for t in node.children))
         return parser_class + '(' + ', '.join(arguments) + ')'
 
 
@@ -931,7 +932,13 @@ class EBNFCompiler(Compiler):
 
 
     def on_plaintext(self, node: Node) -> str:
-        return 'Token(' + node.content.replace('\\', r'\\') + ')'
+        tk = node.content.replace('\\', r'\\')
+        rpl = '"' if tk.find('"') < 0 else "'" if tk.find("'") < 0 else ''
+        if rpl:
+            tk = rpl + tk[1:-1] + rpl
+        else:
+            tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
+        return 'Token(' + tk + ')'
 
 
     def on_regexp(self, node: Node) -> str:

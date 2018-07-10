@@ -110,7 +110,7 @@ class ParserBase:
 
 
 WHITESPACE_PTYPE = ':Whitespace'
-TOKEN_PTYPE = ':_Token'
+TOKEN_PTYPE = ':Token'
 
 
 class MockParser(ParserBase):
@@ -936,8 +936,8 @@ def parse_xml(xml: str) -> Node:
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
     xml = StringView(xml)
-    PlainText = MockParser('', PLAINTEXT_PTYPE)
-    mock_parsers = {PLAINTEXT_PTYPE: PlainText}
+    PlainText = MockParser('', TOKEN_PTYPE)
+    mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
@@ -997,7 +997,7 @@ def parse_xml(xml: str) -> Node:
                     result.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname
-        if len(result) == 1 and result[0].parser.ptype == PLAINTEXT_PTYPE:
+        if len(result) == 1 and result[0].parser.ptype == TOKEN_PTYPE:
             result = result[0].result
         else:
             result = tuple(result)
