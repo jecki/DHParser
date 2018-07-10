@@ -35,8 +35,10 @@ symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, param
 literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
            | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
-whitespace = /~/~                               # insignificant whitespace
+regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+                                                # '~' is a whitespace-marker, if present leading or trailing
+                                                # whitespace of a regular expression will be ignored tacitly.
+whitespace = /~/~                               # implicit or default whitespace
 list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
                                                 # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
 EOF = !/./

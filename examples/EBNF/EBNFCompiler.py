@@ -10,6 +10,9 @@
 from functools import partial
 import os
 import sys
+
+sys.path.extend(['..\\', '..\\..\\'])
+
 try:
     import regex as re
 except ImportError:
@@ -20,7 +23,7 @@ from DHParser import is_filename, load_if_file, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \
+    Node, TransformationFunc, TransformationDict, Whitespace, \
     traverse, remove_children_if, merge_children, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
@@ -289,6 +292,6 @@ if __name__ == "__main__":
                 print(error)
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.as_sxpr() if isinstance(result, Node) else result)
     else:
         print("Usage: EBNFCompiler.py [FILENAME]")

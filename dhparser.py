@@ -29,7 +29,7 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.log import logging
 from DHParser.toolkit import re
 
-LOGGING = False
+LOGGING = True
 
 dhparserdir = os.path.dirname(os.path.realpath(__file__))
 

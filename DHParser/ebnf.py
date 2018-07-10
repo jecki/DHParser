@@ -117,7 +117,7 @@ class EBNFGrammar(Grammar):
         literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                    | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
         plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-        regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
                                                         # '~' is a whitespace-marker, if present leading or trailing
                                                         # whitespace of a regular expression will be ignored tacitly.
         whitespace = /~/~                               # implicit or default whitespace
@@ -126,7 +126,6 @@ class EBNFGrammar(Grammar):
         EOF = !/./
     """
     expression = Forward()
-    source_hash__ = "3fc9f5a340f560e847d9af0b61a68743"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
@@ -135,12 +134,12 @@ class EBNFGrammar(Grammar):
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(_RE('\\w+'), ZeroOrMore(Series(_Token(","), _RE('\\w+'))))
-    whitespace = _RE('~')
-    regexp = _RE('~?/(?:\\\\/|[^/])*?/~?')
-    plaintext = _RE('`(?:[^"]|\\\\")*?`')
-    literal = Alternative(_RE('"(?:[^"]|\\\\")*?"'), _RE("'(?:[^']|\\\\')*?'"))
-    symbol = _RE('(?!\\d)\\w+')
+    list_ = Series(RegExp('\\w+'), whitespace__, ZeroOrMore(Series(_Token(","), RegExp('\\w+'), whitespace__)))
+    whitespace = Series(RegExp('~'), whitespace__)
+    regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), whitespace__)
+    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), whitespace__)
+    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), whitespace__), Series(RegExp("'(?:[^']|\\\\')*?'"), whitespace__))
+    symbol = Series(RegExp('(?!\\d)\\w+'), whitespace__)
     option = Series(_Token("["), expression, _Token("]"), mandatory=1)
     repetition = Series(_Token("{"), expression, _Token("}"), mandatory=1)
     oneormore = Series(_Token("{"), expression, _Token("}+"))
@@ -151,13 +150,14 @@ class EBNFGrammar(Grammar):
     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(_Token("="))),
                          Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext),
                          Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace),
-                         Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
+                         Series(Option(flowmarker), oneormore),
+                         Series(Option(flowmarker), group),
                          Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(_Token("§")), factor))
     expression.set(Series(term, ZeroOrMore(Series(_Token("|"), term))))
     directive = Series(_Token("@"), symbol, _Token("="), Alternative(regexp, literal, list_), mandatory=1)
     definition = Series(symbol, _Token("="), expression, mandatory=1)
-    syntax = Series(Option(_RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    syntax = Series(Option(Series(whitespace__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
