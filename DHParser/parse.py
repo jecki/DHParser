@@ -38,7 +38,7 @@ from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
-    PLAINTEXT_PTYPE, TOKEN_PTYPE, ZOMBIE_PARSER
+    TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
 from typing import Callable, cast, Dict, DefaultDict, List, Set, Tuple, Union, Optional
 
@@ -260,7 +260,7 @@ class Parser(ParserBase):
         """
         duplicate = self.__class__()
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def reset(self):
@@ -864,7 +864,7 @@ class PreprocessorToken(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.name)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -894,27 +894,28 @@ class PreprocessorToken(Parser):
         return None, text
 
 
-class PlainText(Parser):
+class Token(Parser):
     """
     Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
     Example::
 
-        >>> while_token = PlainText("while")
+        >>> while_token = Token("while")
         >>> Grammar(while_token)("while").content
         'while'
     """
-    assert PLAINTEXT_PTYPE == ":PlainText"
+    assert TOKEN_PTYPE == ":_Token"
 
     def __init__(self, text: str) -> None:
         super().__init__()
         self.text = text
         self.len = len(text)
+        self.ptype = ":_Token"  # TODO: Remove when transition to New Token class is finished
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -958,7 +959,7 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -983,6 +984,7 @@ class Whitespace(RegExp):
     """An variant of RegExp that signifies through its class name that it
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
+
 
 
 # def RE(regexp, wL=None, wR=None) -> 'Series':
@@ -1083,7 +1085,7 @@ class _RE(Parser):
             regexp = self.main.regexp.pattern
         duplicate = self.__class__(regexp, self.rx_wsl, self.rx_wsr)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1146,14 +1148,14 @@ class _Token(_RE):
     def __deepcopy__(self, memo={}):
         duplicate = self.__class__(self.token, self.rx_wsl, self.rx_wsr)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def __repr__(self):
         return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
 
     def create_main_parser(self, arg) -> Parser:
-        return PlainText(arg)
+        return Token(arg)
 
 
 ########################################################################
@@ -1184,7 +1186,7 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
@@ -1215,7 +1217,7 @@ class NaryOperator(Parser):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
@@ -1400,7 +1402,7 @@ class Series(NaryOperator):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1846,7 +1848,7 @@ class Retrieve(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.symbol, self.filter)
         duplicate.name = self.name
-        # duplicate.ptype =  self.ptype
+        duplicate.ptype =   self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1968,7 +1970,7 @@ class Forward(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         # duplicate.name = self.name  # Forward-Parsers should never have a name!
-        # duplicate.ptype = self.ptype
+        duplicate.ptype =  self.ptype
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.set(parser)

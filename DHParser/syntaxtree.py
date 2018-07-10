@@ -35,7 +35,6 @@ from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tupl
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',
-           'PLAINTEXT_PTYPE',
            'TOKEN_PTYPE',
            'MockParser',
            'ZombieParser',
@@ -111,7 +110,6 @@ class ParserBase:
 
 
 WHITESPACE_PTYPE = ':Whitespace'
-PLAINTEXT_PTYPE = ':PlainText'
 TOKEN_PTYPE = ':_Token'
 
 
