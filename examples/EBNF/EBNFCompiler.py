@@ -10,6 +10,9 @@
 from functools import partial
 import os
 import sys
+
+sys.path.extend(['..\\', '..\\..\\'])
+
 try:
     import regex as re
 except ImportError:
@@ -17,16 +20,17 @@ except ImportError:
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationFunc, TransformationDict, TRUE_CONDITION, \
+    Node, TransformationFunc, TransformationDict, Whitespace, \
     traverse, remove_children_if, merge_children, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, \
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last
+    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
+    forbid, assert_content, remove_infix_operator
 from DHParser.log import logging
 
 
@@ -89,43 +93,41 @@ class EBNFGrammar(Grammar):
     literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
     plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-    regexp     = /~?\/(?:\\\/|[^\/])*?\/~?/~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                    # '~' is a whitespace-marker, if present leading or trailing
-                                                    # whitespace of a regular expression will be ignored tacitly.
-    whitespace = /~/~                               # implicit or default whitespace
+    regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    whitespace = /~/~                               # insignificant whitespace
     list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
                                                     # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
     EOF = !/./
     """
     expression = Forward()
-    source_hash__ = "d807c57c29ef6c674abe1addfce146c4"
+    source_hash__ = "97b616756462a59e1f5162a95ae84c5f"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
-    wspR__ = WSP__
-    whitespace__ = Whitespace(WSP__)
+    wspR__ = WSP_RE__
+    wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RE('\\w+'), ZeroOrMore(Series(Token(","), RE('\\w+'))))
-    whitespace = RE('~')
-    regexp = RE('~?/(?:\\\\/|[^/])*?/~?')
-    plaintext = RE('`(?:[^"]|\\\\")*?`')
-    literal = Alternative(RE('"(?:[^"]|\\\\")*?"'), RE("'(?:[^']|\\\\')*?'"))
-    symbol = RE('(?!\\d)\\w+')
-    option = Series(Token("["), expression, Token("]"), mandatory=1)
-    repetition = Series(Token("{"), expression, Token("}"), mandatory=1)
-    oneormore = Series(Token("{"), expression, Token("}+"))
-    unordered = Series(Token("<"), expression, Token(">"), mandatory=1)
-    group = Series(Token("("), expression, Token(")"), mandatory=1)
-    retrieveop = Alternative(Token("::"), Token(":"))
-    flowmarker = Alternative(Token("!"), Token("&"), Token("-!"), Token("-&"))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Token("="))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Token("§")), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Token("|"), term))))
-    directive = Series(Token("@"), symbol, Token("="), Alternative(regexp, literal, list_), mandatory=1)
-    definition = Series(symbol, Token("="), expression, mandatory=1)
-    syntax = Series(Option(RE('', wR='', wL=WSP__)), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
+    whitespace = Series(RegExp('~'), wsp__)
+    regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
+    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
+    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
+    option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
+    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
+    oneormore = Series(Series(Token("{"), wsp__), expression, Series(Token("}+"), wsp__))
+    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
+    group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
+    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__), Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
+    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
+    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__), Alternative(regexp, literal, list_), mandatory=1)
+    definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
+    syntax = Series(Option(Series(wsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
@@ -145,27 +147,35 @@ def get_grammar() -> EBNFGrammar:
 #######################################################################
 
 EBNF_AST_transformation_table = {
-    # AST Transformations for the EBNF-grammar
-    "+": remove_empty,
-    "syntax": [],
-    "definition": [],
-    "directive": [],
-    "expression": [],
-    "term": [],
-    "factor": [replace_or_reduce],
-    "flowmarker": [replace_or_reduce],
-    "retrieveop": [replace_or_reduce],
-    "group": [],
-    "oneormore": [],
-    "repetition": [],
-    "option": [],
-    "symbol": [],
-    "literal": [replace_or_reduce],
-    "regexp": [],
-    "list_": [],
-    "EOF": [],
-    ":Token, :RE": reduce_single_child,
-    "*": replace_by_single_child
+    # AST Transformations for EBNF-grammar
+    "+":
+        remove_expendables,
+    "syntax":
+        [],  # otherwise '"*": replace_by_single_child' would be applied
+    "directive, definition":
+        remove_tokens('@', '='),
+    "expression":
+        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
+    "term":
+        [replace_by_single_child, flatten],  # supports both idioms:
+                                             # "{ factor }+" and "factor { factor }"
+    "factor, flowmarker, retrieveop":
+        replace_by_single_child,
+    "group":
+        [remove_brackets, replace_by_single_child],
+    "unordered":
+        remove_brackets,
+    "oneormore, repetition, option":
+        [reduce_single_child, remove_brackets,
+         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
+    "symbol, literal, regexp":
+        reduce_single_child,
+    (TOKEN_PTYPE, WHITESPACE_PTYPE):
+        reduce_single_child,
+    "list_":
+        [flatten, remove_infix_operator],
+    "*":
+        replace_by_single_child
 }
 
 
@@ -289,6 +299,6 @@ if __name__ == "__main__":
                 print(error)
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.as_sxpr() if isinstance(result, Node) else result)
     else:
         print("Usage: EBNFCompiler.py [FILENAME]")

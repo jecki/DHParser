@@ -35,7 +35,6 @@ from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tupl
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',
-           'PLAINTEXT_PTYPE',
            'TOKEN_PTYPE',
            'MockParser',
            'ZombieParser',
@@ -62,11 +61,11 @@ class ParserBase:
     It is defined here, because Node objects require a parser object
     for instantiation.
     """
-    __slots__ = '_name', '_ptype'
+    __slots__ = 'name', 'ptype'
 
-    def __init__(self, name=''):  # , pbases=frozenset()):
-        self._name = name  # type: str
-        self._ptype = ':' + self.__class__.__name__  # type: str
+    def __init__(self,):  # , pbases=frozenset()):
+        self.name = ''  # type: str
+        self.ptype = ':' + self.__class__.__name__  # type: str
 
     def __repr__(self):
          return self.name + self.ptype
@@ -77,17 +76,17 @@ class ParserBase:
     def __call__(self, text: StringView) -> Tuple[Optional['Node'], StringView]:
         return None, text
 
-    @property
-    def name(self):
-        """Returns the name of the parser or the empty string '' for unnamed
-        parsers."""
-        return self._name
-
-    @property
-    def ptype(self) -> str:
-        """Returns the type of the parser. By default this is the parser's
-        class name preceded by a colon, e.g. ':ZeroOrMore'."""
-        return self._ptype
+    # @property
+    # def name(self):
+    #     """Returns the name of the parser or the empty string '' for unnamed
+    #     parsers."""
+    #     return self._name
+    #
+    # @property
+    # def ptype(self) -> str:
+    #     """Returns the type of the parser. By default this is the parser's
+    #     class name preceded by a colon, e.g. ':ZeroOrMore'."""
+    #     return self._ptype
 
     @property
     def repr(self) -> str:
@@ -111,7 +110,6 @@ class ParserBase:
 
 
 WHITESPACE_PTYPE = ':Whitespace'
-PLAINTEXT_PTYPE = ':PlainText'
 TOKEN_PTYPE = ':Token'
 
 
@@ -129,8 +127,10 @@ class MockParser(ParserBase):
 
     def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
         assert not ptype or ptype[0] == ':'
-        super().__init__(name)
-        self._ptype = ptype or ':' + self.__class__.__name__
+        super().__init__()
+        self.name = name
+        if ptype:
+            self.ptype = ptype  # or ':' + self.__class__.__name__
 
 
 class ZombieParser(MockParser):
@@ -147,9 +147,10 @@ class ZombieParser(MockParser):
     __slots__ = ()
 
     def __init__(self):
-        super(ZombieParser, self).__init__("__ZOMBIE__")
+        super(ZombieParser, self).__init__()
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
+        self.name = "__ZOMBIE__"
         self.__class__.alive = True
 
     def __copy__(self):
@@ -935,8 +936,8 @@ def parse_xml(xml: str) -> Node:
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
     xml = StringView(xml)
-    PlainText = MockParser('', PLAINTEXT_PTYPE)
-    mock_parsers = {PLAINTEXT_PTYPE: PlainText}
+    PlainText = MockParser('', TOKEN_PTYPE)
+    mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
@@ -996,7 +997,7 @@ def parse_xml(xml: str) -> Node:
                     result.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname
-        if len(result) == 1 and result[0].parser.ptype == PLAINTEXT_PTYPE:
+        if len(result) == 1 and result[0].parser.ptype == TOKEN_PTYPE:
             result = result[0].result
         else:
             result = tuple(result)

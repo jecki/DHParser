@@ -19,8 +19,8 @@ except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, _Token, Synonym, AllOf, SomeOf, Unordered, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, _RE, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
@@ -91,7 +91,7 @@ class wsGrammar(Grammar):
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*'
     WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)
@@ -122,7 +122,7 @@ ws_AST_transformation_table = {
     "document": [],
     "WORD": [],
     "EOF": [],
-    ":Token, :RE": reduce_single_child,
+    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

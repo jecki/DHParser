@@ -55,7 +55,7 @@ class TestParseXML:
     def test_plaintext_handling(self):
         tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
         assert flatten_sxpr(tree.as_sxpr()) == \
-               '(a (:PlainText "alpha ") (b "beta") (:PlainText " gamma"))'
+               '(a (:Token "alpha ") (b "beta") (:Token " gamma"))'
         tree = parse_xml(' <a>   <b>beta</b>   </a> ')
         assert flatten_xml(tree.as_xml()) == '<a><b>beta</b></a>'
 
@@ -100,10 +100,9 @@ class TestNode:
 
     def test_equality2(self):
         ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
-        att  = {"term": [replace_by_single_child, flatten],
+        att  = {"term": [remove_expendables, replace_by_single_child, flatten],
                 "factor": [remove_expendables, reduce_single_child],
-                (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-                "?": [remove_expendables, replace_by_single_child]}
+                "*": [remove_expendables, replace_by_single_child]}
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)

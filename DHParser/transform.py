@@ -97,7 +97,8 @@ __all__ = ('TransformationDict',
            'assert_content',
            'error_on',
            'warn_on',
-           'assert_has_children')
+           'assert_has_children',
+           'peek')
 
 
 TransformationProc = Callable[[List[Node]], None]
@@ -409,19 +410,21 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
     any token is a match.
     """
-    def stripped(nd: Node) -> str:
-        """Removes leading and trailing whitespace-nodes from content."""
-        # assert node.parser.ptype == TOKEN_PTYPE
-        if nd.children:
-            i, k = 0, len(nd.children)
-            while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
-                i += 1
-            while k > 0 and nd.children[k - 1].parser.ptype == WHITESPACE_PTYPE:
-                k -= 1
-            return "".join(child.content for child in node.children[i:k])
-        return nd.content
+    # def stripped(nd: Node) -> str:
+    #     """Removes leading and trailing whitespace-nodes from content."""
+    #     # assert node.parser.ptype == TOKEN_PTYPE
+    #     if nd.children:
+    #         i, k = 0, len(nd.children)
+    #         while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
+    #             i += 1
+    #         while k > 0 and nd.children[k - 1].parser.ptype == WHITESPACE_PTYPE:
+    #             k -= 1
+    #         return "".join(child.content for child in node.children[i:k])
+    #     return nd.content
+    # node = context[-1]
+    # return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
     node = context[-1]
-    return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
+    return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.content in tokens)
 
 
 @transformation_factory(collections.abc.Set)
@@ -983,3 +986,8 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
         if child.tag_name in child_tags:
             context[0].new_error(node, 'Element "%s" cannot be nested inside "%s".' %
                                  (child.parser.name, node.parser.name))
+
+
+def peek(context: List[Node]):
+    """For debugging: Prints the last node in the context as S-expression."""
+    print(context[-1].as_sxpr())

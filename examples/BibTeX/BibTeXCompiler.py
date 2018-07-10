@@ -20,7 +20,7 @@ sys.path.extend(['../../', '../', './'])
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, RE, Capture, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationDict, Whitespace, \
@@ -106,29 +106,29 @@ class BibTeXGrammar(Grammar):
     CONTENT_STRING = { /[^{}%]+/ | /(?=%)/~ }+
     """
     text = Forward()
-    source_hash__ = "5ce8838ebbb255548cf3e14cd90bae6d"
+    source_hash__ = "534895885bfdddb19785f5d943b356a7"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?i)%.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
-    wspR__ = WSP__
-    whitespace__ = Whitespace(WSP__)
-    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), RE('(?i)(?=%)')))
-    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), RE('(?i)(?=%)')))
-    NO_BLANK_STRING = RE('(?i)[^ \\t\\n,%]+')
-    WORD_ = RE('(?i)\\w+')
+    wspR__ = WSP_RE__
+    wsp__ = Whitespace(WSP_RE__)
+    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
+    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
+    NO_BLANK_STRING = Series(RegExp('(?i)[^ \\t\\n,%]+'), wsp__)
+    WORD_ = Series(RegExp('(?i)\\w+'), wsp__)
     WORD = RegExp('(?i)\\w+')
-    text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Token("{"), text, Token("}")))))
+    text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)))))
     plain_content = Synonym(COMMA_TERMINATED_STRING)
-    content = Alternative(Series(Token("{"), text, Token("}")), plain_content)
+    content = Alternative(Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)), plain_content)
     field = Synonym(WORD_)
     key = Synonym(NO_BLANK_STRING)
     type = Synonym(WORD)
-    entry = Series(RegExp('(?i)@'), type, Token("{"), key, ZeroOrMore(Series(Token(","), field, Token("="), content, mandatory=2)), Token("}"), mandatory=5)
-    comment = Series(Token("@Comment{"), text, Token("}"), mandatory=2)
+    entry = Series(RegExp('(?i)@'), type, Series(Token("{"), wsp__), key, ZeroOrMore(Series(Series(Token(","), wsp__), field, Series(Token("="), wsp__), content, mandatory=2)), Series(Token("}"), wsp__), mandatory=5)
+    comment = Series(Series(Token("@Comment{"), wsp__), text, Series(Token("}"), wsp__), mandatory=2)
     pre_code = ZeroOrMore(Alternative(RegExp('(?i)[^"%]+'), RegExp('(?i)%.*\\n')))
-    preamble = Series(Token("@Preamble{"), RegExp('(?i)"'), pre_code, RE('(?i)"'), Token("}"), mandatory=4)
+    preamble = Series(Series(Token("@Preamble{"), wsp__), RegExp('(?i)"'), pre_code, RegExp('(?i)"'), wsp__, Series(Token("}"), wsp__), mandatory=5)
     bibliography = ZeroOrMore(Alternative(preamble, comment, entry))
     root__ = bibliography
     
@@ -162,7 +162,7 @@ BibTeX_AST_transformation_table = {
     "content": [replace_or_reduce],
     "plain_content": [],
     "text": [],
-    ":Token, :RE": reduce_single_child,
+    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

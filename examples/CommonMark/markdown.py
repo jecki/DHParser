@@ -191,7 +191,7 @@ code = compile(parser_py, '<string>', 'exec')
 
 
 module_vars = globals()
-name_space = {k: module_vars[k] for k in {'RegExp', 'RE', 'Token', 'Required', 'Option', 'mixin_comment',
+name_space = {k: module_vars[k] for k in {'RegExp', '_RE', '_Token', 'Required', 'Option', 'mixin_comment',
                                           'ZeroOrMore', 'OneOrMore', 'Sequence', 'Alternative', 'Forward',
                                           'NegativeLookahead', 'PositiveLookahead', 'PreprocessorToken', 'Grammar'}}
 exec(code, name_space)
