@@ -62,11 +62,11 @@ class ParserBase:
     It is defined here, because Node objects require a parser object
     for instantiation.
     """
-    __slots__ = '_name', '_ptype'
+    __slots__ = 'name', 'ptype'
 
-    def __init__(self, name=''):  # , pbases=frozenset()):
-        self._name = name  # type: str
-        self._ptype = ':' + self.__class__.__name__  # type: str
+    def __init__(self,):  # , pbases=frozenset()):
+        self.name = ''  # type: str
+        self.ptype = ':' + self.__class__.__name__  # type: str
 
     def __repr__(self):
          return self.name + self.ptype
@@ -77,17 +77,17 @@ class ParserBase:
     def __call__(self, text: StringView) -> Tuple[Optional['Node'], StringView]:
         return None, text
 
-    @property
-    def name(self):
-        """Returns the name of the parser or the empty string '' for unnamed
-        parsers."""
-        return self._name
-
-    @property
-    def ptype(self) -> str:
-        """Returns the type of the parser. By default this is the parser's
-        class name preceded by a colon, e.g. ':ZeroOrMore'."""
-        return self._ptype
+    # @property
+    # def name(self):
+    #     """Returns the name of the parser or the empty string '' for unnamed
+    #     parsers."""
+    #     return self._name
+    #
+    # @property
+    # def ptype(self) -> str:
+    #     """Returns the type of the parser. By default this is the parser's
+    #     class name preceded by a colon, e.g. ':ZeroOrMore'."""
+    #     return self._ptype
 
     @property
     def repr(self) -> str:
@@ -129,8 +129,9 @@ class MockParser(ParserBase):
 
     def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
         assert not ptype or ptype[0] == ':'
-        super().__init__(name)
-        self._ptype = ptype or ':' + self.__class__.__name__
+        super().__init__()
+        self.name = name
+        self.ptype = ptype or ':' + self.__class__.__name__
 
 
 class ZombieParser(MockParser):
@@ -147,9 +148,10 @@ class ZombieParser(MockParser):
     __slots__ = ()
 
     def __init__(self):
-        super(ZombieParser, self).__init__("__ZOMBIE__")
+        super(ZombieParser, self).__init__()
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
+        self.name = "__ZOMBIE__"
         self.__class__.alive = True
 
     def __copy__(self):

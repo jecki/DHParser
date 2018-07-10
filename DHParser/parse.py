@@ -235,9 +235,9 @@ class Parser(ParserBase):
 
     ApplyFunc = Callable[['Parser'], None]
 
-    def __init__(self, name: str = '') -> None:
+    def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
-        super().__init__(name)
+        super().__init__()
         self._grammar = None  # type: Optional['Grammar']
         self.reset()
 
@@ -258,7 +258,10 @@ class Parser(ParserBase):
         `__deepcopy__`-method must be replaced (i.e. overridden without
         calling the same method from the superclass) by the derived class.
         """
-        return self.__class__(self.name)
+        duplicate = self.__class__()
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def reset(self):
         """Initializes or resets any parser variables. If overwritten,
@@ -577,7 +580,7 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     if not parser.name:
-                        parser._name = entry
+                        parser.name = entry
                     if isinstance(parser, Forward) and (not cast(Forward, parser).parser.name):
                         cast(Forward, parser).parser._name = entry
             cls.parser_initialization__ = "done"
@@ -855,7 +858,8 @@ class PreprocessorToken(Parser):
     def __init__(self, token: str) -> None:
         assert token and token.isupper()
         assert RX_TOKEN_NAME.match(token)
-        super().__init__(token)
+        super().__init__()
+        self.name = token
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text[0:1] == BEGIN_TOKEN:
@@ -896,13 +900,16 @@ class PlainText(Parser):
     """
     assert PLAINTEXT_PTYPE == ":PlainText"
 
-    def __init__(self, text: str, name: str = '') -> None:
-        super().__init__(name)
+    def __init__(self, text: str) -> None:
+        super().__init__()
         self.text = text
         self.len = len(text)
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.text, self.name)
+        duplicate = self.__class__(self.text)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
@@ -933,8 +940,8 @@ class RegExp(Parser):
     EBNF-Example:   ``word = /\w+/``
     """
 
-    def __init__(self, regexp, name: str = '') -> None:
-        super().__init__(name)
+    def __init__(self, regexp) -> None:
+        super().__init__()
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -943,7 +950,10 @@ class RegExp(Parser):
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        return self.__class__(regexp, self.name)
+        duplicate = self.__class__(regexp)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         match = text.match(self.regexp)
@@ -969,17 +979,17 @@ class Whitespace(RegExp):
     assert WHITESPACE_PTYPE == ":Whitespace"
 
 
-def RE(regexp, wL=None, wR=None) -> Series:
-    def rxp(regex):
-        return regex if isinstance(regex, RegExp) else RegExp(regex)
-    if wL is None and wR is None:
-        return rxp(regexp)
-    elif wL is None:
-        return Series(rxp(regexp), rxp(wR))
-    elif wR is None:
-        return Series(rxp(wL), rxp(regexp))
-    else:
-        return Series(rxp(wL), rxp(regexp), rxp(wR))
+# def RE(regexp, wL=None, wR=None) -> 'Series':
+#     def rxp(regex):
+#         return regex if isinstance(regex, RegExp) else RegExp(regex)
+#     if wL is None and wR is None:
+#         return rxp(regexp)
+#     elif wL is None:
+#         return Series(rxp(regexp), rxp(wR))
+#     elif wR is None:
+#         return Series(rxp(wL), rxp(regexp))
+#     else:
+#         return Series(rxp(wL), rxp(regexp), rxp(wR))
 
 
 #######################################################################
@@ -1038,7 +1048,7 @@ class _RE(Parser):
     EBNF-Example:   ``word = /\w+/~``
     """
 
-    def __init__(self, regexp, wL=None, wR=None, name: str='') -> None:
+    def __init__(self, regexp, wL=None, wR=None) -> None:
         r"""Constructor for class _RE.
 
         Args:
@@ -1053,7 +1063,7 @@ class _RE(Parser):
                 See above.
             name:  The optional name of the parser.
         """
-        super().__init__(name)
+        super().__init__()
         self.rx_wsl = wL
         self.rx_wsr = wR
         self.wsp_left = Whitespace(wL) if wL else ZOMBIE_PARSER
@@ -1065,7 +1075,10 @@ class _RE(Parser):
             regexp = copy.deepcopy(self.main.regexp, memo)
         except TypeError:
             regexp = self.main.regexp.pattern
-        return self.__class__(regexp, self.rx_wsl, self.rx_wsr, self.name)
+        duplicate = self.__class__(regexp, self.rx_wsl, self.rx_wsr)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # assert self.main.regexp.pattern != "@"
@@ -1120,12 +1133,15 @@ class _Token(_RE):
     """
     assert TOKEN_PTYPE == ":_Token"
 
-    def __init__(self, token: str, wL=None, wR=None, name: str = '') -> None:
+    def __init__(self, token: str, wL=None, wR=None) -> None:
         self.token = token
-        super().__init__(token, wL, wR, name)
+        super().__init__(token, wL, wR)
 
     def __deepcopy__(self, memo={}):
-        return self.__class__(self.token, self.rx_wsl, self.rx_wsr, self.name)
+        duplicate = self.__class__(self.token, self.rx_wsl, self.rx_wsr)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __repr__(self):
         return '"%s"' % self.token if self.token.find('"') < 0 else "'%s'" % self.token
@@ -1153,14 +1169,17 @@ class UnaryOperator(Parser):
     has additional parameters.
     """
 
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super(UnaryOperator, self).__init__(name)
+    def __init__(self, parser: Parser) -> None:
+        super(UnaryOperator, self).__init__()
         assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        return self.__class__(parser, self.name)
+        duplicate = self.__class__(parser)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
         if super().apply(func):
@@ -1181,14 +1200,17 @@ class NaryOperator(Parser):
     additional parameters.
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super().__init__(name)
+    def __init__(self, *parsers: Parser) -> None:
+        super().__init__()
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        return self.__class__(*parsers, name=self.name)
+        duplicate = self.__class__(*parsers)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
         if super().apply(func):
@@ -1226,8 +1248,8 @@ class Option(UnaryOperator):
     EBNF-Example:  ``number = ["-"]  /\d+/  [ /\.\d+/ ]``
     """
 
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super().__init__(parser, name)
+    def __init__(self, parser: Parser) -> None:
+        super().__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
             "Redundant nesting of options: %s(%s)" % (str(name), str(parser.name))
@@ -1308,8 +1330,8 @@ class OneOrMore(UnaryOperator):
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
 
-    def __init__(self, parser: Parser, name: str = '') -> None:
-        super().__init__(parser, name)
+    def __init__(self, parser: Parser) -> None:
+        super().__init__(parser)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (str(name), str(parser.name))
@@ -1361,8 +1383,8 @@ class Series(NaryOperator):
     RX_ARGUMENT = re.compile(r'\s(\S)')
     NOPE = 1000
 
-    def __init__(self, *parsers: Parser, mandatory: int = NOPE, name: str = '') -> None:
-        super().__init__(*parsers, name=name)
+    def __init__(self, *parsers: Parser, mandatory: int = NOPE) -> None:
+        super().__init__(*parsers)
         length = len(self.parsers)
         assert 1 <= length < Series.NOPE, \
             'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
@@ -1373,7 +1395,10 @@ class Series(NaryOperator):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        return self.__class__(*parsers, mandatory=self.mandatory, name=self.name)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1475,8 +1500,8 @@ class Alternative(NaryOperator):
     EBNF-Example:  ``sentence = /\d+\.\d+/ | /\d+/``
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
-        super().__init__(*parsers, name=name)
+    def __init__(self, *parsers: Parser) -> None:
+        super().__init__(*parsers)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
@@ -1536,7 +1561,7 @@ class AllOf(NaryOperator):
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
+    def __init__(self, *parsers: Parser) -> None:
         if len(parsers) == 1 and isinstance(parsers[0], Series):
             assert isinstance(parsers[0], Series), \
                 "Parser-specification Error: No single arguments other than a Series " \
@@ -1545,7 +1570,7 @@ class AllOf(NaryOperator):
             assert series.mandatory == Series.NOPE, \
                 "AllOf cannot contain mandatory (§) elements!"
             parsers = series.parsers
-        super().__init__(*parsers, name=name)
+        super().__init__(*parsers)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1589,14 +1614,14 @@ class SomeOf(NaryOperator):
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
-    def __init__(self, *parsers: Parser, name: str = '') -> None:
+    def __init__(self, *parsers: Parser) -> None:
         if len(parsers) == 1:
             assert isinstance(parsers[0], Alternative), \
                 "Parser-specification Error: No single arguments other than a Alternative " \
                 "allowed as arguments for SomeOf-Parser !"
             alternative = cast(Alternative, parsers[0])
             parsers = alternative.parsers
-        super().__init__(*parsers, name=name)
+        super().__init__(*parsers)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1622,15 +1647,15 @@ class SomeOf(NaryOperator):
         return '<' + ' | '.join(parser.repr for parser in self.parsers) + '>'
 
 
-def Unordered(parser: NaryOperator, name: str = '') -> NaryOperator:
+def Unordered(parser: NaryOperator) -> NaryOperator:
     """
     Returns an AllOf- or SomeOf-parser depending on whether `parser`
     is a Series (AllOf) or an Alternative (SomeOf).
     """
     if isinstance(parser, Series):
-        return AllOf(parser, name=name)
+        return AllOf(parser)
     elif isinstance(parser, Alternative):
-        return SomeOf(parser, name=name)
+        return SomeOf(parser)
     else:
         raise AssertionError("Unordered can take only Series or Alternative as parser.")
 
@@ -1710,7 +1735,7 @@ class Lookbehind(FlowOperator):
 
     EXPERIMENTAL
     """
-    def __init__(self, parser: Parser, name: str = '') -> None:
+    def __init__(self, parser: Parser) -> None:
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
@@ -1726,7 +1751,7 @@ class Lookbehind(FlowOperator):
             self.regexp = cast(RegExp, p).regexp
         else:  # p is of type PlainText
             self.text = cast(PlainText, p).text
-        super().__init__(parser, name)
+        super().__init__(parser)
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[len(text):]
@@ -1810,13 +1835,16 @@ class Retrieve(Parser):
     used.
     """
 
-    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None, name: str = '') -> None:
-        super(Retrieve, self).__init__(name)
+    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
+        super().__init__()
         self.symbol = symbol
         self.filter = rfilter if rfilter else last_value
 
     def __deepcopy__(self, memo):
-        return self.__class__(self.symbol, self.filter, self.name)
+        duplicate = self.__class__(self.symbol, self.filter)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # the following indirection allows the call() method to be called
@@ -1930,12 +1958,14 @@ class Forward(Parser):
     """
 
     def __init__(self):
-        Parser.__init__(self)
+        super().__init__()
         self.parser = None
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.set(parser)

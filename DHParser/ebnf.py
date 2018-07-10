@@ -777,6 +777,7 @@ class EBNFCompiler(Compiler):
         Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
         """
+        # print(node.as_sxpr())
         arguments = [self.compile(r) for r in node.children] + custom_args
         # node.error_flag = max(node.error_flag, max(t.error_flag for t in node.children))
         return parser_class + '(' + ', '.join(arguments) + ')'
