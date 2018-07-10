@@ -131,7 +131,8 @@ class MockParser(ParserBase):
         assert not ptype or ptype[0] == ':'
         super().__init__()
         self.name = name
-        self.ptype = ptype or ':' + self.__class__.__name__
+        if ptype:
+            self.ptype = ptype  # or ':' + self.__class__.__name__
 
 
 class ZombieParser(MockParser):

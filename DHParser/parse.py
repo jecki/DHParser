@@ -243,7 +243,7 @@ class Parser(ParserBase):
 
         # add "aspect oriented" wrapper around parser calls
         # for memoizing, left recursion and tracing
-        if not isinstance(self, Forward):  # should Forward-Parser no be guarded? Not sure...
+        if not isinstance(self, Forward):  # should Forward-Parser not be guarded? Not sure...
             guarded_parser_call = add_parser_guard(self.__class__.__call__)
             # The following check is necessary for classes that don't override
             # the __call__() method, because in these cases the non-overridden
@@ -260,7 +260,7 @@ class Parser(ParserBase):
         """
         duplicate = self.__class__()
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def reset(self):
@@ -560,11 +560,9 @@ class Grammar:
                 ...
                 symbol = _RE('(?!\\d)\\w+')
 
-        After the call of this method symbol.name == "symbol"
-        holds. Names assigned via the ``name``-parameter of the
-        constructor will not be overwritten. Parser names starting or
-        ending with a double underscore like ``root__`` will be
-        ignored. See :func:`sane_parser_name()`
+        After the call of this method symbol.name == "symbol" holds.
+        Parser names starting or ending with a double underscore like
+        ``root__`` will be ignored. See :func:`sane_parser_name()`
 
         This is done only once, upon the first instantiation of the
         grammar class!
@@ -579,10 +577,11 @@ class Grammar:
             cdict = cls.__dict__
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
-                    if not parser.name:
+                    if isinstance(parser, Forward):
+                        if  not cast(Forward, parser).parser.name:
+                            cast(Forward, parser).parser.name = entry
+                    else:   # if not parser.name:
                         parser.name = entry
-                    if isinstance(parser, Forward) and (not cast(Forward, parser).parser.name):
-                        cast(Forward, parser).parser._name = entry
             cls.parser_initialization__ = "done"
 
 
@@ -683,7 +682,8 @@ class Grammar:
             assert parser.name not in self.__dict__ or \
                 isinstance(self.__dict__[parser.name], parser.__class__), \
                 ('Cannot add parser "%s" because a field with the same name '
-                 'already exists in grammar object!' % parser.name)
+                 'already exists in grammar object: %s!'
+                 % (parser.name, str(self.__dict__[parser.name])))
             setattr(self, parser.name, parser)
         self.all_parsers__.add(parser)
         parser.grammar = self
@@ -908,7 +908,7 @@ class PlainText(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -952,7 +952,7 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1077,7 +1077,7 @@ class _RE(Parser):
             regexp = self.main.regexp.pattern
         duplicate = self.__class__(regexp, self.rx_wsl, self.rx_wsr)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1140,7 +1140,7 @@ class _Token(_RE):
     def __deepcopy__(self, memo={}):
         duplicate = self.__class__(self.token, self.rx_wsl, self.rx_wsr)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def __repr__(self):
@@ -1178,7 +1178,7 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
@@ -1209,7 +1209,7 @@ class NaryOperator(Parser):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
@@ -1394,7 +1394,7 @@ class Series(NaryOperator):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1840,7 +1840,7 @@ class Retrieve(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.symbol, self.filter)
         duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.ptype =  self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1961,8 +1961,8 @@ class Forward(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        duplicate.name = self.name
-        duplicate.ptype = self.ptype
+        # duplicate.name = self.name  # Forward-Parsers should never have a name!
+        # duplicate.ptype = self.ptype
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.set(parser)
