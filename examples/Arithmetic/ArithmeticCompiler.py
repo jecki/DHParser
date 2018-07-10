@@ -68,7 +68,7 @@ class ArithmeticGrammar(Grammar):
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'[\t ]*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
     test = Series(digit, constant, variable)

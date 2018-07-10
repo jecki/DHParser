@@ -95,7 +95,7 @@ class TestReservedSymbols:
     def test_whitespace(self):
         lang = r"""
         @whitespace = /\s*/
-        document = WSP__ { word WSP__ }
+        document = WSP_RE__ { word WSP_RE__ }
         word = /\w+/ 
         """
         parser = grammar_provider(lang)()
@@ -104,7 +104,7 @@ class TestReservedSymbols:
         lang = r"""
         @comment = /#.*(?:\n|$)/
         @whitespace = /\s*/
-        document = WSP__ { word WSP__ }
+        document = WSP_RE__ { word WSP_RE__ }
         word = /\w+/ 
         """
         parser = grammar_provider(lang)()
@@ -221,7 +221,7 @@ class TestCompilerErrors:
     def test_no_error(self):
         """But reserved symbols should not be repoted as undefined.
         """
-        ebnf = """nothing =  WSP__ | COMMENT__\n"""
+        ebnf = """nothing =  WSP_RE__ | COMMENT__\n"""
         result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
             get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
         assert not bool(messages), messages

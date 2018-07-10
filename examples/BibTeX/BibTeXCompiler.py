@@ -110,7 +110,7 @@ class BibTeXGrammar(Grammar):
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'(?i)%.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
     wspR__ = WSP__
     whitespace__ = Whitespace(WSP__)

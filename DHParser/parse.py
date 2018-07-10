@@ -47,6 +47,7 @@ __all__ = ('Parser',
            'UnknownParserError',
            'Grammar',
            'PreprocessorToken',
+           'Token',
            'RegExp',
            'Whitespace',
            '_RE',
@@ -426,13 +427,13 @@ class Grammar:
     Attributes:
         COMMENT__:  regular expression string for matching comments
 
-        WSP__:   regular expression for whitespace and comments
+        WSP_RE__:   regular expression for whitespace and comments
 
         wspL__:  regular expression string for left aligned whitespace,
-                 which either equals WSP__ or is empty.
+                 which either equals WSP_RE__ or is empty.
 
         wspR__:  regular expression string for right aligned whitespace,
-                 which either equals WSP__ or is empty.
+                 which either equals WSP_RE__ or is empty.
 
         root__:  The root parser of the grammar. Theoretically, all parsers of the
                  grammar should be reachable by the root parser. However, for testing
@@ -544,9 +545,9 @@ class Grammar:
     parser_initialization__ = "pending"  # type: str
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
-    WSP__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
+    WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
     wspL__ = ''     # type: str
-    wspR__ = WSP__  # type: str
+    wspR__ = WSP_RE__  # type: str
 
 
     @classmethod
@@ -608,19 +609,19 @@ class Grammar:
         # do so only arises during testing.
         self.root__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
 
-        if self.WSP__:
+        if self.WSP_RE__:
             try:
                 probe = self.whitespace__  # type: RegExp
-                assert self.whitespace__.regexp.pattern == self.WSP__
+                assert self.whitespace__.regexp.pattern == self.WSP_RE__
             except AttributeError:
-                self.whitespace__ = Whitespace(self.WSP__)  # type: RegExp
+                self.whitespace__ = Whitespace(self.WSP_RE__)  # type: RegExp
             self.whitespace__.grammar = self
             self.all_parsers__.add(self.whitespace__)   # don't you forget about me...
         else:
             self.whitespace__ = cast(RegExp, ZOMBIE_PARSER)
 
-        assert not self.wspL__ or self.wspL__ == self.WSP__
-        assert not self.wspR__ or self.wspR__ == self.WSP__
+        assert not self.wspL__ or self.wspL__ == self.WSP_RE__
+        assert not self.wspR__ or self.wspR__ == self.WSP_RE__
         self.wsp_left_parser__ = self.whitespace__ if self.wspL__ else ZOMBIE_PARSER
         self.wsp_right_parser__ = self.whitespace__ if self.wspR__ else ZOMBIE_PARSER
 

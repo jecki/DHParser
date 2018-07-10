@@ -31,7 +31,7 @@ from functools import partial
 from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, _RE, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, _Token
+    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, _Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -129,10 +129,10 @@ class EBNFGrammar(Grammar):
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wspL__ = ''
-    wspR__ = WSP__
-    whitespace__ = Whitespace(WSP__)
+    wspR__ = WSP_RE__
+    whitespace__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RegExp('\\w+'), whitespace__, ZeroOrMore(Series(_Token(","), RegExp('\\w+'), whitespace__)))
     whitespace = Series(RegExp('~'), whitespace__)
@@ -382,9 +382,9 @@ class EBNFCompiler(Compiler):
                 regular expressions found in the current parsing process
     """
     COMMENT_KEYWORD = "COMMENT__"
-    WHITESPACE_KEYWORD = "WSP__"
+    WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
-    WHITESPACE_PARSER_KEYWORD = "whitespace__"
+    WHITESPACE_PARSER_KEYWORD = "wsp__"
     RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
@@ -922,12 +922,16 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node: Node) -> str:
-        return '_Token(' + node.content.replace('\\', r'\\') + ')'
+        center = 'Token(' + node.content.replace('\\', r'\\') + ')'
+        left = self.WHITESPACE_PARSER_KEYWORD if 'left' in self.directives['literalws'] else ''
+        right = self.WHITESPACE_PARSER_KEYWORD if 'right' in self.directives['literalws'] else ''
+        if left or right:
+            return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
+        return center
 
 
     def on_plaintext(self, node: Node) -> str:
-        return '_Token(' + node.content.replace('\\', r'\\').replace('`', '"') \
-               + ", wL='', wR='')"
+        return 'Token(' + node.content.replace('\\', r'\\') + ')'
 
 
     def on_regexp(self, node: Node) -> str:
@@ -962,7 +966,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_whitespace(self, node: Node) -> str:
-        return 'whitespace__'
+        return self.WHITESPACE_PARSER_KEYWORD
 
 
     def on_list_(self, node) -> Set[str]:
