@@ -29,6 +29,8 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.log import logging
 from DHParser.toolkit import re
 
+LOGGING = True
+
 dhparserdir = os.path.dirname(os.path.realpath(__file__))
 
 EBNF_TEMPLATE = r"""-grammar
@@ -325,7 +327,7 @@ def main():
                 print('File %s not found! Aborting.' % file_path)
                 sys.exit(1)
         elif choice.strip() == '3':
-            with logging(False):
+            with logging(LOGGING):
                 if not cpu_profile(selftest, 1):
                     print("Selftest FAILED :-(\n")
                     sys.exit(1)

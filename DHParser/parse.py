@@ -1252,10 +1252,7 @@ class Option(UnaryOperator):
         super().__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
-            "Redundant nesting of options: %s(%s)" % (str(name), str(parser.name))
-        # assert not isinstance(parser, Required), \
-        #     "Nesting options with required elements is contradictory: " \
-        #     "%s(%s)" % (str(name), str(parser.name))
+            "Redundant nesting of options: %s" % (str(self.ptype), str(parser.name))
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
@@ -1334,7 +1331,7 @@ class OneOrMore(UnaryOperator):
         super().__init__(parser)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
-            "%s(%s)" % (str(name), str(parser.name))
+            "%s(%s)" % (str(self.ptype), str(parser.name))
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
