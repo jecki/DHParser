@@ -101,7 +101,8 @@ class LyrikGrammar(Grammar):
     text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
     zeile = OneOrMore(ZEICHENFOLGE)
     titel = Series(OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
-    serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
+    serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)),
+                   OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     ziel = Synonym(ZEICHENFOLGE)
     verknüpfung = Series(Token("<"), ziel, Token(">"))
     namenfolge = OneOrMore(NAME)
@@ -111,8 +112,10 @@ class LyrikGrammar(Grammar):
     untertitel = Series(wortfolge, Option(verknüpfung))
     werk = Series(wortfolge, Option(Series(Token("."), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Token(","), Option(NZ), werk, Token(","), Option(NZ), ort, Token(","), Option(NZ), jahr, Token("."), mandatory=1)
-    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
+    bibliographisches = Series(autor, Token(","), Option(NZ), werk, Token(","), Option(NZ),
+                               ort, Token(","), Option(NZ), jahr, Token("."), mandatory=1)
+    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie),
+                     titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
