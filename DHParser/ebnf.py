@@ -130,8 +130,6 @@ class EBNFGrammar(Grammar):
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP_RE__
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
@@ -542,10 +540,10 @@ class EBNFCompiler(Compiler):
 
         definitions.append((self.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
-        definitions.append(('wspR__', self.WHITESPACE_KEYWORD
-                            if 'right' in self.directives['literalws'] else "''"))
-        definitions.append(('wspL__', self.WHITESPACE_KEYWORD
-                            if 'left' in self.directives['literalws'] else "''"))
+        # definitions.append(('wspR__', self.WHITESPACE_KEYWORD
+        #                     if 'right' in self.directives['literalws'] else "''"))
+        # definitions.append(('wspL__', self.WHITESPACE_KEYWORD
+        #                     if 'left' in self.directives['literalws'] else "''"))
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD +
                              ", comment=" + self.COMMENT_KEYWORD + ")")))
