@@ -52,7 +52,7 @@ expressions. `regex` is faster and more powerful than `re`.
 In order to speed up DHParser even more, it is recommended that you
 run the `buildpackages.sh`-script (or `buildpackages.bat` on
 Windows-systems) after installation. This script compiles the
-`stringview.py`-module to C-Code with the cython C to Python compiler
+`stringview.py`-module to C-Code with the cython Python to C compiler
 (https://cython.org). This requires that you have cython and a
 C-compiler installed on your system.
 
