@@ -430,7 +430,9 @@ class Node(collections.abc.Sized):
     @property
     def content(self) -> str:
         """
-        Returns content as string, omitting error messages.
+        Returns content as string, omitting error messages. If the node has
+        child-nodes, the string content of the child-nodes is recursively read
+        and then concatenated.
         """
         if self._content is None:
             if self.children:
@@ -440,6 +442,11 @@ class Node(collections.abc.Sized):
                 self._content = str(self._result)
                 self._result = self._content  # self._result might be more efficient as a string!?
         return self._content
+
+
+    @content.setter
+    def content(self, content: str):
+        self.result = content
 
 
     @property

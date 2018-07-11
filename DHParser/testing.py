@@ -184,6 +184,14 @@ def unit_from_file(filename):
     # Check for ambiguous Test names
     errors = []
     for parser_name, tests in test_unit.items():
+        # normalize case for test category names
+        keys = list(tests.keys())
+        for key in keys:
+            new_key = key.lower()
+            if new_key != key:
+                tests[new_key] = tests[keys]
+                del tests[keys]
+
         m_names = set(tests.get('match', dict()).keys())
         f_names = set(tests.get('fail', dict()).keys())
         intersection = list(m_names & f_names)
@@ -265,6 +273,21 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     """
     Unit tests for a grammar-parser and ast transformations.
     """
+    def clean_key(k):
+        try:
+            return k.replace('*', '')
+        except AttributeError:
+            return k
+
+    def get(tests, category, key):
+        try:
+            value = tests[category][key] if key in tests[category] \
+                else tests[category][clean_key(key)]
+        except KeyError:
+            raise AssertionError('%s-test %s for parser %s missing !?'
+                                 % (category, test_name, parser_name))
+        return value
+
     if isinstance(test_unit, str):
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
         test_unit = unit_from_file(test_unit)
@@ -289,12 +312,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         match_tests = set(tests['match'].keys()) if 'match' in tests else set()
         if 'ast' in tests:
             ast_tests = set(tests['ast'].keys())
-            if not ast_tests <= match_tests:
-                raise AssertionError('AST-Tests %s lack corresponding match-tests!'
-                                     % str(ast_tests - match_tests))
+            if not {clean_key(k) for k in ast_tests} <= {clean_key(k) for k in match_tests}:
+                raise AssertionError('AST-Tests %s for parser %s lack corresponding match-tests!'
+                                     % (str(ast_tests - match_tests), parser_name))
         if 'cst' in tests:
             cst_tests = set(tests['cst'].keys())
-            if not cst_tests <= match_tests:
+            if not {clean_key(k) for k in cst_tests} <= {clean_key(k) for k in match_tests}:
                 raise AssertionError('CST-Tests %s lack corresponding match-tests!'
                                      % str(cst_tests - match_tests))
 
@@ -321,25 +344,23 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
-                tests.setdefault('__err__', {})[test_name] = errata[-1]
+                # tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
                 if is_logging():
                     log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
-            elif "cst" in tests and parse_sxpr(tests["cst"][test_name]) != cst:
+            elif "cst" in tests and parse_sxpr(get(tests, "cst", test_name)) != cst:
                 errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                               (test_name, parser_name, cst.as_sxpr()))
             elif "ast" in tests:
-                try:
-                    compare = parse_sxpr(tests["ast"][test_name])
-                except KeyError:
-                    pass
+                compare = parse_sxpr(get(tests, "ast", test_name))
                 if compare != ast:
                     errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                   '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                   % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                      flatten_sxpr(compare.as_sxpr()),
                                      flatten_sxpr(ast.as_sxpr())))
-                    tests.setdefault('__err__', {})[test_name] = errata[-1]
+            if errata:
+                tests.setdefault('__err__', {})[test_name] = errata[-1]
             if verbose:
                 print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
