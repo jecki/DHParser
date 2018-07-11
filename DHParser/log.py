@@ -287,7 +287,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join((p.repr if p.ptype in {':RegExp', ':PlainText'} else p.name or p.ptype)
+        return "->".join((p.repr if p.ptype in {':RegExp', ':Token'} else p.name or p.ptype)
                          for p in self.call_stack)
 
     @property
