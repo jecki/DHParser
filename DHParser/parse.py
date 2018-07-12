@@ -109,7 +109,7 @@ def add_parser_guard(parser_func):
             # if location has already been visited by the current parser,
             # return saved result
             if location in parser.visited:
-                # no history recording in case of meomized results
+                # no history recording in case of memoized results
                 return parser.visited[location]
 
             if grammar.history_tracking__:
@@ -123,7 +123,7 @@ def add_parser_guard(parser_func):
                     return None, text
                 parser.recursion_counter[location] += 1
 
-            # run original __call__ method
+            # PARSER CALL: run original __call__ method
             node, rest = parser_func(parser, text)
 
             if grammar.left_recursion_handling__:
@@ -151,9 +151,11 @@ def add_parser_guard(parser_func):
                     #   because caching would interfere with changes of variable state
                     # - in case of left recursion, the first recursive step that
                     #   matches will store its result in the cache
+                    # TODO: need a test concerning interference of variable manipulation and left recursion algorithm?
                     parser.visited[location] = (node, rest)
 
-            # Mind that meomized parser calls will not appear in the history record!
+            # Mind that memoized parser calls will not appear in the history record!
+            # Does this make sense? Or should it be changed?
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)

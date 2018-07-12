@@ -237,13 +237,11 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "1329c620430169c2cbeff23b05e049c3"
+    source_hash__ = "840c0f34c77bbbe0433e7691fe68f884"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP_RE__
     wsp__ = Whitespace(WSP_RE__)
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
