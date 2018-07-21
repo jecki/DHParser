@@ -151,7 +151,7 @@ def add_parser_guard(parser_func):
                     #   because caching would interfere with changes of variable state
                     # - in case of left recursion, the first recursive step that
                     #   matches will store its result in the cache
-                    # TODO: need a test concerning interference of variable manipulation and left recursion algorithm?
+                    # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
                     parser.visited[location] = (node, rest)
 
             # Mind that memoized parser calls will not appear in the history record!
