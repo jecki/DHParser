@@ -972,6 +972,9 @@ class Whitespace(RegExp):
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
+    def __repr__(self):
+        return '~'
+
 
 ########################################################################
 #
@@ -1749,12 +1752,6 @@ class Synonym(UnaryOperator):
 
     def __repr__(self):
         return self.name or self.parser.repr
-
-    def __str__(self):
-        return super().__str__()
-
-    def repr(self) -> str:
-        return super().repr
 
 
 class Forward(Parser):
