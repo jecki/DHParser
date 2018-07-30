@@ -556,7 +556,7 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     if isinstance(parser, Forward):
-                        if  not cast(Forward, parser).parser.name:
+                        if not cast(Forward, parser).parser.name:
                             cast(Forward, parser).parser.name = entry
                     else:   # if not parser.name:
                         parser.name = entry
@@ -1750,6 +1750,12 @@ class Synonym(UnaryOperator):
     def __repr__(self):
         return self.name or self.parser.repr
 
+    def __str__(self):
+        return super().__str__()
+
+    def repr(self) -> str:
+        return super().repr
+
 
 class Forward(Parser):
     r"""
@@ -1811,7 +1817,7 @@ class Forward(Parser):
 
     @property
     def repr(self) -> str:
-        """Returns the parser's name if it has a name and repr()"""
+        """Returns the parser's name if it has a name or repr(self) if not."""
         return self.parser.name if self.parser.name else repr(self)
 
     def set(self, parser: Parser):
