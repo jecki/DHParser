@@ -44,8 +44,9 @@ from DHParser.toolkit import re, typing
 
 from typing import Tuple
 
-__all__ = ('unit_from_configfile',
+__all__ = ('unit_from_config',
            'unit_from_json',
+           'TEST_READERS',
            'unit_from_file',
            'get_report',
            'grammar_unit',
@@ -93,12 +94,12 @@ RX_ENTRY = re.compile('\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
 RX_COMMENT = re.compile('\s*#.*\n')
 
 
-def unit_from_configfile(config_filename):
+def unit_from_config(config_str):
     """ Reads grammar unit tests contained in a file in config file (.ini)
     syntax.
 
     Args:
-        config_filename (str): A config file containing Grammar unit-tests
+        config_str (str): A string containing a config-file with Grammar unit-tests
 
     Returns:
         A dictionary representing the unit tests.
@@ -112,9 +113,7 @@ def unit_from_configfile(config_filename):
             m = RX_COMMENT.match(txt, pos)
         return pos
 
-    with open(config_filename, 'r', encoding="utf-8") as f:
-        cfg = f.read()
-        cfg = cfg.replace('\t', '    ')
+    cfg = config_str.replace('\t', '    ')
 
     OD = collections.OrderedDict
     unit = OD()
@@ -154,19 +153,28 @@ def unit_from_configfile(config_filename):
     return unit
 
 
-def unit_from_json(json_filename):
+def unit_from_json(json_str):
     """
-    Reads grammar unit tests from a json file.
+    Reads grammar unit tests from a json string.
     """
-    with open(json_filename, 'r', encoding='utf8') as f:
-        unit = json.load(f)
+    unit = json.loads(json_str)
     for symbol in unit:
         for stage in unit[symbol]:
             if stage not in UNIT_STAGES:
                 raise ValueError('Test stage %s not in: %s' % (stage, str(UNIT_STAGES)))
     return unit
 
+
 # TODO: add support for yaml, cson, toml
+
+
+# A dictionary associating file endings with reader functions that
+# transfrom strings containing the file's content to a nested dictionary
+# structure of test cases.
+TEST_READERS = {
+    '.ini': unit_from_config,
+    '.json': unit_from_json
+}
 
 
 def unit_from_file(filename):
@@ -174,11 +182,12 @@ def unit_from_file(filename):
     Reads a grammar unit test from a file. The format of the file is
     determined by the ending of its name.
     """
-    if filename.endswith(".json"):
-        test_unit = unit_from_json(filename)
-    elif filename.endswith(".ini"):
-        test_unit = unit_from_configfile(filename)
-    else:
+    try:
+        reader = TEST_READERS[os.path.splitext(filename)[1].lower()]
+        with open(filename, 'r', encoding='utf8') as f:
+            data = f.read()
+        test_unit = reader(data)
+    except KeyError:
         raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
 
     # Check for ambiguous Test names

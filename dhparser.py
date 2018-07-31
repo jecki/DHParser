@@ -155,7 +155,14 @@ def run_grammar_tests(glob_pattern):
 
 
 if __name__ == '__main__':
-    arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
+    if (len(sys.argv) == 2 and (arg.endswith('.ebnf') or (os.path.isfile(sys.argv[1]) and
+        os.path.splitext(sys.argv[1])[1].lower() in testing.TEST_READERS.keys()))):
+        # if called with a single filename that is either an EBNF file or a known
+        # test file type then use the given argument
+        arg = sys.argv[1]
+    else: 
+        # otherwise run all tests in the test directory
+        arg = '*_test_*.ini'
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
