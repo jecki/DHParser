@@ -194,12 +194,14 @@ def flatten_sxpr(sxpr: str) -> str:
 def flatten_xml(xml: str) -> str:
     """Returns an XML-tree as a one liner without unnecessary whitespace,
     i.e. only whitespace within leaf-nodes is preserved.
+    A more precise alternative to `flatten_xml` is to use Node.as_xml()
+    ans passing a set containing the top level tag to parameter `inline_tags`.
     """
     # works only with regex
     # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
     def tag_only(m):
         return m.groupdict()['closing_tag']
-    return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?P<closing_tag></\w+>)\s+', tag_only, xml))
+    return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
 class Node(collections.abc.Sized):

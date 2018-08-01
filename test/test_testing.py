@@ -30,7 +30,7 @@ from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_expendables, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
-from DHParser.testing import get_report, grammar_unit, unit_from_configfile, \
+from DHParser.testing import get_report, grammar_unit, unit_from_file, \
     reset_unit
 
 CFG_FILE_1 = '''
@@ -102,7 +102,7 @@ class TestTestfiles:
         os.remove('configfile_test_3.ini')
 
     def test_unit_from_config_file(self):
-        unit = unit_from_configfile('configfile_test_1.ini')
+        unit = unit_from_file('configfile_test_1.ini')
         assert list(unit.keys()) == ['ParserA']
         assert list(unit['ParserA'].keys()) == ['match', 'fail'], str(list(unit['ParserA'].keys()))
         assert list(unit['ParserA']['match'].keys()) == ['M1', 'M2', 'M3', 'M4']
@@ -111,13 +111,13 @@ class TestTestfiles:
         lines = testcase.split('\n')
         assert len(lines[2]) - len(lines[2].lstrip()) == 4
 
-        unit = unit_from_configfile('configfile_test_2.ini')
+        unit = unit_from_file('configfile_test_2.ini')
         txt = unit['BedeutungsPosition']['match']['M1']
         txt.split('\n')
         for line in txt:
             assert line.rstrip()[0:1] != ' '
 
-        unit = unit_from_configfile('configfile_test_3.ini')
+        unit = unit_from_file('configfile_test_3.ini')
 
 
 ARITHMETIC_EBNF = """
