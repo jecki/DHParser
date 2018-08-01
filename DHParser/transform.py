@@ -33,7 +33,8 @@ import fnmatch
 from functools import partial, reduce, singledispatch
 
 from DHParser.error import Error
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, MockParser, ZOMBIE_NODE
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, ParserBase, MockParser, \
+    ZOMBIE_NODE
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text, Generic
@@ -53,6 +54,7 @@ __all__ = ('TransformationDict',
            'replace_or_reduce',
            'replace_parser',
            'collapse',
+           'collapse_if',
            'merge_children',
            'replace_content',
            'replace_content_by',
@@ -65,6 +67,7 @@ __all__ = ('TransformationDict',
            'is_expendable',
            'is_token',
            'is_one_of',
+           'not_one_of',
            'matches_re',
            'has_content',
            'has_parent',
@@ -433,6 +436,12 @@ def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     return context[-1].tag_name in tag_name_set
 
 
+@transformation_factory(collections.abc.Set)
+def not_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Returns true, if the node's tag_name is not one of the given tag names."""
+    return context[-1].tag_name not in tag_name_set
+
+
 # @transformation_factory(collections.abc.Set)
 # def matches_wildcard(context: List[Node], wildcards: AbstractSet[str]) -> bool:
 #     """Retruns true, if the node's tag_name matches one of the glob patterns
@@ -669,6 +678,39 @@ def collapse(context: List[Node]):
     """
     node = context[-1]
     node.result = node.content
+
+
+@transformation_factory(collections.abc.Callable)
+def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase):
+    node = context[-1]
+    package = []
+    result = []
+
+    def close_package():
+        nonlocal package
+        if package:
+            s = "".join(str(nd.result) for nd in package)
+            result.append(Node(target_tag, s))
+            package = []
+
+    for child in node.children:
+        if condition([child]):
+            if child.children:
+                collapse_if([child], condition, target_tag)
+                for c in child.children:
+                    if condition([c]):
+                        package.append(c)
+                    else:
+                        close_package()
+                        result.append(c)
+                close_package()
+            else:
+                package.append(child)
+        else:
+            close_package()
+            result.append(child)
+    close_package()
+    node.result = tuple(result)
 
 
 # @transformation_factory

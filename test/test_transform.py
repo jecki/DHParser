@@ -24,9 +24,9 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, parse_sxpr, ZOMBIE_NODE
+from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, ZOMBIE_NODE, MockParser, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
-    traverse_locally, collapse, lstrip, rstrip, remove_content, remove_tokens, \
+    traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
     transformation_factory
 from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
@@ -202,6 +202,16 @@ class TestConditionalTransformations:
         # whitespace after "facitergula", but not after "bona" should have been removed
         assert str(cst) == "faciterculasim.bona fide"
 
+class TestComplexTransformations:
+    def test_collapse_if(self):
+        xml = "<EINZEILER><DEU_WORT>spectat</DEU_WORT><WS> </WS><DEU_WORT>ad</DEU_WORT>" +\
+              "<WS> </WS><DEU_WORT>gravitatem</DEU_WORT><TEIL_SATZZEICHEN>,</TEIL_SATZZEICHEN>" +\
+              "<WS> </WS><DEU_WORT>momentum</DEU_WORT></EINZEILER>"
+        tree = parse_xml(xml)
+        print(tree.as_xml())
+        Text = MockParser('Text', TOKEN_PTYPE)
+        collapse_if([tree], lambda l: True, Text)
+        print(tree.as_xml())
 
 
 if __name__ == "__main__":

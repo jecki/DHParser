@@ -999,7 +999,7 @@ def parse_xml(xml: str) -> Node:
         if not solitary:
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
-                if not leaf.match(RX_WHITESPACE_TAIL):
+                if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
                     result.append(Node(PlainText, leaf))
                 if s[:1] == "<" and s[:2] != "</":
                     s, child = parse_full_content(s)
