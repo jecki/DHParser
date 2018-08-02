@@ -87,19 +87,19 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \\
+from DHParser import logging, is_filename, load_if_file, MockParser, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \\
-    Node, TransformationFunc, TransformationDict, transformation_factory, \\
-    traverse, remove_children_if, merge_children, is_anonymous, matches_re, \\
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
+    remove_children_if, move_whitespace, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
-    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \\
-    is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
+    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, is_empty, \\
+    is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \\
+    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by
 '''.format(dhparserdir=dhparserdir)
