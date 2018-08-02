@@ -24,7 +24,8 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, ZOMBIE_NODE, MockParser, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, ZOMBIE_NODE, \
+    MockParser, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
     transformation_factory
@@ -225,6 +226,7 @@ class TestComplexTransformations:
                    <SEITENZAHL>18</SEITENZAHL>
                  </Stelle>"""
         tree = parse_xml(xml)
+        print(flatten_sxpr(tree.as_sxpr()))
         collapse_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT', self.Text)
         assert tree.as_xml(inline_tags={'Stelle'}) == \
                "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"

@@ -55,9 +55,11 @@ __all__ = ('TransformationDict',
            'replace_parser',
            'collapse',
            'collapse_if',
-           'merge_children',
+           # 'merge_children',
            'replace_content',
            'replace_content_by',
+           'normalize_whitespace',
+           'move_whitespace',
            'apply_if',
            'apply_unless',
            'traverse_locally',
@@ -513,28 +515,6 @@ def _reduce_child(node: Node, child: Node):
         node.attr.update(child.attr)
 
 
-# def _pick_child(context: List[Node], criteria: CriteriaType):
-#     """Returns the first child that meets the criteria."""
-#     if isinstance(criteria, int):
-#         try:
-#             return context[-1].children[criteria]
-#         except IndexError:
-#             return None
-#     elif isinstance(criteria, str):
-#         for child in context[-1].children:
-#             if child.tag_name == criteria:
-#                 return child
-#         return None
-#     else:  # assume criteria has type ConditionFunc
-#         for child in context[-1].children:
-#             context.append(child)
-#             evaluation = criteria(context)
-#             context.pop()
-#             if evaluation:
-#                 return child
-#         return None
-
-
 #######################################################################
 #
 # rearranging transformations
@@ -672,16 +652,27 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
 
 
 def collapse(context: List[Node]):
-    """
-    Collapses all sub-nodes of a node by replacing them with the
-    string representation of the node.
-    """
+    """Collapses all sub-nodes of a node by replacing them with the
+    string representation of the node. USE WITH CARE!"""
     node = context[-1]
     node.result = node.content
 
 
 @transformation_factory(collections.abc.Callable)
 def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase):
+    """(Recursively) merges the content of all adjacent child nodes that
+    fulfil the given `condition` into a single leaf node with parser
+    `target_tag`. Nodes that do not fulfil the condition will be preserved.
+
+    >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
+    >>> tree = parse_sxpr(sxpr)
+    >>> text = MockParser('text')
+    >>> collapse_if([tree], not_one_of({'superscript', 'subscript'}), text)
+    >>> print(flatten_sxpr(tree.as_sxpr()))
+    (place (text "p. 26") (superscript "b") (text ",18"))
+
+    See `test_transform.TestComplexTransformations` for examples.
+    """
     node = context[-1]
     package = []
     result = []
@@ -689,7 +680,7 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
     def close_package():
         nonlocal package
         if package:
-            s = "".join(str(nd.result) for nd in package)
+            s = "".join(nd.content for nd in package)
             result.append(Node(target_tag, s))
             package = []
 
@@ -734,33 +725,33 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
 #         node.result = (nd for nd in leaves_iterator)
 
 
-@transformation_factory(tuple)
-def merge_children(context: List[Node], tag_names: Tuple[str]):
-    """
-    Joins all children next to each other and with particular tag-names
-    into a single child node with a mock-parser with the name of the
-    first tag-name in the list.
-    """
-    node = context[-1]
-    result = []
-    name, ptype = ('', tag_names[0]) if tag_names[0][:1] == ':' else (tag_names[0], '')
-    if node.children:
-        i = 0
-        L = len(node.children)
-        while i < L:
-            while i < L and not node.children[i].tag_name in tag_names:
-                result.append(node.children[i])
-                i += 1
-            k = i + 1
-            while (k < L and node.children[k].tag_name in tag_names
-                   and bool(node.children[i].children) == bool(node.children[k].children)):
-                k += 1
-            if i < L:
-                result.append(Node(MockParser(name, ptype),
-                                   reduce(lambda a, b: a + b,
-                                          (node.children for node in node.children[i:k]))))
-            i = k
-        node.result = tuple(result)
+# @transformation_factory(tuple)
+# def merge_children(context: List[Node], tag_names: Tuple[str]):
+#     """
+#     Joins all children next to each other and with particular tag-names
+#     into a single child node with a mock-parser with the name of the
+#     first tag-name in the list.
+#     """
+#     node = context[-1]
+#     result = []
+#     name, ptype = ('', tag_names[0]) if tag_names[0][:1] == ':' else (tag_names[0], '')
+#     if node.children:
+#         i = 0
+#         L = len(node.children)
+#         while i < L:
+#             while i < L and not node.children[i].tag_name in tag_names:
+#                 result.append(node.children[i])
+#                 i += 1
+#             k = i + 1
+#             while (k < L and node.children[k].tag_name in tag_names
+#                    and bool(node.children[i].children) == bool(node.children[k].children)):
+#                 k += 1
+#             if i < L:
+#                 result.append(Node(MockParser(name, ptype),
+#                                    reduce(lambda a, b: a + b,
+#                                           (node.children for node in node.children[i:k]))))
+#             i = k
+#         node.result = tuple(result)
 
 
 @transformation_factory(collections.abc.Callable)
@@ -780,12 +771,64 @@ def replace_content_by(context: List[Node], content: str):  # Callable[[Node], R
     node.result = content
 
 
+def normalize_whitespace(context):
+    """Normalizes Whitespace inside a leaf node, i.e. any sequence of
+    whitespaces, tabs and linefeeds will be replaced by a single
+    whitespace. Empty (i.e. zero-length) Whitespace remains empty,
+    however."""
+    node = context[-1]
+    assert not node.children
+    if is_whitespace(context):
+        if node.result:
+            node.result = ' '
+    else:
+        node.result = re.sub('\s+', ' ', node.result)
+
+
+def move_whitespace(context):
+    """Moves adjacent whitespace nodes to the parent node.
+    """
+    node = context[-1]
+    if len(context) <= 1 or not node.children:
+        return
+    parent = context[-2]
+    children = node.children
+    if children[0].parser.ptype == WHITESPACE_PTYPE:
+        before = (children[0],)
+        children = children[1:]
+    else:
+        before = ()
+    if children and children[-1].parser.ptype == WHITESPACE_PTYPE:
+        after = (children[-1],)
+        children = children[:-1]
+    else:
+        after = tuple()
+
+    if before or after:
+        node.result = children
+        for i, child in enumerate(parent.children):
+            if child == node:
+                break
+
+        # merge adjacent whitespace
+        prevN = parent.children[i-1] if i > 0 else None
+        nextN = parent.children[i+1] if i < len(parent.children)-1 else None
+        if before and prevN and prevN.parser.ptype == WHITESPACE_PTYPE:
+            prevN.result = prevN.result + before[0].result
+            before = ()
+        if after and nextN and nextN.parser.ptype == WHITESPACE_PTYPE:
+            nextN.result = after[0].result + nextN.result
+            after = ()
+
+        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
+
+
 #######################################################################
 #
 # destructive transformations:
 #
 # - leaves may be dropped (e.g. if deemed irrelevant)
-# - errors of dropped leaves will be lost
+# - errors of dropped leaves may be be lost
 # - no promise that order will be preserved
 #
 #######################################################################
