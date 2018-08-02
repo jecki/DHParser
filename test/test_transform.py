@@ -203,15 +203,31 @@ class TestConditionalTransformations:
         assert str(cst) == "faciterculasim.bona fide"
 
 class TestComplexTransformations:
-    def test_collapse_if(self):
+    def setup(self):
+        self.Text = MockParser('Text', TOKEN_PTYPE)
+
+    def test_collapse_if_plain(self):
         xml = "<EINZEILER><DEU_WORT>spectat</DEU_WORT><WS> </WS><DEU_WORT>ad</DEU_WORT>" +\
               "<WS> </WS><DEU_WORT>gravitatem</DEU_WORT><TEIL_SATZZEICHEN>,</TEIL_SATZZEICHEN>" +\
               "<WS> </WS><DEU_WORT>momentum</DEU_WORT></EINZEILER>"
         tree = parse_xml(xml)
-        print(tree.as_xml())
-        Text = MockParser('Text', TOKEN_PTYPE)
-        collapse_if([tree], lambda l: True, Text)
-        print(tree.as_xml())
+        assert tree.as_xml(inline_tags={'EINZEILER'}) == xml
+        collapse_if([tree], lambda l: True, self.Text)
+        assert tree.as_xml(inline_tags={'EINZEILER'}) == \
+               "<EINZEILER><Text>spectat ad gravitatem, momentum</Text></EINZEILER>"
+
+    def test_collapse_if_structured(self):
+        xml = """<Stelle>
+                   <DEU_WORT>p.</DEU_WORT>
+                   <SEITENZAHL>26</SEITENZAHL>
+                   <HOCHGESTELLT>b</HOCHGESTELLT>
+                   <TEIL_SATZZEICHEN>,</TEIL_SATZZEICHEN>
+                   <SEITENZAHL>18</SEITENZAHL>
+                 </Stelle>"""
+        tree = parse_xml(xml)
+        collapse_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT', self.Text)
+        assert tree.as_xml(inline_tags={'Stelle'}) == \
+               "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"
 
 
 if __name__ == "__main__":
