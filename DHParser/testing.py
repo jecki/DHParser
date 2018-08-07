@@ -148,7 +148,7 @@ def unit_from_config(config_str):
         section_match = RX_SECTION.match(cfg, pos)
 
     if pos != len(cfg):
-        raise SyntaxError('in file %s in line %i' % (config_filename, cfg[:pos].count('\n') + 1))
+        raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 1))
 
     return unit
 
