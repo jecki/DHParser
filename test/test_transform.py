@@ -226,7 +226,7 @@ class TestComplexTransformations:
                    <SEITENZAHL>18</SEITENZAHL>
                  </Stelle>"""
         tree = parse_xml(xml)
-        print(flatten_sxpr(tree.as_sxpr()))
+        # print(flatten_sxpr(tree.as_sxpr()))
         collapse_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT', self.Text)
         assert tree.as_xml(inline_tags={'Stelle'}) == \
                "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"

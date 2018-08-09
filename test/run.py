@@ -10,8 +10,8 @@ if __name__ == "__main__":
     # print("Running nosetests:")
     # os.system("nosetests test")
 
-    interpreters = ['python ', 'pypy3 ', 'python37 ']
-    # interpreters = [r'C:\Users\di68kap\AppData\Local\Programs\Python\Python37-32\python.exe ']
+    # interpreters = ['python ', 'pypy3 ', 'python37 ']
+    interpreters = [r'C:\Users\di68kap\AppData\Local\Programs\Python\Python37-32\python.exe ']
 
     for interpreter in interpreters:
         os.system(interpreter + '--version')
