@@ -590,7 +590,8 @@ class Node(collections.abc.Sized):
             if hasattr(node, '_xml_attr'):
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
-                txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
+                line, col = line_col(lbreaks, node.pos)
+                txt.append(" `(pos %i %i %i)" % (node.pos, line, col))
             if showerrors and node.errors:
                 txt.append(" `(err `%s)" % ' '.join(str(err) for err in node.errors))
             return "".join(txt) + '\n'
