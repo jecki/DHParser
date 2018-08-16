@@ -4,7 +4,7 @@ DHParser's Step by Step Guide
 This step by step guide goes through the whole process of desining and testing
 a domain specific notation from the very start. (The terms "domain specific
 notation" and "domain specific language" are used interchangeably in the
-following. Both will abbreviated by "DSL", however.) We will design a simple
+following. Both will be abbreviated by "DSL", however.) We will design a simple
 domain specific notation for poems as a teaching example. On the way we will
 learn:
 
@@ -16,7 +16,7 @@ learn:
 
 4. how to specify the transformations for converting the concrete syntax tree
    that results from parsing a text denoted in our DLS into an abstract syntax
-   tree that represents or comes close to representing out data model.
+   tree that represents or comes close to representing our data model.
 
 5. how to write a compiler that transforms the abstract syntax tree into a
    target representation which might be a html page, epub or printable pdf in
@@ -55,7 +55,7 @@ files and directories for sure, but those will not concern us for now::
     DHParser/            - the DHParser python packages
     documentation/       - DHParser's documentation in html-form
     documentation_source - DHParser's documentation in reStructedText-Format
-    examples/            - some exmamples for DHParser (mostly incomplete)
+    examples/            - some examples for DHParser (mostly incomplete)
     experimental/        - an empty directory for experimenting
     test/                - DHParser's unit-tests
     dhparser.py          - DHParser's command line tool for setting up projects
@@ -91,7 +91,7 @@ contains the following files::
 Now, if you look into the file "example.dsl" you will find that it contains a
 simple sequence of words, namely "Life is but a walking shadow". In fact, the
 demo grammar that comes with a newly created project is nothing but simple
-grammar for sequences of words separated by whitespace. Now, since we alread
+grammar for sequences of words separated by whitespace. Now, since we already
 have unit tests, our first exercise will be to run the unit tests by starting
 the script "tst_poetry_grammar.py"::
 
@@ -209,7 +209,7 @@ A reasonable workflow for developing the grammar proceeds like this:
    decide to use different syntactic constructs.
 
    If all examples can be parsed, you go back to step one and add further more
-   complex examples, and continue to do so until you have the feeling that you
+   complex examples, and continue to do so until you have the feeling that your
    DSL's grammar is rich enough for all intended application cases.
 
 Let's try this with the trivial demo example that comes with creating a new
@@ -319,8 +319,8 @@ follow. Since this is true only for the end of file, the parser looking for
 EOF will only match if the very end of the file has been reached.
 
 Now, what would be the easiest way to allow our sequence of words to be ended
-like a real sentence with a dot "."?  As always when defining grammars on can
-think of different choice to implement this requirement in our grammar. One
+like a real sentence with a dot "."?  As always when defining grammars one can
+think of different choices to implement this requirement in our grammar. One
 possible solution is to add a dot-literal before the "§EOF"-component at the
 end of the definition of the "document"-rule. So let's do that. Change the
 line where the "document"-rule is defined to::
@@ -329,7 +329,7 @@ line where the "document"-rule is defined to::
 
 As you can see, string-literals are simply denoted as strings between inverted
 commas in DHParser's variant of the EBNF-Grammar. Now, before we can compile
-the file "example.dsl", we will have to regenerate the our parser, because we
+the file "example.dsl", we will have to regenerate our parser, because we
 have changed the grammar. In order to recompile, we simply run the test-script
 again::
 
@@ -378,7 +378,7 @@ to our grammar.
 Extending the example DSL further
 ---------------------------------
 
-A grammar that can only digest single sentences is certainly a rather boring.
+A grammar that can only digest single sentences is certainly rather boring.
 So we'll extend our grammar a little further so that it can capture paragraphs
 of sentences. To see, where we are heading, let's first start a new example
 file, let's call it "macbeth.dsl" and enter the following lines::
@@ -389,7 +389,7 @@ file, let's call it "macbeth.dsl" and enter the following lines::
 
 What have we got, there? We've got a paragraph that consists of several
 sentences each of which ends with a full stop. The sentences themselves can
-consist of different parts which a separated by a comma. If, so far, we have
+consist of different parts which are separated by a comma. If, so far, we have
 got a clear idea (in verbal terms) of the structure of texts in our DSL, we
 can now try to formulate this in the grammar.::
 
@@ -408,7 +408,7 @@ that I find the formal definition easier to understand. However, for learning
 EBNF or any other formalism, it helps in the beginning to translate the
 meaning of its statements into plain old English.)
 
-There is are two subtle mistakes in this grammar. If you can figure them out
+There are two subtle mistakes in this grammar. If you can figure them out
 just by thinking about it, feel free to correct the grammar right now. (Would
 you really have noticed the mistakes if they hadn't already been marked in the
 code above?) For all less intelligent people, like me: Let's be prudent and -
@@ -499,7 +499,7 @@ option::
 
     $ python poetryCompiler.py --debug macbeth.dsl
 
-You will receive the same error messages as before. But this time various
+You will receive the same error messages as before. but this time various
 kinds of debugging information have been written into a newly created
 subdirectory "LOGS". (Beware that any files in the "LOGS" directory may be
 overwritten or deleted by any of the DHParser scripts upon the next run! So
@@ -539,7 +539,7 @@ In our concrete example, we can see that the parser "WORD" matches "Life", but
 not "Life’s" or "’s". And this ultimately leads to the failure of the parsing
 process as a whole. The most simple solution would be to add the apostrophe to
 the list of allowed characters in a word by changing the respective line in
-the grammar definition to ``WORD = /[\w’]+/``. Now, before we even change the
+the grammar definition to ``WORD = /[\w’]+/~``. Now, before we even change the
 grammar we first add another test case to capture this kind of error. Since we
 have decided that "Life’s" should be parsed as a singe word, let's open the
 file "grammar_tests/01_test_word.ini" and add the following test::
@@ -574,7 +574,7 @@ just described. Now both the tests and the compilation of the file
 Controlling abstract-syntax-tree generation
 -------------------------------------------
 
-Compiling the example "macbeth.dsl" with the command ``python poetryCompier.py
+Compiling the example "macbeth.dsl" with the command ``python poetryCompiler.py
 macbeth.dsl``, you might find yourself not being able to avoid the impression
 that the output is rather verbose. Just looking at the beginning of the
 output, we find::
@@ -690,8 +690,8 @@ operators for transforming a node. There is a difference between specifying an
 empty list for a particular tag-name or leaving out a tag-name completely. In the
 latter case the "*"-joker is applied, in place of the missing list of operators.
 In the former case only the "+"-joker is applied. If a list of operators is
-specified, these operator will be applied in sequence one after the other. We
-also call the list of operators or the single operator if there is only one the
+specified, these operators will be applied in sequence one after the other. We
+also call the list of operators or the single operator if there is only one
 *transformation* for a particular tag (or parser name or parser type for that
 matter).
 
@@ -734,14 +734,14 @@ It starts to become more readable and concise, but there are sill some oddities.
 Firstly, the Tokens that deliminate parts of sentences still contain whitespace.
 Secondly, if several <part>-nodes follow each other in a <sentence>-node, the
 <part>-nodes after the first one are enclosed by a <:Series>-node or even a
-cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:_Token>-nodes, have
+cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:_Token>-nodes, we
 can do the same trick as with the WORD-nodes::
 
     ":_Token": [remove_whitespace, reduce_single_child],
     ":_RE": reduce_single_child,
 
 As to the nested structure of the <part>-nodes within the <sentence>-node, this
-a rather typical case of syntactic artefacts that can be found in concrete
+a rather typical case of syntactic artifacts that can be found in concrete
 syntax trees. It is obviously a consequence of the grammar definition::
 
     sentence = part {"," part } "."
@@ -757,8 +757,8 @@ The ``flatten`` operator recursively eliminates all intermediary anonymous child
 nodes. We do not need to do anything in particular for transforming the
 <part>-node, except that we should explicitly assign an empty operator-list to
 it, because we do not want the "*" to step in. The reason is that a <part> with
-a single <WORD> should still be visible as a part a not replaced by the
-<WORD>-node, because we would like our data model to have has regular a form as
+a single <WORD> should still be visible as a part and not be replaced by the
+<WORD>-node, because we would like our data model to have as regular a form as
 possible. (This does of course imply a decision that we have taken on the form
 of our data model, which would lead too far to discuss here. Suffice it to say
 that depending on the occasion and purpose, such decisions can also be taken
@@ -768,7 +768,7 @@ The only kind of nodes left are the <document>-nodes. In the output of the
 compiler-script (see above), the <document>-node had a single child-node
 ":ZeroOrMore". Since this child node does not have any particular semantic
 meaning it would reasonable to eliminate it and attach its children directly to
-"document". We could do so by entering ``reduce_single_child`` in the lost of
+"document". We could do so by entering ``reduce_single_child`` in the list of
 transformations for "document"-nodes. However, when designing the
 AST-transformations, it is important not only to consider the concrete output
 that a particular text yields, but all possible outputs. Therefore, before
@@ -787,7 +787,7 @@ there is more than a single child. (We could of course also use the
 "flatten"-operator, instead. Try this as an exercise.) Test cases help to
 capture those different scenarios, so adding test cases and examining the output
 in the test report help to get a grip on this, if just looking at the grammar
-strains you imagination too much.
+strains your imagination too much.
 
 Since we have decided, that we do not want to include whitespace in our data
 model, we can simply eliminate any whitespace before we apply the
