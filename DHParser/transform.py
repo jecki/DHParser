@@ -704,56 +704,6 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
     node.result = tuple(result)
 
 
-# @transformation_factory
-# def collect_leaves(context: List[Node], whitespace: str=''):
-#     """
-#     Collects all leave nodes dropping any intermediary nodes.
-#     Optionally adds whitespace between the nodes.
-#     """
-#     assert context[-1].children
-#     node = context[-1]
-#     leaves_iterator = node.select(lambda nd: not nd.children, include_root=False)
-#     if whitespace:
-#         mock_ws_parser = MockParser('', WHITESPACE_PTYPE)
-#         result = []
-#         for leave in leaves_iterator:
-#             result.append(leave)
-#             result.append(Node(mock_ws_parser, whitespace, leafhint=True))
-#         result.pop()
-#         node.result = tuple(result)
-#     else:
-#         node.result = (nd for nd in leaves_iterator)
-
-
-# @transformation_factory(tuple)
-# def merge_children(context: List[Node], tag_names: Tuple[str]):
-#     """
-#     Joins all children next to each other and with particular tag-names
-#     into a single child node with a mock-parser with the name of the
-#     first tag-name in the list.
-#     """
-#     node = context[-1]
-#     result = []
-#     name, ptype = ('', tag_names[0]) if tag_names[0][:1] == ':' else (tag_names[0], '')
-#     if node.children:
-#         i = 0
-#         L = len(node.children)
-#         while i < L:
-#             while i < L and not node.children[i].tag_name in tag_names:
-#                 result.append(node.children[i])
-#                 i += 1
-#             k = i + 1
-#             while (k < L and node.children[k].tag_name in tag_names
-#                    and bool(node.children[i].children) == bool(node.children[k].children)):
-#                 k += 1
-#             if i < L:
-#                 result.append(Node(MockParser(name, ptype),
-#                                    reduce(lambda a, b: a + b,
-#                                           (node.children for node in node.children[i:k]))))
-#             i = k
-#         node.result = tuple(result)
-
-
 @transformation_factory(collections.abc.Callable)
 def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
     """Replaces the content of the node. ``func`` takes the node's result
@@ -772,10 +722,12 @@ def replace_content_by(context: List[Node], content: str):  # Callable[[Node], R
 
 
 def normalize_whitespace(context):
-    """Normalizes Whitespace inside a leaf node, i.e. any sequence of
+    """
+    Normalizes Whitespace inside a leaf node, i.e. any sequence of
     whitespaces, tabs and linefeeds will be replaced by a single
     whitespace. Empty (i.e. zero-length) Whitespace remains empty,
-    however."""
+    however.
+    """
     node = context[-1]
     assert not node.children
     if is_whitespace(context):
@@ -786,7 +738,8 @@ def normalize_whitespace(context):
 
 
 def move_whitespace(context):
-    """Moves adjacent whitespace nodes to the parent node.
+    """
+    Moves adjacent whitespace nodes to the parent node.
     """
     node = context[-1]
     if len(context) <= 1 or not node.children:
