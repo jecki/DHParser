@@ -497,10 +497,10 @@ where the parser reached the farthest into the text. In order to receive the
 parsing history, you need to run the compiler-script again with the debugging
 option::
 
-    $ python poetryCompiler.py macbeth.dsl
+    $ python poetryCompiler.py --debug macbeth.dsl
 
-You will receive the same error messages as before. but this time various
-kinds of debugging information have been written into a new created
+You will receive the same error messages as before. But this time various
+kinds of debugging information have been written into a newly created
 subdirectory "LOGS". (Beware that any files in the "LOGS" directory may be
 overwritten or deleted by any of the DHParser scripts upon the next run! So
 don't store any important data there.) The most interesting file in the
