@@ -215,12 +215,12 @@ def unit_from_file(filename):
     return test_unit
 
 
-def all_match_tests(tests):
-    """Returns all match tests from ``tests``, This includes match tests
-    marked with an asterix for CST-output as well as unmarked match-tests.
-    """
-    return itertools.chain(tests.get('match', dict()).items(),
-                           tests.get('match*', dict()).items())
+# def all_match_tests(tests):
+#     """Returns all match tests from ``tests``, This includes match tests
+#     marked with an asterix for CST-output as well as unmarked match-tests.
+#     """
+#     return itertools.chain(tests.get('match', dict()).items(),
+#                            tests.get('match*', dict()).items())
 
 
 def get_report(test_unit):
