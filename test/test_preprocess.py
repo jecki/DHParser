@@ -70,6 +70,16 @@ class TestSourceMapping:
         assert offsets[-1] >= offsets[-2]
         assert self.tokenized.find('AND') == self.code.find('AND') + len('CONJUNCTION') + 2
 
+    def test_bondary_cases(self):
+        # position at the end of the file
+        source = " "
+        srcmap = tokenized_to_original_mapping(source)
+        pos = source_map(1, srcmap)
+        # empty file
+        source =""
+        srcmap = tokenized_to_original_mapping(source)
+        pos = source_map(0, srcmap)
+
 
 class TestTokenParsing:
     def preprocess_indentation(self, src: str) -> str:
