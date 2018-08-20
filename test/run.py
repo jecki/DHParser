@@ -38,8 +38,10 @@ if __name__ == "__main__":
         os.chdir('..')
         files = os.listdir('DHParser')
         for filename in files:
-            if filename.endswith('.py'):
-                print('\nDOCTESTS in ' + filename)
-                os.system(interpreter + ' -m doctest ' + filename)
+            if filename.endswith('.py') and filename \
+                    not in ["foreign_typing.py", "stringview.py", "__init__.py"]:
+                filepath = os.path.join('DHParser', filename)
+                print('\nDOCTESTS in ' + filepath)
+                os.system(interpreter + ' -m doctest ' + filepath)
 
     os.chdir(cwd)

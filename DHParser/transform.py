@@ -34,7 +34,7 @@ from functools import partial, reduce, singledispatch
 
 from DHParser.error import Error
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, ParserBase, MockParser, \
-    ZOMBIE_NODE
+    ZOMBIE_NODE, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text, Generic
@@ -669,7 +669,7 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
     >>> text = MockParser('text')
     >>> collapse_if([tree], not_one_of({'superscript', 'subscript'}), text)
     >>> print(flatten_sxpr(tree.as_sxpr()))
-    (place (text "p. 26") (superscript "b") (text ",18"))
+    (place (text "p.26") (superscript "b") (text ",18"))
 
     See `test_transform.TestComplexTransformations` for examples.
     """
