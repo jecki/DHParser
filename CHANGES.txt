@@ -1,10 +1,19 @@
+DHParser Version 0.8.3 (20.8.2018)
+..................................
+
+- new transformation function collapse_if()
+- restored compatibility with Python 3.4
+- StepByStep Guide typos fixed
+- bug fixes
+
+
 DHParser Version 0.8.2 (10.7.2018)
 ..................................
 
 - refactoring of module parser.py for more simplicity. RE is now
   a simple (macro-style) function instead of a class of its own.
-  Class Token has been merged with PlainText. Possible break of 
-  backwards compatibility with certain AST-transformation-tables in 
+  Class Token has been merged with PlainText. Possible break of
+  backwards compatibility with certain AST-transformation-tables in
   connection with Token and RE-nodes!
 
 
