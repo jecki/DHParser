@@ -2,10 +2,12 @@
 
 """Runs the dhparser test-suite with several installed interpreters"""
 
-if __name__ == "__main__":
-    import os
-    import platform
+import multiprocessing
+import os
+import platform
+import sys
 
+if __name__ == "__main__":
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 
     # if os.getcwd().endswith('test'):
@@ -15,7 +17,7 @@ if __name__ == "__main__":
     if platform.system() != "Windows":
         interpreters = ['python ', 'pypy3 ', 'python37 ']
     else:
-        interpreters = [r'C:\Users\di68kap\AppData\Local\Programs\Python\Python37-32\python.exe ']
+        interpreters = ['python.exe ']
 
     cwd = os.getcwd()
 

@@ -21,6 +21,7 @@ limitations under the License.
 """
 
 import os
+import platform
 import shutil
 import sys
 
@@ -43,8 +44,9 @@ class TestDHParserCommandLineTool:
         os.chdir(self.cwd)
 
     def test_dhparser(self):
-        os.system('python ../dhparser.py testdata/neu >/dev/null')
-        os.system('python testdata/neu/tst_neu_grammar.py >/dev/null')
+        nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
+        os.system('python ../dhparser.py testdata/neu ' + nulldevice)
+        os.system('python testdata/neu/tst_neu_grammar.py ' + nulldevice)
         os.system('python testdata/neu/neuCompiler.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
