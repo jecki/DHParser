@@ -2,10 +2,11 @@
 
 """Runs the dhparser test-suite with several installed interpreters"""
 
-import multiprocessing
+import concurrent.futures
 import os
 import platform
-import threading
+import time
+
 
 
 def run_tests(testtype, command):
@@ -38,7 +39,9 @@ if __name__ == "__main__":
     cwd = os.getcwd()
     os.chdir(scriptdir + '/..')
 
-    with multiprocessing.Pool() as pool:
+    timestamp = time.time()
+
+    with concurrent.futures.ProcessPoolExecutor(4) as pool:
         for interpreter in interpreters:
             os.system(interpreter + '--version')
 
@@ -54,5 +57,8 @@ if __name__ == "__main__":
                         for filename in os.listdir('DHParser') if filename.endswith('.py')
                         and filename not in ["foreign_typing.py", "stringview.py", "__init__.py"]]
             pool.map(run_doctests, commands)
+
+    elapsed = time.time() - timestamp
+    print('\n Test-Duration: %.2f seconds' % elapsed)
 
     os.chdir(cwd)
