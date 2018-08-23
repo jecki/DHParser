@@ -5,7 +5,23 @@
 import multiprocessing
 import os
 import platform
-import sys
+import threading
+
+
+def run_tests(testtype, command):
+    filename = command[command.rfind(' ')+1:]
+    print('\n' + testtype + ' ' + filename)
+    os.system(command)
+
+
+def run_unittests(command):
+    run_tests('UNITTESTS', command)
+
+
+def run_doctests(command):
+    print(os.getcwd())
+    run_tests('DOCTESTS', command)
+
 
 if __name__ == "__main__":
     scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -20,30 +36,23 @@ if __name__ == "__main__":
         interpreters = ['python.exe ']
 
     cwd = os.getcwd()
+    os.chdir(scriptdir + '/..')
 
-    for interpreter in interpreters:
-        os.system(interpreter + '--version')
+    with multiprocessing.Pool() as pool:
+        for interpreter in interpreters:
+            os.system(interpreter + '--version')
 
-        # unit tests
+            # unit tests
 
-        os.chdir(scriptdir)
+            commands = [interpreter + os.path.join('test', filename)
+                        for filename in os.listdir('test') if filename.startswith('test_')]
+            pool.map(run_unittests, commands)
 
-        assert os.getcwd().endswith('test')
-        files = os.listdir()
-        for filename in files:
-            if filename.startswith('test_'):
-                print('\nUNITTEST ' + filename)
-                os.system(interpreter + filename)
+            # doctests
 
-        # doctests
-
-        os.chdir('..')
-        files = os.listdir('DHParser')
-        for filename in files:
-            if filename.endswith('.py') and filename \
-                    not in ["foreign_typing.py", "stringview.py", "__init__.py"]:
-                filepath = os.path.join('DHParser', filename)
-                print('\nDOCTESTS in ' + filepath)
-                os.system(interpreter + ' -m doctest ' + filepath)
+            commands = [interpreter + ' -m doctest ' + os.path.join('DHParser', filename)
+                        for filename in os.listdir('DHParser') if filename.endswith('.py')
+                        and filename not in ["foreign_typing.py", "stringview.py", "__init__.py"]]
+            pool.map(run_doctests, commands)
 
     os.chdir(cwd)
