@@ -26,7 +26,7 @@ from DHParser import logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, Token, \
-    traverse, remove_children_if, merge_children, is_anonymous, \
+    traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -277,7 +277,7 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "205ce13682b5d466a39069a1c1c6108b"
+    source_hash__ = "0d1304f359f001aae4a17e5d9e801f0e"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'
