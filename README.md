@@ -10,7 +10,7 @@ Email:  arnold@badw.de
 License
 -------
 
-DHParser is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
+DHParser is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
 
 Copyright 2016-2018  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 

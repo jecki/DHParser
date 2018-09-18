@@ -58,13 +58,13 @@ a few drawbacks to this approach:
   and closing tags. This takes time...
 
 - While looking for a good XML-Editor, you find that there hardly exist
-  any XML-Editors any more. (And for a reason, actually...) In
-  particular, there are no good open source XML-Editors.
+  any XML-Editors, any more. (And for a reason, actually...) In
+  particular, there are not many good open source XML-Editors.
 
 On the other hand, there are good reasons why XML is used in the
 humanities: Important encoding standards like
 [TEI-XML](http://www.tei-c.org/index.xml) are defined in XML. Its strict
-syntax and the possibility to check data against schema help to detect
+syntax and the possibility to check data against a schema help to detect
 and avoiding encoding errors. If the schema is well-defined, it is
 unambiguous, and it is easy to parse for a computer. Most of these
 advantages, however, are on a technical level and few of them are
@@ -335,7 +335,7 @@ strictly separated steps:
 2. Transformation of the CST into an "abstract syntax tree" (AST)
 
 3. And, finally, compilation of the AST into valid XML, HTML, LaTeX or
-   what you like.
+   whatever you like.
 
 DHParser automatically only generates a parser for the very first step.
 The other steps have to be programmed by hand, though DHParser tries to
