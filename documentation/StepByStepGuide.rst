@@ -820,5 +820,5 @@ few anonymous <:_Token> nodes. Here is a little exercise: Do away with those
 <:_Token>-nodes by replacing them by something semantically more meaningful.
 Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". An
 alternative strategy to extending the grammar would be to use the
-``replace_parser`` operator. Which of the strategy is the better one? Explain
+``replace_parser`` operator. Which of the strategies is the better one? Explain
 why.
