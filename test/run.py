@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # print("Running nosetests:")
     # os.system("nosetests test")
     if platform.system() != "Windows":
-        interpreters = ['python ', 'pypy3 ']
+        interpreters = ['python3 ', 'pypy3 ']
     else:
         interpreters = ['python.exe ']
 

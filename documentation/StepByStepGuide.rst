@@ -67,8 +67,8 @@ In order to verify that the installation works, you can simply run the
 "dhparser.py" script and, when asked, chose "3" for the self-test. If the
 self-test runs through without error, the installation has succeeded.
 
-Staring a new DHParser project
-------------------------------
+Starting a new DHParser project
+-------------------------------
 
 In order to setup a new DHParser project, you run the ``dhparser.py``-script
 with the name of the new project. For the sake of the example, let's type::
@@ -406,7 +406,7 @@ stop. (Understandable? If you have ever read Russell's "Introduction to
 Mathematical Philosophy" you will be used to this kind of prose. Other than
 that I find the formal definition easier to understand. However, for learning
 EBNF or any other formalism, it helps in the beginning to translate the
-meaning of its statements into plain old English.)
+meaning of its statements into plain language.)
 
 There are two subtle mistakes in this grammar. If you can figure them out
 just by thinking about it, feel free to correct the grammar right now. (Would
