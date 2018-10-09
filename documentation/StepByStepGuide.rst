@@ -27,7 +27,7 @@ Setting up a new DHParser project
 =================================
 
 Since DHParser, while quite mature in terms of implemented features, is still
-in a pre-first-release state, it is for the time being more recommendable to
+in a pre-first-release state, it is, for the time being, more recommendable to
 clone the most current version of DHParser from the git-repository rather than
 installing the packages from the Python Package Index (PyPI).
 

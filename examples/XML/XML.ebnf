@@ -6,7 +6,7 @@
 #
 #######################################################################
 
-@ whitespace  = /\s*/           # implicit whitespace, signified by ~
+@ whitespace  = /\s*/           # insignificant whitespace, signified by ~
 @ literalws   = none            # literals have no implicit whitespace
 @ comment     = //              # no implicit comments
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
