@@ -23,7 +23,6 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.error import Error
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, flatten_xml, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
@@ -56,9 +55,17 @@ class TestParseXML:
     def test_plaintext_handling(self):
         tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
         assert flatten_sxpr(tree.as_sxpr()) == \
-               '(a (:PlainText "alpha ") (b "beta") (:PlainText " gamma"))'
-        tree = parse_xml(' <a>   <b>beta</b>   </a> ')
-        assert flatten_xml(tree.as_xml()) == '<a><b>beta</b></a>'
+               '(a (:Token "alpha ") (b "beta") (:Token " gamma"))'
+        tree = parse_xml(' <a>  <b>beta</b>  </a> ')
+        assert flatten_xml(tree.as_xml()) == '<a><:Token>  </:Token><b>beta</b><:Token>  </:Token></a>'
+        assert tree.as_xml(inline_tags={'a'}, omit_tags={':Token'}) == '<a>  <b>beta</b>  </a>'
+        tree = parse_xml(' <a>\n  <b>beta</b>\n</a> ')
+        assert tree.as_xml(inline_tags={'a'}) == '<a><b>beta</b></a>'
+
+    def test_flatten_xml(self):
+        tree = parse_xml('<alpha>\n  <beta>gamma</beta>\n</alpha>')
+        flat_xml = flatten_xml(tree.as_xml())
+        assert flat_xml == '<alpha><beta>gamma</beta></alpha>', flat_xml
 
 
 class TestNode:
@@ -96,10 +103,9 @@ class TestNode:
 
     def test_equality2(self):
         ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
-        att  = {"term": [replace_by_single_child, flatten],
+        att  = {"term": [remove_expendables, replace_by_single_child, flatten],
                 "factor": [remove_expendables, reduce_single_child],
-                (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-                "?": [remove_expendables, replace_by_single_child]}
+                "*": [remove_expendables, replace_by_single_child]}
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
@@ -166,37 +172,6 @@ class TestRootNode:
         assert error_str.find("A") < error_str.find("B")
 
 
-# class TestErrorHandling:
-#     def test_error_flag_propagation(self):
-#         tree = parse_sxpr('(a (b c) (d (e (f (g h)))))')
-#
-#         def find_h(context):
-#             node = context[-1]
-#             if node.result == "h":
-#                 node.new_error("an error deep inside the syntax tree")
-#
-#         assert not tree.error_flag
-#         traverse(tree, {"*": find_h})
-#         assert tree.error_flag, tree.as_sxpr()
-#
-#     def test_collect_errors(self):
-#         tree = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))))')
-#         A = tree
-#         B = next(tree.select(lambda node: str(node) == "1"))
-#         D = next(tree.select(lambda node: node.parser.name == "D"))
-#         F = next(tree.select(lambda node: str(node) == "3"))
-#         B.new_error("Error in child node")
-#         F.new_error("Error in child's child node")
-#         tree.error_flag = Error.ERROR
-#         errors = tree.collect_errors()
-#         assert len(errors) == 2, str(errors)
-#         assert A.error_flag
-#         assert D.error_flag
-#         errors = tree.collect_errors(clear_errors=True)
-#         assert len(errors) == 2
-#         assert not D.error_flag
-
-
 class TestNodeFind():
     """Test the select-functions of class Node.
     """
@@ -248,22 +223,65 @@ class TestSerialization:
 
     def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')
-        tree.attributes['attr'] = "value"
+        tree.attr['attr'] = "value"
         tree2 = parse_sxpr('(A `(attr "value") "B")')
         assert tree.as_sxpr() ==  tree2.as_sxpr()
-        tree.attributes['attr2'] = "value2"
+        tree.attr['attr2'] = "value2"
         tree3 = parse_sxpr('(A `(attr "value") `(attr2 "value2") "B")')
         assert tree.as_sxpr() == tree3.as_sxpr()
 
+    def test_sexpr(self):
+        tree = parse_sxpr('(A (B "C") (D "E"))')
+        s = tree.as_sxpr()
+        assert s == '(A\n  (B\n    "C"\n  )\n  (D\n    "E"\n  )\n)', s
+        tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
+        s = tree.as_sxpr()
+        assert s == '(A\n  (B\n    (C\n      "D"\n    )\n    (E\n      "F"\n    )' \
+            '\n  )\n  (G\n    "H"\n  )\n)', s
+        tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+        s = tree.as_sxpr()
+        assert s == '(A\n  (B\n    (C\n      "D"\n      "X"\n    )' \
+            '\n    (E\n      "F"\n    )\n  )\n  (G\n    " H "\n    " Y "\n  )\n)', s
+
+    def test_compact_representation(self):
+        tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
+        compact = tree.as_sxpr(compact=True)
+        assert compact == 'A\n  B\n    C "D"\n    E "F"\n  G "H"', compact
+        tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+        compact = tree.as_sxpr(compact=True)
+        assert compact == 'A\n  B\n    C\n      "D"\n      "X"\n    E "F"' \
+            '\n  G\n    " H "\n    " Y "', compact
+
     def test_xml_inlining(self):
         tree = parse_sxpr('(A (B "C") (D "E"))')
-        # obsolete: tree.attributes['_inline'] = "1"
+
         xml = tree.as_xml(inline_tags={'A'})
-        assert xml == "<A>\n  <B>C</B><D>E</D>\n</A>"
+        assert xml == "<A><B>C</B><D>E</D></A>", xml
+
+        assert tree.as_xml() == "<A>\n  <B>C</B>\n  <D>E</D>\n</A>", xml
+
+        tree.attr['xml:space'] = 'preserve'
+        xml = tree.as_xml()
+        assert xml == '<A xml:space="preserve"><B>C</B><D>E</D></A>', xml
+
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
-        # obsolete: tree.attributes['_inline'] = "1"
+
+        xml = tree.as_xml(inline_tags={'B'})
+        assert xml == "<A>\n  <B><C>D</C><E>F</E></B>\n  <G>H</G>\n</A>", xml
         xml = tree.as_xml(inline_tags={'A'})
-        assert xml == "<A>\n  <B><C>D</C><E>F</E></B><G>H</G>\n</A>"
+        assert xml == "<A><B><C>D</C><E>F</E></B><G>H</G></A>", xml
+
+        tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+        xml = tree.as_xml()
+        assert xml == '<A>\n  <B>\n    <C>\n      D\n      X\n    </C>\n    ' \
+            '<E>F</E>\n  </B>\n  <G>\n     H \n     Y \n  </G>\n</A>', xml
+        xml = tree.as_xml(inline_tags={'A'})
+        assert xml == '<A><B><C>D\nX</C><E>F</E></B><G> H \n Y </G></A>', xml
+
+    # def test_xml2(self):
+    #     tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
+    #     print(tree.as_xml())
+    #     print(tree.as_xml(inline_tags={'A'}))
 
 
 if __name__ == "__main__":

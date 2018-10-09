@@ -19,8 +19,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# import sys
-# sys.path.append('../')
+import sys
+
+sys.path.extend(['../', './'])
 
 from functools import partial
 
@@ -68,6 +69,16 @@ class TestSourceMapping:
         assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 2))
         assert offsets[-1] >= offsets[-2]
         assert self.tokenized.find('AND') == self.code.find('AND') + len('CONJUNCTION') + 2
+
+    def test_bondary_cases(self):
+        # position at the end of the file
+        source = " "
+        srcmap = tokenized_to_original_mapping(source)
+        pos = source_map(1, srcmap)
+        # empty file
+        source =""
+        srcmap = tokenized_to_original_mapping(source)
+        pos = source_map(0, srcmap)
 
 
 class TestTokenParsing:

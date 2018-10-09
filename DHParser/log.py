@@ -287,7 +287,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join((p.repr if p.ptype in {':RegExp', ':PlainText'} else p.name or p.ptype)
+        return "->".join((p.repr if p.ptype in {':RegExp', ':Token'} else p.name or p.ptype)
                          for p in self.call_stack)
 
     @property
@@ -372,7 +372,7 @@ def log_ST(syntax_tree, log_file_name):
             f.write(syntax_tree.as_sxpr())
 
 
-LOG_SIZE_THRESHOLD = 100000   # maximum number of history records to log
+LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
 LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
 
 

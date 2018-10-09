@@ -41,9 +41,10 @@ import bisect
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
 from DHParser.toolkit import typing
-from typing import Iterable, Iterator, Union, Tuple, List, Optional
+from typing import Iterable, Iterator, Union, Tuple, List, NewType
 
-__all__ = ('Error',
+__all__ = ('ErrorCode',
+           'Error',
            'is_error',
            'is_warning',
            'has_errors',
@@ -53,44 +54,44 @@ __all__ = ('Error',
            'adjust_error_locations')
 
 
+class ErrorCode(int):
+    pass
+
+
 class Error:
     __slots__ = ['message', 'level', 'code', '_pos', 'orig_pos', 'line', 'column', '_node_keep']
 
     # error levels
 
-    NO_ERROR  = 0
-    MESSAGE   = 1
-    WARNING   = 10
-    ERROR     = 1000
+    NO_ERROR  = ErrorCode(0)
+    MESSAGE   = ErrorCode(1)
+    WARNING   = ErrorCode(100)
+    ERROR     = ErrorCode(1000)
     HIGHEST   = ERROR
 
     # warning codes
 
-    REDEFINED_DIRECTIVE_WARNING = 101
-    REDECLARED_TOKEN_WARNING = 102
+    REDEFINED_DIRECTIVE_WARNING = ErrorCode(101)
+    REDECLARED_TOKEN_WARNING = ErrorCode(102)
 
-    UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE = 601
+    UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE = ErrorCode(601)
 
     # error codes
 
-    MANDATORY_CONTINUATION = 1001
+    MANDATORY_CONTINUATION = ErrorCode(1001)
 
-    def __init__(self, message: str, code: int = ERROR, pos: int = -1,
-                 orig_pos: int = -1, line: int = -1, column: int = -1,
-                 node: Optional['Node'] = None) -> None:
-        self.message = message
+    def __init__(self, message: str, pos, code: ErrorCode = ERROR,
+                 orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
+        assert isinstance(code, ErrorCode)
+        assert not isinstance(pos, ErrorCode)
+        assert pos >= 0
         assert code >= 0
-        self.code = code
+        self.message = message
         self._pos = pos
+        self.code = code
         self.orig_pos = orig_pos
         self.line = line
         self.column = column
-        if node is not None and node._pos >= 0:
-            assert self._pos < 0 or self._pos == node._pos
-            self._pos = node._pos
-            self._node_keep = None  # if node is not needed, if pos has been set
-        else:
-            self._node_keep = node  # redundant: consider removing, see RootNode.collect_errors
 
     def __str__(self):
         prefix = ''
@@ -104,10 +105,6 @@ class Error:
 
     @property
     def pos(self):
-        if self._pos < 0:
-            assert self._node_keep and self._node_keep.pos >= 0, "pos value not ready yet"
-            self._pos = self._node_keep.pos   # lazy evaluation of position
-        self._node_keep = None  # forget node to allow GC to free memory
         return self._pos
 
     @property
@@ -212,7 +209,7 @@ def adjust_error_locations(errors: List[Error],
 
     Returns:
         The list of errors. (Returning the list of errors is just syntactical
-        sugar. Be aware that the line, col and orig_pos attributes have been
+        sugar. Be aware that the line, col and orig_pos attr have been
         changed in place.)
     """
     line_breaks = linebreaks(original_text)

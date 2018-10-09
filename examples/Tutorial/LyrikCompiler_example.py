@@ -17,14 +17,14 @@ try:
 except ImportError:
     import re
 from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
-    Alternative, Pop, Token, Synonym, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Series, RE, Capture, \
+    Alternative, Pop, Token, Synonym, Whitespace, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, remove_empty, reduce_single_child, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
-    is_one_of, remove_first, remove_last, remove_tokens, remove_nodes, \
+    is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
     is_whitespace, TOKEN_PTYPE
 from DHParser.log import logging
 
@@ -82,20 +82,19 @@ class LyrikGrammar(Grammar):
     JAHRESZAHL        = /\d\d\d\d/~
     ENDE              = !/./
     """
-    source_hash__ = "e4060274178d9c633c6dbfafb34471bd"
+    source_hash__ = "6602d99972ef2883e28bd735e1fe0401"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'[\t ]*'
-    WSP__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP__
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wsp__ = Whitespace(WSP_RE__)
     ENDE = NegativeLookahead(RegExp('.'))
-    JAHRESZAHL = RE('\\d\\d\\d\\d')
-    LEERZEILE = RE('\\n[ \\t]*(?=\\n)')
-    NZ = RE('\\n')
-    ZEICHENFOLGE = RE('[^ \\n<>]+')
-    NAME = RE('\\w+\\.?')
-    WORT = RE('\\w+')
+    JAHRESZAHL = Series(RegExp('\\d\\d\\d\\d'), wsp__)
+    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), wsp__)
+    NZ = Series(RegExp('\\n'), wsp__)
+    ZEICHENFOLGE = Series(RegExp('[^ \\n<>]+'), wsp__)
+    NAME = Series(RegExp('\\w+\\.?'), wsp__)
+    WORT = Series(RegExp('\\w+'), wsp__)
     vers = OneOrMore(ZEICHENFOLGE)
     strophe = OneOrMore(Series(NZ, vers))
     text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
@@ -103,15 +102,16 @@ class LyrikGrammar(Grammar):
     titel = Series(OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     ziel = Synonym(ZEICHENFOLGE)
-    verknüpfung = Series(Token("<"), ziel, Token(">"))
+    verknüpfung = Series(Series(Token("<"), wsp__), ziel, Series(Token(">"), wsp__))
     namenfolge = OneOrMore(NAME)
     wortfolge = OneOrMore(WORT)
     jahr = Synonym(JAHRESZAHL)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Token("."), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Series(Token("."), wsp__), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Token(","), Option(NZ), werk, Token(","), Option(NZ), ort, Token(","), Option(NZ), jahr, Token("."), mandatory=1)
+    bibliographisches = Series(autor, Series(Token(","), wsp__), Option(NZ), werk, Series(Token(","), wsp__),
+                               Option(NZ), ort, Series(Token(","), wsp__), Option(NZ), jahr, Series(Token("."), wsp__), mandatory=1)
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
@@ -138,28 +138,28 @@ Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
     "+": remove_empty,
     "bibliographisches":
-        [remove_nodes('NZ'), remove_tokens],
+        [flatten, remove_nodes('NZ'), remove_whitespace, remove_tokens],
     "autor": [],
     "werk": [],
     "untertitel": [],
     "ort": [],
     "jahr":
-        [reduce_single_child],
+        [reduce_single_child, remove_whitespace, reduce_single_child],
     "wortfolge":
-        [flatten(is_one_of('WORT'), recursive=False), remove_last(is_whitespace), collapse],
+        [flatten(is_one_of('WORT'), recursive=False), peek, rstrip, collapse],
     "namenfolge":
-        [flatten(is_one_of('NAME'), recursive=False), remove_last(is_whitespace), collapse],
+        [flatten(is_one_of('NAME'), recursive=False), peek, rstrip, collapse],
     "verknüpfung":
-        [remove_tokens('<', '>'), reduce_single_child],
+        [flatten, remove_tokens('<', '>'), remove_whitespace, reduce_single_child],
     "ziel":
-        reduce_single_child,
+        [reduce_single_child, remove_whitespace, reduce_single_child],
     "gedicht, strophe, text":
         [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
     "titel, serie":
         [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'), collapse],
-    "zeile": [],
+    "zeile": [strip],
     "vers":
-        collapse,
+        [strip, collapse],
     "WORT": [],
     "NAME": [],
     "ZEICHENFOLGE":
@@ -172,8 +172,6 @@ Lyrik_AST_transformation_table = {
     "ENDE": [],
     ":Whitespace":
         replace_content(lambda node : " "),
-    ":Token, :RE":
-        reduce_single_child,
     "*": replace_by_single_child
 }
 

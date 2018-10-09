@@ -24,9 +24,10 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, parse_sxpr, ZOMBIE_NODE
+from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, ZOMBIE_NODE, \
+    MockParser, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
-    traverse_locally, collapse, lstrip, rstrip, remove_content, remove_tokens, \
+    traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
     transformation_factory
 from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
@@ -36,40 +37,40 @@ class TestRemoval:
     """Tests removing transformations."""
 
     def test_lstrip(self):
-        cst = parse_sxpr('(Token (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(_Token (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
         sxpr1 = cst.as_sxpr()
         lstrip([cst])
         assert sxpr1 == cst.as_sxpr()
-        cst = parse_sxpr('(Token)')
+        cst = parse_sxpr('(_Token)')
         lstrip([cst])
-        assert cst.as_sxpr() == '(Token)'
-        cst = parse_sxpr('(Token (:Whitespace " ") (:Whitespace " ") (:Re test))')
+        assert cst.as_sxpr() == '(_Token)'
+        cst = parse_sxpr('(_Token (:Whitespace " ") (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = parse_sxpr('(Token (:Whitespace " ") (Deeper (:Whitespace " ")) '
+        cst = parse_sxpr('(_Token (:Whitespace " ") (Deeper (:Whitespace " ")) '
                                '(:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = parse_sxpr('(Token (:Re ein) (:Whitespace " ") (:Re test))')
+        cst = parse_sxpr('(_Token (:Re ein) (:Whitespace " ") (:Re test))')
         lstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") >= 0
 
     def test_rstrip(self):
-        cst = parse_sxpr('(Token (:Re test) (:Whitespace " "))')
+        cst = parse_sxpr('(_Token (:Re test) (:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
         sxpr1 = cst.as_sxpr()
         rstrip([cst])
         assert sxpr1 == cst.as_sxpr()
-        cst = parse_sxpr('(Token)')
+        cst = parse_sxpr('(_Token)')
         rstrip([cst])
-        assert cst.as_sxpr() == '(Token)'
-        cst = parse_sxpr('(Token  (:Re test) (:Whitespace " ") (:Whitespace " "))')
+        assert cst.as_sxpr() == '(_Token)'
+        cst = parse_sxpr('(_Token  (:Re test) (:Whitespace " ") (:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0
-        cst = parse_sxpr('(Token  (:Re test) (:Whitespace " ") (Deeper (:Whitespace " ")) '
+        cst = parse_sxpr('(_Token  (:Re test) (:Whitespace " ") (Deeper (:Whitespace " ")) '
                                '(:Whitespace " "))')
         rstrip([cst])
         assert cst.as_sxpr().find(":Whitespace") < 0, cst.as_sxpr()
@@ -202,6 +203,33 @@ class TestConditionalTransformations:
         # whitespace after "facitergula", but not after "bona" should have been removed
         assert str(cst) == "faciterculasim.bona fide"
 
+class TestComplexTransformations:
+    def setup(self):
+        self.Text = MockParser('Text', TOKEN_PTYPE)
+
+    def test_collapse_if_plain(self):
+        xml = "<EINZEILER><DEU_WORT>spectat</DEU_WORT><WS> </WS><DEU_WORT>ad</DEU_WORT>" +\
+              "<WS> </WS><DEU_WORT>gravitatem</DEU_WORT><TEIL_SATZZEICHEN>,</TEIL_SATZZEICHEN>" +\
+              "<WS> </WS><DEU_WORT>momentum</DEU_WORT></EINZEILER>"
+        tree = parse_xml(xml)
+        assert tree.as_xml(inline_tags={'EINZEILER'}) == xml
+        collapse_if([tree], lambda l: True, self.Text)
+        assert tree.as_xml(inline_tags={'EINZEILER'}) == \
+               "<EINZEILER><Text>spectat ad gravitatem, momentum</Text></EINZEILER>"
+
+    def test_collapse_if_structured(self):
+        xml = """<Stelle>
+                   <DEU_WORT>p.</DEU_WORT>
+                   <SEITENZAHL>26</SEITENZAHL>
+                   <HOCHGESTELLT>b</HOCHGESTELLT>
+                   <TEIL_SATZZEICHEN>,</TEIL_SATZZEICHEN>
+                   <SEITENZAHL>18</SEITENZAHL>
+                 </Stelle>"""
+        tree = parse_xml(xml)
+        # print(flatten_sxpr(tree.as_sxpr()))
+        collapse_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT', self.Text)
+        assert tree.as_xml(inline_tags={'Stelle'}) == \
+               "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"
 
 
 if __name__ == "__main__":

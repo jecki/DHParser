@@ -29,6 +29,8 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.log import logging
 from DHParser.toolkit import re
 
+LOGGING = False
+
 dhparserdir = os.path.dirname(os.path.realpath(__file__))
 
 EBNF_TEMPLATE = r"""-grammar
@@ -117,6 +119,8 @@ GRAMMAR_TEST_TEMPLATE = r'''#!/usr/bin/python3
 import os
 import sys
 
+LOGGING = False
+
 sys.path.append(r'{dhparserdir}')
 
 scriptpath = os.path.dirname(__file__)
@@ -133,7 +137,7 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    with DHParser.log.logging(False):
+    with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
         if not dsl.recompile_grammar(grammar_src, force=force):
             print('\nErrors while recompiling "%s":' % grammar_src +
@@ -144,7 +148,7 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(glob_pattern):
-    with DHParser.log.logging(False):
+    with DHParser.log.logging(LOGGING):
         error_report = testing.grammar_suite(
             os.path.join(scriptpath, 'grammar_tests'),
             get_grammar, get_transformer,
@@ -153,7 +157,18 @@ def run_grammar_tests(glob_pattern):
 
 
 if __name__ == '__main__':
-    arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
+    argv = sys.argv[:]
+    if len(argv) > 1 and sys.argv[1] == "--debug":
+        LOGGING = True
+        del argv[1]
+    if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
+        os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
+        # if called with a single filename that is either an EBNF file or a known
+        # test file type then use the given argument
+        arg = argv[1]
+    else: 
+        # otherwise run all tests in the test directory
+        arg = '*_test_*.ini'
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
@@ -325,7 +340,7 @@ def main():
                 print('File %s not found! Aborting.' % file_path)
                 sys.exit(1)
         elif choice.strip() == '3':
-            with logging(False):
+            with logging(LOGGING):
                 if not cpu_profile(selftest, 1):
                     print("Selftest FAILED :-(\n")
                     sys.exit(1)

@@ -1542,7 +1542,7 @@ class _ProtocolMeta(GenericMeta):
             # Every class is a subclass of the empty protocol.
             return True
 
-        # Find all attributes defined in the protocol.
+        # Find all attr defined in the protocol.
         attrs = self._get_protocol_attrs()
 
         for attr in attrs:
@@ -1557,11 +1557,11 @@ class _ProtocolMeta(GenericMeta):
             if getattr(c, '_is_protocol', False) and c.__name__ != '_Protocol':
                 protocol_bases.append(c)
 
-        # Get attributes included in protocol.
+        # Get attr included in protocol.
         attrs = set()
         for base in protocol_bases:
             for attr in base.__dict__.keys():
-                # Include attributes not defined in any non-protocol bases.
+                # Include attr not defined in any non-protocol bases.
                 for c in self.__mro__:
                     if (c is not base and attr in c.__dict__ and
                             not getattr(c, '_is_protocol', False)):

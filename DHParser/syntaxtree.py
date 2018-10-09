@@ -26,7 +26,6 @@ parser classes are defined in the ``parse`` module.
 
 import collections.abc
 from collections import OrderedDict
-import copy
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
@@ -36,7 +35,6 @@ from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tupl
 
 __all__ = ('ParserBase',
            'WHITESPACE_PTYPE',
-           'PLAINTEXT_PTYPE',
            'TOKEN_PTYPE',
            'MockParser',
            'ZombieParser',
@@ -63,9 +61,11 @@ class ParserBase:
     It is defined here, because Node objects require a parser object
     for instantiation.
     """
-    def __init__(self, name=''):  # , pbases=frozenset()):
-        self._name = name  # type: str
-        self._ptype = ':' + self.__class__.__name__  # type: str
+    __slots__ = 'name', 'ptype'
+
+    def __init__(self,):  # , pbases=frozenset()):
+        self.name = ''  # type: str
+        self.ptype = ':' + self.__class__.__name__  # type: str
 
     def __repr__(self):
          return self.name + self.ptype
@@ -76,17 +76,17 @@ class ParserBase:
     def __call__(self, text: StringView) -> Tuple[Optional['Node'], StringView]:
         return None, text
 
-    @property
-    def name(self):
-        """Returns the name of the parser or the empty string '' for unnamed
-        parsers."""
-        return self._name
-
-    @property
-    def ptype(self) -> str:
-        """Returns the type of the parser. By default this is the parser's
-        class name preceded by a colon, e.g. ':ZeroOrMore'."""
-        return self._ptype
+    # @property
+    # def name(self):
+    #     """Returns the name of the parser or the empty string '' for unnamed
+    #     parsers."""
+    #     return self._name
+    #
+    # @property
+    # def ptype(self) -> str:
+    #     """Returns the type of the parser. By default this is the parser's
+    #     class name preceded by a colon, e.g. ':ZeroOrMore'."""
+    #     return self._ptype
 
     @property
     def repr(self) -> str:
@@ -110,7 +110,6 @@ class ParserBase:
 
 
 WHITESPACE_PTYPE = ':Whitespace'
-PLAINTEXT_PTYPE = ':PlainText'
 TOKEN_PTYPE = ':Token'
 
 
@@ -118,16 +117,20 @@ class MockParser(ParserBase):
     """
     MockParser objects can be used to reconstruct syntax trees from a
     serialized form like S-expressions or XML. Mock objects can mimic
-    different parser types by assigning them a ptype on initialization.
+    different parser types by assigning them a `ptype` on initialization.
 
     Mock objects should not be used for anything other than
     syntax tree (re-)construction. In all other cases where a parser
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
+    __slots__ = ()
+
     def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
         assert not ptype or ptype[0] == ':'
-        super().__init__(name)
-        self._ptype = ptype or ':' + self.__class__.__name__
+        super().__init__()
+        self.name = name
+        if ptype:
+            self.ptype = ptype  # or ':' + self.__class__.__name__
 
 
 class ZombieParser(MockParser):
@@ -141,11 +144,13 @@ class ZombieParser(MockParser):
     object is instantiated.
     """
     alive = False
+    __slots__ = ()
 
     def __init__(self):
-        super(ZombieParser, self).__init__("__ZOMBIE__")
+        super(ZombieParser, self).__init__()
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
+        self.name = "__ZOMBIE__"
         self.__class__.alive = True
 
     def __copy__(self):
@@ -187,15 +192,23 @@ def flatten_sxpr(sxpr: str) -> str:
 
 
 def flatten_xml(xml: str) -> str:
-    """Returns an XML-tree as a one linter without unnecessary whitespace,
+    """Returns an XML-tree as a one liner without unnecessary whitespace,
     i.e. only whitespace within leaf-nodes is preserved.
+    A more precise alternative to `flatten_xml` is to use Node.as_xml()
+    ans passing a set containing the top level tag to parameter `inline_tags`.
     """
-    return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
+    # works only with regex
+    # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
+    def tag_only(m):
+        return m.groupdict()['closing_tag']
+    return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
 class Node(collections.abc.Sized):
     """
     Represents a node in the concrete or abstract syntax tree.
+
+    TODO: Add some documentation and doc-tests here...
 
     Attributes:
         tag_name (str):  The name of the node, which is either its
@@ -241,22 +254,22 @@ class Node(collections.abc.Sized):
 
         errors (list):  A list of all errors that occured on this node.
 
-        attributes (dict): An optional dictionary of XML-attributes. This
-            dictionary is created lazily upon first usage. The attributes
+        attr (dict): An optional dictionary of XML-attr. This
+            dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
             S-Expression-output.
     """
 
-    __slots__ = ['_result', 'children', '_len', '_pos', 'parser', 'errors', '_xml_attr', '_content']
+    __slots__ = '_result', 'children', '_len', '_pos', 'parser', 'errors', '_xml_attr', '_content'
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self.errors = []               # type: List[Error]
+        self.errors = []                # type: List[Error]
         self._pos = -1                  # type: int
-        # Assignment to self.result initializes the attributes _result, children and _len
+        # Assignment to self.result initializes the attr _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType
@@ -361,6 +374,20 @@ class Node(collections.abc.Sized):
         #     return False
 
 
+    def get(self, index_or_tagname: Union[int, str],
+            surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
+        """Returns the child node with the given index if ``index_or_tagname``
+        is an integer or the first child node with the given tag name. If no
+        child with the given index or tag_name exists, the ``surrogate`` is
+        returned instead. This mimics the behaviour of Python's dictionary's
+        get-method.
+        """
+        try:
+            return self[index_or_tagname]
+        except KeyError:
+            return surrogate
+
+
     @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
     def tag_name(self) -> str:
         """
@@ -407,7 +434,9 @@ class Node(collections.abc.Sized):
     @property
     def content(self) -> str:
         """
-        Returns content as string, omitting error messages.
+        Returns content as string, omitting error messages. If the node has
+        child-nodes, the string content of the child-nodes is recursively read
+        and then concatenated.
         """
         if self._content is None:
             if self.children:
@@ -417,6 +446,11 @@ class Node(collections.abc.Sized):
                 self._content = str(self._result)
                 self._result = self._content  # self._result might be more efficient as a string!?
         return self._content
+
+
+    @content.setter
+    def content(self, content: str):
+        self.result = content
 
 
     @property
@@ -457,9 +491,9 @@ class Node(collections.abc.Sized):
 
 
     @property
-    def attributes(self):
+    def attr(self):
         """
-        Returns a dictionary of XML-Attributes attached to the Node.
+        Returns a dictionary of XML-attr attached to the node.
         """
         if not hasattr(self, '_xml_attr'):
             self._xml_attr = OrderedDict()
@@ -497,28 +531,40 @@ class Node(collections.abc.Sized):
 
         tail = tail.lstrip(None if density & 2 else '')
 
-        outer_tab = '' if inline else tab
         inline = inline or inline_fn(self)
-        sep, inner_tab = ('', '') if inline else ('\n', tab)
+        if inline:
+            head = head.rstrip()
+            tail = tail.lstrip()
+            usetab, sep = '', ''
+        else:
+            usetab = tab if head else ''    # no indentation if tag is already omitted
+            sep = '\n'
 
         if self.children:
             content = []
             for child in self.children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline, inline_fn).split('\n')
-                content.append((sep + inner_tab).join(s for s in subtree))
-            return head + outer_tab + (sep + inner_tab).join(content) + tail
+                                           density, inline, inline_fn)
+                if subtree:
+                    subtree = [subtree] if inline else subtree.split('\n')
+                    content.append((sep + usetab).join(s for s in subtree))
+            return head + usetab + (sep + usetab).join(content) + tail
 
         res = cast(str, self.result)  # safe, because if there are no children, result is a string
+        if not inline and not head:
+            # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
+            res = res.strip()
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
-            gap = ' ' if head.rstrip()[-1] != '>' else ''
-            return head.rstrip() + gap + data_fn(self.result) + tail.lstrip()
+            gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
+            return head.rstrip() + gap + data_fn(res) + tail.lstrip()
         else:
-            return head + '\n'.join([tab + data_fn(s) for s in res.split('\n')]) + tail
+            return head + '\n'.join([usetab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str = None, showerrors: bool = True, indentation: int = 2,
+    def as_sxpr(self, src: str = None,
+                showerrors: bool = True,
+                indentation: int = 2,
                 compact: bool = False) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form.
@@ -527,7 +573,9 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
-            compact:  If True a compact representation is returned where
+            showerrors: If True, error messages will be shown.
+            indentation: The number of whitespaces for indentation
+            compact:  If True, a compact representation is returned where
                 brackets are omitted and only the indentation indicates the
                 tree structure.
         """
@@ -540,11 +588,10 @@ class Node(collections.abc.Sized):
             txt = [left_bracket,  node.tag_name]
             # s += " '(pos %i)" % node.add_pos
             if hasattr(node, '_xml_attr'):
-                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attributes.items())
+                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
-                txt.append(" `(pos %i %i %i)" % (node.pos, *line_col(lbreaks, node.pos)))
-            # if node.error_flag:   # just for debugging error collecting
-            #     txt += " HAS ERRORS"
+                line, col = line_col(lbreaks, node.pos)
+                txt.append(" `(pos %i %i %i)" % (node.pos, line, col))
             if showerrors and node.errors:
                 txt.append(" `(err `%s)" % ' '.join(str(err) for err in node.errors))
             return "".join(txt) + '\n'
@@ -562,8 +609,12 @@ class Node(collections.abc.Sized):
         return self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
 
 
-    def as_xml(self, src: str = None, showerrors: bool = True, indentation: int = 2,
-               inline_tags: Set[str]=set(), omit_tags: Set[str]=set()) -> str:
+    def as_xml(self, src: str = None,
+               showerrors: bool = True,
+               indentation: int = 2,
+               inline_tags: Set[str]=set(),
+               omit_tags: Set[str]=set(),
+               empty_tags: Set[str]=set()) -> str:
         """
         Returns content as XML-tree.
 
@@ -571,13 +622,17 @@ class Node(collections.abc.Sized):
             src:  The source text or `None`. In case the source text is
                 given the position will also be reported as line and
                 column.
+            showerrors: If True, error messages will be shown.
+            indentation: The number of whitespaces for indentation
             inline_tags:  A set of tag names, the content of which will always be written
                 on a single line, unless it contains explicit line feeds ('\n').
             omit_tags:  A set of tags from which only the content will be printed, but
-                neither the opening tag nor its attributes nor the closing tag. This
+                neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,
                 which otherwise is not supported by the Node object, because it
                 requires its content to be either a tuple of children or string content.
+            empty_tags:  A set of tags which shall be rendered as empty elements, e.g.
+                "<empty/>" instead of "<empty><empty>".
         """
 
         def opening(node) -> str:
@@ -586,19 +641,25 @@ class Node(collections.abc.Sized):
                 return ''
             txt = ['<', node.tag_name]
             has_reserved_attrs = hasattr(node, '_xml_attr') \
-                and any (r in node.attributes for r in {'err', 'line', 'col'})
+                and any (r in node.attr for r in {'err', 'line', 'col'})
             if hasattr(node, '_xml_attr'):
-                txt.extend(' %s="%s"' % (k, v) for k, v in node.attributes.items())
+                txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if showerrors and node.errors and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in node.errors))
-            return "".join(txt + [">\n"])
+            if node.tag_name in empty_tags:
+                assert not node.result, ("Node %s with content %s is not an empty element!" %
+                                         (node.tag_name, str(node)))
+                ending = "/>\n" if not node.tag_name[0] == '?' else "?>\n"
+            else:
+                ending = ">\n"
+            return "".join(txt + [ending])
 
         def closing(node):
             """Returns the closing string for the representation of `node`."""
-            if node.tag_name in omit_tags:
+            if node.tag_name in omit_tags or node.tag_name in empty_tags:
                 return ''
             return ('\n</') + node.tag_name + '>'
 
@@ -607,7 +668,8 @@ class Node(collections.abc.Sized):
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
             """
-            return node.tag_name in inline_tags
+            return node.tag_name in inline_tags or (hasattr(node, '_xml_attr') \
+                                                    and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing,
@@ -698,7 +760,7 @@ class Node(collections.abc.Sized):
 class RootNode(Node):
     """TODO: Add Documentation!!!
 
-        errors (list):  A list of all errors that have occured so far during
+        all_errors (list):  A list of all errors that have occured so far during
                 processing (i.e. parsing, AST-transformation, compiling)
                 of this tree.
 
@@ -708,35 +770,25 @@ class RootNode(Node):
     def __init__(self, node: Optional[Node] = None) -> 'RootNode':
         super().__init__(ZOMBIE_PARSER, '')
         self.all_errors = []
-        self.err_nodes_keep = []
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
-
-    # def _propagate_errors(self):
-    #     if not self.all_errors or not self.error_propagation:
-    #         return
-    #     self.all_errors.sort(key=lambda e: e.pos)
-    #     i = 0
-    #     for leaf in self.select(lambda nd: not nd.children, False):
-    #         leaf.errors = []
-    #         while i < len(self.all_errors) \
-    #                 and leaf.pos <= self.all_errors[i].add_pos < leaf.add_pos + leaf.len:
-    #             leaf._errors.append(self.all_errors[i])
-    #             i += 1
-    #         if i >= len(self.all_errors):
-    #             break
-    #
-    # def _propagate_new_error(self, error):
-    #     if self.error_propagation:
-    #         for leaf in self.select(lambda nd: not nd.children, True):
-    #             if leaf.pos <= error.add_pos < leaf.add_pos + leaf.len:
-    #                 leaf._errors.append(error)
-    #                 break
-    #         else:
-    #             assert False, "Error %s at pos %i out of bounds" % (str(error), error.add_pos)
+        # customization for XML-Representation
+        self.inline_tags = set()
+        self.omit_tags = set()
+        self.empty_tags = set()
 
     def swallow(self, node: Node) -> 'RootNode':
+        """Put `self` in the place of `node` by copying all its data.
+        Returns self.
+
+        This is done by the parse.Grammar object after
+        parsing has finished, so that the Grammar object always
+        returns a syntax tree rooted in a RootNode object.
+
+        It is possible to add errors to a RootNode object, before it
+        has actually swallowed the root of the syntax tree.
+        """
         self._result = node._result
         self.children = node.children
         self._len = node._len
@@ -752,7 +804,6 @@ class RootNode(Node):
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         node.errors.append(error)
-        self.err_nodes_keep.append(node)
         return self
 
     def new_error(self,
@@ -766,27 +817,23 @@ class RootNode(Node):
             message(str): A string with the error message.abs
             code(int):    An error code to identify the kind of error
         """
-        error = Error(message, code, node=node)
+        error = Error(message, node.pos, code)
         self.add_error(node, error)
         return self
 
     def collect_errors(self) -> List[Error]:
         """Returns the list of errors, ordered bv their position.
         """
-        # for node in self.err_nodes:  # lazy evaluation of positions
-        #     for err in node.errors:  # moved to error.Error.pos
-        #         err.pos = node.pos
         self.all_errors.sort(key=lambda e: e.pos)
-        for node in self.err_nodes_keep:  # redundant: consider removing Error.Error._node_keep
-            for error in node.errors:
-                assert error._pos < 0 or node.pos <= error._pos <= node.pos + len(node)
-                if error._pos < 0:
-                    error._pos = node.pos
-        self.err_nodes_keep = []
-        errors = self.all_errors
-        # for error in self.all_errors:
-        #     _ = error.pos
-        return errors
+        return self.all_errors
+
+    def customized_XML(self):
+        """Returns a customized XML representation of the tree.
+        See the docstring of `Node.as_xml()` for an explanation of the
+        customizations."""
+        return self.as_xml(inline_tags = self.inline_tags,
+                           omit_tags=self.omit_tags,
+                           empty_tags=self.empty_tags)
 
 
 ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
@@ -802,7 +849,7 @@ def parse_sxpr(sxpr: str) -> Node:
 
     Example:
     >>> parse_sxpr("(a (b c))").as_sxpr()
-    '(a\\n    (b\\n        "c"\\n    )\\n)'
+    '(a\\n  (b\\n    "c"\\n  )\\n)'
     """
     sxpr = StringView(sxpr).strip()
     mock_parsers = dict()
@@ -851,7 +898,7 @@ def parse_sxpr(sxpr: str) -> Node:
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
-                # parse attributes
+                # parse attr
                 while sxpr[:2] == "`(":
                     i = sxpr.find('"')
                     k = sxpr.find(')')
@@ -864,7 +911,7 @@ def parse_sxpr(sxpr: str) -> Node:
                         while m >= 0 and m < k:
                             m = sxpr.find('(', k)
                             k = max(k, sxpr.find(')', max(m, 0)))
-                    # read attributes
+                    # read attr
                     else:
                         attr = sxpr[2:i].strip()
                         value = sxpr[i:k].strip()[1:-1]
@@ -887,7 +934,7 @@ def parse_sxpr(sxpr: str) -> Node:
             result = "\n".join(lines)
         node = Node(mock_parsers.setdefault(tagname, MockParser(name, ':' + class_name)), result)
         if attributes:
-            node.attributes.update(attributes)
+            node.attr.update(attributes)
         return node
 
     return inner_parser(sxpr)
@@ -901,12 +948,12 @@ def parse_xml(xml: str) -> Node:
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
     xml = StringView(xml)
-    PlainText = MockParser('', PLAINTEXT_PTYPE)
-    mock_parsers = {PLAINTEXT_PTYPE: PlainText}
+    PlainText = MockParser('', TOKEN_PTYPE)
+    mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
-        beginning after the end of the attributes."""
+        beginning after the end of the attr."""
         attributes = OrderedDict()
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
@@ -917,7 +964,7 @@ def parse_xml(xml: str) -> Node:
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
         """Parses an opening tag. Returns the string segment following the
-        the opening tag, the tag name, a dictionary of attributes and
+        the opening tag, the tag name, a dictionary of attr and
         a flag indicating whether the tag is actually a solitary tag as
         indicated by a slash at the end, i.e. <br/>."""
         match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))
@@ -955,14 +1002,14 @@ def parse_xml(xml: str) -> Node:
         if not solitary:
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
-                if not leaf.match(RX_WHITESPACE_TAIL):
+                if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
                     result.append(Node(PlainText, leaf))
                 if s[:1] == "<" and s[:2] != "</":
                     s, child = parse_full_content(s)
                     result.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname
-        if len(result) == 1 and result[0].parser.ptype == PLAINTEXT_PTYPE:
+        if len(result) == 1 and result[0].parser.ptype == TOKEN_PTYPE:
             result = result[0].result
         else:
             result = tuple(result)

@@ -21,13 +21,14 @@ limitations under the License.
 """
 
 import concurrent.futures
+import collections.abc
 import os
 import sys
 
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, \
-    lstrip_docstring
+    lstrip_docstring, issubtype, isgenerictype, typing
 from DHParser.log import log_dir, logging, is_logging
 
 
@@ -148,6 +149,12 @@ class TestStringHelpers:
                     indented indented line"""
         assert lstrip_docstring(str2) == '\nline\nline\n    indented line\n        indented ' \
                                          'indented line'
+
+
+class TestTypeSystemSupport:
+    def test_issubtype(self):
+        assert issubtype(typing.List, collections.abc.Sequence)
+
 
 
 if __name__ == "__main__":

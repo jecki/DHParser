@@ -185,7 +185,7 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
     positions, offsets = [0], [0]
     o = 0
     i = tokenized_source.find(BEGIN_TOKEN)
-    e = -1
+    e = -2
     while i >= 0:
         d = tokenized_source.find(TOKEN_DELIMITER, i)
         e = tokenized_source.find(END_TOKEN, i)
@@ -195,7 +195,7 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
         offsets.extend([o + 1, o])
         i = tokenized_source.find(BEGIN_TOKEN, e + 1)
     if e + 1 < len(tokenized_source):
-        positions.append(len(tokenized_source))
+        positions.append(len(tokenized_source) + 1)
         offsets.append(offsets[-1])
 
     # post conditions
