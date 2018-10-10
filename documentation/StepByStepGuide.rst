@@ -779,7 +779,7 @@ again, where "document" is defined as follows::
 As we can see a "document"-node may also contain whitespace and an EOF-marker.
 The reason why we don't find these in the output is that empty nodes have been
 eliminated by the ``remove_empty``-transformation specified in the "+"-joker,
-before. While EOF is always empty (little exercise: explain why!). But there
+before. EOF is always empty (little exercise: explain why!). But there
 could be ":Whitespace"-nodes next to the zero or more sentences in the document
 node, in which case the "reduce_single_child"-operator would do nothing, because
 there is more than a single child. (We could of course also use the
