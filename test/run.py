@@ -32,7 +32,7 @@ if __name__ == "__main__":
     # print("Running nosetests:")
     # os.system("nosetests test")
     if platform.system() != "Windows":
-        interpreters = ['python ', 'pypy3 ', 'python37 ']
+        interpreters = ['python3 ', 'pypy3 ']
     else:
         interpreters = ['python.exe ']
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     timestamp = time.time()
 
-    with concurrent.futures.ProcessPoolExecutor(4) as pool:
+    with concurrent.futures.ThreadPoolExecutor(4) as pool:
         for interpreter in interpreters:
             os.system(interpreter + '--version')
 
