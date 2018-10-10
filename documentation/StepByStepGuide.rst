@@ -637,7 +637,7 @@ can easily write your own. How does this look like? ::
        "part": [],
        "WORD": [],
        "EOF": [],
-       ":_Token, :_RE": reduce_single_child,
+       ":Token": reduce_single_child,
        "*": replace_by_single_child
     }
 
@@ -653,8 +653,8 @@ reached the transformations for its descendant nodes have already been applied.
 As you can see, the transformation-table contains an entry for every known
 parser, i.e. "document", "sentence", "part", "WORD", "EOF". (If any of these are
 missing in the table of your ``poetryCompiler.py``, add them now!) In the
-template you'll also find transformations for two anonymous parsers, i.e.
-":_Token" and ":_RE" as well as some curious entries such as "*" and "+". The
+template you'll also find transformations for the anonymous parser
+":Token" as well as some curious entries such as "*" and "+". The
 latter are considered to be "jokers". The transformations related to the
 "+"-sign will be applied on any node, before any other transformation is
 applied. In this case, all empty nodes will be removed first (transformation:
@@ -722,10 +722,10 @@ Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
            <WORD>shadow</WORD>
          </part>
          <:Series>
-           <:_Token>
+           <:Token>
              <:PlainText>,</:PlainText>
              <:Whitespace> </:Whitespace>
-           </:_Token>
+           </:Token>
            <part>
              <WORD>a</WORD>
     ...
@@ -734,11 +734,10 @@ It starts to become more readable and concise, but there are sill some oddities.
 Firstly, the Tokens that deliminate parts of sentences still contain whitespace.
 Secondly, if several <part>-nodes follow each other in a <sentence>-node, the
 <part>-nodes after the first one are enclosed by a <:Series>-node or even a
-cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:_Token>-nodes, we
+cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:Token>-nodes, we
 can do the same trick as with the WORD-nodes::
 
-    ":_Token": [remove_whitespace, reduce_single_child],
-    ":_RE": reduce_single_child,
+    ":Token": [remove_whitespace, reduce_single_child],
 
 As to the nested structure of the <part>-nodes within the <sentence>-node, this
 a rather typical case of syntactic artifacts that can be found in concrete
@@ -807,7 +806,7 @@ Now that everything is set, let's have a look at the result::
          <WORD>walking</WORD>
          <WORD>shadow</WORD>
        </part>
-       <:_Token>,</:_Token>
+       <:Token>,</:Token>
        <part>
          <WORD>a</WORD>
          <WORD>poor</WORD>
@@ -816,8 +815,8 @@ Now that everything is set, let's have a look at the result::
 
 That is much better. There is but one slight blemish in the output: While all
 nodes left a named nodes, i.e. nodes associated with a named parser, there are a
-few anonymous <:_Token> nodes. Here is a little exercise: Do away with those
-<:_Token>-nodes by replacing them by something semantically more meaningful.
+few anonymous <:Token> nodes. Here is a little exercise: Do away with those
+<:Token>-nodes by replacing them by something semantically more meaningful.
 Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". An
 alternative strategy to extending the grammar would be to use the
 ``replace_parser`` operator. Which of the strategies is the better one? Explain

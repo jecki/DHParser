@@ -386,7 +386,7 @@ scroll down to the AST section, you'll see something like this:
         "ZEICHENFOLGE, NZ, JAHRESZAHL": content_from_sinlge_child,
         "WORT, NAME, LEERZEILE, ENDE": [],
         ":Whitespace": replace_content(lambda node : " "),
-        ":Token, :RE": content_from_sinlge_child,
+        ":Token": content_from_sinlge_child,
         "*": replace_by_single_child
     }
 

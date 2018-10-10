@@ -44,3 +44,4 @@ _static
 _templates
 .vs
 OLDSTUFF
+.pytest_cache
