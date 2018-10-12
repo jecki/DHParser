@@ -116,7 +116,8 @@ CriteriaType = Union[int, str, Callable]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
-    """Creates factory functions from transformation-functions that
+    """
+    Creates factory functions from transformation-functions that
     dispatch on the first parameter after the context parameter.
 
     Decorating a transformation-function that has more than merely the
@@ -276,6 +277,7 @@ def traverse(root_node: Node,
         traverse(node, table)
 
     """
+
     # Is this optimazation really needed?
     if '__cache__' in processing_table:
         # assume that processing table has already been expanded
@@ -292,12 +294,6 @@ def traverse(root_node: Node,
         # change processing table in place, so its already expanded and cache filled next time
         processing_table.clear()
         processing_table.update(table)
-
-    # assert '__cache__' in processing_table
-    # # Code without optimization
-    # table = {name: smart_list(call) for name, call in list(processing_table.items())}
-    # table = expand_table(table)
-    # cache = {}  # type: Dict[str, List[Callable]]
 
     def traverse_recursive(context):
         nonlocal cache
@@ -341,7 +337,8 @@ def traverse(root_node: Node,
 def traverse_locally(context: List[Node],
                      processing_table: Dict,            # actually: ProcessingTableType
                      key_func: Callable=key_tag_name):  # actually: KeyFunc
-    """Transforms the syntax tree starting from the last node in the context
+    """
+    Transforms the syntax tree starting from the last node in the context
     according to the given processing table. The purpose of this function is
     to apply certain transformations locally, i.e. only for those nodes that
     have the last node in the context as their parent node.
@@ -351,14 +348,18 @@ def traverse_locally(context: List[Node],
 
 @transformation_factory(collections.abc.Callable)
 def apply_if(context: List[Node], transformation: Callable, condition: Callable):
-    """Applies a transformation only if a certain condition is met."""
+    """
+    Applies a transformation only if a certain condition is met.
+    """
     if condition(context):
         transformation(context)
 
 
 @transformation_factory(collections.abc.Callable)
 def apply_unless(context: List[Node], transformation: Callable, condition: Callable):
-    """Applies a transformation if a certain condition is *not* met."""
+    """
+    Applies a transformation if a certain condition is *not* met.
+    """
     if not condition(context):
         transformation(context)
 
@@ -410,24 +411,12 @@ def is_expendable(context: List[Node]) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
-    """Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
+    """
+    Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
     and it's content matches one of the given tokens. Leading and trailing
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
     any token is a match.
     """
-    # def stripped(nd: Node) -> str:
-    #     """Removes leading and trailing whitespace-nodes from content."""
-    #     # assert node.parser.ptype == TOKEN_PTYPE
-    #     if nd.children:
-    #         i, k = 0, len(nd.children)
-    #         while i < len(nd.children) and nd.children[i].parser.ptype == WHITESPACE_PTYPE:
-    #             i += 1
-    #         while k > 0 and nd.children[k - 1].parser.ptype == WHITESPACE_PTYPE:
-    #             k -= 1
-    #         return "".join(child.content for child in node.children[i:k])
-    #     return nd.content
-    # node = context[-1]
-    # return node.parser.ptype == TOKEN_PTYPE and (not tokens or stripped(node) in tokens)
     node = context[-1]
     return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.content in tokens)
 
@@ -444,20 +433,10 @@ def not_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     return context[-1].tag_name not in tag_name_set
 
 
-# @transformation_factory(collections.abc.Set)
-# def matches_wildcard(context: List[Node], wildcards: AbstractSet[str]) -> bool:
-#     """Retruns true, if the node's tag_name matches one of the glob patterns
-#     in `wildcards`. For example, ':*' matches all anonymous nodes. """
-#     tn = context[-1].tag_name
-#     for pattern in wildcards:
-#         if fnmatch.fnmatch(tn, pattern):
-#             return True
-#     return False
-
-
 @transformation_factory(collections.abc.Set)
 def matches_re(context: List[Node], patterns: AbstractSet[str]) -> bool:
-    """Retruns true, if the node's tag_name matches one of the regular
+    """
+    Returns true, if the node's tag_name matches one of the regular
     expressions in `patterns`. For example, ':.*' matches all anonymous nodes.
     """
     tn = context[-1].tag_name
@@ -482,8 +461,10 @@ def has_content(context: List[Node], regexp: str) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
-    """Checks whether a node with one of the given tag names appears somewhere
-     in the context before the last node in the context."""
+    """
+    Checks whether a node with one of the given tag names appears somewhere
+     in the context before the last node in the context.
+     """
     for i in range(2, len(context)):
         if context[-i].tag_name in tag_name_set:
             return True
@@ -502,14 +483,12 @@ def _replace_by(node: Node, child: Node):
         child.parser = MockParser(node.parser.name, child.parser.ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node.parser = child.parser
-    # node.errors.extend(child.errors)
     node.result = child.result
     if hasattr(child, '_xml_attr'):
         node.attr.update(child.attr)
 
 
 def _reduce_child(node: Node, child: Node):
-    # node.errors.extend(child.errors)
     node.result = child.result
     if hasattr(child, '_xml_attr'):
         node.attr.update(child.attr)
@@ -635,6 +614,7 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
         (1 (+ 2) (+ 3))    ->   (1 + 2 + 3)
         (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
     """
+
     node = context[-1]
     if node.children:
         new_result = []     # type: List[Node]
@@ -652,15 +632,18 @@ def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bo
 
 
 def collapse(context: List[Node]):
-    """Collapses all sub-nodes of a node by replacing them with the
-    string representation of the node. USE WITH CARE!"""
+    """
+    Collapses all sub-nodes of a node by replacing them with the
+    string representation of the node. USE WITH CARE!
+    """
     node = context[-1]
     node.result = node.content
 
 
 @transformation_factory(collections.abc.Callable)
 def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase):
-    """(Recursively) merges the content of all adjacent child nodes that
+    """
+    (Recursively) merges the content of all adjacent child nodes that
     fulfil the given `condition` into a single leaf node with parser
     `target_tag`. Nodes that do not fulfil the condition will be preserved.
 
@@ -673,6 +656,7 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
 
     See `test_transform.TestComplexTransformations` for examples.
     """
+
     node = context[-1]
     package = []
     result = []
@@ -706,7 +690,8 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
 
 @transformation_factory(collections.abc.Callable)
 def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
-    """Replaces the content of the node. ``func`` takes the node's result
+    """
+    Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
     """
     node = context[-1]
@@ -715,7 +700,8 @@ def replace_content(context: List[Node], func: Callable):  # Callable[[Node], Re
 
 @transformation_factory  # (str)
 def replace_content_by(context: List[Node], content: str):  # Callable[[Node], ResultType]
-    """Replaces the content of the node with the given text content.
+    """
+    Replaces the content of the node with the given text content.
     """
     node = context[-1]
     node.result = content

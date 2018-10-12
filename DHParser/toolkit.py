@@ -42,6 +42,7 @@ except ImportError:
 
 from typing import Any, Iterable, Sequence, Set, Union, Dict, cast
 
+
 __all__ = ('escape_re',
            'escape_control_characters',
            'is_filename',
@@ -68,6 +69,7 @@ def escape_re(strg: str) -> str:
     """
     Returns the string with all regular expression special characters escaped.
     """
+
     # assert isinstance(strg, str)
     re_chars = r"\.^$*+?{}[]()#<>=|!"
     for esc_ch in re_chars:
@@ -79,6 +81,7 @@ def escape_control_characters(strg: str) -> str:
     """
     Replace all control characters (e.g. \n \t) in a string by their backslashed representation.
     """
+
     return repr(strg).replace('\\\\', '\\')[1:-1]
 
 
@@ -86,6 +89,7 @@ def lstrip_docstring(docstring: str) -> str:
     """
     Strips leading whitespace from a docstring.
     """
+
     lines = docstring.replace('\t', '    ').split('\n')
     indent = 255  # highest integer value
     for line in lines[1:]:
@@ -98,7 +102,10 @@ def lstrip_docstring(docstring: str) -> str:
 
 
 def is_filename(strg: str) -> bool:
-    """Tries to guess whether string ``s`` is a file name."""
+    """
+    Tries to guess whether string ``strg`` is a file name.
+    """
+
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
     #   and strg.select('*') < 0 and strg.select('?') < 0
@@ -112,16 +119,6 @@ def is_filename(strg: str) -> bool:
 
 
 def issubtype(sub_type, base_type):
-    # if sys.version_info.major <= 3 and sys.version_info.minor <= 6:
-    #     return issubclass(sub_type, base_type)
-    # try:
-    #     base_type = base_type.__origin__
-    # except AttributeError:
-    #     pass
-    # try:
-    #     sub_type = sub_type.__origin__
-    # except AttributeError:
-    #     pass
     def origin(t):
         try:
             ot = t.__origin__
@@ -143,11 +140,13 @@ def isgenerictype(t):
 
 
 def load_if_file(text_or_file) -> str:
-    """Reads and returns content of a text-file if parameter
+    """
+    Reads and returns content of a text-file if parameter
     `text_or_file` is a file name (i.e. a single line string),
     otherwise (i.e. if `text_or_file` is a multi-line string)
     `text_or_file` is returned.
     """
+
     if is_filename(text_or_file):
         try:
             with open(text_or_file, encoding="utf-8") as f:
@@ -164,9 +163,11 @@ def load_if_file(text_or_file) -> str:
 
 
 def is_python_code(text_or_file: str) -> bool:
-    """Checks whether 'text_or_file' is python code or the name of a file that
+    """
+    Checks whether 'text_or_file' is python code or the name of a file that
     contains python code.
     """
+
     if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
@@ -179,11 +180,13 @@ def is_python_code(text_or_file: str) -> bool:
 
 
 def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
-    """Checks whether `text_or_file` contains fenced code blocks, which are
+    """
+    Checks whether `text_or_file` contains fenced code blocks, which are
     marked by one of the given info strings.
     See http://spec.commonmark.org/0.28/#fenced-code-blocks for more
     information on fenced code blocks in common mark documents.
     """
+
     if is_filename(text_or_file):
         with open(text_or_file, 'r', encoding='utf-8') as f:
             markdown = f.read()
@@ -210,9 +213,11 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
 
 
 def md5(*txt):
-    """Returns the md5-checksum for `txt`. This can be used to test if
+    """
+    Returns the md5-checksum for `txt`. This can be used to test if
     some piece of text, for example a grammar source file, has changed.
     """
+
     md5_hash = hashlib.md5()
     for t in txt:
         md5_hash.update(t.encode('utf8'))
@@ -220,10 +225,12 @@ def md5(*txt):
 
 
 def compile_python_object(python_src, catch_obj_regex=""):
-    """Compiles the python source code and returns the (first) object
+    """
+    Compiles the python source code and returns the (first) object
     the name of which is matched by ``catch_obj_regex``. If catch_obj
     is the empty string, the namespace dictionary will be returned.
     """
+
     if isinstance(catch_obj_regex, str):
         catch_obj_regex = re.compile(catch_obj_regex)
     code = compile(python_src, '<string>', 'exec')
@@ -251,7 +258,8 @@ def compile_python_object(python_src, catch_obj_regex=""):
 
 # def smart_list(arg: Union[str, Iterable[T]]) -> Union[Sequence[str], Sequence[T]]:
 def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
-    """Returns the argument as list, depending on its type and content.
+    """
+    Returns the argument as list, depending on its type and content.
 
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
@@ -280,6 +288,7 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
     >>> smart_list(125)
     [125]
     """
+
     if isinstance(arg, str):
         for delimiter in (';', ','):
             lst = arg.split(delimiter)
@@ -295,13 +304,15 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
 
 
 def expand_table(compact_table: Dict) -> Dict:
-    """Expands a table by separating keywords that are tuples or strings
+    """
+    Expands a table by separating keywords that are tuples or strings
     containing comma separated words into single keyword entries with
     the same values. Returns the expanded table.
     Example:
     >>> expand_table({"a, b": 1, ('d','e','f'):5, "c":3})
     {'a': 1, 'b': 1, 'd': 5, 'e': 5, 'f': 5, 'c': 3}
     """
+
     expanded_table = {}  # type: Dict
     keys = list(compact_table.keys())
     for key in keys:
@@ -322,9 +333,11 @@ def expand_table(compact_table: Dict) -> Dict:
 
 
 def sane_parser_name(name) -> bool:
-    """Checks whether given name is an acceptable parser name. Parser names
+    """
+    Checks whether given name is an acceptable parser name. Parser names
     must not be preceded or succeeded by a double underscore '__'!
     """
+
     return name and name[:2] != '__' and name[-2:] != '__'
 
 

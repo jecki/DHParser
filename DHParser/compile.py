@@ -51,10 +51,12 @@ __all__ = ('CompilerError', 'Compiler', 'compile_source')
 
 
 class CompilerError(Exception):
-    """Exception raised when an error of the compiler itself is detected.
+    """
+    Exception raised when an error of the compiler itself is detected.
     Compiler errors are not to be confused with errors in the source
     code to be compiled, which do not raise Exceptions but are merely
-    reported as an error."""
+    reported as an error.
+    """
     pass
 
 

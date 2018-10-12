@@ -61,6 +61,7 @@ class ParserBase:
     It is defined here, because Node objects require a parser object
     for instantiation.
     """
+
     __slots__ = 'name', 'ptype'
 
     def __init__(self,):  # , pbases=frozenset()):
@@ -75,18 +76,6 @@ class ParserBase:
 
     def __call__(self, text: StringView) -> Tuple[Optional['Node'], StringView]:
         return None, text
-
-    # @property
-    # def name(self):
-    #     """Returns the name of the parser or the empty string '' for unnamed
-    #     parsers."""
-    #     return self._name
-    #
-    # @property
-    # def ptype(self) -> str:
-    #     """Returns the type of the parser. By default this is the parser's
-    #     class name preceded by a colon, e.g. ':ZeroOrMore'."""
-    #     return self._ptype
 
     @property
     def repr(self) -> str:
@@ -123,6 +112,7 @@ class MockParser(ParserBase):
     syntax tree (re-)construction. In all other cases where a parser
     object substitute is needed, chose the singleton ZOMBIE_PARSER.
     """
+
     __slots__ = ()
 
     def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
@@ -143,6 +133,7 @@ class ZombieParser(MockParser):
     these (or one of these properties) is needed, but no real Parser-
     object is instantiated.
     """
+
     alive = False
     __slots__ = ()
 
@@ -181,22 +172,26 @@ ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 
 def flatten_sxpr(sxpr: str) -> str:
-    """Returns S-expression ``sxpr`` as a one-liner without unnecessary
+    """
+    Returns S-expression ``sxpr`` as a one-liner without unnecessary
     whitespace.
 
     Example:
     >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
     '(a (b c))'
     """
+
     return re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
 
 
 def flatten_xml(xml: str) -> str:
-    """Returns an XML-tree as a one liner without unnecessary whitespace,
+    """
+    Returns an XML-tree as a one liner without unnecessary whitespace,
     i.e. only whitespace within leaf-nodes is preserved.
     A more precise alternative to `flatten_xml` is to use Node.as_xml()
     ans passing a set containing the top level tag to parameter `inline_tags`.
     """
+
     # works only with regex
     # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
     def tag_only(m):
@@ -366,12 +361,6 @@ class Node(collections.abc.Sized):
                     return True
             return False
         raise ValueError('Leave node cannot contain other nodes')
-        # generator = self.select_by_tag(tag_name, False)
-        # try:
-        #     generator.__next__()
-        #     return True
-        # except StopIteration:
-        #     return False
 
 
     def get(self, index_or_tagname: Union[int, str],
@@ -767,6 +756,7 @@ class RootNode(Node):
         error_flag (int):  the highest warning or error level of all errors
                 that occurred.
     """
+
     def __init__(self, node: Optional[Node] = None) -> 'RootNode':
         super().__init__(ZOMBIE_PARSER, '')
         self.all_errors = []
@@ -779,7 +769,8 @@ class RootNode(Node):
         self.empty_tags = set()
 
     def swallow(self, node: Node) -> 'RootNode':
-        """Put `self` in the place of `node` by copying all its data.
+        """
+        Put `self` in the place of `node` by copying all its data.
         Returns self.
 
         This is done by the parse.Grammar object after
@@ -800,7 +791,9 @@ class RootNode(Node):
         return self
 
     def add_error(self, node: Node, error: Error) -> 'RootNode':
-        """Adds an Error object to the tree, locating it at a specific node."""
+        """
+        Adds an Error object to the tree, locating it at a specific node.
+        """
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         node.errors.append(error)
@@ -822,15 +815,18 @@ class RootNode(Node):
         return self
 
     def collect_errors(self) -> List[Error]:
-        """Returns the list of errors, ordered bv their position.
+        """
+        Returns the list of errors, ordered bv their position.
         """
         self.all_errors.sort(key=lambda e: e.pos)
         return self.all_errors
 
     def customized_XML(self):
-        """Returns a customized XML representation of the tree.
+        """
+        Returns a customized XML representation of the tree.
         See the docstring of `Node.as_xml()` for an explanation of the
-        customizations."""
+        customizations.
+        """
         return self.as_xml(inline_tags = self.inline_tags,
                            omit_tags=self.omit_tags,
                            empty_tags=self.empty_tags)
@@ -851,13 +847,15 @@ def parse_sxpr(sxpr: str) -> Node:
     >>> parse_sxpr("(a (b c))").as_sxpr()
     '(a\\n  (b\\n    "c"\\n  )\\n)'
     """
+
     sxpr = StringView(sxpr).strip()
     mock_parsers = dict()
 
     def next_block(s: StringView):
         """Generator that yields all characters until the next closing bracket
         that does not match an opening bracket matched earlier within the same
-        package."""
+        package.
+        """
         s = s.strip()
         try:
             while s[0] != ')':
@@ -947,13 +945,15 @@ def parse_xml(xml: str) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
+
     xml = StringView(xml)
     PlainText = MockParser('', TOKEN_PTYPE)
     mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
-        beginning after the end of the attr."""
+        beginning after the end of the attr.
+        """
         attributes = OrderedDict()
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
@@ -966,7 +966,8 @@ def parse_xml(xml: str) -> Node:
         """Parses an opening tag. Returns the string segment following the
         the opening tag, the tag name, a dictionary of attr and
         a flag indicating whether the tag is actually a solitary tag as
-        indicated by a slash at the end, i.e. <br/>."""
+        indicated by a slash at the end, i.e. <br/>.
+        """
         match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))
         assert match
         tagname = match.groupdict()['tagname']
@@ -978,7 +979,8 @@ def parse_xml(xml: str) -> Node:
 
     def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
         """Parses a closing tag and returns the string segment, just after
-        the closing tag."""
+        the closing tag.
+        """
         match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
         assert match
         tagname = match.groupdict()['tagname']
@@ -986,7 +988,8 @@ def parse_xml(xml: str) -> Node:
 
     def parse_leaf_content(s: StringView) -> Tuple[StringView, str]:
         """Parses a piece of the content of a tag, just until the next opening,
-        closing or solitary tag is reached."""
+        closing or solitary tag is reached.
+        """
         i = 0
         while s[i] != "<" or s[max(0, i-1)] == "\\":
             i = s.find("<", i)
