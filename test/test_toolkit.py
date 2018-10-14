@@ -28,12 +28,14 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, \
-    lstrip_docstring, issubtype, isgenerictype, typing
+    lstrip_docstring, issubtype, typing, concurrent_ident
 from DHParser.log import log_dir, logging, is_logging
 
 
 class TestLoggingAndLoading:
-    filename = "test/tmp/test.py" if os.path.isdir('test') else "tmp/test.py"
+    tmpname = 'tmp_' + concurrent_ident()
+    filename = os.path.join("test", tmpname, "test.py") if os.path.isdir('test') \
+        else os.path.join(tmpname, "test.py")
     dirname = os.path.dirname(filename)
     code1 = "x = 46"
     code2 = "def f():\n    return 46"

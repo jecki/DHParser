@@ -3,25 +3,17 @@
 """Runs the dhparser test-suite with several installed interpreters"""
 
 import concurrent.futures
+import multiprocessing
 import os
 import platform
 import time
 
 
-
-def run_tests(testtype, command):
+def run_tests(command):
+    testtype = 'DOCTEST' if command.find('doctest') >= 0 else 'UNITTEST'
     filename = command[command.rfind(' ')+1:]
     print('\n' + testtype + ' ' + filename)
     os.system(command)
-
-
-def run_unittests(command):
-    run_tests('UNITTESTS', command)
-
-
-def run_doctests(command):
-    print(os.getcwd())
-    run_tests('DOCTESTS', command)
 
 
 if __name__ == "__main__":
@@ -32,7 +24,7 @@ if __name__ == "__main__":
     # print("Running nosetests:")
     # os.system("nosetests test")
     if platform.system() != "Windows":
-        interpreters = ['python3 ', 'pypy3 ']
+        interpreters = ['pypy3 ', 'python3 ']
     else:
         interpreters = ['python.exe ']
 
@@ -41,22 +33,20 @@ if __name__ == "__main__":
 
     timestamp = time.time()
 
-    with concurrent.futures.ThreadPoolExecutor(4) as pool:
+    with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
         for interpreter in interpreters:
             os.system(interpreter + '--version')
 
-            # unit tests
-
-            commands = [interpreter + os.path.join('test', filename)
-                        for filename in os.listdir('test') if filename.startswith('test_')]
-            pool.map(run_unittests, commands)
-
             # doctests
-
             commands = [interpreter + ' -m doctest ' + os.path.join('DHParser', filename)
                         for filename in os.listdir('DHParser') if filename.endswith('.py')
                         and filename not in ["foreign_typing.py", "stringview.py", "__init__.py"]]
-            pool.map(run_doctests, commands)
+
+            # unit tests
+            commands += [interpreter + os.path.join('test', filename)
+                         for filename in os.listdir('test') if filename.startswith('test_')]
+
+            pool.map(run_tests, commands)
 
     elapsed = time.time() - timestamp
     print('\n Test-Duration: %.2f seconds' % elapsed)

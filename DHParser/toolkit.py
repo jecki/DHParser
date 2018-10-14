@@ -24,9 +24,10 @@ so that they are best defined in a toolkit-module.
 
 import codecs
 import hashlib
-import inspect
 import io
+import multiprocessing
 import parser
+import threading
 
 try:
     import regex as re
@@ -46,6 +47,7 @@ from typing import Any, Iterable, Sequence, Set, Union, Dict, cast
 __all__ = ('escape_re',
            'escape_control_characters',
            'is_filename',
+           'concurrent_ident',
            'lstrip_docstring',
            'issubtype',
            'isgenerictype',
@@ -109,6 +111,13 @@ def is_filename(strg: str) -> bool:
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
     #   and strg.select('*') < 0 and strg.select('?') < 0
+
+
+def concurrent_ident() -> str:
+    """
+    Returns an identificator for the current process and thread
+    """
+    return multiprocessing.current_process().name + '_' + str(threading.get_ident())
 
 
 #######################################################################

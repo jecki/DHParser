@@ -29,6 +29,7 @@ from DHParser import Compiler
 from DHParser.error import is_error
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_provider, \
     load_compiler_suite
+from DHParser.toolkit import concurrent_ident
 
 ARITHMETIC_EBNF = """
     @ whitespace = linefeed
@@ -62,12 +63,13 @@ class TestCompilerGeneration:
         word = /\w+/
         WSPC = /\s+/
         """
-    tmp = 'test/tmp/' if os.path.isdir('test/') else ('tmp/')
+    tmpname = 'tmp_' + concurrent_ident()
+    tmp = os.path.join('test', tmpname) if os.path.isdir('test/') else tmpname
     trivial_text = u"""Es war ein Koenig in Thule.\n"""
-    grammar_name = tmp + "TestCompilerGeneration.ebnf"
-    compiler_name = tmp + "TestCompilerGenerationCompiler.py"
-    text_name = tmp + "TestCompilerGeneration_text.txt"
-    result_name = tmp + "TestCompilerGeneration_text.xml"
+    grammar_name = os.path.join(tmp, "TestCompilerGeneration.ebnf")
+    compiler_name = os.path.join(tmp, "TestCompilerGenerationCompiler.py")
+    text_name = os.path.join(tmp, "TestCompilerGeneration_text.txt")
+    result_name = os.path.join(tmp, "TestCompilerGeneration_text.xml")
 
     def setup(self):
         if not os.path.exists(self.tmp):
