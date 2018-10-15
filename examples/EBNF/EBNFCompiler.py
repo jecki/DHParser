@@ -148,7 +148,7 @@ def get_grammar() -> EBNFGrammar:
 
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
-    "+":
+    "<":
         remove_expendables,
     "syntax":
         [],  # otherwise '"*": replace_by_single_child' would be applied

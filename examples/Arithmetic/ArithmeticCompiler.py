@@ -99,7 +99,7 @@ def get_grammar() -> ArithmeticGrammar:
 
 Arithmetic_AST_transformation_table = {
     # AST Transformations for the Arithmetic-grammar
-    "+": remove_empty,
+    "<": remove_empty,
     "expression": [],
     "term": [],
     "factor": [replace_or_reduce],

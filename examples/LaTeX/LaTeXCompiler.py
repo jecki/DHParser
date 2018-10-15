@@ -396,9 +396,9 @@ drop_expendables = remove_children_if(lambda context: is_empty(context) or
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "+": [drop_expendables, flatten_structure],
+    "<": [drop_expendables, flatten_structure],
     "latexdoc": [],
-    "preamble": [traverse_locally({'+': remove_whitespace, 'block': replace_by_single_child})],
+    "preamble": [traverse_locally({'<': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],
     "pdfinfo": [],
     "frontpages": reduce_single_child,

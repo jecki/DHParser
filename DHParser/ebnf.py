@@ -213,7 +213,7 @@ def get_ebnf_grammar() -> EBNFGrammar:
 
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
-    "+":
+    "<":
         remove_expendables,
     "syntax":
         [],  # otherwise '"*": replace_by_single_child' would be applied
@@ -451,7 +451,7 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar']
-        transtable.append('    "+": remove_empty,')
+        transtable.append('    "<": remove_empty,')
         for name in self.rules:
             transformations = '[]'
             rule = self.definitions[name]
@@ -505,7 +505,7 @@ class EBNFCompiler(Compiler):
         table.
         """
         assert self._dirty_flag
-        table_entries = set(expand_table(transtable).keys()) - {'*', '+', '~'}
+        table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~'}
         symbols = self.rules.keys()
         messages = []
         for entry in table_entries:

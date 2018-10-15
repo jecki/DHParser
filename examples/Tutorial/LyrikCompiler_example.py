@@ -136,7 +136,7 @@ def halt(node):
 
 Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
-    "+": remove_empty,
+    "<": remove_empty,
     "bibliographisches":
         [flatten, remove_nodes('NZ'), remove_whitespace, remove_tokens],
     "autor": [],

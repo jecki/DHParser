@@ -256,10 +256,10 @@ def traverse(root_node: Node,
     tag names, but any other key function is possible. There exist
     three special keys:
 
-    - '+': always called (before any other processing function)
+    - '<': always called (before any other processing function)
     - '*': called for those nodes for which no (other) processing
       function appears in the table
-    - '~': always called (after any other processing function)
+    - '>': always called (after any other processing function)
 
     Args:
         root_node (Node): The root-node of the syntax tree to be traversed
@@ -289,6 +289,16 @@ def traverse(root_node: Node,
         table = {name: cast(Sequence[Callable], smart_list(call))
                  for name, call in list(processing_table.items())}
         table = expand_table(table)
+        # substitute key for insiginificant whitespace
+        if '~' in table:
+            if ':Whitespace' in table:
+                raise AssertionError('"~" is a synonym for ":Whitespace" in the '
+                    'processing table. To avoid confusion, choose either of the two, '
+                    'but do not use both at the same time!')
+            whitespace_transformation = table['~']
+            del table['~']
+            table[':Whitespace'] = whitespace_transformation
+        # cache expanded table
         cache = cast(TransformationDict,
                      table.setdefault('__cache__', cast(TransformationDict, dict())))
         # change processing table in place, so its already expanded and cache filled next time
@@ -309,13 +319,9 @@ def traverse(root_node: Node,
         try:
             sequence = cache[key]
         except KeyError:
-            sequence = table.get('+', []) \
+            sequence = table.get('<', []) \
                 + table.get(key, table.get('*', [])) \
-                + table.get('~', [])
-            # '+' always called (before any other processing function)
-            # '*' called for those nodes for which no (other) processing function
-            #     appears in the table
-            # '~' always called (after any other processing function)
+                + table.get('>', [])
             cache[key] = sequence
 
         for call in sequence:

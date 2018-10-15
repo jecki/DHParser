@@ -66,7 +66,7 @@ class XMLGrammar(Grammar):
     #
     #######################################################################
     
-    @ whitespace  = /\s*/           # implicit whitespace, signified by ~
+    @ whitespace  = /\s*/           # insignificant whitespace, signified by ~
     @ literalws   = none            # literals have no implicit whitespace
     @ comment     = //              # no implicit comments
     @ ignorecase  = False           # literals and regular expressions are case-sensitive
@@ -277,7 +277,7 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "0d1304f359f001aae4a17e5d9e801f0e"
+    source_hash__ = "52808225879f254ab3099942adde3b59"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'
@@ -397,134 +397,10 @@ def get_grammar() -> XMLGrammar:
 #
 #######################################################################
 
-XML_AST_transformation_table = {
-    # AST Transformations for the XML-grammar
-    "+": [remove_empty, remove_anonymous_tokens, remove_whitespace, remove_nodes("S")],
-    "document": [],
-    "prolog": [],
-    "XMLDecl": [],
-    "VersionInfo": [reduce_single_child],
-    "VersionNum": [],
-    "EncodingDecl": [reduce_single_child],
-    "EncName": [],
-    "SDDecl": [],
-    "Yes": [],
-    "No": [],
-    "doctypedecl": [],
-    "intSubset": [],
-    "DeclSep": [replace_or_reduce],
-    "markupdecl": [replace_or_reduce],
-    "extSubset": [],
-    "extSubsetDecl": [],
-    "conditionalSect": [replace_or_reduce],
-    "includeSect": [],
-    "ignoreSect": [],
-    "ignoreSectContents": [],
-    "extParsedEnt": [],
-    "TextDecl": [],
-    "elementdecl": [],
-    "contentspec": [replace_or_reduce],
-    "EMPTY": [],
-    "ANY": [],
-    "Mixed": [replace_or_reduce],
-    "children": [],
-    "choice": [],
-    "cp": [],
-    "seq": [],
-    "AttlistDecl": [],
-    "AttDef": [],
-    "AttType": [replace_or_reduce],
-    "StringType": [],
-    "TokenizedType": [replace_or_reduce],
-    "ID": [],
-    "IDREF": [],
-    "IDREFS": [],
-    "ENTITY": [],
-    "ENTITIES": [],
-    "NMTOKEN": [],
-    "NMTOKENS": [],
-    "EnumeratedType": [replace_or_reduce],
-    "NotationType": [],
-    "Enumeration": [],
-    "DefaultDecl": [replace_or_reduce],
-    "REQUIRED": [],
-    "IMPLIED": [],
-    "FIXED": [],
-    "EntityDecl": [replace_or_reduce],
-    "GEDecl": [],
-    "PEDecl": [],
-    "EntityDef": [replace_or_reduce],
-    "PEDef": [replace_or_reduce],
-    "NotationDecl": [],
-    "ExternalID": [],
-    "PublicID": [],
-    "NDataDecl": [],
-    "element": [replace_or_reduce],
-    "STag": [],
-    "ETag": [reduce_single_child],
-    "EmptyElemTag": [],
-    "TagName": [replace_by_single_child],
-    "Attribute": [],
-    "content": [flatten],
-    "EntityValue": [replace_or_reduce],
-    "AttValue": [replace_or_reduce],
-    "SystemLiteral": [replace_or_reduce],
-    "PubidLiteral": [replace_or_reduce],
-    "Reference": [replace_or_reduce],
-    "EntityRef": [],
-    "PEReference": [],
-    "Nmtokens": [],
-    "Nmtoken": [reduce_single_child],
-    "Names": [],
-    "Name": [collapse],
-    "NameStartChar": [],
-    "NameChars": [],
-    "Misc": [],
-    "Comment": [],
-    "PI": [],
-    "PITarget": [reduce_single_child],
-    "CDSect": [],
-    "PubidCharsSingleQuoted": [],
-    "PubidChars": [],
-    "CharData": [],
-    "CData": [],
-    "IgnoreChars": [],
-    "PIChars": [],
-    "CommentChars": [],
-    "CharRef": [replace_or_reduce],
-    "Chars": [],
-    "Char": [],
-    "S": [],
-    "EOF": [],
-    ":_Token, :_RE": reduce_single_child,
-    "*": replace_by_single_child
-}
-
-
-def XMLTransform() -> TransformationDict:
-    return partial(traverse, processing_table=XML_AST_transformation_table.copy())
-
-
-def get_transformer() -> TransformationFunc:
-    global thread_local_XML_transformer_singleton
-    try:
-        transformer = thread_local_XML_transformer_singleton
-    except NameError:
-        thread_local_XML_transformer_singleton = XMLTransform()
-        transformer = thread_local_XML_transformer_singleton
-    return transformer
-
-
-#######################################################################
-#
-# Tag conversion
-#
-#######################################################################
-
 
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
-    "+": [remove_empty, remove_anonymous_tokens, remove_whitespace, remove_nodes("S")],
+    "<": [remove_empty, remove_anonymous_tokens, remove_whitespace, remove_nodes("S")],
     "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
     "prolog": [],
     "XMLDecl": [],

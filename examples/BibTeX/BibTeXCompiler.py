@@ -150,7 +150,7 @@ def get_grammar() -> BibTeXGrammar:
 
 BibTeX_AST_transformation_table = {
     # AST Transformations for the BibTeX-grammar
-    "+": remove_empty,
+    "<": remove_empty,
     "bibliography": [],
     "preamble": [],
     "pre_code": [],
