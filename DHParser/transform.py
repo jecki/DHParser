@@ -290,6 +290,7 @@ def traverse(root_node: Node,
                  for name, call in list(processing_table.items())}
         table = expand_table(table)
         # substitute key for insiginificant whitespace
+        assert '+' not in table, 'Symbol "+" in processing table is obsolete, use "<" instead'
         if '~' in table:
             if ':Whitespace' in table:
                 raise AssertionError('"~" is a synonym for ":Whitespace" in the '
