@@ -472,7 +472,7 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     Checks whether a node with one of the given tag names appears somewhere
      in the context before the last node in the context.
      """
-    for i in range(2, len(context)):
+    for i in range(2, len(context) + 1):
         if context[-i].tag_name in tag_name_set:
             return True
     return False

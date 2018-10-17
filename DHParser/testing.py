@@ -339,6 +339,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             try:
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
+                cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_PARSER, "").init_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
             # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))

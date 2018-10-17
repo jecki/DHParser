@@ -222,6 +222,7 @@ class TestGrammarTest:
         #     print(e)
         assert len(errata) == 3, str(errata)
 
+
     # def test_get_report(self):
     #     parser_fac = grammar_provider(ARITHMETIC_EBNF)
     #     trans_fac = lambda : ARITHMETIC_EBNFTransform

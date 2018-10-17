@@ -28,7 +28,7 @@ from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, ZOMBI
     MockParser, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
-    transformation_factory
+    transformation_factory, has_parent
 from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -156,6 +156,14 @@ class TestTransformationFactory:
 
 class TestConditionalTransformations:
     """Tests conditional transformations."""
+
+    def test_has_parent(self):
+        context = [Node(MockParser('A'), 'alpha'),
+                   Node(MockParser('B'), 'beta'),
+                   Node(MockParser('C'), 'gamma')]
+        assert has_parent(context, {'A'})
+        assert has_parent(context, {'B'})
+        assert not has_parent(context, {'C'})
 
     def test_traverse_locally(self):
         cst = parse_sxpr("""
