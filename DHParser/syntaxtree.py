@@ -665,7 +665,8 @@ class Node(collections.abc.Sized):
                                density=1, inline_fn=inlining)
 
 
-    def select(self, match_function: Callable, include_root: bool=False) -> Iterator['Node']:
+    def select(self, match_function: Callable, include_root: bool=False, reverse: bool=False) \
+            -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion.
 
@@ -680,14 +681,17 @@ class Node(collections.abc.Sized):
                 object as argument and returns True or False
             include_root (bool): If False, only descendant nodes will be
                 checked for a match.
+            reverse (bool): If True, the tree will be walked in reverse
+                order, i.e. last children first.
         Yields:
             Node: All nodes of the tree for which
             ``match_function(node)`` returns True
         """
         if include_root and match_function(self):
             yield self
-        for child in self.children:
-            for node in child.select(match_function, True):
+        child_iterator = reversed(self.children) if reverse else self.children
+        for child in child_iterator:
+            for node in child.select(match_function, True, reverse):
                 yield node
 
 
