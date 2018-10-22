@@ -214,7 +214,7 @@ class TestGrammarTest:
         trans_fac = lambda : ARITHMETIC_EBNFTransform
         # reset_unit(self.cases)
         errata = grammar_unit(self.cases, parser_fac, trans_fac)
-        assert not errata, str(errata)
+        assert errata, "Unknown parser, but no error message!?"
         report = get_report(self.cases)
         assert report.find('### CST') >= 0
         errata = grammar_unit(self.failure_cases, parser_fac, trans_fac)
@@ -230,6 +230,17 @@ class TestGrammarTest:
     #     grammar_unit(self.cases, parser_fac, trans_fac)
     #     report = get_report(self.cases)
     #     assert report.find('### CST') >= 0
+
+    def test_fail_failtest(self):
+        """Failure test should not pass if it failed because the parser is unknown."""
+        fcases = {}
+        fcases['berm'] = {}
+        fcases['berm']['fail'] = self.failure_cases['term']['fail']
+        errata = grammar_unit(fcases,
+                              grammar_provider(ARITHMETIC_EBNF),
+                              lambda : ARITHMETIC_EBNFTransform)
+        assert errata
+
 
 
 class TestSExpr:
