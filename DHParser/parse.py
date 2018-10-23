@@ -718,6 +718,7 @@ class Grammar:
                     last_record = self.history__[-2] if len(self.history__) > 1 else []
                     if last_record and parser != self.root__ \
                             and last_record.status == HistoryRecord.MATCH \
+                            and last_record.node.pos + len(last_record.node) >= len(self.document__) \
                             and any(isinstance(parser, Lookahead)
                                     for parser in last_record.call_stack):
                         error_msg = 'Parser did not match except for lookahead! ' + err_info

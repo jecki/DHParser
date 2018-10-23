@@ -274,9 +274,12 @@ class TestLookahead:
     fail_cases = {
         "category": {
             "match": {
-                1: """Mountains: b""",   # stop sign ":" is missing
+                1: """Mountains: b""",  # stop sign ":" is missing
                 2: """Rivers: 
-                         # not allowed"""
+                         # not allowed""",
+                2: """Mountains:        
+                          K2
+                      Rivers:"""  # lookahead only covers K2
             },
             "fail": {
                 1: """Mountains: big:
