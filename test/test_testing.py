@@ -27,11 +27,13 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
-from DHParser.transform import traverse, remove_expendables, \
+from DHParser.transform import traverse, remove_expendables, remove_empty, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
     reset_unit
+from DHParser.log import logging
+
 
 CFG_FILE_1 = '''
 # a comment
@@ -143,6 +145,19 @@ ARITHMETIC_EBNF_transformation_table = {
 ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
 
 
+def clean_report():
+    if os.path.exists('REPORT'):
+        files = os.listdir('REPORT')
+        flag = False
+        for file in files:
+            if re.match(r'unit_test_\d+\.md', file):
+                os.remove(os.path.join('REPORT', file))
+            else:
+                flag = True
+        if not flag:
+            os.rmdir('REPORT')
+
+
 class TestGrammarTest:
     cases = {
         "factor": {
@@ -198,16 +213,7 @@ class TestGrammarTest:
     }
 
     def teardown(self):
-        if os.path.exists('REPORT'):
-            files = os.listdir('REPORT')
-            flag = False
-            for file in files:
-                if re.match(r'unit_test_\d+\.md', file):
-                    os.remove(os.path.join('REPORT', file))
-                else:
-                    flag = True
-            if not flag:
-                os.rmdir('REPORT')
+        clean_report()
 
     def test_testing_grammar(self):
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
@@ -221,7 +227,6 @@ class TestGrammarTest:
         # for e in errata:
         #     print(e)
         assert len(errata) == 3, str(errata)
-
 
     # def test_get_report(self):
     #     parser_fac = grammar_provider(ARITHMETIC_EBNF)
@@ -241,6 +246,75 @@ class TestGrammarTest:
                               lambda : ARITHMETIC_EBNFTransform)
         assert errata
 
+
+class TestLookahead:
+    """
+    Testing of Expressions with trailing Lookahead-Parser.
+    """
+    EBNF = r"""
+        document = { category | entry } { LF }
+        category = {LF } sequence_of_letters { /:/ sequence_of_letters } /:/ &(LF sequence_of_letters) 
+        entry = { LF } sequence_of_letters !/:/
+        sequence_of_letters = /[A-Za-z0-9 ]+/
+        LF = / *\n/
+    """
+
+    cases = {
+        "category": {
+            "match": {
+                1: """Mountains: big:
+                          K2"""
+            },
+            "fail": {
+                6: """Mountains: big:"""
+            }
+        }
+    }
+
+    fail_cases = {
+        "category": {
+            "match": {
+                1: """Mountains: b""",   # stop sign ":" is missing
+                2: """Rivers: 
+                         # not allowed"""
+            },
+            "fail": {
+                1: """Mountains: big:
+                          K2"""
+            }
+        }
+    }
+
+    def setup(self):
+        self.grammar_fac = grammar_provider(TestLookahead.EBNF)
+        self.trans_fac = lambda : partial(traverse, processing_table={"*": [flatten, remove_empty]})
+
+    def teardown(self):
+        clean_report()
+
+    def test_selftest(self):
+        doc = """
+            Mountains: big:
+                Mount Everest
+                K2
+            Mountains: medium:
+                Denali
+                Alpomayo
+            Rivers:
+                Nile   
+            """
+        grammar = self.grammar_fac()
+        cst = grammar(doc)
+        assert not cst.error_flag
+        # trans = self.trans_fac()
+        # trans(cst)
+        # print(cst.as_sxpr())
+
+    def test_unit_lookahead(self):
+        errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac)
+        assert not errata
+        errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac)
+        assert errata
 
 
 class TestSExpr:

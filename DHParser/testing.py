@@ -36,7 +36,7 @@ import json
 import os
 import sys
 
-from DHParser.error import is_error, adjust_error_locations
+from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
 from DHParser.parse import UnknownParserError
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, flatten_sxpr, ZOMBIE_PARSER
@@ -308,6 +308,17 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
 
+    def lookahead_artifact(raw_errors):
+        """
+        Returns True, if the error merely occured, because the parser
+        stopped in front of a seuqence that was captured by a lookahead
+        operator. This is required for testing of parsers that put a
+        lookahead operator at the end. See test_testing.TestLookahead.
+        """
+        return len(raw_errors) == 2 \
+               and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY \
+               and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END
+
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
         assert not any (test_type in RESULT_STAGES for test_type in tests), \
@@ -337,7 +348,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
             try:
-                cst = parser(test_code, parser_name)
+                cst = parser(test_code, parser_name, track_history=True)
             except UnknownParserError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_PARSER, "").init_pos(0), str(upe))
@@ -349,8 +360,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
                 # log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
-            if is_error(cst.error_flag):
-                errors = adjust_error_locations(cst.collect_errors(), test_code)
+            raw_errors = cst.collect_errors()
+            if is_error(cst.error_flag) and not lookahead_artifact(raw_errors):
+                errors = adjust_error_locations(raw_errors, test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
@@ -385,13 +397,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 errflag = len(errata)
             # cst = parser(test_code, parser_name)
             try:
-                cst = parser(test_code, parser_name)
+                cst = parser(test_code, parser_name, track_history=True)
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_PARSER, "").init_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
-            if not is_error(cst.error_flag):
+            if not is_error(cst.error_flag) and not lookahead_artifact(cst.collect_errors()):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]

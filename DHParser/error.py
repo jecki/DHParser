@@ -80,8 +80,9 @@ class Error:
 
     MANDATORY_CONTINUATION                   = ErrorCode(1001)
     PARSER_DID_NOT_MATCH                     = ErrorCode(1002)
-    PARSER_STOPPED_BEFORE_END                = ErrorCode(1003)
-    CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1004)
+    PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1003)
+    PARSER_STOPPED_BEFORE_END                = ErrorCode(1004)
+    CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1005)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:

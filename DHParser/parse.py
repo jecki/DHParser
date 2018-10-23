@@ -650,17 +650,22 @@ class Grammar:
         parser.grammar = self
 
 
-    def __call__(self, document: str, start_parser="root__") -> Node:
+    def __call__(self, document: str, start_parser="root__", track_history=False) -> Node:
         """
         Parses a document with with parser-combinators.
 
         Args:
             document (str): The source text to be parsed.
-            start_parser (str): The name of the parser with which to
-                start. This is useful for testing particular parsers
+            start_parser (str or Parser): The name of the parser with which
+                to start. This is useful for testing particular parsers
                 (i.e. particular parts of the EBNF-Grammar.)
+            track_history (bool): If true, the parsing history will be
+                recorded in self.history__. If logging is turned on (i.e.
+                DHParser.log.is_logging() returns true), the parsing history
+                will always be recorded, even if `False` is passed to
+                the `track_history` parameter.
         Returns:
-            Node: The root node ot the parse tree.
+            Node: The root node to the parse tree.
         """
 
         def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...]]) -> int:
@@ -677,7 +682,10 @@ class Grammar:
                 parser.reset()
         else:
             self._dirty_flag__ = True
-        self.history_tracking__ = is_logging()
+        self.history_tracking__ = track_history or is_logging()
+        # safe tracking state, because history_tracking__ might be set to false, later,
+        # but original tracking state is needed for additional error information.
+        track_history = self.history_tracking__
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
@@ -701,11 +709,22 @@ class Grammar:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None:
-                    error_msg = 'Parser did not match! Invalid source file?' \
-                                '\n    Most advanced: %s\n    Last match:    %s;' % \
-                                (str(HistoryRecord.most_advanced_match(self.history__)),
-                                 str(HistoryRecord.last_match(self.history__)))
-                    error_code = Error.PARSER_DID_NOT_MATCH
+                    err_info = '' if not track_history else \
+                               '\n    Most advanced: %s\n    Last match:    %s;' % \
+                               (str(HistoryRecord.most_advanced_match(self.history__)),
+                                str(HistoryRecord.last_match(self.history__)))
+                    # Check if a Lookahead-Parser did match. Needed for testing, because
+                    # in a test case this is not necessarily an error.
+                    last_record = self.history__[-2] if len(self.history__) > 1 else []
+                    if last_record and parser != self.root__ \
+                            and last_record.status == HistoryRecord.MATCH \
+                            and any(isinstance(parser, Lookahead)
+                                    for parser in last_record.call_stack):
+                        error_msg = 'Parser did not match except for lookahead! ' + err_info
+                        error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
+                    else:
+                        error_msg = 'Parser did not match!' + err_info
+                        error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
                     error_msg = "Parser stopped before end" + \
@@ -1150,7 +1169,7 @@ class OneOrMore(UnaryOperator):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
+        ' <<< Error on "." | Parser did not match! >>> '
 
     EBNF-Notation: ``{ ... }+``
 
@@ -1201,7 +1220,7 @@ class Series(NaryOperator):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser did not match! Invalid source file?\n    Most advanced: None\n    Last match:    None; >>> '
+        ' <<< Error on "1_variable" | Parser did not match! >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 
