@@ -693,7 +693,8 @@ class Grammar:
             if result is None:
                 result = Node(None, '').init_pos(0)
                 self.tree__.new_error(result,
-                                      'Parser "%s" did not match empty document.' % str(parser))
+                                      'Parser "%s" did not match empty document.' % str(parser),
+                                      Error.PARSER_DID_NOT_MATCH)
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
             if rest:
@@ -704,6 +705,7 @@ class Grammar:
                                 '\n    Most advanced: %s\n    Last match:    %s;' % \
                                 (str(HistoryRecord.most_advanced_match(self.history__)),
                                  str(HistoryRecord.last_match(self.history__)))
+                    error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
                     error_msg = "Parser stopped before end" + \
@@ -712,8 +714,9 @@ class Grammar:
                                    if self.history_tracking__ else "..."))
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
+                    error_code = Error.PARSER_STOPPED_BEFORE_END
                 stitches.append(Node(None, skip).init_pos(tail_pos(stitches)))
-                self.tree__.new_error(stitches[-1], error_msg)
+                self.tree__.new_error(stitches[-1], error_msg, error_code)
                 if self.history_tracking__:
                     # # some parsers may have matched and left history records with nodes != None.
                     # # Because these are not connected to the stitched root node, their pos-
@@ -731,18 +734,19 @@ class Grammar:
                 stitches.append(Node(None, rest))
             result = Node(None, tuple(stitches)).init_pos(0)
         if any(self.variables__.values()):
-            error_str = "Capture-retrieve-stack not empty after end of parsing: " \
+            error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
                 + str(self.variables__)
+            error_code = Error.CAPTURE_STACK_NOT_EMPTY
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
                     # of the error will be the end of the text. Otherwise, the error
                     # message above ("...after end of parsing") would appear illogical.
                     error_node = Node(ZOMBIE_PARSER, '').init_pos(tail_pos(result.children))
-                    self.tree__.new_error(error_node, error_str)
+                    self.tree__.new_error(error_node, error_msg, error_code)
                     result.result = result.children + (error_node,)
                 else:
-                    self.tree__.new_error(result, error_str)
+                    self.tree__.new_error(result, error_msg, error_code)
         # result.pos = 0  # calculate all positions
         # result.collect_errors(self.document__)
         self.tree__.swallow(result)

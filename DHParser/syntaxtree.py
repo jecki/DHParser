@@ -746,6 +746,9 @@ class Node(collections.abc.Sized):
         return sum(child.tree_size() for child in self.children) + 1
 
 
+ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
+
+
 class RootNode(Node):
     """TODO: Add Documentation!!!
 
@@ -832,7 +835,11 @@ class RootNode(Node):
                            empty_tags=self.empty_tags)
 
 
-ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
+#######################################################################
+#
+# S-expression- and XML-parsers
+#
+#######################################################################
 
 
 def parse_sxpr(sxpr: str) -> Node:
