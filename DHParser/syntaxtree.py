@@ -199,6 +199,9 @@ def flatten_xml(xml: str) -> str:
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
+RX_AMP = re.compile('&(?!\w+;)')
+
+
 class Node(collections.abc.Sized):
     """
     Represents a node in the concrete or abstract syntax tree.
@@ -539,7 +542,7 @@ class Node(collections.abc.Sized):
                     content.append((sep + usetab).join(s for s in subtree))
             return head + usetab + (sep + usetab).join(content) + tail
 
-        res = cast(str, self.result)  # safe, because if there are no children, result is a string
+        res = self.content  # cast(str, self.result)  # safe, because if there are no children, result is a string
         if not inline and not head:
             # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
             res = res.strip()
@@ -652,6 +655,13 @@ class Node(collections.abc.Sized):
                 return ''
             return ('\n</') + node.tag_name + '>'
 
+        def sanitizer(content: str) -> str:
+            """Substitute "&", "<", ">" in XML-content by the respective entities."""
+            content = RX_AMP.sub('&amp;', content)
+            content = content.replace('<', '&lt;').replace('>', '&gt;')
+            return content
+
+
         def inlining(node):
             """Returns True, if `node`'s tag name is contained in `inline_tags`,
             thereby signalling that the children of this node shall not be
@@ -661,7 +671,7 @@ class Node(collections.abc.Sized):
                                                     and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
-        return self._tree_repr(' ' * indentation, opening, closing,
+        return self._tree_repr(' ' * indentation, opening, closing, sanitizer,
                                density=1, inline_fn=inlining)
 
 

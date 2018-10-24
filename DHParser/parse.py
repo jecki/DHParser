@@ -1215,6 +1215,9 @@ class Series(NaryOperator):
     Matches if each of a series of parsers matches exactly in the order of
     the series.
 
+    Attributes:
+        mandatory (int):  Starting
+
     Example::
 
         >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')

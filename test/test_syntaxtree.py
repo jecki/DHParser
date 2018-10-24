@@ -23,7 +23,8 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, flatten_xml, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, flatten_xml, \
+    MockParser
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -153,6 +154,10 @@ class TestNode:
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
+
+    def test_xml_sanitizer(self):
+        node = Node(MockParser('tag'), '<&>')
+        print(node.as_xml())
 
 
 class TestRootNode:
