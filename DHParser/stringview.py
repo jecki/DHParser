@@ -194,17 +194,28 @@ class StringView(collections.abc.Sized):
             return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
 
     def startswith(self,
-                   prefix: Union[str, Tuple[str, ...]],
+                   prefix: str,
                    start: int = 0,
                    end: Optional[int] = None) -> bool:
         """Return True if S starts with the specified prefix, False otherwise.
         With optional `start`, test S beginning at that position.
         With optional `end`, stop comparing S at that position.
-        prefix can also be a tuple of strings to try.
         """
         start += self.begin
         end = self.end if end is None else self.begin + end
         return self.text.startswith(prefix, start, end)
+
+    def endswith(self,
+                 suffix: str,
+                 start: int = 0,
+                 end: Optional[int] = None) -> bool:
+        """Return True if S ends with the specified suufix, False otherwise.
+        With optional `start`, test S beginning at that position.
+        With optional `end`, stop comparing S at that position.
+        """
+        start += self.begin
+        end = self.end if end is None else self.begin + end
+        return self.text.endswith(suffix, start, end)
 
     def match(self, regex, flags=0):
         """Executes `regex.match` on the StringView object and returns the
