@@ -38,7 +38,7 @@ from DHParser.syntaxtree import Node
 from DHParser.transform import TransformationFunc
 from DHParser.toolkit import load_if_file, is_python_code, compile_python_object, \
     re, typing
-from typing import Any, cast, List, Tuple, Union, Iterator, Iterable
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, Callable
 
 
 __all__ = ('DHPARSER_IMPORTS',
@@ -553,19 +553,22 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     return messages
 
 
-def recompile_grammar(ebnf_filename, force=False) -> bool:
+def recompile_grammar(ebnf_filename, force=False,
+                      notify: Callable=lambda: None) -> bool:
     """
     Re-compiles an EBNF-grammar if necessary, that is, if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is
     outdated.
 
     Parameters:
-        ebnf_filename(str):  The filename of the ebnf-source of the
-            grammar. In case this is a directory and not a file, all
-            files within this directory ending with .ebnf will be
-            compiled.
+        ebnf_filename(str):  The filename of the ebnf-source of the grammar.
+            In case this is a directory and not a file, all files within
+            this directory ending with .ebnf will be compiled.
         force(bool):  If False (default), the grammar will only be
             recompiled if it has been changed.
+        notify(Callable):  'notify' is a function without parameters that
+            is called when recompilation actually takes place. This can
+            be used to inform the user.
     """
     if os.path.isdir(ebnf_filename):
         success = True
@@ -580,7 +583,7 @@ def recompile_grammar(ebnf_filename, force=False) -> bool:
     messages = []  # type: Iterable[Error]
     if (not os.path.exists(compiler_name) or force or
             grammar_changed(compiler_name, ebnf_filename)):
-        # print("recompiling parser for: " + ebnf_filename)
+        notify()
         messages = compile_on_disk(ebnf_filename)
         if messages:
             # print("Errors while compiling: " + ebnf_filename + '!')
