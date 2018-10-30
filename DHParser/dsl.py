@@ -101,7 +101,7 @@ from DHParser import logging, is_filename, load_if_file, MockParser, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content, replace_content_by
+    replace_content, replace_content_by, recompile_grammar
 '''.format(dhparserdir=dhparserdir)
 
 
@@ -112,8 +112,6 @@ def compile_src(source, log_dir=''):
     with logging(log_dir):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \\
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
         result = compile_source(source, get_preprocessor(),
                                 get_grammar(),
                                 get_transformer(), compiler)
@@ -121,15 +119,21 @@ def compile_src(source, log_dir=''):
 
 
 if __name__ == "__main__":
+    # recompile grammar if needed
+    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    if os.path.exists(grammar_path):
+        if not recompile_grammar(grammar_path, force=False,
+                                  notify=lambda:print('recompiling ' + grammar_path)):
+            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            with open(error_file, encoding="utf-8") as f:
+                print(f.read())
+            sys.exit(1)
+    else:
+        print('Could not check whether grammar requires recompiling, '
+              'because grammar was not found at: ' + grammar_path)
+
     if len(sys.argv) > 1:
-        try:
-            grammar_file_name = os.path.basename(__file__).replace('Compiler.py', '.ebnf')
-            if grammar_changed({NAME}Grammar, grammar_file_name):
-                print("Grammar has changed. Please recompile Grammar first.")
-                sys.exit(1)
-        except FileNotFoundError:
-            print('Could not check for changed grammar, because grammar file "%s" was not found!'
-                  % grammar_file_name)    
+        # compile file 
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
