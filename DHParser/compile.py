@@ -251,6 +251,7 @@ def compile_source(source: str,
         3. The root-node of the abstract syntax tree if `preserve_ast` is True
            or `None` otherwise.
     """
+    ast = None
     original_text = load_if_file(source)
     log_file_name = logfile_basename(source, compiler)
     if preprocessor is None:
@@ -285,4 +286,4 @@ def compile_source(source: str,
 
     messages = syntax_tree.collect_errors()
     adjust_error_locations(messages, original_text, source_mapping)
-    return result, messages, (ast if preserve_ast else None)
+    return result, messages, ast
