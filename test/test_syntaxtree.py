@@ -29,6 +29,7 @@ from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider
+from DHParser.error import Error
 
 
 class TestParseSxpression:
@@ -78,6 +79,29 @@ class TestNode:
         self.unique_tree = parse_sxpr(self.unique_nodes_sexpr)
         self.recurring_nodes_sexpr = '(a (b x) (c (d e) (b y)))'
         self.recurr_tree = parse_sxpr(self.recurring_nodes_sexpr)
+
+    def test_deepcopy(self):
+        tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
+        tree_copy = copy.deepcopy(tree)
+
+        assert tree == tree_copy
+        assert tree.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
+        assert tree_copy.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
+
+        tree.add_error(tree, Error('Test Error', 0))
+        assert not tree_copy.all_errors
+        assert tree.as_sxpr() != parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
+        assert tree_copy.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
+
+        tree['d'].result = "x"
+        assert tree != tree_copy
+        assert tree_copy == parse_sxpr('(a (b c) (d (e f) (h i)))')
+        print(tree.as_sxpr())
+        print(parse_sxpr('(a (b c) (d x))').as_sxpr())
+        assert tree == parse_sxpr('(a (b c) (d x))')
+
+        # this also checks for errors equality...
+        assert parse_sxpr('(a (b c) (d x))').as_sxpr() != tree.as_sxpr()
 
     def test_str(self):
         assert str(self.unique_tree) == "ceh"
@@ -157,7 +181,7 @@ class TestNode:
 
     def test_xml_sanitizer(self):
         node = Node(MockParser('tag'), '<&>')
-        print(node.as_xml())
+        assert node.as_xml() == '<tag>&lt;&amp;&gt;</tag>'
 
 
 class TestRootNode:

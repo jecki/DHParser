@@ -323,6 +323,10 @@ class Node(collections.abc.Sized):
         """
         Equality of nodes: Two nodes are considered as equal, if their tag
         name is the same and if their results are equal.
+
+        Note: It is not required that two nodes have the same errors attached.
+        In case you need to check for error equality as well, compare a
+        serialization that includes error messages, as_sxpr() will do!
         """
         return self.tag_name == other.tag_name and self.result == other.result
 
@@ -796,6 +800,28 @@ class RootNode(Node):
         self.inline_tags = set()
         self.omit_tags = set()
         self.empty_tags = set()
+
+    def __deepcopy__(self, memodict={}):
+        duplicate = self.__class__(None)
+        if self.children:
+            duplicate.children = copy.deepcopy(self.children)
+            duplicate._result = duplicate.children
+        else:
+            duplicate.children = NoChildren
+            duplicate._result = self._result
+        duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
+        duplicate._pos = self._pos
+        duplicate._len = self._len
+        if hasattr(self, '_xml_attr'):
+            duplicate._xml_attr = copy.deepcopy(self._xml_attr)
+        duplicate.all_errors = copy.deepcopy(self.all_errors)
+        duplicate.error_flag = self.error_flag
+        duplicate.inline_tags = self.inline_tags
+        duplicate.omit_tags = self.omit_tags
+        duplicate.empty_tags = self.empty_tags
+        duplicate.parser = self.parser
+        return duplicate
+
 
     def swallow(self, node: Node) -> 'RootNode':
         """
