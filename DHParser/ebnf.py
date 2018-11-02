@@ -540,10 +540,6 @@ class EBNFCompiler(Compiler):
 
         definitions.append((self.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
-        # definitions.append(('wspR__', self.WHITESPACE_KEYWORD
-        #                     if 'right' in self.directives['literalws'] else "''"))
-        # definitions.append(('wspL__', self.WHITESPACE_KEYWORD
-        #                     if 'left' in self.directives['literalws'] else "''"))
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD +
                              ", comment=" + self.COMMENT_KEYWORD + ")")))

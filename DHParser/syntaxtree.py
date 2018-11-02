@@ -26,6 +26,7 @@ parser classes are defined in the ``parse`` module.
 
 import collections.abc
 from collections import OrderedDict
+import copy
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.stringview import StringView
@@ -278,6 +279,17 @@ class Node(collections.abc.Sized):
             self.result = result
         self.parser = parser or ZOMBIE_PARSER
 
+    def __deepcopy__(self, memo):
+        if self.children:
+            duplicate = self.__class__(self.parser, copy.deepcopy(self.children), False)
+        else:
+            duplicate = self.__class__(self.parser, self.result, True)
+        duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
+        duplicate._pos = self._pos
+        duplicate._len = self._len
+        if hasattr(self, '_xml_attr'):
+            duplicate._xml_attr = copy.deepcopy(self._xml_attr)
+        return duplicate
 
     def __str__(self):
         s = "".join(str(child) for child in self.children) if self.children else self.content

@@ -34,6 +34,7 @@ See module ``ebnf`` for a sample of the implementation of a
 compiler object.
 """
 
+import copy
 import os
 import re
 
@@ -216,8 +217,9 @@ class Compiler:
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
-                   transformer: TransformationFunc,  # Node -> Node (abstract syntax tree (AST))
-                   compiler: Compiler) -> Tuple[Any, List[Error], Node]:  # Node (AST) -> Any
+                   transformer: TransformationFunc,  # Node (CST) -> Node (abstract syntax tree (AST))
+                   compiler: Compiler,  # Node (AST) -> Any
+                   preserve_ast: bool = False) -> Tuple[Any, List[Error], Node]:
     """
     Compiles a source in four stages:
     1. Pre-Processing (if needed)
@@ -239,13 +241,15 @@ def compile_source(source: str,
             transforms it (in place) into an abstract syntax tree.
         compiler (function): A compiler function or compiler class
             instance
+        preserve_ast (bool): Preserves the AST-tree.
 
     Returns (tuple):
         The result of the compilation as a 3-tuple
         (result, errors, abstract syntax tree). In detail:
         1. The result as returned by the compiler or ``None`` in case of failure
         2. A list of error or warning messages
-        3. The root-node of the abstract syntax tree
+        3. The root-node of the abstract syntax tree if `preserve_ast` is True
+           or `None` otherwise.
     """
     original_text = load_if_file(source)
     log_file_name = logfile_basename(source, compiler)
@@ -272,6 +276,8 @@ def compile_source(source: str,
         if is_logging():
             log_ST(syntax_tree, log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
+            if preserve_ast:
+                ast = copy.deepcopy(syntax_tree)
             result = compiler(syntax_tree)
         # print(syntax_tree.as_sxpr())
         # messages.extend(syntax_tree.collect_errors())
@@ -279,4 +285,4 @@ def compile_source(source: str,
 
     messages = syntax_tree.collect_errors()
     adjust_error_locations(messages, original_text, source_mapping)
-    return result, messages, syntax_tree
+    return result, messages, (ast if preserve_ast else None)
