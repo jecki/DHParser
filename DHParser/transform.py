@@ -605,7 +605,7 @@ def replace_parser(context: List[Node], name: str):
 @transformation_factory(collections.abc.Callable)
 def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bool=True):
     """
-    Flattens all children, that fulfil the given ``condition``
+    Flattens all children, that fulfill the given ``condition``
     (default: all unnamed children). Flattening means that wherever a
     node has child nodes, the child nodes are inserted in place of the
     node.

@@ -258,10 +258,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
-                report.append(indent(cst.as_sxpr()))
+                report.append(indent(cst.as_sxpr(compact=True)))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(ast.as_sxpr()))
+                report.append(indent(ast.as_xml()))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
