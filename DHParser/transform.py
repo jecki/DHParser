@@ -400,7 +400,7 @@ def is_anonymous(context: List[Node]) -> bool:
 
 
 def is_whitespace(context: List[Node]) -> bool:
-    """Removes whitespace and comments defined with the
+    """Returns ``True`` for whitespace and comments defined with the
     ``@comment``-directive."""
     return context[-1].parser.ptype == WHITESPACE_PTYPE
 
