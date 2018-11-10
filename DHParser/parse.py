@@ -735,7 +735,7 @@ class Grammar:
                                  if len(stitches) < MAX_DROPOUTS
                                  else " too often! Terminating parser.")
                     error_code = Error.PARSER_STOPPED_BEFORE_END
-                stitches.append(Node(None, skip).init_pos(tail_pos(stitches)))
+                stitches.append(Node(None, skip).init_pos(tail_pos(stitches or result)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
                 if self.history_tracking__:
                     # # some parsers may have matched and left history records with nodes != None.
