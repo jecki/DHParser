@@ -758,7 +758,7 @@ class Node(collections.abc.Sized):
         """
         Picks the first descendant with one of the given tag_names.
 
-        This function is just syntactic sugar for
+        This function is mostly just syntactic sugar for
         ``next(node.select_by_tag(tag_names, False))``. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.

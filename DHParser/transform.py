@@ -32,7 +32,7 @@ import inspect
 import fnmatch
 from functools import partial, reduce, singledispatch
 
-from DHParser.error import Error
+from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, ParserBase, MockParser, \
     ZOMBIE_NODE, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
@@ -101,7 +101,6 @@ __all__ = ('TransformationDict',
            'require',
            'assert_content',
            'error_on',
-           'warn_on',
            'assert_has_children',
            'peek')
 
@@ -957,37 +956,42 @@ def remove_content(context: List[Node], regexp: str):
 ########################################################################
 
 @transformation_factory(collections.abc.Callable)
-def error_on(context: List[Node], condition: Callable, error_msg: str = ''):
+def error_on(context: List[Node],
+             condition: Callable,
+             error_msg: str = '',
+             error_code: ErrorCode = Error.ERROR):
     """
-    Checks for `condition`; adds an error message if condition is not met.
+    Checks for `condition`; adds an error or warning message if condition is not met.
     """
     node = context[-1]
     if not condition(context):
         if error_msg:
-            node.add_error(error_msg % node.tag_name if error_msg.find("%s") > 0 else error_msg)
+            context[0].new_error(node, error_msg % node.tag_name if error_msg.find("%s") > 0
+                                  else error_msg, error_code)
         else:
             cond_name = condition.__name__ if hasattr(condition, '__name__') \
                         else condition.__class__.__name__ if hasattr(condition, '__class__') \
                         else '<unknown>'
-            node.add_error("transform.error_on: Failed to meet condition " + cond_name)
+            context[0].new_error(node, "transform.error_on: Failed to meet condition " + cond_name,
+                                 error_code)
 
-
-@transformation_factory(collections.abc.Callable)
-def warn_on(context: List[Node], condition: Callable, warning: str = ''):
-    """
-    Checks for `condition`; adds an warning message if condition is not met.
-    """
-    node = context[-1]
-    if not condition(context):
-        if warning:
-            node.add_error(warning % node.tag_name if warning.find("%s") > 0 else warning,
-                           Error.WARNING)
-        else:
-            cond_name = condition.__name__ if hasattr(condition, '__name__') \
-                        else condition.__class__.__name__ if hasattr(condition, '__class__') \
-                        else '<unknown>'
-            node.add_error("transform.warn_on: Failed to meet condition " + cond_name,
-                           Error.WARNING)
+#
+# @transformation_factory(collections.abc.Callable)
+# def warn_on(context: List[Node], condition: Callable, warning: str = ''):
+#     """
+#     Checks for `condition`; adds an warning message if condition is not met.
+#     """
+#     node = context[-1]
+#     if not condition(context):
+#         if warning:
+#             node.add_error(warning % node.tag_name if warning.find("%s") > 0 else warning,
+#                            Error.WARNING)
+#         else:
+#             cond_name = condition.__name__ if hasattr(condition, '__name__') \
+#                         else condition.__class__.__name__ if hasattr(condition, '__class__') \
+#                         else '<unknown>'
+#             context[0].new_error(node, "transform.warn_on: Failed to meet condition " + cond_name,
+#                                  Error.WARNING)
 
 
 assert_has_children = error_on(lambda nd: nd.children, 'Element "%s" has no children')
