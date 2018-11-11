@@ -964,7 +964,7 @@ def error_on(context: List[Node],
     Checks for `condition`; adds an error or warning message if condition is not met.
     """
     node = context[-1]
-    if not condition(context):
+    if condition(context):
         if error_msg:
             context[0].new_error(node, error_msg % node.tag_name if error_msg.find("%s") > 0
                                   else error_msg, error_code)
