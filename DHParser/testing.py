@@ -261,7 +261,7 @@ def get_report(test_unit):
                 report.append(indent(cst.as_sxpr(compact=True)))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(ast.as_xml()))
+                report.append(indent(ast.as_sxpr(compact=True)))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
