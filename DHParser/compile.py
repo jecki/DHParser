@@ -287,3 +287,6 @@ def compile_source(source: str,
     messages = syntax_tree.collect_errors()
     adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
+
+
+# TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser
