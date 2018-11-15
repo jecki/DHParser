@@ -357,12 +357,12 @@ def sane_parser_name(name) -> bool:
 #######################################################################
 
 
-try:
-    if sys.stdout.encoding.upper() != "UTF-8":
-        # make sure that `print()` does not raise an error on
-        # non-ASCII characters:
-        sys.stdout = cast(io.TextIOWrapper, codecs.getwriter("utf-8")(cast(
-            io.BytesIO, cast(io.TextIOWrapper, sys.stdout).detach())))
-except AttributeError:
-    # somebody has already taken care of this !?
-    pass
+# try:
+#     if sys.stdout.encoding.upper() != "UTF-8":
+#         # make sure that `print()` does not raise an error on
+#         # non-ASCII characters:
+#         sys.stdout = cast(io.TextIOWrapper, codecs.getwriter("utf-8")(cast(
+#             io.BytesIO, cast(io.TextIOWrapper, sys.stdout).detach())))
+# except AttributeError:
+#     # somebody has already taken care of this !?
+#     pass
