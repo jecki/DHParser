@@ -190,9 +190,9 @@ class Compiler:
         """
         elem = node.parser.name or node.parser.ptype[1:]
         if not sane_parser_name(elem):
-            node.add_error("Reserved name '%s' not allowed as parser "
-                           "name! " % elem + "(Any name starting with "
-                           "'_' or '__' or ending with '__' is reserved.)")
+            self.tree.new_error(node, "Reserved name '%s' not allowed as parser "
+                                "name! " % elem + "(Any name starting with "
+                                "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
             try:

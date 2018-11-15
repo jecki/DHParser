@@ -999,7 +999,7 @@ def parse_sxpr(sxpr: str) -> Node:
             node.attr.update(attributes)
         return node
 
-    return inner_parser(sxpr)
+    return inner_parser(StringView(sxpr))
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')

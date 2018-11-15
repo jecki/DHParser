@@ -24,7 +24,7 @@ import os
 import sys
 
 from DHParser.compile import compile_source
-from DHParser.dsl import compileDSL, compile_on_disk, recompile_grammar
+from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import logging
 from DHParser.toolkit import re
