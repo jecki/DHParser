@@ -40,7 +40,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
-from typing import Callable, cast, Dict, DefaultDict, List, Set, Tuple, Union, Optional
+from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional
 
 
 __all__ = ('Parser',
@@ -263,7 +263,7 @@ class Parser(ParserBase):
         """
         duplicate = self.__class__()
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def reset(self):
@@ -271,7 +271,7 @@ class Parser(ParserBase):
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
-        self.recursion_counter = defaultdict(lambda :0)  # type: DefaultDict[int, int]
+        self.recursion_counter = defaultdict(lambda: 0)  # type: DefaultDict[int, int]
         self.cycle_detection = set()  # type: Set[Callable]
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -293,7 +293,10 @@ class Parser(ParserBase):
 
     @property
     def grammar(self) -> 'Grammar':
-        return self._grammar
+        if self._grammar:
+            return self._grammar
+        else:
+            raise AssertionError('Grammar has not yet been set!')
 
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
@@ -301,8 +304,9 @@ class Parser(ParserBase):
             self._grammar = grammar
             self._grammar_assigned_notifier()
         else:
-            assert self._grammar == grammar, \
-                "Parser has already been assigned to a different Grammar object!"
+            if self._grammar != grammar:
+                raise AssertionError("Parser has already been assigned"
+                                     "to a different Grammar object!")
 
     def _grammar_assigned_notifier(self):
         """A function that notifies the parser object that it has been
@@ -564,12 +568,6 @@ class Grammar:
 
 
     def __init__(self, root: Parser = None) -> None:
-        # if not hasattr(self.__class__, 'parser_initialization__'):
-        #     self.__class__.parser_initialization__ = "pending"
-        # if not hasattr(self.__class__, 'wspL__'):
-        #     self.wspL__ = ''
-        # if not hasattr(self.__class__, 'wspR__'):
-        #     self.wspR__ = ''
         self.all_parsers__ = set()             # type: Set[ParserBase]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
@@ -650,7 +648,7 @@ class Grammar:
         parser.grammar = self
 
 
-    def __call__(self, document: str, start_parser="root__", track_history=False) -> Node:
+    def __call__(self, document: str, start_parser="root__", track_history=False) -> RootNode:
         """
         Parses a document with with parser-combinators.
 

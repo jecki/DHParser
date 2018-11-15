@@ -28,10 +28,10 @@ import collections.abc
 from collections import OrderedDict
 import copy
 
-from DHParser.error import Error, linebreaks, line_col
+from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, typing
-from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional
+from typing import Callable, cast, Iterator, List, AbstractSet, Set, Dict, Union, Tuple, Optional
 
 
 __all__ = ('ParserBase',
@@ -43,6 +43,7 @@ __all__ = ('ParserBase',
            'ZOMBIE_NODE',
            'Node',
            'RootNode',
+           'ZOMBIE_ROOTNODE',
            'parse_sxpr',
            'parse_xml',
            'flatten_sxpr',
@@ -70,7 +71,7 @@ class ParserBase:
         self.ptype = ':' + self.__class__.__name__  # type: str
 
     def __repr__(self):
-         return self.name + self.ptype
+        return self.name + self.ptype
 
     def __str__(self):
         return self.name + (' = ' if self.name else '') + repr(self)
@@ -200,7 +201,7 @@ def flatten_xml(xml: str) -> str:
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
-RX_AMP = re.compile('&(?!\w+;)')
+RX_AMP = re.compile(r'&(?!\w+;)')
 
 
 class Node(collections.abc.Sized):
@@ -271,7 +272,7 @@ class Node(collections.abc.Sized):
         # Assignment to self.result initializes the attr _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = result       # type: StrictResultType
+            self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
             self._content = None        # type: Optional[str]
             self.children = NoChildren  # type: ChildrenType
             self._len = -1              # type: int  # lazy evaluation
@@ -436,7 +437,7 @@ class Node(collections.abc.Sized):
                 self._result = result or ''
             else:
                 self.children = NoChildren
-                self._result = result
+                self._result = result  # cast(StrictResultType, result)
 
 
     @property
@@ -554,11 +555,11 @@ class Node(collections.abc.Sized):
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn)
                 if subtree:
-                    subtree = [subtree] if inline else subtree.split('\n')
-                    content.append((sep + usetab).join(s for s in subtree))
+                    st = [subtree] if inline else subtree.split('\n')
+                    content.append((sep + usetab).join(s for s in st))
             return head + usetab + (sep + usetab).join(content) + tail
 
-        res = self.content  # cast(str, self.result)  # safe, because if there are no children, result is a string
+        res = self.content
         if not inline and not head:
             # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
             res = res.strip()
@@ -593,7 +594,7 @@ class Node(collections.abc.Sized):
 
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""
-            txt = [left_bracket,  node.tag_name]
+            txt = [left_bracket, node.tag_name]
             # s += " '(pos %i)" % node.add_pos
             if hasattr(node, '_xml_attr'):
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
@@ -620,9 +621,9 @@ class Node(collections.abc.Sized):
     def as_xml(self, src: str = None,
                showerrors: bool = True,
                indentation: int = 2,
-               inline_tags: Set[str]=set(),
-               omit_tags: Set[str]=set(),
-               empty_tags: Set[str]=set()) -> str:
+               inline_tags: Set[str] = set(),
+               omit_tags: Set[str] = set(),
+               empty_tags: Set[str] = set()) -> str:
         """
         Returns content as XML-tree.
 
@@ -683,15 +684,16 @@ class Node(collections.abc.Sized):
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
             """
-            return node.tag_name in inline_tags or (hasattr(node, '_xml_attr') \
-                                                    and node.attr.get('xml:space', 'default') == 'preserve')
+            return node.tag_name in inline_tags \
+                or (hasattr(node, '_xml_attr')
+                    and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing, sanitizer,
                                density=1, inline_fn=inlining)
 
 
-    def select(self, match_function: Callable, include_root: bool=False, reverse: bool=False) \
+    def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
             -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion.
@@ -722,7 +724,7 @@ class Node(collections.abc.Sized):
 
 
     def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
-                      include_root: bool=False) -> Iterator['Node']:
+                      include_root: bool = False) -> Iterator['Node']:
         """
         Returns an iterator that runs through all descendants that have one
         of the given tag names.
@@ -790,16 +792,16 @@ class RootNode(Node):
                 that occurred.
     """
 
-    def __init__(self, node: Optional[Node] = None) -> 'RootNode':
+    def __init__(self, node: Optional[Node] = None):
         super().__init__(ZOMBIE_PARSER, '')
-        self.all_errors = []
+        self.all_errors = []  # type: List[Error]
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
         # customization for XML-Representation
-        self.inline_tags = set()
-        self.omit_tags = set()
-        self.empty_tags = set()
+        self.inline_tags = set()  # type: Set[str]
+        self.omit_tags = set()  # type: Set[str]
+        self.empty_tags = set()  # type: Set[str]
 
     def __deepcopy__(self, memodict={}):
         duplicate = self.__class__(None)
@@ -857,7 +859,7 @@ class RootNode(Node):
     def new_error(self,
                   node: Node,
                   message: str,
-                  code: int = Error.ERROR) -> 'RootNode':
+                  code: ErrorCode = Error.ERROR) -> 'RootNode':
         """
         Adds an error to this tree, locating it at a specific node.
         Parameters:
@@ -882,10 +884,12 @@ class RootNode(Node):
         See the docstring of `Node.as_xml()` for an explanation of the
         customizations.
         """
-        return self.as_xml(inline_tags = self.inline_tags,
+        return self.as_xml(inline_tags=self.inline_tags,
                            omit_tags=self.omit_tags,
                            empty_tags=self.empty_tags)
 
+
+ZOMBIE_ROOTNODE = RootNode()
 
 #######################################################################
 #
@@ -908,7 +912,7 @@ def parse_sxpr(sxpr: str) -> Node:
     """
 
     sxpr = StringView(sxpr).strip()
-    mock_parsers = dict()
+    mock_parsers = dict()  # type: Dict[str, MockParser]
 
     def next_block(s: StringView):
         """Generator that yields all characters until the next closing bracket
@@ -949,9 +953,9 @@ def parse_sxpr(sxpr: str) -> Node:
         tagname = sxpr[:end]
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
-        attributes = OrderedDict()
+        attributes = OrderedDict()  # type: OrderedDict[str, str]
         if sxpr[0] == '(':
-            result = tuple(inner_parser(block) for block in next_block(sxpr))
+            result = tuple(inner_parser(block) for block in next_block(sxpr))  # type: ResultType
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
@@ -961,11 +965,12 @@ def parse_sxpr(sxpr: str) -> Node:
                     k = sxpr.find(')')
                     # read very special attribute pos
                     if sxpr[2:5] == "pos" and 0 < i < k:
-                        pos = int(sxpr[5:k].strip().split(' ')[0])
+                        # pos = int(sxpr[5:k].strip().split(' ')[0])
+                        pass
                     # ignore very special attribute err
                     elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
                         m = sxpr.find('(', 5)
-                        while m >= 0 and m < k:
+                        while 0 <= m < k:
                             m = sxpr.find('(', k)
                             k = max(k, sxpr.find(')', max(m, 0)))
                     # read attr
@@ -973,7 +978,7 @@ def parse_sxpr(sxpr: str) -> Node:
                         attr = sxpr[2:i].strip()
                         value = sxpr[i:k].strip()[1:-1]
                         attributes[attr] = value
-                    sxpr = sxpr[k+1:].strip()
+                    sxpr = sxpr[k + 1:].strip()
                 # parse content
                 for qtmark in ['"""', "'''", '"', "'"]:
                     match = sxpr.match(re.compile(qtmark + r'.*?' + qtmark, re.DOTALL))
@@ -1000,12 +1005,12 @@ def parse_sxpr(sxpr: str) -> Node:
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 
 
-def parse_xml(xml: str) -> Node:
+def parse_xml(xml: Union[str, StringView]) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
     """
 
-    xml = StringView(xml)
+    xml = StringView(str(xml))
     PlainText = MockParser('', TOKEN_PTYPE)
     mock_parsers = {TOKEN_PTYPE: PlainText}
 
@@ -1013,7 +1018,7 @@ def parse_xml(xml: str) -> Node:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
         beginning after the end of the attr.
         """
-        attributes = OrderedDict()
+        attributes = OrderedDict()  # type: OrderedDict[str, str]
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
             d = match.groupdict()
@@ -1034,7 +1039,7 @@ def parse_xml(xml: str) -> Node:
         s, attributes = parse_attributes(section)
         i = s.find('>')
         assert i >= 0
-        return s[i+1:], tagname, attributes, s[i-1] == "/"
+        return s[i + 1:], tagname, attributes, s[i - 1] == "/"
 
     def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
         """Parses a closing tag and returns the string segment, just after
@@ -1045,12 +1050,12 @@ def parse_xml(xml: str) -> Node:
         tagname = match.groupdict()['tagname']
         return s[match.end() - s.begin:], tagname
 
-    def parse_leaf_content(s: StringView) -> Tuple[StringView, str]:
+    def parse_leaf_content(s: StringView) -> Tuple[StringView, StringView]:
         """Parses a piece of the content of a tag, just until the next opening,
         closing or solitary tag is reached.
         """
         i = 0
-        while s[i] != "<" or s[max(0, i-1)] == "\\":
+        while s[i] != "<" or s[max(0, i - 1)] == "\\":
             i = s.find("<", i)
         return s[i:], s[:i]
 
@@ -1058,23 +1063,23 @@ def parse_xml(xml: str) -> Node:
         """Parses the full content of a tag, starting right at the beginning
         of the opening tag and ending right after the closing tag.
         """
-        result = []
-        s, tagname, attributes, solitary = parse_opening_tag(s)
+        res = []  # type: List[Node]
+        s, tagname, _, solitary = parse_opening_tag(s)
         name, class_name = (tagname.split(":") + [''])[:2]
         if not solitary:
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
-                    result.append(Node(PlainText, leaf))
+                    res.append(Node(PlainText, leaf))
                 if s[:1] == "<" and s[:2] != "</":
                     s, child = parse_full_content(s)
-                    result.append(child)
+                    res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname
-        if len(result) == 1 and result[0].parser.ptype == TOKEN_PTYPE:
-            result = result[0].result
+        if len(res) == 1 and res[0].parser.ptype == TOKEN_PTYPE:
+            result = res[0].result
         else:
-            result = tuple(result)
+            result = tuple(res)
         return s, Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
 
     match_header = xml.search(re.compile(r'<(?!\?)'))

@@ -166,7 +166,7 @@ if __name__ == '__main__':
         # if called with a single filename that is either an EBNF file or a known
         # test file type then use the given argument
         arg = argv[1]
-    else: 
+    else:
         # otherwise run all tests in the test directory
         arg = '*_test_*.ini'
     if arg.endswith('.ebnf'):
@@ -328,8 +328,8 @@ def main():
             file_path = input('Please enter a file path for compilation > ')
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 compiler_suite = input('Compiler suite or ENTER (for ebnf) > ')
-                if (not compiler_suite or (os.path.exists(compiler_suite)
-                        and os.path.isfile(compiler_suite))):
+                if not compiler_suite or (os.path.exists(compiler_suite)
+                                          and os.path.isfile(compiler_suite)):
                     _errors = compile_on_disk(file_path, compiler_suite)
                     if _errors:
                         print('\n\n'.join(str(err) for err in _errors))

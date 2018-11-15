@@ -247,6 +247,7 @@ EBNF_AST_transformation_table = {
 def EBNFTransform() -> TransformationFunc:
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
+
 def get_ebnf_transformer() -> TransformationFunc:
     global thread_local_EBNF_transformer_singleton
     try:
@@ -550,11 +551,11 @@ class EBNFCompiler(Compiler):
         # add EBNF grammar to the doc string of the parser class
 
         article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '  # what about 'hour', 'universe' etc.?
-        declarations = ['class ' + self.grammar_name +
-                        'Grammar(Grammar):',
-                        'r"""Parser for ' + article + self.grammar_name +
-                        ' source file' +
-                        (', with this grammar:' if self.grammar_source else '.')]
+        declarations = ['class ' + self.grammar_name
+                        + 'Grammar(Grammar):',
+                        'r"""Parser for ' + article + self.grammar_name
+                        + ' source file'
+                        + (', with this grammar:' if self.grammar_source else '.')]
         definitions.append(('parser_initialization__', '"upon instantiation"'))
         if self.grammar_source:
             definitions.append(('source_hash__',
@@ -833,7 +834,7 @@ class EBNFCompiler(Compiler):
             # shift = (Node(node.parser, node.result[1].result),)
             # node.result[1].result = shift + node.result[2:]
             node.children[1].result = (Node(node.children[1].parser, node.children[1].result),) \
-                                    + node.children[2:]
+                + node.children[2:]
             node.children[1].parser = node.parser
             node.result = (node.children[0], node.children[1])
 
