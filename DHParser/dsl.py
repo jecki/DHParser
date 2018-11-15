@@ -480,10 +480,10 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             source = f.read()
             sections = RX_SECTION_MARKER.split(source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
-            # TODO: Verify transformation table
             ast_trans_table = compile_python_object(DHPARSER_IMPORTS + ast,
                                                     r'(?:\w+_)?AST_transformation_table$')
             messages.extend(ebnf_compiler.verify_transformation_table(ast_trans_table))
+            # TODO: Verify compiler
         except (PermissionError, FileNotFoundError, IOError):
             intro, imports, preprocessor, _, ast, compiler, outro = '', '', '', '', '', '', ''
         except ValueError:

@@ -516,6 +516,13 @@ class EBNFCompiler(Compiler):
                                       0, Error.UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE))
         return messages
 
+    def verify_compiler(self, compiler):
+        """
+        Checks for on_XXXX()-methods that occur in the compiler, although XXXX
+        has never been defined in the grammar. Usually, this kind of
+        inconsistency results from an error like a typo in the compiler-code.
+        """
+        pass  # TODO: add verification code here
 
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:
         """
