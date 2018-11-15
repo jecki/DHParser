@@ -898,7 +898,7 @@ ZOMBIE_ROOTNODE = RootNode()
 #######################################################################
 
 
-def parse_sxpr(sxpr: str) -> Node:
+def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     """
     Generates a tree of nodes from an S-expression.
 
@@ -999,7 +999,7 @@ def parse_sxpr(sxpr: str) -> Node:
             node.attr.update(attributes)
         return node
 
-    return inner_parser(StringView(sxpr))
+    return inner_parser(StringView(sxpr) if isinstance(sxpr, str) else sxpr)
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
