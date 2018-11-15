@@ -54,7 +54,7 @@ def last_char(text, begin: int, end: int) -> int:
     """Returns the index of the first non-whitespace character in string
     `text` within the bounds [begin, end].
     """
-    while end > begin and text[end-1] in ' \n\t':
+    while end > begin and text[end - 1] in ' \n\t':
         end -= 1
     return end
 

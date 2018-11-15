@@ -607,7 +607,7 @@ class Grammar:
         self.document_length__ = 0            # type: int
         self.document_lbreaks__ = []          # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
-        self.variables__ = defaultdict(lambda :[])  # type: DefaultDict[str, List[str]]
+        self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
@@ -666,7 +666,7 @@ class Grammar:
             Node: The root node to the parse tree.
         """
 
-        def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...]]) -> int:
+        def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...], None]) -> int:
             """Adds the position after the last node in the list of
             predecessors to the node."""
             return predecessors[-1].pos + len(predecessors[-1]) if predecessors else 0
@@ -713,10 +713,11 @@ class Grammar:
                                 str(HistoryRecord.last_match(self.history__)))
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
-                    last_record = self.history__[-2] if len(self.history__) > 1 else []
+                    last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
                     if last_record and parser != self.root__ \
                             and last_record.status == HistoryRecord.MATCH \
-                            and last_record.node.pos + len(last_record.node) >= len(self.document__) \
+                            and last_record.node.pos \
+                            + len(last_record.node) >= len(self.document__) \
                             and any(isinstance(parser, Lookahead)
                                     for parser in last_record.call_stack):
                         error_msg = 'Parser did not match except for lookahead! ' + err_info
@@ -726,14 +727,14 @@ class Grammar:
                         error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
-                    error_msg = "Parser stopped before end" + \
-                                (("! trying to recover" +
-                                  (" but stopping history recording at this point."
-                                   if self.history_tracking__ else "..."))
-                                 if len(stitches) < MAX_DROPOUTS
-                                 else " too often! Terminating parser.")
+                    error_msg = "Parser stopped before end" \
+                        + (("! trying to recover"
+                            + (" but stopping history recording at this point."
+                               if self.history_tracking__ else "..."))
+                            if len(stitches) < MAX_DROPOUTS
+                            else " too often! Terminating parser.")
                     error_code = Error.PARSER_STOPPED_BEFORE_END
-                stitches.append(Node(None, skip).init_pos(tail_pos(stitches or result)))
+                stitches.append(Node(None, skip).init_pos(tail_pos(stitches)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
                 if self.history_tracking__:
                     # # some parsers may have matched and left history records with nodes != None.
@@ -767,7 +768,8 @@ class Grammar:
                     self.tree__.new_error(result, error_msg, error_code)
         # result.pos = 0  # calculate all positions
         # result.collect_errors(self.document__)
-        self.tree__.swallow(result)
+        if result:
+            self.tree__.swallow(result)
         return self.tree__
 
 
@@ -847,7 +849,7 @@ class PreprocessorToken(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.name)
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -855,19 +857,22 @@ class PreprocessorToken(Parser):
             end = text.find(END_TOKEN, 1)
             if end < 0:
                 node = Node(self, '')
-                self.grammar.tree__.new_error(node,
+                self.grammar.tree__.new_error(
+                    node,
                     'END_TOKEN delimiter missing from preprocessor token. '
                     '(Most likely due to a preprocessor bug!)')  # type: Node
                 return node, text[1:]
             elif end == 0:
                 node = Node(self, '')
-                self.grammar.tree__.new_error(node,
+                self.grammar.tree__.new_error(
+                    node,
                     'Preprocessor-token cannot have zero length. '
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[2:]
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
                 node = Node(self, text[len(self.name) + 1:end])
-                self.grammar.tree__.new_error(node,
+                self.grammar.tree__.new_error(
+                    node,
                     'Preprocessor-tokens must not be nested or contain '
                     'BEGIN_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a preprocessor bug!)')
@@ -941,7 +946,7 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -962,7 +967,7 @@ class RegExp(Parser):
         return escape_control_characters('/%s/' % self.regexp.pattern)
 
 
-def withWS(parser_factory, wsL='', wsR='\s*'):
+def withWS(parser_factory, wsL='', wsR=r'\s*'):
     """Syntactic Sugar for 'Series(Whitespace(wsL), parser_factory(), Whitespace(wsR))'.
     """
     if wsL and isinstance(wsL, str):
@@ -979,12 +984,12 @@ def withWS(parser_factory, wsL='', wsR='\s*'):
         return parser_factory()
 
 
-def RE(regexp, wsL='', wsR='\s*'):
+def RE(regexp, wsL='', wsR=r'\s*'):
     """Syntactic Sugar for 'Series(Whitespace(wsL), RegExp(regexp), Whitespace(wsR))'"""
-    return withWS(lambda : RegExp(regexp), wsL, wsR)
+    return withWS(lambda: RegExp(regexp), wsL, wsR)
 
 
-def TKN(token, wsL='', wsR='\s*'):
+def TKN(token, wsL='', wsR=r'\s*'):
     """Syntactic Sugar for 'Series(Whitespace(wsL), Token(token), Whitespace(wsR))'"""
     return withWS(lambda: Token(token), wsL, wsR)
 
@@ -1026,7 +1031,7 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
@@ -1057,7 +1062,7 @@ class NaryOperator(Parser):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def apply(self, func: Parser.ApplyFunc) -> bool:
@@ -1100,7 +1105,7 @@ class Option(UnaryOperator):
         super().__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
-            "Redundant nesting of options: %s" % (str(self.ptype), str(parser.name))
+            "Redundant nesting of options: %s%s" % (str(parser.name), str(self.ptype))
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
@@ -1245,7 +1250,7 @@ class Series(NaryOperator):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1589,7 +1594,7 @@ class Lookbehind(FlowOperator):
             p = p.parser
         assert isinstance(p, RegExp) or isinstance(p, Token)
         self.regexp = None
-        self.text = None
+        self.text = ''  # type: str
         if isinstance(p, RegExp):
             self.regexp = cast(RegExp, p).regexp
         else:  # p is of type PlainText
@@ -1686,7 +1691,7 @@ class Retrieve(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.symbol, self.filter)
         duplicate.name = self.name
-        duplicate.ptype =   self.ptype
+        duplicate.ptype = self.ptype
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1808,7 +1813,7 @@ class Forward(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         # duplicate.name = self.name  # Forward-Parsers should never have a name!
-        duplicate.ptype =  self.ptype
+        duplicate.ptype = self.ptype
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.set(parser)
@@ -1854,4 +1859,3 @@ class Forward(Parser):
             self.parser.apply(func)
             return True
         return False
-

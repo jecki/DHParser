@@ -31,7 +31,6 @@ import collections
 import copy
 import fnmatch
 import inspect
-import itertools
 import json
 import os
 import sys
@@ -83,15 +82,15 @@ RESULT_STAGES = {'__cst__', '__ast__', '__err__'}
 #     # print(json.dumps(unit, sort_keys=True, indent=4))
 #     return unit
 
-RX_SECTION = re.compile('\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
+RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
-           '(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
+           r'(?:"(.*?)")|' + "(?:'(.*?)')|" + r'(.*(?:\n(?:\s*\n)*    .*)*)'
 # the following does not work with pypy3, because pypy's re-engine does not
 # support local flags, e.g. '(?s: )'
-# RE_VALUE = '(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
-#            '(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
-RX_ENTRY = re.compile('\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
-RX_COMMENT = re.compile('\s*#.*\n')
+# RE_VALUE = r'(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
+#            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
+RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
+RX_COMMENT = re.compile(r'\s*#.*\n')
 
 
 def unit_from_config(config_str):
@@ -316,12 +315,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         lookahead operator at the end. See test_testing.TestLookahead.
         """
         return len(raw_errors) == 2 \
-               and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY \
-               and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END
+            and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY \
+            and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END
 
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
-        assert not any (test_type in RESULT_STAGES for test_type in tests), \
+        assert not any(test_type in RESULT_STAGES for test_type in tests), \
             ("Test %s in %s already has results. Use reset_unit() before running again!"
              % (parser_name, unit_name))
         assert set(tests.keys()).issubset(UNIT_STAGES), \
@@ -562,4 +561,3 @@ def runner(test_classes, namespace):
 
     for test in test_functions:
         exec(test + '()', namespace)
-

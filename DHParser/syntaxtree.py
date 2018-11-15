@@ -304,7 +304,7 @@ class Node(collections.abc.Sized):
         mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
         parg = "MockParser({name}, {ptype})".format(**mpargs)
         rarg = str(self) if not self.children else \
-               "(" + ", ".join(repr(child) for child in self.children) + ")"
+            "(" + ", ".join(repr(child) for child in self.children) + ")"
         return "Node(%s, %s)" % (parg, rarg)
 
 
@@ -650,7 +650,7 @@ class Node(collections.abc.Sized):
                 return ''
             txt = ['<', node.tag_name]
             has_reserved_attrs = hasattr(node, '_xml_attr') \
-                and any (r in node.attr for r in {'err', 'line', 'col'})
+                and any(r in node.attr for r in {'err', 'line', 'col'})
             if hasattr(node, '_xml_attr'):
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
@@ -911,7 +911,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     '(a\\n  (b\\n    "c"\\n  )\\n)'
     """
 
-    sxpr = StringView(sxpr).strip()
+    sxpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()
     mock_parsers = dict()  # type: Dict[str, MockParser]
 
     def next_block(s: StringView):

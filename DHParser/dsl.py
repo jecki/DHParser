@@ -463,6 +463,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     compiler1 = cfactory()
     compiler1.set_grammar_name(compiler_name, source_file)
     result, messages, _ = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
+
     if has_errors(messages):
         return messages
 
@@ -487,8 +488,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             intro, imports, preprocessor, _, ast, compiler, outro = '', '', '', '', '', '', ''
         except ValueError:
             name = '"' + rootname + 'Compiler.py"'
-            raise ValueError('Could not identify all required sections in ' + name +
-                             '. Please delete or repair ' + name + ' manually!')
+            raise ValueError('Could not identify all required sections in ' + name
+                             + '. Please delete or repair ' + name + ' manually!')
         finally:
             if f:
                 f.close()
@@ -516,7 +517,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             f.write(SECTION_MARKER.format(marker=PREPROCESSOR_SECTION))
             f.write(preprocessor)
             f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
-            f.write(result)
+            f.write(cast(str, result))
             f.write(SECTION_MARKER.format(marker=AST_SECTION))
             f.write(ast)
             f.write(SECTION_MARKER.format(marker=COMPILER_SECTION))
@@ -559,7 +560,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
 
 
 def recompile_grammar(ebnf_filename, force=False,
-                      notify: Callable=lambda: None) -> bool:
+                      notify: Callable = lambda: None) -> bool:
     """
     Re-compiles an EBNF-grammar if necessary, that is, if either no
     corresponding 'XXXXCompiler.py'-file exists or if that file is

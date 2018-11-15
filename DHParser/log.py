@@ -206,12 +206,13 @@ class HistoryRecord:
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col ' \
                'style="width:75%"/><col style="width:6%"/><col style="width:15%"/>\n</colgroup>'
     HEADINGS = ('<tr><th>L</th><th>C</th><th>parser call sequence</th>'
-        '<th>success</th><th>text matched or failed</th></tr>')
-    HTML_LEAD_IN = ('<!DOCTYPE html>\n'
+                '<th>success</th><th>text matched or failed</th></tr>')
+    HTML_LEAD_IN = (
+        '<!DOCTYPE html>\n'
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
         'td,th {font-family:monospace; '
         'border-right: thin solid grey; border-bottom: thin solid grey}\n'
-        'td.line, td.column {color:darkgrey}\n' # 'td.stack {}\n'
+        'td.line, td.column {color:darkgrey}\n'  # 'td.stack {}\n'
         'td.status {font-weight:bold}\n'
         'td.text {color:darkblue}\n'
         'table {border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
@@ -260,10 +261,10 @@ class HistoryRecord:
         if status == self.MATCH:
             status = '<span class="match">' + status + '</span>'
             i = stack.rfind('-&gt;')
-            chr = stack[i+12:i+13]
+            chr = stack[i + 12:i + 13]
             while not chr.isidentifier() and i >= 0:
                 i = stack.rfind('-&gt;', 0, i)
-                chr = stack[i+12:i+13]
+                chr = stack[i + 12:i + 13]
             if i >= 0:
                 i += 12
                 k = stack.find('<', i)
@@ -424,9 +425,9 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     full_history = ['<h1>Full parsing history of "%s"</h1>' % log_file_name]  # type: List[str]
 
     if len(grammar.history__) > LOG_SIZE_THRESHOLD:
-        warning =('Sorry, man, %iK history records is just too many! '
-                  'Only looking at the last %iK records.'
-                  % (len(grammar.history__) // 1000, LOG_SIZE_THRESHOLD // 1000))
+        warning = ('Sorry, man, %iK history records is just too many! '
+                   'Only looking at the last %iK records.'
+                   % (len(grammar.history__) // 1000, LOG_SIZE_THRESHOLD // 1000))
         html_warning = '<p><strong>' + warning + '</strong></p>'
         full_history.append(html_warning)
 
@@ -441,4 +442,3 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     if len(full_history) > LOG_TAIL_THRESHOLD + 10:
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
-

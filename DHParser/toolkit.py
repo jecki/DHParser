@@ -22,9 +22,9 @@ several of the the other DHParser-Modules or that are just very generic
 so that they are best defined in a toolkit-module.
 """
 
-import codecs
+# import codecs
 import hashlib
-import io
+# import io
 import multiprocessing
 import parser
 import threading
@@ -41,7 +41,7 @@ except ImportError:
     import DHParser.foreign_typing as typing
     sys.modules['typing'] = typing  # make it possible to import from typing
 
-from typing import Any, Iterable, Sequence, Set, Union, Dict, cast
+from typing import Any, Iterable, Sequence, Set, Union, Dict  # , cast
 
 
 __all__ = ('escape_re',
@@ -207,13 +207,13 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
 
     if isinstance(info_strings, str):
         info_strings = (info_strings,)
-    fence_tmpl = '\n(?:(?:``[`]*[ ]*(?:%s)(?=[ .\-:\n])[^`\n]*\n)' + \
-                 '|(?:~~[~]*[ ]*(?:%s)(?=[ .\-:\n])[\n]*\n))'
+    fence_tmpl = r'\n(?:(?:``[`]*[ ]*(?:%s)(?=[ .\-:\n])[^`\n]*\n)' + \
+                 r'|(?:~~[~]*[ ]*(?:%s)(?=[ .\-:\n])[\n]*\n))'
     label_re = '|'.join('(?:%s)' % matched_string for matched_string in info_strings)
     rx_fence = re.compile(fence_tmpl % (label_re, label_re), flags=re.IGNORECASE)
 
     for match in rx_fence.finditer(markdown):
-        matched_string = re.match('(?:\n`+)|(?:\n~+)', match.group(0)).group(0)
+        matched_string = re.match(r'(?:\n`+)|(?:\n~+)', match.group(0)).group(0)
         if markdown.find(matched_string, match.end()) >= 0:
             return True
         else:
@@ -331,7 +331,6 @@ def expand_table(compact_table: Dict) -> Dict:
                 raise KeyError('Key "%s" used more than once in compact table!' % key)
             expanded_table[k] = value
     return expanded_table
-
 
 
 #######################################################################

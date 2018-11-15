@@ -183,7 +183,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
             pycode = f.read()
-        m = re.search('class \w*\(Grammar\)', pycode)
+        m = re.search(r'class \w*\(Grammar\)', pycode)
         if m:
             m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
                           pycode[m.span()[1]:])
@@ -476,13 +476,13 @@ class EBNFCompiler(Compiler):
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
         compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
-                    '    """Compiler for the abstract-syntax-tree of a ' +
-                    self.grammar_name + ' source file.',
+                    '    """Compiler for the abstract-syntax-tree of a '
+                    + self.grammar_name + ' source file.',
                     '    """', '',
-                    '    def __init__(self, grammar_name="' +
-                    self.grammar_name + '", grammar_source=""):',
-                    '        super(' + self.grammar_name +
-                    'Compiler, self).__init__(grammar_name, grammar_source)',
+                    '    def __init__(self, grammar_name="'
+                    + self.grammar_name + '", grammar_source=""):',
+                    '        super(' + self.grammar_name
+                    + 'Compiler, self).__init__(grammar_name, grammar_source)',
                     r"        assert re.match('\w+\Z', grammar_name)", '',
                     '    def _reset(self):',
                     '        super()._reset()',
@@ -542,8 +542,8 @@ class EBNFCompiler(Compiler):
         definitions.append((self.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
         definitions.append((self.WHITESPACE_KEYWORD,
-                            ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD +
-                             ", comment=" + self.COMMENT_KEYWORD + ")")))
+                            ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
+                             + ", comment=" + self.COMMENT_KEYWORD + ")")))
         definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
         definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
 
@@ -584,7 +584,7 @@ class EBNFCompiler(Compiler):
         for symbol in self.symbols:
             if symbol not in defined_symbols:
                 self.tree.new_error(self.symbols[symbol],
-                               "Missing definition for symbol '%s'" % symbol)
+                                    "Missing definition for symbol '%s'" % symbol)
                 # root_node.error_flag = True
 
         # check for unconnected rules
@@ -643,7 +643,7 @@ class EBNFCompiler(Compiler):
             first = self.rules[rule][0]
             if not first.errors:
                 self.tree.new_error(first, 'First definition of rule "%s" '
-                               'followed by illegal redefinitions.' % rule)
+                                    'followed by illegal redefinitions.' % rule)
             self.tree.new_error(node, 'A rule "%s" has already been defined earlier.' % rule)
         elif rule in EBNFCompiler.RESERVED_SYMBOLS:
             self.tree.new_error(node, 'Symbol "%s" is a reserved symbol.' % rule)
@@ -683,7 +683,8 @@ class EBNFCompiler(Compiler):
         prepended by the multiline-flag. Returns the regular expression string.
         """
         flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
-        if flags:  rx = "(?%s)%s" % ("".join(flags), rx)
+        if flags:
+            rx = "(?%s)%s" % ("".join(flags), rx)
         try:
             re.compile(rx)
         except Exception as re_error:
@@ -770,7 +771,7 @@ class EBNFCompiler(Compiler):
         return ""
 
 
-    def non_terminal(self, node: Node, parser_class: str, custom_args: List[str]=[]) -> str:
+    def non_terminal(self, node: Node, parser_class: str, custom_args: List[str] = []) -> str:
         """
         Compiles any non-terminal, where `parser_class` indicates the Parser class
         name for the particular non-terminal.
@@ -944,7 +945,7 @@ class EBNFCompiler(Compiler):
         else:
             parser = '_RE('
             if rx[:2] == '~/':
-                if not 'left' in self.directives['literalws']:
+                if 'left' not in self.directives['literalws']:
                     name = ['wL=' + self.WHITESPACE_KEYWORD] + name
                 rx = rx[1:]
             elif 'left' in self.directives['literalws']:

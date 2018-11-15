@@ -29,12 +29,11 @@ for CST -> AST transformations.
 
 import collections.abc
 import inspect
-import fnmatch
-from functools import partial, reduce, singledispatch
+from functools import partial, singledispatch
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, ParserBase, MockParser, \
-    ZOMBIE_NODE, parse_sxpr, flatten_sxpr
+    ZOMBIE_NODE, RootNode, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text, Generic
@@ -240,7 +239,7 @@ def key_tag_name(node: Node) -> str:
 
 def traverse(root_node: Node,
              processing_table: ProcessingTableType,
-             key_func: KeyFunc=key_tag_name) -> None:
+             key_func: KeyFunc = key_tag_name) -> None:
     """
     Traverses the snytax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
@@ -292,9 +291,10 @@ def traverse(root_node: Node,
         assert '+' not in table, 'Symbol "+" in processing table is obsolete, use "<" instead'
         if '~' in table:
             if ':Whitespace' in table:
-                raise AssertionError('"~" is a synonym for ":Whitespace" in the '
-                    'processing table. To avoid confusion, choose either of the two, '
-                    'but do not use both at the same time!')
+                raise AssertionError(
+                    '"~" is a synonym for ":Whitespace" in the processing table. '
+                    'To avoid confusion, choose either of the two, but do not use '
+                    'both at the same time!')
             whitespace_transformation = table['~']
             del table['~']
             table[':Whitespace'] = whitespace_transformation
@@ -341,8 +341,8 @@ def traverse(root_node: Node,
 
 @transformation_factory(dict)
 def traverse_locally(context: List[Node],
-                     processing_table: Dict,            # actually: ProcessingTableType
-                     key_func: Callable=key_tag_name):  # actually: KeyFunc
+                     processing_table: Dict,              # actually: ProcessingTableType
+                     key_func: Callable = key_tag_name):  # actually: KeyFunc
     """
     Transforms the syntax tree starting from the last node in the context
     according to the given processing table. The purpose of this function is
@@ -572,7 +572,7 @@ def reduce_single_child(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Callable)
-def replace_or_reduce(context: List[Node], condition: Callable=is_named):
+def replace_or_reduce(context: List[Node], condition: Callable = is_named):
     """
     Replaces node by a single child, if condition is met on child,
     otherwise (i.e. if the child is anonymous) reduces the child.
@@ -602,7 +602,7 @@ def replace_parser(context: List[Node], name: str):
 
 
 @transformation_factory(collections.abc.Callable)
-def flatten(context: List[Node], condition: Callable=is_anonymous, recursive: bool=True):
+def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: bool = True):
     """
     Flattens all children, that fulfill the given ``condition``
     (default: all unnamed children). Flattening means that wherever a
@@ -664,8 +664,8 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
     """
 
     node = context[-1]
-    package = []
-    result = []
+    package = []  # type: List[Node]
+    result = []  # type: List[Node]
 
     def close_package():
         nonlocal package
@@ -726,7 +726,7 @@ def normalize_whitespace(context):
         if node.result:
             node.result = ' '
     else:
-        node.result = re.sub('\s+', ' ', node.result)
+        node.result = re.sub(r'\s+', ' ', node.result)
 
 
 def move_whitespace(context):
@@ -756,8 +756,8 @@ def move_whitespace(context):
                 break
 
         # merge adjacent whitespace
-        prevN = parent.children[i-1] if i > 0 else None
-        nextN = parent.children[i+1] if i < len(parent.children)-1 else None
+        prevN = parent.children[i - 1] if i > 0 else None
+        nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
         if before and prevN and prevN.parser.ptype == WHITESPACE_PTYPE:
             prevN.result = prevN.result + before[0].result
             before = ()
@@ -765,7 +765,7 @@ def move_whitespace(context):
             nextN.result = after[0].result + nextN.result
             after = ()
 
-        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
+        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i + 1:]
 
 
 #######################################################################
@@ -802,7 +802,7 @@ def rstrip(context: List[Node], condition: Callable = is_expendable):
         rstrip(context + [node.children[-1]], condition)
         L = len(node.children)
         i = L
-        while i > 0 and condition(context + [node.children[i-1]]):
+        while i > 0 and condition(context + [node.children[i - 1]]):
             i -= 1
         if i < L:
             node.result = node.children[:i]
@@ -832,7 +832,7 @@ def keep_children_if(context: List[Node], condition: Callable):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_tokens(context: List[Node], tokens: AbstractSet[str]=frozenset()):
+def keep_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -907,7 +907,7 @@ def remove_first(context: List[Node]):
                 break
         else:
             return
-        node.result = node.children[:i] + node.children[i+1:]
+        node.result = node.children[:i] + node.children[i + 1:]
 
 
 def remove_last(context: List[Node]):
@@ -920,7 +920,7 @@ def remove_last(context: List[Node]):
         else:
             return
         i = len(node.children) - i - 1
-        node.result = node.children[:i] + node.children[i+1:]
+        node.result = node.children[:i] + node.children[i + 1:]
 
 
 def remove_brackets(context: List[Node]):
@@ -930,7 +930,7 @@ def remove_brackets(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_tokens(context: List[Node], tokens: AbstractSet[str]=frozenset()):
+def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -966,14 +966,15 @@ def error_on(context: List[Node],
     node = context[-1]
     if condition(context):
         if error_msg:
-            context[0].new_error(node, error_msg % node.tag_name if error_msg.find("%s") > 0
-                                  else error_msg, error_code)
+            cast(RootNode, context[0]).new_error(node, error_msg % node.tag_name
+                                                 if error_msg.find("%s") > 0
+                                                 else error_msg, error_code)
         else:
             cond_name = condition.__name__ if hasattr(condition, '__name__') \
-                        else condition.__class__.__name__ if hasattr(condition, '__class__') \
-                        else '<unknown>'
-            context[0].new_error(node, "transform.error_on: Failed to meet condition " + cond_name,
-                                 error_code)
+                else condition.__class__.__name__ if hasattr(condition, '__class__') \
+                else '<unknown>'
+            cast(RootNode, context[0]).new_error(node, "transform.error_on: Failed to meet"
+                                                 "condition " + cond_name, error_code)
 
 #
 # @transformation_factory(collections.abc.Callable)
@@ -1001,8 +1002,8 @@ assert_has_children = error_on(lambda nd: nd.children, 'Element "%s" has no chil
 def assert_content(context: List[Node], regexp: str):
     node = context[-1]
     if not has_content(context, regexp):
-        context[0].new_error(node, 'Element "%s" violates %s on %s' %
-                             (node.parser.name, str(regexp), node.content))
+        cast(RootNode, context[0]).new_error(node, 'Element "%s" violates %s on %s'
+                                             % (node.parser.name, str(regexp), node.content))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1010,8 +1011,8 @@ def require(context: List[Node], child_tags: AbstractSet[str]):
     node = context[-1]
     for child in node.children:
         if child.tag_name not in child_tags:
-            context[0].new_error(node, 'Element "%s" is not allowed inside "%s".' %
-                                 (child.parser.name, node.parser.name))
+            cast(RootNode, context[0]).new_error(node, 'Element "%s" is not allowed inside "%s".'
+                                                 % (child.parser.name, node.parser.name))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1019,8 +1020,8 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
     node = context[-1]
     for child in node.children:
         if child.tag_name in child_tags:
-            context[0].new_error(node, 'Element "%s" cannot be nested inside "%s".' %
-                                 (child.parser.name, node.parser.name))
+            cast(RootNode, context[0]).new_error(node, 'Element "%s" cannot be nested inside "%s".'
+                                                 % (child.parser.name, node.parser.name))
 
 
 def peek(context: List[Node]):
