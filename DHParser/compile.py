@@ -217,7 +217,7 @@ class Compiler:
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
-                   transformer: TransformationFunc,  # Node (CST) -> Node (abstract syntax tree (AST))
+                   transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: Compiler,  # Node (AST) -> Any
                    preserve_ast: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """

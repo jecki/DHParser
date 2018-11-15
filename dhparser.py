@@ -27,7 +27,8 @@ from DHParser.compile import compile_source
 from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import logging
-from DHParser.toolkit import re
+from DHParser.toolkit import re, typing
+from typing import cast
 
 LOGGING = False
 
@@ -241,9 +242,10 @@ def selftest() -> bool:
     ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
     ebnf_transformer = get_ebnf_transformer()
     ebnf_compiler = get_ebnf_compiler('EBNF')
-    generated_ebnf_parser, errors, _ = compile_source(
+    result, errors, _ = compile_source(
         ebnf_src, None,
         builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
+    generated_ebnf_parser = cast(str, result)
 
     if errors:
         print("Selftest FAILED :-(")

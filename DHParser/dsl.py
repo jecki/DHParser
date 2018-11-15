@@ -133,7 +133,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     if len(sys.argv) > 1:
-        # compile file 
+        # compile file
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
@@ -157,7 +157,7 @@ class DSLException(Exception):
     """
     def __init__(self, errors):
         assert isinstance(errors, Iterator) or isinstance(errors, list) \
-               or isinstance(errors, tuple)
+            or isinstance(errors, tuple)
         self.errors = errors
 
     def __str__(self):
@@ -209,9 +209,10 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             parser_py, messages = grammar_src, []  # type: str, List[Error]
         else:
             with logging(False):
-                parser_py, messages, _ = compile_source(
+                result, messages, _ = compile_source(
                     grammar_src, None,
                     get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
+                parser_py = cast(str, result)
         if has_errors(messages):
             raise GrammarError(only_errors(messages), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')()
@@ -227,7 +228,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 
 
 def compileDSL(text_or_file: str,
-               preprocessor: PreprocessorFunc,
+               preprocessor: Optional[PreprocessorFunc],
                dsl_grammar: Union[str, Grammar],
                ast_transformation: TransformationFunc,
                compiler: Compiler) -> Any:
@@ -461,7 +462,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         cfactory = get_ebnf_compiler
     compiler1 = cfactory()
     compiler1.set_grammar_name(compiler_name, source_file)
-    result, messages, AST = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
+    result, messages, _ = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
     if has_errors(messages):
         return messages
 
@@ -477,14 +478,14 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             f = open(rootname + 'Compiler.py', 'r', encoding="utf-8")
             source = f.read()
             sections = RX_SECTION_MARKER.split(source)
-            intro, imports, preprocessor, parser, ast, compiler, outro = sections
+            intro, imports, preprocessor, _, ast, compiler, outro = sections
             # TODO: Verify transformation table
             ast_trans_table = compile_python_object(DHPARSER_IMPORTS + ast,
                                                     r'(?:\w+_)?AST_transformation_table$')
             messages.extend(ebnf_compiler.verify_transformation_table(ast_trans_table))
-        except (PermissionError, FileNotFoundError, IOError) as error:
-            intro, imports, preprocessor, parser, ast, compiler, outro = '', '', '', '', '', '', ''
-        except ValueError as error:
+        except (PermissionError, FileNotFoundError, IOError):
+            intro, imports, preprocessor, _, ast, compiler, outro = '', '', '', '', '', '', ''
+        except ValueError:
             name = '"' + rootname + 'Compiler.py"'
             raise ValueError('Could not identify all required sections in ' + name +
                              '. Please delete or repair ' + name + ' manually!')
@@ -581,7 +582,7 @@ def recompile_grammar(ebnf_filename, force=False,
                 success = success and recompile_grammar(entry, force)
         return success
 
-    base, ext = os.path.splitext(ebnf_filename)
+    base, _ = os.path.splitext(ebnf_filename)
     compiler_name = base + 'Compiler.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
     messages = []  # type: Iterable[Error]
