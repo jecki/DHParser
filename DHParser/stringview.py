@@ -54,7 +54,7 @@ def last_char(text, begin: int, end: int) -> int:
     """Returns the index of the first non-whitespace character in string
     `text` within the bounds [begin, end].
     """
-    while end > begin and text[end-1] in ' \n\t':
+    while end > begin and text[end - 1] in ' \n\t':
         end -= 1
     return end
 
@@ -288,12 +288,12 @@ class StringView(collections.abc.Sized):
             return self.fullstring.split(sep)
         else:
             pieces = []
-            l = len(sep)
+            length = len(sep)
             k = 0
             i = self.find(sep, k)
             while i >= 0:
                 pieces.append(self.text[self.begin + k: self.begin + i])
-                k = i + l
+                k = i + length
                 i = self.find(sep, k)
             pieces.append(self.text[self.begin + k: self.end])
             return pieces

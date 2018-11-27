@@ -55,7 +55,7 @@ import os
 
 from DHParser.error import line_col
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE
+from DHParser.syntaxtree import Node
 from DHParser.toolkit import is_filename, escape_control_characters, typing
 from typing import List, Tuple, Union
 
@@ -206,12 +206,13 @@ class HistoryRecord:
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col ' \
                'style="width:75%"/><col style="width:6%"/><col style="width:15%"/>\n</colgroup>'
     HEADINGS = ('<tr><th>L</th><th>C</th><th>parser call sequence</th>'
-        '<th>success</th><th>text matched or failed</th></tr>')
-    HTML_LEAD_IN = ('<!DOCTYPE html>\n'
+                '<th>success</th><th>text matched or failed</th></tr>')
+    HTML_LEAD_IN = (
+        '<!DOCTYPE html>\n'
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
         'td,th {font-family:monospace; '
-        'border-right: thin solid grey; border-bottom: thin solid grey}\n'        
-        'td.line, td.column {color:darkgrey}\n' # 'td.stack {}\n'
+        'border-right: thin solid grey; border-bottom: thin solid grey}\n'
+        'td.line, td.column {color:darkgrey}\n'  # 'td.stack {}\n'
         'td.status {font-weight:bold}\n'
         'td.text {color:darkblue}\n'
         'table {border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
@@ -236,7 +237,7 @@ class HistoryRecord:
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
 
-    def as_tuple(self) -> Snapshot:
+    def as_tuple(self) -> 'Snapshot':
         """
         Returns history record formatted as a snapshot tuple.
         """
@@ -260,10 +261,10 @@ class HistoryRecord:
         if status == self.MATCH:
             status = '<span class="match">' + status + '</span>'
             i = stack.rfind('-&gt;')
-            chr = stack[i+12:i+13]
+            chr = stack[i + 12:i + 13]
             while not chr.isidentifier() and i >= 0:
                 i = stack.rfind('-&gt;', 0, i)
-                chr = stack[i+12:i+13]
+                chr = stack[i + 12:i + 13]
             if i >= 0:
                 i += 12
                 k = stack.find('<', i)
@@ -294,7 +295,6 @@ class HistoryRecord:
     def status(self) -> str:
         return self.FAIL if self.node is None else \
             ('"%s"' % self.err_msg()) if self.node.errors else self.MATCH
-            # has_errors(self.node._errors)
 
     @property
     def excerpt(self):
@@ -344,8 +344,8 @@ class HistoryRecord:
         remaining = -1
         result = None
         for record in history:
-            if (record.status == HistoryRecord.MATCH and
-                    (record.remaining < remaining or remaining < 0)):
+            if (record.status == HistoryRecord.MATCH
+                    and (record.remaining < remaining or remaining < 0)):
                 result = record
                 remaining = record.remaining
         return result
@@ -376,7 +376,7 @@ LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
 LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
 
 
-def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> None:
+def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> None:
     """
     Writes a log of the parsing history of the most recently parsed document.
 
@@ -415,8 +415,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> No
 
     if not is_logging():
         raise AssertionError("Cannot log history when logging is turned off!")
-    # assert self.history__, \
-    #     "Parser did not yet run or logging was turned off when running parser!"
+
     if not log_file_name:
         name = grammar.__class__.__name__
         log_file_name = name[:-7] if name.lower().endswith('grammar') else name
@@ -424,35 +423,22 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool=True) -> No
         log_file_name = log_file_name[:-4]
 
     full_history = ['<h1>Full parsing history of "%s"</h1>' % log_file_name]  # type: List[str]
-    # match_history = ['<h1>Match history of parsing "%s"</h1>' % log_file_name]  # type: List[str]
-    # errors_only = ['<h1>Errors when parsing "%s"</h1>' % log_file_name]  # type: List[str]
 
     if len(grammar.history__) > LOG_SIZE_THRESHOLD:
-        warning =('Sorry, man, %iK history records is just too many! '
-                  'Only looking at the last %iK records.'
-                  % (len(grammar.history__)//1000, LOG_SIZE_THRESHOLD//1000))
+        warning = ('Sorry, man, %iK history records is just too many! '
+                   'Only looking at the last %iK records.'
+                   % (len(grammar.history__) // 1000, LOG_SIZE_THRESHOLD // 1000))
         html_warning = '<p><strong>' + warning + '</strong></p>'
         full_history.append(html_warning)
-        # match_history.append(html_warning)
-        # errors_only.append(html_warning)
 
     lead_in = '\n'. join(['<table>', HistoryRecord.COLGROUP, HistoryRecord.HEADINGS])
     full_history.append(lead_in)
-    # match_history.append(lead_in)
-    # errors_only.append(lead_in)
 
     for record in grammar.history__[-LOG_SIZE_THRESHOLD:]:
         line = record.as_html_tr() if html else str(record)
         append_line(full_history, line)
-        # if record.node and record.node.parser.ptype != WHITESPACE_PTYPE:
-        #     append_line(match_history, line)
-        #     if record.node.errors:
-        #         append_line(errors_only, line)
+
     write_log(full_history, log_file_name + '_full')
     if len(full_history) > LOG_TAIL_THRESHOLD + 10:
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
-    # write_log(match_history, log_file_name + '_match')
-    # if (len(errors_only) > 3 or (len(grammar.history__) <= LOG_SIZE_THRESHOLD
-    #                              and len(errors_only) > 2)):
-    #     write_log(errors_only, log_file_name + '_errors')

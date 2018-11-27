@@ -41,7 +41,7 @@ import bisect
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
 from DHParser.toolkit import typing
-from typing import Iterable, Iterator, Union, Tuple, List, NewType
+from typing import Iterable, Iterator, Union, Tuple, List
 
 __all__ = ('ErrorCode',
            'Error',
@@ -200,7 +200,7 @@ def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
 
 def adjust_error_locations(errors: List[Error],
                            original_text: Union[StringView, str],
-                           source_mapping: SourceMapFunc=lambda i: i) -> List[Error]:
+                           source_mapping: SourceMapFunc = lambda i: i) -> List[Error]:
     """Adds (or adjusts) line and column numbers of error messages in place.
 
     Args:

@@ -39,7 +39,7 @@ import os
 import re
 
 from DHParser.preprocess import strip_tokens, with_source_mapping, PreprocessorFunc
-from DHParser.syntaxtree import Node, RootNode, StrictResultType
+from DHParser.syntaxtree import Node, RootNode, ZOMBIE_ROOTNODE, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
@@ -97,7 +97,7 @@ class Compiler:
         self._reset()
 
     def _reset(self):
-        self.tree = None   # type: Optional[RootNode]
+        self.tree = ZOMBIE_ROOTNODE   # type: RootNode
         self.context = []  # type: List[Node]
         self._dirty_flag = False
 
@@ -116,7 +116,7 @@ class Compiler:
         result = self.compile(root)
         return result
 
-    def set_grammar_name(self, grammar_name: str="", grammar_source: str=""):
+    def set_grammar_name(self, grammar_name: str = "", grammar_source: str = ""):
         """
         Changes the grammar's name and the grammar's source.
 
@@ -190,9 +190,9 @@ class Compiler:
         """
         elem = node.parser.name or node.parser.ptype[1:]
         if not sane_parser_name(elem):
-            node.add_error("Reserved name '%s' not allowed as parser "
-                           "name! " % elem + "(Any name starting with "
-                           "'_' or '__' or ending with '__' is reserved.)")
+            self.tree.new_error(node, "Reserved name '%s' not allowed as parser "
+                                "name! " % elem + "(Any name starting with "
+                                "'_' or '__' or ending with '__' is reserved.)")
             return None
         else:
             try:
@@ -217,9 +217,9 @@ class Compiler:
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
-                   transformer: TransformationFunc,  # Node (CST) -> Node (abstract syntax tree (AST))
+                   transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: Compiler,  # Node (AST) -> Any
-                   preserve_ast: bool = False) -> Tuple[Any, List[Error], Node]:
+                   preserve_ast: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles a source in four stages:
     1. Pre-Processing (if needed)
@@ -259,7 +259,7 @@ def compile_source(source: str,
         source_mapping = lambda i: i
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
-    syntax_tree = parser(source_text)
+    syntax_tree = parser(source_text)  # type: RootNode
     if is_logging():
         log_ST(syntax_tree, log_file_name + '.cst')
         log_parsing_history(parser, log_file_name)
@@ -287,3 +287,6 @@ def compile_source(source: str,
     messages = syntax_tree.collect_errors()
     adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
+
+
+# TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser

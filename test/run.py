@@ -11,7 +11,7 @@ import time
 
 def run_tests(command):
     testtype = 'DOCTEST' if command.find('doctest') >= 0 else 'UNITTEST'
-    filename = command[command.rfind(' ')+1:]
+    filename = command[command.rfind(' ') + 1:]
     print('\n' + testtype + ' ' + filename)
     os.system(command)
 

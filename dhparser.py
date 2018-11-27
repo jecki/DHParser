@@ -24,10 +24,11 @@ import os
 import sys
 
 from DHParser.compile import compile_source
-from DHParser.dsl import compileDSL, compile_on_disk, recompile_grammar
+from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import logging
-from DHParser.toolkit import re
+from DHParser.toolkit import re, typing
+from typing import cast
 
 LOGGING = False
 
@@ -166,7 +167,7 @@ if __name__ == '__main__':
         # if called with a single filename that is either an EBNF file or a known
         # test file type then use the given argument
         arg = argv[1]
-    else: 
+    else:
         # otherwise run all tests in the test directory
         arg = '*_test_*.ini'
     if arg.endswith('.ebnf'):
@@ -241,9 +242,10 @@ def selftest() -> bool:
     ebnf_src = builtin_ebnf_parser.__doc__[builtin_ebnf_parser.__doc__.find('#'):]
     ebnf_transformer = get_ebnf_transformer()
     ebnf_compiler = get_ebnf_compiler('EBNF')
-    generated_ebnf_parser, errors, _ = compile_source(
+    result, errors, _ = compile_source(
         ebnf_src, None,
         builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
+    generated_ebnf_parser = cast(str, result)
 
     if errors:
         print("Selftest FAILED :-(")
@@ -328,8 +330,8 @@ def main():
             file_path = input('Please enter a file path for compilation > ')
             if os.path.exists(file_path) and os.path.isfile(file_path):
                 compiler_suite = input('Compiler suite or ENTER (for ebnf) > ')
-                if (not compiler_suite or (os.path.exists(compiler_suite)
-                        and os.path.isfile(compiler_suite))):
+                if not compiler_suite or (os.path.exists(compiler_suite)
+                                          and os.path.isfile(compiler_suite)):
                     _errors = compile_on_disk(file_path, compiler_suite)
                     if _errors:
                         print('\n\n'.join(str(err) for err in _errors))

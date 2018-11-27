@@ -156,7 +156,6 @@ def strip_tokens(tokenized: str) -> str:
     return ''.join(result)
 
 
-
 #######################################################################
 #
 # Source Maps - mapping source code positions between different
