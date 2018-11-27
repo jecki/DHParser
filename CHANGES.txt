@@ -1,5 +1,5 @@
-DHParser Version 0.8.4 (pending)
-................................
+DHParser Version 0.8.4 (27.11.2018)
+...................................
 
 - lookahead parsers can now be unit-tested (experimental)
 - customized, faster deepcopy of syntax trees
