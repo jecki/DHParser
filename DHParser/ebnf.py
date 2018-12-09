@@ -35,7 +35,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, typing
+    GLOBALS, CONFIG_PRESET, get_config_value, typing
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
@@ -577,17 +577,19 @@ class EBNFCompiler(Compiler):
         # add EBNF grammar to the doc string of the parser class
 
         article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '  # what about 'hour', 'universe' etc.?
+        show_source = get_config_value('add_grammar_source_to_parser_docstring')
         declarations = ['class ' + self.grammar_name
                         + 'Grammar(Grammar):',
                         'r"""Parser for ' + article + self.grammar_name
                         + ' source file'
-                        + (', with this grammar:' if self.grammar_source else '.')]
+                        + ('. Grammar:' if self.grammar_source and show_source else '.')]
         definitions.append(('parser_initialization__', '"upon instantiation"'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
             declarations.append('')
-            declarations += [line for line in self.grammar_source.split('\n')]
+            if show_source:
+                declarations += [line for line in self.grammar_source.split('\n')]
             while declarations[-1].strip() == '':
                 declarations = declarations[:-1]
         declarations.append('"""')
@@ -1013,3 +1015,6 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         compiler.set_grammar_name(grammar_name, grammar_source)
         GLOBALS.ebnf_compiler_singleton = compiler
         return compiler
+
+
+CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False

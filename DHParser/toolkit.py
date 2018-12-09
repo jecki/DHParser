@@ -58,7 +58,55 @@ __all__ = ('escape_re',
            'compile_python_object',
            'smart_list',
            'sane_parser_name',
-           'GLOBALS')
+           'GLOBALS',
+           'CONFIG_PRESET',
+           'get_config_value',
+           'set_config_value')
+
+
+#######################################################################
+#
+# Thread local globals and configuration
+#
+#######################################################################
+
+GLOBALS = threading.local()
+CONFIG_PRESET = {}
+
+
+def get_config_value(key):
+    """
+    Retrieves a configuration value thread-safely.
+    :param key:  the key (an immutable, usually a string)
+    :return:     the value
+    """
+    try:
+        cfg = GLOBALS.config
+    except AttributeError:
+        GLOBALS.config = {}
+        cfg = GLOBALS.config
+    try:
+        return cfg[key]
+    except KeyError:
+        value = CONFIG_PRESET[key]
+        GLOBALS.config[key] = value
+        return value
+
+
+def set_config_value(key, value):
+    """
+    Changes a configuration value thread-safely. The configuration
+    value will be set only for the current thread. In order to
+    set configuration values for any new thread, add the key and value
+    to CONFIG_PRESET, before the thread is started.
+    :param key:    the key (an immutable, usually a string)
+    :param value:  the value
+    """
+    try:
+        _ = GLOBALS.config
+    except AttributeError:
+        GLOBALS.config = {}
+    GLOBALS.config[key] = value
 
 
 #######################################################################
@@ -66,10 +114,6 @@ __all__ = ('escape_re',
 # miscellaneous (generic)
 #
 #######################################################################
-
-
-GLOBALS = threading.local()
-GLOBALS.config = {}
 
 
 def escape_re(strg: str) -> str:

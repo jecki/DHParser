@@ -4,8 +4,8 @@ DHParser Version 0.8.4 (10.11.2018)
 - lookahead parsers can now be unit-tested (experimental)
 - customized (faster) deepcopy of syntax trees
 - better customization of XML-serialization of syntax-trees
-- tollkit.GLOBALS as container for globel (actually thread-local)
-  variables and parameters added
+- support for thread-safe globals and configuration data
+  via toolkit-module
 
 
 DHParser Version 0.8.3 (20.8.2018)
