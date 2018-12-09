@@ -546,9 +546,8 @@ class XMLCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a XML source file.
     """
 
-    def __init__(self, grammar_name="XML", grammar_source=""):
-        super(XMLCompiler, self).__init__(grammar_name, grammar_source)
-        assert re.match('\w+\Z', grammar_name)
+    def __init__(self):
+        super(XMLCompiler, self).__init__()
         self.cleanup_whitespace = True  # remove empty CharData from mixed elements
 
     def _reset(self):
@@ -909,14 +908,12 @@ class XMLCompiler(Compiler):
     #     return node
 
 
-def get_compiler(grammar_name="XML", grammar_source="") -> XMLCompiler:
+def get_compiler() -> XMLCompiler:
     global thread_local_XML_compiler_singleton
     try:
         compiler = thread_local_XML_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
     except NameError:
-        thread_local_XML_compiler_singleton = \
-            XMLCompiler(grammar_name, grammar_source)
+        thread_local_XML_compiler_singleton = XMLCompiler()
         compiler = thread_local_XML_compiler_singleton
     return compiler
 

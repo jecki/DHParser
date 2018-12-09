@@ -24,7 +24,7 @@ from DHParser import is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationDict, Whitespace, \
-    traverse, remove_children_if, merge_children, is_anonymous, \
+    traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, replace_parser, \
@@ -189,11 +189,6 @@ def get_transformer() -> TransformationFunc:
 class BibTeXCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a BibTeX source file.
     """
-
-    def __init__(self, grammar_name="BibTeX", grammar_source=""):
-        super(BibTeXCompiler, self).__init__(grammar_name, grammar_source)
-        assert re.match('\w+\Z', grammar_name)
-
     def on_bibliography(self, node):
         return node
 
@@ -228,14 +223,12 @@ class BibTeXCompiler(Compiler):
         pass
 
 
-def get_compiler(grammar_name="BibTeX", grammar_source="") -> BibTeXCompiler:
+def get_compiler() -> BibTeXCompiler:
     global thread_local_BibTeX_compiler_singleton
     try:
         compiler = thread_local_BibTeX_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
     except NameError:
-        thread_local_BibTeX_compiler_singleton = \
-            BibTeXCompiler(grammar_name, grammar_source)
+        thread_local_BibTeX_compiler_singleton = BibTeXCompiler()
         compiler = thread_local_BibTeX_compiler_singleton
     return compiler
 

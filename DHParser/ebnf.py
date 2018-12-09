@@ -300,13 +300,11 @@ def get_transformer() -> TransformationFunc:
 
 
 COMPILER_FACTORY = '''
-def get_compiler(grammar_name="{NAME}", grammar_source="") -> {NAME}Compiler:
+def get_compiler() -> {NAME}Compiler:
     try:
         compiler = GLOBALS.{NAME}_{ID}_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
     except AttributeError:
-        GLOBALS.{NAME}_{ID}_compiler_singleton = \\
-            {NAME}Compiler(grammar_name, grammar_source)
+        GLOBALS.{NAME}_{ID}_compiler_singleton = {NAME}Compiler()
         compiler = GLOBALS.{NAME}_{ID}_compiler_singleton
     return compiler
 '''
@@ -378,6 +376,10 @@ class EBNFCompiler(Compiler):
         re_flags:  A set of regular expression flags to be added to all
                 regular expressions found in the current parsing process
 
+        grammar_name:  The name of the grammar to be compiled
+
+        grammar_source:  The source code of the grammar to be compiled.
+
         grammar_id: a unique id for every compiled grammar. (Required for
                 disambiguation of of thread local variables storing
                 compiled texts.)
@@ -399,10 +401,10 @@ class EBNFCompiler(Compiler):
     REPEATABLE_DIRECTIVES = {'tokens'}
 
 
-    def __init__(self, grammar_name="", grammar_source=""):
+    def __init__(self, grammar_name="DSL", grammar_source=""):
         self.grammar_id = 0
-        super(EBNFCompiler, self).__init__(grammar_name, grammar_source)
-        # self._reset()
+        super(EBNFCompiler, self).__init__()  # calls the _reset()-method
+        self.set_grammar_name(grammar_name, grammar_source)
 
 
     def _reset(self):
@@ -430,6 +432,23 @@ class EBNFCompiler(Compiler):
     @property
     def result(self) -> str:
         return self._result
+
+
+    def set_grammar_name(self, grammar_name: str = "", grammar_source: str = ""):
+        """
+        Changes the grammar name and source.
+
+        The grammar name and the source text are metadata that do not affect the
+        compilation process. It is used to name and annotate the output.
+        Returns `self`.
+        """
+        assert grammar_name == "" or re.match(r'\w+\Z', grammar_name)
+        if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
+            grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
+        self.grammar_name = grammar_name
+        self.grammar_source = load_if_file(grammar_source)
+        return self
+
 
     # methods for generating skeleton code for preprocessor, transformer, and compiler
 
@@ -481,11 +500,9 @@ class EBNFCompiler(Compiler):
                     '    """Compiler for the abstract-syntax-tree of a '
                     + self.grammar_name + ' source file.',
                     '    """', '',
-                    '    def __init__(self, grammar_name="'
-                    + self.grammar_name + '", grammar_source=""):',
-                    '        super(' + self.grammar_name
-                    + 'Compiler, self).__init__(grammar_name, grammar_source)',
-                    r"        assert re.match('\w+\Z', grammar_name)", '',
+                    '    def __init__(self):',
+                    '        super(' + self.grammar_name + 'Compiler, self).__init__()',
+                    '',
                     '    def _reset(self):',
                     '        super()._reset()',
                     '        # initialize your variables here, not in the constructor!']
@@ -992,5 +1009,7 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         compiler.set_grammar_name(grammar_name, grammar_source)
         return compiler
     except AttributeError:
-        GLOBALS.ebnf_compiler_singleton = EBNFCompiler(grammar_name, grammar_source)
-        return GLOBALS.ebnf_compiler_singleton
+        compiler = EBNFCompiler(grammar_name, grammar_source)
+        compiler.set_grammar_name(grammar_name, grammar_source)
+        GLOBALS.ebnf_compiler_singleton = compiler
+        return compiler

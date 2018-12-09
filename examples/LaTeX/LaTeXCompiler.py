@@ -24,7 +24,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
-    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error
+    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, GLOBALS
 from DHParser.log import logging
 
 
@@ -332,12 +332,11 @@ class LaTeXGrammar(Grammar):
     root__ = latexdoc
     
 def get_grammar() -> LaTeXGrammar:
-    global thread_local_LaTeX_grammar_singleton
     try:
-        grammar = thread_local_LaTeX_grammar_singleton
-    except NameError:
-        thread_local_LaTeX_grammar_singleton = LaTeXGrammar()
-        grammar = thread_local_LaTeX_grammar_singleton
+        grammar = GLOBALS.LaTeX_1_grammar_singleton
+    except AttributeError:
+        GLOBALS.LaTeX_1_grammar_singleton = LaTeXGrammar()
+        grammar = GLOBALS.LaTeX_1_grammar_singleton
     return grammar
 
 
@@ -496,9 +495,8 @@ class LaTeXCompiler(Compiler):
     KNOWN_DOCUMENT_CLASSES = {'book', 'article'}
     KNOWN_LANGUAGES = {'english', 'german'}
 
-    def __init__(self, grammar_name="LaTeX", grammar_source=""):
-        super(LaTeXCompiler, self).__init__(grammar_name, grammar_source)
-        assert re.match('\w+\Z', grammar_name)
+    def __init__(self):
+        super(LaTeXCompiler, self).__init__()
         self.metadata = defaultdict(empty_defaultdict)
 
     # def on_latexdoc(self, node):
@@ -771,14 +769,12 @@ class LaTeXCompiler(Compiler):
     #     return node
 
 
-def get_compiler(grammar_name="LaTeX", grammar_source="") -> LaTeXCompiler:
+def get_compiler() -> LaTeXCompiler:
     global thread_local_LaTeX_compiler_singleton
     try:
         compiler = thread_local_LaTeX_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
     except NameError:
-        thread_local_LaTeX_compiler_singleton = \
-            LaTeXCompiler(grammar_name, grammar_source)
+        thread_local_LaTeX_compiler_singleton = LaTeXCompiler()
         compiler = thread_local_LaTeX_compiler_singleton
     return compiler
 

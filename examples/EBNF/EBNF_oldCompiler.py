@@ -103,13 +103,11 @@ class EBNF_oldGrammar(Grammar):
     EOF = !/./
     """
     expression = Forward()
-    source_hash__ = "876bb760b35a20924a3ee449820f4316"
+    source_hash__ = "249997be7111ca806939bf18070e136e"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP_RE__
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
@@ -134,12 +132,11 @@ class EBNF_oldGrammar(Grammar):
     root__ = syntax
     
 def get_grammar() -> EBNF_oldGrammar:
-    global thread_local_EBNF_old_grammar_singleton
     try:
-        grammar = thread_local_EBNF_old_grammar_singleton
-    except NameError:
-        thread_local_EBNF_old_grammar_singleton = EBNF_oldGrammar()
-        grammar = thread_local_EBNF_old_grammar_singleton
+        grammar = GLOBALS.EBNF_old_1_grammar_singleton
+    except AttributeError:
+        GLOBALS.EBNF_old_1_grammar_singleton = EBNF_oldGrammar()
+        grammar = GLOBALS.EBNF_old_1_grammar_singleton
     return grammar
 
 

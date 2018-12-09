@@ -84,16 +84,13 @@ class Compiler:
     Attributes:
         context:  A list of parent nodes that ends with the currently
                 compiled node.
-        grammar_name:  The name of the grammar this compiler is related to
-        grammar_source:  The source code of the grammar this compiler is
-                related to.
+
         _dirty_flag:  A flag indicating that the compiler has already been
                 called at least once and that therefore all compilation
                 variables must be reset when it is called again.
     """
 
-    def __init__(self, grammar_name="", grammar_source=""):
-        self.set_grammar_name(grammar_name, grammar_source)
+    def __init__(self):
         self._reset()
 
     def _reset(self):
@@ -115,22 +112,6 @@ class Compiler:
         self.tree = root
         result = self.compile(root)
         return result
-
-    def set_grammar_name(self, grammar_name: str = "", grammar_source: str = ""):
-        """
-        Changes the grammar's name and the grammar's source.
-
-        The grammar name and the source text of the grammar are
-        metadata about the grammar that do not affect the compilation
-        process. Classes inheriting from `Compiler` can use this
-        information to name and annotate its output. Returns `self`.
-        """
-        assert grammar_name == "" or re.match(r'\w+\Z', grammar_name)
-        if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
-            grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
-        self.grammar_name = grammar_name
-        self.grammar_source = load_if_file(grammar_source)
-        return self
 
     # @staticmethod
     # def propagate_error_flags(node: Node, lazy: bool = True) -> None:

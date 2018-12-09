@@ -11,7 +11,7 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['..\\', '..\\..\\'])
+sys.path.extend(['../', '../../', './'])
 
 try:
     import regex as re
@@ -24,13 +24,13 @@ from DHParser import is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, Whitespace, \
-    traverse, remove_children_if, merge_children, is_anonymous, \
+    traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    forbid, assert_content, remove_infix_operator
+    forbid, assert_content, remove_infix_operator, GLOBALS
 from DHParser.log import logging
 
 
@@ -100,13 +100,11 @@ class EBNFGrammar(Grammar):
     EOF = !/./
     """
     expression = Forward()
-    source_hash__ = "97b616756462a59e1f5162a95ae84c5f"
+    source_hash__ = "6099690fa36228d49e6c35ec60750c59"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP_RE__
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
@@ -131,12 +129,11 @@ class EBNFGrammar(Grammar):
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
-    global thread_local_EBNF_grammar_singleton
     try:
-        grammar = thread_local_EBNF_grammar_singleton
-    except NameError:
-        thread_local_EBNF_grammar_singleton = EBNFGrammar()
-        grammar = thread_local_EBNF_grammar_singleton
+        grammar = GLOBALS.EBNF_2_grammar_singleton
+    except AttributeError:
+        GLOBALS.EBNF_2_grammar_singleton = EBNFGrammar()
+        grammar = GLOBALS.EBNF_2_grammar_singleton
     return grammar
 
 
@@ -201,11 +198,6 @@ def get_transformer() -> TransformationFunc:
 class EBNFCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a EBNF source file.
     """
-
-    def __init__(self, grammar_name="EBNF", grammar_source=""):
-        super(EBNFCompiler, self).__init__(grammar_name, grammar_source)
-        assert re.match('\w+\Z', grammar_name)
-
     def on_syntax(self, node):
         return node
 
@@ -258,14 +250,12 @@ class EBNFCompiler(Compiler):
         pass
 
 
-def get_compiler(grammar_name="EBNF", grammar_source="") -> EBNFCompiler:
+def get_compiler() -> EBNFCompiler:
     global thread_local_EBNF_compiler_singleton
     try:
         compiler = thread_local_EBNF_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
     except NameError:
-        thread_local_EBNF_compiler_singleton = \
-            EBNFCompiler(grammar_name, grammar_source)
+        thread_local_EBNF_compiler_singleton = EBNFCompiler()
         compiler = thread_local_EBNF_compiler_singleton
     return compiler
 

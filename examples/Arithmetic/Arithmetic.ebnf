@@ -6,3 +6,4 @@ constant   = digit {digit}
 digit      = "0" | "1" | "..." | "9"
 test       = digit constant variable
 
+

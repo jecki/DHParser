@@ -69,6 +69,7 @@ __all__ = ('escape_re',
 
 
 GLOBALS = threading.local()
+GLOBALS.config = {}
 
 
 def escape_re(strg: str) -> str:

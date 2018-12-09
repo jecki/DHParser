@@ -10,6 +10,9 @@
 from functools import partial
 import os
 import sys
+
+sys.path.extend(['../../', '../', './'])
+
 try:
     import regex as re
 except ImportError:
@@ -21,7 +24,7 @@ from DHParser import logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, \
-    traverse, remove_children_if, merge_children, is_anonymous, Whitespace, \
+    traverse, remove_children_if, is_anonymous, Whitespace, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -64,13 +67,11 @@ class ArithmeticGrammar(Grammar):
     digit = Forward()
     expression = Forward()
     variable = Forward()
-    source_hash__ = "385a94a70cb629d46a13e15305692667"
+    source_hash__ = "c4e6e090ef9673b972ba18ef39fe7c8e"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP_RE__
     wsp__ = Whitespace(WSP_RE__)
     test = Series(digit, constant, variable)
     digit.set(Alternative(Series(Token("0"), wsp__), Series(Token("1"), wsp__), Series(Token("..."), wsp__), Series(Token("9"), wsp__)))
@@ -82,12 +83,11 @@ class ArithmeticGrammar(Grammar):
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
-    global thread_local_Arithmetic_grammar_singleton
     try:
-        grammar = thread_local_Arithmetic_grammar_singleton
-    except NameError:
-        thread_local_Arithmetic_grammar_singleton = ArithmeticGrammar()
-        grammar = thread_local_Arithmetic_grammar_singleton
+        grammar = GLOBALS.Arithmetic_1_grammar_singleton
+    except AttributeError:
+        GLOBALS.Arithmetic_1_grammar_singleton = ArithmeticGrammar()
+        grammar = GLOBALS.Arithmetic_1_grammar_singleton
     return grammar
 
 
@@ -135,10 +135,6 @@ class ArithmeticCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a Arithmetic source file.
     """
 
-    def __init__(self, grammar_name="Arithmetic", grammar_source=""):
-        super(ArithmeticCompiler, self).__init__(grammar_name, grammar_source)
-        assert re.match('\w+\Z', grammar_name)
-
     def on_expression(self, node):
         return node
 
@@ -161,14 +157,12 @@ class ArithmeticCompiler(Compiler):
     #     return node
 
 
-def get_compiler(grammar_name="Arithmetic", grammar_source="") -> ArithmeticCompiler:
+def get_compiler() -> ArithmeticCompiler:
     global thread_local_Arithmetic_compiler_singleton
     try:
         compiler = thread_local_Arithmetic_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
     except NameError:
-        thread_local_Arithmetic_compiler_singleton = \
-            ArithmeticCompiler(grammar_name, grammar_source)
+        thread_local_Arithmetic_compiler_singleton = ArithmeticCompiler()
         compiler = thread_local_Arithmetic_compiler_singleton
     return compiler
 

@@ -192,10 +192,6 @@ class LyrikCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a Lyrik source file.
     """
 
-    def __init__(self, grammar_name="Lyrik", grammar_source=""):
-        super(LyrikCompiler, self).__init__(grammar_name, grammar_source)
-        assert re.match('\w+\Z', grammar_name)
-
     def on_gedicht(self, node):
         return node
 
@@ -269,15 +265,13 @@ class LyrikCompiler(Compiler):
         pass
 
 
-def get_compiler(grammar_name="Lyrik", grammar_source="") -> LyrikCompiler:
+def get_compiler() -> LyrikCompiler:
     global thread_local_Lyrik_compiler_singleton
     try:
         compiler = thread_local_Lyrik_compiler_singleton
-        compiler.set_grammar_name(grammar_name, grammar_source)
         return compiler
     except NameError:
-        thread_local_Lyrik_compiler_singleton = \
-            LyrikCompiler(grammar_name, grammar_source)
+        thread_local_Lyrik_compiler_singleton = LyrikCompiler()
         return thread_local_Lyrik_compiler_singleton 
 
 

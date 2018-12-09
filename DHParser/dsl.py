@@ -101,7 +101,8 @@ from DHParser import logging, is_filename, load_if_file, MockParser, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content, replace_content_by, error_on, recompile_grammar, GLOBALS
+    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
+    error_on, recompile_grammar, GLOBALS
 '''.format(dhparserdir=dhparserdir)
 
 
@@ -455,13 +456,14 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     compiler_name = os.path.basename(rootname)
     if compiler_suite:
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
+        compiler1 = cfactory()
     else:
         sfactory = get_ebnf_preprocessor
         pfactory = get_ebnf_grammar
         tfactory = get_ebnf_transformer
         cfactory = get_ebnf_compiler
-    compiler1 = cfactory()
-    compiler1.set_grammar_name(compiler_name, source_file)
+        compiler1 = cfactory()
+        compiler1.set_grammar_name(compiler_name, source_file)
     result, messages, _ = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
 
     if has_errors(messages):
