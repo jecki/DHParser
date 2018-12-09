@@ -95,9 +95,9 @@ class TestLoggingAndLoading:
     def test_logging(self):
         try:
             log_dir()
-            assert False, "Name error should be raised when log_dir() is called outside " \
+            assert False, "AttributeError should be raised when log_dir() is called outside " \
                           "a logging context."
-        except NameError:
+        except AttributeError:
             pass
         with logging("TESTLOGS"):
             assert not os.path.exists("TESTSLOGS"), \

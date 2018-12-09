@@ -34,6 +34,7 @@ import inspect
 import json
 import os
 import sys
+import threading
 
 from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history

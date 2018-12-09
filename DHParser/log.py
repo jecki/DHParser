@@ -52,11 +52,12 @@ import collections
 import contextlib
 import html
 import os
+import threading
 
 from DHParser.error import line_col
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node
-from DHParser.toolkit import is_filename, escape_control_characters, typing
+from DHParser.toolkit import is_filename, escape_control_characters, THREAD_LOCAL, typing
 from typing import List, Tuple, Union
 
 __all__ = ('log_dir',
@@ -87,15 +88,14 @@ def log_dir() -> str:
     Returns:
         name of the logging directory
     """
-    # the try-except clauses in the following are precautions for multiprocessing
-    global LOGGING
+    # the try-except clauses in the following are precautions for multithreading
     try:
-        dirname = LOGGING  # raises a name error if LOGGING is not defined
+        dirname = THREAD_LOCAL.LOGGING  # raises a name error if LOGGING is not defined
         if not dirname:
-            raise NameError  # raise a name error if LOGGING evaluates to False
-    except NameError:
-        raise NameError("No access to log directory before logging has been "
-                        "turned on within the same thread/process.")
+            raise AttributeError  # raise a name error if LOGGING evaluates to False
+    except AttributeError:
+        raise AttributeError("No access to log directory before logging has been "
+                             "turned on within the same thread/process.")
     if os.path.exists(dirname) and not os.path.isdir(dirname):
         raise IOError('"' + dirname + '" cannot be used as log directory, '
                                       'because it is not a directory!')
@@ -123,24 +123,22 @@ def logging(dirname="LOGS"):
         dirname: the name for the log directory or the empty string to
             turn logging of
     """
-    global LOGGING
     if dirname and not isinstance(dirname, str):
         dirname = "LOGS"  # be fail tolerant here...
     try:
-        save = LOGGING
-    except NameError:
+        save = THREAD_LOCAL.LOGGING
+    except AttributeError:
         save = ""
-    LOGGING = dirname or ""
+    THREAD_LOCAL.LOGGING = dirname or ""
     yield
-    LOGGING = save
+    THREAD_LOCAL.LOGGING = save
 
 
 def is_logging() -> bool:
     """-> True, if logging is turned on."""
-    global LOGGING
     try:
-        return bool(LOGGING)
-    except NameError:
+        return bool(THREAD_LOCAL.LOGGING)
+    except AttributeError:
         return False
 
 

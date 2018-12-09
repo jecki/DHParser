@@ -57,7 +57,8 @@ __all__ = ('escape_re',
            'expand_table',
            'compile_python_object',
            'smart_list',
-           'sane_parser_name')
+           'sane_parser_name',
+           'THREAD_LOCAL')
 
 
 #######################################################################
@@ -65,6 +66,9 @@ __all__ = ('escape_re',
 # miscellaneous (generic)
 #
 #######################################################################
+
+
+THREAD_LOCAL = threading.local()
 
 
 def escape_re(strg: str) -> str:

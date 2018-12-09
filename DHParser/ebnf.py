@@ -33,14 +33,14 @@ from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    typing
+    THREAD_LOCAL, typing
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
 from DHParser.versionnumber import __version__
-from typing import Callable, Dict, List, Set, Tuple
+from typing import Callable, Dict, List, Set, Tuple, Any
 
 
 __all__ = ('get_ebnf_preprocessor',
@@ -195,13 +195,12 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
 
 
 def get_ebnf_grammar() -> EBNFGrammar:
-    global thread_local_ebnf_grammar_singleton
     try:
-        grammar = thread_local_ebnf_grammar_singleton
+        grammar = THREAD_LOCAL.ebnf_grammar_singleton
         return grammar
-    except NameError:
-        thread_local_ebnf_grammar_singleton = EBNFGrammar()
-        return thread_local_ebnf_grammar_singleton
+    except AttributeError:
+        THREAD_LOCAL.ebnf_grammar_singleton = EBNFGrammar()
+        return THREAD_LOCAL.ebnf_grammar_singleton
 
 
 ########################################################################
@@ -249,12 +248,11 @@ def EBNFTransform() -> TransformationFunc:
 
 
 def get_ebnf_transformer() -> TransformationFunc:
-    global thread_local_EBNF_transformer_singleton
     try:
-        transformer = thread_local_EBNF_transformer_singleton
-    except NameError:
-        thread_local_EBNF_transformer_singleton = EBNFTransform()
-        transformer = thread_local_EBNF_transformer_singleton
+        transformer = THREAD_LOCAL.EBNF_transformer_singleton
+    except AttributeError:
+        THREAD_LOCAL.EBNF_transformer_singleton = EBNFTransform()
+        transformer = THREAD_LOCAL.EBNF_transformer_singleton
     return transformer
 
 
@@ -278,12 +276,11 @@ def get_preprocessor() -> PreprocessorFunc:
 
 GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
-    global thread_local_{NAME}_grammar_singleton
     try:
-        grammar = thread_local_{NAME}_grammar_singleton
-    except NameError:
-        thread_local_{NAME}_grammar_singleton = {NAME}Grammar()
-        grammar = thread_local_{NAME}_grammar_singleton
+        grammar = THREAD_LOCAL.{NAME}_{ID}_grammar_singleton
+    except AttributeError:
+        THREAD_LOCAL.{NAME}_{ID}_grammar_singleton = {NAME}Grammar()
+        grammar = THREAD_LOCAL.{NAME}_{ID}_grammar_singleton
     return grammar
 '''
 
@@ -293,26 +290,24 @@ def {NAME}Transform() -> TransformationDict:
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
-    global thread_local_{NAME}_transformer_singleton
     try:
-        transformer = thread_local_{NAME}_transformer_singleton
-    except NameError:
-        thread_local_{NAME}_transformer_singleton = {NAME}Transform()
-        transformer = thread_local_{NAME}_transformer_singleton
+        transformer = THREAD_LOCAL.{NAME}_{ID}_transformer_singleton
+    except AttributeError:
+        THREAD_LOCAL.{NAME}_{ID}_transformer_singleton = {NAME}Transform()
+        transformer = THREAD_LOCAL.{NAME}_{ID}_transformer_singleton
     return transformer
 '''
 
 
 COMPILER_FACTORY = '''
 def get_compiler(grammar_name="{NAME}", grammar_source="") -> {NAME}Compiler:
-    global thread_local_{NAME}_compiler_singleton
     try:
-        compiler = thread_local_{NAME}_compiler_singleton
+        compiler = THREAD_LOCAL.{NAME}_{ID}_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
-    except NameError:
-        thread_local_{NAME}_compiler_singleton = \\
+    except AttributeError:
+        THREAD_LOCAL.{NAME}_{ID}_compiler_singleton = \\
             {NAME}Compiler(grammar_name, grammar_source)
-        compiler = thread_local_{NAME}_compiler_singleton
+        compiler = THREAD_LOCAL.{NAME}_{ID}_compiler_singleton
     return compiler
 '''
 
@@ -369,19 +364,23 @@ class EBNFCompiler(Compiler):
         definitions:  A dictionary of definitions. Other than `rules`
                 this maps the symbols to their compiled definienda.
 
-        deferred_taks:  A list of callables that is filled during
+        deferred_tasks:  A list of callables that is filled during
                 compilatation, but that will be executed only after
                 compilation has finished. Typically, it contains
                 sementatic checks that require information that
                 is only available upon completion of compilation.
 
-        root:   The name of the root symbol.
+        root_symbol: The name of the root symbol.
 
         directives:  A dictionary of all directives and their default
                 values.
 
         re_flags:  A set of regular expression flags to be added to all
                 regular expressions found in the current parsing process
+
+        grammar_id: a unique id for every compiled grammar. (Required for
+                disambiguation of of thread local variables storing
+                compiled texts.)
     """
     COMMENT_KEYWORD = "COMMENT__"
     WHITESPACE_KEYWORD = "WSP_RE__"
@@ -401,8 +400,9 @@ class EBNFCompiler(Compiler):
 
 
     def __init__(self, grammar_name="", grammar_source=""):
+        self.grammar_id = 0
         super(EBNFCompiler, self).__init__(grammar_name, grammar_source)
-        self._reset()
+        # self._reset()
 
 
     def _reset(self):
@@ -424,6 +424,8 @@ class EBNFCompiler(Compiler):
                            'filter': dict()}  # alt. 'filter'
         # self.directives['ignorecase']: False
         self.defined_directives = set()  # type: Set[str]
+        self.grammar_id += 1
+
 
     @property
     def result(self) -> str:
@@ -463,7 +465,7 @@ class EBNFCompiler(Compiler):
             transtable.append('    "' + name + '": %s,' % transformations)
         transtable.append('    ":Token": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
-        transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
+        transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(transtable)
 
 
@@ -495,7 +497,7 @@ class EBNFCompiler(Compiler):
             else:
                 compiler += ['    # def ' + method_name + '(self, node):',
                              '    #     return node', '']
-        compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
+        compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(compiler)
 
     def verify_transformation_table(self, transtable):
@@ -618,7 +620,7 @@ class EBNFCompiler(Compiler):
             declarations.append('root__ = ' + self.root_symbol)
         declarations.append('')
         self._result = '\n    '.join(declarations) \
-                       + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
+                       + GRAMMAR_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)
         return self._result
 
 
@@ -985,11 +987,10 @@ class EBNFCompiler(Compiler):
 
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
-    global thread_local_ebnf_compiler_singleton
     try:
-        compiler = thread_local_ebnf_compiler_singleton
+        compiler = THREAD_LOCAL.ebnf_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
         return compiler
-    except NameError:
-        thread_local_ebnf_compiler_singleton = EBNFCompiler(grammar_name, grammar_source)
-        return thread_local_ebnf_compiler_singleton
+    except AttributeError:
+        THREAD_LOCAL.ebnf_compiler_singleton = EBNFCompiler(grammar_name, grammar_source)
+        return THREAD_LOCAL.ebnf_compiler_singleton
