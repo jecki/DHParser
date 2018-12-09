@@ -132,6 +132,9 @@ of our "example.dsl"-document according the grammar specified in "poetry.ebnf"
 If you see the pseudo-XML on screen, the setup of the new DHParser-project
 has been successful.
 
+Developing a DHParser-project
+=============================
+
 Understanding how compilation of DSL-documents with DHParser works
 ------------------------------------------------------------------
 
