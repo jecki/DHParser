@@ -58,7 +58,7 @@ __all__ = ('escape_re',
            'compile_python_object',
            'smart_list',
            'sane_parser_name',
-           'THREAD_LOCAL')
+           'GLOBALS')
 
 
 #######################################################################
@@ -68,7 +68,7 @@ __all__ = ('escape_re',
 #######################################################################
 
 
-THREAD_LOCAL = threading.local()
+GLOBALS = threading.local()
 
 
 def escape_re(strg: str) -> str:

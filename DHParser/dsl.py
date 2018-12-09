@@ -101,7 +101,7 @@ from DHParser import logging, is_filename, load_if_file, MockParser, \\
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content, replace_content_by, error_on, recompile_grammar, THREAD_LOCAL
+    replace_content, replace_content_by, error_on, recompile_grammar, GLOBALS
 '''.format(dhparserdir=dhparserdir)
 
 

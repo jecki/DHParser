@@ -57,7 +57,7 @@ import threading
 from DHParser.error import line_col
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node
-from DHParser.toolkit import is_filename, escape_control_characters, THREAD_LOCAL, typing
+from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS, typing
 from typing import List, Tuple, Union
 
 __all__ = ('log_dir',
@@ -90,7 +90,7 @@ def log_dir() -> str:
     """
     # the try-except clauses in the following are precautions for multithreading
     try:
-        dirname = THREAD_LOCAL.LOGGING  # raises a name error if LOGGING is not defined
+        dirname = GLOBALS.LOGGING  # raises a name error if LOGGING is not defined
         if not dirname:
             raise AttributeError  # raise a name error if LOGGING evaluates to False
     except AttributeError:
@@ -126,18 +126,18 @@ def logging(dirname="LOGS"):
     if dirname and not isinstance(dirname, str):
         dirname = "LOGS"  # be fail tolerant here...
     try:
-        save = THREAD_LOCAL.LOGGING
+        save = GLOBALS.LOGGING
     except AttributeError:
         save = ""
-    THREAD_LOCAL.LOGGING = dirname or ""
+    GLOBALS.LOGGING = dirname or ""
     yield
-    THREAD_LOCAL.LOGGING = save
+    GLOBALS.LOGGING = save
 
 
 def is_logging() -> bool:
     """-> True, if logging is turned on."""
     try:
-        return bool(THREAD_LOCAL.LOGGING)
+        return bool(GLOBALS.LOGGING)
     except AttributeError:
         return False
 
