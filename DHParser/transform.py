@@ -729,6 +729,27 @@ def normalize_whitespace(context):
         node.result = re.sub(r'\s+', ' ', node.result)
 
 
+def merge_whitespace(context):
+    """
+    Merges adjacent whitespace. UNTESTED!
+    """
+    node = context[-1]
+    children = node.children
+    new_result = []
+    i = 0
+    L = len(children)
+    while i < L:
+        if children[i].parser.pytpe == WHITESPACE_PTYPE:
+            k = i
+            while i < L and children[k].parser.ptype == WHITESPACE_PTYPE:
+                i += 1
+            if i > k:
+                children[k].result = sum(children[n].result for n in range(k, i + 1))
+            new_result.append(children[k])
+        i += 1
+    node.result = tuple(new_result)
+
+
 def move_whitespace(context):
     """
     Moves adjacent whitespace nodes to the parent node.
