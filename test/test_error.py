@@ -29,7 +29,8 @@ try:
 except ImportError:
     import re
 
-from DHParser.error import linebreaks, line_col
+from DHParser.error import linebreaks, line_col, Error
+from DHParser.dsl import grammar_provider,  CompilationError
 
 
 class TestErrorSupport:
@@ -68,6 +69,50 @@ class TestErrorSupport:
         self.mini_suite(s, linebreaks(s), 0)
         s = "\n123456789\n123456789\n"
         self.mini_suite(s, linebreaks(s), 1)
+
+
+class TestCuratedErrors:
+    """
+    Cureted Errors replace existing errors with alternative
+    error codes and messages that are more helptful to the user.
+    """
+    def test_user_error_declaration(self):
+        lang = """
+            document = series | /.*/
+            series = "X" | head §"C" "D"
+            head = "A" "B"
+            @series_error = "a user defined error message"
+            """
+        try:
+            parser = grammar_provider(lang)()
+            assert False, "Error definition after symbol definition should fail!"
+        except CompilationError as e:
+            pass
+
+    def test_curated_mandatory_continuation(self):
+        lang = """
+            document = series | /.*/
+            @series_error = "a user defined error message"
+            series = "X" | head §"C" "D"
+            head = "A" "B"
+            """
+        # from DHParser.dsl import compileDSL
+        # from DHParser.preprocess import nil_preprocessor
+        # from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+        # grammar_src = compileDSL(lang, nil_preprocessor, get_ebnf_grammar(),
+        #                          get_ebnf_transformer(), get_ebnf_compiler("test", lang))
+        # print(grammar_src)
+        parser = grammar_provider(lang)()
+        st = parser("X");  assert not st.error_flag
+        st = parser("ABCD");  assert not st.error_flag
+        st = parser("A_CD");  assert not st.error_flag
+        st = parser("AB_D");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "a user defined error message"
+        # transitivity of mandatory-operator
+        st = parser("ABC_");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "a user defined error message"
 
 
 if __name__ == "__main__":

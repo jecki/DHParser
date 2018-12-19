@@ -423,7 +423,8 @@ class EBNFCompiler(Compiler):
                            'comment': '',
                            'literalws': {'right'},
                            'tokens': set(),  # alt. 'preprocessor_tokens'
-                           'filter': dict()}  # alt. 'filter'
+                           'filter': dict(),  # alt. 'filter'
+                           'error': dict()}  # customized error messages
         # self.directives['ignorecase']: False
         self.defined_directives = set()  # type: Set[str]
         self.grammar_id += 1
@@ -793,6 +794,17 @@ class EBNFCompiler(Compiler):
                                     % (key, str(filter_set)))
             self.directives['filter'][key[:-7]] = filter_set.pop()
 
+        elif key.endswith('_error'):
+            error_msg = node.children[1].content
+            if not isinstance(error_msg, str):
+                self.tree.new_error(node, 'Directive "%s" requires message string as argument'
+                                    % (key, str(filter_set)))
+            symbol = key[:-6]
+            if symbol in self.rules:
+                self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
+                                    + 'must be defined before the symbol!')
+            self.directives['error'][symbol] = error_msg
+
         else:
             self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
                                 (key, ', '.join(list(self.directives.keys()))))
@@ -837,6 +849,12 @@ class EBNFCompiler(Compiler):
             compiled = self.non_terminal(node, 'Required')
         else:
             custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
+            # add custom error message if it has been declared for the currend definition
+            if custom_args:
+                current_symbol = next(reversed(self.rules.keys()))
+                msg = self.directives['error'].get(current_symbol, '')
+                if msg:
+                    custom_args.append('errmsg=' + msg)
             compiled = self.non_terminal(node, 'Series', custom_args)
         node.result = saved_result
         return compiled

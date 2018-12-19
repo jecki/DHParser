@@ -1219,7 +1219,14 @@ class Series(NaryOperator):
     the series.
 
     Attributes:
-        mandatory (int):  Starting
+        mandatory (int):  Number of the element statring at which the element
+                and all following elements are considered "mandatory". This
+                means that rather than returning a non-match an error message
+                is isssued. The default value is Series.NOPE, which means that
+                no elements are mandatory.
+        errmsg (str):  An optional error message that overrides the default
+               message for mandatory continuation errors. This can be used to
+               provide more helpful error messages to the user.
 
     Example::
 
@@ -1236,7 +1243,7 @@ class Series(NaryOperator):
     RX_ARGUMENT = re.compile(r'\s(\S)')
     NOPE = 1000
 
-    def __init__(self, *parsers: Parser, mandatory: int = NOPE) -> None:
+    def __init__(self, *parsers: Parser, mandatory: int = NOPE, errmsg: str="") -> None:
         super().__init__(*parsers)
         length = len(self.parsers)
         assert 1 <= length < Series.NOPE, \
@@ -1245,10 +1252,11 @@ class Series(NaryOperator):
             mandatory += length
         assert 0 <= mandatory < length or mandatory == Series.NOPE
         self.mandatory = mandatory
+        self.errmsg = errmsg
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory, errmsg=self.errmsg)
         duplicate.name = self.name
         duplicate.ptype = self.ptype
         return duplicate
@@ -1272,8 +1280,12 @@ class Series(NaryOperator):
                     node.errors.append(Error("§ %s violation" % parser.repr,
                                              location, Error.MESSAGE))
                     if not mandatory_violation:
-                        msg = '%s expected, "%s" found!' \
-                              % (parser.repr, text_[:10].replace('\n', '\\n '))
+                        found = text_[:10].replace('\n', '\\n ')
+                        if self.errmsg:
+                            msg = self.errmsg % found if self.errmsg.find("%s") >= 0 \
+                                else self.errmsg
+                        else:
+                            msg = '%s expected, "%s" found!' % (parser.repr, found)
                         mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)
                     text_ = text_[i:]
             results += (node,)
@@ -1681,6 +1693,14 @@ class Retrieve(Parser):
     `Retrieve` and the `Pop` parser.)
     The constructor parameter `symbol` determines which variable is
     used.
+
+    Attributes:
+        symbol: The parser that has stored the value to be retrieved, in
+            other words: "the observed parser"
+        rfilter: a procedure that through which the processing to the
+            retrieved symbols is channeld. In the simplemost case it merely
+            returns the last string stored by the observed parser. This can
+            be (mis-)used to execute any kind of semantic action.
     """
 
     def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
