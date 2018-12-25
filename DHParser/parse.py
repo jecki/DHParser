@@ -1264,9 +1264,8 @@ class Series(NaryOperator):
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
-        pos = 0
         mandatory_violation = None
-        for parser in self.parsers:
+        for pos, parser in enumerate(self.parsers):
             node, text_ = parser(text_)
             if not node:
                 if pos < self.mandatory:
@@ -1277,25 +1276,29 @@ class Series(NaryOperator):
                     i = max(1, text.index(match.regs[1][0])) if match else 1
                     location = self.grammar.document_length__ - len(text_)
                     node = Node(self, text_[:i]).init_pos(location)
-                    node.errors.append(Error("§ %s violation" % parser.repr,
-                                             location, Error.MESSAGE))
-                    if not mandatory_violation:
-                        found = text_[:10].replace('\n', '\\n ')
-                        if self.errmsg:
-                            msg = self.errmsg % found if self.errmsg.find("%s") >= 0 \
-                                else self.errmsg
-                        else:
-                            msg = '%s expected, "%s" found!' % (parser.repr, found)
-                        mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)
+                    # self.grammar.tree__.add_error(
+                    #     node, Error("§ %s violation" % parser.repr, location, Error.MESSAGE))
+                    # # node.errors.append(Error("§ %s violation" % parser.repr,
+                    # #                          location, Error.MESSAGE))
+                    found = text_[:10].replace('\n', '\\n ')
+                    if self.errmsg:
+                        msg = self.errmsg % found if self.errmsg.find("%s") >= 0 \
+                            else self.errmsg
+                    else:
+                        msg = '%s expected, "%s" found!' % (parser.repr, found)
+                    mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)
+                    self.grammar.tree__.add_error(node, mandatory_violation)
                     text_ = text_[i:]
+                    results += (node,)
+                    break
             results += (node,)
             # if node.error_flag:  # break on first error
             #    break
-            pos += 1
         assert len(results) <= len(self.parsers)
         node = Node(self, results)
         if mandatory_violation:
-            self.grammar.tree__.add_error(node, mandatory_violation)
+            pass
+            # self.grammar.tree__.add_error(node, mandatory_violation)
         return node, text_
 
     def __repr__(self):

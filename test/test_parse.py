@@ -298,6 +298,7 @@ class TestSeries:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
+        # print(st.collect_errors())
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
@@ -583,9 +584,9 @@ class TestBorderlineCases:
         cst = gr('X', 'parser')
         assert not cst.error_flag
         cst = gr(' ', 'parser')
-        assert cst.error_flag
+        assert cst.error_flag and cst.collect_errors()[0].code == Error.PARSER_DID_NOT_MATCH
         cst = gr('', 'parser')
-        assert cst.error_flag
+        assert cst.error_flag and cst.collect_errors()[0].code == Error.PARSER_DID_NOT_MATCH
 
     def test_matching(self):
         minilang = """parser = /.?/"""
@@ -593,9 +594,27 @@ class TestBorderlineCases:
         cst = gr(' ', 'parser')
         assert not cst.error_flag
         cst = gr('  ', 'parser')
-        assert cst.error_flag
+        assert cst.error_flag and cst.collect_errors()[0].code == Error.PARSER_STOPPED_BEFORE_END
         cst = gr('', 'parser')
         assert not cst.error_flag
+
+
+# class TestReentryAfterError:
+#     def test_reentry_after_mandatory_error(self):
+#         lang = """
+#         document = alpha [beta] gamma "."
+#           alpha = "ALPHA" abc
+#             abc = §"a" "b" "c"
+#           beta = "BETA" (bac | bca)
+#             bac = "b" "a" § "c"
+#             bca = "b" "c" § "a"
+#           gamma = "GAMMA" §(cab | cba)
+#             cab = "c" "a" §"b"
+#             cba = "c" "b" §"a"
+#         """
+#         gr = grammar_provider(lang)()
+#         cst =  gr('ALPHA abc BETA bac GAMMA cab .')
+#         assert not cst.error_flag
 
 
 class TestUnknownParserError:
