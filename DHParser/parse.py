@@ -92,6 +92,43 @@ MAX_DROPOUTS = 3  # type: int
 # stop trying to recover parsing after so many errors
 
 
+class ParserError(Exception):
+    """
+    A `ParserError` is thrown for those parser errors that allow the
+    controlled re-entrance of the parsion process after the error occured.
+    If a reentry-rule has been configured for the parser where the error
+    occured, the parser guard can resume the parsing process.
+
+    Currently, the only case when a `ParserError` is thrown (and not some
+    different kind of error like `UnknownParserError`, is when a `Series`-
+    detects a missing mandatory element.
+    """
+    def __init__(self,
+                 parser: ParserBase,
+                 node: Node,
+                 remaining: StringView,
+                 error: Error):
+        self.parser = parser  # type: Parser
+        self.node = node  # type: Node
+        self.remaining = remaining  # type: StringView
+        self.error = error  # type: Error
+
+    @property
+    def location(self):
+        return self.parser.grammar.document_length__ - len(self.remaining)
+
+    # to be continued...
+
+
+# class ReentryRule:
+#     """
+#     A rule for reentering the parsing process after a ParserError was thrown.
+#     """
+#     def __init__(self, parser: ParserBase, fast_forward_re: str):
+#         self.parser = parser  # type: List[Parser]
+#         self.rules =  # type: Sequence[Tuple[str, str]]
+
+
 def add_parser_guard(parser_func):
     """
     Add a wrapper function to a parser functions (i.e. Parser.__call__ method)
@@ -99,10 +136,10 @@ def add_parser_guard(parser_func):
     (aka "history tracking") of parser calls. Returns the wrapped call.
     """
     def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
-        try:
-            grammar = parser.grammar
-            location = grammar.document_length__ - len(text)
+        grammar = parser.grammar
+        location = grammar.document_length__ - len(text)
 
+        try:
             if grammar.last_rb__loc__ >= location:
                 grammar.rollback_to__(location)
 
@@ -112,16 +149,16 @@ def add_parser_guard(parser_func):
                 # no history recording in case of memoized results
                 return parser.visited[location]
 
-            if grammar.history_tracking__:
-                grammar.call_stack__.append(parser)
-                grammar.moving_forward__ = True
-
             # break left recursion at the maximum allowed depth
             if grammar.left_recursion_handling__:
                 if parser.recursion_counter[location] > LEFT_RECURSION_DEPTH:
                     grammar.recursion_locations__.add(location)
                     return None, text
                 parser.recursion_counter[location] += 1
+
+            if grammar.history_tracking__:
+                grammar.call_stack__.append(parser)
+                grammar.moving_forward__ = True
 
             # PARSER CALL: run original __call__ method
             node, rest = parser_func(parser, text)
