@@ -1083,7 +1083,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         return s, Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
 
     match_header = xml.search(re.compile(r'<(?!\?)'))
-    start = match_header.start() if match_header else 0
+    start = xml.index(match_header.start()) if match_header else 0
     _, tree = parse_full_content(xml[start:])
     assert _.match(RX_WHITESPACE_TAIL)
     return tree

@@ -40,7 +40,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_PARSER
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
-from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional
+from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
 
 __all__ = ('Parser',
@@ -90,6 +90,62 @@ LEFT_RECURSION_DEPTH = 8  # type: int
 # set too high. PyPy allows higher values than CPython
 MAX_DROPOUTS = 3  # type: int
 # stop trying to recover parsing after so many errors
+
+
+class ParserError(Exception):
+    """
+    A `ParserError` is thrown for those parser errors that allow the
+    controlled re-entrance of the parsion process after the error occured.
+    If a reentry-rule has been configured for the parser where the error
+    occured, the parser guard can resume the parsing process.
+
+    Currently, the only case when a `ParserError` is thrown (and not some
+    different kind of error like `UnknownParserError`, is when a `Series`-
+    detects a missing mandatory element.
+    """
+
+
+class ResumeRule:
+    """
+    Rule for resuming after a parser error was caught. A resmue rule
+    consists of a parser name and a list of compiled regular expressions
+    or strings.
+    """
+    def __init__(self, parser: Union[ParserBase, str], resume: List[Union[str, Any]]):
+        self.parser_name = parser if isinstance(parser, str) else parser.name  # type: str
+        self.resume = resume  # type: List[Union[str, Any]]
+
+
+ResumeList = List[Union[str, Any]]  # list of strings or regular rexpressiones
+
+
+def resume(rest: StringView, rules: ResumeList) -> Tuple[Node, StringView]:
+    """
+    Finds the point where parsing should resume after a ParserError has been caught.
+    Args:
+        rest:  The rest of the parsed text or, in other words, the point where
+                a ParserError was thrown.
+        rules: A list of strings or regular expressions. The rest of the text is
+                searched for each of these. The closest match is the point where
+                parsing will be resumed.
+    Returns:
+        A tuple of a node containing the skipped text and a StringView with the
+        (new) rest of the text for resuming the parsing process.
+    """
+    upper_limit = len(rest)
+    i = upper_limit
+    #find closest match
+    for rule in rules:
+        if isinstance(rule, str):
+            i = min(rest.find(rule), i if i > 0 else upper_limit)
+        else:
+            m = rest.search(rule)
+            if m:
+                i = min(rest.index(m.startswith()), i)
+    # in case no rule matched move on by just one character
+    if i == upper_limit and upper_limit > 0:
+        i = 1
+    return Node(None, rest[:i]), rest[i:]
 
 
 def add_parser_guard(parser_func):
