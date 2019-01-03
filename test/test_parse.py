@@ -599,22 +599,24 @@ class TestBorderlineCases:
         assert not cst.error_flag
 
 
-# class TestReentryAfterError:
-#     def test_reentry_after_mandatory_error(self):
-#         lang = """
-#         document = alpha [beta] gamma "."
-#           alpha = "ALPHA" abc
-#             abc = §"a" "b" "c"
-#           beta = "BETA" (bac | bca)
-#             bac = "b" "a" § "c"
-#             bca = "b" "c" § "a"
-#           gamma = "GAMMA" §(cab | cba)
-#             cab = "c" "a" §"b"
-#             cba = "c" "b" §"a"
-#         """
-#         gr = grammar_provider(lang)()
-#         cst =  gr('ALPHA abc BETA bac GAMMA cab .')
-#         assert not cst.error_flag
+class TestReentryAfterError:
+    def test_reentry_after_mandatory_error(self):
+        lang = """
+        document = alpha [beta] gamma "."
+          alpha = "ALPHA" abc
+            abc = §"a" "b" "c"
+          beta = "BETA" (bac | bca)
+            bac = "b" "a" § "c"
+            bca = "b" "c" § "a"
+          gamma = "GAMMA" §(cab | cba)
+            cab = "c" "a" §"b"
+            cba = "c" "b" §"a"
+        """
+        gr = grammar_provider(lang)()
+        # cst = gr('ALPHA abc BETA bac GAMMA cab .')
+        # assert not cst.error_flag
+        cst = gr('ALPHA acb BETA bac GAMMA cab .')
+        assert cst.error_flag
 
 
 class TestUnknownParserError:

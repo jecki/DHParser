@@ -88,7 +88,8 @@ class ParserBase:
         """Resets any parser variables. (Should be overridden.)"""
         pass
 
-    def grammar(self) -> Optional[object]:
+    @property
+    def grammar(self) -> Optional['Grammar']:
         """Returns the Grammar object to which the parser belongs. If not
         yet connected to any Grammar object, None is returned."""
         return None

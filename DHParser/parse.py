@@ -30,7 +30,7 @@ for an example.
 """
 
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import copy
 
 from DHParser.error import Error, linebreaks
@@ -103,6 +103,9 @@ class ParserError(Exception):
     different kind of error like `UnknownParserError`, is when a `Series`-
     detects a missing mandatory element.
     """
+    def __init__(self, node: Node, rest: StringView):
+        self.node = node  # type: Node
+        self.rest = rest  # type: StringView
 
 
 class ResumeRule:
@@ -179,8 +182,22 @@ def add_parser_guard(parser_func):
                 grammar.call_stack__.append(parser)
                 grammar.moving_forward__ = True
 
-            # PARSER CALL: run original __call__ method
-            node, rest = parser_func(parser, text)
+            try:
+                # PARSER CALL: run original __call__ method
+                node, rest = parser_func(parser, text)
+            except ParserError as error:
+                node = error.node
+                rest = error.rest
+                rules = grammar.resume_rules__.get(parser.name, [])
+                if rules or parser == grammar.root__:
+                    nd, rest = resume(rest, rules)
+                    assert node.children
+                    node.result += (nd,)
+                    # node.result = (nd,) + node.result
+                else:
+                    gap = len(text) - len(rest)
+                    result = (Node(None, text[:gap]), node) if gap else node
+                    raise ParserError(Node(parser, result), rest)
 
             if grammar.left_recursion_handling__:
                 parser.recursion_counter[location] -= 1
@@ -348,7 +365,7 @@ class Parser(ParserBase):
         return Alternative(self, other)
 
     @property
-    def grammar(self) -> 'Grammar':
+    def grammar(self) -> Optional['Grammar']:
         if self._grammar:
             return self._grammar
         else:
@@ -492,6 +509,10 @@ class Grammar:
                  of yet incomplete grammars class Grammar does not assume that this
                  is the case.
 
+        resume_rules__: A mapping of parser names to a list of regular expressions or search
+                string that act as rules to find the the reentry point if a ParserError
+                was thrown during the execution of the parser with the respective name.
+
         parser_initializiation__:  Before the parser class (!) has been initialized,
                  which happens upon the first time it is instantiated (see
                  :func:_assign_parser_names()` for an explanation), this class
@@ -582,6 +603,7 @@ class Grammar:
     root__ = ZOMBIE_PARSER  # type: ParserBase
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
+    resume_rules__ = dict()  # type: Dictionary[str, ResumeRule]
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
@@ -807,7 +829,11 @@ class Grammar:
         if stitches:
             if rest:
                 stitches.append(Node(None, rest))
-            result = Node(None, tuple(stitches)).init_pos(0)
+            try:
+                result = Node(None, tuple(stitches)).init_pos(0)
+            except AssertionError as error:
+                print(Node(None, tuple(stitches)).as_sxpr())
+                raise error
         if any(self.variables__.values()):
             error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
                 + str(self.variables__)
@@ -1328,8 +1354,10 @@ class Series(NaryOperator):
                     return None, text
                 else:
                     # Provide useful error messages
-                    match = text.search(Series.RX_ARGUMENT)
-                    i = max(1, text.index(match.regs[1][0])) if match else 1
+                    # TODO: Change to accomodate to resuming after errors are caught.
+                    # match = text.search(Series.RX_ARGUMENT)
+                    # i = max(1, text.index(match.regs[1][0])) if match else 1
+                    i = 0
                     location = self.grammar.document_length__ - len(text_)
                     node = Node(self, text_[:i]).init_pos(location)
                     # self.grammar.tree__.add_error(
@@ -1353,7 +1381,7 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers)
         node = Node(self, results)
         if mandatory_violation:
-            pass
+            raise ParserError(node, text_)
             # self.grammar.tree__.add_error(node, mandatory_violation)
         return node, text_
 
