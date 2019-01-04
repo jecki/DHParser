@@ -119,7 +119,7 @@ class ResumeRule:
         self.resume = resume  # type: List[Union[str, Any]]
 
 
-ResumeList = List[Union[str, Any]]  # list of strings or regular rexpressiones
+ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
 
 
 def resume(rest: StringView, rules: ResumeList) -> Tuple[Node, StringView]:
@@ -186,18 +186,17 @@ def add_parser_guard(parser_func):
                 # PARSER CALL: run original __call__ method
                 node, rest = parser_func(parser, text)
             except ParserError as error:
-                node = error.node
+                error_node = error.node
                 rest = error.rest
                 rules = grammar.resume_rules__.get(parser.name, [])
                 if rules or parser == grammar.root__:
-                    nd, rest = resume(rest, rules)
-                    assert node.children
-                    node.result += (nd,)
-                    # node.result = (nd,) + node.result
-                else:
                     gap = len(text) - len(rest)
-                    result = (Node(None, text[:gap]), node) if gap else node
-                    raise ParserError(Node(parser, result), rest)
+                    nd, rest = resume(rest[len(error_node):], rules)
+                    assert error_node.children
+                    node = Node(parser, (Node(None, text[:gap]), error_node, nd))
+                else:
+                    # result = (Node(None, text[:gap]), error_node) if gap else error_node
+                    raise ParserError(error_node, rest)
 
             if grammar.left_recursion_handling__:
                 parser.recursion_counter[location] -= 1
@@ -510,7 +509,7 @@ class Grammar:
                  is the case.
 
         resume_rules__: A mapping of parser names to a list of regular expressions or search
-                string that act as rules to find the the reentry point if a ParserError
+                strings that act as rules to find the the reentry point if a ParserError
                 was thrown during the execution of the parser with the respective name.
 
         parser_initializiation__:  Before the parser class (!) has been initialized,
@@ -829,11 +828,12 @@ class Grammar:
         if stitches:
             if rest:
                 stitches.append(Node(None, rest))
-            try:
-                result = Node(None, tuple(stitches)).init_pos(0)
-            except AssertionError as error:
-                print(Node(None, tuple(stitches)).as_sxpr())
-                raise error
+            #try:
+            result = Node(None, tuple(stitches)).init_pos(0)
+            # except AssertionError as error:
+            #     # some debugging output
+            #     print(Node(None, tuple(stitches)).as_sxpr())
+            #     raise error
         if any(self.variables__.values()):
             error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
                 + str(self.variables__)
@@ -1381,7 +1381,7 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers)
         node = Node(self, results)
         if mandatory_violation:
-            raise ParserError(node, text_)
+            raise ParserError(node, text)
             # self.grammar.tree__.add_error(node, mandatory_violation)
         return node, text_
 

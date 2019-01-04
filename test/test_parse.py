@@ -613,10 +613,13 @@ class TestReentryAfterError:
             cba = "c" "b" §"a"
         """
         gr = grammar_provider(lang)()
+        gr.resume_rules__['alpha'] = ['BETA']
         # cst = gr('ALPHA abc BETA bac GAMMA cab .')
         # assert not cst.error_flag
-        cst = gr('ALPHA acb BETA bac GAMMA cab .')
+        content = 'ALPHA acb BETA bac GAMMA cab .'
+        cst = gr(content)
         assert cst.error_flag
+        assert cst.content == content
 
 
 class TestUnknownParserError:
