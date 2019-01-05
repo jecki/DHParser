@@ -136,7 +136,7 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
         The integer index of the closest reentry point or -1 if no reentry-point
         was found.
     """
-    upper_limit = len(rest)
+    upper_limit = len(rest) + 1
     i = upper_limit
     #find closest match
     for rule in rules:
@@ -148,7 +148,7 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
             if m:
                 i = min(rest.index(m.startswith()), i)
     # in case no rule matched return -1
-    if i == upper_limit and upper_limit > 0:
+    if i == upper_limit:
         i = -1
     return i
     # return Node(None, rest[:i]), rest[i:]
@@ -194,12 +194,17 @@ def add_parser_guard(parser_func):
                 rest = error.rest[len(error.node):]
                 i = reentry_point(rest, rules)
                 if i >= 0 or parser == grammar.root__:
+                    # apply reentry-rule or catch error at root-parser
                     if i < 0:
                         i = 1
                     nd = Node(None, rest[:i])
                     rest = rest[i:]
                     assert error.node.children
-                    node = Node(parser, (Node(None, text[:gap]), error.node, nd))
+                    if error.first_throw:
+                        node = error.node
+                        node.result += (nd,)
+                    else:
+                        node = Node(parser, (Node(None, text[:gap]), error.node, nd))
                 elif error.first_throw:
                     raise ParserError(error.node, error.rest, first_throw=False)
                 else:

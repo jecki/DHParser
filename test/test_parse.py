@@ -600,21 +600,23 @@ class TestBorderlineCases:
 
 
 class TestReentryAfterError:
-    def test_reentry_after_mandatory_error(self):
+    def setup(self):
         lang = """
         document = alpha [beta] gamma "."
           alpha = "ALPHA" abc
             abc = §"a" "b" "c"
           beta = "BETA" (bac | bca)
-            bac = "b" "a" § "c"
-            bca = "b" "c" § "a"
+            bac = "b" "a" §"c"
+            bca = "b" "c" §"a"
           gamma = "GAMMA" §(cab | cba)
             cab = "c" "a" §"b"
             cba = "c" "b" §"a"
         """
-        gr = grammar_provider(lang)()
+        self.gr = grammar_provider(lang)()
 
+    def test_no_resume_rules(self):
         # 1. no resume rules
+        gr = self.gr;  gr.resume_rules = dict()
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         # print(cst.as_sxpr())
@@ -622,8 +624,10 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
 
-        # 2. simple resume rule
+    def test_simple_resume_rule(self):
+        gr = self.gr;  gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = ['BETA']
+        content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         # print(cst.as_sxpr())
         assert cst.error_flag
@@ -632,8 +636,10 @@ class TestReentryAfterError:
         # because of resuming, there should be only on error message
         assert len(cst.collect_errors()) == 1
 
-        # 3. failing resume rule
+    def test_failing_resume_rule(self):
+        gr = self.gr;  gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = ['XXX']
+        content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         # print(cst.as_sxpr())
         assert cst.error_flag
@@ -641,8 +647,10 @@ class TestReentryAfterError:
         # assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
 
-        # 4. several resume rules
+    def test_severl_reentry_points(self):
+        gr = self.gr;  gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         # print(cst.as_sxpr())
         assert cst.error_flag
@@ -651,16 +659,40 @@ class TestReentryAfterError:
         # because of resuming, there should be only on error message
         assert len(cst.collect_errors()) == 1
 
-        # 4. several resume rules, second rule matching
+    def test_several_reentry_points_second_point_matching(self):
+        gr = self.gr;  gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
-        print(cst.as_sxpr())
+        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
         assert len(cst.collect_errors()) == 1
+
+    def test_several_resume_rules_innermost_rule_matching(self):
+        gr = self.gr;  gr.resume_rules = dict()
+        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        gr.resume_rules__['beta'] = ['GAMMA']
+        gr.resume_rules__['bac'] = ['GAMMA']
+        content = 'ALPHA abc BETA bad GAMMA cab .'
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 1
+        # multiple failures
+        content = 'ALPHA acb BETA bad GAMMA cab .'
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 2
 
 
 class TestUnknownParserError:
