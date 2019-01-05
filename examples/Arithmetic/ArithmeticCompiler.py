@@ -53,15 +53,7 @@ def get_preprocessor() -> PreprocessorFunc:
 #######################################################################
 
 class ArithmeticGrammar(Grammar):
-    r"""Parser for an Arithmetic source file, with this grammar:
-    
-    expression = term  { ("+" | "-") term}
-    term       = factor  { ("*"|"/") factor}
-    factor     = constant | variable | "("  expression  ")"
-    variable   = "x" | "y" | "z"
-    constant   = digit {digit}
-    digit      = "0" | "1" | "..." | "9"
-    test       = digit constant variable
+    r"""Parser for an Arithmetic source file.
     """
     constant = Forward()
     digit = Forward()
@@ -69,6 +61,7 @@ class ArithmeticGrammar(Grammar):
     variable = Forward()
     source_hash__ = "c4e6e090ef9673b972ba18ef39fe7c8e"
     parser_initialization__ = "upon instantiation"
+    resume_rules__ = {}
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)

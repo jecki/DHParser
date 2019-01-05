@@ -57,9 +57,9 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    list_ = Forward()
-    source_hash__ = "8a91723fddb6b9ab6dbdb69ac5263492"
+    source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
     parser_initialization__ = "upon instantiation"
+    resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
@@ -68,8 +68,7 @@ class EBNFGrammar(Grammar):
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
     plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
-    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__),
-                          Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
     option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
     repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
@@ -77,19 +76,12 @@ class EBNFGrammar(Grammar):
     unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
     group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
     retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
-    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
-                             Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
-                                NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal),
-                         Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp),
-                         Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore),
-                         Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__), Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
     expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
+    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), wsp__), Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
-    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__), list_, mandatory=1)
-    list_.set(Series(Alternative(regexp, literal, symbol),
-                     ZeroOrMore(Series(Series(Token(","), wsp__), Alternative(regexp, literal, symbol)))))
     syntax = Series(Option(Series(wsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
@@ -115,7 +107,7 @@ EBNF_AST_transformation_table = {
     "syntax":
         [],  # otherwise '"*": replace_by_single_child' would be applied
     "directive, definition":
-        remove_tokens('@', '='),
+        remove_tokens('@', '=', ','),
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
     "term":
@@ -134,8 +126,6 @@ EBNF_AST_transformation_table = {
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         reduce_single_child,
-    "list_":
-        [flatten, remove_infix_operator],
     "*":
         replace_by_single_child
 }

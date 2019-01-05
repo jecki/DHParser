@@ -29,7 +29,7 @@ from DHParser import is_filename, load_if_file, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
     is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, replace_parser, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    WHITESPACE_PTYPE, TOKEN_PTYPE
+    WHITESPACE_PTYPE, TOKEN_PTYPE, GLOBALS
 from DHParser.transform import TransformationFunc
 from DHParser.log import logging
 
@@ -54,65 +54,15 @@ def get_preprocessor() -> PreprocessorFunc:
 #######################################################################
 
 class BibTeXGrammar(Grammar):
-    r"""Parser for a BibTeX source file, with this grammar:
-    
-    # BibTeX-Grammar
-    
-    
-    #######################################################################
-    #
-    #  EBNF-Directives
-    #
-    ######################################################################
-    
-    @ whitespace  = /\s*/
-    @ ignorecase  = True
-    @ comment     = /%.*(?:\n|$)/
-    
-    
-    #######################################################################
-    #
-    #  Bib-file Structure and Components
-    #
-    #######################################################################
-    
-    bibliography = { preamble | comment | entry }
-    
-    preamble      = "@Preamble{" /"/ pre_code /"/~ §"}"
-    pre_code      = { /[^"%]+/ | /%.*\n/ }
-    
-    comment       = "@Comment{" text §"}"
-    
-    entry         = /@/ type "{" key { "," field §"=" content } §"}"
-    type          = WORD
-    key           = NO_BLANK_STRING
-    field         = WORD_
-    content       = "{" text "}" | plain_content
-    
-    plain_content = COMMA_TERMINATED_STRING
-    text          = { CONTENT_STRING | "{" text "}" }
-    
-    
-    #######################################################################
-    #
-    #  Regular Expressions
-    #
-    #######################################################################
-    
-    WORD          = /\w+/
-    WORD_         = /\w+/~
-    NO_BLANK_STRING         = /[^ \t\n,%]+/~
-    COMMA_TERMINATED_STRING = { /[^,%]+/ | /(?=%)/~ }
-    CONTENT_STRING = { /[^{}%]+/ | /(?=%)/~ }+
+    r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "534895885bfdddb19785f5d943b356a7"
+    source_hash__ = "569bee4a051ea4d9f625ad9bbd46a7a2"
     parser_initialization__ = "upon instantiation"
+    resume_rules__ = {}
     COMMENT__ = r'(?i)%.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wspL__ = ''
-    wspR__ = WSP_RE__
     wsp__ = Whitespace(WSP_RE__)
     CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
     COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
@@ -133,12 +83,11 @@ class BibTeXGrammar(Grammar):
     root__ = bibliography
     
 def get_grammar() -> BibTeXGrammar:
-    global thread_local_BibTeX_grammar_singleton
     try:
-        grammar = thread_local_BibTeX_grammar_singleton
-    except NameError:
-        thread_local_BibTeX_grammar_singleton = BibTeXGrammar()
-        grammar = thread_local_BibTeX_grammar_singleton
+        grammar = GLOBALS.BibTeX_1_grammar_singleton
+    except AttributeError:
+        GLOBALS.BibTeX_1_grammar_singleton = BibTeXGrammar()
+        grammar = GLOBALS.BibTeX_1_grammar_singleton
     return grammar
 
 
