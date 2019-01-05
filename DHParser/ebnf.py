@@ -35,7 +35,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, CONFIG_PRESET, get_config_value, typing
+    GLOBALS, CONFIG_PRESET, get_config_value, unrepr, typing
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content, remove_infix_operator
@@ -570,6 +570,7 @@ class EBNFCompiler(Compiler):
         definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
         definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
         definitions.append((self.RESUME_RULES_KEYWORD, repr(self.directives['resume'])))
+        print(self.directives['resume'])
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -736,6 +737,18 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "%s" must have one, but not %i values.'
                                     % (key, len(node.children) - 1))
 
+        def extract_regex(nd: Node) -> str:
+            value = nd.content.strip("~")
+            # cast(str, node.children[1].result).strip("~")
+            if value != nd.content:  # cast(str, node.children[1].result)
+                self.tree.new_error(node, "Whitespace marker '~' not allowed in definition "
+                                          "of %s regular expression." % key)
+            if value[0] + value[-1] in {'""', "''"}:
+                value = escape_re(value[1:-1])
+            elif value[0] + value[-1] == '//':
+                value = self._check_rx(node, value[1:-1])
+            return value
+
         if key in {'comment', 'whitespace'}:
             check_argnum()
             if node.children[1].parser.name == "symbol":
@@ -746,15 +759,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, 'Value "%s" not allowed for directive "%s".'
                                         % (value, key))
             else:
-                value = node.children[1].content.strip("~")
-                # cast(str, node.children[1].result).strip("~")
-                if value != node.children[1].content:  # cast(str, node.children[1].result)
-                    self.tree.new_error(node, "Whitespace marker '~' not allowed in definition "
-                                        "of %s regular expression." % key)
-                if value[0] + value[-1] in {'""', "''"}:
-                    value = escape_re(value[1:-1])
-                elif value[0] + value[-1] == '//':
-                    value = self._check_rx(node, value[1:-1])
+                value = extract_regex(node.children[1])
                 if key == 'whitespace' and not re.match(value, ''):
                     self.tree.new_error(node, "Implicit whitespace should always "
                                         "match the empty string, /%s/ does not." % value)
@@ -813,17 +818,19 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "%s" accepts only regular expressions or '
                                           'plain strings as arguments, but no symbols without '
                                           'quotation marks!' % key)
-            symbol = key[:-6]
+            symbol = key[:-7]
             if symbol in self.directives['resume']:
                 self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
                                           ' earlier!' % symbol)
             else:
                 reentry_conditions = []
-                for child in node.children:
-                    if child.parser.name == 'regex':
-                        reentry_conditions.append("re.compile(r'')" % child.content)
+                for child in node.children[1:]:
+                    if child.parser.name == 'regexp':
+                        reentry_conditions.append(unrepr("re.compile(r'%s')" % extract_regex(child)))
                     else:
-                        reentry_conditions.append(repr(child.content))
+                        s = child.content.strip()
+                        s = s.strip('"') if s[0] == '"' else s.strip("'")
+                        reentry_conditions.append(s)
                 self.directives['resume'][symbol] = reentry_conditions
 
         else:

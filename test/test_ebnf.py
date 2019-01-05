@@ -28,7 +28,7 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compile_python_object, re
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
-from DHParser.error import has_errors
+from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
@@ -446,6 +446,92 @@ class TestAllSome:
         grammar = grammar_provider(ebnf)()
         assert grammar('B A').content == 'B A'
         assert grammar('B').content == 'B'
+
+
+class TestCuratedErrors:
+    """
+    Cureted Errors replace existing errors with alternative
+    error codes and messages that are more helptful to the user.
+    """
+    def test_user_error_declaration(self):
+        lang = """
+            document = series | /.*/
+            series = "X" | head §"C" "D"
+            head = "A" "B"
+            @series_error = "a user defined error message"
+            """
+        try:
+            parser = grammar_provider(lang)()
+            assert False, "Error definition after symbol definition should fail!"
+        except CompilationError as e:
+            pass
+
+    def test_curated_mandatory_continuation(self):
+        lang = """
+            document = series | /.*/
+            @series_error = "a user defined error message"
+            series = "X" | head §"C" "D"
+            head = "A" "B"
+            """
+        # from DHParser.dsl import compileDSL
+        # from DHParser.preprocess import nil_preprocessor
+        # from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+        # grammar_src = compileDSL(lang, nil_preprocessor, get_ebnf_grammar(),
+        #                          get_ebnf_transformer(), get_ebnf_compiler("test", lang))
+        # print(grammar_src)
+        parser = grammar_provider(lang)()
+        st = parser("X");  assert not st.error_flag
+        st = parser("ABCD");  assert not st.error_flag
+        st = parser("A_CD");  assert not st.error_flag
+        st = parser("AB_D");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "a user defined error message"
+        # transitivity of mandatory-operator
+        st = parser("ABC_");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "a user defined error message"
+
+
+class TestCustomizedResumeParsing:
+    def setup(self):
+        lang = """
+        @ alpha_resume = 'BETA', 'GAMMA'
+        @ beta_resume = 'GAMMA'
+        @ bac_resume = /GA\w+/
+        document = alpha [beta] gamma "."
+          alpha = "ALPHA" abc
+            abc = §"a" "b" "c"
+          beta = "BETA" (bac | bca)
+            bac = "b" "a" §"c"
+            bca = "b" "c" §"a"
+          gamma = "GAMMA" §(cab | cba)
+            cab = "c" "a" §"b"
+            cba = "c" "b" §"a"
+        """
+        try:
+            self.gr = grammar_provider(lang)()
+        except CompilationError as ce:
+            print(ce)
+
+    def test_several_resume_rules_innermost_rule_matching(self):
+        gr = self.gr
+        content = 'ALPHA abc BETA bad GAMMA cab .'
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 1
+        # multiple failures
+        content = 'ALPHA acb BETA bad GAMMA cab .'
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 2
 
 
 if __name__ == "__main__":

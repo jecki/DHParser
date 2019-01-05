@@ -146,7 +146,7 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
         else:
             m = rest.search(rule)
             if m:
-                i = min(rest.index(m.startswith()), i)
+                i = min(rest.index(m.start()), i)
     # in case no rule matched return -1
     if i == upper_limit:
         i = -1
@@ -1372,7 +1372,7 @@ class Series(NaryOperator):
                     # i = max(1, text.index(match.regs[1][0])) if match else 1
                     i = 0
                     location = self.grammar.document_length__ - len(text_)
-                    node = Node(self, text_[:i]).init_pos(location)
+                    node = Node(None, text_[:i]).init_pos(location)
                     # self.grammar.tree__.add_error(
                     #     node, Error("§ %s violation" % parser.repr, location, Error.MESSAGE))
                     # # node.errors.append(Error("§ %s violation" % parser.repr,

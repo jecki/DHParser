@@ -48,6 +48,7 @@ __all__ = ('escape_re',
            'escape_control_characters',
            'is_filename',
            'concurrent_ident',
+           'unrepr',
            'lstrip_docstring',
            'issubtype',
            'isgenerictype',
@@ -167,6 +168,29 @@ def concurrent_ident() -> str:
     Returns an identificator for the current process and thread
     """
     return multiprocessing.current_process().name + '_' + str(threading.get_ident())
+
+
+class unrepr:
+    """
+    unrepr encapsulates a string representing a python function in such
+    a way that the representation of the string yields the function call
+    itself rather then a string representing the function call and delimited
+    by quotation marks.
+
+    Example:
+        >>> "re.compile(r'abc+')"
+        "re.compile(r'abc+')"
+        >>> unrepr("re.compile(r'abc+')")
+        re.compile(r'abc+')
+    """
+    def __init__(self, s):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+    def __repr__(self):
+        return self.s
 
 
 #######################################################################
