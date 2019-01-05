@@ -613,13 +613,54 @@ class TestReentryAfterError:
             cba = "c" "b" §"a"
         """
         gr = grammar_provider(lang)()
-        gr.resume_rules__['alpha'] = ['BETA']
-        # cst = gr('ALPHA abc BETA bac GAMMA cab .')
-        # assert not cst.error_flag
+
+        # 1. no resume rules
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
+        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+
+        # 2. simple resume rule
+        gr.resume_rules__['alpha'] = ['BETA']
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 1
+
+        # 3. failing resume rule
+        gr.resume_rules__['alpha'] = ['XXX']
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        # assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+
+        # 4. several resume rules
+        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 1
+
+        # 4. several resume rules, second rule matching
+        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        content = 'ALPHA acb GAMMA cab .'
+        cst = gr(content)
+        print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 1
 
 
 class TestUnknownParserError:

@@ -95,17 +95,18 @@ MAX_DROPOUTS = 3  # type: int
 class ParserError(Exception):
     """
     A `ParserError` is thrown for those parser errors that allow the
-    controlled re-entrance of the parsion process after the error occured.
+    controlled re-entrance of the parsing process after the error occurred.
     If a reentry-rule has been configured for the parser where the error
-    occured, the parser guard can resume the parsing process.
+    occurred, the parser guard can resume the parsing process.
 
     Currently, the only case when a `ParserError` is thrown (and not some
     different kind of error like `UnknownParserError`, is when a `Series`-
     detects a missing mandatory element.
     """
-    def __init__(self, node: Node, rest: StringView):
+    def __init__(self, node: Node, rest: StringView, first_throw: bool):
         self.node = node  # type: Node
         self.rest = rest  # type: StringView
+        self.first_throw = first_throw  # type: bool
 
 
 class ResumeRule:
@@ -122,7 +123,7 @@ class ResumeRule:
 ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
 
 
-def resume(rest: StringView, rules: ResumeList) -> Tuple[Node, StringView]:
+def reentry_point(rest: StringView, rules: ResumeList) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     Args:
@@ -132,23 +133,25 @@ def resume(rest: StringView, rules: ResumeList) -> Tuple[Node, StringView]:
                 searched for each of these. The closest match is the point where
                 parsing will be resumed.
     Returns:
-        A tuple of a node containing the skipped text and a StringView with the
-        (new) rest of the text for resuming the parsing process.
+        The integer index of the closest reentry point or -1 if no reentry-point
+        was found.
     """
     upper_limit = len(rest)
     i = upper_limit
     #find closest match
     for rule in rules:
         if isinstance(rule, str):
-            i = min(rest.find(rule), i if i > 0 else upper_limit)
+            k = rest.find(rule)
+            i = min(k if k >= 0 else upper_limit, i)
         else:
             m = rest.search(rule)
             if m:
                 i = min(rest.index(m.startswith()), i)
-    # in case no rule matched move on by just one character
+    # in case no rule matched return -1
     if i == upper_limit and upper_limit > 0:
-        i = 1
-    return Node(None, rest[:i]), rest[i:]
+        i = -1
+    return i
+    # return Node(None, rest[:i]), rest[i:]
 
 
 def add_parser_guard(parser_func):
@@ -186,17 +189,22 @@ def add_parser_guard(parser_func):
                 # PARSER CALL: run original __call__ method
                 node, rest = parser_func(parser, text)
             except ParserError as error:
-                error_node = error.node
-                rest = error.rest
+                gap = len(text) - len(error.rest)
                 rules = grammar.resume_rules__.get(parser.name, [])
-                if rules or parser == grammar.root__:
-                    gap = len(text) - len(rest)
-                    nd, rest = resume(rest[len(error_node):], rules)
-                    assert error_node.children
-                    node = Node(parser, (Node(None, text[:gap]), error_node, nd))
+                rest = error.rest[len(error.node):]
+                i = reentry_point(rest, rules)
+                if i >= 0 or parser == grammar.root__:
+                    if i < 0:
+                        i = 1
+                    nd = Node(None, rest[:i])
+                    rest = rest[i:]
+                    assert error.node.children
+                    node = Node(parser, (Node(None, text[:gap]), error.node, nd))
+                elif error.first_throw:
+                    raise ParserError(error.node, error.rest, first_throw=False)
                 else:
-                    # result = (Node(None, text[:gap]), error_node) if gap else error_node
-                    raise ParserError(error_node, rest)
+                    result = (Node(None, text[:gap]), error.node) if gap else error.node
+                    raise ParserError(Node(parser, result), text, first_throw=False)
 
             if grammar.left_recursion_handling__:
                 parser.recursion_counter[location] -= 1
@@ -1381,7 +1389,7 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers)
         node = Node(self, results)
         if mandatory_violation:
-            raise ParserError(node, text)
+            raise ParserError(node, text, first_throw=True)
             # self.grammar.tree__.add_error(node, mandatory_violation)
         return node, text_
 
