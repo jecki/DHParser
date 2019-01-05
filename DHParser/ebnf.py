@@ -382,7 +382,8 @@ class EBNFCompiler(Compiler):
     WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
-    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD}
+    RESUME_RULES_KEYWORD = "resume_rules__"
+    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD, RESUME_RULES_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -416,9 +417,10 @@ class EBNFCompiler(Compiler):
         self.directives = {'whitespace': self.WHITESPACE['vertical'],
                            'comment': '',
                            'literalws': {'right'},
-                           'tokens': set(),  # alt. 'preprocessor_tokens'
+                           'tokens': set(),   # alt. 'preprocessor_tokens'
                            'filter': dict(),  # alt. 'filter'
-                           'error': dict()}  # customized error messages
+                           'error': dict(),   # customized error messages
+                           'resume': dict()}  # reentry points after parser errors
         # self.directives['ignorecase']: False
         self.defined_directives = set()  # type: Set[str]
         self.grammar_id += 1
@@ -567,6 +569,7 @@ class EBNFCompiler(Compiler):
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))
         definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
         definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
+        definitions.append((self.RESUME_RULES_KEYWORD, repr(self.directives['resume'])))
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -787,7 +790,8 @@ class EBNFCompiler(Compiler):
 
         elif key.endswith('_filter'):
             check_argnum()
-            self.directives['filter'][key[:-7]] = node.children[1].content.strip()
+            symbol = key[:-7]
+            self.directives['filter'][symbol] = node.children[1].content.strip()
 
         elif key.endswith('_error'):
             check_argnum()
@@ -798,11 +802,42 @@ class EBNFCompiler(Compiler):
             if symbol in self.rules:
                 self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
                                     + 'must be defined before the symbol!')
-            self.directives['error'][symbol] = error_msg
+            if symbol in self.directives['error']:
+                self.tree.new_error(node, 'Error message for "%s" has already been customized '
+                                          'earlier!' % symbol)
+            else:
+                self.directives['error'][symbol] = error_msg
+
+        elif key.endswith('_resume'):
+            if not all(child.parser.name in ('literal', 'regexp') for child in node.children[1:]):
+                self.tree.new_error(node, 'Directive "%s" accepts only regular expressions or '
+                                          'plain strings as arguments, but no symbols without '
+                                          'quotation marks!' % key)
+            symbol = key[:-6]
+            if symbol in self.directives['resume']:
+                self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
+                                          ' earlier!' % symbol)
+            else:
+                reentry_conditions = []
+                for child in node.children:
+                    if child.parser.name == 'regex':
+                        reentry_conditions.append("re.compile(r'')" % child.content)
+                    else:
+                        reentry_conditions.append(repr(child.content))
+                self.directives['resume'][symbol] = reentry_conditions
 
         else:
             self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
                                 (key, ', '.join(list(self.directives.keys()))))
+
+        try:
+            if symbol not in self.symbols:
+                # remember first use of symbol, so that dangling references or
+                # redundant definitions or usages of symbols can be detected later
+                self.symbols[symbol] = node
+        except NameError:
+            pass  # no symbol was referred to in directive
+
         return ""
 
 
@@ -950,7 +985,9 @@ class EBNFCompiler(Compiler):
         else:
             self.current_symbols.append(node)
             if symbol not in self.symbols:
-                self.symbols[symbol] = node  # remember first use of symbol
+                # remember first use of symbol, so that dangling references or
+                # redundant definitions or usages of symbols can be detected later
+                self.symbols[symbol] = node
             if symbol in self.rules:
                 self.recursive.add(symbol)
             if symbol in EBNFCompiler.RESERVED_SYMBOLS:
