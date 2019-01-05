@@ -624,6 +624,15 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
 
+    def test_no_resume_rules_partial_parsing(self):
+        gr = self.gr;  gr.resume_rules = dict()
+        content = 'ALPHA acb'
+        cst = gr(content, 'alpha')
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+
     def test_simple_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = ['BETA']

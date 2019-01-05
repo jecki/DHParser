@@ -570,7 +570,6 @@ class EBNFCompiler(Compiler):
         definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
         definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
         definitions.append((self.RESUME_RULES_KEYWORD, repr(self.directives['resume'])))
-        print(self.directives['resume'])
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class

@@ -59,6 +59,7 @@ class LaTeXGrammar(Grammar):
     text_element = Forward()
     source_hash__ = "79e85f223d89452f2ba796f9c40daac9"
     parser_initialization__ = "upon instantiation"
+    resume_rules__ = {}
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)

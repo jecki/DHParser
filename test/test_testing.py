@@ -315,7 +315,7 @@ class TestLookahead:
 
     def test_unit_lookahead(self):
         errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac)
-        assert not errata
+        assert not errata, str(errata)
         errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac)
         assert errata
 

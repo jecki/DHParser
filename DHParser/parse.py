@@ -157,10 +157,13 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
 def add_parser_guard(parser_func):
     """
     Add a wrapper function to a parser functions (i.e. Parser.__call__ method)
-    that takes care of memoizing, left recursion and, optionally, tracing
-    (aka "history tracking") of parser calls. Returns the wrapped call.
+    that takes care of memoizing, left recursion, error catching and,
+    optionally, tracing (aka "history tracking") of parser calls.
+    Returns the wrapped call.
     """
     def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
+        """Wrapper method for Parser.__call__. This is used to add in an aspect-oriented
+        fashion the business intelligence that is common to all parsers."""
         grammar = parser.grammar
         location = grammar.document_length__ - len(text)
 
@@ -193,7 +196,7 @@ def add_parser_guard(parser_func):
                 rules = grammar.resume_rules__.get(parser.name, [])
                 rest = error.rest[len(error.node):]
                 i = reentry_point(rest, rules)
-                if i >= 0 or parser == grammar.root__:
+                if i >= 0 or parser == grammar.start_parser__:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:
                         i = 1
@@ -538,6 +541,10 @@ class Grammar:
     Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
 
+        start_parser__:  During parsing, the parser with which the parsing process
+                was started (see method `__call__`) or `None` if no parsing process
+                is running.
+
         history_tracking__:  A flag indicating that the parsing history shall
                 be tracked
 
@@ -659,6 +666,7 @@ class Grammar:
 
     def __init__(self, root: Parser = None) -> None:
         self.all_parsers__ = set()             # type: Set[ParserBase]
+        self.start_parser__ = None             # type: ParserBase
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
@@ -738,7 +746,10 @@ class Grammar:
         parser.grammar = self
 
 
-    def __call__(self, document: str, start_parser="root__", track_history=False) -> RootNode:
+    def __call__(self,
+                 document: str,
+                 start_parser: Union[str, Parser] = "root__",
+                 track_history: bool = False) -> RootNode:
         """
         Parses a document with with parser-combinators.
 
@@ -779,6 +790,7 @@ class Grammar:
         self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = -1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
+        self.start_parser__ = parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
         result = None  # type: Optional[Node]
@@ -865,6 +877,7 @@ class Grammar:
         # result.collect_errors(self.document__)
         if result:
             self.tree__.swallow(result)
+        self.start_parser__ = None
         return self.tree__
 
 
