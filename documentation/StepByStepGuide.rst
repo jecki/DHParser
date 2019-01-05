@@ -282,20 +282,39 @@ and the definition of the rule on the right hand side.
 In our case the text as a whole, conveniently named "document" (any other name
 would be allowed, too), consists of a leading whitespace, a possibly empty
 sequence of an arbitrary number of words words ending only if the end of file
-has been reached. Whitespace in DHParser-grammars is always denoted by a tilde
-"~". Thus, the definiens of the rule "document" starts with a "~" on the right
-hand side of the definition sign ("="). Next, you find the symbol "WORD"
-enclosed in braces. "WORD", like any symbol composed of letters in DHParser,
-refers to another rule further below that defines what words are. The meaning
-of the braces is that whatever is enclosed by braces may be repeated zero or
-more times. Thus the expression "{ WORD }" describes a sequence of arbitrarily
-many repetitions of WORD, whatever WORD may be. Finally, EOF refers to yet
-another rule defined further below. We do not yet know what EOF is, but we
-know that when the sequence of words ends, it must be followed by an EOF. The
-paragraph sign "§" in front of EOF means that it is absolutely mandatory that
-the sequence of WORDs is followed by an EOF. If it doesn't the program issues
-an error message. Without the "§"-sign the parser simply would not match,
-which in itself is not considered an error.
+has been reached. Whitespace or, more precisely, insignificant whitespace in
+DHParser-grammars is always denoted by a tilde "~". Thus, the definiens of the
+rule "document" starts with a "~" on the right hand side of the definition sign
+("="). Next, you find the symbol "WORD" enclosed in braces. "WORD", like any
+symbol composed of letters in DHParser, refers to another rule further below
+that defines what words are. The meaning of the braces is that whatever is
+enclosed by braces may be repeated zero or more times. Thus the expression "{
+WORD }" describes a sequence of arbitrarily many repetitions of WORD, whatever
+WORD may be. Finally, EOF refers to yet another rule defined further below. We
+do not yet know what EOF is, but we know that when the sequence of words ends,
+it must be followed by an EOF. The paragraph sign "§" in front of EOF means
+that it is absolutely mandatory that the sequence of WORDs is followed by an
+EOF. If it doesn't the program issues an error message. Without the "§"-sign
+the parser simply would not match, which in itself is not considered an error.
+
+.. note:: Often when parsing or transforming texts, there is a distinction
+   between significant whitespace and insignificant whitespace. For example,
+   whitespace at the beginning of a text could be considered insignificant,
+   because the text does not change when the whitespace at the beginning is
+   removed. By the same token, whitespace between words could be considered as significant. It is, however, a matter of convention and purpose, when and whether whitespace is to be considered insignificant. For example, a typesetter might not quite agree that whitespace at the beginning of a text is insignificant. And in our example, whitespace between words is considered
+   as semantically insiginificant, because -- even though it is needed during
+   the parsing process -- we know by definition that words must be separated by
+   whitespace, so that we can safely leave it out of our data model (see below). In fact, all whitespace in our example is thus considered as insignificant.
+
+   If, however, the distinction is made between a significant and an insignificant type of whitespace -- which is often reasonable, then the insignificant whitespace should be denoted by DHParser's default sign for whitespace, that is a tilde "~", while significant whitespace should be explicitely defined in the grammar, for example by introducing a
+   definition like `S = /\s+/` into the grammar.
+
+   Here is a little exercise: Can you rewrite the grammar of this example
+   so as to distinguish between significant whitespace between words and
+   insignificant whitespace at the beginning of the text? Why could it be
+   useful to keep whitespace in the data model, even if the presence of
+   whitespace follows strict conventions (e.g. between any two consecuitive words there must be whitespace and at the beginning of the second and
+   all following paragraphs there is to be whitespace and the like)? Discuss.
 
 Now, let's look at our two matching rules. Both of these rules contain regular
 expressions. If you do not know about regular expressions yet, you should head
