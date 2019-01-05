@@ -78,61 +78,56 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 
 class EBNFGrammar(Grammar):
     r"""
-    Parser for an EBNF source file, with this grammar::
+    Parser for an EBNF source file, with this grammar:
 
-        # EBNF-Grammar in EBNF
+    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace = /\s*/                            # whitespace includes linefeed
+    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 
-        @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-        @ whitespace = /\s*/                            # whitespace includes linefeed
-        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+    syntax     = [~//] { definition | directive } §EOF
+    definition = symbol §"=" expression
+    directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
 
-        syntax     = [~//] { definition | directive } §EOF
-        definition = symbol §"=" expression
-        directive  = "@" §symbol "=" ( regexp | literal | list_ )
+    expression = term { "|" term }
+    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+               | [flowmarker] literal
+               | [flowmarker] plaintext
+               | [flowmarker] regexp
+               | [flowmarker] whitespace
+               | [flowmarker] oneormore
+               | [flowmarker] group
+               | [flowmarker] unordered
+               | repetition
+               | option
 
-        expression = term { "|" term }
-        term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-        factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-                   | [flowmarker] literal
-                   | [flowmarker] plaintext
-                   | [flowmarker] regexp
-                   | [flowmarker] whitespace
-                   | [flowmarker] oneormore
-                   | [flowmarker] group
-                   | [flowmarker] unordered
-                   | repetition
-                   | option
+    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
 
-        flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-                   | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-        retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+    group      = "(" §expression ")"
+    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+    oneormore  = "{" expression "}+"
+    repetition = "{" §expression "}"
+    option     = "[" §expression "]"
 
-        group      = "(" §expression ")"
-        unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-        oneormore  = "{" expression "}+"
-        repetition = "{" §expression "}"
-        option     = "[" §expression "]"
+    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
+    regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    whitespace = /~/~                               # insignificant whitespace
 
-        symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-        literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                   | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-        plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-        regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
-                                                        # '~' is a whitespace-marker, if present leading or trailing
-                                                        # whitespace of a regular expression will be ignored tacitly.
-        whitespace = /~/~                               # implicit or default whitespace
-        list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                        # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-        EOF = !/./
+    EOF = !/./
     """
     expression = Forward()
+    source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
     plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
@@ -147,18 +142,17 @@ class EBNFGrammar(Grammar):
     flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
                              Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
-                                NegativeLookahead(Series(Token("="), wsp__))),
-                         Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext),
-                         Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace),
-                         Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group),
-                         Series(Option(flowmarker), unordered), repetition, option)
+                                NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal),
+                         Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp),
+                         Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore),
+                         Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
     expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
     directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
-                       Alternative(regexp, literal, list_), mandatory=1)
+                       Alternative(regexp, literal, symbol),
+                       ZeroOrMore(Series(Series(Token(","), wsp__), Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
-    syntax = Series(Option(Series(wsp__, RegExp(''))),
-                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    syntax = Series(Option(Series(wsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -217,7 +211,7 @@ EBNF_AST_transformation_table = {
     "syntax":
         [],  # otherwise '"*": replace_by_single_child' would be applied
     "directive, definition":
-        remove_tokens('@', '='),
+        [flatten, remove_tokens('@', '=', ',')],
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
     "term":
@@ -236,8 +230,8 @@ EBNF_AST_transformation_table = {
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         reduce_single_child,
-    "list_":
-        [flatten, remove_infix_operator],
+    # "list_":
+    #     [flatten, remove_infix_operator],
     "*":
         replace_by_single_child
 }
@@ -734,21 +728,24 @@ class EBNFCompiler(Compiler):
                 return ""
             self.defined_directives.add(key)
 
+        def check_argnum(n: int = 1):
+            if len(node.children) > n + 1:
+                self.tree.new_error(node, 'Directive "%s" must have one, but not %i values.'
+                                    % (key, len(node.children) - 1))
+
         if key in {'comment', 'whitespace'}:
-            if node.children[1].parser.name == "list_":
-                if len(node.children[1].result) != 1:
-                    self.tree.new_error(node, 'Directive "%s" must have one, but not %i values.'
-                                        % (key, len(node.children[1].result)))
-                value = self.compile(node.children[1]).pop()
+            check_argnum()
+            if node.children[1].parser.name == "symbol":
+                value = node.children[1].content
                 if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
                     value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
                 else:
                     self.tree.new_error(node, 'Value "%s" not allowed for directive "%s".'
                                         % (value, key))
             else:
-                value = node.children[1].content.strip("~")  # cast(str, node.children[
-                # 1].result).strip("~")
-                if value != node.children[1].content:  # cast(str, node.children[1].result):
+                value = node.children[1].content.strip("~")
+                # cast(str, node.children[1].result).strip("~")
+                if value != node.children[1].content:  # cast(str, node.children[1].result)
                     self.tree.new_error(node, "Whitespace marker '~' not allowed in definition "
                                         "of %s regular expression." % key)
                 if value[0] + value[-1] in {'""', "''"}:
@@ -761,6 +758,7 @@ class EBNFCompiler(Compiler):
             self.directives[key] = value
 
         elif key == 'ignorecase':
+            check_argnum()
             if node.children[1].content.lower() not in {"off", "false", "no"}:
                 self.re_flags.add('i')
 
@@ -769,7 +767,7 @@ class EBNFCompiler(Compiler):
         #     self.directives['testing'] = value.lower() not in {"off", "false", "no"}
 
         elif key == 'literalws':
-            value = {item.lower() for item in self.compile(node.children[1])}
+            value = {child.content.strip().lower() for child in node.children[1:]}
             if ((value - {'left', 'right', 'both', 'none'})
                     or ('none' in value and len(value) > 1)):
                 self.tree.new_error(node, 'Directive "literalws" allows only `left`, `right`, '
@@ -779,7 +777,7 @@ class EBNFCompiler(Compiler):
             self.directives[key] = list(wsp)
 
         elif key in {'tokens', 'preprocessor_tokens'}:
-            tokens = self.compile(node.children[1])
+            tokens = {child.content.strip() for child in node.children[1:]}
             redeclared = self.directives['tokens'] & tokens
             if redeclared:
                 self.tree.new_error(node, 'Tokens %s have already been declared earlier. '
@@ -788,17 +786,14 @@ class EBNFCompiler(Compiler):
             self.directives['tokens'] |= tokens - redeclared
 
         elif key.endswith('_filter'):
-            filter_set = self.compile(node.children[1])
-            if not isinstance(filter_set, set) or len(filter_set) != 1:
-                self.tree.new_error(node, 'Directive "%s" accepts exactly on symbol, not %s'
-                                    % (key, str(filter_set)))
-            self.directives['filter'][key[:-7]] = filter_set.pop()
+            check_argnum()
+            self.directives['filter'][key[:-7]] = node.children[1].content.strip()
 
         elif key.endswith('_error'):
+            check_argnum()
+            if not node.children[1].parser.name == "literal":
+                self.tree.new_error(node, 'Directive "%s" requires message string as argument')
             error_msg = node.children[1].content
-            if not isinstance(error_msg, str):
-                self.tree.new_error(node, 'Directive "%s" requires message string as argument'
-                                    % (key, str(filter_set)))
             symbol = key[:-6]
             if symbol in self.rules:
                 self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
@@ -1016,11 +1011,6 @@ class EBNFCompiler(Compiler):
 
     def on_whitespace(self, node: Node) -> str:
         return self.WHITESPACE_PARSER_KEYWORD
-
-
-    def on_list_(self, node) -> Set[str]:
-        assert node.children
-        return set(item.result.strip() for item in node.children)
 
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:

@@ -6,7 +6,7 @@
 
 syntax     = [~//] { definition | directive } §EOF
 definition = symbol §"=" expression
-directive  = "@" §symbol "=" ( regexp | literal | list_ )
+directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
 
 expression = term { "|" term }
 term       = { ["§"] factor }+                       # "§" means all following factors mandatory
@@ -37,6 +37,5 @@ literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
 plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
 regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
 whitespace = /~/~                               # insignificant whitespace
-list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
+
 EOF = !/./

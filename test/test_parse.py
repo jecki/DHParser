@@ -216,7 +216,7 @@ class TestRegex:
         result, messages, syntax_tree = compile_source(tokenlang, None, get_ebnf_grammar(),
                                     get_ebnf_transformer(), get_ebnf_compiler("TokenTest"))
         assert result
-        assert not messages
+        assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         result = parser(testdoc)
         # parser.log_parsing_history("test.log")

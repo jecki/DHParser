@@ -54,64 +54,22 @@ def get_preprocessor() -> PreprocessorFunc:
 #######################################################################
 
 class EBNFGrammar(Grammar):
-    r"""Parser for an EBNF source file, with this grammar:
-    
-    # EBNF-Grammar in EBNF
-    
-    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace = /\s*/                            # whitespace includes linefeed
-    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-    
-    syntax     = [~//] { definition | directive } §EOF
-    definition = symbol §"=" expression
-    directive  = "@" §symbol "=" ( regexp | literal | list_ )
-    
-    expression = term { "|" term }
-    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-               | [flowmarker] literal
-               | [flowmarker] plaintext
-               | [flowmarker] regexp
-               | [flowmarker] whitespace
-               | [flowmarker] oneormore
-               | [flowmarker] group
-               | [flowmarker] unordered
-               | repetition
-               | option
-    
-    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
-    
-    group      = "(" §expression ")"
-    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-    oneormore  = "{" expression "}+"
-    repetition = "{" §expression "}"
-    option     = "[" §expression "]"
-    
-    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-    regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
-    whitespace = /~/~                               # insignificant whitespace
-    list_      = /\w+/~ { "," /\w+/~ }              # comma separated list of symbols, e.g. BEGIN_LIST, END_LIST,
-                                                    # BEGIN_QUOTE, END_QUOTE ; see CommonMark/markdown.py for an exmaple
-    EOF = !/./
+    r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "6099690fa36228d49e6c35ec60750c59"
+    list_ = Forward()
+    source_hash__ = "8a91723fddb6b9ab6dbdb69ac5263492"
     parser_initialization__ = "upon instantiation"
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    list_ = Series(RegExp('\\w+'), wsp__, ZeroOrMore(Series(Series(Token(","), wsp__), RegExp('\\w+'), wsp__)))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
     plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
-    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__),
+                          Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
     option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
     repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
@@ -119,21 +77,28 @@ class EBNFGrammar(Grammar):
     unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
     group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
     retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
-    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__), Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
+                             Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
+                                NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal),
+                         Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp),
+                         Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore),
+                         Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
     expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
-    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__), Alternative(regexp, literal, list_), mandatory=1)
     definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
+    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__), list_, mandatory=1)
+    list_.set(Series(Alternative(regexp, literal, symbol),
+                     ZeroOrMore(Series(Series(Token(","), wsp__), Alternative(regexp, literal, symbol)))))
     syntax = Series(Option(Series(wsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
     try:
-        grammar = GLOBALS.EBNF_2_grammar_singleton
+        grammar = GLOBALS.EBNF_1_grammar_singleton
     except AttributeError:
-        GLOBALS.EBNF_2_grammar_singleton = EBNFGrammar()
-        grammar = GLOBALS.EBNF_2_grammar_singleton
+        GLOBALS.EBNF_1_grammar_singleton = EBNFGrammar()
+        grammar = GLOBALS.EBNF_1_grammar_singleton
     return grammar
 
 
