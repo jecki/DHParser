@@ -37,8 +37,8 @@ import sys
 import threading
 
 from DHParser.error import Error, is_error, adjust_error_locations
-from DHParser.log import is_logging, clear_logs, log_ST, log_parsing_history
-from DHParser.parse import UnknownParserError
+from DHParser.log import is_logging, clear_logs, log_parsing_history
+from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, flatten_sxpr, ZOMBIE_PARSER
 from DHParser.toolkit import re, typing
 
@@ -308,6 +308,32 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
 
+    with_lookahead = set()  # type: Set[Parser]
+    visited = set()  # type: Set[Parser]
+
+    def find_lookahead(p: Parser):
+        """Raises a StopIterationError if parser `p` is or contains
+        a Lookahead-parser."""
+        nonlocal with_lookahead, visited
+        visited.add(p)
+        if p in with_lookahead or isinstance(p, Lookahead):
+            raise StopIteration
+
+    def has_lookahead(parser_name: str):
+        """Returns `True`, if given parser is or contains a Lookahead-parser."""
+        nonlocal with_lookahead, visited, parser
+        p = parser[parser_name]
+        if p in with_lookahead:
+            return True
+        try:
+            visited = set()
+            p.apply(find_lookahead)
+        except StopIteration:
+            for vp in visited:
+                with_lookahead.add(p)
+            return True
+        return False
+
     def lookahead_artifact(raw_errors):
         """
         Returns True, if the error merely occured, because the parser
@@ -348,7 +374,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
             try:
-                cst = parser(test_code, parser_name, track_history=True)
+
+                cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
             except UnknownParserError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_PARSER, "").init_pos(0), str(upe))
@@ -397,7 +424,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 errflag = len(errata)
             # cst = parser(test_code, parser_name)
             try:
-                cst = parser(test_code, parser_name, track_history=True)
+                cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_PARSER, "").init_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
@@ -438,7 +465,6 @@ def reset_unit(test_unit):
                 if key not in RESULT_STAGES:
                     print('Removing unknown component %s from test %s' % (key, parser))
                 del tests[key]
-
 
 
 def grammar_suite(directory, parser_factory, transformer_factory,
