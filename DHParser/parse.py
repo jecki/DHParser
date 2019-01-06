@@ -38,7 +38,7 @@ from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_PARSER
+    TOKEN_PTYPE, ZOMBIE_PARSER, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
@@ -109,17 +109,6 @@ class ParserError(Exception):
         self.first_throw = first_throw  # type: bool
 
 
-class ResumeRule:
-    """
-    Rule for resuming after a parser error was caught. A resmue rule
-    consists of a parser name and a list of compiled regular expressions
-    or strings.
-    """
-    def __init__(self, parser: Union[ParserBase, str], resume: List[Union[str, Any]]):
-        self.parser_name = parser if isinstance(parser, str) else parser.name  # type: str
-        self.resume = resume  # type: List[Union[str, Any]]
-
-
 ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
 
 
@@ -164,7 +153,7 @@ def add_parser_guard(parser_func):
     def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         """Wrapper method for Parser.__call__. This is used to add in an aspect-oriented
         fashion the business intelligence that is common to all parsers."""
-        grammar = parser.grammar
+        grammar = parser._grammar  # read protected member instead property to avoid function call
         location = grammar.document_length__ - len(text)
 
         try:
@@ -192,6 +181,7 @@ def add_parser_guard(parser_func):
                 # PARSER CALL: run original __call__ method
                 node, rest = parser_func(parser, text)
             except ParserError as error:
+                # does this play well with variable setting? add rollback clause here? tests needed...
                 gap = len(text) - len(error.rest)
                 rules = grammar.resume_rules__.get(parser.name, [])
                 rest = error.rest[len(error.node):]
@@ -211,7 +201,7 @@ def add_parser_guard(parser_func):
                 elif error.first_throw:
                     raise ParserError(error.node, error.rest, first_throw=False)
                 else:
-                    result = (Node(None, text[:gap]), error.node) if gap else error.node
+                    result = (Node(None, text[:gap]), error.node) if gap else error.node  # type: ResultType
                     raise ParserError(Node(parser, result), text, first_throw=False)
 
             if grammar.left_recursion_handling__:
@@ -329,7 +319,7 @@ class Parser(ParserBase):
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
         super().__init__()
-        self._grammar = None  # type: Optional['Grammar']
+        self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
         self.reset()
 
         # add "aspect oriented" wrapper around parser calls
@@ -380,21 +370,20 @@ class Parser(ParserBase):
         return Alternative(self, other)
 
     @property
-    def grammar(self) -> Optional['Grammar']:
-        if self._grammar:
+    def grammar(self) -> 'Grammar':
+        if self._grammar != ZOMBIE_GRAMMAR:
             return self._grammar
         else:
             raise AssertionError('Grammar has not yet been set!')
 
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
-        if self._grammar is None:
+        if self._grammar == ZOMBIE_GRAMMAR:
             self._grammar = grammar
             self._grammar_assigned_notifier()
-        else:
-            if self._grammar != grammar:
-                raise AssertionError("Parser has already been assigned"
-                                     "to a different Grammar object!")
+        elif self._grammar != grammar:
+              raise AssertionError("Parser has already been assigned"
+                                   "to a different Grammar object!")
 
     def _grammar_assigned_notifier(self):
         """A function that notifies the parser object that it has been
@@ -622,7 +611,7 @@ class Grammar:
     root__ = ZOMBIE_PARSER  # type: ParserBase
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
-    resume_rules__ = dict()  # type: Dictionary[str, ResumeRule]
+    resume_rules__ = dict()  # type: Dict[str, ResumeList]
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
@@ -666,7 +655,7 @@ class Grammar:
 
     def __init__(self, root: Parser = None) -> None:
         self.all_parsers__ = set()             # type: Set[ParserBase]
-        self.start_parser__ = None             # type: ParserBase
+        self.start_parser__ = None             # type: Optional[ParserBase]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
@@ -709,7 +698,7 @@ class Grammar:
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
-        self.call_stack__ = []                # type: List[Parser]
+        self.call_stack__ = []                # type: List[ParserBase]
         # snapshots of call stacks
         self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
@@ -928,6 +917,9 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     else:
         msg.extend(["\nEnable history tracking in Grammar object to display call stack."])
     return " ".join(msg)
+
+
+ZOMBIE_GRAMMAR = Grammar()
 
 
 ########################################################################

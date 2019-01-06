@@ -56,7 +56,7 @@ import threading
 
 from DHParser.error import line_col
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node
+from DHParser.syntaxtree import Node, ParserBase
 from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS, typing
 from typing import List, Tuple, Union
 
@@ -220,9 +220,9 @@ class HistoryRecord:
         '\n</style>\n</head>\n<body>\n')
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
-    def __init__(self, call_stack: List['Parser'], node: Node, text: StringView) -> None:
+    def __init__(self, call_stack: List['ParserBase'], node: Node, text: StringView) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['Parser']
+        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['ParserBase']
         self.node = node                # type: Node
         self.text = text                # type: StringView
         self.line_col = (1, 1)          # type: Tuple[int, int]

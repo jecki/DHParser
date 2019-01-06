@@ -41,7 +41,7 @@ except ImportError:
     import DHParser.foreign_typing as typing
     sys.modules['typing'] = typing  # make it possible to import from typing
 
-from typing import Any, Iterable, Sequence, Set, Union, Dict  # , cast
+from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable  # , cast
 
 
 __all__ = ('escape_re',
@@ -72,10 +72,10 @@ __all__ = ('escape_re',
 #######################################################################
 
 GLOBALS = threading.local()
-CONFIG_PRESET = {}
+CONFIG_PRESET = dict()  # type: Dict[Hashable, Any]
 
 
-def get_config_value(key):
+def get_config_value(key: Hashable) -> Any:
     """
     Retrieves a configuration value thread-safely.
     :param key:  the key (an immutable, usually a string)
@@ -84,7 +84,7 @@ def get_config_value(key):
     try:
         cfg = GLOBALS.config
     except AttributeError:
-        GLOBALS.config = {}
+        GLOBALS.config = dict()
         cfg = GLOBALS.config
     try:
         return cfg[key]
@@ -94,7 +94,7 @@ def get_config_value(key):
         return value
 
 
-def set_config_value(key, value):
+def set_config_value(key: Hashable, value: Any):
     """
     Changes a configuration value thread-safely. The configuration
     value will be set only for the current thread. In order to
@@ -106,7 +106,7 @@ def set_config_value(key, value):
     try:
         _ = GLOBALS.config
     except AttributeError:
-        GLOBALS.config = {}
+        GLOBALS.config = dict()
     GLOBALS.config[key] = value
 
 

@@ -24,23 +24,24 @@ conforming to this grammar into contrete syntax trees.
 """
 
 
-import keyword
 from collections import OrderedDict
 from functools import partial
+import keyword
+import os
 
 from DHParser.compile import CompilerError, Compiler
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
     GLOBALS, CONFIG_PRESET, get_config_value, unrepr, typing
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
-    remove_tokens, flatten, forbid, assert_content, remove_infix_operator
+    remove_tokens, flatten, forbid, assert_content
 from DHParser.versionnumber import __version__
-from typing import Callable, Dict, List, Set, Tuple, Any
+from typing import Callable, Dict, List, Set, Tuple, Union
 
 
 __all__ = ('get_ebnf_preprocessor',
@@ -774,13 +775,13 @@ class EBNFCompiler(Compiler):
         #     self.directives['testing'] = value.lower() not in {"off", "false", "no"}
 
         elif key == 'literalws':
-            value = {child.content.strip().lower() for child in node.children[1:]}
-            if ((value - {'left', 'right', 'both', 'none'})
-                    or ('none' in value and len(value) > 1)):
+            values = {child.content.strip().lower() for child in node.children[1:]}
+            if ((values - {'left', 'right', 'both', 'none'})
+                    or ('none' in values and len(values) > 1)):
                 self.tree.new_error(node, 'Directive "literalws" allows only `left`, `right`, '
-                                    '`both` or `none`, not `%s`' % ", ".join(value))
-            wsp = {'left', 'right'} if 'both' in value \
-                else {} if 'none' in value else value
+                                    '`both` or `none`, not `%s`' % ", ".join(values))
+            wsp = {'left', 'right'} if 'both' in values \
+                else {} if 'none' in values else values
             self.directives[key] = list(wsp)
 
         elif key in {'tokens', 'preprocessor_tokens'}:
@@ -822,7 +823,7 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
                                           ' earlier!' % symbol)
             else:
-                reentry_conditions = []
+                reentry_conditions = []  # type: List[Union[unrepr, str]]
                 for child in node.children[1:]:
                     if child.parser.name == 'regexp':
                         reentry_conditions.append(unrepr("re.compile(r'%s')" % extract_regex(child)))

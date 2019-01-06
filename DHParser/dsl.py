@@ -450,6 +450,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         A (potentially empty) list of error or warning messages.
     """
     filepath = os.path.normpath(source_file)
+    f = None  # Optional[TextIO]
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
     rootname = os.path.splitext(filepath)[0]
@@ -548,8 +549,10 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                     f.write(result.as_xml())
                 else:
                     f.write(result.as_sxpr())
-            else:
+            elif isinstance(result, str):
                 f.write(result)
+            else:
+                raise AssertionError('Illegal result type: ' + str(type(result)))
         except (PermissionError, FileNotFoundError, IOError) as error:
             print('# Could not write file "' + rootname + '.py" because of: '
                   + "\n# ".join(str(error).split('\n)')))

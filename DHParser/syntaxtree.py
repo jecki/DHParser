@@ -41,6 +41,9 @@ __all__ = ('ParserBase',
            'ZombieParser',
            'ZOMBIE_PARSER',
            'ZOMBIE_NODE',
+           'ResultType',
+           'StrictResultType',
+           'ChildrenType',
            'Node',
            'RootNode',
            'ZOMBIE_ROOTNODE',
@@ -89,10 +92,10 @@ class ParserBase:
         pass
 
     @property
-    def grammar(self) -> Optional['Grammar']:
+    def grammar(self) -> 'Grammar':
         """Returns the Grammar object to which the parser belongs. If not
         yet connected to any Grammar object, None is returned."""
-        return None
+        raise NotImplementedError
 
     def apply(self, func: Callable) -> bool:
         """Applies the function `func` to the parser. Returns False, if
