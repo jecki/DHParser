@@ -97,11 +97,10 @@ class ParserBase:
         yet connected to any Grammar object, None is returned."""
         raise NotImplementedError
 
-    def apply(self, func: Callable) -> bool:
-        """Applies the function `func` to the parser. Returns False, if
-        - for whatever reason - the functions has not been applied, True
-        otherwise."""
-        return False
+    def apply(self, func: Callable):
+        """Applies the function `func` recursively to the parser and all
+        descendant parsers, if any exist."""
+        pass
 
 
 WHITESPACE_PTYPE = ':Whitespace'

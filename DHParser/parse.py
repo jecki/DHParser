@@ -256,6 +256,10 @@ def add_parser_guard(parser_func):
     return guarded_call
 
 
+ApplyFunc = Callable[['Parser'], None]
+FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
+
+
 class Parser(ParserBase):
     """
     (Abstract) Base class for Parser combinator parsers. Any parser
@@ -314,8 +318,6 @@ class Parser(ParserBase):
                 is attached.
     """
 
-    ApplyFunc = Callable[['Parser'], None]
-
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
         super().__init__()
@@ -350,7 +352,7 @@ class Parser(ParserBase):
         `reset()`-method of the derived class."""
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(lambda: 0)  # type: DefaultDict[int, int]
-        self.cycle_detection = set()  # type: Set[Callable]
+        self.cycle_detection = set()  # type: Set[ApplyFunc]
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
@@ -390,22 +392,54 @@ class Parser(ParserBase):
         assigned to a grammar."""
         pass
 
-    def apply(self, func: ApplyFunc) -> bool:
+    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
-        descendant parsers if any exist. The same function can never
-        be applied twice between calls of the ``reset()``-method!
-        Returns `True`, if function has been applied, `False` if function
-        had been applied earlier already and thus has not been applied again.
+        descendant parsers, if any exist.
+
+        In order to break cycles, function `flip` is called, which should
+        return `True`, if this parser has already been visited. If not, it
+        flips the cycle detection flag and returns `False`.
+
+        This is a protected function and should not called from outside
+        class Parser or any of its descendants. The entry point for external
+        calls is the method `apply()` without underscore!
         """
-        if func in self.cycle_detection:
+        if flip(func, self.cycle_detection):
             return False
         else:
-            assert not self.visited, "No calls to Parser.apply() during or " \
-                                     "after ongoing parsing process. (Call Parser.reset() first.)"
-            self.cycle_detection.add(func)
             func(self)
             return True
+
+    def apply(self, func: ApplyFunc):
+        """
+        Applies function `func(parser)` recursively to this parser and all
+        descendant parsers, if any exist. Traversal is pre-order.
+        """
+        def positive_flip(f: ApplyFunc, flagged: Set[Callable]) -> bool:
+            """Returns True, if function `f` has already been applied to this
+            parser and sets the flag accordingly. Interprets `f in flagged == True`
+            as meaning that `f` has already been applied."""
+            if f in flagged:
+                return True
+            else:
+                flagged.add(f)
+                return False
+
+        def negative_flip(f: ApplyFunc, flagged: Set[Callable]) -> bool:
+            """Returns True, if function `f` has already been applied to this
+            parser and sets the flag accordingly. Interprets `f in flagged == False`
+            as meaning that `f` has already been applied."""
+            if f not in flagged:
+                return True
+            else:
+                flagged.remove(f)
+                return False
+
+        if func in self.cycle_detection:
+            self._apply(func, negative_flip)
+        else:
+            self._apply(func, positive_flip)
 
 
 def mixin_comment(whitespace: str, comment: str) -> str:
@@ -1134,9 +1168,9 @@ class UnaryOperator(Parser):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super().apply(func):
-            self.parser.apply(func)
+    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
+        if super()._apply(func, flip):
+            self.parser._apply(func, flip)
             return True
         return False
 
@@ -1165,10 +1199,10 @@ class NaryOperator(Parser):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super().apply(func):
+    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
+        if super()._apply(func, flip):
             for parser in self.parsers:
-                parser.apply(func)
+                parser._apply(func, flip)
             return True
         return False
 
@@ -1979,8 +2013,8 @@ class Forward(Parser):
         """
         self.parser = parser
 
-    def apply(self, func: Parser.ApplyFunc) -> bool:
-        if super().apply(func):
-            self.parser.apply(func)
+    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
+        if super()._apply(func, flip):
+            self.parser._apply(func, flip)
             return True
         return False

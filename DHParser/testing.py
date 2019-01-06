@@ -311,7 +311,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     def lookahead_artifact(raw_errors):
         """
         Returns True, if the error merely occured, because the parser
-        stopped in front of a seuqence that was captured by a lookahead
+        stopped in front of a sequence that was captured by a lookahead
         operator. This is required for testing of parsers that put a
         lookahead operator at the end. See test_testing.TestLookahead.
         """

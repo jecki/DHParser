@@ -27,11 +27,35 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compile_python_object
 from DHParser.log import logging, is_logging, log_ST
 from DHParser.error import Error
-from DHParser.parse import Retrieve, Grammar, Forward, TKN, ZeroOrMore, RE, \
-    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, UnknownParserError
+from DHParser.parse import Retrieve, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
+    UnknownParserError
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
+
+
+class TestParserClass:
+    def test_apply(self):
+        minilang ="""
+            expr = expr ("+"|"-") term | term
+            term = term ("*"|"/") factor | factor
+            factor = /[0-9]+/~
+            """
+        gr = grammar_provider(minilang)()
+        l = []
+        def visitor(p: Parser):
+            l.append(p.name + p.ptype)
+        gr.root__.apply(visitor)
+        s1 = ", ".join(l)
+        l = []
+        gr.root__.apply(visitor)
+        s2 = ", ".join(l)
+        l = []
+        gr.root__.apply(visitor)
+        s3 = ", ".join(l)
+        # print(s1);  print(s2);  print(s3)
+        assert s1 == s2 == s3
 
 
 class TestInfiLoopsAndRecursion:
