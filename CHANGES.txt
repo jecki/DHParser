@@ -1,7 +1,11 @@
+DHParser Version 0.8.5 (DATE?)
+..............................
+
+- parse.Parser.apply() reworked
 
 
 DHParser Version 0.8.4 (6.1.2019)
-...................................
+.................................
 
 - customized resuming after parser errors! (still experimental, see
   tests/test_ebnf.TestCustomizedResumeParsing as well as

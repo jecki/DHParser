@@ -541,6 +541,46 @@ class EBNFCompiler(Compiler):
         """
         pass  # TODO: add verification code here
 
+
+    def _check_rx(self, node: Node, rx: str) -> str:
+        """
+        Checks whether the string `rx` represents a valid regular
+        expression. Makes sure that multiline regular expressions are
+        prepended by the multiline-flag. Returns the regular expression string.
+        """
+        flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
+        if flags:
+            rx = "(?%s)%s" % ("".join(flags), rx)
+        try:
+            re.compile(rx)
+        except Exception as re_error:
+            self.tree.new_error(node, "malformed regular expression %s: %s" %
+                                (repr(rx), str(re_error)))
+        return rx
+
+
+    def _extract_regex(self, node: Node) -> str:
+        """Extracts regular expression string from regexp-Node."""
+        value = node.content.strip("~")
+        if value[0] + value[-1] in {'""', "''"}:
+            value = escape_re(value[1:-1])
+        elif value[0] + value[-1] == '//':
+            value = self._check_rx(node, value[1:-1])
+        return value
+
+
+    def _generate_resume_rule(self, nd: Node) -> Union[str, unrepr]:
+        """Generates a resume rules from the nodes content. Returns an
+        empty string in case the node is neither regexp nor literal.
+        """
+        if nd.parser.name == 'regexp':
+            return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
+        elif nd.parser.name == 'literal':
+            s = nd.content.strip()
+            return s.strip('"') if s[0] == '"' else s.strip("'")
+        return ''
+
+
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:
         """
         Creates the Python code for the parser after compilation of
@@ -570,7 +610,28 @@ class EBNFCompiler(Compiler):
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))
         definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
         definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
-        definitions.append((self.RESUME_RULES_KEYWORD, repr(self.directives['resume'])))
+
+        # prepare and add resume-rules
+
+        resume_rules = dict()  # type: Dict[str, List[Union[str, unrpr]]]
+        for symbol, raw_rules in self.directives['resume'].items():
+            refined_rules = []
+            for rule in raw_rules:
+                if isinstance(rule, unrepr) and rule.s.isidentifier():
+                    try:
+                        nd = self.rules[rule.s][0].children[1]
+                        refined = self._generate_resume_rule(nd)
+                    except IndexError:
+                        refined = ""
+                    if refined:
+                        refined_rules.append(refined)
+                    else:
+                        self.tree.new_error(nd, 'Symbol "%s" cannot be used in resume rule, since'
+                                                ' it represents neither literal nor regexp!')
+                else:
+                    refined_rules.append(rule)
+            resume_rules[symbol] = refined_rules
+        definitions.append((self.RESUME_RULES_KEYWORD, repr(resume_rules)))
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -703,23 +764,6 @@ class EBNFCompiler(Compiler):
         return rule, defn
 
 
-    def _check_rx(self, node: Node, rx: str) -> str:
-        """
-        Checks whether the string `rx` represents a valid regular
-        expression. Makes sure that multiline regular expressions are
-        prepended by the multiline-flag. Returns the regular expression string.
-        """
-        flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
-        if flags:
-            rx = "(?%s)%s" % ("".join(flags), rx)
-        try:
-            re.compile(rx)
-        except Exception as re_error:
-            self.tree.new_error(node, "malformed regular expression %s: %s" %
-                                (repr(rx), str(re_error)))
-        return rx
-
-
     def on_directive(self, node: Node) -> str:
         key = node.children[0].content
         assert key not in self.directives['tokens']
@@ -737,18 +781,6 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "%s" must have one, but not %i values.'
                                     % (key, len(node.children) - 1))
 
-        def extract_regex(nd: Node) -> str:
-            value = nd.content.strip("~")
-            # cast(str, node.children[1].result).strip("~")
-            if value != nd.content:  # cast(str, node.children[1].result)
-                self.tree.new_error(node, "Whitespace marker '~' not allowed in definition "
-                                          "of %s regular expression." % key)
-            if value[0] + value[-1] in {'""', "''"}:
-                value = escape_re(value[1:-1])
-            elif value[0] + value[-1] == '//':
-                value = self._check_rx(node, value[1:-1])
-            return value
-
         if key in {'comment', 'whitespace'}:
             check_argnum()
             if node.children[1].parser.name == "symbol":
@@ -759,7 +791,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, 'Value "%s" not allowed for directive "%s".'
                                         % (value, key))
             else:
-                value = extract_regex(node.children[1])
+                value = self._extract_regex(node.children[1])
                 if key == 'whitespace' and not re.match(value, ''):
                     self.tree.new_error(node, "Implicit whitespace should always "
                                         "match the empty string, /%s/ does not." % value)
@@ -814,10 +846,10 @@ class EBNFCompiler(Compiler):
                 self.directives['error'][symbol] = error_msg
 
         elif key.endswith('_resume'):
-            if not all(child.parser.name in ('literal', 'regexp') for child in node.children[1:]):
-                self.tree.new_error(node, 'Directive "%s" accepts only regular expressions or '
-                                          'plain strings as arguments, but no symbols without '
-                                          'quotation marks!' % key)
+            # if not all(child.parser.name in ('literal', 'regexp') for child in node.children[1:]):
+            #     self.tree.new_error(node, 'Directive "%s" accepts only regular expressions or '
+            #                               'plain strings as arguments, but no symbols without '
+            #                               'quotation marks!' % key)
             symbol = key[:-7]
             if symbol in self.directives['resume']:
                 self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
@@ -825,12 +857,13 @@ class EBNFCompiler(Compiler):
             else:
                 reentry_conditions = []  # type: List[Union[unrepr, str]]
                 for child in node.children[1:]:
-                    if child.parser.name == 'regexp':
-                        reentry_conditions.append(unrepr("re.compile(r'%s')" % extract_regex(child)))
-                    else:
-                        s = child.content.strip()
-                        s = s.strip('"') if s[0] == '"' else s.strip("'")
-                        reentry_conditions.append(s)
+                    rule = self._generate_resume_rule(child)
+                    if rule:
+                        reentry_conditions.append(rule)
+                    else:  # child.parser.name == 'symbol'
+                        if child.content not in self.symbols:
+                            self.symbols[child.content] = node
+                        reentry_conditions.append(unrepr(child.content.strip()))
                 self.directives['resume'][symbol] = reentry_conditions
 
         else:

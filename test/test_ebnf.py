@@ -473,12 +473,6 @@ class TestCuratedErrors:
             series = "X" | head §"C" "D"
             head = "A" "B"
             """
-        # from DHParser.dsl import compileDSL
-        # from DHParser.preprocess import nil_preprocessor
-        # from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-        # grammar_src = compileDSL(lang, nil_preprocessor, get_ebnf_grammar(),
-        #                          get_ebnf_transformer(), get_ebnf_compiler("test", lang))
-        # print(grammar_src)
         parser = grammar_provider(lang)()
         st = parser("X");  assert not st.error_flag
         st = parser("ABCD");  assert not st.error_flag
@@ -491,19 +485,13 @@ class TestCuratedErrors:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "a user defined error message"
 
-    def test_curated_error_message_case_sensitive(self):
+    def test_curated_error_case_sensitive(self):
         lang = """
             document = Series | /.*/
             @Series_error = "a user defined error message"
             Series = "X" | head §"C" "D"
             head = "A" "B"
             """
-        # from DHParser.dsl import compileDSL
-        # from DHParser.preprocess import nil_preprocessor
-        # from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-        # grammar_src = compileDSL(lang, nil_preprocessor, get_ebnf_grammar(),
-        #                          get_ebnf_transformer(), get_ebnf_compiler("test", lang))
-        # print(grammar_src)
         parser = grammar_provider(lang)()
         st = parser("ABC_");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
@@ -513,8 +501,8 @@ class TestCuratedErrors:
 class TestCustomizedResumeParsing:
     def setup(self):
         lang = """
-        @ alpha_resume = 'BETA', 'GAMMA'
-        @ beta_resume = 'GAMMA'
+        @ alpha_resume = 'BETA', GAMMA_STR
+        @ beta_resume = GAMMA_RE
         @ bac_resume = /GA\w+/
         document = alpha [beta] gamma "."
           alpha = "ALPHA" abc
@@ -525,6 +513,8 @@ class TestCustomizedResumeParsing:
           gamma = "GAMMA" §(cab | cba)
             cab = "c" "a" §"b"
             cba = "c" "b" §"a"
+        GAMMA_RE = /GA\w+/
+        GAMMA_STR = "GAMMA"
         """
         try:
             self.gr = grammar_provider(lang)()
@@ -541,7 +531,7 @@ class TestCustomizedResumeParsing:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
         assert len(cst.collect_errors()) == 1
-        # multiple failures
+
         content = 'ALPHA acb BETA bad GAMMA cab .'
         cst = gr(content)
         # print(cst.as_sxpr())
@@ -550,6 +540,15 @@ class TestCustomizedResumeParsing:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
         assert len(cst.collect_errors()) == 2
+
+        content = 'ALPHA acb GAMMA cab .'
+        cst = gr(content)
+        # print(cst.as_sxpr())
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only on error message
+        assert len(cst.collect_errors()) == 1
 
 
 if __name__ == "__main__":
