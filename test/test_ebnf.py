@@ -491,6 +491,24 @@ class TestCuratedErrors:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "a user defined error message"
 
+    def test_curated_error_message_case_sensitive(self):
+        lang = """
+            document = Series | /.*/
+            @Series_error = "a user defined error message"
+            Series = "X" | head §"C" "D"
+            head = "A" "B"
+            """
+        # from DHParser.dsl import compileDSL
+        # from DHParser.preprocess import nil_preprocessor
+        # from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+        # grammar_src = compileDSL(lang, nil_preprocessor, get_ebnf_grammar(),
+        #                          get_ebnf_transformer(), get_ebnf_compiler("test", lang))
+        # print(grammar_src)
+        parser = grammar_provider(lang)()
+        st = parser("ABC_");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "a user defined error message"
+
 
 class TestCustomizedResumeParsing:
     def setup(self):

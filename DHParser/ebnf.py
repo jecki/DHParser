@@ -721,7 +721,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_directive(self, node: Node) -> str:
-        key = node.children[0].content.lower()
+        key = node.children[0].content
         assert key not in self.directives['tokens']
 
         if key not in self.REPEATABLE_DIRECTIVES:
