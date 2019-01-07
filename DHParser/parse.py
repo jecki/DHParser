@@ -1418,8 +1418,7 @@ class Series(NaryOperator):
                     # #                          location, Error.MESSAGE))
                     found = text_[:10].replace('\n', '\\n ')
                     if self.errmsg:
-                        msg = self.errmsg % found if self.errmsg.find("%s") >= 0 \
-                            else self.errmsg
+                        msg = self.errmsg.format(parser.repr, found)
                     else:
                         msg = '%s expected, "%s" found!' % (parser.repr, found)
                     mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)
