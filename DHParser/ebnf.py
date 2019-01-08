@@ -271,10 +271,13 @@ def get_preprocessor() -> PreprocessorFunc:
 
 GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
+    global GLOBALS
     try:
         grammar = GLOBALS.{NAME}_{ID}_grammar_singleton
     except AttributeError:
         GLOBALS.{NAME}_{ID}_grammar_singleton = {NAME}Grammar()
+        if hasattr(get_grammar, 'python_src__'):
+            GLOBALS.{NAME}_{ID}_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = GLOBALS.{NAME}_{ID}_grammar_singleton
     return grammar
 '''
@@ -384,7 +387,9 @@ class EBNFCompiler(Compiler):
     RAW_WS_KEYWORD = "WHITESPACE__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
-    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD, RESUME_RULES_KEYWORD}
+    ERR_MSG_SUFFIX = '_err_msg__'
+    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD,
+                        RESUME_RULES_KEYWORD, ERR_MSG_SUFFIX}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -634,6 +639,20 @@ class EBNFCompiler(Compiler):
             resume_rules[symbol] = refined_rules
         definitions.append((self.RESUME_RULES_KEYWORD, repr(resume_rules)))
 
+        # prepare and add customized error-messages
+
+        for symbol, err_msgs in self.directives['error'].items():
+            custom_errors = []
+            for search, message in err_msgs:
+                if isinstance(search, unrepr) and search.s.isidentifier():
+                    try:
+                        nd = self.rules[search.s][0].children[1]
+                        search = self._gen_search_rule(nd)
+                    except IndexError:
+                        search = ''
+                custom_errors.append((search, message))
+            definitions.append((symbol + self.ERR_MSG_SUFFIX, repr(custom_errors)))
+
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
 
@@ -834,9 +853,9 @@ class EBNFCompiler(Compiler):
             check_argnum(2)
             symbol = key[:-6]
             error_msgs = self.directives['error'].get(symbol, [])
-            # if symbol in self.rules:
-            #     self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
-            #                         + 'must be defined before the symbol!')
+            if symbol in self.rules:
+                self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
+                                    + 'must be defined before the symbol!')
             if node.children[1 if len(node.children) == 2 else 2].parser.name != 'literal':
                 self.tree.new_error(
                     node, 'Directive "%s" requires message string or a a pair ' % key +
@@ -919,10 +938,11 @@ class EBNFCompiler(Compiler):
             # add custom error message if it has been declared for the currend definition
             if custom_args:
                 current_symbol = next(reversed(self.rules.keys()))
-                msgs = self.directives['error'].get(current_symbol, [])
-                if msgs:
+                # msgs = self.directives['error'].get(current_symbol, [])
+                # if msgs:
+                if current_symbol in self.directives['error']:
                     # use class field instead or direct representation of error messages!
-                    custom_args.append('err_msgs=' + str(msgs))
+                    custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
             compiled = self.non_terminal(node, 'Series', custom_args)
         node.result = saved_result
         return compiled

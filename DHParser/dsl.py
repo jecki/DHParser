@@ -320,9 +320,9 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
     """
     grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding, ebnf_src))
-    grammar_obj = compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
-    grammar_obj.python_src__ = grammar_src
-    return grammar_obj
+    grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
+    grammar_factory.python_src__ = grammar_src
+    return grammar_factory
 
 
 def load_compiler_suite(compiler_suite: str) -> \
