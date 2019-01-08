@@ -834,30 +834,24 @@ class EBNFCompiler(Compiler):
             check_argnum(2)
             symbol = key[:-6]
             error_msgs = self.directives['error'].get(symbol, [])
-            if symbol in self.rules:
-                self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
-                                    + 'must be defined before the symbol!')
-            parameter_error = 'Directive "%s" requires message string or a a pair '\
-                              '(regular expression or search string, message string) as argument!'
+            # if symbol in self.rules:
+            #     self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
+            #                         + 'must be defined before the symbol!')
+            if node.children[1 if len(node.children) == 2 else 2].parser.name != 'literal':
+                self.tree.new_error(
+                    node, 'Directive "%s" requires message string or a a pair ' % key +
+                    '(regular expression or search string, message string) as argument!')
             if len(node.children) == 2:
-                if node.children[1].parser.name != 'literal':
-                    self.tree.new_error(node, parameter_error)
-                else:
-                    error_msgs.append(('', unrepr(node.children[1].content)))
-            if len(node.children) == 3:
-                if (node.children[1].parser.name not in ('literal', 'regexp')
-                        or node.children[2].parser.name != 'literal'):
-                    self.tree.new_error(node, parameter_error)
-                else:
-                    error_msgs.append((self._gen_search_rule(node.children[1]),
-                                       unrepr(node.children[2].content)))
+                error_msgs.append(('', unrepr(node.children[1].content)))
+            elif len(node.children) == 3:
+                rule = self._gen_search_rule(node.children[1])
+                error_msgs.append((rule if rule else unrepr(node.children[1].content),
+                                   unrepr(node.children[2].content)))
+            else:
+                self.tree.new_error(node, 'Directive "%s" allows at most two parameters' % key)
             self.directives['error'][symbol] = error_msgs
 
         elif key.endswith('_resume'):
-            # if not all(child.parser.name in ('literal', 'regexp') for child in node.children[1:]):
-            #     self.tree.new_error(node, 'Directive "%s" accepts only regular expressions or '
-            #                               'plain strings as arguments, but no symbols without '
-            #                               'quotation marks!' % key)
             symbol = key[:-7]
             if symbol in self.directives['resume']:
                 self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
@@ -866,12 +860,7 @@ class EBNFCompiler(Compiler):
                 reentry_conditions = []  # type: List[Union[unrepr, str]]
                 for child in node.children[1:]:
                     rule = self._gen_search_rule(child)
-                    if rule:
-                        reentry_conditions.append(rule)
-                    else:  # child.parser.name == 'symbol'
-                        if child.content not in self.symbols:
-                            self.symbols[child.content] = node
-                        reentry_conditions.append(unrepr(child.content.strip()))
+                    reentry_conditions.append(rule if rule else unrepr(child.content.strip()))
                 self.directives['resume'][symbol] = reentry_conditions
 
         else:
@@ -932,6 +921,7 @@ class EBNFCompiler(Compiler):
                 current_symbol = next(reversed(self.rules.keys()))
                 msgs = self.directives['error'].get(current_symbol, [])
                 if msgs:
+                    # use class field instead or direct representation of error messages!
                     custom_args.append('err_msgs=' + str(msgs))
             compiled = self.non_terminal(node, 'Series', custom_args)
         node.result = saved_result

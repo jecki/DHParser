@@ -183,8 +183,17 @@ class unrepr:
         >>> unrepr("re.compile(r'abc+')")
         re.compile(r'abc+')
     """
-    def __init__(self, s):
-        self.s = s
+    def __init__(self, s: str):
+        self.s = s  # type: str
+
+    def __eq__(self, other: Union['unrepr', str]):
+        if isinstance(other, unrepr):
+            return self.s == other.s
+        elif isinstance(other, str):
+            return self.s == other
+        else:
+            raise TypeError('unrepr objects can only be compared with '
+                            'other unrepr objects or strings!')
 
     def __str__(self):
         return self.s
