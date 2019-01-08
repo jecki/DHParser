@@ -1377,8 +1377,12 @@ class Series(NaryOperator):
     RX_ARGUMENT = re.compile(r'\s(\S)')
     NOPE = 1000
 
-    def __init__(self, *parsers: Parser, mandatory: int = NOPE, errmsg: str="") -> None:
+    MessageType = List[Tuple[Union[str, Any], str]]
+
+    def __init__(self, *parsers: Parser, mandatory: int = NOPE, err_msgs: MessageType=[]) -> None:
         super().__init__(*parsers)
+        assert not (mandatory == Series.NOPE and err_msgs), \
+            'Custom error messages only make sense if parameter "mandatory" is set!'
         length = len(self.parsers)
         assert 1 <= length < Series.NOPE, \
             'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
@@ -1386,11 +1390,11 @@ class Series(NaryOperator):
             mandatory += length
         assert 0 <= mandatory < length or mandatory == Series.NOPE
         self.mandatory = mandatory
-        self.errmsg = errmsg
+        self.err_msgs = err_msgs
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory, errmsg=self.errmsg)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory, err_msgs=self.err_msgs)
         duplicate.name = self.name
         duplicate.ptype = self.ptype
         return duplicate
@@ -1417,8 +1421,11 @@ class Series(NaryOperator):
                     # # node.errors.append(Error("§ %s violation" % parser.repr,
                     # #                          location, Error.MESSAGE))
                     found = text_[:10].replace('\n', '\\n ')
-                    if self.errmsg:
-                        msg = self.errmsg.format(parser.repr, found)
+                    for search, message in self.err_msgs:
+                        rxs = not isinstance(search, str)
+                        if rxs and search.match(text_) or not rxs and text_.startswith(search):
+                            msg = message.format(parser.repr, found)
+                            break
                     else:
                         msg = '%s expected, "%s" found!' % (parser.repr, found)
                     mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)

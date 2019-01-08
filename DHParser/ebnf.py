@@ -569,9 +569,10 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def _generate_resume_rule(self, nd: Node) -> Union[str, unrepr]:
-        """Generates a resume rules from the nodes content. Returns an
-        empty string in case the node is neither regexp nor literal.
+    def _gen_search_rule(self, nd: Node) -> Union[str, unrepr]:
+        """Generates a search rule, which can be either a string for simple
+        string search or a regular expression from the nodes content. Returns
+        an empty string in case the node is neither regexp nor literal.
         """
         if nd.parser.name == 'regexp':
             return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
@@ -620,7 +621,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
                     try:
                         nd = self.rules[rule.s][0].children[1]
-                        refined = self._generate_resume_rule(nd)
+                        refined = self._gen_search_rule(nd)
                     except IndexError:
                         refined = ""
                     if refined:
@@ -778,8 +779,7 @@ class EBNFCompiler(Compiler):
 
         def check_argnum(n: int = 1):
             if len(node.children) > n + 1:
-                self.tree.new_error(node, 'Directive "%s" must have one, but not %i values.'
-                                    % (key, len(node.children) - 1))
+                self.tree.new_error(node, 'Directive "%s" can have at most %i values.' % (key, n))
 
         if key in {'comment', 'whitespace'}:
             check_argnum()
@@ -831,19 +831,27 @@ class EBNFCompiler(Compiler):
             self.directives['filter'][symbol] = node.children[1].content.strip()
 
         elif key.endswith('_error'):
-            check_argnum()
-            if not node.children[1].parser.name == "literal":
-                self.tree.new_error(node, 'Directive "%s" requires message string as argument')
-            error_msg = node.children[1].content
+            check_argnum(2)
             symbol = key[:-6]
+            error_msgs = self.directives['error'].get(symbol, [])
             if symbol in self.rules:
                 self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
                                     + 'must be defined before the symbol!')
-            if symbol in self.directives['error']:
-                self.tree.new_error(node, 'Error message for "%s" has already been customized '
-                                          'earlier!' % symbol)
-            else:
-                self.directives['error'][symbol] = error_msg
+            parameter_error = 'Directive "%s" requires message string or a a pair '\
+                              '(regular expression or search string, message string) as argument!'
+            if len(node.children) == 2:
+                if node.children[1].parser.name != 'literal':
+                    self.tree.new_error(node, parameter_error)
+                else:
+                    error_msgs.append(('', unrepr(node.children[1].content)))
+            if len(node.children) == 3:
+                if (node.children[1].parser.name not in ('literal', 'regexp')
+                        or node.children[2].parser.name != 'literal'):
+                    self.tree.new_error(node, parameter_error)
+                else:
+                    error_msgs.append((self._gen_search_rule(node.children[1]),
+                                       unrepr(node.children[2].content)))
+            self.directives['error'][symbol] = error_msgs
 
         elif key.endswith('_resume'):
             # if not all(child.parser.name in ('literal', 'regexp') for child in node.children[1:]):
@@ -857,7 +865,7 @@ class EBNFCompiler(Compiler):
             else:
                 reentry_conditions = []  # type: List[Union[unrepr, str]]
                 for child in node.children[1:]:
-                    rule = self._generate_resume_rule(child)
+                    rule = self._gen_search_rule(child)
                     if rule:
                         reentry_conditions.append(rule)
                     else:  # child.parser.name == 'symbol'
@@ -922,9 +930,9 @@ class EBNFCompiler(Compiler):
             # add custom error message if it has been declared for the currend definition
             if custom_args:
                 current_symbol = next(reversed(self.rules.keys()))
-                msg = self.directives['error'].get(current_symbol, '')
-                if msg:
-                    custom_args.append('errmsg=' + msg)
+                msgs = self.directives['error'].get(current_symbol, [])
+                if msgs:
+                    custom_args.append('err_msgs=' + str(msgs))
             compiled = self.non_terminal(node, 'Series', custom_args)
         node.result = saved_result
         return compiled
