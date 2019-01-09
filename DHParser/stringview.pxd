@@ -17,4 +17,3 @@ cdef int pack_index(int index, int length)
 
 @cython.locals(cbegin=cython.int, cend=cython.int)
 cpdef real_indices(begin, end, int length)
-
