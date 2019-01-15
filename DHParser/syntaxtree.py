@@ -915,7 +915,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     """
 
     sxpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()
-    mock_parsers = dict()  # type: Dict[str, MockParser]
+    mock_parsers = dict()  # type: Dict[StringView, MockParser]
 
     def next_block(s: StringView):
         """Generator that yields all characters until the next closing bracket

@@ -54,8 +54,8 @@ EBNF_TEMPLATE = r"""-grammar
 #
 #######################################################################
 
-document = ~ { WORD } §EOF    # root parser: a sequence of words preceded by whitespace
-                                # until the end of file
+document = ~ { WORD } §EOF      # root parser: a sequence of words preceded
+                                # by whitespace until the end of file
 
 #######################################################################
 #
