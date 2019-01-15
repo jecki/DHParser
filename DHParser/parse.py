@@ -748,7 +748,7 @@ class Grammar:
         this is done lazily.
         """
         if not self._reversed__:
-            self._reversed__ = StringView(self.document__.text[::-1])
+            self._reversed__ = StringView(self.document__.get_text()[::-1])
         return self._reversed__
 
 

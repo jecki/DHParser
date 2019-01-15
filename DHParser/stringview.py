@@ -37,8 +37,16 @@ import collections
 from DHParser.toolkit import typing
 from typing import Optional, Union, Iterable, Tuple
 
+try:
+    import cython
+    cython_optimized = cython.compiled  # type: bool
+except ImportError:
+    # import DHParser.Shadow as cython
+    cython_optimized = False            # type: bool
+    import DHParser.shadow_cython as cython
 
-__all__ = ('StringView', 'EMPTY_STRING_VIEW')
+
+__all__ = ('StringView', 'EMPTY_STRING_VIEW', 'cython_optimized')
 
 
 def first_char(text, begin: int, end: int) -> int:
@@ -80,7 +88,7 @@ def pack_index(index: int, length: int) -> int:
 
 def real_indices(begin: Optional[int],
                  end: Optional[int],
-                 length) -> Tuple[int, int]:   # "length: int" fails with cython!?
+                 length) -> Tuple[int, int]:
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
@@ -89,7 +97,7 @@ def real_indices(begin: Optional[int],
     return pack_index(cbegin, length), pack_index(cend, length)
 
 
-class StringView:  # (collections.abc.Sized):
+class StringView:  # collections.abc.Sized
     """
     A rudimentary StringView class, just enough for the use cases
     in parse.py. The difference between a StringView and the python
@@ -97,33 +105,33 @@ class StringView:  # (collections.abc.Sized):
     copying, i.e. slices are just a view on a section of the sliced
     string.
     """
-    __slots__ = ['text', 'begin', 'end', 'len', 'fullstring']
+    __slots__ = ['_text', '_begin', '_end', '_len', '_fullstring']
 
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         # assert isinstance(text, str)
-        self.text = text  # type: str
-        self.begin, self.end = real_indices(begin, end, len(text))
-        self.len = max(self.end - self.begin, 0)  # type: int
-        if (self.begin == 0 and self.len == len(self.text)):
-            self.fullstring = self.text  # type: str
+        self._text = text  # type: str
+        self._begin, self._end = real_indices(begin, end, len(text))
+        self._len = max(self._end - self._begin, 0)  # type: int
+        if (self._begin == 0 and self._len == len(self._text)):
+            self._fullstring = self._text  # type: str
         else:
-            self.fullstring = ''
+            self._fullstring = ''
 
     def __bool__(self) -> bool:
-        return self.end > self.begin  # and bool(self.text)
+        return self._end > self._begin  # and bool(self.text)
 
     def __len__(self) -> int:
-        return self.len
+        return self._len
 
     def __str__(self) -> str:
         # PERFORMANCE WARNING: This creates a copy of the string-slice
-        if self.fullstring:  # optimization: avoid slicing/copying
-            return self.fullstring
+        if self._fullstring:  # optimization: avoid slicing/copying
+            return self._fullstring
         # since the slice is being copyied now, anyway, the copy might
         # as well be stored in the string view
         # return self.text[self.begin:self.end]  # use this for debugging!
-        self.fullstring = self.text[self.begin:self.end]
-        return self.fullstring
+        self._fullstring = self._text[self._begin:self._end]
+        return self._fullstring
 
     def __eq__(self, other) -> bool:
         # PERFORMANCE WARNING: This creates copies of the strings
@@ -145,28 +153,43 @@ class StringView:  # (collections.abc.Sized):
         else:
             return StringView(str(other) + str(self))
 
+    @cython.locals(start=cython.int, end=cython.int)
     def __getitem__(self, index: Union[slice, int]) -> 'StringView':
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
         try:
-            start, stop = real_indices(index.start, index.stop, self.len)
-            return StringView(self.text, self.begin + start, self.begin + stop)
+            start, stop = real_indices(index.start, index.stop, self._len)
+            return StringView(self._text, self._begin + start, self._begin + stop)
         except AttributeError:
-            return StringView(self.text, self.begin + index, self.begin + index + 1)
+            return StringView(self._text, self._begin + index, self._begin + index + 1)
+
+    def get_begin(self) -> int:
+        """Returns the offset of the StringView. This is needed to correct
+        the absolute offsets that the match objects of regular expression
+        objects return.
+        """
+        return self._begin
+
+    def get_text(self) -> str:
+        """Returns the underlying string."""
+        return self._text
 
     def count(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the number of non-overlapping occurrences of substring
         `sub` in StringView S[start:end].  Optional arguments start and end
         are interpreted as in slice notation.
         """
-        if self.fullstring:
-            return self.fullstring.count(sub, start, end)
+        if self._fullstring:
+            if cython_optimized:
+                return self._fullstring.count(sub, start or 0, self._len if end is None else end)
+            else:
+                return self._fullstring.count(sub, start, end)
         elif start is None and end is None:
-            return self.text.count(sub, self.begin, self.end)
+            return self._text.count(sub, self._begin, self._end)
         else:
-            start, end = real_indices(start, end, self.len)
-            return self.text.count(sub, self.begin + start, self.begin + end)
+            start, end = real_indices(start, end, self._len)
+            return self._text.count(sub, self._begin + start, self._begin + end)
 
     def find(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the lowest index in S where substring `sub` is found,
@@ -174,13 +197,16 @@ class StringView:  # (collections.abc.Sized):
         arguments `start` and `end` are interpreted as in slice notation.
         Returns -1 on failure.
         """
-        if self.fullstring:
-            return self.fullstring.find(sub, start, end)
+        if self._fullstring:
+            if cython_optimized:
+                return self._fullstring.find(sub, start or 0, self._len if end is None else end)
+            else:
+                return self._fullstring.find(sub, start, end)
         elif start is None and end is None:
-            return self.text.find(sub, self.begin, self.end) - self.begin
+            return self._text.find(sub, self._begin, self._end) - self._begin
         else:
-            start, end = real_indices(start, end, self.len)
-            return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
+            start, end = real_indices(start, end, self._len)
+            return self._text.find(sub, self._begin + start, self._begin + end) - self._begin
 
     def rfind(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the highest index in S where substring `sub` is found,
@@ -188,13 +214,16 @@ class StringView:  # (collections.abc.Sized):
         arguments `start` and `end` are interpreted as in slice notation.
         Returns -1 on failure.
         """
-        if self.fullstring:
-            return self.fullstring.rfind(sub, start, end)
+        if self._fullstring:
+            if cython_optimized:
+                return self._fullstring.rfind(sub, start or 0, self._len if end is None else end)
+            else:
+                return self._fullstring.rfind(sub, start, end)
         if start is None and end is None:
-            return self.text.rfind(sub, self.begin, self.end) - self.begin
+            return self._text.rfind(sub, self._begin, self._end) - self._begin
         else:
-            start, end = real_indices(start, end, self.len)
-            return self.text.rfind(sub, self.begin + start, self.begin + end) - self.begin
+            start, end = real_indices(start, end, self._len)
+            return self._text.rfind(sub, self._begin + start, self._begin + end) - self._begin
 
     def startswith(self,
                    prefix: str,
@@ -204,9 +233,9 @@ class StringView:  # (collections.abc.Sized):
         With optional `start`, test S beginning at that position.
         With optional `end`, stop comparing S at that position.
         """
-        start += self.begin
-        end = self.end if end is None else self.begin + end
-        return self.text.startswith(prefix, start, end)
+        start += self._begin
+        end = self._end if end is None else self._begin + end
+        return self._text.startswith(prefix, start, end)
 
     def endswith(self,
                  suffix: str,
@@ -216,17 +245,17 @@ class StringView:  # (collections.abc.Sized):
         With optional `start`, test S beginning at that position.
         With optional `end`, stop comparing S at that position.
         """
-        start += self.begin
-        end = self.end if end is None else self.begin + end
-        return self.text.endswith(suffix, start, end)
+        start += self._begin
+        end = self._end if end is None else self._begin + end
+        return self._text.endswith(suffix, start, end)
 
-    def match(self, regex, flags=0):
+    def match(self, regex, flags: int = 0):
         """Executes `regex.match` on the StringView object and returns the
         result, which is either a match-object or None. Keep in mind that
         match.end(), match.span() etc. are mapped to the underlying text,
         not the StringView-object!!!
         """
-        return regex.match(self.text, pos=self.begin, endpos=self.end)
+        return regex.match(self._text, pos=self._begin, endpos=self._end)
 
     def index(self, absolute_index: int) -> int:
         """Converts an index for a string watched by a StringView object
@@ -240,13 +269,13 @@ class StringView:  # (collections.abc.Sized):
             >>> sv.index(match.end())
             1
         """
-        return absolute_index - self.begin
+        return absolute_index - self._begin
 
     def indices(self, absolute_indices: Iterable[int]) -> Tuple[int, ...]:
         """Converts indices for a string watched by a StringView object
         to indices relative to the string view object. See also: `sv_index()`
         """
-        return tuple(index - self.begin for index in absolute_indices)
+        return tuple(index - self._begin for index in absolute_indices)
 
     def search(self, regex):
         """Executes regex.search on the StringView object and returns the
@@ -254,32 +283,32 @@ class StringView:  # (collections.abc.Sized):
         match.end(), match.span() etc. are mapped to the underlying text,
         not the StringView-object!!!
         """
-        return regex.search(self.text, pos=self.begin, endpos=self.end)
+        return regex.search(self._text, pos=self._begin, endpos=self._end)
 
     def finditer(self, regex):
         """Executes regex.finditer on the StringView object and returns the
         iterator of match objects. Keep in mind that match.end(), match.span()
         etc. are mapped to the underlying text, not the StringView-object!!!
         """
-        return regex.finditer(self.text, pos=self.begin, endpos=self.end)
+        return regex.finditer(self._text, pos=self._begin, endpos=self._end)
 
     def strip(self):
         """Returns a copy of the StringView `self` with leading and trailing
         whitespace removed.
         """
-        begin = first_char(self.text, self.begin, self.end) - self.begin
-        end = last_char(self.text, self.begin, self.end) - self.begin
-        return self if begin == 0 and end == self.len else self[begin:end]
+        begin = first_char(self._text, self._begin, self._end) - self._begin
+        end = last_char(self._text, self._begin, self._end) - self._begin
+        return self if begin == 0 and end == self._len else self[begin:end]
 
     def lstrip(self):
         """Returns a copy of `self` with leading whitespace removed."""
-        begin = first_char(self.text, self.begin, self.end) - self.begin
+        begin = first_char(self._text, self._begin, self._end) - self._begin
         return self if begin == 0 else self[begin:]
 
     def rstrip(self):
         """Returns a copy of `self` with trailing whitespace removed."""
-        end = last_char(self.text, self.begin, self.end) - self.begin
-        return self if end == self.len else self[:end]
+        end = last_char(self._text, self._begin, self._end) - self._begin
+        return self if end == self._len else self[:end]
 
     def split(self, sep=None):
         """Returns a list of the words in `self`, using `sep` as the
@@ -287,18 +316,18 @@ class StringView:  # (collections.abc.Sized):
         whitespace string is a separator and empty strings are
         removed from the result.
         """
-        if self.fullstring:
-            return self.fullstring.split(sep)
+        if self._fullstring:
+            return self._fullstring.split(sep)
         else:
             pieces = []
             length = len(sep)
             k = 0
             i = self.find(sep, k)
             while i >= 0:
-                pieces.append(self.text[self.begin + k: self.begin + i])
+                pieces.append(self._text[self._begin + k: self._begin + i])
                 k = i + length
                 i = self.find(sep, k)
-            pieces.append(self.text[self.begin + k: self.end])
+            pieces.append(self._text[self._begin + k: self._end])
             return pieces
 
     def replace(self, old, new):

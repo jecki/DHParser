@@ -234,7 +234,7 @@ def create_project(path: str):
 
 
 def selftest() -> bool:
-    """Run a simple self-text of DHParser.
+    """Run a simple self-test of DHParser.
     """
     print("DHParser selftest...")
     print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
