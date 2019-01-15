@@ -72,6 +72,9 @@ def pack_index(index: int, length: int) -> int:
     """
     # assert length >= 0
     index = index if index >= 0 else index + length
+    # TODO: Test the following code for speedup
+    # if index < 0:
+    #     index += length
     return 0 if index < 0 else length if index > length else index
 
 
@@ -86,7 +89,7 @@ def real_indices(begin: Optional[int],
     return pack_index(cbegin, length), pack_index(cend, length)
 
 
-class StringView(collections.abc.Sized):
+class StringView:  # (collections.abc.Sized):
     """
     A rudimentary StringView class, just enough for the use cases
     in parse.py. The difference between a StringView and the python
@@ -106,13 +109,13 @@ class StringView(collections.abc.Sized):
         else:
             self.fullstring = ''
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.end > self.begin  # and bool(self.text)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.len
 
-    def __str__(self):
+    def __str__(self) -> str:
         # PERFORMANCE WARNING: This creates a copy of the string-slice
         if self.fullstring:  # optimization: avoid slicing/copying
             return self.fullstring
@@ -122,27 +125,27 @@ class StringView(collections.abc.Sized):
         self.fullstring = self.text[self.begin:self.end]
         return self.fullstring
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         # PERFORMANCE WARNING: This creates copies of the strings
         return len(other) == len(self) and str(self) == str(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         # PERFORMANCE WARNING: This creates a copy of the string-slice
         return hash(str(self))
 
-    def __add__(self, other):
+    def __add__(self, other) -> Union[str, 'StringView']:
         if isinstance(other, str):
             return str(self) + other
         else:
             return StringView(str(self) + str(other))
 
-    def __radd__(self, other):
+    def __radd__(self, other) -> Union[str, 'StringView']:
         if isinstance(other, str):
             return other + str(self)
         else:
             return StringView(str(other) + str(self))
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: Union[slice, int]) -> 'StringView':
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
@@ -150,9 +153,9 @@ class StringView(collections.abc.Sized):
             start, stop = real_indices(index.start, index.stop, self.len)
             return StringView(self.text, self.begin + start, self.begin + stop)
         except AttributeError:
-            return self.text[self.begin + index]
+            return StringView(self.text, self.begin + index, self.begin + index + 1)
 
-    def count(self, sub: str, start=None, end=None) -> int:
+    def count(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the number of non-overlapping occurrences of substring
         `sub` in StringView S[start:end].  Optional arguments start and end
         are interpreted as in slice notation.
@@ -165,7 +168,7 @@ class StringView(collections.abc.Sized):
             start, end = real_indices(start, end, self.len)
             return self.text.count(sub, self.begin + start, self.begin + end)
 
-    def find(self, sub: str, start=None, end=None) -> int:
+    def find(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the lowest index in S where substring `sub` is found,
         such that `sub` is contained within S[start:end].  Optional
         arguments `start` and `end` are interpreted as in slice notation.
@@ -179,7 +182,7 @@ class StringView(collections.abc.Sized):
             start, end = real_indices(start, end, self.len)
             return self.text.find(sub, self.begin + start, self.begin + end) - self.begin
 
-    def rfind(self, sub: str, start=None, end=None) -> int:
+    def rfind(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the highest index in S where substring `sub` is found,
         such that `sub` is contained within S[start:end].  Optional
         arguments `start` and `end` are interpreted as in slice notation.

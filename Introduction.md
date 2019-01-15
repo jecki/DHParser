@@ -390,13 +390,13 @@ scroll down to the AST section, you'll see something like this:
         "*": replace_by_single_child
     }
 
-As you can see, AST-transformations a specified declaratively (with the
+As you can see, AST-transformations are specified declaratively (with the
 option to add your own Python-programmed transformation rules). This
 keeps the specification of the AST-transformation simple and concise. At
 the same, we avoid adding hints for the AST-transformation in the
 grammar specification, which would render the grammar less readable.
 
 Now that you have seen how DHParser basically works, it is time to go
-through the process of desining and testing a domain specific notation
+through the process of designing and testing a domain specific notation
 step by step from the very start. Head over to the documentation in
 subdirectory and read the step by step guide.

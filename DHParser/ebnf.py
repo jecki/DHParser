@@ -619,7 +619,7 @@ class EBNFCompiler(Compiler):
 
         # prepare and add resume-rules
 
-        resume_rules = dict()  # type: Dict[str, List[Union[str, unrpr]]]
+        resume_rules = dict()  # type: Dict[str, List[Union[str, unrepr]]]
         for symbol, raw_rules in self.directives['resume'].items():
             refined_rules = []
             for rule in raw_rules:
