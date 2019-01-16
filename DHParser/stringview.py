@@ -168,6 +168,7 @@ class StringView:  # collections.abc.Sized
         """Returns the underlying string."""
         return self._text
 
+    @cython.locals(_start=cython.int, _end=cython.int)
     def count(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the number of non-overlapping occurrences of substring
         `sub` in StringView S[start:end].  Optional arguments start and end
@@ -181,8 +182,8 @@ class StringView:  # collections.abc.Sized
         elif start is None and end is None:
             return self._text.count(sub, self._begin, self._end)
         else:
-            start, end = real_indices(start, end, self._len)
-            return self._text.count(sub, self._begin + start, self._begin + end)
+            _start, _end = real_indices(start, end, self._len)
+            return self._text.count(sub, self._begin + _start, self._begin + _end)
 
     @cython.locals(_start=cython.int, _end=cython.int)
     def find(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
@@ -202,6 +203,7 @@ class StringView:  # collections.abc.Sized
             _start, _end = real_indices(start, end, self._len)
             return self._text.find(sub, self._begin + _start, self._begin + _end) - self._begin
 
+    @cython.locals(_start=cython.int, _end=cython.int)
     def rfind(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the highest index in S where substring `sub` is found,
         such that `sub` is contained within S[start:end].  Optional
@@ -216,8 +218,8 @@ class StringView:  # collections.abc.Sized
         if start is None and end is None:
             return self._text.rfind(sub, self._begin, self._end) - self._begin
         else:
-            start, end = real_indices(start, end, self._len)
-            return self._text.rfind(sub, self._begin + start, self._begin + end) - self._begin
+            _start, _end = real_indices(start, end, self._len)
+            return self._text.rfind(sub, self._begin + _start, self._begin + _end) - self._begin
 
     def startswith(self,
                    prefix: str,
@@ -230,6 +232,7 @@ class StringView:  # collections.abc.Sized
         start += self._begin
         end = self._end if end is None else self._begin + end
         return self._text.startswith(prefix, start, end)
+
 
     def endswith(self,
                  suffix: str,
@@ -286,6 +289,7 @@ class StringView:  # collections.abc.Sized
         """
         return regex.finditer(self._text, pos=self._begin, endpos=self._end)
 
+    @cython.locals(begin=cython.int, end=cython.int)
     def strip(self):
         """Returns a copy of the StringView `self` with leading and trailing
         whitespace removed.
@@ -294,16 +298,19 @@ class StringView:  # collections.abc.Sized
         end = last_char(self._text, self._begin, self._end) - self._begin
         return self if begin == 0 and end == self._len else self[begin:end]
 
+    @cython.locals(begin=cython.int)
     def lstrip(self):
         """Returns a copy of `self` with leading whitespace removed."""
         begin = first_char(self._text, self._begin, self._end) - self._begin
         return self if begin == 0 else self[begin:]
 
+    @cython.locals(end=cython.int)
     def rstrip(self):
         """Returns a copy of `self` with trailing whitespace removed."""
         end = last_char(self._text, self._begin, self._end) - self._begin
         return self if end == self._len else self[:end]
 
+    @cython.locals(length=cython.int, i=cython.int, k=cython.int)
     def split(self, sep=None):
         """Returns a list of the words in `self`, using `sep` as the
         delimiter string.  If `sep` is not specified or is None, any

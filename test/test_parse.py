@@ -728,6 +728,21 @@ class TestReentryAfterError:
         assert len(cst.collect_errors()) == 2
 
 
+class TestConfiguredErrorMessages:
+    def test_(self):
+        lang = """
+            document = series | /.*/
+            @series_error = "a badly configured error message {5}"
+            series = "X" | head §"C" "D"
+            head = "A" "B"
+            """
+        parser = grammar_provider(lang)()
+        st = parser("AB_D");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MALFORMED_ERROR_STRING
+        assert st.collect_errors()[1].code == Error.MANDATORY_CONTINUATION
+        # print(st.collect_errors())
+
+
 class TestUnknownParserError:
     def test_unknown_parser_error(self):
         gr = Grammar()
@@ -736,6 +751,7 @@ class TestUnknownParserError:
             assert False, "UnknownParserError expected!"
         except UnknownParserError:
             pass
+
 
 
 if __name__ == "__main__":

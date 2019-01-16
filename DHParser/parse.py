@@ -1424,8 +1424,14 @@ class Series(NaryOperator):
                     for search, message in self.err_msgs:
                         rxs = not isinstance(search, str)
                         if rxs and text_.match(search) or not rxs and text_.startswith(search):
-                            msg = message.format(parser.repr, found)
-                            break
+                            try:
+                                msg = message.format(parser.repr, found)
+                                break
+                            except (ValueError, KeyError, IndexError) as e:
+                                error = Error("Malformed error format string '{}' lead to '{}'"
+                                              .format(message, str(e)),
+                                              location, Error.MALFORMED_ERROR_STRING)
+                                self.grammar.tree__.add_error(node, error)
                     else:
                         msg = '%s expected, "%s" found!' % (parser.repr, found)
                     mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)

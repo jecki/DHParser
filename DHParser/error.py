@@ -83,6 +83,7 @@ class Error:
     PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1003)
     PARSER_STOPPED_BEFORE_END                = ErrorCode(1004)
     CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1005)
+    MALFORMED_ERROR_STRING                   = ErrorCode(1006)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
