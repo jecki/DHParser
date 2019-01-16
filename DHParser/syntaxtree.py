@@ -952,7 +952,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         if match is None:
             raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
                                  'not "%s"' % sxpr[:40].replace('\n', ''))
-        end = match.end() - sxpr.get_begin()
+        end = sxpr.index(match.end())
         tagname = sxpr[:end]
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
@@ -986,14 +986,14 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 for qtmark in ['"""', "'''", '"', "'"]:
                     match = sxpr.match(re.compile(qtmark + r'.*?' + qtmark, re.DOTALL))
                     if match:
-                        end = match.end() - sxpr.get_begin()
+                        end = sxpr.index(match.end())
                         i = len(qtmark)
                         lines.append(str(sxpr[i:end - i]))
                         sxpr = sxpr[end:].strip()
                         break
                 else:
                     match = sxpr.match(re.compile(r'(?:(?!\)).)*', re.DOTALL))
-                    end = match.end() - sxpr.get_begin()
+                    end = sxpr.index(match.end())
                     lines.append(str(sxpr[:end]))
                     sxpr = sxpr[end:]
             result = "\n".join(lines)
@@ -1026,7 +1026,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
             d = match.groupdict()
             attributes[d['attr']] = d['value']
-            restart = match.end() - s.get_begin()
+            restart = s.index(match.end())
         return (s[restart:], attributes)
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
@@ -1038,7 +1038,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))
         assert match
         tagname = match.groupdict()['tagname']
-        section = s[match.end() - s.get_begin():]
+        section = s[s.index(match.end()):]
         s, attributes = parse_attributes(section)
         i = s.find('>')
         assert i >= 0
@@ -1051,7 +1051,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
         assert match
         tagname = match.groupdict()['tagname']
-        return s[match.end() - s.get_begin():], tagname
+        return s[s.index(match.end()):], tagname
 
     def parse_leaf_content(s: StringView) -> Tuple[StringView, StringView]:
         """Parses a piece of the content of a tag, just until the next opening,

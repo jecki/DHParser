@@ -164,13 +164,6 @@ class StringView:  # collections.abc.Sized
         except AttributeError:
             return StringView(self._text, self._begin + index, self._begin + index + 1)
 
-    def get_begin(self) -> int:
-        """Returns the offset of the StringView. This is needed to correct
-        the absolute offsets that the match objects of regular expression
-        objects return.
-        """
-        return self._begin
-
     def get_text(self) -> str:
         """Returns the underlying string."""
         return self._text
@@ -191,6 +184,7 @@ class StringView:  # collections.abc.Sized
             start, end = real_indices(start, end, self._len)
             return self._text.count(sub, self._begin + start, self._begin + end)
 
+    @cython.locals(_start=cython.int, _end=cython.int)
     def find(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the lowest index in S where substring `sub` is found,
         such that `sub` is contained within S[start:end].  Optional
@@ -205,8 +199,8 @@ class StringView:  # collections.abc.Sized
         elif start is None and end is None:
             return self._text.find(sub, self._begin, self._end) - self._begin
         else:
-            start, end = real_indices(start, end, self._len)
-            return self._text.find(sub, self._begin + start, self._begin + end) - self._begin
+            _start, _end = real_indices(start, end, self._len)
+            return self._text.find(sub, self._begin + _start, self._begin + _end) - self._begin
 
     def rfind(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the highest index in S where substring `sub` is found,

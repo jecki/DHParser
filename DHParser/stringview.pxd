@@ -8,7 +8,7 @@ import cython
 
 # type hints for Cython python -> C compiler to speed up the most
 # critical code paths of stringview.py.
-
+# see https://cython.readthedocs.io/en/latest/src/tutorial/pure.html
 
 cdef int first_char(str text, int begin, int end)
 
@@ -18,8 +18,6 @@ cdef int pack_index(int index, int length)
 
 @cython.locals(cbegin=cython.int, cend=cython.int)
 cpdef real_indices(begin, end, int length)
-
-# cdefs for class StringView: https://cython.readthedocs.io/en/latest/src/tutorial/pure.html
 
 cdef class StringView:
     cdef str _text
