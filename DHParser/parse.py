@@ -1434,7 +1434,9 @@ class Series(NaryOperator):
                                 self.grammar.tree__.add_error(node, error)
                     else:
                         msg = '%s expected, "%s" found!' % (parser.repr, found)
-                    mandatory_violation = Error(msg, location, Error.MANDATORY_CONTINUATION)
+                    mandatory_violation = Error(msg, location,
+                                                Error.MANDATORY_CONTINUATION if text_
+                                                else Error.MANDATORY_CONTINUATION_AT_EOF)
                     self.grammar.tree__.add_error(node, mandatory_violation)
                     text_ = text_[i:]
                     results += (node,)
