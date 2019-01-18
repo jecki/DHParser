@@ -938,12 +938,12 @@ class EBNFCompiler(Compiler):
             # add custom error message if it has been declared for the currend definition
             if custom_args:
                 current_symbol = next(reversed(self.rules.keys()))
-                # msgs = self.directives['error'].get(current_symbol, [])
-                # if msgs:
                 if current_symbol in self.directives['error']:
                     # use class field instead or direct representation of error messages!
                     custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
             compiled = self.non_terminal(node, 'Series', custom_args)
+            # TODO: Maybe add a warning about ambiguous error messages in case there are several
+            #       Series with mandatory items within the definiens of the same symbol?
         node.result = saved_result
         return compiled
 

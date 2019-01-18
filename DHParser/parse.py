@@ -1409,17 +1409,9 @@ class Series(NaryOperator):
                 if pos < self.mandatory:
                     return None, text
                 else:
-                    # Provide useful error messages
-                    # TODO: Change to accomodate to resuming after errors are caught.
-                    # match = text.search(Series.RX_ARGUMENT)
-                    # i = max(1, text.index(match.regs[1][0])) if match else 1
                     i = 0
                     location = self.grammar.document_length__ - len(text_)
                     node = Node(None, text_[:i]).init_pos(location)
-                    # self.grammar.tree__.add_error(
-                    #     node, Error("§ %s violation" % parser.repr, location, Error.MESSAGE))
-                    # # node.errors.append(Error("§ %s violation" % parser.repr,
-                    # #                          location, Error.MESSAGE))
                     found = text_[:10].replace('\n', '\\n ')
                     for search, message in self.err_msgs:
                         rxs = not isinstance(search, str)
@@ -1440,6 +1432,7 @@ class Series(NaryOperator):
                     self.grammar.tree__.add_error(node, mandatory_violation)
                     text_ = text_[i:]
                     results += (node,)
+                    # TODO: Add queue-jumping here (XXX_skip = Regex, Regex, Regex...)
                     break
             results += (node,)
             # if node.error_flag:  # break on first error
@@ -1590,6 +1583,7 @@ class AllOf(NaryOperator):
             parsers = series.parsers
         super().__init__(*parsers)
 
+    # TODO: Add check for mandatory items here, just like with Series-Operator
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
