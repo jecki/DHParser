@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     digit = Forward()
     expression = Forward()
     variable = Forward()
-    source_hash__ = "c4e6e090ef9673b972ba18ef39fe7c8e"
+    source_hash__ = "120070baa84f5a2bd1bbb900627078fc"
     parser_initialization__ = "upon instantiation"
     resume_rules__ = {}
     COMMENT__ = r''
@@ -76,10 +76,13 @@ class ArithmeticGrammar(Grammar):
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
+    global GLOBALS
     try:
         grammar = GLOBALS.Arithmetic_1_grammar_singleton
     except AttributeError:
         GLOBALS.Arithmetic_1_grammar_singleton = ArithmeticGrammar()
+        if hasattr(get_grammar, 'python_src__'):
+            GLOBALS.Arithmetic_1_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = GLOBALS.Arithmetic_1_grammar_singleton
     return grammar
 

@@ -57,7 +57,7 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
+    source_hash__ = "5e9e65a057bec7da29989dba47f40394"
     parser_initialization__ = "upon instantiation"
     resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
@@ -86,10 +86,13 @@ class EBNFGrammar(Grammar):
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
+    global GLOBALS
     try:
         grammar = GLOBALS.EBNF_1_grammar_singleton
     except AttributeError:
         GLOBALS.EBNF_1_grammar_singleton = EBNFGrammar()
+        if hasattr(get_grammar, 'python_src__'):
+            GLOBALS.EBNF_1_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = GLOBALS.EBNF_1_grammar_singleton
     return grammar
 

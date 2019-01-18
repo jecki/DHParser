@@ -7,7 +7,6 @@ import multiprocessing
 import os
 import platform
 import time
-import sys
 
 def run_tests(command):
     testtype = 'DOCTEST' if command.find('doctest') >= 0 else 'UNITTEST'

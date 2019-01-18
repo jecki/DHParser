@@ -46,8 +46,7 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, 'XML.ebnf'),
-                          force=False)
+        recompile_grammar(os.path.join(scriptpath, 'XML.ebnf'), force=False)
         sys.path.append('.')
         from XMLCompiler import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)
