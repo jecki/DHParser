@@ -71,19 +71,20 @@ class Error:
 
     # warning codes
 
-    REDEFINED_DIRECTIVE_WARNING              = ErrorCode(101)
-    REDECLARED_TOKEN_WARNING                 = ErrorCode(102)
+    REDEFINED_DIRECTIVE_WARNING              = ErrorCode(110)
+    REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
 
-    UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE = ErrorCode(601)
+    UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE = ErrorCode(610)
 
     # error codes
 
-    MANDATORY_CONTINUATION                   = ErrorCode(1001)
-    PARSER_DID_NOT_MATCH                     = ErrorCode(1002)
-    PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1003)
-    PARSER_STOPPED_BEFORE_END                = ErrorCode(1004)
-    CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1005)
-    MALFORMED_ERROR_STRING                   = ErrorCode(1006)
+    MANDATORY_CONTINUATION                   = ErrorCode(1010)
+    MANDATORY_CONTINUATION_AT_EOF            = ErrorCode(1015)
+    PARSER_DID_NOT_MATCH                     = ErrorCode(1020)
+    PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1030)
+    PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
+    CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
+    MALFORMED_ERROR_STRING                   = ErrorCode(1060)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
@@ -102,7 +103,7 @@ class Error:
         prefix = ''
         if self.line > 0:
             prefix = "%i:%i: " % (max(self.line, 0), max(self.column, 0))
-        return prefix + "%s: %s" % (self.severity, self.message)
+        return prefix + "%s (%i): %s" % (self.severity, self.code, self.message)
 
     def __repr__(self):
         return 'Error("%s", %s, %i, %i, %i, %i)' \

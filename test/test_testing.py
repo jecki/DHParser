@@ -253,7 +253,7 @@ class TestLookahead:
     """
     EBNF = r"""
         document = { category | entry } { LF }
-        category = {LF } sequence_of_letters { /:/ sequence_of_letters } /:/ &(LF sequence_of_letters) 
+        category = {LF } sequence_of_letters { /:/ sequence_of_letters } /:/ §&(LF sequence_of_letters) 
         entry = { LF } sequence_of_letters !/:/
         sequence_of_letters = /[A-Za-z0-9 ]+/
         LF = / *\n/
@@ -263,7 +263,8 @@ class TestLookahead:
         "category": {
             "match": {
                 1: """Mountains: big:
-                          K2"""
+                          K2""",
+                2: """Rivers:"""  # allowed because lookahaead failure occurs at end of file and is mandatory!
             },
             "fail": {
                 6: """Mountains: big:"""
