@@ -313,6 +313,9 @@ WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
                     'vertical': r'\s*'}
 
 
+ReprType = Union[str, unrepr]  # Representation of Python code
+
+
 class EBNFDirectives:
     """
     A Record that keeps information about compiler directives
@@ -350,13 +353,10 @@ class EBNFDirectives:
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
         self.comment = ''     # type: str
         self.literalws = {'right'}  # type: Collection[str]
-        self.tokens = set()    # type: Collection[str]  # preprocessor tokens
+        self.tokens = set()   # type: Collection[str]
         self.filter = dict()  # type: Dict[str, str]
-        # symbol -> python function name, i.e. the filter function
-        self.error = dict()   # type: Dict[str, List[Tuple[Union[str, unrepr], unrepr]]]
-        # symbol -> search condition, error message
+        self.error = dict()   # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         self.resume = dict()  # type: Dict[str, List[Union[unrepr, str]]]
-        # symbol -> list of resume search conditions (regexp or simple string)
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -625,7 +625,7 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def _gen_search_rule(self, nd: Node) -> Union[str, unrepr]:
+    def _gen_search_rule(self, nd: Node) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the nodes content. Returns
         an empty string in case the node is neither regexp nor literal.
@@ -670,7 +670,7 @@ class EBNFCompiler(Compiler):
 
         # prepare and add resume-rules
 
-        resume_rules = dict()  # type: Dict[str, List[Union[str, unrepr]]]
+        resume_rules = dict()  # type: Dict[str, List[ReprType]]
         for symbol, raw_rules in self.directives.resume.items():
             refined_rules = []
             for rule in raw_rules:
@@ -693,7 +693,7 @@ class EBNFCompiler(Compiler):
         # prepare and add customized error-messages
 
         for symbol, err_msgs in self.directives.error.items():
-            custom_errors = []  # type: List[Tuple[str, str]]
+            custom_errors = []  # type: List[Tuple[ReprType, ReprType]]
             for search, message in err_msgs:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
