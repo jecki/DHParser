@@ -313,7 +313,8 @@ WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
                     'vertical': r'\s*'}
 
 
-ReprType = Union[str, unrepr]  # Representation of Python code
+# Representation of Python code or, rather, something that will be output as Python code
+ReprType = Union[str, unrepr]
 
 
 class EBNFDirectives:
@@ -349,6 +350,8 @@ class EBNFDirectives:
                 is the point of reentry for the parser after a parser
                 has error occurred.
     """
+    __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'resume']
+
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
         self.comment = ''     # type: str
