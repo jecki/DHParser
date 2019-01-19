@@ -453,19 +453,6 @@ class TestCuratedErrors:
     Cureted Errors replace existing errors with alternative
     error codes and messages that are more helptful to the user.
     """
-    # def test_user_error_declaration(self):
-    #     lang = """
-    #         document = series | /.*/
-    #         series = "X" | head §"C" "D"
-    #         head = "A" "B"
-    #         @series_error = "a user defined error message"
-    #         """
-    #     try:
-    #         parser = grammar_provider(lang)()
-    #         assert False, "Error definition after symbol definition should fail!"
-    #     except CompilationError as e:
-    #         pass
-
     def test_curated_mandatory_continuation(self):
         lang = """
             document = series | /.*/
@@ -497,6 +484,21 @@ class TestCuratedErrors:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "a user defined error message"
 
+    def test_error_cusomization_mistakes(self):
+        lang = """
+            document = series | other
+            @other_error = "a user defined error message"
+            series = "A" § "B" "C"
+            other = "X" | "Y" | "Z"
+            """
+        parser = grammar_provider(lang)()
+        st = parser("ABC")
+        assert not st.error_flag
+        st = parser("Y")
+        assert not st.error_flag
+        st = parser("ADC")
+        assert st.error_flag
+        print(st.collect_errors())
 
 class TestCustomizedResumeParsing:
     def setup(self):

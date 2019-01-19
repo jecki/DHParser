@@ -1415,7 +1415,7 @@ class Series(NaryOperator):
                     found = text_[:10].replace('\n', '\\n ')
                     for search, message in self.err_msgs:
                         rxs = not isinstance(search, str)
-                        if rxs and text_.match(search) or not rxs and text_.startswith(search):
+                        if rxs and text_.match(search) or (not rxs and text_.startswith(search)):
                             try:
                                 msg = message.format(parser.repr, found)
                                 break

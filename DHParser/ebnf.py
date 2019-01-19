@@ -308,6 +308,67 @@ def get_compiler() -> {NAME}Compiler:
 '''
 
 
+WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
+                    'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
+                    'vertical': r'\s*'}
+
+
+class EBNFDirectives:
+    """
+    A Record that keeps information about compiler directives
+    during the compilation process.
+
+    Attributes:
+        whitespace:  the regular expression string for (insignificant)
+                whitespace
+
+        comment:  the regular expression string for comments
+
+        literalws:  automatic whitespace eating next to literals. Can
+                be either 'left', 'right', 'none', 'both'
+
+        tokens:  set of the names of preprocessor tokens
+        filter:  mapping of symbols to python filter functions that
+                will be called on any retrieve / pop - operations on
+                these symbols
+
+        error:  mapping of symbols to tuples of match conditions and
+                customized error messages. A match condition can be
+                either a string or a regular expression. The first
+                error message where the search condition matches will
+                be displayed. An empty string '' as search condition
+                always matches, so in case of multiple error messages,
+                this condition should be placed at the end.
+
+        resume: mapping of symbols to a list of search conditions. A
+                search condition can be either a string ot a regular
+                expression. The closest match from all search conditions
+                is the point of reentry for the parser after a parser
+                has error occurred.
+    """
+    def __init__(self):
+        self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
+        self.comment = ''     # type: str
+        self.literalws = {'right'}  # type: Collection[str]
+        self.tokens = set()    # type: Collection[str]  # preprocessor tokens
+        self.filter = dict()  # type: Dict[str, str]
+        # symbol -> python function name, i.e. the filter function
+        self.error = dict()   # type: Dict[str, List[Tuple[Union[str, unrepr], unrepr]]]
+        # symbol -> search condition, error message
+        self.resume = dict()  # type: Dict[str, List[Union[unrepr, str]]]
+        # symbol -> list of resume search conditions (regexp or simple string)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        assert hasattr(self, key)
+        setattr(self, key, value)
+
+    def keys(self):
+        return self.__dict__.keys()
+
+
 class EBNFCompilerError(CompilerError):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
     in the strict sense, see `CompilationError` in module ``dsl.py``)"""
@@ -396,9 +457,6 @@ class EBNFCompiler(Compiler):
                     '&': 'Lookahead', '!': 'NegativeLookahead',
                     '-&': 'Lookbehind', '-!': 'NegativeLookbehind',
                     '::': 'Pop', ':': 'Retrieve'}
-    WHITESPACE = {'horizontal': r'[\t ]*',  # default: horizontal
-                  'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
-                  'vertical': r'\s*'}
     REPEATABLE_DIRECTIVES = {'tokens'}
 
 
@@ -420,15 +478,8 @@ class EBNFCompiler(Compiler):
         self.definitions = {}       # type: Dict[str, str]
         self.deferred_tasks = []    # type: List[Callable]
         self.root_symbol = ""       # type: str
-        self.directives = {'whitespace': self.WHITESPACE['vertical'],
-                           'comment': '',
-                           'literalws': {'right'},
-                           'tokens': set(),   # alt. 'preprocessor_tokens'
-                           'filter': dict(),  # alt. 'filter'
-                           'error': dict(),   # customized error messages
-                           'resume': dict()}  # reentry points after parser errors
-        # self.directives['ignorecase']: False
-        self.defined_directives = set()  # type: Set[str]
+        self.directives = EBNFDirectives()  # type: EBNFDirectives
+        self.defined_directives = set()     # type: Set[str]
         self.grammar_id += 1
 
 
@@ -614,13 +665,13 @@ class EBNFCompiler(Compiler):
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))
-        definitions.append((self.RAW_WS_KEYWORD, "r'{whitespace}'".format(**self.directives)))
-        definitions.append((self.COMMENT_KEYWORD, "r'{comment}'".format(**self.directives)))
+        definitions.append((self.RAW_WS_KEYWORD, "r'{}'".format(self.directives.whitespace)))
+        definitions.append((self.COMMENT_KEYWORD, "r'{}'".format(self.directives.comment)))
 
         # prepare and add resume-rules
 
         resume_rules = dict()  # type: Dict[str, List[Union[str, unrepr]]]
-        for symbol, raw_rules in self.directives['resume'].items():
+        for symbol, raw_rules in self.directives.resume.items():
             refined_rules = []
             for rule in raw_rules:
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
@@ -641,8 +692,8 @@ class EBNFCompiler(Compiler):
 
         # prepare and add customized error-messages
 
-        for symbol, err_msgs in self.directives['error'].items():
-            custom_errors = []
+        for symbol, err_msgs in self.directives.error.items():
+            custom_errors = []  # type: List[Tuple[str, str]]
             for search, message in err_msgs:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -758,7 +809,7 @@ class EBNFCompiler(Compiler):
         elif not sane_parser_name(rule):
             self.tree.new_error(node, 'Illegal symbol "%s". Symbols must not start or '
                                 ' end with a doube underscore "__".' % rule)
-        elif rule in self.directives['tokens']:
+        elif rule in self.directives.tokens:
             self.tree.new_error(node, 'Symbol "%s" has already been defined as '
                                 'a preprocessor token.' % rule)
         elif keyword.iskeyword(rule):
@@ -786,7 +837,7 @@ class EBNFCompiler(Compiler):
 
     def on_directive(self, node: Node) -> str:
         key = node.children[0].content
-        assert key not in self.directives['tokens']
+        assert key not in self.directives.tokens
 
         if key not in self.REPEATABLE_DIRECTIVES:
             if key in self.defined_directives:
@@ -804,8 +855,8 @@ class EBNFCompiler(Compiler):
             check_argnum()
             if node.children[1].parser.name == "symbol":
                 value = node.children[1].content
-                if key == 'whitespace' and value in EBNFCompiler.WHITESPACE:
-                    value = EBNFCompiler.WHITESPACE[value]  # replace whitespace-name by regex
+                if key == 'whitespace' and value in WHITESPACE_TYPES:
+                    value = WHITESPACE_TYPES[value]  # replace whitespace-name by regex
                 else:
                     self.tree.new_error(node, 'Value "%s" not allowed for directive "%s".'
                                         % (value, key))
@@ -821,10 +872,6 @@ class EBNFCompiler(Compiler):
             if node.children[1].content.lower() not in {"off", "false", "no"}:
                 self.re_flags.add('i')
 
-        # elif key == 'testing':
-        #     value = node.children[1].content
-        #     self.directives['testing'] = value.lower() not in {"off", "false", "no"}
-
         elif key == 'literalws':
             values = {child.content.strip().lower() for child in node.children[1:]}
             if ((values - {'left', 'right', 'both', 'none'})
@@ -833,26 +880,26 @@ class EBNFCompiler(Compiler):
                                     '`both` or `none`, not `%s`' % ", ".join(values))
             wsp = {'left', 'right'} if 'both' in values \
                 else {} if 'none' in values else values
-            self.directives[key] = list(wsp)
+            self.directives.literalws = wsp
 
         elif key in {'tokens', 'preprocessor_tokens'}:
             tokens = {child.content.strip() for child in node.children[1:]}
-            redeclared = self.directives['tokens'] & tokens
+            redeclared = self.directives.tokens & tokens
             if redeclared:
                 self.tree.new_error(node, 'Tokens %s have already been declared earlier. '
                                     % str(redeclared) + 'Later declaration will be ignored',
                                     code=Error.REDECLARED_TOKEN_WARNING)
-            self.directives['tokens'] |= tokens - redeclared
+            self.directives.tokens |= tokens - redeclared
 
         elif key.endswith('_filter'):
             check_argnum()
             symbol = key[:-7]
-            self.directives['filter'][symbol] = node.children[1].content.strip()
+            self.directives.filter[symbol] = node.children[1].content.strip()
 
         elif key.endswith('_error'):
             check_argnum(2)
             symbol = key[:-6]
-            error_msgs = self.directives['error'].get(symbol, [])
+            error_msgs = self.directives.error.get(symbol, [])
             if symbol in self.rules:
                 self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
                                     + 'must be defined before the symbol!')
@@ -868,11 +915,11 @@ class EBNFCompiler(Compiler):
                                    unrepr(node.children[2].content)))
             else:
                 self.tree.new_error(node, 'Directive "%s" allows at most two parameters' % key)
-            self.directives['error'][symbol] = error_msgs
+            self.directives.error[symbol] = error_msgs
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            if symbol in self.directives['resume']:
+            if symbol in self.directives.resume:
                 self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
                                           ' earlier!' % symbol)
             else:
@@ -880,7 +927,7 @@ class EBNFCompiler(Compiler):
                 for child in node.children[1:]:
                     rule = self._gen_search_rule(child)
                     reentry_conditions.append(rule if rule else unrepr(child.content.strip()))
-                self.directives['resume'][symbol] = reentry_conditions
+                self.directives.resume[symbol] = reentry_conditions
 
         else:
             self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
@@ -938,7 +985,7 @@ class EBNFCompiler(Compiler):
             # add custom error message if it has been declared for the currend definition
             if custom_args:
                 current_symbol = next(reversed(self.rules.keys()))
-                if current_symbol in self.directives['error']:
+                if current_symbol in self.directives.error:
                     # use class field instead or direct representation of error messages!
                     custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
             compiled = self.non_terminal(node, 'Series', custom_args)
@@ -961,8 +1008,8 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, ('Retrieve Operator "%s" requires a symbol, '
                                     'and not a %s.') % (prefix, str(arg.parser)))
                 return str(arg.result)
-            if str(arg) in self.directives['filter']:
-                custom_args = ['rfilter=%s' % self.directives['filter'][str(arg)]]
+            if str(arg) in self.directives.filter:
+                custom_args = ['rfilter=%s' % self.directives.filter[str(arg)]]
             self.variables.add(str(arg))  # cast(str, arg.result)
 
         elif len(node.children) > 2:
@@ -1038,7 +1085,7 @@ class EBNFCompiler(Compiler):
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = node.content  # ; assert result == cast(str, node.result)
-        if symbol in self.directives['tokens']:
+        if symbol in self.directives.tokens:
             return 'PreprocessorToken("' + symbol + '")'
         else:
             self.current_symbols.append(node)
@@ -1056,8 +1103,8 @@ class EBNFCompiler(Compiler):
 
     def on_literal(self, node: Node) -> str:
         center = 'Token(' + node.content.replace('\\', r'\\') + ')'
-        left = self.WHITESPACE_PARSER_KEYWORD if 'left' in self.directives['literalws'] else ''
-        right = self.WHITESPACE_PARSER_KEYWORD if 'right' in self.directives['literalws'] else ''
+        left = self.WHITESPACE_PARSER_KEYWORD if 'left' in self.directives.literalws else ''
+        right = self.WHITESPACE_PARSER_KEYWORD if 'right' in self.directives.literalws else ''
         if left or right:
             return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
@@ -1081,16 +1128,16 @@ class EBNFCompiler(Compiler):
         else:
             parser = '_RE('
             if rx[:2] == '~/':
-                if 'left' not in self.directives['literalws']:
+                if 'left' not in self.directives.literalws:
                     name = ['wL=' + self.WHITESPACE_KEYWORD] + name
                 rx = rx[1:]
-            elif 'left' in self.directives['literalws']:
+            elif 'left' in self.directives.literalws:
                 name = ["wL=''"] + name
             if rx[-2:] == '/~':
-                if 'right' not in self.directives['literalws']:
+                if 'right' not in self.directives.literalws:
                     name = ['wR=' + self.WHITESPACE_KEYWORD] + name
                 rx = rx[:-1]
-            elif 'right' in self.directives['literalws']:
+            elif 'right' in self.directives.literalws:
                 name = ["wR=''"] + name
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
