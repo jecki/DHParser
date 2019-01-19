@@ -30,7 +30,8 @@ from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, get_ebnf_compiler
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
+    get_ebnf_compiler, compile_ebnf
 from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
 from DHParser.testing import grammar_unit
 
@@ -504,8 +505,7 @@ class TestErrorCustomization:
             series = "A" § "B" "C"
             other = "X" | "Y" | "Z"
             """
-        result, messages, ast = compile_source(lang, None, get_ebnf_grammar(),
-                                               get_ebnf_transformer(), get_ebnf_compiler())
+        result, messages, ast = compile_ebnf(lang)
         assert messages[0].code == Error.UNUSED_ERROR_MSG_WARNING
 
 

@@ -113,10 +113,10 @@ def compile_src(source, log_dir=''):
     with logging(log_dir):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
-        result = compile_source(source, get_preprocessor(),
-                                get_grammar(),
-                                get_transformer(), compiler)
-    return result
+        result_tuple = compile_source(source, get_preprocessor(),
+                                      get_grammar(),
+                                      get_transformer(), compiler)
+    return result_tuple
 
 
 if __name__ == "__main__":

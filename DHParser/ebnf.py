@@ -29,7 +29,7 @@ from functools import partial
 import keyword
 import os
 
-from DHParser.compile import CompilerError, Compiler
+from DHParser.compile import CompilerError, Compiler, compile_source
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
@@ -41,7 +41,7 @@ from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content
 from DHParser.versionnumber import __version__
-from typing import Callable, Dict, List, Set, Tuple, Union
+from typing import Callable, Dict, List, Set, Tuple, Union, Optional, Any
 
 
 __all__ = ('get_ebnf_preprocessor',
@@ -53,6 +53,7 @@ __all__ = ('get_ebnf_preprocessor',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed',
+           'compile_ebnf',
            'PreprocessorFactoryFunc',
            'ParserFactoryFunc',
            'TransformerFactoryFunc',
@@ -1194,5 +1195,30 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         GLOBALS.ebnf_compiler_singleton = compiler
         return compiler
 
+
+########################################################################
+#
+# EBNF compiler
+#
+########################################################################
+
+def compile_ebnf(ebnf_source: str, branding: str = 'DSL') \
+        -> Tuple[Optional[Any], List[Error], Optional[Node]]:
+    """Compiles an `ebnf_source` (file_name or EBNF-string) and returns
+    a tuple of the python code of the compiler, a list of warnings or errors
+    and the abstract syntax tree of the EBNF-source.
+    This function is merely syntactic sugar."""
+    return compile_source(ebnf_source,
+                          get_ebnf_preprocessor(),
+                          get_ebnf_grammar(),
+                          get_ebnf_transformer(),
+                          get_ebnf_compiler(branding, ebnf_source))
+
+
+########################################################################
+#
+# Presets
+#
+########################################################################
 
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
