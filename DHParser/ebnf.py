@@ -601,7 +601,7 @@ class EBNFCompiler(Compiler):
             if entry not in symbols and not entry.startswith(":"):
                 messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
                                        'the transformation table!') % (entry, self.grammar_name),
-                                      0, Error.UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE))
+                                      0, Error.UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
         return messages
 
     def verify_compiler(self, compiler):
@@ -718,6 +718,14 @@ class EBNFCompiler(Compiler):
                         search = ''
                 custom_errors.append((search, message))
             definitions.append((symbol + self.ERR_MSG_SUFFIX, repr(custom_errors)))
+
+        for symbol in self.directives.error.keys():
+            if symbol not in self.consumed_custom_errors:
+                def_node = self.rules[symbol][0]
+                self.tree.new_error(
+                    def_node, 'Customized error message for symbol "{}" will never be used, '
+                    'because the mandatory marker "§" appears nowhere in its definiendum!'
+                    .format(symbol), Error.UNUSED_ERROR_MSG_WARNING)
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -1011,8 +1019,6 @@ class EBNFCompiler(Compiler):
                         custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
                         self.consumed_custom_errors.add(current_symbol)
             compiled = self.non_terminal(node, 'Series', custom_args)
-            # TODO: Maybe add a warning about ambiguous error messages in case there are several
-            #       Series with mandatory items within the definiens of the same symbol?
         node.result = saved_result
         return compiled
 

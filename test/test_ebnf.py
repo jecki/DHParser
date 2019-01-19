@@ -504,14 +504,10 @@ class TestErrorCustomization:
             series = "A" § "B" "C"
             other = "X" | "Y" | "Z"
             """
-        parser = grammar_provider(lang)()  # TODO: Here an error should occur!
-        st = parser("ABC")
-        assert not st.error_flag
-        st = parser("Y")
-        assert not st.error_flag
-        st = parser("ADC")
-        assert st.error_flag
-        print(st.collect_errors())
+        result, messages, ast = compile_source(lang, None, get_ebnf_grammar(),
+                                               get_ebnf_transformer(), get_ebnf_compiler())
+        assert messages[0].code == Error.UNUSED_ERROR_MSG_WARNING
+
 
 class TestCustomizedResumeParsing:
     def setup(self):

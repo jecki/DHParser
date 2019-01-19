@@ -73,8 +73,9 @@ class Error:
 
     REDEFINED_DIRECTIVE_WARNING              = ErrorCode(110)
     REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
+    UNUSED_ERROR_MSG_WARNING                 = ErrorCode(130)
 
-    UNDEFINED_SYMBOL_IN_TRANSFORMATION_TABLE = ErrorCode(610)
+    UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
 
     # error codes
 
@@ -86,7 +87,6 @@ class Error:
     CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
     AMBIGUOUS_ERROR_MSG                      = ErrorCode(1070)
-    UNUSED_ERROR_MSG                         = ErrorCode(1080)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
@@ -136,6 +136,18 @@ def is_warning(code: int) -> bool:
 def is_error(code: int) -> bool:
     """Returns True, if error is an error, not just a warning."""
     return code >= Error.ERROR
+
+
+# def Warning(message: str, pos, code: ErrorCode = Error.WARNING,
+#             orig_pos: int = -1, line: int = -1, column: int = -1) -> Error:
+#     """
+#     Syntactic sugar for creating Error-objects that contain only a warning.
+#     Raises a ValueError if `code` is not within the range for warnings.
+#     """
+#     if not is_warning(code):
+#         raise ValueError("Tried to create a warning with a error code {}. "
+#                          "Warning codes must be smaller than {}".format(code, Error.ERROR))
+#     return Error(message, pos, code, orig_pos, line, column)
 
 
 def has_errors(messages: Iterable[Error], level: int = Error.ERROR) -> bool:
