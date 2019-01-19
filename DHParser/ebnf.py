@@ -432,8 +432,19 @@ class EBNFCompiler(Compiler):
 
         root_symbol: The name of the root symbol.
 
-        directives:  A dictionary of all directives and their default
-                values.
+        directives:  A record of all directives and their default values.
+
+        defined_directives:  A set of all directives that have already been
+                defined. With the exception of those directives contained
+                in EBNFCompiler.REPEATABLE_DIRECTIVES, directives must only
+                be defined once.
+
+        consumed_custom_errors:  A set of symbols for which a custom error
+                has been defined and(!) consumed during compilation. This
+                allows to add a compiler error in those cases where (i) an
+                error message has been defined but will never used or (ii)
+                an error message is accidently used twice. For examples, see
+                `test_ebnf.TestErrorCustomization`
 
         re_flags:  A set of regular expression flags to be added to all
                 regular expressions found in the current parsing process
@@ -481,8 +492,9 @@ class EBNFCompiler(Compiler):
         self.definitions = {}       # type: Dict[str, str]
         self.deferred_tasks = []    # type: List[Callable]
         self.root_symbol = ""       # type: str
-        self.directives = EBNFDirectives()  # type: EBNFDirectives
-        self.defined_directives = set()     # type: Set[str]
+        self.directives = EBNFDirectives()   # type: EBNFDirectives
+        self.defined_directives = set()      # type: Set[str]
+        self.consumed_custom_errors = set()  # type: Set[str]
         self.grammar_id += 1
 
 
@@ -989,8 +1001,15 @@ class EBNFCompiler(Compiler):
             if custom_args:
                 current_symbol = next(reversed(self.rules.keys()))
                 if current_symbol in self.directives.error:
-                    # use class field instead or direct representation of error messages!
-                    custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
+                    if current_symbol in self.consumed_custom_errors:
+                        self.tree.new_error(
+                            node, "Cannot apply customized error messages unambigiously, because "
+                            "symbol {} contains more than one series with a mandatory marker '§' "
+                            "in its definiens.".format(current_symbol), Error.AMBIGUOUS_ERROR_MSG)
+                    else:
+                        # use class field instead or direct representation of error messages!
+                        custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
+                        self.consumed_custom_errors.add(current_symbol)
             compiled = self.non_terminal(node, 'Series', custom_args)
             # TODO: Maybe add a warning about ambiguous error messages in case there are several
             #       Series with mandatory items within the definiens of the same symbol?

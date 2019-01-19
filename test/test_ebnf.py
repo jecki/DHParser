@@ -448,12 +448,12 @@ class TestAllSome:
         assert grammar('B').content == 'B'
 
 
-class TestCuratedErrors:
+class TestErrorCustomization:
     """
-    Cureted Errors replace existing errors with alternative
+    Customized Errors replace existing errors with alternative
     error codes and messages that are more helptful to the user.
     """
-    def test_curated_mandatory_continuation(self):
+    def test_customized_mandatory_continuation(self):
         lang = """
             document = series | /.*/
             @series_error = "a user defined error message"
@@ -472,7 +472,7 @@ class TestCuratedErrors:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "a user defined error message"
 
-    def test_curated_error_case_sensitive(self):
+    def test_customized_error_case_sensitive(self):
         lang = """
             document = Series | /.*/
             @Series_error = "a user defined error message"
@@ -484,14 +484,27 @@ class TestCuratedErrors:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "a user defined error message"
 
-    def test_error_cusomization_mistakes(self):
+    def test_ambiguous_error_customization(self):
+        lang = """
+            document = series 
+            @series_error = "ambiguous error message: does it apply to 'one' or 'two'?"
+            series = "A" § "B" "C" | "X" § "Y" "Z" 
+            """
+        try:
+            parser = grammar_provider(lang)()
+            assert False, "CompilationError because of ambiguous error message exptected!"
+        except CompilationError as compilation_error:
+            err = next(compilation_error.errors)
+            assert err.code == Error.AMBIGUOUS_ERROR_MSG, str(compilation_error)
+
+    def test_unsed_error_customization(self):
         lang = """
             document = series | other
             @other_error = "a user defined error message"
             series = "A" § "B" "C"
             other = "X" | "Y" | "Z"
             """
-        parser = grammar_provider(lang)()
+        parser = grammar_provider(lang)()  # TODO: Here an error should occur!
         st = parser("ABC")
         assert not st.error_flag
         st = parser("Y")

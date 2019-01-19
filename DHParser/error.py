@@ -85,6 +85,8 @@ class Error:
     PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
     CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
+    AMBIGUOUS_ERROR_MSG                      = ErrorCode(1070)
+    UNUSED_ERROR_MSG                         = ErrorCode(1080)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
