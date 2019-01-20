@@ -179,6 +179,16 @@ class TestParserNameOverwriteBug:
         messages = st.collect_errors()
         assert not has_errors(messages), str(messages)
 
+    def test_single_mandatory_bug(self):
+        lang = """series = § /B/"""
+        result, messages, ast = compile_ebnf(lang)
+        # print(result)
+        assert result.find('Required') < 0
+        parser = grammar_provider(lang)()
+        st = parser('B')
+        assert not st.error_flag
+
+
 
 class TestSemanticValidation:
     def check(self, minilang, bool_filter=lambda x: x):
@@ -496,7 +506,7 @@ class TestErrorCustomization:
             assert False, "CompilationError because of ambiguous error message exptected!"
         except CompilationError as compilation_error:
             err = next(compilation_error.errors)
-            assert err.code == Error.AMBIGUOUS_ERROR_MSG, str(compilation_error)
+            assert err.code == Error.AMBIGUOUS_ERROR_HANDLING, str(compilation_error)
 
     def test_unsed_error_customization(self):
         lang = """
@@ -506,7 +516,7 @@ class TestErrorCustomization:
             other = "X" | "Y" | "Z"
             """
         result, messages, ast = compile_ebnf(lang)
-        assert messages[0].code == Error.UNUSED_ERROR_MSG_WARNING
+        assert messages[0].code == Error.UNUSED_ERROR_HANDLING_WARNING
 
 
 class TestCustomizedResumeParsing:
@@ -561,6 +571,48 @@ class TestCustomizedResumeParsing:
         # because of resuming, there should be only on error message
         assert len(cst.collect_errors()) == 1
 
+
+class TestInSeriesResume:
+    def setup(self):
+        lang = """
+        document = series
+        @series_skip = /B/, /C/, /D/, /E/, /F/, /G/
+        series = "A" §"B" "C" "D" "E" "F" "G"
+        """
+        try:
+            result, _, _ = compile_ebnf(lang)
+            self.gr = grammar_provider(lang)()
+        except CompilationError as ce:
+            print(ce)
+
+    def test_garbage_in_series(self):
+        st = self.gr('ABCDEFG')
+        assert not st.error_flag
+        st = self.gr('AB XYZ CDEFG')
+        errors = st.collect_errors()
+        assert len(errors) == 1 and errors[0].code == Error.MANDATORY_CONTINUATION
+        st = self.gr('AB XYZ CDE XYZ FG')
+        errors = st.collect_errors()
+        assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
+        st = self.gr('AB XYZ CDE XNZ FG')  # fails to resume parsing
+        errors = st.collect_errors()
+        assert len(errors) >= 1 and errors[0].code == Error.MANDATORY_CONTINUATION
+
+    def test_series_gap(self):
+        st = self.gr('ABDEFG')
+        errors = st.collect_errors()
+        assert len(errors) == 1 and errors[0].code == Error.MANDATORY_CONTINUATION
+        st = self.gr('ABXEFG')  # two missing, one wrong element added
+        errors = st.collect_errors()
+        assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
+        st = self.gr('AB_DE_G')
+        errors = st.collect_errors()
+        assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
+
+    def test_series_permutation(self):
+        st = self.gr('ABEDFG')
+        errors = st.collect_errors()
+        assert len(errors) >= 1  # cannot really recover from permutation errors
 
 if __name__ == "__main__":
     from DHParser.testing import runner

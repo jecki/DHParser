@@ -1377,24 +1377,31 @@ class Series(NaryOperator):
     RX_ARGUMENT = re.compile(r'\s(\S)')
     NOPE = 1000
 
-    MessageType = List[Tuple[Union[str, Any], str]]
+    MessagesType = List[Tuple[Union[str, Any], str]]
 
-    def __init__(self, *parsers: Parser, mandatory: int = NOPE, err_msgs: MessageType=[]) -> None:
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NOPE,
+                 err_msgs: MessagesType=[],
+                 skip: ResumeList = []) -> None:
         super().__init__(*parsers)
         assert not (mandatory == Series.NOPE and err_msgs), \
-            'Custom error messages only make sense if parameter "mandatory" is set!'
+            'Custom error messages require that parameter "mandatory" is set!'
+        assert not (mandatory == Series.NOPE and skip), \
+            'Search expressions for skipping text require that parameter "mandatory" is set!'
         length = len(self.parsers)
         assert 1 <= length < Series.NOPE, \
             'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
         if mandatory < 0:
             mandatory += length
         assert 0 <= mandatory < length or mandatory == Series.NOPE
-        self.mandatory = mandatory
-        self.err_msgs = err_msgs
+        self.mandatory = mandatory  # type: int
+        self.err_msgs = err_msgs    # type: Series.MessagesType
+        self.skip = skip            # type: ResumeList
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory, err_msgs=self.err_msgs)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
+                                   err_msgs=self.err_msgs, skip=self.skip)
         duplicate.name = self.name
         duplicate.ptype = self.ptype
         return duplicate
@@ -1409,7 +1416,8 @@ class Series(NaryOperator):
                 if pos < self.mandatory:
                     return None, text
                 else:
-                    i = 0
+                    k = reentry_point(text_, self.skip) if self.skip else -1
+                    i = k if k >= 0 else 0
                     location = self.grammar.document_length__ - len(text_)
                     node = Node(None, text_[:i]).init_pos(location)
                     found = text_[:10].replace('\n', '\\n ')
@@ -1431,17 +1439,21 @@ class Series(NaryOperator):
                                                 else Error.MANDATORY_CONTINUATION_AT_EOF)
                     self.grammar.tree__.add_error(node, mandatory_violation)
                     text_ = text_[i:]
-                    results += (node,)
-                    # TODO: Add queue-jumping here (XXX_skip = Regex, Regex, Regex...)
-                    break
+                    # check if parsing of the series can be resumed somewhere
+                    if k >= 0:
+                        nd, text_ = parser(text_)  # try current parser again
+                        if nd:
+                            results += (node,)
+                            node = nd
+                    else:
+                        results += (node,)
+                        break
             results += (node,)
-            # if node.error_flag:  # break on first error
-            #    break
-        assert len(results) <= len(self.parsers)
+        assert len(results) <= len(self.parsers) \
+               or len(self.parsers) >= len([p for p in results if p.parser != ZOMBIE_PARSER])
         node = Node(self, results)
         if mandatory_violation:
             raise ParserError(node, text, first_throw=True)
-            # self.grammar.tree__.add_error(node, mandatory_violation)
         return node, text_
 
     def __repr__(self):

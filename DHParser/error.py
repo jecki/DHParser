@@ -73,7 +73,7 @@ class Error:
 
     REDEFINED_DIRECTIVE_WARNING              = ErrorCode(110)
     REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
-    UNUSED_ERROR_MSG_WARNING                 = ErrorCode(130)
+    UNUSED_ERROR_HANDLING_WARNING            = ErrorCode(130)
 
     UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
 
@@ -86,7 +86,7 @@ class Error:
     PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
     CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
-    AMBIGUOUS_ERROR_MSG                      = ErrorCode(1070)
+    AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:

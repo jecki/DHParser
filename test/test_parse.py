@@ -639,7 +639,6 @@ class TestReentryAfterError:
         self.gr = grammar_provider(lang)()
 
     def test_no_resume_rules(self):
-        # 1. no resume rules
         gr = self.gr;  gr.resume_rules = dict()
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
