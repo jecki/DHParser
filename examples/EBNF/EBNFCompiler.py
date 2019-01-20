@@ -88,12 +88,12 @@ class EBNFGrammar(Grammar):
 def get_grammar() -> EBNFGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.EBNF_1_grammar_singleton
+        grammar = GLOBALS.EBNF_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.EBNF_1_grammar_singleton = EBNFGrammar()
+        GLOBALS.EBNF_00000001_grammar_singleton = EBNFGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.EBNF_1_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.EBNF_1_grammar_singleton
+            GLOBALS.EBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.EBNF_00000001_grammar_singleton
     return grammar
 
 

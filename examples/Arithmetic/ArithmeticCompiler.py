@@ -78,12 +78,12 @@ class ArithmeticGrammar(Grammar):
 def get_grammar() -> ArithmeticGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.Arithmetic_1_grammar_singleton
+        grammar = GLOBALS.Arithmetic_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.Arithmetic_1_grammar_singleton = ArithmeticGrammar()
+        GLOBALS.Arithmetic_00000001_grammar_singleton = ArithmeticGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.Arithmetic_1_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.Arithmetic_1_grammar_singleton
+            GLOBALS.Arithmetic_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.Arithmetic_00000001_grammar_singleton
     return grammar
 
 

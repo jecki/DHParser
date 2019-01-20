@@ -155,12 +155,12 @@ class LaTeXGrammar(Grammar):
 def get_grammar() -> LaTeXGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.LaTeX_1_grammar_singleton
+        grammar = GLOBALS.LaTeX_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.LaTeX_1_grammar_singleton = LaTeXGrammar()
+        GLOBALS.LaTeX_00000001_grammar_singleton = LaTeXGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.LaTeX_1_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.LaTeX_1_grammar_singleton
+            GLOBALS.LaTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.LaTeX_00000001_grammar_singleton
     return grammar
 
 

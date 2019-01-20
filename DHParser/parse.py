@@ -1351,6 +1351,30 @@ MessagesType = List[Tuple[Union[str, Any], str]]
 NO_MANDATORY = 1000
 
 
+def mandatory_violation(grammar, text_, expected, err_msgs, reloc):
+    i = reloc if reloc >= 0 else 0
+    location = grammar.document_length__ - len(text_)
+    err_node = Node(None, text_[:i]).init_pos(location)
+    found = text_[:10].replace('\n', '\\n ')
+    for search, message in err_msgs:
+        rxs = not isinstance(search, str)
+        if rxs and text_.match(search) or (not rxs and text_.startswith(search)):
+            try:
+                msg = message.format(expected, found)
+                break
+            except (ValueError, KeyError, IndexError) as e:
+                error = Error("Malformed error format string '{}' lead to '{}'"
+                              .format(message, str(e)),
+                              location, Error.MALFORMED_ERROR_STRING)
+                grammar.tree__.add_error(err_node, error)
+    else:
+        msg = '%s expected, "%s" found!' % (expected, found)
+    error = Error(msg, location, Error.MANDATORY_CONTINUATION if text_
+    else Error.MANDATORY_CONTINUATION_AT_EOF)
+    grammar.tree__.add_error(err_node, error)
+    return error, err_node, text_[i:]
+
+
 class Series(NaryOperator):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
@@ -1416,38 +1440,18 @@ class Series(NaryOperator):
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
-        mandatory_violation = None
+        error = None  # type: Optional[Error]
         for pos, parser in enumerate(self.parsers):
             node, text_ = parser(text_)
             if not node:
                 if pos < self.mandatory:
                     return None, text
                 else:
-                    k = reentry_point(text_, self.skip) if self.skip else -1
-                    i = k if k >= 0 else 0
-                    location = self.grammar.document_length__ - len(text_)
-                    node = Node(None, text_[:i]).init_pos(location)
-                    found = text_[:10].replace('\n', '\\n ')
-                    for search, message in self.err_msgs:
-                        rxs = not isinstance(search, str)
-                        if rxs and text_.match(search) or (not rxs and text_.startswith(search)):
-                            try:
-                                msg = message.format(parser.repr, found)
-                                break
-                            except (ValueError, KeyError, IndexError) as e:
-                                error = Error("Malformed error format string '{}' lead to '{}'"
-                                              .format(message, str(e)),
-                                              location, Error.MALFORMED_ERROR_STRING)
-                                self.grammar.tree__.add_error(node, error)
-                    else:
-                        msg = '%s expected, "%s" found!' % (parser.repr, found)
-                    mandatory_violation = Error(msg, location,
-                                                Error.MANDATORY_CONTINUATION if text_
-                                                else Error.MANDATORY_CONTINUATION_AT_EOF)
-                    self.grammar.tree__.add_error(node, mandatory_violation)
-                    text_ = text_[i:]
+                    reloc = reentry_point(text_, self.skip) if self.skip else -1
+                    error, node, text_ = mandatory_violation(
+                        self.grammar, text_, parser.repr, self.err_msgs, reloc)
                     # check if parsing of the series can be resumed somewhere
-                    if k >= 0:
+                    if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
                         if nd:
                             results += (node,)
@@ -1459,7 +1463,7 @@ class Series(NaryOperator):
         assert len(results) <= len(self.parsers) \
                or len(self.parsers) >= len([p for p in results if p.parser != ZOMBIE_PARSER])
         node = Node(self, results)
-        if mandatory_violation:
+        if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
 
@@ -1616,29 +1620,38 @@ class AllOf(NaryOperator):
             parsers = series.parsers
 
         super().__init__(*parsers)
-        num = len(self.parsers)
+        self.num_parsers = len(self.parsers)  # type: int
         if mandatory < 0:
-            mandatory += num
+            mandatory += self.num_parsers
 
         assert not (mandatory == NO_MANDATORY and err_msgs), \
             'Custom error messages require that parameter "mandatory" is set!'
         assert not (mandatory == NO_MANDATORY and skip), \
             'Search expressions for skipping text require that parameter "mandatory" is set!'
-        assert num > 0, \
-            'Number of elements %i is below minimum of 1' % num
-        assert num < NO_MANDATORY, \
-            'Number of elemnts %i of exceeds maximum of %i' % (num, NO_MANDATORY)
-        assert 0 <= mandatory < num or mandatory == NO_MANDATORY
+        assert self.num_parsers > 0, \
+            'Number of elements %i is below minimum of 1' % self.num_parsers
+        assert self.num_parsers < NO_MANDATORY, \
+            'Number of elemnts %i of exceeds maximum of %i' % (self.num_parsers, NO_MANDATORY)
+        assert 0 <= mandatory < self.num_parsers or mandatory == NO_MANDATORY
 
         self.mandatory = mandatory  # type: int
         self.err_msgs = err_msgs    # type: Series.MessagesType
         self.skip = skip            # type: ResumeList
 
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
+                                   err_msgs=self.err_msgs, skip=self.skip)
+        duplicate.name = self.name
+        duplicate.ptype = self.ptype
+        duplicate.num_parsers = self.num_parsers
+        return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         parsers = list(self.parsers)  # type: List[Parser]
+        error = None  # type: Optional[Error]
         while parsers:
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
@@ -1648,12 +1661,25 @@ class AllOf(NaryOperator):
                     del parsers[i]
                     break
             else:
-                return None, text
-        assert len(results) <= len(self.parsers)
-        return Node(self, results), text_
+                if self.num_parsers - len(parsers) < self.mandatory:
+                    return None, text
+                else:
+                    reloc = reentry_point(text_, self.skip) if self.skip else -1
+                    expected = '< ' + ' '.join(parser.repr for parser in parsers) + ' >'
+                    error, err_node, text_ = mandatory_violation(
+                        self.grammar, text_, expected, self.err_msgs, reloc)
+                    results += (err_node,)
+                    if reloc < 0:
+                        parsers = []
+        assert len(results) <= len(self.parsers) \
+               or len(self.parsers) >= len([p for p in results if p.parser != ZOMBIE_PARSER])
+        node =  Node(self, results)
+        if error:
+            raise ParserError(node, text, first_throw=True)
+        return node, text_
 
     def __repr__(self):
-        return '<' + ' '.join(parser.repr for parser in self.parsers) + '>'
+        return '< ' + ' '.join(parser.repr for parser in self.parsers) + ' >'
 
 
 class SomeOf(NaryOperator):
@@ -1707,7 +1733,7 @@ class SomeOf(NaryOperator):
             return None, text
 
     def __repr__(self):
-        return '<' + ' | '.join(parser.repr for parser in self.parsers) + '>'
+        return '< ' + ' | '.join(parser.repr for parser in self.parsers) + ' >'
 
 
 def Unordered(parser: NaryOperator) -> NaryOperator:

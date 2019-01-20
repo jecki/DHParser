@@ -537,10 +537,7 @@ class TestCustomizedResumeParsing:
             GAMMA_RE = /GA\w+/
             GAMMA_STR = "GAMMA"
             """
-        try:
-            self.gr = grammar_provider(lang)()
-        except CompilationError as ce:
-            print(ce)
+        self.gr = grammar_provider(lang)()
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr
@@ -579,10 +576,7 @@ class TestInSeriesResume:
             @series_skip = /B/, /C/, /D/, /E/, /F/, /G/
             series = "A" §"B" "C" "D" "E" "F" "G"
             """
-        try:
-            self.gr = grammar_provider(lang)()
-        except CompilationError as ce:
-            print(ce)
+        self.gr = grammar_provider(lang)()
 
     def test_garbage_in_series(self):
         st = self.gr('ABCDEFG')
@@ -614,22 +608,74 @@ class TestInSeriesResume:
         assert len(errors) >= 1  # cannot really recover from permutation errors
 
 
-class TestInAllOfResume:
+class TestAllOfResume:
     def setup(self):
         lang = """
             document = allof
-            @allof_skip = /A/, /B/, /C/, /D/, /E/, /F/, /G/
-            allof = "A" "B" § "C" "D" "E" "F" "G"
+            @ allof_error = '{} erwartet, {} gefunden :-('
+            @ allof_skip = /A/, /B/, /C/, /D/, /E/, /F/, /G/
+            allof = < "A" "B" § "C" "D" "E" "F" "G" >
         """
-        try:
-            self.gr = grammar_provider(lang)()
-        except CompilationError as ce:
-            print(ce)
+        self.gr = grammar_provider(lang)()
 
     def test_garbage_added(self):
+        st = self.gr('GFCBAED')
+        assert not st.error_flag
         st = self.gr('GFCB XYZ AED')
         errors = st.collect_errors()
-        print(errors)
+        assert errors[0].code == Error.MANDATORY_CONTINUATION
+        assert str(errors[0]).find(':-(') >= 0
+
+
+    def test_allof_resume_later(self):
+        lang = """
+            document = flow "."
+            @ flow_resume = '.'
+            flow = allof | series
+            @ allof_error = '{} erwartet, {} gefunden :-('
+            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            series = "E" "X" "Y" "Z"
+        """
+        gr = grammar_provider(lang)()
+        st = gr('GFCBAED.')
+        assert not st.error_flag
+        st = gr('GFCBAED.')
+        assert not st.error_flag
+        st = gr('EXYZ.')
+        assert not st.error_flag
+        st = gr('EDXYZ.')
+        assert st.error_flag
+        assert len(st.collect_errors()) == 1
+        st = gr('FCB_GAED.')
+        assert len(st.collect_errors()) == 1
+
+
+    def test_complex_resume_task(self):
+        lang = """
+            document = flow { flow } "."
+            @ flow_resume = '.'
+            flow = allof | series
+            @ allof_error = '{} erwartet, {} gefunden :-('
+            @ allof_resume = 'E', 'A'
+            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            @ series_resume = 'E', 'A'
+            series = "E" "X" §"Y" "Z"
+        """
+        gr = grammar_provider(lang)()
+        st = gr('GFCBAED.')
+        assert not st.error_flag
+        st = gr('GFCBAED.')
+        assert not st.error_flag
+        st = gr('EXYZ.')
+        assert not st.error_flag
+        st = gr('EDXYZ.')
+        assert st.error_flag
+        assert len(st.collect_errors()) == 1
+        st = gr('FCB_GAED.')
+        assert len(st.collect_errors()) == 2
+        st = gr('EXY EXYZ.')
+        assert len(st.collect_errors()) == 1
+
 
 
 if __name__ == "__main__":
