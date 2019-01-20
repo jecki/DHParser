@@ -1389,7 +1389,9 @@ class Series(NaryOperator):
         assert not (mandatory == Series.NOPE and skip), \
             'Search expressions for skipping text require that parameter "mandatory" is set!'
         length = len(self.parsers)
-        assert 1 <= length < Series.NOPE, \
+        assert length > 0, \
+            'Length of series %i is below minimum length of 1' % length
+        assert length < Series.NOPE, \
             'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
         if mandatory < 0:
             mandatory += length

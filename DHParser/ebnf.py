@@ -274,12 +274,12 @@ GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.{NAME}_{ID}_grammar_singleton
+        grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID}_grammar_singleton = {NAME}Grammar()
+        GLOBALS.{NAME}_{ID:08d}_grammar_singleton = {NAME}Grammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.{NAME}_{ID}_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.{NAME}_{ID}_grammar_singleton
+            GLOBALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
     return grammar
 '''
 
@@ -290,10 +290,10 @@ def {NAME}Transform() -> TransformationDict:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.{NAME}_{ID}_transformer_singleton
+        transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID}_transformer_singleton = {NAME}Transform()
-        transformer = GLOBALS.{NAME}_{ID}_transformer_singleton
+        GLOBALS.{NAME}_{ID:08d}_transformer_singleton = {NAME}Transform()
+        transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
     return transformer
 '''
 
@@ -301,10 +301,10 @@ def get_transformer() -> TransformationFunc:
 COMPILER_FACTORY = '''
 def get_compiler() -> {NAME}Compiler:
     try:
-        compiler = GLOBALS.{NAME}_{ID}_compiler_singleton
+        compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID}_compiler_singleton = {NAME}Compiler()
-        compiler = GLOBALS.{NAME}_{ID}_compiler_singleton
+        GLOBALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
+        compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
     return compiler
 '''
 
@@ -1031,11 +1031,7 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(node, 'Alternative')
 
 
-    def on_term(self, node) -> str:
-        # Basically, the following code does only this:
-        #       return self.non_terminal(node, 'Series')
-        # What makes it (look) more complicated is the handling of the
-        # mandatory §-operator
+    def _error_customization(self, node) -> Tuple[Tuple[Node], List[str]]:
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:
@@ -1043,11 +1039,9 @@ class EBNFCompiler(Compiler):
                 mandatory_marker.append(len(filtered_children))
                 if len(mandatory_marker) > 1:
                     self.tree.new_error(nd, 'One mandatory marker (§) sufficient to declare '
-                                        'the rest of the series as mandatory.', Error.WARNING)
+                                        'the rest of the elements as mandatory.', Error.WARNING)
             else:
                 filtered_children.append(nd)
-        saved_result = node.result
-        node.result = tuple(filtered_children)
         custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
         # add custom error message if it has been declared for the current definition
         if custom_args:
@@ -1057,7 +1051,7 @@ class EBNFCompiler(Compiler):
                 if current_symbol in self.consumed_custom_errors:
                     self.tree.new_error(
                         node, "Cannot apply customized error messages unambigiously, because "
-                        "symbol {} contains more than one series with a mandatory marker '§' "
+                        "symbol {} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
                         Error.AMBIGUOUS_ERROR_HANDLING)
                 else:
@@ -1069,15 +1063,20 @@ class EBNFCompiler(Compiler):
                 if current_symbol in self.consumed_skip_rules:
                     self.tree.new_error(
                         node, "Cannot apply 'skip-rules' unambigiously, because symbol "
-                        "{} contains more than one series with a mandatory marker '§' "
+                        "{} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
                         Error.AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
                     custom_args.append('skip=' + current_symbol + self.SKIP_RULES_SUFFIX)
                     self.consumed_skip_rules.add(current_symbol)
-        compiled = self.non_terminal(node, 'Series', custom_args)
-        node.result = saved_result
+        return tuple(filtered_children), custom_args
+
+
+    def on_term(self, node) -> str:
+        filtered_result, custom_args = self._error_customization(node)
+        mock_node = Node(node.parser, filtered_result)
+        compiled = self.non_terminal(mock_node, 'Series', custom_args)
         return compiled
 
 
