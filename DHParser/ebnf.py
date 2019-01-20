@@ -1076,8 +1076,7 @@ class EBNFCompiler(Compiler):
     def on_term(self, node) -> str:
         filtered_result, custom_args = self._error_customization(node)
         mock_node = Node(node.parser, filtered_result)
-        compiled = self.non_terminal(mock_node, 'Series', custom_args)
-        return compiled
+        return self.non_terminal(mock_node, 'Series', custom_args)
 
 
     def on_factor(self, node: Node) -> str:
@@ -1155,13 +1154,14 @@ class EBNFCompiler(Compiler):
         # return self.non_terminal(node, 'Unordered')
         assert len(node.children) == 1
         nd = node.children[0]
-        for child in nd.children:
-            if child.parser.ptype == TOKEN_PTYPE and nd.content == "§":
-                self.tree.new_error(node, "No mandatory items § allowed in Unordered sequences.")
-        args = ', '.join(self.compile(child) for child in nd.children)
         if nd.parser.name == "term":
-            return "AllOf(" + args + ")"
+            filtered_result, custom_args = self._error_customization(nd)
+            mock_node = Node(nd.parser, filtered_result)
+            return self.non_terminal(mock_node, 'AllOf', custom_args)
         elif nd.parser.name == "expression":
+            if any(c.parser.ptype == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
+                self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
+            args = ', '.join(self.compile(child) for child in nd.children)
             return "SomeOf(" + args + ")"
         else:
             self.tree.new_error(node, "Unordered sequence or alternative "

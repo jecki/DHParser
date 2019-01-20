@@ -1347,6 +1347,10 @@ class OneOrMore(UnaryOperator):
                       and not self.parser.name else self.parser.repr) + '}+'
 
 
+MessagesType = List[Tuple[Union[str, Any], str]]
+NO_MANDATORY = 1000
+
+
 class Series(NaryOperator):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
@@ -1356,7 +1360,7 @@ class Series(NaryOperator):
         mandatory (int):  Number of the element statring at which the element
                 and all following elements are considered "mandatory". This
                 means that rather than returning a non-match an error message
-                is isssued. The default value is Series.NOPE, which means that
+                is isssued. The default value is NO_MANDATORY, which means that
                 no elements are mandatory.
         errmsg (str):  An optional error message that overrides the default
                message for mandatory continuation errors. This can be used to
@@ -1375,27 +1379,28 @@ class Series(NaryOperator):
     EBNF-Example:  ``series = letter letter_or_digit``
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
-    NOPE = 1000
-
-    MessagesType = List[Tuple[Union[str, Any], str]]
 
     def __init__(self, *parsers: Parser,
-                 mandatory: int = NOPE,
+                 mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType=[],
                  skip: ResumeList = []) -> None:
         super().__init__(*parsers)
-        assert not (mandatory == Series.NOPE and err_msgs), \
-            'Custom error messages require that parameter "mandatory" is set!'
-        assert not (mandatory == Series.NOPE and skip), \
-            'Search expressions for skipping text require that parameter "mandatory" is set!'
         length = len(self.parsers)
-        assert length > 0, \
-            'Length of series %i is below minimum length of 1' % length
-        assert length < Series.NOPE, \
-            'Length %i of series exceeds maximum length of %i' % (length, Series.NOPE)
         if mandatory < 0:
             mandatory += length
-        assert 0 <= mandatory < length or mandatory == Series.NOPE
+
+        assert not (mandatory == NO_MANDATORY and err_msgs), \
+            'Custom error messages require that parameter "mandatory" is set!'
+        assert not (mandatory == NO_MANDATORY and skip), \
+            'Search expressions for skipping text require that parameter "mandatory" is set!'
+
+        assert length > 0, \
+            'Length of series %i is below minimum length of 1' % length
+        assert length < NO_MANDATORY, \
+            'Length %i of series exceeds maximum length of %i' % (length, NO_MANDATORY)
+
+        assert 0 <= mandatory < length or mandatory == NO_MANDATORY
+
         self.mandatory = mandatory  # type: int
         self.err_msgs = err_msgs    # type: Series.MessagesType
         self.skip = skip            # type: ResumeList
@@ -1460,7 +1465,7 @@ class Series(NaryOperator):
 
     def __repr__(self):
         return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
-                        + (['§'] if self.mandatory != Series.NOPE else [])
+                        + (['§'] if self.mandatory != NO_MANDATORY else [])
                         + [parser.repr for parser in self.parsers[self.mandatory:]])
 
     # The following operator definitions add syntactical sugar, so one can write:
@@ -1473,13 +1478,13 @@ class Series(NaryOperator):
         parsers `left` and `right` are joined to a sequence.
         """
         left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
-            if isinstance(left, Series) else (Series.NOPE, 1)
-        if left_mandatory != Series.NOPE:
+            if isinstance(left, Series) else (NO_MANDATORY, 1)
+        if left_mandatory != NO_MANDATORY:
             return left_mandatory
-        right_mandatory = right.mandatory if isinstance(right, Series) else Series.NOPE
-        if right_mandatory != Series.NOPE:
+        right_mandatory = right.mandatory if isinstance(right, Series) else NO_MANDATORY
+        if right_mandatory != NO_MANDATORY:
             return right_mandatory + left_length
-        return Series.NOPE
+        return NO_MANDATORY
 
     def __add__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
@@ -1586,18 +1591,50 @@ class AllOf(NaryOperator):
     EBNF-Example:  ``set = <letter letter_or_digit>``
     """
 
-    def __init__(self, *parsers: Parser) -> None:
-        if len(parsers) == 1 and isinstance(parsers[0], Series):
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NO_MANDATORY,
+                 err_msgs: MessagesType = [],
+                 skip: ResumeList = []) -> None:
+        if len(parsers) == 1:
             assert isinstance(parsers[0], Series), \
-                "Parser-specification Error: No single arguments other than a Series " \
-                "allowed as arguments for AllOf-Parser !"
-            series = cast(Series, parsers[0])
-            assert series.mandatory == Series.NOPE, \
-                "AllOf cannot contain mandatory (§) elements!"
-            parsers = series.parsers
-        super().__init__(*parsers)
+                "AllOf should be initialized either with a series or with more than one parser!"
+            series = cast(Series, parsers[0])  # type: Series
+            if mandatory == NO_MANDATORY:
+                mandatory = series.mandatory
+            if not err_msgs:
+                err_msgs = series.err_msgs
+            if not skip:
+                skip = series.skip
 
-    # TODO: Add check for mandatory items here, just like with Series-Operator
+            assert series.mandatory == NO_MANDATORY or mandatory == series.mandatory, \
+                "If AllOf is initialized with a series, parameter 'mandatory' must be the same!"
+            assert not series.err_msgs or err_msgs == series.err_msgs, \
+                "If AllOf is initialized with a series, 'err_msg' must empty or the same!"
+            assert not series.skip or skip == series.skip, \
+                "If AllOf is initialized with a series, 'skip' must empty or the same!"
+
+            parsers = series.parsers
+
+        super().__init__(*parsers)
+        num = len(self.parsers)
+        if mandatory < 0:
+            mandatory += num
+
+        assert not (mandatory == NO_MANDATORY and err_msgs), \
+            'Custom error messages require that parameter "mandatory" is set!'
+        assert not (mandatory == NO_MANDATORY and skip), \
+            'Search expressions for skipping text require that parameter "mandatory" is set!'
+        assert num > 0, \
+            'Number of elements %i is below minimum of 1' % num
+        assert num < NO_MANDATORY, \
+            'Number of elemnts %i of exceeds maximum of %i' % (num, NO_MANDATORY)
+        assert 0 <= mandatory < num or mandatory == NO_MANDATORY
+
+        self.mandatory = mandatory  # type: int
+        self.err_msgs = err_msgs    # type: Series.MessagesType
+        self.skip = skip            # type: ResumeList
+
+
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView

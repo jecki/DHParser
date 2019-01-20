@@ -522,21 +522,21 @@ class TestErrorCustomization:
 class TestCustomizedResumeParsing:
     def setup(self):
         lang = """
-        @ alpha_resume = 'BETA', GAMMA_STR
-        @ beta_resume = GAMMA_RE
-        @ bac_resume = /GA\w+/
-        document = alpha [beta] gamma "."
-          alpha = "ALPHA" abc
-            abc = §"a" "b" "c"
-          beta = "BETA" (bac | bca)
-            bac = "b" "a" §"c"
-            bca = "b" "c" §"a"
-          gamma = "GAMMA" §(cab | cba)
-            cab = "c" "a" §"b"
-            cba = "c" "b" §"a"
-        GAMMA_RE = /GA\w+/
-        GAMMA_STR = "GAMMA"
-        """
+            @ alpha_resume = 'BETA', GAMMA_STR
+            @ beta_resume = GAMMA_RE
+            @ bac_resume = /GA\w+/
+            document = alpha [beta] gamma "."
+            alpha = "ALPHA" abc
+                abc = §"a" "b" "c"
+              beta = "BETA" (bac | bca)
+                bac = "b" "a" §"c"
+                bca = "b" "c" §"a"
+              gamma = "GAMMA" §(cab | cba)
+                cab = "c" "a" §"b"
+                cba = "c" "b" §"a"
+            GAMMA_RE = /GA\w+/
+            GAMMA_STR = "GAMMA"
+            """
         try:
             self.gr = grammar_provider(lang)()
         except CompilationError as ce:
@@ -575,12 +575,11 @@ class TestCustomizedResumeParsing:
 class TestInSeriesResume:
     def setup(self):
         lang = """
-        document = series
-        @series_skip = /B/, /C/, /D/, /E/, /F/, /G/
-        series = "A" §"B" "C" "D" "E" "F" "G"
-        """
+            document = series
+            @series_skip = /B/, /C/, /D/, /E/, /F/, /G/
+            series = "A" §"B" "C" "D" "E" "F" "G"
+            """
         try:
-            result, _, _ = compile_ebnf(lang)
             self.gr = grammar_provider(lang)()
         except CompilationError as ce:
             print(ce)
@@ -613,6 +612,25 @@ class TestInSeriesResume:
         st = self.gr('ABEDFG')
         errors = st.collect_errors()
         assert len(errors) >= 1  # cannot really recover from permutation errors
+
+
+class TestInAllOfResume:
+    def setup(self):
+        lang = """
+            document = allof
+            @allof_skip = /A/, /B/, /C/, /D/, /E/, /F/, /G/
+            allof = "A" "B" § "C" "D" "E" "F" "G"
+        """
+        try:
+            self.gr = grammar_provider(lang)()
+        except CompilationError as ce:
+            print(ce)
+
+    def test_garbage_added(self):
+        st = self.gr('GFCB XYZ AED')
+        errors = st.collect_errors()
+        print(errors)
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
