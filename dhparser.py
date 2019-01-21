@@ -240,7 +240,7 @@ def selftest() -> bool:
     print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
     builtin_ebnf_parser = get_ebnf_grammar()
     docstring = str(builtin_ebnf_parser.__doc__)  # type: str
-    ebnf_src = docstring[docstring.find('#'):]
+    ebnf_src = docstring[docstring.find('@'):]
     ebnf_transformer = get_ebnf_transformer()
     ebnf_compiler = get_ebnf_compiler('EBNF')
     result, errors, _ = compile_source(

@@ -112,10 +112,11 @@ class StringView:  # collections.abc.Sized
         self._text = text  # type: str
         self._begin, self._end = real_indices(begin, end, len(text))
         self._len = max(self._end - self._begin, 0)  # type: int
-        if (self._begin == 0 and self._len == len(self._text)):
-            self._fullstring = self._text  # type: str
-        else:
-            self._fullstring = ''
+        self._fullstring = ''  # type: str
+        # if (self._begin == 0 and self._len == len(self._text)):
+        #     self._fullstring = self._text  # type: str
+        # else:
+        #     self._fullstring = ''
 
     def __bool__(self) -> bool:
         return self._end > self._begin  # and bool(self.text)

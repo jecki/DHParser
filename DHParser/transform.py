@@ -165,8 +165,8 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         #     raise TypeError("Generic Type %s not permitted\n in transformation_factory "
         #                     "decorator. Use the equivalent non-generic type instead!"
         #                     % str(t))
-        if isinstance(t, str):  # ensure compatibility with python versions
-            t = eval(t)         # with alternative type handling.
+        if isinstance(t, str):          # ensure compatibility with python versions
+            t = eval(t.replace('unicode', 'str'))  # with alternative type handling.
         if isgenerictype(t):
             raise TypeError("Generic Type %s not permitted\n in transformation_factory "
                             "decorator. Use the equivalent non-generic type instead!"

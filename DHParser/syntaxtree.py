@@ -85,7 +85,7 @@ class ParserBase:
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name and repr()"""
-        return self.name if self.name else repr(self)
+        return self.name if self.name else self.__repr__()
 
     def reset(self):
         """Resets any parser variables. (Should be overridden.)"""
@@ -207,7 +207,7 @@ def flatten_xml(xml: str) -> str:
 RX_AMP = re.compile(r'&(?!\w+;)')
 
 
-class Node(collections.abc.Sized):
+class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
     """
     Represents a node in the concrete or abstract syntax tree.
 

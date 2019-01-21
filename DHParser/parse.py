@@ -143,6 +143,8 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
     # return Node(None, rest[:i]), rest[i:]
 
 
+# TODO: Refactor guarded_call into an ordinary method of Parser. That should
+#       make things much simpler and potentially more efficient (no extra closure needed)
 def add_parser_guard(parser_func):
     """
     Add a wrapper function to a parser functions (i.e. Parser.__call__ method)
@@ -2093,7 +2095,7 @@ class Forward(Parser):
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name or repr(self) if not."""
-        return self.parser.name if self.parser.name else repr(self)
+        return self.parser.name if self.parser.name else self.__repr__()
 
     def set(self, parser: Parser):
         """
