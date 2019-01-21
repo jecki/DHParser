@@ -752,7 +752,7 @@ class EBNFCompiler(Compiler):
         # prepare and add skip-rules
 
         for symbol, skip in self.directives.skip.items():
-            skip_rules = []  # type: List[Tuple[ReprType, ReprType]]
+            skip_rules = []  # type: List[ReprType]
             for search in skip:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1031,7 +1031,7 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(node, 'Alternative')
 
 
-    def _error_customization(self, node) -> Tuple[Tuple[Node], List[str]]:
+    def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:

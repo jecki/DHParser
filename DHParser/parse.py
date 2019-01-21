@@ -1351,7 +1351,11 @@ MessagesType = List[Tuple[Union[str, Any], str]]
 NO_MANDATORY = 1000
 
 
-def mandatory_violation(grammar, text_, expected, err_msgs, reloc):
+def mandatory_violation(grammar: Grammar,
+                        text_: StringView,
+                        expected: str,
+                        err_msgs: MessagesType,
+                        reloc: int) -> Tuple[Error, Node, StringView]:
     i = reloc if reloc >= 0 else 0
     location = grammar.document_length__ - len(text_)
     err_node = Node(None, text_[:i]).init_pos(location)
@@ -1426,7 +1430,7 @@ class Series(NaryOperator):
         assert 0 <= mandatory < length or mandatory == NO_MANDATORY
 
         self.mandatory = mandatory  # type: int
-        self.err_msgs = err_msgs    # type: Series.MessagesType
+        self.err_msgs = err_msgs    # type: MessagesType
         self.skip = skip            # type: ResumeList
 
     def __deepcopy__(self, memo):
@@ -1635,7 +1639,7 @@ class AllOf(NaryOperator):
         assert 0 <= mandatory < self.num_parsers or mandatory == NO_MANDATORY
 
         self.mandatory = mandatory  # type: int
-        self.err_msgs = err_msgs    # type: Series.MessagesType
+        self.err_msgs = err_msgs    # type: MessagesType
         self.skip = skip            # type: ResumeList
 
     def __deepcopy__(self, memo):

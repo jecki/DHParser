@@ -348,8 +348,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 #  case 2:  mandatory lookahead failure at end of text
                 or (len(raw_errors) == 1
                     and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)
-                    and any(isinstance(parser, Lookahead)
-                            for parser in parser.history__[-1].call_stack))
+                    and any(isinstance(p, Lookahead)
+                            for p in parser.history__[-1].call_stack))
 
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
@@ -376,6 +376,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         # run match tests
 
         for test_name, test_code in tests.get('match', dict()).items():
+            errflag = 0
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 errflag = len(errata)
@@ -424,6 +425,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         # run fail tests
 
         for test_name, test_code in tests.get('fail', dict()).items():
+            errflag = 0
             if verbose:
                 infostr = '    fail-test  "' + test_name + '" ... '
                 errflag = len(errata)
