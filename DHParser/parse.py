@@ -143,121 +143,6 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
     # return Node(None, rest[:i]), rest[i:]
 
 
-# TODO: Refactor guarded_call into an ordinary method of Parser. That should
-#       make things much simpler and potentially more efficient (no extra closure needed)
-def add_parser_guard(parser_func):
-    """
-    Add a wrapper function to a parser functions (i.e. Parser.__call__ method)
-    that takes care of memoizing, left recursion, error catching and,
-    optionally, tracing (aka "history tracking") of parser calls.
-    Returns the wrapped call.
-    """
-    def guarded_call(parser: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
-        """Wrapper method for Parser.__call__. This is used to add in an aspect-oriented
-        fashion the business intelligence that is common to all parsers."""
-        grammar = parser._grammar  # read protected member instead property to avoid function call
-        location = grammar.document_length__ - len(text)
-
-        try:
-            if grammar.last_rb__loc__ >= location:
-                grammar.rollback_to__(location)
-
-            # if location has already been visited by the current parser,
-            # return saved result
-            if location in parser.visited:
-                # no history recording in case of memoized results
-                return parser.visited[location]
-
-            # break left recursion at the maximum allowed depth
-            if grammar.left_recursion_handling__:
-                if parser.recursion_counter[location] > LEFT_RECURSION_DEPTH:
-                    grammar.recursion_locations__.add(location)
-                    return None, text
-                parser.recursion_counter[location] += 1
-
-            if grammar.history_tracking__:
-                grammar.call_stack__.append(parser)
-                grammar.moving_forward__ = True
-
-            try:
-                # PARSER CALL: run original __call__ method
-                node, rest = parser_func(parser, text)
-            except ParserError as error:
-                # does this play well with variable setting? add rollback clause here? tests needed...
-                gap = len(text) - len(error.rest)
-                rules = grammar.resume_rules__.get(parser.name, [])
-                rest = error.rest[len(error.node):]
-                i = reentry_point(rest, rules)
-                if i >= 0 or parser == grammar.start_parser__:
-                    # apply reentry-rule or catch error at root-parser
-                    if i < 0:
-                        i = 1
-                    nd = Node(None, rest[:i])
-                    rest = rest[i:]
-                    assert error.node.children
-                    if error.first_throw:
-                        node = error.node
-                        node.result += (nd,)
-                    else:
-                        node = Node(parser, (Node(None, text[:gap]), error.node, nd))
-                elif error.first_throw:
-                    raise ParserError(error.node, error.rest, first_throw=False)
-                else:
-                    result = (Node(None, text[:gap]), error.node) if gap else error.node  # type: ResultType
-                    raise ParserError(Node(parser, result), text, first_throw=False)
-
-            if grammar.left_recursion_handling__:
-                parser.recursion_counter[location] -= 1
-                # don't clear recursion_locations__ !!!
-
-            if node is None:
-                # retrieve an earlier match result (from left recursion) if it exists
-                if location in grammar.recursion_locations__:
-                    if location in parser.visited:
-                        node, rest = parser.visited[location]
-                        # TODO: maybe add a warning about occurrence of left-recursion here?
-                    # don't overwrite any positive match (i.e. node not None) in the cache
-                    # and don't add empty entries for parsers returning from left recursive calls!
-                elif grammar.memoization__:
-                    # otherwise also cache None-results
-                    parser.visited[location] = (None, rest)
-            else:
-                assert node._pos < 0
-                node._pos = location
-                assert node._pos >= 0, str("%i < %i" % (grammar.document_length__, location))
-                if (grammar.last_rb__loc__ < location
-                        and (grammar.memoization__ or location in grammar.recursion_locations__)):
-                    # - variable manipulating parsers will not be entered into the cache,
-                    #   because caching would interfere with changes of variable state
-                    # - in case of left recursion, the first recursive step that
-                    #   matches will store its result in the cache
-                    # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
-                    parser.visited[location] = (node, rest)
-
-            # Mind that memoized parser calls will not appear in the history record!
-            # Does this make sense? Or should it be changed?
-            if grammar.history_tracking__:
-                # don't track returning parsers except in case an error has occurred
-                # remaining = len(rest)
-                if (grammar.moving_forward__ or (node and node.errors)):
-                    record = HistoryRecord(grammar.call_stack__, node, text)
-                    grammar.history__.append(record)
-                    # print(record.stack, record.status, rest[:20].replace('\n', '|'))
-                grammar.moving_forward__ = False
-                grammar.call_stack__.pop()
-
-        except RecursionError:
-            node = Node(None, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
-            node._pos = location
-            grammar.tree__.new_error(node, "maximum recursion depth of parser reached; "
-                                     "potentially due to too many errors!")
-            rest = EMPTY_STRING_VIEW
-
-        return node, rest
-
-    return guarded_call
-
-
 ApplyFunc = Callable[['Parser'], None]
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 
@@ -326,15 +211,15 @@ class Parser(ParserBase):
         self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
         self.reset()
 
-        # add "aspect oriented" wrapper around parser calls
-        # for memoizing, left recursion and tracing
-        if not isinstance(self, Forward):  # should Forward-Parser not be guarded? Not sure...
-            guarded_parser_call = add_parser_guard(self.__class__.__call__)
-            # The following check is necessary for classes that don't override
-            # the __call__() method, because in these cases the non-overridden
-            # __call__()-method would be substituted a second time!
-            if self.__class__.__call__.__code__ != guarded_parser_call.__code__:
-                self.__class__.__call__ = guarded_parser_call
+        # # add "aspect oriented" wrapper around parser calls
+        # # for memoizing, left recursion and tracing
+        # if not isinstance(self, Forward):  # should Forward-Parser not be guarded? Not sure...
+        #     guarded_parser_call = add_parser_guard(self.__class__.__call__)
+        #     # The following check is necessary for classes that don't override
+        #     # the __call__() method, because in these cases the non-overridden
+        #     # __call__()-method would be substituted a second time!
+        #     if self.__class__.__call__.__code__ != guarded_parser_call.__code__:
+        #         self.__class__.__call__ = guarded_parser_call
 
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-
@@ -356,11 +241,110 @@ class Parser(ParserBase):
         self.recursion_counter = defaultdict(lambda: 0)  # type: DefaultDict[int, int]
         self.cycle_detection = set()  # type: Set[ApplyFunc]
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        """Applies the parser to the given `text` and returns a node with
-        the results or None as well as the text at the position right behind
-        the matching string."""
-        return None, text  # default behaviour: don't match
+    def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
+        """Applies the parser to the given text. This is a wrapper method that adds
+        the business intelligence that is common to all parsers. The actual parsing is
+        done in the overridden method `_parse()`.
+        """
+        grammar = self._grammar  # read protected member instead property to avoid function call
+        location = grammar.document_length__ - len(text)
+
+        try:
+            if grammar.last_rb__loc__ >= location:
+                grammar.rollback_to__(location)
+
+            # if location has already been visited by the current parser,
+            # return saved result
+            if location in self.visited:
+                # no history recording in case of memoized results
+                return self.visited[location]
+
+            # break left recursion at the maximum allowed depth
+            if grammar.left_recursion_handling__:
+                if self.recursion_counter[location] > LEFT_RECURSION_DEPTH:
+                    grammar.recursion_locations__.add(location)
+                    return None, text
+                self.recursion_counter[location] += 1
+
+            if grammar.history_tracking__:
+                grammar.call_stack__.append(self)
+                grammar.moving_forward__ = True
+
+            try:
+                # PARSER CALL: run _parse() method
+                node, rest = self._parse(text)
+            except ParserError as error:
+                # does this play well with variable setting? add rollback clause here? tests needed...
+                gap = len(text) - len(error.rest)
+                rules = grammar.resume_rules__.get(self.name, [])
+                rest = error.rest[len(error.node):]
+                i = reentry_point(rest, rules)
+                if i >= 0 or self == grammar.start_parser__:
+                    # apply reentry-rule or catch error at root-parser
+                    if i < 0:
+                        i = 1
+                    nd = Node(None, rest[:i])
+                    rest = rest[i:]
+                    assert error.node.children
+                    if error.first_throw:
+                        node = error.node
+                        node.result += (nd,)
+                    else:
+                        node = Node(self, (Node(None, text[:gap]), error.node, nd))
+                elif error.first_throw:
+                    raise ParserError(error.node, error.rest, first_throw=False)
+                else:
+                    result = (Node(None, text[:gap]), error.node) if gap else error.node  # type: ResultType
+                    raise ParserError(Node(self, result), text, first_throw=False)
+
+            if grammar.left_recursion_handling__:
+                self.recursion_counter[location] -= 1
+                # don't clear recursion_locations__ !!!
+
+            if node is None:
+                # retrieve an earlier match result (from left recursion) if it exists
+                if location in grammar.recursion_locations__:
+                    if location in self.visited:
+                        node, rest = self.visited[location]
+                        # TODO: maybe add a warning about occurrence of left-recursion here?
+                    # don't overwrite any positive match (i.e. node not None) in the cache
+                    # and don't add empty entries for parsers returning from left recursive calls!
+                elif grammar.memoization__:
+                    # otherwise also cache None-results
+                    self.visited[location] = (None, rest)
+            else:
+                assert node._pos < 0
+                node._pos = location
+                assert node._pos >= 0, str("%i < %i" % (grammar.document_length__, location))
+                if (grammar.last_rb__loc__ < location
+                        and (grammar.memoization__ or location in grammar.recursion_locations__)):
+                    # - variable manipulating parsers will not be entered into the cache,
+                    #   because caching would interfere with changes of variable state
+                    # - in case of left recursion, the first recursive step that
+                    #   matches will store its result in the cache
+                    # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
+                    self.visited[location] = (node, rest)
+
+            # Mind that memoized parser calls will not appear in the history record!
+            # Does this make sense? Or should it be changed?
+            if grammar.history_tracking__:
+                # don't track returning parsers except in case an error has occurred
+                # remaining = len(rest)
+                if (grammar.moving_forward__ or (node and node.errors)):
+                    record = HistoryRecord(grammar.call_stack__, node, text)
+                    grammar.history__.append(record)
+                    # print(record.stack, record.status, rest[:20].replace('\n', '|'))
+                grammar.moving_forward__ = False
+                grammar.call_stack__.pop()
+
+        except RecursionError:
+            node = Node(None, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
+            node._pos = location
+            grammar.tree__.new_error(node, "maximum recursion depth of parser reached; "
+                                           "potentially due to too many errors!")
+            rest = EMPTY_STRING_VIEW
+
+        return node, rest
 
     def __add__(self, other: 'Parser') -> 'Series':
         """The + operator generates a series-parser that applies two
@@ -372,6 +356,13 @@ class Parser(ParserBase):
         the first parser and, if that does not match, the second parser.
         """
         return Alternative(self, other)
+
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        """Applies the parser to the given `text` and returns a node with
+        the results or None as well as the text at the position right behind
+        the matching string."""
+        raise NotImplementedError
+        # return None, text  # default behaviour: don't match
 
     @property
     def grammar(self) -> 'Grammar':
@@ -988,7 +979,7 @@ class PreprocessorToken(Parser):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -1041,7 +1032,7 @@ class Token(Parser):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
             return Node(self, self.text, True), text[self.len:]
         return None, text
@@ -1085,7 +1076,7 @@ class RegExp(Parser):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         match = text.match(self.regexp)
         if match:
             capture = match.group(0)
@@ -1243,7 +1234,7 @@ class Option(UnaryOperator):
         assert not isinstance(parser, Option), \
             "Redundant nesting of options: %s%s" % (str(parser.name), str(self.ptype))
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -1273,7 +1264,7 @@ class ZeroOrMore(Option):
     EBNF-Example:  ``sentence = { /\w+,?/ } "."``
     """
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1  # type: int
         infinite_loop_error = None  # type: Optional[Error]
@@ -1322,7 +1313,7 @@ class OneOrMore(UnaryOperator):
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (str(self.ptype), str(parser.name))
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         n = len(text) + 1  # type: int
@@ -1443,7 +1434,7 @@ class Series(NaryOperator):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         error = None  # type: Optional[Error]
@@ -1547,7 +1538,7 @@ class Alternative(NaryOperator):
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
             "Parser-specification Error: only the last alternative may be optional!"
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
@@ -1653,7 +1644,7 @@ class AllOf(NaryOperator):
         duplicate.num_parsers = self.num_parsers
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         parsers = list(self.parsers)  # type: List[Parser]
@@ -1718,7 +1709,7 @@ class SomeOf(NaryOperator):
             parsers = alternative.parsers
         super().__init__(*parsers)
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         parsers = list(self.parsers)  # type: List[Parser]
@@ -1779,7 +1770,7 @@ def Required(parser: Parser) -> Parser:
 #     """
 #     RX_ARGUMENT = re.compile(r'\s(\S)')
 #
-#     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
 #         node, text_ = self.parser(text)
 #         if not node:
 #             m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
@@ -1800,7 +1791,7 @@ class Lookahead(FlowOperator):
     Matches, if the contained parser would match for the following text,
     but does not consume any text.
     """
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
             return Node(self, ''), text
@@ -1843,7 +1834,7 @@ class Lookbehind(FlowOperator):
             self.text = cast(Token, p).text
         super().__init__(parser)
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[len(text):]
         if self.regexp is None:  # assert self.text is not None
             does_match = backwards_text[:len(self.text)] == self.text
@@ -1880,7 +1871,7 @@ class Capture(UnaryOperator):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
         if node:
             assert self.name, """Tried to apply an unnamed capture-parser!"""
@@ -1944,7 +1935,7 @@ class Retrieve(Parser):
         duplicate.ptype = self.ptype
         return duplicate
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # the following indirection allows the call() method to be called
         # from subclass without triggering the parser guard a second time
         return self.retrieve_and_match(text)
@@ -1958,10 +1949,6 @@ class Retrieve(Parser):
         the class' constructor and tries to match the variable's value with
         the following text. Returns a Node containing the value or `None`
         accordingly.
-
-        This functionality has been move from the __call__ method to an
-        independent method to allow calling it from a subclasses __call__
-        method without triggering the parser guard a second time.
         """
         try:
             stack = self.grammar.variables__[self.symbol.name]
@@ -1989,7 +1976,7 @@ class Pop(Retrieve):
     used.
     """
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = super().retrieve_and_match(text)
         if node and not node.errors:
             stack = self.grammar.variables__[self.symbol.name]
@@ -2024,7 +2011,7 @@ class Synonym(UnaryOperator):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
 
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
             return Node(self, node), text
@@ -2070,6 +2057,12 @@ class Forward(Parser):
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        """
+        Overrides Parser.__call__, because Forward is not an independent parser
+        but merely a redirects the call to another parser. Other then parser
+        `Synonym`, which might be a meaningful marker for the syntax tree,
+        parser Forward should never appear in the syntax tree.
+        """
         return self.parser(text)
 
     def __cycle_guard(self, func, alt_return):
