@@ -17,8 +17,12 @@ import cython
 #     pass 
 
 # cdef class Node:
-#    cdef int _pos
-#    cdef int _len
+#     cdef object errors
+#     cdef int _pos
+#     cdef object _result
+#     cdef str _content
+#     cdef int _len
+#     cdef object parser
 
 # cdef class RootNode(Node):
 #     pass

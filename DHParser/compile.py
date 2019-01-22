@@ -35,7 +35,6 @@ compiler object.
 """
 
 import copy
-import os
 import re
 
 from DHParser.preprocess import strip_tokens, with_source_mapping, PreprocessorFunc

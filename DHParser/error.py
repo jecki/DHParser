@@ -94,12 +94,12 @@ class Error:
         assert not isinstance(pos, ErrorCode)
         assert pos >= 0
         assert code >= 0
-        self.message = message
-        self._pos = pos
-        self.code = code
-        self.orig_pos = orig_pos
-        self.line = line
-        self.column = column
+        self.message = message    # type: str
+        self._pos = pos           # type: int
+        self.code = code          # type: ErrorCode
+        self.orig_pos = orig_pos  # type: int
+        self.line = line          # type: int
+        self.column = column      # type: int
 
     def __str__(self):
         prefix = ''
