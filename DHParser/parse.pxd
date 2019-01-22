@@ -4,8 +4,6 @@
 #cython: c_string_encoding=utf-8
 
 import cython
-from DHParser cimport syntaxtree
-
 
 # cdef class ParserError(Exception):
 #     cdef bint first_throw
