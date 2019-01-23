@@ -56,7 +56,8 @@ import threading
 
 from DHParser.error import line_col
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, ParserBase
+from DHParser.syntaxtree import Node
+from DHParser.parse import ParserBase
 from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS, typing
 from typing import List, Tuple, Union
 

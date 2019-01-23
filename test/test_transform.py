@@ -25,7 +25,8 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, ZOMBIE_NODE, \
-    MockParser, TOKEN_PTYPE
+    TOKEN_PTYPE
+from DHParser.parse import MockParser
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
     transformation_factory, has_parent

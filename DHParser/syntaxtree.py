@@ -23,24 +23,18 @@ here, because node-objects refer to parser-objects. All concrete
 parser classes are defined in the ``parse`` module.
 """
 
-
-import collections.abc
 from collections import OrderedDict
 import copy
 
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import re, typing
-from typing import Callable, cast, Iterator, List, AbstractSet, Set, Dict, Union, Tuple, Optional
+from DHParser.toolkit import re
+from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional
 
 
-__all__ = ('ParserBase',
-           'WHITESPACE_PTYPE',
+__all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
-           'MockParser',
-           'ZombieParser',
            'ZOMBIE',
-           'ZOMBIE_PARSER',
            'ZOMBIE_NODE',
            'ResultType',
            'StrictResultType',
@@ -61,112 +55,10 @@ __all__ = ('ParserBase',
 #######################################################################
 
 
-class ParserBase:
-    """
-    ParserBase is the base class for all real and mock parser classes.
-    It is defined here, because Node objects require a parser object
-    for instantiation.
-    """
-
-    __slots__ = 'name', 'ptype', 'tag_name'
-
-    def __init__(self,):  # , pbases=frozenset()):
-        self.name = ''  # type: str
-        self.ptype = ':' + self.__class__.__name__  # type: str
-        self.tag_name = self.ptype  # type: str
-
-    def __repr__(self):
-        return self.name + self.ptype
-
-    def __str__(self):
-        return self.name + (' = ' if self.name else '') + repr(self)
-
-    def __call__(self, text: StringView) -> Tuple[Optional['Node'], StringView]:
-        return None, text
-
-    @property
-    def repr(self) -> str:
-        """Returns the parser's name if it has a name and repr()"""
-        return self.name if self.name else self.__repr__()
-
-    def reset(self):
-        """Resets any parser variables. (Should be overridden.)"""
-        pass
-
-    @property
-    def grammar(self) -> 'Grammar':
-        """Returns the Grammar object to which the parser belongs. If not
-        yet connected to any Grammar object, None is returned."""
-        raise NotImplementedError
-
-    def apply(self, func: Callable):
-        """Applies the function `func` recursively to the parser and all
-        descendant parsers, if any exist."""
-        pass
-
-
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
 
-
-class MockParser(ParserBase):
-    """
-    MockParser objects can be used to reconstruct syntax trees from a
-    serialized form like S-expressions or XML. Mock objects can mimic
-    different parser types by assigning them a `ptype` on initialization.
-
-    Mock objects should not be used for anything other than
-    syntax tree (re-)construction. In all other cases where a parser
-    object substitute is needed, chose the singleton ZOMBIE_PARSER.
-    """
-
-    __slots__ = ()
-
-    def __init__(self, name='', ptype=''):  # , pbases=frozenset()):
-        assert not ptype or ptype[0] == ':'
-        super().__init__()
-        self.name = name
-        if ptype:
-            self.ptype = ptype  # or ':' + self.__class__.__name__
-
-
 ZOMBIE = "__ZOMBIE__"
-
-
-class ZombieParser(MockParser):
-    """
-    Serves as a substitute for a Parser instance.
-
-    ``ZombieParser`` is the class of the singelton object
-    ``ZOMBIE_PARSER``. The  ``ZOMBIE_PARSER`` has a name and can be
-    called, but it never matches. It serves as a substitute where only
-    these (or one of these properties) is needed, but no real Parser-
-    object is instantiated.
-    """
-
-    alive = False
-    __slots__ = ()
-
-    def __init__(self):
-        super(ZombieParser, self).__init__()
-        assert not self.__class__.alive, "There can be only one!"
-        assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.name = ZOMBIE
-        self.__class__.alive = True
-
-    def __copy__(self):
-        return self
-
-    def __deepcopy__(self, memo):
-        return self
-
-    def __call__(self, text):
-        """Better call Saul ;-)"""
-        return None, text
-
-
-ZOMBIE_PARSER = ZombieParser()
-
 
 #######################################################################
 #
