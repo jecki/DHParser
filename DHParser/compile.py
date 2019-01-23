@@ -168,7 +168,9 @@ class Compiler:
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
         """
-        elem = node.parser.name or node.parser.ptype[1:]
+        elem = node.tag_name
+        if elem.startswith(':'):
+            elem = elem[1:]
         if not sane_parser_name(elem):
             self.tree.new_error(node, "Reserved name '%s' not allowed as parser "
                                 "name! " % elem + "(Any name starting with "

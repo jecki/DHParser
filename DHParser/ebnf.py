@@ -660,9 +660,9 @@ class EBNFCompiler(Compiler):
         string search or a regular expression from the nodes content. Returns
         an empty string in case the node is neither regexp nor literal.
         """
-        if nd.parser.name == 'regexp':
+        if nd.tag_name == 'regexp':
             return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
-        elif nd.parser.name == 'literal':
+        elif nd.tag_name == 'literal':
             s = nd.content.strip()
             return s.strip('"') if s[0] == '"' else s.strip("'")
         return ''
@@ -847,15 +847,15 @@ class EBNFCompiler(Compiler):
         definitions = []  # type: List[Tuple[str, str]]
 
         # drop the wrapping sequence node
-        if len(node.children) == 1 and not node.children[0].parser.name:
+        if len(node.children) == 1 and node.children[0].is_anonymous():
             node = node.children[0]
 
         # compile definitions and directives and collect definitions
         for nd in node.children:
-            if nd.parser.name == "definition":
+            if nd.tag_name == "definition":
                 definitions.append(self.compile(nd))
             else:
-                assert nd.parser.name == "directive", nd.as_sxpr()
+                assert nd.tag_name == "directive", nd.as_sxpr()
                 self.compile(nd)
             # node.error_flag = max(node.error_flag, nd.error_flag)
         self.definitions.update(definitions)
@@ -920,7 +920,7 @@ class EBNFCompiler(Compiler):
 
         if key in {'comment', 'whitespace'}:
             check_argnum()
-            if node.children[1].parser.name == "symbol":
+            if node.children[1].tag_name == "symbol":
                 value = node.children[1].content
                 if key == 'whitespace' and value in WHITESPACE_TYPES:
                     value = WHITESPACE_TYPES[value]  # replace whitespace-name by regex
@@ -970,7 +970,7 @@ class EBNFCompiler(Compiler):
             if symbol in self.rules:
                 self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
                                     + 'must be defined before the symbol!')
-            if node.children[1 if len(node.children) == 2 else 2].parser.name != 'literal':
+            if node.children[1 if len(node.children) == 2 else 2].tag_name != 'literal':
                 self.tree.new_error(
                     node, 'Directive "%s" requires message string or a a pair ' % key +
                     '(regular expression or search string, message string) as argument!')
@@ -1035,7 +1035,7 @@ class EBNFCompiler(Compiler):
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:
-            if nd.parser.ptype == TOKEN_PTYPE and nd.content == "§":
+            if nd.tag_name == TOKEN_PTYPE and nd.content == "§":
                 mandatory_marker.append(len(filtered_children))
                 if len(mandatory_marker) > 1:
                     self.tree.new_error(nd, 'One mandatory marker (§) sufficient to declare '
@@ -1088,9 +1088,9 @@ class EBNFCompiler(Compiler):
         if prefix in {'::', ':'}:
             assert len(node.children) == 2
             arg = node.children[-1]
-            if arg.parser.name != 'symbol':
+            if arg.tag_name != 'symbol':
                 self.tree.new_error(node, ('Retrieve Operator "%s" requires a symbol, '
-                                    'and not a %s.') % (prefix, str(arg.parser)))
+                                    'and not a %s.') % (prefix, arg.tag_name))
                 return str(arg.result)
             if str(arg) in self.directives.filter:
                 custom_args = ['rfilter=%s' % self.directives.filter[str(arg)]]
@@ -1101,7 +1101,7 @@ class EBNFCompiler(Compiler):
             # node.result[1].result = shift + node.result[2:]
             node.children[1].result = (Node(node.children[1].parser, node.children[1].result),) \
                 + node.children[2:]
-            node.children[1].parser = node.parser
+            node.children[1].tag_name = node.tag_name
             node.result = (node.children[0], node.children[1])
 
         node.result = node.children[1:]
@@ -1113,7 +1113,7 @@ class EBNFCompiler(Compiler):
                     nd = node
                     if len(nd.children) >= 1:
                         nd = nd.children[0]
-                    while nd.parser.name == "symbol":
+                    while nd.tag_name == "symbol":
                         symlist = self.rules.get(nd.content, [])
                         if len(symlist) == 2:
                             nd = symlist[1]
@@ -1121,10 +1121,10 @@ class EBNFCompiler(Compiler):
                             if len(symlist) == 1:
                                 nd = symlist[0].children[1]
                             break
-                    if (nd.parser.name != "regexp" or nd.content[:1] != '/'
+                    if (nd.tag_name != "regexp" or nd.content[:1] != '/'
                             or nd.content[-1:] != '/'):
                         self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
-                                            "-parsers, not: " + nd.parser.name + nd.parser.ptype)
+                                            "-parsers, not: " + nd.tag_name)
 
                 if not result.startswith('RegExp('):
                     self.deferred_tasks.append(lambda: check(node))
@@ -1154,12 +1154,12 @@ class EBNFCompiler(Compiler):
         # return self.non_terminal(node, 'Unordered')
         assert len(node.children) == 1
         nd = node.children[0]
-        if nd.parser.name == "term":
+        if nd.tag_name == "term":
             filtered_result, custom_args = self._error_customization(nd)
             mock_node = Node(nd.parser, filtered_result)
             return self.non_terminal(mock_node, 'AllOf', custom_args)
-        elif nd.parser.name == "expression":
-            if any(c.parser.ptype == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
+        elif nd.tag_name == "expression":
+            if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
                 self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
             args = ', '.join(self.compile(child) for child in nd.children)
             return "SomeOf(" + args + ")"

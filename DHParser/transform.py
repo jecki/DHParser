@@ -44,7 +44,6 @@ __all__ = ('TransformationDict',
            'ConditionFunc',
            'KeyFunc',
            'transformation_factory',
-           'key_parser_name',
            'key_tag_name',
            'traverse',
            'is_named',
@@ -231,8 +230,8 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         return decorator
 
 
-def key_parser_name(node: Node) -> str:
-    return node.parser.name
+# def key_parser_name(node: Node) -> str:
+#     return node.parser.name
 
 
 def key_tag_name(node: Node) -> str:
@@ -268,7 +267,7 @@ def traverse(root_node: Node,
             is interpreted as a ``compact_table``. See
             :func:`expand_table` or :func:`EBNFCompiler.EBNFTransTable`
         key_func (function): A mapping key_func(node) -> keystr. The default
-            key_func yields node.parser.name.
+            key_func yields node.tag_name.
 
     Example::
 
@@ -392,18 +391,18 @@ def is_single_child(context: List[Node]) -> bool:
 
 def is_named(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
-    return bool(context[-1].parser.name)
+    return not context[-1].is_anonymous()
 
 
 def is_anonymous(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is an anonymous parser."""
-    return not context[-1].parser.name
+    return context[-1].is_anonymous()
 
 
 def is_whitespace(context: List[Node]) -> bool:
     """Returns ``True`` for whitespace and comments defined with the
     ``@comment``-directive."""
-    return context[-1].parser.ptype == WHITESPACE_PTYPE
+    return context[-1].tag_name == WHITESPACE_PTYPE
 
 
 def is_empty(context: List[Node]) -> bool:
@@ -426,7 +425,7 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
     any token is a match.
     """
     node = context[-1]
-    return node.parser.ptype == TOKEN_PTYPE and (not tokens or node.content in tokens)
+    return node.tag_name == TOKEN_PTYPE and (not tokens or node.content in tokens)
 
 
 @transformation_factory(collections.abc.Set)
@@ -487,10 +486,11 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 
 
 def _replace_by(node: Node, child: Node):
-    if not child.parser.name:
-        child.parser = MockParser(node.parser.name, child.parser.ptype)
+    if node.is_anonymous() or not child.is_anonymous():
+        node.tag_name = child.tag_name
+        # name, ptype = (node.tag_name.split(':') + [''])[:2]
+        # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
-    node.parser = child.parser
     node.result = child.result
     if hasattr(child, '_xml_attr'):
         node.attr.update(child.attr)
@@ -599,8 +599,7 @@ def replace_parser(context: List[Node], name: str):
         name: "NAME:PTYPE" of the surrogate. The ptype is optional
     """
     node = context[-1]
-    name, ptype = (name.split(':') + [''])[:2]
-    node.parser = MockParser(name, ':' + ptype)
+    node.tag_name = name
 
 
 @transformation_factory(collections.abc.Callable)
@@ -741,9 +740,9 @@ def merge_whitespace(context):
     i = 0
     L = len(children)
     while i < L:
-        if children[i].parser.pytpe == WHITESPACE_PTYPE:
+        if children[i].tag_name == WHITESPACE_PTYPE:
             k = i
-            while i < L and children[k].parser.ptype == WHITESPACE_PTYPE:
+            while i < L and children[k].tag_name == WHITESPACE_PTYPE:
                 i += 1
             if i > k:
                 children[k].result = sum(children[n].result for n in range(k, i + 1))
@@ -761,12 +760,12 @@ def move_whitespace(context):
         return
     parent = context[-2]
     children = node.children
-    if children[0].parser.ptype == WHITESPACE_PTYPE:
+    if children[0].tag_name == WHITESPACE_PTYPE:
         before = (children[0],)
         children = children[1:]
     else:
         before = ()
-    if children and children[-1].parser.ptype == WHITESPACE_PTYPE:
+    if children and children[-1].tag_name == WHITESPACE_PTYPE:
         after = (children[-1],)
         children = children[:-1]
     else:
@@ -781,10 +780,10 @@ def move_whitespace(context):
         # merge adjacent whitespace
         prevN = parent.children[i - 1] if i > 0 else None
         nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
-        if before and prevN and prevN.parser.ptype == WHITESPACE_PTYPE:
+        if before and prevN and prevN.tag_name == WHITESPACE_PTYPE:
             prevN.result = prevN.result + before[0].result
             before = ()
-        if after and nextN and nextN.parser.ptype == WHITESPACE_PTYPE:
+        if after and nextN and nextN.tag_name == WHITESPACE_PTYPE:
             nextN.result = after[0].result + nextN.result
             after = ()
 
@@ -926,7 +925,7 @@ def remove_first(context: List[Node]):
     node = context[-1]
     if node.children:
         for i, child in enumerate(node.children):
-            if child.parser.ptype != WHITESPACE_PTYPE:
+            if child.tag_name != WHITESPACE_PTYPE:
                 break
         else:
             return
@@ -938,7 +937,7 @@ def remove_last(context: List[Node]):
     node = context[-1]
     if node.children:
         for i, child in enumerate(reversed(node.children)):
-            if child.parser.ptype != WHITESPACE_PTYPE:
+            if child.tag_name != WHITESPACE_PTYPE:
                 break
         else:
             return
@@ -1026,7 +1025,7 @@ def assert_content(context: List[Node], regexp: str):
     node = context[-1]
     if not has_content(context, regexp):
         cast(RootNode, context[0]).new_error(node, 'Element "%s" violates %s on %s'
-                                             % (node.parser.name, str(regexp), node.content))
+                                             % (node.tag_name, str(regexp), node.content))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1035,7 +1034,7 @@ def require(context: List[Node], child_tags: AbstractSet[str]):
     for child in node.children:
         if child.tag_name not in child_tags:
             cast(RootNode, context[0]).new_error(node, 'Element "%s" is not allowed inside "%s".'
-                                                 % (child.parser.name, node.parser.name))
+                                                 % (child.tag_name, node.tag_name))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1044,7 +1043,7 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
     for child in node.children:
         if child.tag_name in child_tags:
             cast(RootNode, context[0]).new_error(node, 'Element "%s" cannot be nested inside "%s".'
-                                                 % (child.parser.name, node.parser.name))
+                                                 % (child.tag_name, node.tag_name))
 
 
 def peek(context: List[Node]):

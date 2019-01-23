@@ -38,7 +38,7 @@ from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, ParserBase, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_PARSER, ResultType
+    TOKEN_PTYPE, ZOMBIE_PARSER, ZOMBIE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
@@ -1458,7 +1458,7 @@ class Series(NaryOperator):
                         break
             results += (node,)
         assert len(results) <= len(self.parsers) \
-               or len(self.parsers) >= len([p for p in results if p.parser != ZOMBIE_PARSER])
+               or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
         node = Node(self, results)
         if error:
             raise ParserError(node, text, first_throw=True)
@@ -1669,7 +1669,7 @@ class AllOf(NaryOperator):
                     if reloc < 0:
                         parsers = []
         assert len(results) <= len(self.parsers) \
-               or len(self.parsers) >= len([p for p in results if p.parser != ZOMBIE_PARSER])
+               or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
         node =  Node(self, results)
         if error:
             raise ParserError(node, text, first_throw=True)

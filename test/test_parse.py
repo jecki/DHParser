@@ -446,11 +446,12 @@ class TestPopRetrieve:
 
     @staticmethod
     def opening_delimiter(node, name):
-        return node.tag_name == name and not isinstance(node.parser, Retrieve)
+        return node.tag_name == name # and not isinstance(node.parser, Retrieve)
 
     @staticmethod
     def closing_delimiter(node):
-        return isinstance(node.parser, Retrieve)
+        return node.tag_name in {':Pop', ':Retrieve'}
+        # return isinstance(node.parser, Retrieve)
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
