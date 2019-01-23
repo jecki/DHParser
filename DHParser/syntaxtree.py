@@ -39,6 +39,7 @@ __all__ = ('ParserBase',
            'TOKEN_PTYPE',
            'MockParser',
            'ZombieParser',
+           'ZOMBIE',
            'ZOMBIE_PARSER',
            'ZOMBIE_NODE',
            'ResultType',
@@ -128,6 +129,9 @@ class MockParser(ParserBase):
             self.ptype = ptype  # or ':' + self.__class__.__name__
 
 
+ZOMBIE = "__ZOMBIE__"
+
+
 class ZombieParser(MockParser):
     """
     Serves as a substitute for a Parser instance.
@@ -146,7 +150,7 @@ class ZombieParser(MockParser):
         super(ZombieParser, self).__init__()
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.name = "__ZOMBIE__"
+        self.name = ZOMBIE
         self.__class__.alive = True
 
     def __copy__(self):
@@ -263,7 +267,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_len', '_pos', 'parser', 'errors', '_xml_attr', '_content'
+    __slots__ = '_result', 'children', '_len', '_pos', '_tag_name', 'errors', '_xml_attr', '_content'
 
     def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -281,7 +285,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        self.parser = parser or ZOMBIE_PARSER
+        if parser is None:
+            self._tag_name = ZOMBIE
+        else:
+            self._tag_name = parser.name or parser.ptype
 
     def __deepcopy__(self, memo):
         if self.children:
@@ -304,8 +311,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def __repr__(self):
-        mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
-        parg = "MockParser({name}, {ptype})".format(**mpargs)
+        # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
+        name, ptype = (self._tag_name.split(':') + [''])[:2]
+        parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
         rarg = str(self) if not self.children else \
             "(" + ", ".join(repr(child) for child in self.children) + ")"
         return "Node(%s, %s)" % (parg, rarg)
@@ -408,7 +416,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         name of the node's parser or, if the node's parser is unnamed, the
         node's parser's `ptype`.
         """
-        return self.parser.name or self.parser.ptype
+        return self._tag_name
+
+    @tag_name.setter
+    def tag_name(self, tag_name: str):
+        assert tag_name
+        self._tag_name = tag_name
+
+
+    def is_anonymous(self):
+        return self._tag_name[0] == ':'
+
+
+    @property
+    def parser(self) -> MockParser:
+        name, ptype = (self.tag_name.split(':') + [''])[:2]
+        return MockParser(name, ':' + ptype)
 
 
     @property
@@ -824,7 +847,7 @@ class RootNode(Node):
         duplicate.inline_tags = self.inline_tags
         duplicate.omit_tags = self.omit_tags
         duplicate.empty_tags = self.empty_tags
-        duplicate.parser = self.parser
+        duplicate.tag_name = self.tag_name
         return duplicate
 
 
@@ -844,7 +867,7 @@ class RootNode(Node):
         self.children = node.children
         self._len = node._len
         self._pos = node._pos
-        self.parser = node.parser
+        self.tag_name = node.tag_name
         if hasattr(node, '_xml_attr'):
             self._xml_attr = node._xml_attr
         self._content = node._content
@@ -1079,7 +1102,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
                     res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname
-        if len(res) == 1 and res[0].parser.ptype == TOKEN_PTYPE:
+        if len(res) == 1 and res[0].tag_name == TOKEN_PTYPE:
             result = res[0].result
         else:
             result = tuple(res)
