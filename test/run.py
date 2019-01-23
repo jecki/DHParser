@@ -7,7 +7,11 @@ import doctest
 import multiprocessing
 import os
 import platform
+import sys
 import time
+
+
+sys.path.extend(['../', './'])
 
 
 def run_doctests(module):
