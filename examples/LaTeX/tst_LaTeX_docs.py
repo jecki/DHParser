@@ -83,6 +83,8 @@ def tst_func():
                     print('Saving AST')
                     with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
                         f.write(result.as_sxpr(compact=True))
+                    with open('LOGS/' + file[:-4] + '.tex', 'w', encoding='utf-8') as f:
+                        f.write(str(result))
 
                 print('\nCompiling document: "%s"' % file)
                 output = compiler(result)

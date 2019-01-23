@@ -172,7 +172,7 @@ def get_grammar() -> LaTeXGrammar:
 
 
 def streamline_whitespace(context):
-    if context[-2].parser.ptype == ":_Token":
+    if context[-2].tag_name == TOKEN_PTYPE:
         return
     node = context[-1]
     assert node.tag_name in ['WSPC', ':Whitespace']
@@ -200,7 +200,7 @@ def is_commandname(context):
     """Returns True, if last node in the content represents a (potentially
     unknown) LaTeX-command."""
     node = context[-1]
-    if node.parser.ptype == TOKEN_PTYPE:
+    if node.tag_name == TOKEN_PTYPE:
         parent = context[-2]
         if len(parent.children) > 1:
             parent_name = parent.tag_name.lower()

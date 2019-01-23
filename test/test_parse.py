@@ -176,7 +176,7 @@ class TestRegex:
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
-        assert node.parser.name == "regex"
+        assert node.tag_name == "regex"
         assert str(node) == 'abc+def'
 
     def test_multilineRegex_wo_Comments(self):
@@ -192,7 +192,7 @@ class TestRegex:
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
-        assert node.parser.name == "regex"
+        assert node.tag_name == "regex"
         assert str(node) == 'abc+def'
 
     def text_ignore_case(self):
@@ -209,7 +209,7 @@ class TestRegex:
         assert node
         assert not node.error_flag
         assert rest == ''
-        assert node.parser.name == "regex"
+        assert node.tag_name == "regex"
         assert str(node) == 'Alpha'
 
         mlregex = r"""

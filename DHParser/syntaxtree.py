@@ -431,10 +431,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._tag_name[0] == ':'
 
 
-    @property
-    def parser(self) -> MockParser:
-        name, ptype = (self.tag_name.split(':') + [''])[:2]
-        return MockParser(name, ':' + ptype)
+    # @property
+    # def parser(self) -> MockParser:
+    #     name, ptype = (self.tag_name.split(':') + [''])[:2]
+    #     return MockParser(name, ':' + ptype)
 
 
     @property
