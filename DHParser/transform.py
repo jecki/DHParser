@@ -599,7 +599,7 @@ def replace_parser(context: List[Node], name: str):
         name: "NAME:PTYPE" of the surrogate. The ptype is optional
     """
     node = context[-1]
-    node.tage_name = name
+    node.tag_name = name
 
 
 @transformation_factory(collections.abc.Callable)
