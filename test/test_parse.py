@@ -25,7 +25,7 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.toolkit import compile_python_object
-from DHParser.log import logging, is_logging, log_ST
+from DHParser.log import logging, is_logging, log_ST, log_parsing_history
 from DHParser.error import Error
 from DHParser.parse import Retrieve, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
@@ -73,7 +73,7 @@ class TestInfiLoopsAndRecursion:
         assert snippet == str(syntax_tree)
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_direct.cst")
-            parser.log_parsing_history__("test_LeftRecursion_direct")
+            log_parsing_history(parser, "test_LeftRecursion_direct")
 
     def test_direct_left_recursion2(self):
         minilang = """
@@ -110,7 +110,7 @@ class TestInfiLoopsAndRecursion:
         assert snippet == str(syntax_tree)
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
-            parser.log_parsing_history__("test_LeftRecursion_indirect")
+            log_parsing_history(parser, "test_LeftRecursion_indirect")
 
     def test_inifinite_loops(self):
         minilang = """not_forever = { // } \n"""
@@ -243,7 +243,7 @@ class TestRegex:
         assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
         result = parser(testdoc)
-        # parser.log_parsing_history("test.log")
+        # log_parsing_history(parser, "test.log")
         assert not result.error_flag
 
 

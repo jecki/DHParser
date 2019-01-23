@@ -253,7 +253,7 @@ class TestLookahead:
     """
     EBNF = r"""
         document = { category | entry } { LF }
-        category = {LF } sequence_of_letters { /:/ sequence_of_letters } /:/ §&(LF sequence_of_letters) 
+        category = { LF } sequence_of_letters { /:/ sequence_of_letters } /:/ §&(LF sequence_of_letters) 
         entry = { LF } sequence_of_letters !/:/
         sequence_of_letters = /[A-Za-z0-9 ]+/
         LF = / *\n/

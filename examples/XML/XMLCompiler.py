@@ -33,7 +33,6 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, ZOMBIE_NODE
-from DHParser.parse import MockParser
 
 
 #######################################################################
@@ -395,7 +394,7 @@ class XMLCompiler(Compiler):
             node.attr.update(attributes)
         node.result = ''
         self.tree.empty_tags.add('?xml')
-        node.parser = self.get_parser('?xml')
+        node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
     # def on_VersionInfo(self, node):
@@ -597,7 +596,7 @@ class XMLCompiler(Compiler):
         attributes = self.extract_attributes(node.children)
         if attributes:
             node.attr.update(attributes)
-        node.parser = self.get_parser(node['Name'].content)
+        node.tag_name = node['Name'].content  # node.parser = self.get_parser(node['Name'].content)
         node.result = ''
         self.tree.empty_tags.add(node.tag_name)
         return node

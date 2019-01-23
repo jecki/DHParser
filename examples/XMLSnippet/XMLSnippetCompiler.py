@@ -33,7 +33,6 @@ from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, GLOBALS
-from DHParser.parse import MockParser
 
 
 #######################################################################

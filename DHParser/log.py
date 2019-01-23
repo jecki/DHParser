@@ -52,12 +52,9 @@ import collections
 import contextlib
 import html
 import os
-import threading
 
-from DHParser.error import line_col
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node
-from DHParser.parse import ParserBase
 from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS, typing
 from typing import List, Tuple, Union
 
@@ -221,17 +218,15 @@ class HistoryRecord:
         '\n</style>\n</head>\n<body>\n')
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
-    def __init__(self, call_stack: List['ParserBase'], node: Node, text: StringView) -> None:
+    def __init__(self, call_stack: List[str],
+                 node: Node,
+                 text: StringView,
+                 line_col: Tuple[int, int]) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [p for p in call_stack if p.ptype != ":Forward"]  # type: List['ParserBase']
+        self.call_stack = [tn for tn in call_stack if tn != ":Forward"]  # type: List[str]
         self.node = node                # type: Node
         self.text = text                # type: StringView
-        self.line_col = (1, 1)          # type: Tuple[int, int]
-        if call_stack:
-            grammar = call_stack[-1].grammar
-            document = grammar.document__
-            lbreaks = grammar.document_lbreaks__
-            self.line_col = line_col(lbreaks, len(document) - len(text))
+        self.line_col = line_col        # type: Tuple[int, int]
 
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
@@ -287,8 +282,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join((p.repr if p.ptype in {':RegExp', ':Token'} else p.name or p.ptype)
-                         for p in self.call_stack)
+        return "->".join(self.call_stack)
 
     @property
     def status(self) -> str:

@@ -349,7 +349,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 or (len(raw_errors) == 1
                     and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)
                     and any(isinstance(p, Lookahead)
-                            for p in parser.history__[-1].call_stack))
+                            for p in parser.history__[-1].call_stack))  # TODO: Refactor this clause!!!
 
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
