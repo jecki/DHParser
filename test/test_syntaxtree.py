@@ -183,7 +183,7 @@ class TestNode:
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
 
     def test_xml_sanitizer(self):
-        node = Node(MockParser('tag'), '<&>')
+        node = Node('tag', '<&>')
         assert node.as_xml() == '<tag>&lt;&amp;&gt;</tag>'
 
 

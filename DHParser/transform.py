@@ -648,7 +648,7 @@ def collapse(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Callable)
-def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase):
+def collapse_if(context: List[Node], condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfil the given `condition` into a single leaf node with parser
@@ -656,13 +656,14 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: ParserBase
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
     >>> tree = parse_sxpr(sxpr)
-    >>> text = MockParser('text')
-    >>> collapse_if([tree], not_one_of({'superscript', 'subscript'}), text)
+    >>> collapse_if([tree], not_one_of({'superscript', 'subscript'}), 'text')
     >>> print(flatten_sxpr(tree.as_sxpr()))
     (place (text "p.26") (superscript "b") (text ",18"))
 
     See `test_transform.TestComplexTransformations` for examples.
     """
+
+    assert isinstance(target_tag, str)  # TODO: Delete this when safe
 
     node = context[-1]
     package = []  # type: List[Node]

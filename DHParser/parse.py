@@ -290,12 +290,12 @@ class Parser(ParserBase):
                         node = error.node
                         node.result += (nd,)
                     else:
-                        node = Node(self, (Node(None, text[:gap]), error.node, nd))
+                        node = Node(self.tag_name, (Node(None, text[:gap]), error.node, nd))
                 elif error.first_throw:
                     raise ParserError(error.node, error.rest, first_throw=False)
                 else:
                     result = (Node(None, text[:gap]), error.node) if gap else error.node  # type: ResultType
-                    raise ParserError(Node(self, result), text, first_throw=False)
+                    raise ParserError(Node(self.tag_name, result), text, first_throw=False)
 
             if grammar.left_recursion_handling__:
                 self.recursion_counter[location] -= 1
@@ -758,6 +758,7 @@ class Grammar:
                  'already exists in grammar object: %s!'
                  % (parser.name, str(self.__dict__[parser.name])))
             setattr(self, parser.name, parser)
+        parser.tag_name = parser.name or parser.ptype
         self.all_parsers__.add(parser)
         parser.grammar = self
 
@@ -884,7 +885,7 @@ class Grammar:
                     # add another child node at the end to ensure that the position
                     # of the error will be the end of the text. Otherwise, the error
                     # message above ("...after end of parsing") would appear illogical.
-                    error_node = Node(ZOMBIE_PARSER, '').init_pos(tail_pos(result.children))
+                    error_node = Node(ZOMBIE, '').init_pos(tail_pos(result.children))
                     self.tree__.new_error(error_node, error_msg, error_code)
                     result.result = result.children + (error_node,)
                 else:
@@ -983,21 +984,21 @@ class PreprocessorToken(Parser):
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
-                node = Node(self, '')
+                node = Node(self.tag_name, '')
                 self.grammar.tree__.new_error(
                     node,
                     'END_TOKEN delimiter missing from preprocessor token. '
                     '(Most likely due to a preprocessor bug!)')  # type: Node
                 return node, text[1:]
             elif end == 0:
-                node = Node(self, '')
+                node = Node(self.tag_name, '')
                 self.grammar.tree__.new_error(
                     node,
                     'Preprocessor-token cannot have zero length. '
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[2:]
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
-                node = Node(self, text[len(self.name) + 1:end])
+                node = Node(self.tag_name, text[len(self.name) + 1:end])
                 self.grammar.tree__.new_error(
                     node,
                     'Preprocessor-tokens must not be nested or contain '
@@ -1005,7 +1006,7 @@ class PreprocessorToken(Parser):
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[end:]
             if text[1:len(self.name) + 1] == self.name:
-                return Node(self, text[len(self.name) + 2:end]), text[end + 1:]
+                return Node(self.tag_name, text[len(self.name) + 2:end]), text[end + 1:]
         return None, text
 
 
@@ -1034,7 +1035,7 @@ class Token(Parser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
-            return Node(self, self.text, True), text[self.len:]
+            return Node(self.tag_name, self.text, True), text[self.len:]
         return None, text
 
     def __repr__(self):
@@ -1087,7 +1088,7 @@ class RegExp(Parser):
             if i >= 0:
                 capture = capture[:i]
                 end = i
-            return Node(self, capture, True), text[end:]
+            return Node(self.tag_name, capture, True), text[end:]
         return None, text
 
     def __repr__(self):
@@ -1237,8 +1238,8 @@ class Option(UnaryOperator):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
-            return Node(self, node), text
-        return Node(self, ()), text
+            return Node(self.tag_name, node), text
+        return Node(self.tag_name, ()), text
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1278,7 +1279,7 @@ class ZeroOrMore(Option):
                 infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
                                             node.pos)
             results += (node,)
-        node = Node(self, results)
+        node = Node(self.tag_name, results)
         if infinite_loop_error:
             self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text
@@ -1330,7 +1331,7 @@ class OneOrMore(UnaryOperator):
             results += (node,)
         if results == ():
             return None, text
-        node = Node(self, results)
+        node = Node(self.tag_name, results)
         if infinite_loop_error:
             self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text_
@@ -1459,7 +1460,7 @@ class Series(NaryOperator):
             results += (node,)
         assert len(results) <= len(self.parsers) \
                or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
-        node = Node(self, results)
+        node = Node(self.tag_name, results)
         if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
@@ -1542,7 +1543,7 @@ class Alternative(NaryOperator):
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
-                return Node(self, node), text_
+                return Node(self.tag_name, node), text_
         return None, text
 
     def __repr__(self):
@@ -1670,7 +1671,7 @@ class AllOf(NaryOperator):
                         parsers = []
         assert len(results) <= len(self.parsers) \
                or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
-        node =  Node(self, results)
+        node =  Node(self.tag_name, results)
         if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
@@ -1725,7 +1726,7 @@ class SomeOf(NaryOperator):
                 parsers = []
         assert len(results) <= len(self.parsers)
         if results:
-            return Node(self, results), text_
+            return Node(self.tag_name, results), text_
         else:
             return None, text
 
@@ -1794,7 +1795,7 @@ class Lookahead(FlowOperator):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
-            return Node(self, ''), text
+            return Node(self.tag_name, ''), text
         else:
             return None, text
 
@@ -1840,7 +1841,7 @@ class Lookbehind(FlowOperator):
             does_match = backwards_text[:len(self.text)] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
-        return (Node(self, ''), text) if self.sign(does_match) else (None, text)
+        return (Node(self.tag_name, ''), text) if self.sign(does_match) else (None, text)
 
     def __repr__(self):
         return '-&' + self.parser.repr
@@ -1881,7 +1882,7 @@ class Capture(UnaryOperator):
             self.grammar.push_rollback__(location, lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
-            return Node(self, node), text_
+            return Node(self.tag_name, node), text_
         else:
             return None, text
 
@@ -1954,12 +1955,12 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.name]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            node = Node(self, '')
+            node = Node(self.tag_name, '')
             self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.name))
             return node, text
         if text.startswith(value):
-            return Node(self, value), text[len(value):]
+            return Node(self.tag_name, value), text[len(value):]
         else:
             return None, text
 
@@ -2014,7 +2015,7 @@ class Synonym(UnaryOperator):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         if node:
-            return Node(self, node), text
+            return Node(self.tag_name, node), text
         return None, text
 
     def __repr__(self):

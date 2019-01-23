@@ -1075,7 +1075,7 @@ class EBNFCompiler(Compiler):
 
     def on_term(self, node) -> str:
         filtered_result, custom_args = self._error_customization(node)
-        mock_node = Node(node.parser, filtered_result)
+        mock_node = Node(node.tag_name, filtered_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
@@ -1099,7 +1099,7 @@ class EBNFCompiler(Compiler):
         elif len(node.children) > 2:
             # shift = (Node(node.parser, node.result[1].result),)
             # node.result[1].result = shift + node.result[2:]
-            node.children[1].result = (Node(node.children[1].parser, node.children[1].result),) \
+            node.children[1].result = (Node(node.children[1].tag_name, node.children[1].result),) \
                 + node.children[2:]
             node.children[1].tag_name = node.tag_name
             node.result = (node.children[0], node.children[1])
@@ -1156,7 +1156,7 @@ class EBNFCompiler(Compiler):
         nd = node.children[0]
         if nd.tag_name == "term":
             filtered_result, custom_args = self._error_customization(nd)
-            mock_node = Node(nd.parser, filtered_result)
+            mock_node = Node(nd.tag_name, filtered_result)
             return self.non_terminal(mock_node, 'AllOf', custom_args)
         elif nd.tag_name == "expression":
             if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):

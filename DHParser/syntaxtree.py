@@ -68,11 +68,12 @@ class ParserBase:
     for instantiation.
     """
 
-    __slots__ = 'name', 'ptype'
+    __slots__ = 'name', 'ptype', 'tag_name'
 
     def __init__(self,):  # , pbases=frozenset()):
         self.name = ''  # type: str
         self.ptype = ':' + self.__class__.__name__  # type: str
+        self.tag_name = self.ptype  # type: str
 
     def __repr__(self):
         return self.name + self.ptype
@@ -269,7 +270,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     __slots__ = '_result', 'children', '_len', '_pos', '_tag_name', 'errors', '_xml_attr', '_content'
 
-    def __init__(self, parser, result: ResultType, leafhint: bool = False) -> None:
+    def __init__(self, name: Optional[str], result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
@@ -285,16 +286,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        if parser is None:
-            self._tag_name = ZOMBIE
-        else:
-            self._tag_name = parser.name or parser.ptype
+        assert name is None or isinstance(name, str)   # TODO: Delete this line
+        self._tag_name = name if name else ZOMBIE
+        # if parser is None:
+        #     self._tag_name = ZOMBIE
+        # else:
+        #     self._tag_name = parser.name or parser.ptype
 
     def __deepcopy__(self, memo):
         if self.children:
-            duplicate = self.__class__(self.parser, copy.deepcopy(self.children), False)
+            duplicate = self.__class__(self._tag_name, copy.deepcopy(self.children), False)
         else:
-            duplicate = self.__class__(self.parser, self.result, True)
+            duplicate = self.__class__(self._tag_name, self.result, True)
         duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
         duplicate._pos = self._pos
         duplicate._len = self._len
@@ -312,11 +315,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def __repr__(self):
         # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
-        name, ptype = (self._tag_name.split(':') + [''])[:2]
-        parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
+        # name, ptype = (self._tag_name.split(':') + [''])[:2]
+        # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
         rarg = str(self) if not self.children else \
             "(" + ", ".join(repr(child) for child in self.children) + ")"
-        return "Node(%s, %s)" % (parg, rarg)
+        return "Node(%s, %s)" % (self._tag_name, rarg)
 
 
     def __len__(self):
@@ -804,7 +807,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return sum(child.tree_size() for child in self.children) + 1
 
 
-ZOMBIE_NODE = Node(ZOMBIE_PARSER, '')
+ZOMBIE_NODE = Node(ZOMBIE, '')
 
 
 class RootNode(Node):
@@ -819,7 +822,7 @@ class RootNode(Node):
     """
 
     def __init__(self, node: Optional[Node] = None):
-        super().__init__(ZOMBIE_PARSER, '')
+        super().__init__(ZOMBIE, '')
         self.all_errors = []  # type: List[Error]
         self.error_flag = 0
         if node is not None:
@@ -938,7 +941,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     """
 
     sxpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()
-    mock_parsers = dict()  # type: Dict[StringView, MockParser]
+    # mock_parsers = dict()  # type: Dict[StringView, MockParser]
 
     def next_block(s: StringView):
         """Generator that yields all characters until the next closing bracket
@@ -1020,7 +1023,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                     lines.append(str(sxpr[:end]))
                     sxpr = sxpr[end:]
             result = "\n".join(lines)
-        node = Node(mock_parsers.setdefault(tagname, MockParser(name, ':' + class_name)), result)
+        node = Node(name or ':' + class_name, result)
         if attributes:
             node.attr.update(attributes)
         return node
@@ -1037,8 +1040,8 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
     """
 
     xml = StringView(str(xml))
-    PlainText = MockParser('', TOKEN_PTYPE)
-    mock_parsers = {TOKEN_PTYPE: PlainText}
+    # PlainText = MockParser('', TOKEN_PTYPE)
+    # mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """Parses a sqeuence of XML-Attributes. Returns the string-slice
@@ -1096,7 +1099,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
-                    res.append(Node(PlainText, leaf))
+                    res.append(Node(TOKEN_PTYPE, leaf))
                 if s[:1] == "<" and s[:2] != "</":
                     s, child = parse_full_content(s)
                     res.append(child)
@@ -1106,7 +1109,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
             result = res[0].result
         else:
             result = tuple(res)
-        return s, Node(mock_parsers.setdefault(tagname, MockParser(name, ":" + class_name)), result)
+        return s, Node(name or ':' + class_name, result)
 
     match_header = xml.search(re.compile(r'<(?!\?)'))
     start = xml.index(match_header.start()) if match_header else 0

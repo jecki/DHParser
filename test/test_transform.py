@@ -158,9 +158,9 @@ class TestConditionalTransformations:
     """Tests conditional transformations."""
 
     def test_has_parent(self):
-        context = [Node(MockParser('A'), 'alpha'),
-                   Node(MockParser('B'), 'beta'),
-                   Node(MockParser('C'), 'gamma')]
+        context = [Node('A', 'alpha'),
+                   Node('B', 'beta'),
+                   Node('C', 'gamma')]
         assert has_parent(context, {'A'})
         assert has_parent(context, {'B'})
         assert not has_parent(context, {'C'})
@@ -213,7 +213,7 @@ class TestConditionalTransformations:
 
 class TestComplexTransformations:
     def setup(self):
-        self.Text = MockParser('Text', TOKEN_PTYPE)
+        self.Text = 'Text'  # TOKEN_PTYPE
 
     def test_collapse_if_plain(self):
         xml = "<EINZEILER><DEU_WORT>spectat</DEU_WORT><WS> </WS><DEU_WORT>ad</DEU_WORT>" +\
