@@ -1090,7 +1090,7 @@ class EBNFCompiler(Compiler):
             arg = node.children[-1]
             if arg.tag_name != 'symbol':
                 self.tree.new_error(node, ('Retrieve Operator "%s" requires a symbol, '
-                                    'and not a %s.') % (prefix, str(arg.parser)))
+                                    'and not a %s.') % (prefix, arg.tag_name))
                 return str(arg.result)
             if str(arg) in self.directives.filter:
                 custom_args = ['rfilter=%s' % self.directives.filter[str(arg)]]
