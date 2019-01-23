@@ -270,7 +270,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     __slots__ = '_result', 'children', '_len', '_pos', '_tag_name', 'errors', '_xml_attr', '_content'
 
-    def __init__(self, name: Optional[str], result: ResultType, leafhint: bool = False) -> None:
+    def __init__(self, tag_name: Optional[str], result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
@@ -286,8 +286,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        assert name is None or isinstance(name, str)   # TODO: Delete this line
-        self._tag_name = name if name else ZOMBIE
+        assert tag_name is None or isinstance(tag_name, str)   # TODO: Delete this line
+        self._tag_name = tag_name if tag_name else ZOMBIE
         # if parser is None:
         #     self._tag_name = ZOMBIE
         # else:
