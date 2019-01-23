@@ -47,3 +47,4 @@ _templates
 OLDSTUFF
 .pytest_cache
 *.c
+*.pyd
