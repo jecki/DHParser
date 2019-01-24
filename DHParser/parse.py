@@ -208,7 +208,6 @@ class Parser:
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
         self.pname = ''  # type: str
-        self.ptype = ':' + self.__class__.__name__  # type: str
         self.tag_name = self.ptype  # type: str
         if not hasattr(self.__class__, 'alive'):
             self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
@@ -223,7 +222,6 @@ class Parser:
         """
         duplicate = self.__class__()
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
         duplicate.tag_name = self.tag_name
         return duplicate
 
@@ -232,6 +230,12 @@ class Parser:
 
     def __str__(self):
         return self.pname + (' = ' if self.pname else '') + repr(self)
+
+    @property
+    def ptype(self) -> str:
+        """Returns a type name for the parser. By default this is the name of
+        the parser class with an added leading colon ':'. """
+        return ':' + self.__class__.__name__
 
     @property
     def repr(self) -> str:
@@ -459,7 +463,6 @@ class ZombieParser(Parser):
     def __init__(self):
         super().__init__()
         self.pname = ZOMBIE
-        self.ptype = ':' + ZOMBIE
         self.tag_name = ZOMBIE
         # no need to call super class constructor
         assert not self.__class__.alive, "There can be only one!"
@@ -476,8 +479,13 @@ class ZombieParser(Parser):
     def __call__(self, text):
         raise AssertionError("Better call Saul ;-)")
 
-    def _grammar_assigned_notifier(self):
-        raise AssertionError("No zombies allowed in any grammar!")
+    @property
+    def grammar(self) -> 'Grammar':
+        raise AssertionError("Zombie parser doesn't have a grammar!")
+
+    @grammar.setter
+    def grammar(self, grammar: 'Grammar'):
+        raise AssertionError('Cannot assign a grammar a zombie parser or vice versa!')
 
     def apply(self, func: ApplyFunc):
         return "Eaten alive..."
@@ -1048,8 +1056,8 @@ class PreprocessorToken(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.pname)
-        duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        # duplicate.pname = self.pname  # will be written by the constructor, anyway
+        duplicate.tage_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1102,7 +1110,7 @@ class Token(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1146,7 +1154,7 @@ class RegExp(Parser):
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1240,7 +1248,7 @@ class UnaryOperator(Parser):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
@@ -1271,7 +1279,7 @@ class NaryOperator(Parser):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
@@ -1314,7 +1322,7 @@ class Option(UnaryOperator):
         super().__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
-            "Redundant nesting of options: %s%s" % (str(parser.pname), str(self.ptype))
+            "Redundant nesting of options: %s(%s)" % (self.ptype, parser.pname)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
@@ -1393,7 +1401,7 @@ class OneOrMore(UnaryOperator):
         super().__init__(parser)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
-            "%s(%s)" % (str(self.ptype), str(parser.pname))
+            "%s(%s)" % (self.ptype, parser.pname)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1513,7 +1521,7 @@ class Series(NaryOperator):
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    err_msgs=self.err_msgs, skip=self.skip)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1722,7 +1730,7 @@ class AllOf(NaryOperator):
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    err_msgs=self.err_msgs, skip=self.skip)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         duplicate.num_parsers = self.num_parsers
         return duplicate
 
@@ -2014,7 +2022,7 @@ class Retrieve(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.symbol, self.filter)
         duplicate.pname = self.pname
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2132,7 +2140,7 @@ class Forward(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         # duplicate.pname = self.pname  # Forward-Parsers should never have a name!
-        duplicate.ptype = self.ptype
+        duplicate.tag_name = self.tag_name
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.set(parser)

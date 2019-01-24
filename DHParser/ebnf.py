@@ -906,11 +906,11 @@ class EBNFCompiler(Compiler):
         key = node.children[0].content
         assert key not in self.directives.tokens
 
-        if key not in self.REPEATABLE_DIRECTIVES:
+        if key not in self.REPEATABLE_DIRECTIVES and not key.endswith('_error'):
             if key in self.defined_directives:
                 self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
                                     % key + 'Later definition will be ignored!',
-                                    code=Error.REDEFINED_DIRECTIVE_WARNING)
+                                    code=Error.REDEFINED_DIRECTIVE)
                 return ""
             self.defined_directives.add(key)
 
@@ -986,9 +986,6 @@ class EBNFCompiler(Compiler):
 
         elif key.endswith('_skip'):
             symbol = key[:-5]
-            if symbol in self.directives.skip:
-                self.tree.new_error(node, 'In-series resuming for "%s" has already been defined'
-                                          ' earlier!' % symbol)
             if symbol in self.rules:
                 self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
                                     'must be defined before the symbol!'.format(symbol))
@@ -996,11 +993,7 @@ class EBNFCompiler(Compiler):
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            if symbol in self.directives.resume:
-                self.tree.new_error(node, 'Reentry conditions for "%s" have already been defined'
-                                          ' earlier!' % symbol)
-            else:
-                self.directives.resume[symbol] = self._gen_search_list(node.children[1:])
+            self.directives.resume[symbol] = self._gen_search_list(node.children[1:])
 
         else:
             self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %

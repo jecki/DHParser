@@ -495,10 +495,37 @@ class TestErrorCustomization:
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "a user defined error message"
 
+    def test_multiple_error_messages(self):
+        lang = """
+            document = series | /.*/
+            @series_error = '_', "the underscore is wrong in this place"
+            @series_error = '*', "the asterix is wrong in this place"
+            @series_error = /\w/, "wrong letter {0} in place of {1}"
+            @series_error = "fallback error message"
+            series = "X" | head §"C" "D"
+            head = "A" "B"
+            """
+        parser = grammar_provider(lang)()
+        st = parser("AB*D");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "the asterix is wrong in this place"
+        # transitivity of mandatory-operator
+        st = parser("ABC_");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "the underscore is wrong in this place"
+        st = parser("ABiD");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message.startswith('wrong letter')
+        st = parser("AB+D");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message == "fallback error message"
+
+
+class TestErrorCustomizationErrors:
     def test_ambiguous_error_customization(self):
         lang = """
             document = series 
-            @series_error = "ambiguous error message: does it apply to 'one' or 'two'?"
+            @series_error = "ambiguous error message: does it apply to first or second '§'?"
             series = "A" § "B" "C" | "X" § "Y" "Z" 
             """
         try:
@@ -517,6 +544,26 @@ class TestErrorCustomization:
             """
         result, messages, ast = compile_ebnf(lang)
         assert messages[0].code == Error.UNUSED_ERROR_HANDLING_WARNING
+
+    def test_multiple_resume_definitions(self):
+        lang = """
+            document = series
+            @series_resume = /B/, /C/, /D/, /E/, /F/, /G/
+            @series_resume = /X/, /Y/
+            series = "A" §"B" "C" "D" "E" "F" "G"
+            """
+        result, messages, ast = compile_ebnf(lang)
+        assert messages[0].code == Error.REDEFINED_DIRECTIVE
+
+    def test_multiple_skip_definitions(self):
+        lang = """
+            document = series
+            @series_skip = /B/, /C/, /D/, /E/, /F/, /G/
+            @series_skip = /X/, /Y/
+            series = "A" §"B" "C" "D" "E" "F" "G"
+            """
+        result, messages, ast = compile_ebnf(lang)
+        assert messages[0].code == Error.REDEFINED_DIRECTIVE
 
 
 class TestCustomizedResumeParsing:
