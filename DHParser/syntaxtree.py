@@ -160,7 +160,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_len', '_pos', '_tag_name', 'errors', '_xml_attr', '_content'
+    __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', 'errors', '_xml_attr', '_content'
 
     def __init__(self, tag_name: Optional[str], result: ResultType, leafhint: bool = False) -> None:
         """
@@ -179,7 +179,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             self.result = result
         assert tag_name is None or isinstance(tag_name, str)   # TODO: Delete this line
-        self._tag_name = tag_name if tag_name else ZOMBIE
+        self.tag_name = tag_name if tag_name else ZOMBIE
         # if parser is None:
         #     self._tag_name = ZOMBIE
         # else:
@@ -187,9 +187,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def __deepcopy__(self, memo):
         if self.children:
-            duplicate = self.__class__(self._tag_name, copy.deepcopy(self.children), False)
+            duplicate = self.__class__(self.tag_name, copy.deepcopy(self.children), False)
         else:
-            duplicate = self.__class__(self._tag_name, self.result, True)
+            duplicate = self.__class__(self.tag_name, self.result, True)
         duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
         duplicate._pos = self._pos
         duplicate._len = self._len
@@ -211,7 +211,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
         rarg = str(self) if not self.children else \
             "(" + ", ".join(repr(child) for child in self.children) + ")"
-        return "Node(%s, %s)" % (self._tag_name, rarg)
+        return "Node(%s, %s)" % (self.tag_name, rarg)
 
 
     def __len__(self):
@@ -303,30 +303,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return surrogate
 
 
-    @property   # this needs to be a (dynamic) property, in case sef.parser gets updated
-    def tag_name(self) -> str:
-        """
-        Returns the tage name of Node, i.e. the name for XML or
-        S-expression representation. By default the tag name is the
-        name of the node's parser or, if the node's parser is unnamed, the
-        node's parser's `ptype`.
-        """
-        return self._tag_name
-
-    @tag_name.setter
-    def tag_name(self, tag_name: str):
-        assert tag_name
-        self._tag_name = tag_name
-
-
     def is_anonymous(self):
-        return self._tag_name[0] == ':'
-
-
-    # @property
-    # def parser(self) -> MockParser:
-    #     name, ptype = (self.tag_name.split(':') + [''])[:2]
-    #     return MockParser(name, ':' + ptype)
+        return self.tag_name[0] == ':'
 
 
     @property

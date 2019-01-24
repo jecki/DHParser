@@ -210,7 +210,8 @@ class Parser:
         self.name = ''  # type: str
         self.ptype = ':' + self.__class__.__name__  # type: str
         self.tag_name = self.ptype  # type: str
-        self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
+        if not hasattr(self.__class__, 'alive'):
+            self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -456,12 +457,13 @@ class ZombieParser(Parser):
     __slots__ = ()
 
     def __init__(self):
+        super().__init__()
+        self.name = ZOMBIE
+        self.ptype = ':' + ZOMBIE
+        self.tag_name = ZOMBIE
         # no need to call super class constructor
         assert not self.__class__.alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.name = ZOMBIE
-        self.ptype = ':' + self.__class__.__name__
-        self.tag_name = ZOMBIE
         self.__class__.alive = True
         self.reset()
 
@@ -691,7 +693,7 @@ class Grammar:
                 recursion.
     """
     python_src__ = ''  # type: str
-    root__ = ZOMBIE_PARSER  # type: ParserBase
+    root__ = ZOMBIE_PARSER  # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = "pending"  # type: str
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
@@ -737,8 +739,8 @@ class Grammar:
 
 
     def __init__(self, root: Parser = None) -> None:
-        self.all_parsers__ = set()             # type: Set[ParserBase]
-        self.start_parser__ = None             # type: Optional[ParserBase]
+        self.all_parsers__ = set()             # type: Set[Parser]
+        self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
