@@ -769,6 +769,8 @@ class Grammar:
                 return self[key]
             raise UnknownParserError('Unknown parser "%s" !' % key)
 
+    def __contains__(self, key):
+        return key in self.__dict__ or hasattr(self, key)
 
     def _reset__(self):
         self.tree__ = RootNode()              # type: RootNode
@@ -889,12 +891,14 @@ class Grammar:
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
+
                     if last_record and parser != self.root__ \
                             and last_record.status == HistoryRecord.MATCH \
                             and last_record.node.pos \
                             + len(last_record.node) >= len(self.document__) \
-                            and any(isinstance(parser, Lookahead)
-                                    for parser in last_record.call_stack):
+                            and any(tn in self and isinstance(self[tn], Lookahead)
+                                    or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
+                                    for tn in last_record.call_stack):
                         error_msg = 'Parser did not match except for lookahead! ' + err_info
                         error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
                     else:

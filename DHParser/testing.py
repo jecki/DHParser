@@ -308,29 +308,34 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
 
-    with_lookahead = set()  # type: Set[Parser]
-    visited = set()  # type: Set[Parser]
+    is_lookahead = set()     # type: Dict[str]  # Dictionary of parser names
+    with_lookahead = set()   # type: Set[Parser]
+    visited = set()          # type: Set[Parser]
 
     def find_lookahead(p: Parser):
         """Raises a StopIterationError if parser `p` is or contains
         a Lookahead-parser."""
-        nonlocal with_lookahead, visited
-        visited.add(p)
-        if p in with_lookahead or isinstance(p, Lookahead):
+        nonlocal is_lookahead, with_lookahead, visited
+        if p in visited:
             raise StopIteration
+        visited.add(p)
+        if isinstance(p, Lookahead):
+            is_lookahead.add(p.tag_name)
+            with_lookahead.add(p)
 
     def has_lookahead(parser_name: str):
         """Returns `True`, if given parser is or contains a Lookahead-parser."""
-        nonlocal with_lookahead, visited, parser
+        nonlocal is_lookahead, with_lookahead, visited, parser
         p = parser[parser_name]
+        num_lookaheads = len(is_lookahead)
         if p in with_lookahead:
             return True
         try:
-            visited = set()
             p.apply(find_lookahead)
         except StopIteration:
-            for vp in visited:
-                with_lookahead.add(p)
+            pass
+        if len(is_lookahead) > num_lookaheads:
+            with_lookahead.add(p)
             return True
         return False
 
@@ -342,14 +347,14 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         This is required for testing of parsers that put a lookahead
         operator at the end. See test_testing.TestLookahead.
         """
+        nonlocal is_lookahead
         return ((len(raw_errors) == 2  # case 1:  superfluous data for lookahead
                  and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
                  and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END)
                 #  case 2:  mandatory lookahead failure at end of text
                 or (len(raw_errors) == 1
                     and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)
-                    and any(isinstance(p, Lookahead)
-                            for p in parser.history__[-1].call_stack))  # TODO: Refactor this clause!!!
+                    and any(tn in is_lookahead for tn in parser.history__[-1].call_stack))
 
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name

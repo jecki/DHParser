@@ -16,6 +16,7 @@ sys.path.extend(['../', './'])
 
 def run_doctests(module):
     namespace = {}
+    print('DOCTEST ' + module)
     exec('import DHParser.' + module, namespace)
     mod = getattr(namespace['DHParser'], module)
     result = doctest.testmod(mod)
