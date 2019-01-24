@@ -162,7 +162,7 @@ class Parser:
 
     There are two different types of parsers:
 
-    1. *Named parsers* for which a name is set in field `parser.name`.
+    1. *Named parsers* for which a name is set in field `parser.pname`.
        The results produced by these parsers can later be retrieved in
        the AST by the parser name.
 
@@ -207,7 +207,7 @@ class Parser:
 
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
-        self.name = ''  # type: str
+        self.pname = ''  # type: str
         self.ptype = ':' + self.__class__.__name__  # type: str
         self.tag_name = self.ptype  # type: str
         if not hasattr(self.__class__, 'alive'):
@@ -222,21 +222,21 @@ class Parser:
         calling the same method from the superclass) by the derived class.
         """
         duplicate = self.__class__()
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         duplicate.tag_name = self.tag_name
         return duplicate
 
     def __repr__(self):
-        return self.name + self.ptype
+        return self.pname + self.ptype
 
     def __str__(self):
-        return self.name + (' = ' if self.name else '') + repr(self)
+        return self.pname + (' = ' if self.pname else '') + repr(self)
 
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name and self.__repr___() otherwise."""
-        return self.name if self.name else self.__repr__()
+        return self.pname if self.pname else self.__repr__()
 
     def reset(self):
         """Initializes or resets any parser variables. If overwritten,
@@ -282,7 +282,7 @@ class Parser:
             except ParserError as error:
                 # does this play well with variable setting? add rollback clause here? tests needed...
                 gap = len(text) - len(error.rest)
-                rules = grammar.resume_rules__.get(self.name, [])
+                rules = grammar.resume_rules__.get(self.pname, [])
                 rest = error.rest[len(error.node):]
                 i = reentry_point(rest, rules)
                 if i >= 0 or self == grammar.start_parser__:
@@ -458,7 +458,7 @@ class ZombieParser(Parser):
 
     def __init__(self):
         super().__init__()
-        self.name = ZOMBIE
+        self.pname = ZOMBIE
         self.ptype = ':' + ZOMBIE
         self.tag_name = ZOMBIE
         # no need to call super class constructor
@@ -572,10 +572,10 @@ class Grammar:
     Upon instantiation the parser objects are deep-copied to the
     Grammar object and assigned to object variables of the same name.
     Any parser that is directly assigned to a class variable is a
-    'named' parser and its field `parser.name` contains the variable
+    'named' parser and its field `parser.pname` contains the variable
     name after instantiation of the Grammar class. All other parsers,
     i.e. parsers that are defined within a `named` parser, remain
-    "anonymous parsers" where `parser.name` is the empty string, unless
+    "anonymous parsers" where `parser.pname` is the empty string, unless
     a name has been passed explicitly upon instantiation.
     If one and the same parser is assigned to several class variables
     such as, for example the parser `expression` in the example above,
@@ -705,7 +705,7 @@ class Grammar:
     @classmethod
     def _assign_parser_names__(cls):
         """
-        Initializes the `parser.name` fields of those
+        Initializes the `parser.pname` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.::
 
@@ -713,7 +713,7 @@ class Grammar:
                 ...
                 symbol = RE('(?!\\d)\\w+')
 
-        After the call of this method symbol.name == "symbol" holds.
+        After the call of this method symbol.pname == "symbol" holds.
         Parser names starting or ending with a double underscore like
         ``root__`` will be ignored. See :func:`sane_parser_name()`
 
@@ -731,10 +731,10 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     if isinstance(parser, Forward):
-                        if not cast(Forward, parser).parser.name:
-                            cast(Forward, parser).parser.name = entry
-                    else:   # if not parser.name:
-                        parser.name = entry
+                        if not cast(Forward, parser).parser.pname:
+                            cast(Forward, parser).parser.pname = entry
+                    else:   # if not parser.pname:
+                        parser.pname = entry
             cls.parser_initialization__ = "done"
 
 
@@ -810,15 +810,15 @@ class Grammar:
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
-        if parser.name:
+        if parser.pname:
             # prevent overwriting instance variables or parsers of a different class
-            assert parser.name not in self.__dict__ or \
-                isinstance(self.__dict__[parser.name], parser.__class__), \
+            assert parser.pname not in self.__dict__ or \
+                   isinstance(self.__dict__[parser.pname], parser.__class__), \
                 ('Cannot add parser "%s" because a field with the same name '
                  'already exists in grammar object: %s!'
-                 % (parser.name, str(self.__dict__[parser.name])))
-            setattr(self, parser.name, parser)
-        parser.tag_name = parser.name or parser.ptype
+                 % (parser.pname, str(self.__dict__[parser.pname])))
+            setattr(self, parser.pname, parser)
+        parser.tag_name = parser.pname or parser.ptype
         self.all_parsers__.add(parser)
         parser.grammar = self
 
@@ -1044,11 +1044,11 @@ class PreprocessorToken(Parser):
         assert token and token.isupper()
         assert RX_TOKEN_NAME.match(token)
         super().__init__()
-        self.name = token
+        self.pname = token
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.name)
-        duplicate.name = self.name
+        duplicate = self.__class__(self.pname)
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -1070,15 +1070,15 @@ class PreprocessorToken(Parser):
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[2:]
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
-                node = Node(self.tag_name, text[len(self.name) + 1:end])
+                node = Node(self.tag_name, text[len(self.pname) + 1:end])
                 self.grammar.tree__.new_error(
                     node,
                     'Preprocessor-tokens must not be nested or contain '
                     'BEGIN_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[end:]
-            if text[1:len(self.name) + 1] == self.name:
-                return Node(self.tag_name, text[len(self.name) + 2:end]), text[end + 1:]
+            if text[1:len(self.pname) + 1] == self.pname:
+                return Node(self.tag_name, text[len(self.pname) + 2:end]), text[end + 1:]
         return None, text
 
 
@@ -1101,7 +1101,7 @@ class Token(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -1145,7 +1145,7 @@ class RegExp(Parser):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -1155,11 +1155,20 @@ class RegExp(Parser):
             capture = match.group(0)
             end = text.index(match.end())
             # regular expression must never match preprocessor-tokens!
-            # TODO: Find a better solution here? e.g. static checking/re-mangling at compile time
-            i = capture.find(BEGIN_TOKEN)
-            if i >= 0:
-                capture = capture[:i]
-                end = i
+            # Should never happen, anyway, as long as text characters do not
+            # fall into the range below 0x20
+            # # Find a better solution here? e.g. static checking/re-mangling at compile time
+            # # Needs testing!!!
+            # i = capture.find(BEGIN_TOKEN)
+            # if i >= 0:
+            #     capture = capture[:i]
+            #     end = i
+            #     m = capture[:end].match(self.regexp)
+            #     if m:
+            #         capture = m.group(0)
+            #         end = text.index(m.end())
+            #     else:
+            #         return None, text
             return Node(self.tag_name, capture, True), text[end:]
         return None, text
 
@@ -1230,7 +1239,7 @@ class UnaryOperator(Parser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -1261,7 +1270,7 @@ class NaryOperator(Parser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -1305,7 +1314,7 @@ class Option(UnaryOperator):
         super().__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
-            "Redundant nesting of options: %s%s" % (str(parser.name), str(self.ptype))
+            "Redundant nesting of options: %s%s" % (str(parser.pname), str(self.ptype))
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
@@ -1315,7 +1324,7 @@ class Option(UnaryOperator):
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
-                      and not self.parser.name else self.parser.repr) + ']'
+                      and not self.parser.pname else self.parser.repr) + ']'
 
 
 class ZeroOrMore(Option):
@@ -1358,7 +1367,7 @@ class ZeroOrMore(Option):
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
-                      and not self.parser.name else self.parser.repr) + '}'
+                      and not self.parser.pname else self.parser.repr) + '}'
 
 
 class OneOrMore(UnaryOperator):
@@ -1384,7 +1393,7 @@ class OneOrMore(UnaryOperator):
         super().__init__(parser)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
-            "%s(%s)" % (str(self.ptype), str(parser.name))
+            "%s(%s)" % (str(self.ptype), str(parser.pname))
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1410,7 +1419,7 @@ class OneOrMore(UnaryOperator):
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
-                      and not self.parser.name else self.parser.repr) + '}+'
+                      and not self.parser.pname else self.parser.repr) + '}+'
 
 
 MessagesType = List[Tuple[Union[str, Any], str]]
@@ -1503,7 +1512,7 @@ class Series(NaryOperator):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    err_msgs=self.err_msgs, skip=self.skip)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -1712,7 +1721,7 @@ class AllOf(NaryOperator):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    err_msgs=self.err_msgs, skip=self.skip)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         duplicate.num_parsers = self.num_parsers
         return duplicate
@@ -1947,8 +1956,8 @@ class Capture(UnaryOperator):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
         if node:
-            assert self.name, """Tried to apply an unnamed capture-parser!"""
-            stack = self.grammar.variables__[self.name]
+            assert self.pname, """Tried to apply an unnamed capture-parser!"""
+            stack = self.grammar.variables__[self.pname]
             stack.append(node.content)
             location = self.grammar.document_length__ - len(text)
             self.grammar.push_rollback__(location, lambda: stack.pop())
@@ -2004,7 +2013,7 @@ class Retrieve(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.symbol, self.filter)
-        duplicate.name = self.name
+        duplicate.pname = self.pname
         duplicate.ptype = self.ptype
         return duplicate
 
@@ -2024,12 +2033,12 @@ class Retrieve(Parser):
         accordingly.
         """
         try:
-            stack = self.grammar.variables__[self.symbol.name]
+            stack = self.grammar.variables__[self.symbol.pname]
             value = self.filter(stack)
         except (KeyError, IndexError):
             node = Node(self.tag_name, '')
             self.grammar.tree__.new_error(
-                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.name))
+                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text
         if text.startswith(value):
             return Node(self.tag_name, value), text[len(value):]
@@ -2052,7 +2061,7 @@ class Pop(Retrieve):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = super().retrieve_and_match(text)
         if node and not node.errors:
-            stack = self.grammar.variables__[self.symbol.name]
+            stack = self.grammar.variables__[self.symbol.pname]
             value = stack.pop()
             location = self.grammar.document_length__ - len(text)
             self.grammar.push_rollback__(location, lambda: stack.append(value))
@@ -2091,7 +2100,7 @@ class Synonym(UnaryOperator):
         return None, text
 
     def __repr__(self):
-        return self.name or self.parser.repr
+        return self.pname or self.parser.repr
 
 
 class Forward(Parser):
@@ -2122,7 +2131,7 @@ class Forward(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        # duplicate.name = self.name  # Forward-Parsers should never have a name!
+        # duplicate.pname = self.pname  # Forward-Parsers should never have a name!
         duplicate.ptype = self.ptype
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
@@ -2161,7 +2170,7 @@ class Forward(Parser):
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name or repr(self) if not."""
-        return self.parser.name if self.parser.name else self.__repr__()
+        return self.parser.pname if self.parser.pname else self.__repr__()
 
     def set(self, parser: Parser):
         """

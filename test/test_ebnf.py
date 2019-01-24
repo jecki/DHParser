@@ -368,8 +368,8 @@ class TestSynonymDetection:
                   b = /b/
         """
         grammar = grammar_provider(ebnf)()
-        assert grammar['a'].name == 'a', grammar['a'].name
-        assert grammar['b'].name == 'b', grammar['b'].name
+        assert grammar['a'].pname == 'a', grammar['a'].pname
+        assert grammar['b'].pname == 'b', grammar['b'].pname
         assert grammar('b').as_sxpr().count('b') == 2
 
 

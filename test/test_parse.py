@@ -45,7 +45,7 @@ class TestParserClass:
         gr = grammar_provider(minilang)()
         l = []
         def visitor(p: Parser):
-            l.append(p.name + p.ptype)
+            l.append(p.pname + p.ptype)
         gr.root__.apply(visitor)
         s1 = ", ".join(l)
         l = []
