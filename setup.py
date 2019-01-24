@@ -24,7 +24,6 @@ setup(
                            'DHParser/transform.py',
                            'DHParser/compile.py',
                            'DHParser/ebnf.py',
-                           'DHParser/dsl.py'
                            ],
                           nthreads=0, annotate=False),
     url='https://gitlab.lrz.de/badw-it/DHParser',
