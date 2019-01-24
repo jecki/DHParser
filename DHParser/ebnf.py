@@ -29,7 +29,7 @@ from functools import partial
 import keyword
 import os
 
-from DHParser.compile import CompilerError, Compiler, compile_source
+from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
@@ -124,7 +124,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
@@ -591,7 +591,7 @@ class EBNFCompiler(Compiler):
                     '        super()._reset()',
                     '        # initialize your variables here, not in the constructor!']
         for name in self.rules:
-            method_name = Compiler.method_name(name)
+            method_name = visitor_name(name)
             if name == self.root_symbol:
                 compiler += ['    def ' + method_name + '(self, node):',
                              '        return self.fallback_compiler(node)', '']
@@ -781,7 +781,7 @@ class EBNFCompiler(Compiler):
                         'r"""Parser for ' + article + self.grammar_name
                         + ' source file'
                         + ('. Grammar:' if self.grammar_source and show_source else '.')]
-        definitions.append(('parser_initialization__', '"upon instantiation"'))
+        definitions.append(('parser_initialization__', '["upon instantiation"]'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))

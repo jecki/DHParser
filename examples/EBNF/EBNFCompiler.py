@@ -58,7 +58,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "5e9e65a057bec7da29989dba47f40394"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'

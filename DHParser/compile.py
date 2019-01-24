@@ -47,7 +47,7 @@ from DHParser.toolkit import typing, sane_parser_name, load_if_file
 from typing import Any, Optional, Tuple, List, Callable
 
 
-__all__ = ('CompilerError', 'Compiler', 'compile_source')
+__all__ = ('CompilerError', 'Compiler', 'compile_source', 'visitor_name')
 
 
 class CompilerError(Exception):
@@ -58,6 +58,17 @@ class CompilerError(Exception):
     reported as an error.
     """
     pass
+
+
+def visitor_name(node_name: str) -> str:
+    """
+    Returns the method name for `node_name`, e.g.::
+
+        >>> visitor_name('expression')
+        'on_expression'
+    """
+    # assert re.match(r'\w+$', node_name)
+    return 'on_' + node_name
 
 
 class Compiler:
@@ -112,30 +123,6 @@ class Compiler:
         result = self.compile(root)
         return result
 
-    # @staticmethod
-    # def propagate_error_flags(node: Node, lazy: bool = True) -> None:
-    #     # See test_parser.TestCompilerClass.test_propagate_error()..
-    #     """Propagates error flags from children to parent nodes to make sure
-    #     that the parent's error flag is always greater or equal the maximum
-    #     of the children's error flags."""
-    #     if not lazy or node.error_flag < Error.HIGHEST:
-    #         for child in node.children:
-    #             Compiler.propagate_error_flags(child)
-    #             node.error_flag = max(node.error_flag, child.error_flag)
-    #             if lazy and node.error_flag >= Error.HIGHEST:
-    #                 return
-
-    @staticmethod
-    def method_name(node_name: str) -> str:
-        """
-        Returns the method name for `node_name`, e.g.::
-
-            >>> Compiler.method_name('expression')
-            'on_expression'
-        """
-        assert re.match(r'\w+$', node_name)
-        return 'on_' + node_name
-
     def compile_children(self, node: Node) -> StrictResultType:
         """Compiles all children of the given node and returns the tuple
         of the compiled children or the node's (potentially empty) result
@@ -171,29 +158,17 @@ class Compiler:
         elem = node.tag_name
         if elem.startswith(':'):
             elem = elem[1:]
-        if not sane_parser_name(elem):
-            self.tree.new_error(node, "Reserved name '%s' not allowed as parser "
-                                "name! " % elem + "(Any name starting with "
-                                "'_' or '__' or ending with '__' is reserved.)")
-            return None
-        else:
-            try:
-                compiler = self.__getattribute__(self.method_name(elem))
-            except AttributeError:
-                compiler = self.fallback_compiler
-            self.context.append(node)
-            result = compiler(node)
-            self.context.pop()
-            if result is None:
-                raise CompilerError('Method on_%s returned `None` instead of a '
-                                    'valid compilation result!' % elem)
-            # # the following statement makes sure that the error_flag
-            # # is propagated early on. Otherwise it is redundant, because
-            # # the __call__ method globally propagates the node's error_flag
-            # # later anyway. So, maybe it could be removed here.
-            # for child in node.children:
-            #     node.error_flag = node.error_flag or child.error_flag
-            return result
+        try:
+            compiler = self.__getattribute__(visitor_name(elem))
+        except AttributeError:
+            compiler = self.fallback_compiler
+        self.context.append(node)
+        result = compiler(node)
+        self.context.pop()
+        if result is None:
+            raise CompilerError('Method on_%s returned `None` instead of a '
+                                'valid compilation result!' % elem)
+        return result
 
 
 def compile_source(source: str,

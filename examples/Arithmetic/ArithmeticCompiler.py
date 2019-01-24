@@ -60,7 +60,7 @@ class ArithmeticGrammar(Grammar):
     expression = Forward()
     variable = Forward()
     source_hash__ = "120070baa84f5a2bd1bbb900627078fc"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'

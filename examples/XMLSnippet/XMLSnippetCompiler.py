@@ -60,7 +60,7 @@ class XMLSnippetGrammar(Grammar):
     Name = Forward()
     element = Forward()
     source_hash__ = "2efb839574bee3f63b5b9d1ea5c96386"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'

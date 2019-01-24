@@ -19,7 +19,7 @@ setup(
                            'DHParser/syntaxtree.py',
                            'DHParser/parse.py',
                            'DHParser/transform.py',
-                           # 'DHParser/compile.py',
+                           'DHParser/compile.py',
                            # 'DHParser/ebnf.py'
                            ],
                           nthreads=0, annotate=False),

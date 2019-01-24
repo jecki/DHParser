@@ -193,7 +193,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
         duplicate._pos = self._pos
         duplicate._len = self._len
-        if hasattr(self, '_xml_attr'):
+        if self.attr_active():
             duplicate._xml_attr = copy.deepcopy(self._xml_attr)
         return duplicate
 
@@ -398,12 +398,28 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self
 
 
+    def attr_active(self) -> bool:
+        """
+        Returns True, if XML-Attributes of this node have ever been set
+        or queried, even if unsuccessfully.
+        """
+        try:
+            if self._xml_attr is not None:
+                return True
+        except AttributeError:
+            pass
+        return False
+
+
     @property
     def attr(self):
         """
         Returns a dictionary of XML-attr attached to the node.
         """
-        if not hasattr(self, '_xml_attr'):
+        try:
+            if self._xml_attr is None:          # cython compatibility
+                self._xml_attr = OrderedDict()
+        except AttributeError:
             self._xml_attr = OrderedDict()
         return self._xml_attr
 
@@ -495,7 +511,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             txt = [left_bracket, node.tag_name]
             # s += " '(pos %i)" % node.add_pos
-            if hasattr(node, '_xml_attr'):
+            if node.attr_active():
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
                 line, col = line_col(lbreaks, node.pos)
@@ -548,9 +564,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if node.tag_name in omit_tags:
                 return ''
             txt = ['<', node.tag_name]
-            has_reserved_attrs = hasattr(node, '_xml_attr') \
+            has_reserved_attrs = node.attr_active() \
                 and any(r in node.attr for r in {'err', 'line', 'col'})
-            if hasattr(node, '_xml_attr'):
+            if node.attr_active():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
@@ -584,7 +600,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             printed on several lines to avoid unwanted gaps in the output.
             """
             return node.tag_name in inline_tags \
-                or (hasattr(node, '_xml_attr')
+                or (node.attr_active()
                     and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
@@ -713,7 +729,7 @@ class RootNode(Node):
         duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
         duplicate._pos = self._pos
         duplicate._len = self._len
-        if hasattr(self, '_xml_attr'):
+        if self.attr_active():
             duplicate._xml_attr = copy.deepcopy(self._xml_attr)
         duplicate.all_errors = copy.deepcopy(self.all_errors)
         duplicate.error_flag = self.error_flag
@@ -741,7 +757,7 @@ class RootNode(Node):
         self._len = node._len
         self._pos = node._pos
         self.tag_name = node.tag_name
-        if hasattr(node, '_xml_attr'):
+        if node.attr_active():
             self._xml_attr = node._xml_attr
         self._content = node._content
         return self

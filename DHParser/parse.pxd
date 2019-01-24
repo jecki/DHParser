@@ -13,26 +13,27 @@ cdef class Parser:
 
     # cpdef _parse(self, text)
 
-# cdef class Grammar:
-#     cdef public set all_parsers__
-#     cdef public object start_parser__
-#     cdef bint _dirty_flag__
-#     cdef public bint history_tracking__
-#     cdef public bint memoization__
-#     cdef public bint left_recursion_handling__
-#     cdef public object root__
-#     cdef public object tree__
-#     cdef public object document__
-#     cdef public object _reversed__
-#     cdef public int document_length__
-#     cdef public list document_lbreaks__
-#     cdef public object variables__
-#     cdef public list rollback__
-#     cdef public int last_rb__loc__
-#     cdef public list call_stack__
-#     cdef public list history__
-#     cdef public bint moving_forward__
-#     cdef public set recursion_locations__
+cdef class Grammar:
+    cdef dict __dict__
+    cdef public set all_parsers__
+    cdef public object start_parser__
+    cdef bint _dirty_flag__
+    cdef public bint history_tracking__
+    cdef public bint memoization__
+    cdef public bint left_recursion_handling__
+#    cdef public object root_parser__  # do not uncomment this!!!
+    cdef public object tree__
+    cdef public object document__
+    cdef public object _reversed__
+    cdef public int document_length__
+    cdef public list document_lbreaks__
+    cdef public object variables__
+    cdef public list rollback__
+    cdef public int last_rb__loc__
+    cdef public list call_stack__
+    cdef public list history__
+    cdef public bint moving_forward__
+    cdef public set recursion_locations__
 
 cdef class PreprocessorToken(Parser):
     pass

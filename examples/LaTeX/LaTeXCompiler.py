@@ -58,7 +58,7 @@ class LaTeXGrammar(Grammar):
     tabular_config = Forward()
     text_element = Forward()
     source_hash__ = "e09808ecd485c07b3455c3a2bf4eada3"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'%.*'
     WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'

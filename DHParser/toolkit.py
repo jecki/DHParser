@@ -43,8 +43,19 @@ except ImportError:
 
 from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable  # , cast
 
+try:
+    import cython
+    cython_optimized = cython.compiled  # type: bool
+except ImportError:
+    # import DHParser.Shadow as cython
+    cython_optimized = False            # type: bool
+    import DHParser.shadow_cython as cython
 
-__all__ = ('escape_re',
+
+__all__ = ('typing',
+           'cython',
+           'cython_optimized',
+           'escape_re',
            'escape_control_characters',
            'is_filename',
            'concurrent_ident',

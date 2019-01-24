@@ -145,7 +145,7 @@ class TestFlowControl:
 
     def test_lookbehind_indirect(self):
         class LookbehindTestGrammar(Grammar):
-            parser_initialization__ = "upon instantiation"
+            parser_initialization__ = ["upon instantiation"]
             ws = RegExp('\\s*')
             end = RegExp('END')
             SUCC_LB = RegExp('\\s*?\\n')

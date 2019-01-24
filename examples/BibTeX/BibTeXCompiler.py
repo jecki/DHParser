@@ -58,7 +58,7 @@ class BibTeXGrammar(Grammar):
     """
     text = Forward()
     source_hash__ = "e402951b290cb0fce63ba0cbca3f23e9"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'(?i)%.*(?:\n|$)'
     WHITESPACE__ = r'\s*'

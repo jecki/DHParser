@@ -154,7 +154,7 @@ class StringView:  # collections.abc.Sized
         else:
             return StringView(str(other) + str(self))
 
-    @cython.locals(start=cython.int, end=cython.int)
+    @cython.locals(start=cython.int, stop=cython.int)
     def __getitem__(self, index: Union[slice, int]) -> 'StringView':
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \

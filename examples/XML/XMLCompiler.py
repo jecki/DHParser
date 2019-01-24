@@ -68,7 +68,7 @@ class XMLGrammar(Grammar):
     ignoreSectContents = Forward()
     markupdecl = Forward()
     source_hash__ = "1c64c8f613952c5ab8e851da15f65ec3"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'

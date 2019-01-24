@@ -39,7 +39,7 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing
+from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing, cython
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
 
@@ -247,9 +247,10 @@ class Parser:
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
-        self.recursion_counter = defaultdict(lambda: 0)  # type: DefaultDict[int, int]
+        self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
         self.cycle_detection = set()  # type: Set[ApplyFunc]
 
+    @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
@@ -702,7 +703,7 @@ class Grammar:
     python_src__ = ''  # type: str
     root__ = ZOMBIE_PARSER  # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
-    parser_initialization__ = "pending"  # type: list[str]
+    parser_initialization__ = ["pending"]  # type: list[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
@@ -733,7 +734,7 @@ class Grammar:
         selected reference will be chosen. See PEP 520
         (www.python.org/dev/peps/pep-0520/) for an explanation of why.
         """
-        if cls.parser_initialization__ != "done":
+        if cls.parser_initialization__[0] != "done":
             cdict = cls.__dict__
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
@@ -742,7 +743,7 @@ class Grammar:
                             cast(Forward, parser).parser.pname = entry
                     else:   # if not parser.pname:
                         parser.pname = entry
-            cls.parser_initialization__ = "done"
+            cls.parser_initialization__[0] = "done"
 
 
     def __init__(self, root: Parser = None) -> None:
@@ -761,20 +762,22 @@ class Grammar:
         # parsers not connected to the root object will be copied later
         # on demand (see Grammar.__getitem__()). Usually, the need to
         # do so only arises during testing.
-        self.root__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
-        self.root__.apply(self._add_parser__)
+        self.root_parser__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
+        self.root_parser__.apply(self._add_parser__)
+        assert 'root_parser__' in self.__dict__
+        assert self.root_parser__ == self.__dict__['root_parser__']
 
 
     def __getitem__(self, key):
         try:
             return self.__dict__[key]
         except KeyError:
-            parser_template = getattr(self, key, None)
+            parser_template = getattr(self.__class__, key, None)
             if parser_template:
                 # add parser to grammar object on the fly...
                 parser = copy.deepcopy(parser_template)
                 parser.apply(self._add_parser__)
-                # assert self[key] == parser
+                assert self[key] == parser
                 return self[key]
             raise UnknownParserError('Unknown parser "%s" !' % key)
 
@@ -832,7 +835,7 @@ class Grammar:
 
     def __call__(self,
                  document: str,
-                 start_parser: Union[str, Parser] = "root__",
+                 start_parser: Union[str, Parser] = "root_parser__",
                  track_history: bool = False) -> RootNode:
         """
         Parses a document with with parser-combinators.
@@ -857,8 +860,6 @@ class Grammar:
             return predecessors[-1].pos + len(predecessors[-1]) if predecessors else 0
 
         # assert isinstance(document, str), type(document)
-        if self.root__ is None:
-            raise NotImplementedError()
         if self._dirty_flag__:
             self._reset__()
             for parser in self.all_parsers__:
@@ -901,7 +902,7 @@ class Grammar:
                     # in a test case this is not necessarily an error.
                     last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
 
-                    if last_record and parser != self.root__ \
+                    if last_record and parser != self.root_parser__ \
                             and last_record.status == HistoryRecord.MATCH \
                             and last_record.node.pos \
                             + len(last_record.node) >= len(self.document__) \
@@ -1353,6 +1354,7 @@ class ZeroOrMore(Option):
     EBNF-Example:  ``sentence = { /\w+,?/ } "."``
     """
 
+    @cython.locals(n=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1  # type: int
@@ -1523,6 +1525,7 @@ class Series(NaryOperator):
         duplicate.tag_name = self.tag_name
         return duplicate
 
+    @cython.locals(pos=cython.int, reloc=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
@@ -1546,8 +1549,8 @@ class Series(NaryOperator):
                         results += (node,)
                         break
             results += (node,)
-        assert len(results) <= len(self.parsers) \
-               or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
+        # assert len(results) <= len(self.parsers) \
+        #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
         node = Node(self.tag_name, results)
         if error:
             raise ParserError(node, text, first_throw=True)
