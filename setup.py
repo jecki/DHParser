@@ -16,11 +16,15 @@ setup(
     version=__version__,
     packages=['DHParser'],
     ext_modules=cythonize(['DHParser/stringview.py',
+                           'DHParser/preprocess.py',
+                           'DHParser/error.py',
                            'DHParser/syntaxtree.py',
+                           'DHParser/log.py',
                            'DHParser/parse.py',
                            'DHParser/transform.py',
                            'DHParser/compile.py',
-                           # 'DHParser/ebnf.py'
+                           'DHParser/ebnf.py',
+                           'DHParser/dsl.py'
                            ],
                           nthreads=0, annotate=False),
     url='https://gitlab.lrz.de/badw-it/DHParser',
