@@ -500,6 +500,7 @@ class TestErrorCustomization:
             document = series | /.*/
             @series_error = '_', "the underscore is wrong in this place"
             @series_error = '*', "the asterix is wrong in this place"
+            @series_error = /(?<=C)\w/, 'C cannot be followed by {0}'
             @series_error = /\w/, "wrong letter {0} in place of {1}"
             @series_error = "fallback error message"
             series = "X" | head §"C" "D"
@@ -519,6 +520,9 @@ class TestErrorCustomization:
         st = parser("AB+D");  assert st.error_flag
         assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
         assert st.collect_errors()[0].message == "fallback error message"
+        st = parser("ABCi");  assert st.error_flag
+        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.collect_errors()[0].message.startswith('C cannot be followed by')
 
 
 class TestErrorCustomizationErrors:
