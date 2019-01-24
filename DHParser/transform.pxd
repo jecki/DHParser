@@ -12,7 +12,6 @@ import cython
 # cpdef decorator(f)
 # cpdef gen_special(*args)
 # cpdef gen_partial(*args, **kwargs)
-cpdef key_parser_name(node: Node)
 cpdef key_tag_name(node: Node)
 # cpdef traverse(root_node: Node, processing_table: ProcessingTableType,
 #               key_func: KeyFunc = ?)

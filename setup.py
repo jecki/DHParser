@@ -16,9 +16,9 @@ setup(
     version=__version__,
     packages=['DHParser'],
     ext_modules=cythonize(['DHParser/stringview.py',
-                           # 'DHParser/syntaxtree.py',
-                           # 'DHParser/parse.py',
-                           # 'DHParser/transform.py',
+                           'DHParser/syntaxtree.py',
+                           'DHParser/parse.py',
+                           'DHParser/transform.py',
                            # 'DHParser/compile.py',
                            # 'DHParser/ebnf.py'
                            ],

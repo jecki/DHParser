@@ -30,7 +30,7 @@ for an example.
 """
 
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 import copy
 
 from DHParser.error import Error, linebreaks, line_col
@@ -209,7 +209,7 @@ class Parser:
         # assert isinstance(name, str), str(name)
         self.pname = ''  # type: str
         self.tag_name = self.ptype  # type: str
-        if not hasattr(self.__class__, 'alive'):
+        if not isinstance(self, ZombieParser):
             self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
         self.reset()
 
@@ -446,6 +446,8 @@ class Parser:
             self._apply(func, positive_flip)
 
 
+zombie_alive = False
+
 class ZombieParser(Parser):
     """
     Serves as a substitute for a Parser instance.
@@ -456,18 +458,15 @@ class ZombieParser(Parser):
     these (or one of these properties) is needed, but no real Parser-
     object is instantiated.
     """
-
-    alive = False
-    __slots__ = ()
-
     def __init__(self):
+        global zombie_alive
         super().__init__()
         self.pname = ZOMBIE
         self.tag_name = ZOMBIE
         # no need to call super class constructor
-        assert not self.__class__.alive, "There can be only one!"
+        assert not zombie_alive, "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
-        self.__class__.alive = True
+        zombie_alive = True
         self.reset()
 
     def __copy__(self):
@@ -703,7 +702,7 @@ class Grammar:
     python_src__ = ''  # type: str
     root__ = ZOMBIE_PARSER  # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
-    parser_initialization__ = "pending"  # type: str
+    parser_initialization__ = "pending"  # type: list[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
@@ -1057,7 +1056,7 @@ class PreprocessorToken(Parser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.pname)
         # duplicate.pname = self.pname  # will be written by the constructor, anyway
-        duplicate.tage_name = self.tag_name
+        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
