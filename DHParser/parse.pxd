@@ -11,7 +11,7 @@ cdef class Parser:
     cdef object recursion_counter
     cdef object cycle_detection
 
-    # cpdef _parse(self, text)
+    cpdef _parse(self, text)
 
 cdef class Grammar:
     cdef dict __dict__
@@ -107,7 +107,7 @@ cdef class Retrieve(Parser):
     cdef public object filter
 
 cdef class Pop(Retrieve):
-    pass
+    cdef public list values
 
 cdef class Synonym(UnaryOperator):
     pass

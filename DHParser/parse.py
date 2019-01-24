@@ -447,8 +447,6 @@ class Parser:
             self._apply(func, positive_flip)
 
 
-zombie_alive = False
-
 class ZombieParser(Parser):
     """
     Serves as a substitute for a Parser instance.
@@ -459,15 +457,16 @@ class ZombieParser(Parser):
     these (or one of these properties) is needed, but no real Parser-
     object is instantiated.
     """
+    alive = [False]  # cython compatibility: cython forbits writing to class attributes
+
     def __init__(self):
-        global zombie_alive
         super().__init__()
         self.pname = ZOMBIE
         self.tag_name = ZOMBIE
         # no need to call super class constructor
-        assert not zombie_alive, "There can be only one!"
+        assert not ZombieParser.alive[0], "There can be only one!"
         assert self.__class__ == ZombieParser, "No derivatives, please!"
-        zombie_alive = True
+        ZombieParser.alive[0] = True
         self.reset()
 
     def __copy__(self):
@@ -1754,7 +1753,7 @@ class AllOf(NaryOperator):
                     return None, text
                 else:
                     reloc = reentry_point(text_, self.skip) if self.skip else -1
-                    expected = '< ' + ' '.join(parser.repr for parser in parsers) + ' >'
+                    expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
                     error, err_node, text_ = mandatory_violation(
                         self.grammar, text_, expected, self.err_msgs, reloc)
                     results += (err_node,)
@@ -1963,14 +1962,16 @@ class Capture(UnaryOperator):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
+    def _rollback(self):
+        return self.grammar.variables__[self.pname].pop()
+
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
         if node:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
-            stack = self.grammar.variables__[self.pname]
-            stack.append(node.content)
+            self.grammar.variables__[self.pname].append(node.content)
             location = self.grammar.document_length__ - len(text)
-            self.grammar.push_rollback__(location, lambda: stack.pop())
+            self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
             return Node(self.tag_name, node), text_
@@ -2067,14 +2068,26 @@ class Pop(Retrieve):
     The constructor parameter `symbol` determines which variable is
     used.
     """
+    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
+        super().__init__(symbol, rfilter)
+        self.values = []
+
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__(self.symbol, self.filter)
+        duplicate.pname = self.pname
+        duplicate.tag_name = self.tag_name
+        duplicate.values = self.values[:]
+        return duplicate
+
+    def _rollback(self):
+        return self.grammar.variables__[self.symbol.pname].append(self.values.pop())
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, txt = super().retrieve_and_match(text)
+        node, txt = self.retrieve_and_match(text)
         if node and not node.errors:
-            stack = self.grammar.variables__[self.symbol.pname]
-            value = stack.pop()
+            self.values.append(self.grammar.variables__[self.symbol.pname].pop())
             location = self.grammar.document_length__ - len(text)
-            self.grammar.push_rollback__(location, lambda: stack.append(value))
+            self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 
     def __repr__(self):

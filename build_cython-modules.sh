@@ -1,11 +1,11 @@
 #!/bin/sh
 
-rm DHParser/*.c
-rm DHParser/*.so
+# rm DHParser/*.c
+# rm DHParser/*.so
 
 # for testing:
-# rm DHParser/parse.c
-# rm DHParser/parse.cpython*.so
+rm DHParser/parse.c
+rm DHParser/parse.cpython*.so
 # rm DHParser/syntaxtree.c
 # rm DHParser/syntaxtree.cpython*.so
 # rm DHParser/transform.c
