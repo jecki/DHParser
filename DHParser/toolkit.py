@@ -22,9 +22,9 @@ several of the the other DHParser-Modules or that are just very generic
 so that they are best defined in a toolkit-module.
 """
 
-# import codecs
+import codecs
 import hashlib
-# import io
+import io
 import multiprocessing
 import parser
 import threading
@@ -41,7 +41,7 @@ except ImportError:
     import DHParser.foreign_typing as typing
     sys.modules['typing'] = typing  # make it possible to import from typing
 
-from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable  # , cast
+from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable, cast
 
 try:
     import cython
@@ -449,12 +449,13 @@ def sane_parser_name(name) -> bool:
 #######################################################################
 
 
-# try:
-#     if sys.stdout.encoding.upper() != "UTF-8":
-#         # make sure that `print()` does not raise an error on
-#         # non-ASCII characters:
-#         sys.stdout = cast(io.TextIOWrapper, codecs.getwriter("utf-8")(cast(
-#             io.BytesIO, cast(io.TextIOWrapper, sys.stdout).detach())))
-# except AttributeError:
-#     # somebody has already taken care of this !?
-#     pass
+try:
+    if sys.stdout.encoding.upper() != "UTF-8":  # and  platform.system() == "Windows":
+        # make sure that `print()` does not raise an error on
+        # non-ASCII characters:
+        # sys.stdout = cast(io.TextIOWrapper, codecs.getwriter("utf-8")(cast(
+        #     io.BytesIO, cast(io.TextIOWrapper, sys.stdout).detach())))
+        sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
+except AttributeError:
+    # somebody has already taken care of this !?
+    pass

@@ -301,6 +301,8 @@ class Parser:
                         node = error.node
                         node.result += (nd,)
                     else:
+                        # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht anfügen
+                        #       dürfte allerdings erst an den nächsten(!) Knoten angehängt werden (wie?)
                         node = Node(self.tag_name, (Node(None, text[:gap]), error.node, nd))
                 elif error.first_throw:
                     raise ParserError(error.node, error.rest, first_throw=False)
