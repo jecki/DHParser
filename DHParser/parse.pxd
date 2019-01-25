@@ -12,6 +12,11 @@ cdef class Parser:
     cdef object cycle_detection
 
     cpdef _parse(self, text)
+    cpdef reset(self)
+    cpdef _apply(self, func, flip)
+    # cpdef push_rollback__(self, int location, func)
+    # cpdef rollback_to__(self, int location)
+    # cpdef line_col__(self, text)
 
 cdef class Grammar:
     cdef dict __dict__

@@ -1251,7 +1251,7 @@ class UnaryOperator(Parser):
         return duplicate
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super()._apply(func, flip):
+        if super(UnaryOperator, self)._apply(func, flip):
             self.parser._apply(func, flip)
             return True
         return False
@@ -1282,7 +1282,7 @@ class NaryOperator(Parser):
         return duplicate
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super()._apply(func, flip):
+        if super(NaryOperator, self)._apply(func, flip):
             for parser in self.parsers:
                 parser._apply(func, flip)
             return True
@@ -2070,6 +2070,9 @@ class Pop(Retrieve):
     """
     def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
         super().__init__(symbol, rfilter)
+
+    def reset(self):
+        super(Pop, self).reset()
         self.values = []
 
     def __deepcopy__(self, memo):
@@ -2203,7 +2206,7 @@ class Forward(Parser):
         self.parser = parser
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super()._apply(func, flip):
+        if super(Forward, self)._apply(func, flip):
             self.parser._apply(func, flip)
             return True
         return False
