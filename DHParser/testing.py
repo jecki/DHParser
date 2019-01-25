@@ -308,33 +308,31 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
 
-    is_lookahead = set()     # type: Dict[str]  # Dictionary of parser names
-    with_lookahead = set()   # type: Set[Parser]
-    visited = set()          # type: Set[Parser]
+    is_lookahead = set()    # type: Set[str]  # Dictionary of parser names
+    with_lookahead = set()  # type: Set[Parser]
+    lookahead_flag = False  # type: bool
 
     def find_lookahead(p: Parser):
         """Raises a StopIterationError if parser `p` is or contains
         a Lookahead-parser."""
-        nonlocal is_lookahead, with_lookahead, visited
-        if p in visited:
-            raise StopIteration
-        visited.add(p)
-        if isinstance(p, Lookahead):
-            is_lookahead.add(p.tag_name)
-            with_lookahead.add(p)
+        nonlocal is_lookahead, with_lookahead, lookahead_flag
+        if p in with_lookahead:
+            lookahead_flag = True
+        else:
+            if isinstance(p, Lookahead):
+                is_lookahead.add(p.tag_name)
+                with_lookahead.add(p)
+                lookahead_flag = True
 
     def has_lookahead(parser_name: str):
         """Returns `True`, if given parser is or contains a Lookahead-parser."""
-        nonlocal is_lookahead, with_lookahead, visited, parser
+        nonlocal is_lookahead, with_lookahead, lookahead_flag, parser
         p = parser[parser_name]
-        num_lookaheads = len(is_lookahead)
         if p in with_lookahead:
             return True
-        try:
-            p.apply(find_lookahead)
-        except StopIteration:
-            pass
-        if len(is_lookahead) > num_lookaheads:
+        lookahead_flag = False
+        p.apply(find_lookahead)
+        if lookahead_flag:
             with_lookahead.add(p)
             return True
         return False
