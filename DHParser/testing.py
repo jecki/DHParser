@@ -309,7 +309,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     transform = transformer_factory()
 
     is_lookahead = set()    # type: Set[str]  # Dictionary of parser names
-    with_lookahead = set()  # type: Set[Parser]
+    with_lookahead = set()  # type: Set[Optional[Parser]]
     lookahead_flag = False  # type: bool
 
     def find_lookahead(p: Parser):
@@ -323,6 +323,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 is_lookahead.add(p.tag_name)
                 with_lookahead.add(p)
                 lookahead_flag = True
+            else:
+                if any(child for child in (getattr(p, 'parsers', [])
+                       or [getattr(p, 'parser', None)]) if child in with_lookahead):
+                    with_lookahead.add(p)
 
     def has_lookahead(parser_name: str):
         """Returns `True`, if given parser is or contains a Lookahead-parser."""
