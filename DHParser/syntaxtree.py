@@ -354,11 +354,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self._content = str(self._result)
                 self._result = self._content  # self._result might be more efficient as a string!?
         return self._content
-
-
-    @content.setter
-    def content(self, content: str):
-        self.result = content
+    #
+    #
+    # @content.setter
+    # def content(self, content: str):
+    #     self.result = content
 
 
     @property
