@@ -7,26 +7,30 @@ import doctest
 import multiprocessing
 import os
 import platform
+import subprocess
 import sys
 import time
+import threading
 
 
 sys.path.extend(['../', './'])
 
+lock = threading.Lock()
 
 def run_doctests(module):
-    namespace = {}
-    print('DOCTEST ' + module)
-    exec('import DHParser.' + module, namespace)
-    mod = getattr(namespace['DHParser'], module)
-    result = doctest.testmod(mod)
-    return result.failed
+    with lock:
+        namespace = {}
+        print('DOCTEST ' + module)
+        exec('import DHParser.' + module, namespace)
+        mod = getattr(namespace['DHParser'], module)
+        result = doctest.testmod(mod)
+        return result.failed
 
 def run_unittests(command):
-    filename = command[command.rfind(' ') + 1:]
+    args = command.split(' ')
+    filename = args[1]
     print('\nUNITTEST ' + filename)
-    os.system(command)
-
+    subprocess.run(args)
 
 if __name__ == "__main__":
     scriptdir = os.path.dirname(os.path.realpath(__file__))

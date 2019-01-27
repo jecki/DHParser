@@ -27,14 +27,15 @@ main cause of trouble when constructing a context free Grammar.
 
 
 import collections
+import concurrent.futures
 # import configparser
 import copy
 import fnmatch
 import inspect
 import json
+import multiprocessing
 import os
 import sys
-import threading
 
 from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_parsing_history
@@ -282,6 +283,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     """
     Unit tests for a grammar-parser and ast transformations.
     """
+    output = []
+
+    def write(s):
+        nonlocal output
+        """Append string `s` to output. The purpose is to defer printing to
+        stdout in order to avoid muddled output when several unit tests run
+        at the same time."""
+        output.append(s)
+
     def clean_key(k):
         try:
             return k.replace('*', '')
@@ -303,7 +313,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     else:
         unit_name = 'unit_test_' + str(id(test_unit))
     if verbose:
-        print("\nUnit: " + unit_name)
+        write("\nGRAMMAR TEST UNIT: " + unit_name)
     errata = []
     parser = parser_factory()
     transform = transformer_factory()
@@ -365,7 +375,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             'Unknown test-types: %s ! Must be one of %s' \
             % (set(tests.keys()) - UNIT_STAGES, UNIT_STAGES)
         if verbose:
-            print('  Match-Tests for parser "' + parser_name + '"')
+            write('  Match-Tests for parser "' + parser_name + '"')
         match_tests = set(tests['match'].keys()) if 'match' in tests else set()
         if 'ast' in tests:
             ast_tests = set(tests['ast'].keys())
@@ -422,10 +432,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if errata:
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if verbose:
-                print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+                write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
         if verbose and 'fail' in tests:
-            print('  Fail-Tests for parser "' + parser_name + '"')
+            write('  Fail-Tests for parser "' + parser_name + '"')
 
         # run fail tests
 
@@ -453,7 +463,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.collect_errors())
             if verbose:
-                print(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+                write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
     # write test-report
     if report:
@@ -463,6 +473,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         with open(os.path.join(report_dir, unit_name + '.md'), 'w', encoding='utf8') as f:
             f.write(get_report(test_unit))
 
+    print('\n'.join(output))
     return errata
 
 
@@ -496,13 +507,15 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     os.chdir(directory)
     if is_logging():
         clear_logs()
-    for filename in sorted(os.listdir()):
-        if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
+    with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+        errata_futures = []
+        for filename in sorted(os.listdir()):
+            if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
+                parameters = filename, parser_factory, transformer_factory, report, verbose
+                errata_futures.append((filename, pool.submit(grammar_unit, *parameters)))
+        for filename, err_future in errata_futures:
             try:
-                if verbose:
-                    print("\nRunning grammar tests from: " + filename)
-                errata = grammar_unit(filename, parser_factory,
-                                      transformer_factory, report, verbose)
+                errata = err_future.result()
                 if errata:
                     all_errors[filename] = errata
             except ValueError as e:
