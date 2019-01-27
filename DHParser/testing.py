@@ -542,6 +542,43 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     return ''
 
 
+
+def run_tests_in_class(test, namespace):
+    """
+    Runs all tests in test-class `test` in the given namespace.
+    """
+    def instantiate(cls_name, namespace):
+        exec("obj = " + cls_name + "()", namespace)
+        obj = namespace["obj"]
+        if "setup" in dir(obj):
+            obj.setup()
+        return obj
+
+    obj = None
+    try:
+        if test.find('.') >= 0:
+            cls_name, method_name = test.split('.')
+            obj = instantiate(cls_name, namespace)
+            print("Running " + cls_name + "." + method_name)
+            exec('obj.' + method_name + '()')
+        else:
+            obj = instantiate(test, namespace)
+            for name in dir(obj):
+                if name.lower().startswith("test"):
+                    print("Running " + test + "." + name)
+                    exec('obj.' + name + '()')
+    finally:
+        if "teardown" in dir(obj):
+            obj.teardown()
+
+
+def run_test_function(test, namespace):
+    """
+    Run the test-function `test` in the given namespace.
+    """
+    exec(test + '()', namespace)
+
+
 def runner(test_classes, namespace):
     """
     Runs all or some selected Python unit tests found in the
@@ -573,12 +610,7 @@ def runner(test_classes, namespace):
             from DHParser.testing import runner
             runner("", globals())
     """
-    def instantiate(cls_name):
-        exec("obj = " + cls_name + "()", namespace)
-        obj = namespace["obj"]
-        if "setup" in dir(obj):
-            obj.setup()
-        return obj
+
 
     if test_classes:
         if isinstance(test_classes, str):
@@ -594,24 +626,10 @@ def runner(test_classes, namespace):
                 elif inspect.isfunction(namespace[name]):
                     test_functions.append(name)
 
-
-    obj = None
     for test in test_classes:
-        try:
-            if test.find('.') >= 0:
-                cls_name, method_name = test.split('.')
-                obj = instantiate(cls_name)
-                print("Running " + cls_name + "." + method_name)
-                exec('obj.' + method_name + '()')
-            else:
-                obj = instantiate(test)
-                for name in dir(obj):
-                    if name.lower().startswith("test"):
-                        print("Running " + test + "." + name)
-                        exec('obj.' + name + '()')
-        finally:
-            if "teardown" in dir(obj):
-                obj.teardown()
+        run_tests_in_class(test, namespace)
 
     for test in test_functions:
-        exec(test + '()', namespace)
+        run_test_function(test, namespace)
+
+
