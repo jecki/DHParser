@@ -292,7 +292,7 @@ class TestSerialization:
         assert tree.as_xml() == "<A>\n  <B>C</B>\n  <D>E</D>\n</A>", xml
 
         tree.attr['xml:space'] = 'preserve'
-        print(tree.attr)
+        # print(tree.attr)
         xml = tree.as_xml()
         assert xml == '<A xml:space="preserve"><B>C</B><D>E</D></A>', xml
 

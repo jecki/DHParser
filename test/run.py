@@ -12,10 +12,8 @@ import sys
 import time
 import threading
 
-
-sys.path.extend(['../', './'])
-
 lock = threading.Lock()
+
 
 def run_doctests(module):
     with lock:
@@ -26,11 +24,13 @@ def run_doctests(module):
         result = doctest.testmod(mod)
         return result.failed
 
-def run_unittests(command):
-    args = command.split(' ')
-    filename = args[1]
-    print('\nUNITTEST ' + filename)
-    subprocess.run(args)
+
+# def run_unittests(command):
+#     args = command.split(' ')
+#     filename = args[1]
+#     print('\nUNITTEST ' + filename)
+#     subprocess.run(args)
+
 
 if __name__ == "__main__":
     scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -60,10 +60,15 @@ if __name__ == "__main__":
         # unit tests
         for interpreter in interpreters:
             os.system(interpreter + '--version')
-            for filename in os.listdir('test'):
-                if filename.startswith('test_'):
-                    command = interpreter + os.path.join('test', filename)
-                    results.append(pool.submit(run_unittests, command))
+            # for filename in os.listdir('test'):
+            #     if filename.startswith('test_'):
+            #         command = interpreter + os.path.join('test', filename)
+            #         results.append(pool.submit(run_unittests, command))
+            os.system(' '.join([interpreter, '-c',
+                                """'import sys;"""
+                                """sys.path.extend(["DHParser"]);""" 
+                                """import testing; testing.run_path("%s")'""" % scriptdir,
+                            os.path.join(os.getcwd(), 'test')]))
 
         concurrent.futures.wait(results)
 

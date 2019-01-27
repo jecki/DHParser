@@ -33,14 +33,13 @@ from DHParser.log import log_dir, logging, is_logging
 
 
 class TestLoggingAndLoading:
-    tmpname = 'tmp_' + concurrent_ident()
-    filename = os.path.join("test", tmpname, "test.py") if os.path.isdir('test') \
-        else os.path.join(tmpname, "test.py")
-    dirname = os.path.dirname(filename)
-    code1 = "x = 46"
-    code2 = "def f():\n    return 46"
-
     def setup(self):
+        self.tmpname = 'tmp_' + concurrent_ident()
+        self.filename = os.path.join("test", self.tmpname, "test.py") if os.path.isdir('test') \
+            else os.path.join(self.tmpname, "test.py")
+        self.dirname = os.path.dirname(self.filename)
+        self.code1 = "x = 46"
+        self.code2 = "def f():\n    return 46"
         if not os.path.exists(self.dirname):
             os.mkdir(self.dirname)
         with open(self.filename, 'w') as f:

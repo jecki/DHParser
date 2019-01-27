@@ -542,6 +542,12 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     return ''
 
 
+#######################################################################
+#
+#  general unit testing support
+#
+#######################################################################
+
 
 def run_tests_in_class(test, namespace):
     """
@@ -572,11 +578,12 @@ def run_tests_in_class(test, namespace):
             obj.teardown()
 
 
-def run_test_function(test, namespace):
+def run_test_function(func_name, namespace):
     """
     Run the test-function `test` in the given namespace.
     """
-    exec(test + '()', namespace)
+    print("Running test-function: " + func_name)
+    exec(func_name + '()', namespace)
 
 
 def runner(test_classes, namespace):
@@ -590,8 +597,8 @@ def runner(test_classes, namespace):
     in such classes or functions, the name of which starts with "test".
 
     Args:
-        tests: Either a string or a list of strings that contains the
-            names of test or test classes. Each test and, in the case
+        test_classes: Either a string or a list of strings that contains
+            the names of test or test classes. Each test and, in the case
             of a test class, all tests within the test class will be
             run.
         namespace: The namespace for running the test, usually
@@ -632,4 +639,32 @@ def runner(test_classes, namespace):
     for test in test_functions:
         run_test_function(test, namespace)
 
+
+def run_file(fname):
+    if fname.lower().startswith('test_') and fname.endswith('.py'):
+        # print('\nRUNNING UNIT TESTS IN: ' + fname)
+        exec('import ' + fname[:-3])
+        runner('', eval(fname[:-3]).__dict__)
+
+
+def run_path(path):
+    """Runs all unit tests in `path`"""
+    if os.path.isdir(path):
+        sys.path.append(path)
+        files = os.listdir(path)
+        result_futures = []
+        with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+            for f in files:
+                result_futures.append(pool.submit(run_file, f))
+                # run_file(f)  # for testing!
+            for r in result_futures:
+                try:
+                    _ = r.result()
+                except AssertionError as failure:
+                    print(failure)
+    else:
+        path, fname = os.path.split(path)
+        sys.path.append(path)
+        run_file(fname)
+    sys.path.pop()
 

@@ -63,15 +63,15 @@ class TestCompilerGeneration:
         word = /\w+/
         WSPC = /\s+/
         """
-    tmpname = 'tmp_' + concurrent_ident()
-    tmp = os.path.join('test', tmpname) if os.path.isdir('test/') else tmpname
-    trivial_text = u"""Es war ein Koenig in Thule.\n"""
-    grammar_name = os.path.join(tmp, "TestCompilerGeneration.ebnf")
-    compiler_name = os.path.join(tmp, "TestCompilerGenerationCompiler.py")
-    text_name = os.path.join(tmp, "TestCompilerGeneration_text.txt")
-    result_name = os.path.join(tmp, "TestCompilerGeneration_text.xml")
 
     def setup(self):
+        self.tmpname = 'tmp_' + concurrent_ident()
+        self.tmp = os.path.join('test', self.tmpname) if os.path.isdir('test/') else self.tmpname
+        self.trivial_text = u"""Es war ein Koenig in Thule.\n"""
+        self.grammar_name = os.path.join(self.tmp, "TestCompilerGeneration.ebnf")
+        self.compiler_name = os.path.join(self.tmp, "TestCompilerGenerationCompiler.py")
+        self.text_name = os.path.join(self.tmp, "TestCompilerGeneration_text.txt")
+        self.result_name = os.path.join(self.tmp, "TestCompilerGeneration_text.xml")
         if not os.path.exists(self.tmp):
             os.mkdir(self.tmp)
         with open(self.grammar_name, "w") as f:
