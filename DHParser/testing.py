@@ -586,7 +586,7 @@ def run_test_function(func_name, namespace):
     exec(func_name + '()', namespace)
 
 
-def runner(test_classes, namespace):
+def runner(tests, namespace):
     """
     Runs all or some selected Python unit tests found in the
     namespace. To run all tests in a module, call
@@ -597,10 +597,12 @@ def runner(test_classes, namespace):
     in such classes or functions, the name of which starts with "test".
 
     Args:
-        test_classes: Either a string or a list of strings that contains
-            the names of test or test classes. Each test and, in the case
-            of a test class, all tests within the test class will be
-            run.
+        tests: String or list of strings with the names of tests to
+            run. If empty, runner searches by itself all objects the
+            of which starts with 'test' and runs it (if its a function)
+            or all of its methods that start with "test" if its a class
+            plus the "setup" and "teardown" methods if they exist.
+
         namespace: The namespace for running the test, usually
             ``globals()`` should be used.
 
@@ -617,21 +619,22 @@ def runner(test_classes, namespace):
             from DHParser.testing import runner
             runner("", globals())
     """
+    test_classes = []
+    test_functions = []
 
-
-    if test_classes:
-        if isinstance(test_classes, str):
-            test_classes = test_classes.split(" ")
+    if tests:
+        if isinstance(tests, str):
+            tests = tests.split(' ')
+        assert all(test.lower().startswith('test') for test in tests)
     else:
-        # collect all test classes, in case no methods or classes have been passed explicitly
-        test_classes = []
-        test_functions = []
-        for name in namespace.keys():
-            if name.lower().startswith('test'):
-                if inspect.isclass(namespace[name]):
-                    test_classes.append(name)
-                elif inspect.isfunction(namespace[name]):
-                    test_functions.append(name)
+        tests = namespace.keys()
+
+    for name in tests:
+        if name.lower().startswith('test'):
+            if inspect.isclass(namespace[name]):
+                test_classes.append(name)
+            elif inspect.isfunction(namespace[name]):
+                test_functions.append(name)
 
     for test in test_classes:
         run_tests_in_class(test, namespace)

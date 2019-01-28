@@ -7,8 +7,8 @@ import doctest
 import multiprocessing
 import os
 import platform
-import subprocess
-import sys
+#import subprocess
+#import sys
 import time
 import threading
 
