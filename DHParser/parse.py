@@ -1217,6 +1217,14 @@ class Whitespace(RegExp):
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
+    # def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    #     match = text.match(self.regexp)
+    #     if match:
+    #         capture = match.group(0)
+    #         end = text.index(match.end())
+    #         return Node(self.tag_name, capture, True), text[end:]
+    #     return None, text
+
     def __repr__(self):
         return '~'
 
