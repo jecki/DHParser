@@ -1093,6 +1093,20 @@ class Token(Parser):
         return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % self.text
 
 
+class DropToken(Token):
+    """
+    EXPERIMENTAL AND UNTESTED!
+
+    Parses play text string, but returns EMPTY_NODE rather than the parsed
+    string on a match.
+    """
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        if text.startswith(self.text):
+            return EMPTY_NODE, text[self.len:]
+            # return Node(self.tag_name, self.text, True), text[self.len:]
+        return None, text
+
+
 class RegExp(Parser):
     r"""
     Regular expression parser.
@@ -1167,6 +1181,11 @@ def TKN(token, wsL='', wsR=r'\s*'):
     return withWS(lambda: Token(token), wsL, wsR)
 
 
+def DTKN(token, wsL='', wsR=r'\s*'):
+    """Syntactic Sugar for 'Series(Whitespace(wsL), DropToken(token), Whitespace(wsR))'"""
+    return withWS(lambda: DropToken(token), wsL, wsR)
+
+
 class Whitespace(RegExp):
     """An variant of RegExp that signifies through its class name that it
     is a RegExp-parser for whitespace."""
@@ -1186,6 +1205,23 @@ class Whitespace(RegExp):
 
     def __repr__(self):
         return '~'
+
+
+class DropWhitespace(Whitespace):
+    """
+    EXPERIMENTAL AND UNTESTED!
+
+    Parses whitespace but never returns it. Instead EMPTY_NODE is returned
+    on a match.
+    """
+
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        match = text.match(self.regexp)
+        if match:
+            capture = match.group(0)
+            end = text.index(match.end())
+            return EMPTY_NODE, text[end:]
+        return None, text
 
 
 ########################################################################
