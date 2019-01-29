@@ -1095,7 +1095,7 @@ class Token(Parser):
 
 class DropToken(Token):
     """
-    EXPERIMENTAL AND UNTESTED!
+    EXPERIMENTAL AND UNTESTED! Violates the invariant: str(parse(text)) == text
 
     Parses play text string, but returns EMPTY_NODE rather than the parsed
     string on a match.
@@ -1209,7 +1209,7 @@ class Whitespace(RegExp):
 
 class DropWhitespace(Whitespace):
     """
-    EXPERIMENTAL AND UNTESTED!
+    EXPERIMENTAL AND UNTESTED! Violates the invariant: str(parse(text)) == text
 
     Parses whitespace but never returns it. Instead EMPTY_NODE is returned
     on a match.
