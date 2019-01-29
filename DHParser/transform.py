@@ -32,7 +32,7 @@ import inspect
 from functools import partial, singledispatch
 
 from DHParser.error import Error, ErrorCode
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_NODE, RootNode, parse_sxpr, flatten_sxpr
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, PLACEHOLDER, RootNode, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text, Generic
@@ -309,7 +309,7 @@ def traverse(root_node: Node,
         nonlocal cache
         node = context[-1]
         if node.children:
-            context.append(ZOMBIE_NODE)
+            context.append(PLACEHOLDER)
             for child in node.children:
                 context[-1] = child
                 traverse_recursive(context)  # depth first
@@ -624,7 +624,7 @@ def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: 
     node = context[-1]
     if node.children:
         new_result = []     # type: List[Node]
-        context.append(ZOMBIE_NODE)
+        context.append(PLACEHOLDER)
         for child in node.children:
             context[-1] = child
             if child.children and condition(context):

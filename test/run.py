@@ -7,10 +7,12 @@ import doctest
 import multiprocessing
 import os
 import platform
-#import subprocess
-#import sys
+import sys
 import time
 import threading
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(scriptdir, '../'))
 
 lock = threading.Lock()
 
@@ -33,8 +35,6 @@ def run_doctests(module):
 
 
 if __name__ == "__main__":
-    scriptdir = os.path.dirname(os.path.realpath(__file__))
-
     if platform.system() != "Windows":
         interpreters = ['pypy3 ', 'python3 ']
     else:

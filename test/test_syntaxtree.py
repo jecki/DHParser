@@ -23,7 +23,8 @@ import copy
 import sys
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, flatten_xml
+from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
+    flatten_xml, ZOMBIE_TAG
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_expendables
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -170,11 +171,11 @@ class TestNode:
 
     def test_len_and_pos(self):
         """Test len-property of Node."""
-        nd1 = Node(None, "123")
+        nd1 = Node(ZOMBIE_TAG, "123")
         assert len(nd1) == 3, "Expected Node.len == 3, got %i" % len(nd1)
-        nd2 = Node(None, "456")
+        nd2 = Node(ZOMBIE_TAG, "456")
         assert len(nd2) == 3, "Expected Node.len == 3, got %i" % len(nd2)
-        nd = Node(None, (nd1, nd2))
+        nd = Node(ZOMBIE_TAG, (nd1, nd2))
         assert len(nd) == 6, "Expected Node.len == 6, got %i" % len(nd)
         nd.init_pos(0)
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos

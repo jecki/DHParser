@@ -37,8 +37,8 @@ from DHParser.error import Error, linebreaks, line_col
 from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE, ResultType
+from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, ZOMBIE_TAG, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing, cython
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
@@ -76,6 +76,10 @@ __all__ = ('Parser',
            'Retrieve',
            'Pop',
            'Forward')
+
+
+
+EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 
 ########################################################################
@@ -140,7 +144,7 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
     if i == upper_limit:
         i = -1
     return i
-    # return Node(None, rest[:i]), rest[i:]
+    # return Node(ZOMBIE_TAG, rest[:i]), rest[i:]
 
 
 ApplyFunc = Callable[['Parser'], None]
@@ -201,7 +205,7 @@ class Parser:
                 (recursively) a second time, if it has already been
                 applied to this parser.
 
-        grammar:  A reference to the Grammar object to which the parser
+        _grammar:  A reference to the Grammar object to which the parser
                 is attached.
     """
 
@@ -209,8 +213,10 @@ class Parser:
         # assert isinstance(name, str), str(name)
         self.pname = ''  # type: str
         self.tag_name = self.ptype  # type: str
-        if not isinstance(self, ZombieParser):
-            self._grammar = ZOMBIE_GRAMMAR  # type: Grammar
+        try:
+            self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
+        except NameError:
+            pass
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -256,7 +262,7 @@ class Parser:
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method `_parse()`.
         """
-        grammar = self._grammar  # read protected member instead property to avoid function call
+        grammar = self._grammar
         location = grammar.document_length__ - len(text)
 
         try:
@@ -294,7 +300,7 @@ class Parser:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:
                         i = 1
-                    nd = Node(None, rest[:i])
+                    nd = Node(ZOMBIE_TAG, rest[:i])
                     rest = rest[i:]
                     assert error.node.children
                     if error.first_throw:
@@ -303,11 +309,11 @@ class Parser:
                     else:
                         # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht anfügen
                         #       dürfte allerdings erst an den nächsten(!) Knoten angehängt werden (wie?)
-                        node = Node(self.tag_name, (Node(None, text[:gap]), error.node, nd))
+                        node = Node(self.tag_name, (Node(ZOMBIE_TAG, text[:gap]), error.node, nd))
                 elif error.first_throw:
                     raise ParserError(error.node, error.rest, first_throw=False)
                 else:
-                    result = (Node(None, text[:gap]), error.node) if gap else error.node  # type: ResultType
+                    result = (Node(ZOMBIE_TAG, text[:gap]), error.node) if gap else error.node  # type: ResultType
                     raise ParserError(Node(self.tag_name, result), text, first_throw=False)
 
             if grammar.left_recursion_handling__:
@@ -326,9 +332,10 @@ class Parser:
                     # otherwise also cache None-results
                     self.visited[location] = (None, rest)
             else:
-                assert node._pos < 0
+                assert node._pos < 0 or node == EMPTY_NODE
                 node._pos = location
-                assert node._pos >= 0, str("%i < %i" % (grammar.document_length__, location))
+                assert node._pos >= 0 or node == EMPTY_NODE, \
+                    str("%i < %i" % (grammar.document_length__, location))
                 if (grammar.last_rb__loc__ < location
                         and (grammar.memoization__ or location in grammar.recursion_locations__)):
                     # - variable manipulating parsers will not be entered into the cache,
@@ -352,7 +359,7 @@ class Parser:
                 grammar.call_stack__.pop()
 
         except RecursionError:
-            node = Node(None, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
+            node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node._pos = location
             grammar.tree__.new_error(node, "maximum recursion depth of parser reached; "
                                            "potentially due to too many errors!")
@@ -376,28 +383,34 @@ class Parser:
         the results or None as well as the text at the position right behind
         the matching string."""
         raise NotImplementedError
-        # return None, text  # default behaviour: don't match
 
     @property
     def grammar(self) -> 'Grammar':
-        if self._grammar != ZOMBIE_GRAMMAR:
-            return self._grammar
-        else:
-            raise AssertionError('Grammar has not yet been set!')
+        try:
+            grammar = self._grammar
+            if self._grammar != GRAMMAR_PLACEHOLDER:
+                return self._grammar
+            else:
+                raise AssertionError('Grammar has not yet been set!')
+        except AttributeError:
+            raise AssertionError('Parser placeholder does not have a grammar!')
 
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
-        if self._grammar == ZOMBIE_GRAMMAR:
-            self._grammar = grammar
-            self._grammar_assigned_notifier()
-        elif self._grammar != grammar:
-              raise AssertionError("Parser has already been assigned"
-                                   "to a different Grammar object!")
+        try:
+            if self._grammar == GRAMMAR_PLACEHOLDER:
+                self._grammar = grammar
+                # self._grammar_assigned_notifier()
+            elif self._grammar != grammar:
+                  raise AssertionError("Parser has already been assigned"
+                                       "to a different Grammar object!")
+        except AttributeError:
+            pass  # ignore setting of grammar attribute for placeholder parser
 
-    def _grammar_assigned_notifier(self):
-        """A function that notifies the parser object that it has been
-        assigned to a grammar."""
-        pass
+    # def _grammar_assigned_notifier(self):
+    #     """A function that notifies the parser object that it has been
+    #     assigned to a grammar."""
+    #     pass
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         """
@@ -449,50 +462,7 @@ class Parser:
             self._apply(func, positive_flip)
 
 
-class ZombieParser(Parser):
-    """
-    Serves as a substitute for a Parser instance.
-
-    ``ZombieParser`` is the class of the singelton object
-    ``ZOMBIE_PARSER``. The  ``ZOMBIE_PARSER`` has a name and can be
-    called, but it never matches. It serves as a substitute where only
-    these (or one of these properties) is needed, but no real Parser-
-    object is instantiated.
-    """
-    alive = [False]  # cython compatibility: cython forbits writing to class attributes
-
-    def __init__(self):
-        super().__init__()
-        self.pname = ZOMBIE
-        self.tag_name = ZOMBIE
-        # no need to call super class constructor
-        assert not ZombieParser.alive[0], "There can be only one!"
-        assert self.__class__ == ZombieParser, "No derivatives, please!"
-        ZombieParser.alive[0] = True
-        self.reset()
-
-    def __copy__(self):
-        return self
-
-    def __deepcopy__(self, memo):
-        return self
-
-    def __call__(self, text):
-        raise AssertionError("Better call Saul ;-)")
-
-    @property
-    def grammar(self) -> 'Grammar':
-        raise AssertionError("Zombie parser doesn't have a grammar!")
-
-    @grammar.setter
-    def grammar(self, grammar: 'Grammar'):
-        raise AssertionError('Cannot assign a grammar a zombie parser or vice versa!')
-
-    def apply(self, func: ApplyFunc):
-        return "Eaten alive..."
-
-
-ZOMBIE_PARSER = ZombieParser()
+PARSER_PLACEHOLDER = Parser()
 
 
 ########################################################################
@@ -702,7 +672,7 @@ class Grammar:
                 recursion.
     """
     python_src__ = ''  # type: str
-    root__ = ZOMBIE_PARSER  # type: Parser
+    root__ = PARSER_PLACEHOLDER  # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: list[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
@@ -885,7 +855,7 @@ class Grammar:
         if not rest:
             result, _ = parser(rest)
             if result is None:
-                result = Node(None, '').init_pos(0)
+                result = Node(ZOMBIE_TAG, '').init_pos(0)
                 self.tree__.new_error(result,
                                       'Parser "%s" did not match empty document.' % str(parser),
                                       Error.PARSER_DID_NOT_MATCH)
@@ -924,7 +894,7 @@ class Grammar:
                             if len(stitches) < MAX_DROPOUTS
                             else " too often! Terminating parser.")
                     error_code = Error.PARSER_STOPPED_BEFORE_END
-                stitches.append(Node(None, skip).init_pos(tail_pos(stitches)))
+                stitches.append(Node(ZOMBIE_TAG, skip).init_pos(tail_pos(stitches)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
                 if self.history_tracking__:
                     # # some parsers may have matched and left history records with nodes != None.
@@ -941,12 +911,12 @@ class Grammar:
                     self.history_tracking__ = False
         if stitches:
             if rest:
-                stitches.append(Node(None, rest))
+                stitches.append(Node(ZOMBIE_TAG, rest))
             #try:
-            result = Node(None, tuple(stitches)).init_pos(0)
+            result = Node(ZOMBIE_TAG, tuple(stitches)).init_pos(0)
             # except AssertionError as error:
             #     # some debugging output
-            #     print(Node(None, tuple(stitches)).as_sxpr())
+            #     print(Node(ZOMBIE_TAG, tuple(stitches)).as_sxpr())
             #     raise error
         if any(self.variables__.values()):
             error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
@@ -957,7 +927,7 @@ class Grammar:
                     # add another child node at the end to ensure that the position
                     # of the error will be the end of the text. Otherwise, the error
                     # message above ("...after end of parsing") would appear illogical.
-                    error_node = Node(ZOMBIE, '').init_pos(tail_pos(result.children))
+                    error_node = Node(ZOMBIE_TAG, '').init_pos(tail_pos(result.children))
                     self.tree__.new_error(error_node, error_msg, error_code)
                     result.result = result.children + (error_node,)
                 else:
@@ -1028,7 +998,7 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     return " ".join(msg)
 
 
-ZOMBIE_GRAMMAR = Grammar()
+GRAMMAR_PLACEHOLDER = Grammar()
 
 
 ########################################################################
@@ -1163,21 +1133,6 @@ class RegExp(Parser):
         if match:
             capture = match.group(0)
             end = text.index(match.end())
-            # regular expression must never match preprocessor-tokens!
-            # Should never happen, anyway, as long as text characters do not
-            # fall into the range below 0x20
-            # # Find a better solution here? e.g. static checking/re-mangling at compile time
-            # # Needs testing!!!
-            # i = capture.find(BEGIN_TOKEN)
-            # if i >= 0:
-            #     capture = capture[:i]
-            #     end = i
-            #     m = capture[:end].match(self.regexp)
-            #     if m:
-            #         capture = m.group(0)
-            #         end = text.index(m.end())
-            #     else:
-            #         return None, text
             return Node(self.tag_name, capture, True), text[end:]
         return None, text
 
@@ -1217,13 +1172,17 @@ class Whitespace(RegExp):
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
-    # def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-    #     match = text.match(self.regexp)
-    #     if match:
-    #         capture = match.group(0)
-    #         end = text.index(match.end())
-    #         return Node(self.tag_name, capture, True), text[end:]
-    #     return None, text
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        match = text.match(self.regexp)
+        if match:
+            capture = match.group(0)
+            if capture or self.pname:
+                end = text.index(match.end())
+                return Node(self.tag_name, capture, True), text[end:]
+            else:
+                # avoid creation of a node object for empty nodes
+                return  EMPTY_NODE, text
+        return None, text
 
     def __repr__(self):
         return '~'
@@ -1318,7 +1277,7 @@ class Option(UnaryOperator):
         >>> Grammar(number)('3.14159').content
         '3.14159'
         >>> Grammar(number)('3.14159').structure
-        '(:Series (:Option) (:RegExp "3") (:Option (:RegExp ".14159")))'
+        '(:Series (:RegExp "3") (:Option (:RegExp ".14159")))'
         >>> Grammar(number)('-1').content
         '-1'
 
@@ -1335,9 +1294,13 @@ class Option(UnaryOperator):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
-        if node:
+        if node and (node._result or self.parser.pname):
             return Node(self.tag_name, node), text
-        return Node(self.tag_name, ()), text
+        if self.pname:
+            return Node(self.tag_name, ()), text
+        else:
+            # avoid creation of a node object for empty nodes
+            return  EMPTY_NODE, text
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1451,7 +1414,7 @@ def mandatory_violation(grammar: Grammar,
                         reloc: int) -> Tuple[Error, Node, StringView]:
     i = reloc if reloc >= 0 else 0
     location = grammar.document_length__ - len(text_)
-    err_node = Node(None, text_[:i]).init_pos(location)
+    err_node = Node(ZOMBIE_TAG, text_[:i]).init_pos(location)
     found = text_[:10].replace('\n', '\\n ')
     for search, message in err_msgs:
         rxs = not isinstance(search, str)
@@ -1557,9 +1520,10 @@ class Series(NaryOperator):
                     else:
                         results += (node,)
                         break
-            results += (node,)
+            if node._result or parser.pname:  # optimization: drop anonymous empty nodes
+                results += (node,)
         # assert len(results) <= len(self.parsers) \
-        #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
+        #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         node = Node(self.tag_name, results)
         if error:
             raise ParserError(node, text, first_throw=True)
@@ -1754,8 +1718,9 @@ class AllOf(NaryOperator):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    results += (node,)
-                    text_ = text__
+                    if node._result or parser.pname:
+                        results += (node,)
+                        text_ = text__
                     del parsers[i]
                     break
             else:
@@ -1770,7 +1735,7 @@ class AllOf(NaryOperator):
                     if reloc < 0:
                         parsers = []
         assert len(results) <= len(self.parsers) \
-               or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE])
+               or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         node =  Node(self.tag_name, results)
         if error:
             raise ParserError(node, text, first_throw=True)
@@ -1818,8 +1783,9 @@ class SomeOf(NaryOperator):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    results += (node,)
-                    text_ = text__
+                    if node._result or parser.pname:
+                        results += (node,)
+                        text_ = text__
                     del parsers[i]
                     break
             else:

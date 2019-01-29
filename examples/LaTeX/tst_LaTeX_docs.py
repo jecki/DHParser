@@ -55,6 +55,13 @@ def fail_on_error(src, result):
         sys.exit(1)
 
 
+def count_nodes(tree, condition=lambda n: True):
+    N = 0
+    for nd in tree.select(condition, include_root=True):
+        N += 1
+    return N
+
+
 def tst_func():
     with DHParser.log.logging(LOGGING):
         if not os.path.exists('REPORT'):
@@ -68,6 +75,9 @@ def tst_func():
 
                 print('\n\nParsing document: "%s"' % file)
                 result = parser(doc)
+                print("Number of CST-nodes: " + str(count_nodes(result)))
+                # print("Number of empty nodes: " + str(count_nodes(result,
+                #                                                 lambda n: not bool(n.result))))
                 if DHParser.log.is_logging():
                     print('Saving CST')
                     with open('REPORT/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
@@ -79,6 +89,7 @@ def tst_func():
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)
+                print("Number of AST-nodes: " + str(count_nodes(result)))
                 if DHParser.log.is_logging():
                     print('Saving AST')
                     with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:

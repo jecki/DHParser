@@ -24,7 +24,7 @@ import sys
 
 sys.path.extend(['../', './'])
 
-from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, ZOMBIE_NODE, \
+from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACEHOLDER, \
     TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
@@ -140,7 +140,7 @@ class TestTransformationFactory:
             nonlocal save
             save = parameters
         transformation = parameterized_transformation('a', 'b', 'c')
-        transformation([ZOMBIE_NODE])
+        transformation([PLACEHOLDER])
         assert save == {'a', 'b', 'c'}
 
     def test_parameter_set_expansion2(self):
@@ -150,7 +150,7 @@ class TestTransformationFactory:
             nonlocal save
             save = parameters
         transformation = parameterized_transformation('a', 'b', 'c')
-        transformation([ZOMBIE_NODE])
+        transformation([PLACEHOLDER])
         assert save == ('a', 'b', 'c'), str(save)
 
 

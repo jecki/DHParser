@@ -32,7 +32,7 @@ from DHParser import logging, is_filename, load_if_file, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, ZOMBIE_NODE
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, PLACEHOLDER
 
 
 #######################################################################
@@ -574,7 +574,7 @@ class XMLCompiler(Compiler):
             node.attr.update(attributes)
             preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
         node.tag_name = tag_name
-        content = self.compile_children(node.get('content', ZOMBIE_NODE))
+        content = self.compile_children(node.get('content', PLACEHOLDER))
         if len(content) == 1:
             if content[0].tag_name == "CharData":
                 # reduce single CharData children

@@ -38,7 +38,7 @@ import copy
 import re
 
 from DHParser.preprocess import strip_tokens, with_source_mapping, PreprocessorFunc
-from DHParser.syntaxtree import Node, RootNode, ZOMBIE_ROOTNODE, StrictResultType
+from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
@@ -69,6 +69,9 @@ def visitor_name(node_name: str) -> str:
     """
     # assert re.match(r'\w+$', node_name)
     return 'on_' + node_name
+
+
+ROOTNODE_PLACEHOLDER = RootNode()
 
 
 class Compiler:
@@ -104,7 +107,7 @@ class Compiler:
         self._reset()
 
     def _reset(self):
-        self.tree = ZOMBIE_ROOTNODE   # type: RootNode
+        self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._dirty_flag = False
 
@@ -116,6 +119,7 @@ class Compiler:
         (This very much depends on the kind and purpose of the
         implemented compiler.)
         """
+        assert root.tag_name != ZOMBIE_TAG
         if self._dirty_flag:
             self._reset()
         self._dirty_flag = True

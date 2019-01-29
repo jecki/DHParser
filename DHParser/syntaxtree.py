@@ -34,14 +34,14 @@ from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tupl
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
-           'ZOMBIE',
-           'ZOMBIE_NODE',
+           'ZOMBIE_TAG',
+           'PLACEHOLDER',
            'ResultType',
            'StrictResultType',
            'ChildrenType',
            'Node',
+           'FrozenNode',
            'RootNode',
-           'ZOMBIE_ROOTNODE',
            'parse_sxpr',
            'parse_xml',
            'flatten_sxpr',
@@ -58,7 +58,7 @@ __all__ = ('WHITESPACE_PTYPE',
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
 
-ZOMBIE = "__ZOMBIE__"
+ZOMBIE_TAG = "__ZOMBIE__"
 
 #######################################################################
 #
@@ -162,7 +162,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', 'errors', '_xml_attr', '_content'
 
-    def __init__(self, tag_name: Optional[str], result: ResultType, leafhint: bool = False) -> None:
+    def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
@@ -178,12 +178,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        assert tag_name is None or isinstance(tag_name, str)   # TODO: Delete this line
-        self.tag_name = tag_name if tag_name else ZOMBIE
-        # if parser is None:
-        #     self._tag_name = ZOMBIE
-        # else:
-        #     self._tag_name = parser.name or parser.ptype
+        # assert tag_name is not None
+        self.tag_name = tag_name        # type: str
 
     def __deepcopy__(self, memo):
         if self.children:
@@ -693,7 +689,29 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return sum(child.tree_size() for child in self.children) + 1
 
 
-ZOMBIE_NODE = Node(ZOMBIE, '')
+class FrozenNode(Node):
+
+    def __init__(self, tag_name: str, result: ResultType) -> None:
+        if isinstance(result, str) or isinstance(result, StringView):
+            result = str(result)
+        else:
+            raise TypeError('FrozenNode only accepts string as results. '
+                            '(Only leaf-nodes can be frozen nodes.)')
+        super(FrozenNode, self).__init__(tag_name, result, True)
+
+    @property
+    def result(self) -> StrictResultType:
+        return self._result
+
+    @result.setter
+    def result(self, result: ResultType):
+        raise TypeError('FrozenNode does not allow re-assignment of results.')
+
+    def init_pos(self, pos: int) -> 'Node':
+        pass
+
+
+PLACEHOLDER = Node('__PLACEHOLDER__', '')
 
 
 class RootNode(Node):
@@ -708,7 +726,7 @@ class RootNode(Node):
     """
 
     def __init__(self, node: Optional[Node] = None):
-        super().__init__(ZOMBIE, '')
+        super().__init__(ZOMBIE_TAG, '')
         self.all_errors = []  # type: List[Error]
         self.error_flag = 0
         if node is not None:
@@ -803,8 +821,6 @@ class RootNode(Node):
                            omit_tags=self.omit_tags,
                            empty_tags=self.empty_tags)
 
-
-ZOMBIE_ROOTNODE = RootNode()
 
 #######################################################################
 #
