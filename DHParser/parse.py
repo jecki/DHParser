@@ -1181,7 +1181,7 @@ class Whitespace(RegExp):
                 return Node(self.tag_name, capture, True), text[end:]
             else:
                 # avoid creation of a node object for empty nodes
-                return  EMPTY_NODE, text
+                return EMPTY_NODE, text
         return None, text
 
     def __repr__(self):
@@ -1300,7 +1300,7 @@ class Option(UnaryOperator):
             return Node(self.tag_name, ()), text
         else:
             # avoid creation of a node object for empty nodes
-            return  EMPTY_NODE, text
+            return EMPTY_NODE, text
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1520,7 +1520,7 @@ class Series(NaryOperator):
                     else:
                         results += (node,)
                         break
-            if node._result or parser.pname:  # optimization: drop anonymous empty nodes
+            if node._result or parser.pname:  # optimization
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
