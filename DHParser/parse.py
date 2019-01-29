@@ -1022,7 +1022,7 @@ class PreprocessorToken(Parser):
     def __init__(self, token: str) -> None:
         assert token and token.isupper()
         assert RX_TOKEN_NAME.match(token)
-        super().__init__()
+        super(PreprocessorToken, self).__init__()
         self.pname = token
 
     def __deepcopy__(self, memo):
@@ -1074,7 +1074,7 @@ class Token(Parser):
     assert TOKEN_PTYPE == ":Token"
 
     def __init__(self, text: str) -> None:
-        super().__init__()
+        super(Token, self).__init__()
         self.text = text
         self.len = len(text)
 
@@ -1101,6 +1101,7 @@ class DropToken(Token):
     string on a match.
     """
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        assert not self.pname, "DropToken must not be used for named parsers!"
         if text.startswith(self.text):
             return EMPTY_NODE, text[self.len:]
             # return Node(self.tag_name, self.text, True), text[self.len:]
@@ -1128,7 +1129,7 @@ class RegExp(Parser):
     """
 
     def __init__(self, regexp) -> None:
-        super().__init__()
+        super(RegExp, self).__init__()
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -1216,6 +1217,7 @@ class DropWhitespace(Whitespace):
     """
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        assert not self.pname, "DropWhitespace must not be used for named parsers!"
         match = text.match(self.regexp)
         if match:
             capture = match.group(0)
@@ -1275,7 +1277,7 @@ class NaryOperator(Parser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        super().__init__()
+        super(NaryOperator, self).__init__()
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
@@ -1323,7 +1325,7 @@ class Option(UnaryOperator):
     """
 
     def __init__(self, parser: Parser) -> None:
-        super().__init__(parser)
+        super(Option, self).__init__(parser)
         # assert isinstance(parser, Parser)
         assert not isinstance(parser, Option), \
             "Redundant nesting of options: %s(%s)" % (self.ptype, parser.pname)
@@ -1407,7 +1409,7 @@ class OneOrMore(UnaryOperator):
     """
 
     def __init__(self, parser: Parser) -> None:
-        super().__init__(parser)
+        super(OneOrMore, self).__init__(parser)
         assert not isinstance(parser, Option), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (self.ptype, parser.pname)
@@ -1504,7 +1506,7 @@ class Series(NaryOperator):
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType=[],
                  skip: ResumeList = []) -> None:
-        super().__init__(*parsers)
+        super(Series, self).__init__(*parsers)
         length = len(self.parsers)
         if mandatory < 0:
             mandatory += length
@@ -1633,7 +1635,7 @@ class Alternative(NaryOperator):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        super().__init__(*parsers)
+        super(Alternative, self).__init__(*parsers)
         assert len(self.parsers) >= 1
         # only the last alternative may be optional. Could this be checked at compile time?
         assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
@@ -1717,7 +1719,7 @@ class AllOf(NaryOperator):
 
             parsers = series.parsers
 
-        super().__init__(*parsers)
+        super(AllOf, self).__init__(*parsers)
         self.num_parsers = len(self.parsers)  # type: int
         if mandatory < 0:
             mandatory += self.num_parsers
@@ -1809,7 +1811,7 @@ class SomeOf(NaryOperator):
                 "allowed as arguments for SomeOf-Parser !"
             alternative = cast(Alternative, parsers[0])
             parsers = alternative.parsers
-        super().__init__(*parsers)
+        super(SomeOf, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1935,7 +1937,7 @@ class Lookbehind(FlowOperator):
             self.regexp = cast(RegExp, p).regexp
         else:  # p is of type PlainText
             self.text = cast(Token, p).text
-        super().__init__(parser)
+        super(Lookbehind, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[len(text):]
@@ -2030,7 +2032,7 @@ class Retrieve(Parser):
     """
 
     def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
-        super().__init__()
+        super(Retrieve, self).__init__()
         self.symbol = symbol
         self.filter = rfilter if rfilter else last_value
 
@@ -2081,7 +2083,7 @@ class Pop(Retrieve):
     used.
     """
     def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
-        super().__init__(symbol, rfilter)
+        super(Pop, self).__init__(symbol, rfilter)
 
     def reset(self):
         super(Pop, self).reset()
@@ -2163,7 +2165,7 @@ class Forward(Parser):
     """
 
     def __init__(self):
-        super().__init__()
+        super(Forward, self).__init__()
         self.parser = None
         self.cycle_reached = False
 
