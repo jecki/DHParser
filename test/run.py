@@ -41,7 +41,7 @@ if __name__ == "__main__":
         interpreters = ['python.exe ']
 
     cwd = os.getcwd()
-    os.chdir(scriptdir + '/..')
+    os.chdir(os.path.join(scriptdir, '..'))
 
     timestamp = time.time()
 
@@ -65,9 +65,10 @@ if __name__ == "__main__":
             #         command = interpreter + os.path.join('test', filename)
             #         results.append(pool.submit(run_unittests, command))
             os.system(' '.join([interpreter, '-c',
-                                """'import sys;"""
-                                """sys.path.extend(["DHParser"]);""" 
-                                """import testing; testing.run_path("%s")'""" % scriptdir,
+                                '''"import sys; '''
+                                '''sys.path.extend(['DHParser']);''' 
+                                '''import testing; testing.run_path('%s')"''' %
+                                scriptdir.replace('\\', '\\\\'),
                             os.path.join(os.getcwd(), 'test')]))
 
         concurrent.futures.wait(results)
