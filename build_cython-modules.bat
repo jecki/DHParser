@@ -1,3 +1,3 @@
-del DHParser\syntaxtree*.pyd
-del DHParser\syntaxtree*.c
+del DHParser\*.pyd
+del DHParser\*.c
 python.exe setup.py build_ext --inplace

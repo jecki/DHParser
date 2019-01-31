@@ -750,7 +750,7 @@ class RootNode(Node):
         duplicate._len = self._len
         if self.attr_active():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
-            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)
+            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
         duplicate.all_errors = copy.deepcopy(self.all_errors)
         duplicate.error_flag = self.error_flag
         duplicate.inline_tags = self.inline_tags
