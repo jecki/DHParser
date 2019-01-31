@@ -190,7 +190,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         duplicate._pos = self._pos
         duplicate._len = self._len
         if self.attr_active():
-            duplicate._xml_attr = copy.deepcopy(self._xml_attr)
+            duplicate.attr.update(copy.deepcopy(self._xml_attr))
+            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
         return duplicate
 
     def __str__(self):
@@ -748,7 +749,8 @@ class RootNode(Node):
         duplicate._pos = self._pos
         duplicate._len = self._len
         if self.attr_active():
-            duplicate._xml_attr = copy.deepcopy(self._xml_attr)
+            duplicate.attr.update(copy.deepcopy(self._xml_attr))
+            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)
         duplicate.all_errors = copy.deepcopy(self.all_errors)
         duplicate.error_flag = self.error_flag
         duplicate.inline_tags = self.inline_tags
