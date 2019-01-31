@@ -48,10 +48,12 @@ __all__ = ('Parser',
            'Grammar',
            'PreprocessorToken',
            'Token',
+           'DropToken',
            'RegExp',
            'RE',
            'TKN',
            'Whitespace',
+           'DropWhitespace',
            'mixin_comment',
            'UnaryOperator',
            'NaryOperator',
@@ -1645,7 +1647,7 @@ class Alternative(NaryOperator):
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
-                return Node(self.tag_name, node), text_
+                return Node(self.tag_name, node if node._result or parser.pname else ()), text_
         return None, text
 
     def __repr__(self):

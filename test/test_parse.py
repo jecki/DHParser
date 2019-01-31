@@ -753,6 +753,24 @@ class TestUnknownParserError:
             pass
 
 
+class TestEarlyTokenWhitespaceDrop:
+    def setup(self):
+        self.lang = """
+            @ drop = token, whitespace
+            expression = term  { ("+" | "-") term}
+            term       = factor  { ("*"|"/") factor}
+            factor     = constant | variable | "("  expression  ")"
+            variable   = /[a-z]/~
+            constant   = /\d+/~   
+            """
+        self.gr = grammar_provider(self.lang)()
+
+    def test(self):
+        cst = self.gr('4 + 3 * 5')
+        # print(cst.as_sxpr())
+        assert not cst.pick(':Token')
+        assert not cst.pick(':Whitespace')
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

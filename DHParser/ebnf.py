@@ -313,6 +313,9 @@ WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
                     'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
                     'vertical': r'\s*'}
 
+DROP_TOKEN  = 'token'
+DROP_WSPC   = 'whitespace'
+DROP_VALUES = {DROP_TOKEN, DROP_WSPC}
 
 # Representation of Python code or, rather, something that will be output as Python code
 ReprType = Union[str, unrepr]
@@ -359,7 +362,7 @@ class EBNFDirectives:
                 the failing parser has returned.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
-                 'resume']
+                 'resume', 'drop']
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
@@ -370,6 +373,7 @@ class EBNFDirectives:
         self.error = dict()   # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         self.skip = dict()    # type: Dict[str, List[Union[unrepr, str]]]
         self.resume = dict()  # type: Dict[str, List[Union[unrepr, str]]]
+        self.drop = set()     # type: Set[str]
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -399,7 +403,7 @@ class EBNFCompiler(Compiler):
     this language that can be used to parse texts in this language.
     See classes `parser.Compiler` and `parser.Grammar` for more information.
 
-    Addionally, class EBNFCompiler provides helper methods to generate
+    Additionally, class EBNFCompiler provides helper methods to generate
     code-skeletons for a preprocessor, AST-transformation and full
     compilation of the formal language. These method's names start with
     the prefix `gen_`.
@@ -474,6 +478,7 @@ class EBNFCompiler(Compiler):
     WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
+    DROP_WHITESPACE_PARSER_KEYWORD = "dwsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_SUFFIX = '_skip__'
     ERR_MSG_SUFFIX = '_err_msg__'
@@ -699,6 +704,9 @@ class EBNFCompiler(Compiler):
 
         definitions.append((self.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
+        if DROP_WSPC in self.directives.drop:
+            definitions.append((self.DROP_WHITESPACE_PARSER_KEYWORD,
+                                'DropWhitespace(%s)' % self.WHITESPACE_KEYWORD))
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))
@@ -933,6 +941,13 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, "Implicit whitespace should always "
                                         "match the empty string, /%s/ does not." % value)
             self.directives[key] = value
+
+        elif key == 'drop':
+            check_argnum(2)
+            for child in node.children[1:]:
+                node_type = child.content.lower()
+                assert node_type in DROP_VALUES, child.content
+                self.directives[key].add(node_type)
 
         elif key == 'ignorecase':
             check_argnum()
@@ -1179,10 +1194,21 @@ class EBNFCompiler(Compiler):
             return symbol
 
 
+    def TOKEN_PARSER(self):
+        if DROP_TOKEN in self.directives.drop and self.context[-2].tag_name != "definition":
+            return 'DropToken('
+        return 'Token('
+
+    def WSPC_PARSER(self):
+        if DROP_WSPC in self.directives.drop and (self.context[-2].tag_name != "definition"
+                                                  or self.context[-1].tag_name == 'literal'):
+            return 'dwsp__'
+        return 'wsp__'
+
     def on_literal(self, node: Node) -> str:
-        center = 'Token(' + node.content.replace('\\', r'\\') + ')'
-        left = self.WHITESPACE_PARSER_KEYWORD if 'left' in self.directives.literalws else ''
-        right = self.WHITESPACE_PARSER_KEYWORD if 'right' in self.directives.literalws else ''
+        center = self.TOKEN_PARSER() + node.content.replace('\\', r'\\') + ')'
+        left = self.WSPC_PARSER() if 'left' in self.directives.literalws else ''
+        right = self.WSPC_PARSER() if 'right' in self.directives.literalws else ''
         if left or right:
             return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
@@ -1195,28 +1221,14 @@ class EBNFCompiler(Compiler):
             tk = rpl + tk[1:-1] + rpl
         else:
             tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
-        return 'Token(' + tk + ')'
+        return self.TOKEN_PARSER() + tk + ')'
 
 
     def on_regexp(self, node: Node) -> str:
         rx = node.content
         name = []   # type: List[str]
-        if rx[0] == '/' and rx[-1] == '/':
-            parser = 'RegExp('
-        else:
-            parser = '_RE('
-            if rx[:2] == '~/':
-                if 'left' not in self.directives.literalws:
-                    name = ['wL=' + self.WHITESPACE_KEYWORD] + name
-                rx = rx[1:]
-            elif 'left' in self.directives.literalws:
-                name = ["wL=''"] + name
-            if rx[-2:] == '/~':
-                if 'right' not in self.directives.literalws:
-                    name = ['wR=' + self.WHITESPACE_KEYWORD] + name
-                rx = rx[:-1]
-            elif 'right' in self.directives.literalws:
-                name = ["wR=''"] + name
+        assert rx[0] == '/' and rx[-1] == '/'
+        parser = 'RegExp('
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
@@ -1230,8 +1242,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_whitespace(self, node: Node) -> str:
-        return self.WHITESPACE_PARSER_KEYWORD
-
+        return self.WSPC_PARSER()
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     try:
