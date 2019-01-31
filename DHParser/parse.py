@@ -334,10 +334,10 @@ class Parser:
                     # otherwise also cache None-results
                     self.visited[location] = (None, rest)
             else:
-                assert node._pos < 0 or node == EMPTY_NODE
+                # assert node._pos < 0 or node == EMPTY_NODE
                 node._pos = location
-                assert node._pos >= 0 or node == EMPTY_NODE, \
-                    str("%i < %i" % (grammar.document_length__, location))
+                # assert node._pos >= 0 or node == EMPTY_NODE, \
+                #     str("%i < %i" % (grammar.document_length__, location))
                 if (grammar.last_rb__loc__ < location
                         and (grammar.memoization__ or location in grammar.recursion_locations__)):
                     # - variable manipulating parsers will not be entered into the cache,
@@ -389,13 +389,12 @@ class Parser:
     @property
     def grammar(self) -> 'Grammar':
         try:
-            grammar = self._grammar
             if self._grammar != GRAMMAR_PLACEHOLDER:
                 return self._grammar
             else:
                 raise AssertionError('Grammar has not yet been set!')
-        except AttributeError:
-            raise AssertionError('Parser placeholder does not have a grammar!')
+        except (AttributeError, NameError):
+            raise AttributeError('Parser placeholder does not have a grammar!')
 
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
@@ -408,6 +407,8 @@ class Parser:
                                        "to a different Grammar object!")
         except AttributeError:
             pass  # ignore setting of grammar attribute for placeholder parser
+        except NameError:  # Cython: No access to GRAMMA_PLACEHOLDER, yet :-(
+            self._grammar = grammar
 
     # def _grammar_assigned_notifier(self):
     #     """A function that notifies the parser object that it has been

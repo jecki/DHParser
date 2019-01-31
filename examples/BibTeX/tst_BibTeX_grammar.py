@@ -23,27 +23,27 @@ import sys
 
 sys.path.extend(['../../', '../'])
 
-import DHParser.log
 import DHParser.dsl
 from DHParser import testing
-from DHParser import toolkit
 
-if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
-    print('\nErrors while recompiling "BibTeX.ebnf":\n--------------------------------------\n\n')
-    with open('BibTeX_ebnf_ERRORS.txt') as f:
-        print(f.read())
-    sys.exit(1)
+if __name__ == "__main__":
+    if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
+        print('\nErrors while recompiling "BibTeX.ebnf":\n--------------------------------------\n\n')
+        with open('BibTeX_ebnf_ERRORS.txt') as f:
+            print(f.read())
+        sys.exit(1)
 
-sys.path.append('./')
-# must be appended after module creation, because otherwise an ImportError is raised under Windows
-from BibTeXCompiler import get_grammar, get_transformer
+    sys.path.append('./')
+    # must be appended after module creation, because otherwise an ImportError is raised under Windows
 
-with DHParser.log.logging(True):
-    error_report = testing.grammar_suite('grammar_tests', get_grammar,
-                                         get_transformer, report=True, verbose=True)
-if error_report:
-    print('\n')
-    print(error_report)
-    sys.exit(1)
-else:
-    print('\nSUCCESS! All tests passed :-)')
+    from BibTeXCompiler import get_grammar, get_transformer
+
+    with DHParser.log.logging(True):
+        error_report = testing.grammar_suite('grammar_tests', get_grammar,
+                                             get_transformer, report=True, verbose=True)
+    if error_report:
+        print('\n')
+        print(error_report)
+        sys.exit(1)
+    else:
+        print('\nSUCCESS! All tests passed :-)')

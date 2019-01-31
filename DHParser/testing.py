@@ -515,6 +515,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
             if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                 parameters = filename, parser_factory, transformer_factory, report, verbose
                 errata_futures.append((filename, pool.submit(grammar_unit, *parameters)))
+                # grammar_unit(*parameters)
         for filename, err_future in errata_futures:
             try:
                 errata = err_future.result()
