@@ -759,17 +759,28 @@ class TestEarlyTokenWhitespaceDrop:
             @ drop = token, whitespace
             expression = term  { ("+" | "-") term}
             term       = factor  { ("*"|"/") factor}
-            factor     = constant | variable | "("  expression  ")"
+            factor     = number | variable | "("  expression  ")" 
+                       | constant | fixed
             variable   = /[a-z]/~
-            constant   = /\d+/~   
+            number     = /\d+/~
+            constant   = "A" | "B"
+            fixed      = "X"   
             """
         self.gr = grammar_provider(self.lang)()
 
-    def test(self):
+    def test_drop(self):
         cst = self.gr('4 + 3 * 5')
         # print(cst.as_sxpr())
         assert not cst.pick(':Token')
         assert not cst.pick(':Whitespace')
+        cst = self.gr('A + B')
+        try:
+            _ = next(cst.select(lambda node: node.content == 'A'))
+            assert False, "Tokens in compound expressions should be dropped!"
+        except StopIteration:
+            pass
+        cst = self.gr('X * y')
+        assert next(cst.select(lambda node: node.content == 'X'))
 
 
 if __name__ == "__main__":
