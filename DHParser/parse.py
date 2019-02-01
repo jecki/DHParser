@@ -55,8 +55,8 @@ __all__ = ('Parser',
            'Whitespace',
            'DropWhitespace',
            'mixin_comment',
-           'UnaryOperator',
-           'NaryOperator',
+           'UnaryParser',
+           'NaryParser',
            'Synonym',
            'Option',
            'ZeroOrMore',
@@ -379,6 +379,30 @@ class Parser:
         the first parser and, if that does not match, the second parser.
         """
         return Alternative(self, other)
+
+    def _return_node(self, node: Node) -> Node:
+        # Node(self.tag_name, node)  # unoptimized code
+        if node and node._result:
+            return Node(self.tag_name, node) if self.pname else node
+        if self.pname:
+            return Node(self.tag_name, ())
+        else:
+            # avoid creation of a node object for empty nodes
+            return EMPTY_NODE
+
+    @cython.locals(N=cython.int)
+    def _return_node_from_results(self, results: Tuple[Node, ...]) -> Node:
+        # return Node(self.tag_name, results)  # unoptimized code
+        N = len(results)
+        if N > 1:
+            return Node(self.tag_name, results)
+        elif N == 1:
+            return self._return_node(results[0])
+        elif self.pname:
+            return Node(self.tag_name, ())
+        else:
+            # avoid creation of a node object for empty nodes
+            return EMPTY_NODE
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
@@ -1237,19 +1261,19 @@ class DropWhitespace(Whitespace):
 ########################################################################
 
 
-class UnaryOperator(Parser):
+class UnaryParser(Parser):
     """
-    Base class of all unary parser operators, i.e. parser that contains
+    Base class of all unary parsers, i.e. parser that contains
     one and only one other parser, like the optional parser for example.
 
     The UnaryOperator base class supplies __deepcopy__ and apply
-    methods for unary parser operators. The __deepcopy__ method needs
+    methods for unary parsers. The __deepcopy__ method needs
     to be overwritten, however, if the constructor of a derived class
     has additional parameters.
     """
 
     def __init__(self, parser: Parser) -> None:
-        super(UnaryOperator, self).__init__()
+        super(UnaryParser, self).__init__()
         assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
 
@@ -1261,26 +1285,26 @@ class UnaryOperator(Parser):
         return duplicate
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super(UnaryOperator, self)._apply(func, flip):
+        if super(UnaryParser, self)._apply(func, flip):
             self.parser._apply(func, flip)
             return True
         return False
 
 
-class NaryOperator(Parser):
+class NaryParser(Parser):
     """
-    Base class of all Nnary parser operators, i.e. parser that
+    Base class of all Nnary parsers, i.e. parser that
     contains one or more other parsers, like the alternative
     parser for example.
 
     The NnaryOperator base class supplies __deepcopy__ and apply methods
-    for unary parser operators. The __deepcopy__ method needs to be
+    for unary parsers. The __deepcopy__ method needs to be
     overwritten, however, if the constructor of a derived class has
     additional parameters.
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        super(NaryOperator, self).__init__()
+        super(NaryParser, self).__init__()
         assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
@@ -1292,14 +1316,14 @@ class NaryOperator(Parser):
         return duplicate
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super(NaryOperator, self)._apply(func, flip):
+        if super(NaryParser, self)._apply(func, flip):
             for parser in self.parsers:
                 parser._apply(func, flip)
             return True
         return False
 
 
-class Option(UnaryOperator):
+class Option(UnaryParser):
     r"""
     Parser ``Option`` always matches, even if its child-parser
     did not match.
@@ -1318,7 +1342,7 @@ class Option(UnaryOperator):
         >>> Grammar(number)('3.14159').content
         '3.14159'
         >>> Grammar(number)('3.14159').structure
-        '(:Series (:RegExp "3") (:Option (:RegExp ".14159")))'
+        '(:Series (:RegExp "3") (:RegExp ".14159"))'
         >>> Grammar(number)('-1').content
         '-1'
 
@@ -1335,13 +1359,7 @@ class Option(UnaryOperator):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
-        if node and (node._result or self.parser.pname):
-            return Node(self.tag_name, node), text
-        if self.pname:
-            return Node(self.tag_name, ()), text
-        else:
-            # avoid creation of a node object for empty nodes
-            return EMPTY_NODE, text
+        return self._return_node(node), text
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1382,7 +1400,7 @@ class ZeroOrMore(Option):
                 infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
                                             node.pos)
             results += (node,)
-        node = Node(self.tag_name, results)
+        node = self._return_node_from_results(results)  # type: Node
         if infinite_loop_error:
             self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text
@@ -1392,7 +1410,7 @@ class ZeroOrMore(Option):
                       and not self.parser.pname else self.parser.repr) + '}'
 
 
-class OneOrMore(UnaryOperator):
+class OneOrMore(UnaryParser):
     r"""
     `OneOrMore` applies a parser repeatedly as long as this parser
     matches. Other than `ZeroOrMore` which always matches, at least
@@ -1434,7 +1452,7 @@ class OneOrMore(UnaryOperator):
             results += (node,)
         if results == ():
             return None, text
-        node = Node(self.tag_name, results)
+        node = self._return_node_from_results(results)  # type: Node
         if infinite_loop_error:
             self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text_
@@ -1476,7 +1494,7 @@ def mandatory_violation(grammar: Grammar,
     return error, err_node, text_[i:]
 
 
-class Series(NaryOperator):
+class Series(NaryParser):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
     the series.
@@ -1565,7 +1583,7 @@ class Series(NaryOperator):
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        node = Node(self.tag_name, results)
+        node = self._return_node_from_results(results)  # type: Node
         if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
@@ -1613,7 +1631,7 @@ class Series(NaryOperator):
         return self
 
 
-class Alternative(NaryOperator):
+class Alternative(NaryParser):
     r"""
     Matches if one of several alternatives matches. Returns
     the first match.
@@ -1679,7 +1697,7 @@ class Alternative(NaryOperator):
         return self
 
 
-class AllOf(NaryOperator):
+class AllOf(NaryParser):
     """
     Matches if all elements of a list of parsers match. Each parser must
     match exactly once. Other than in a sequence, the order in which
@@ -1777,7 +1795,7 @@ class AllOf(NaryOperator):
                         parsers = []
         assert len(results) <= len(self.parsers) \
                or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        node =  Node(self.tag_name, results)
+        node = self._return_node_from_results(results)  # type: Node
         if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
@@ -1786,7 +1804,7 @@ class AllOf(NaryOperator):
         return '< ' + ' '.join(parser.repr for parser in self.parsers) + ' >'
 
 
-class SomeOf(NaryOperator):
+class SomeOf(NaryParser):
     """
     Matches if at least one element of a list of parsers match. No parser
     must match more than once . Other than in a sequence, the order in which
@@ -1833,7 +1851,7 @@ class SomeOf(NaryOperator):
                 parsers = []
         assert len(results) <= len(self.parsers)
         if results:
-            return Node(self.tag_name, results), text_
+            return self._return_node_from_results(results), text_
         else:
             return None, text
 
@@ -1841,7 +1859,7 @@ class SomeOf(NaryOperator):
         return '< ' + ' | '.join(parser.repr for parser in self.parsers) + ' >'
 
 
-def Unordered(parser: NaryOperator) -> NaryOperator:
+def Unordered(parser: NaryParser) -> NaryParser:
     """
     Returns an AllOf- or SomeOf-parser depending on whether `parser`
     is a Series (AllOf) or an Alternative (SomeOf).
@@ -1856,13 +1874,13 @@ def Unordered(parser: NaryOperator) -> NaryOperator:
 
 ########################################################################
 #
-# Flow control operators
+# Flow control parsers
 #
 ########################################################################
 
-class FlowOperator(UnaryOperator):
+class FlowParser(UnaryParser):
     """
-    Base class for all flow operator parsers like Lookahead and Lookbehind.
+    Base class for all flow parsers like Lookahead and Lookbehind.
     """
     def sign(self, bool_value) -> bool:
         """Returns the value. Can be overriden to return the inverted bool."""
@@ -1873,7 +1891,7 @@ def Required(parser: Parser) -> Parser:
     return Series(parser, mandatory=0)
 
 
-# class Required(FlowOperator):
+# class Required(FlowParser):
 #     """OBSOLETE. Use mandatory-parameter of Series-parser instead!
 #     """
 #     RX_ARGUMENT = re.compile(r'\s(\S)')
@@ -1894,7 +1912,7 @@ def Required(parser: Parser) -> Parser:
 #         return '§' + self.parser.repr
 
 
-class Lookahead(FlowOperator):
+class Lookahead(FlowParser):
     """
     Matches, if the contained parser would match for the following text,
     but does not consume any text.
@@ -1922,7 +1940,7 @@ class NegativeLookahead(Lookahead):
         return not bool_value
 
 
-class Lookbehind(FlowOperator):
+class Lookbehind(FlowParser):
     """
     Matches, if the contained parser would match backwards. Requires
     the contained parser to be a RegExp, _RE, PlainText or _Token parser.
@@ -1968,12 +1986,12 @@ class NegativeLookbehind(Lookbehind):
 
 ########################################################################
 #
-# Capture and Retrieve operators (for passing variables in the parser)
+# Capture and Retrieve parsers (for passing variables in the parser)
 #
 ########################################################################
 
 
-class Capture(UnaryOperator):
+class Capture(UnaryParser):
     """
     Applies the contained parser and, in case of a match, saves the result
     in a variable. A variable is a stack of values associated with the
@@ -1991,7 +2009,7 @@ class Capture(UnaryOperator):
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
-            return Node(self.tag_name, node), text_
+            return self._return_node(node), text_
         else:
             return None, text
 
@@ -2121,7 +2139,7 @@ class Pop(Retrieve):
 ########################################################################
 
 
-class Synonym(UnaryOperator):
+class Synonym(UnaryParser):
     r"""
     Simply calls another parser and encapsulates the result in
     another node if that parser matches.

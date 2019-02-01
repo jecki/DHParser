@@ -11,6 +11,8 @@ cdef class Parser:
     cdef object recursion_counter
     cdef object cycle_detection
 
+    cpdef _return_node(self, node)
+    cpdef _return_node_from_results(self, results)
     cpdef _parse(self, text)
     cpdef reset(self)
     cpdef _apply(self, func, flip)
