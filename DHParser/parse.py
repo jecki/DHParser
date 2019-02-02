@@ -380,29 +380,6 @@ class Parser:
         """
         return Alternative(self, other)
 
-    def _return_node(self, node: Node) -> Node:
-        # Node(self.tag_name, node)  # unoptimized code
-        if node and node._result:
-            return Node(self.tag_name, node) if self.pname else node
-        if self.pname:
-            return Node(self.tag_name, ())
-        else:
-            # avoid creation of a node object for empty nodes
-            return EMPTY_NODE
-
-    @cython.locals(N=cython.int)
-    def _return_node_from_results(self, results: Tuple[Node, ...]) -> Node:
-        # return Node(self.tag_name, results)  # unoptimized code
-        N = len(results)
-        if N > 1:
-            return Node(self.tag_name, results)
-        elif N == 1:
-            return self._return_node(results[0])
-        elif self.pname:
-            return Node(self.tag_name, ())
-        else:
-            # avoid creation of a node object for empty nodes
-            return EMPTY_NODE
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
@@ -1255,13 +1232,42 @@ class DropWhitespace(Whitespace):
 
 ########################################################################
 #
-# Containing parser classes, i.e. parsers that contain other parsers
+# Meta parser classes, i.e. parsers that contain other parsers
 # to which they delegate parsing
 #
 ########################################################################
 
 
-class UnaryParser(Parser):
+class MetaParser(Parser):
+
+    def _return_value(self, node: Optional[Node]) -> Node:
+        # Node(self.tag_name, node)  # unoptimized code
+        assert node is None or isinstance(node, Node)
+        if node and node._result:
+            return Node(self.tag_name, node) if self.pname else node
+        if self.pname:
+            return Node(self.tag_name, ())
+        else:
+            # avoid creation of a node object for empty nodes
+            return EMPTY_NODE
+
+    @cython.locals(N=cython.int)
+    def _return_values(self, results: Tuple[Node, ...]) -> Node:
+        # return Node(self.tag_name, results)  # unoptimized code
+        assert isinstance(results, Tuple)
+        N = len(results)
+        if N > 1:
+            return Node(self.tag_name, results)
+        elif N == 1:
+            return self._return_value(results[0])
+        elif self.pname:
+            return Node(self.tag_name, ())
+        else:
+            # avoid creation of a node object for empty nodes
+            return EMPTY_NODE
+
+
+class UnaryParser(MetaParser):
     """
     Base class of all unary parsers, i.e. parser that contains
     one and only one other parser, like the optional parser for example.
@@ -1291,7 +1297,7 @@ class UnaryParser(Parser):
         return False
 
 
-class NaryParser(Parser):
+class NaryParser(MetaParser):
     """
     Base class of all Nnary parsers, i.e. parser that
     contains one or more other parsers, like the alternative
@@ -1359,7 +1365,7 @@ class Option(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
-        return self._return_node(node), text
+        return self._return_value(node), text
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1400,7 +1406,7 @@ class ZeroOrMore(Option):
                 infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
                                             node.pos)
             results += (node,)
-        node = self._return_node_from_results(results)  # type: Node
+        node = self._return_values(results)  # type: Node
         if infinite_loop_error:
             self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text
@@ -1452,7 +1458,7 @@ class OneOrMore(UnaryParser):
             results += (node,)
         if results == ():
             return None, text
-        node = self._return_node_from_results(results)  # type: Node
+        node = self._return_values(results)  # type: Node
         if infinite_loop_error:
             self.grammar.tree__.add_error(node, infinite_loop_error)
         return node, text_
@@ -1583,7 +1589,7 @@ class Series(NaryParser):
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        node = self._return_node_from_results(results)  # type: Node
+        node = self._return_values(results)  # type: Node
         if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
@@ -1795,7 +1801,7 @@ class AllOf(NaryParser):
                         parsers = []
         assert len(results) <= len(self.parsers) \
                or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        node = self._return_node_from_results(results)  # type: Node
+        node = self._return_values(results)  # type: Node
         if error:
             raise ParserError(node, text, first_throw=True)
         return node, text_
@@ -1851,7 +1857,7 @@ class SomeOf(NaryParser):
                 parsers = []
         assert len(results) <= len(self.parsers)
         if results:
-            return self._return_node_from_results(results), text_
+            return self._return_values(results), text_
         else:
             return None, text
 
@@ -2009,7 +2015,7 @@ class Capture(UnaryParser):
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
-            return self._return_node(node), text_
+            return self._return_value(node), text_
         else:
             return None, text
 
