@@ -718,7 +718,7 @@ class FrozenNode(Node):
 
     @errors.setter
     def errors(self, errors: List[Error]):
-        if errors != []:
+        if errors:
             raise AssertionError('Cannot assign error list to frozen node')
 
     def init_pos(self, pos: int) -> 'Node':

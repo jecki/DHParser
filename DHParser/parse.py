@@ -1256,8 +1256,7 @@ class MetaParser(Parser):
                 return nd2
         elif self.pname:
             return Node(self.tag_name, ())  # type: Node
-        # avoid creation of a node object for empty nodes
-        return EMPTY_NODE
+        return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
 
 
     @cython.locals(N=cython.int)
@@ -1271,8 +1270,7 @@ class MetaParser(Parser):
             return self._return_value(results[0])
         elif self.pname:
             return Node(self.tag_name, ())
-        # avoid creation of a node object for empty nodes
-        return EMPTY_NODE
+        return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
 
 
 class UnaryParser(MetaParser):
