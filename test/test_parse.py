@@ -113,11 +113,12 @@ class TestInfiLoopsAndRecursion:
             log_parsing_history(parser, "test_LeftRecursion_indirect")
 
     def test_inifinite_loops(self):
-        minilang = """not_forever = { // } \n"""
-        snippet = " "
+        minilang = """not_forever = /A/ { // } \n"""
+        snippet = "A "
         parser = grammar_provider(minilang)()
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
+        assert syntax_tree.collect_errors()[0].pos == 1
 
 
 class TestFlowControl:

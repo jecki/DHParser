@@ -304,10 +304,10 @@ class Parser:
                         i = 1
                     nd = Node(ZOMBIE_TAG, rest[:i])
                     rest = rest[i:]
-                    assert error.node.children
+                    assert error.node.children or (not error.node.result)
                     if error.first_throw:
                         node = error.node
-                        node.result += (nd,)
+                        node.result = node.children + (nd,)
                     else:
                         # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht anfügen
                         #       dürfte allerdings erst an den nächsten(!) Knoten angehängt werden (wie?)
@@ -1245,8 +1245,10 @@ class MetaParser(Parser):
         assert node is None or isinstance(node, Node)
         if node and node._result:
             return Node(self.tag_name, node) if self.pname else node
-        if self.pname:
-            return Node(self.tag_name, ())
+        if self.pname:  # or (node and node.errors):
+            nd = Node(self.tag_name, ())
+            # nd.errors = node.errors
+            return nd
         else:
             # avoid creation of a node object for empty nodes
             return EMPTY_NODE
