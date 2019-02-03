@@ -353,7 +353,7 @@ class Parser:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)
                 if (grammar.moving_forward__ or (node and node.errors)):
-                    record = HistoryRecord(grammar.call_stack__, node, text,
+                    record = HistoryRecord(grammar.call_stack__, node or EMPTY_NODE, text,
                                            grammar.line_col__(text))
                     grammar.history__.append(record)
                     # print(record.stack, record.status, rest[:20].replace('\n', '|'))
@@ -678,7 +678,7 @@ class Grammar:
     python_src__ = ''  # type: str
     root__ = PARSER_PLACEHOLDER  # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
-    parser_initialization__ = ["pending"]  # type: list[str]
+    parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
@@ -1243,20 +1243,27 @@ class MetaParser(Parser):
     def _return_value(self, node: Optional[Node]) -> Node:
         # Node(self.tag_name, node)  # unoptimized code
         assert node is None or isinstance(node, Node)
-        if node and node._result:
-            return Node(self.tag_name, node) if self.pname else node
-        if self.pname:  # or (node and node.errors):
-            nd = Node(self.tag_name, ())
-            # nd.errors = node.errors
-            return nd
-        else:
-            # avoid creation of a node object for empty nodes
-            return EMPTY_NODE
+        if node:
+            if node._result:
+                return Node(self.tag_name, node) if self.pname else node
+            elif self.pname:
+                nd1 = Node(self.tag_name, ())  # type: Node
+                nd1.errors = node.errors
+                return nd1
+            elif node.errors:
+                nd2 = Node(self.tag_name, ())  # type: Node
+                nd2.errors = node.errors
+                return nd2
+        elif self.pname:
+            return Node(self.tag_name, ())  # type: Node
+        # avoid creation of a node object for empty nodes
+        return EMPTY_NODE
+
 
     @cython.locals(N=cython.int)
     def _return_values(self, results: Tuple[Node, ...]) -> Node:
         # return Node(self.tag_name, results)  # unoptimized code
-        assert isinstance(results, Tuple)
+        assert isinstance(results, tuple)
         N = len(results)
         if N > 1:
             return Node(self.tag_name, results)
@@ -1264,9 +1271,8 @@ class MetaParser(Parser):
             return self._return_value(results[0])
         elif self.pname:
             return Node(self.tag_name, ())
-        else:
-            # avoid creation of a node object for empty nodes
-            return EMPTY_NODE
+        # avoid creation of a node object for empty nodes
+        return EMPTY_NODE
 
 
 class UnaryParser(MetaParser):
@@ -1404,14 +1410,11 @@ class ZeroOrMore(Option):
             if not node:
                 break
             if len(text) == n:
-                node.errors.append(Error("Infinite loop!", node.pos, Error.MESSAGE))
-                infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
-                                            node.pos)
+                self.grammar.tree__.add_error(
+                    node, Error(dsl_error_msg(self, 'Infinite Loop encountered.'), node.pos))
             results += (node,)
-        node = self._return_values(results)  # type: Node
-        if infinite_loop_error:
-            self.grammar.tree__.add_error(node, infinite_loop_error)
-        return node, text
+        nd = self._return_values(results)  # type: Node
+        return nd, text
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1454,16 +1457,13 @@ class OneOrMore(UnaryParser):
             if not node:
                 break
             if len(text_) == n:
-                node.errors.append(Error("Infinite loop!", node.pos, Error.MESSAGE))
-                infinite_loop_error = Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
-                                            node.pos)
+                self.grammar.tree__.add_error(
+                    node, Error(dsl_error_msg(self, 'Infinite Loop encountered.'), node.pos))
             results += (node,)
         if results == ():
             return None, text
-        node = self._return_values(results)  # type: Node
-        if infinite_loop_error:
-            self.grammar.tree__.add_error(node, infinite_loop_error)
-        return node, text_
+        nd = self._return_values(results)  # type: Node
+        return nd, text_
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1587,14 +1587,14 @@ class Series(NaryParser):
                     else:
                         results += (node,)
                         break
-            if node._result or parser.pname:  # optimization
+            if node._result or parser.pname or node.errors:  # optimization
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        node = self._return_values(results)  # type: Node
+        ret_node = self._return_values(results)  # type: Node
         if error:
-            raise ParserError(node, text, first_throw=True)
-        return node, text_
+            raise ParserError(ret_node, text, first_throw=True)
+        return ret_node, text_
 
     def __repr__(self):
         return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
@@ -1674,7 +1674,8 @@ class Alternative(NaryParser):
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
-                return Node(self.tag_name, node if node._result or parser.pname else ()), text_
+                return Node(self.tag_name,
+                            node if node._result or parser.pname or node.errors else ()), text_
         return None, text
 
     def __repr__(self):
@@ -1785,7 +1786,7 @@ class AllOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or parser.pname:
+                    if node._result or parser.pname or node.errors:
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -1803,10 +1804,10 @@ class AllOf(NaryParser):
                         parsers = []
         assert len(results) <= len(self.parsers) \
                or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        node = self._return_values(results)  # type: Node
+        nd = self._return_values(results)  # type: Node
         if error:
-            raise ParserError(node, text, first_throw=True)
-        return node, text_
+            raise ParserError(nd, text, first_throw=True)
+        return nd, text_
 
     def __repr__(self):
         return '< ' + ' '.join(parser.repr for parser in self.parsers) + ' >'
@@ -1850,7 +1851,7 @@ class SomeOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or parser.pname:
+                    if node._result or parser.pname or node.errors:
                         results += (node,)
                         text_ = text__
                     del parsers[i]

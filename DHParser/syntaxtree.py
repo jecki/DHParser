@@ -708,6 +708,19 @@ class FrozenNode(Node):
     def result(self, result: ResultType):
         raise TypeError('FrozenNode does not allow re-assignment of results.')
 
+    @property
+    def attr(self):
+        raise AssertionError("Attributes cannot be accessed on a frozen node")
+
+    @property
+    def errors(self) -> List[Error]:
+        return ()
+
+    @errors.setter
+    def errors(self, errors: List[Error]):
+        if errors != []:
+            raise AssertionError('Cannot assign error list to frozen node')
+
     def init_pos(self, pos: int) -> 'Node':
         pass
 
@@ -786,6 +799,7 @@ class RootNode(Node):
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
+        assert not isinstance(node, FrozenNode)
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         node.errors.append(error)

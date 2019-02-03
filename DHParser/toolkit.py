@@ -198,7 +198,7 @@ class unrepr:
     def __init__(self, s: str):
         self.s = s  # type: str
 
-    def __eq__(self, other: Union['unrepr', str]):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, unrepr):
             return self.s == other.s
         elif isinstance(other, str):
@@ -207,10 +207,10 @@ class unrepr:
             raise TypeError('unrepr objects can only be compared with '
                             'other unrepr objects or strings!')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.s
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.s
 
 
