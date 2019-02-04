@@ -13,11 +13,35 @@ cdef class Node:
     cdef public str tag_name
     cdef object _xml_attr
 
+    cpdef get(self,  index_or_tagname, surrogate)
+    cpdef is_anonymous(self)
+    cpdef init_pos(self, pos)
+    cpdef attr_active(self)
+    # cpdef compare_attr(self, other)
+    # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
+    # cpdef as_sxpr(self, src, indentation, compact)
+    # cpdef as_xml(self, src, indentation, inline_tags, omit_tags, empty_tags)
+    # cpdef select(self, match_function, include_root, reverse)
+    # cpdef select_by_tag(self, tag_names, include_root)
+    cpdef pick(self, tag_names)
+    # cpdef tree_size(self)
+
+
+cdef class FrozenNode(Node):
+    cpdef init_pos(self, pos)
+
+
 cdef class RootNode(Node):
-    cdef public list all_errors
+    cdef public list errors
     cdef public object error_nodes
     cdef public object error_positions
     cdef public int error_flag
     cdef public set inline_tags
     cdef public set omit_tags
     cdef public set empty_tags
+
+    # cpdef swallow(self, node)
+    # cpdef add_error(self, node, error)
+    # cpdef new_error(self, node, message, code)
+    # cpdef get_errors(self, node)
+    cpdef customized_XML(self)
