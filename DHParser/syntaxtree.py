@@ -152,22 +152,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             At any rate, it should only be reassigned during the parsing
             stage and never during or after the AST-transformation.
 
-        errors (list):  A list of all errors that occured on this node.
-
         attr (dict): An optional dictionary of XML-attr. This
             dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', 'errors', '_xml_attr', '_content'
+    __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', '_xml_attr', '_content'
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self.errors = []                # type: List[Error]
         self._pos = -1                  # type: int
         # Assignment to self.result initializes the attr _result, children and _len
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
@@ -186,7 +183,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             duplicate = self.__class__(self.tag_name, copy.deepcopy(self.children), False)
         else:
             duplicate = self.__class__(self.tag_name, self.result, True)
-        duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
         duplicate._pos = self._pos
         duplicate._len = self._len
         if self.attr_active():
@@ -195,19 +191,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return duplicate
 
     def __str__(self):
-        s = "".join(str(child) for child in self.children) if self.children else self.content
-        if self.errors:
-            return ' <<< Error on "%s" | %s >>> ' % \
-                   (s, '; '.join(e.message for e in self.errors))
-        return s
-
+        if isinstance(self, RootNode):
+            root = cast(RootNode, self)
+            errors = root.errors()
+            if errors:
+                e_pos = errors[0].pos
+                return self.content[:e_pos] + \
+                   ' <<< Error on "%s" | %s >>> ' % \
+                   (self.content[e_pos - self.pos:], '; '.join(e.message for e in errors))
+        return self.content
 
     def __repr__(self):
         # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
         # name, ptype = (self._tag_name.split(':') + [''])[:2]
         # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
         rarg = str(self) if not self.children else \
-            "(" + ", ".join(repr(child) for child in self.children) + ")"
+            "(" + ", ".join(child.__repr__() for child in self.children) + ")"
         return "Node(%s, %s)" % (self.tag_name, rarg)
 
 
@@ -226,13 +225,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __eq__(self, other):
         """
         Equality of nodes: Two nodes are considered as equal, if their tag
-        name is the same and if their results are equal.
-
-        Note: It is not required that two nodes have the same errors attached.
-        In case you need to check for error equality as well, compare a
-        serialization that includes error messages, as_sxpr() will do!
+        name is the same, if their results are equal and if their attributes
+        and attribute values are the same.
         """
-        return self.tag_name == other.tag_name and self.result == other.result
+        return self.tag_name == other.tag_name and self.result == other.result \
+            and self.compare_attr(other)
 
 
     def __hash__(self):
@@ -339,9 +336,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @property
     def content(self) -> str:
         """
-        Returns content as string, omitting error messages. If the node has
-        child-nodes, the string content of the child-nodes is recursively read
-        and then concatenated.
+        Returns content as string. If the node has child-nodes, the
+        string content of the child-nodes is recursively read and then
+        concatenated.
         """
         if self._content is None:
             if self.children:
@@ -364,7 +361,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Return structure (and content) as S-expression on a single line
         without any line breaks.
         """
-        return flatten_sxpr(self.as_sxpr(showerrors=False))
+        return flatten_sxpr(self.as_sxpr())
 
 
     @property
@@ -395,6 +392,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self
 
 
+    @property
+    def attr(self):
+        """
+        Returns a dictionary of XML-attr attached to the node.
+        """
+        try:
+            if self._xml_attr is None:          # cython compatibility
+                self._xml_attr = OrderedDict()
+        except AttributeError:
+            self._xml_attr = OrderedDict()
+        return self._xml_attr
+
+
     def attr_active(self) -> bool:
         """
         Returns True, if XML-Attributes of this node have ever been set
@@ -408,17 +418,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return False
 
 
-    @property
-    def attr(self):
+    def compare_attr(self, other: 'Node') -> bool:
         """
-        Returns a dictionary of XML-attr attached to the node.
+        Returns True, if `self` and `other` have the same attributes with the
+        same attribute values.
         """
-        try:
-            if self._xml_attr is None:          # cython compatibility
-                self._xml_attr = OrderedDict()
-        except AttributeError:
-            self._xml_attr = OrderedDict()
-        return self._xml_attr
+        if self.attr_active():
+            if other.attr_active():
+                return self.attr == other.attr
+            return len(self.attr) == 0
+            # self has empty dictionary and other has no attributes
+        elif other.attr_active():
+            return len(other.attr) == 0
+            # other has empty attribute dictionary and self as no attributes
+        return True  # neither self nor other have any attributes
 
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
@@ -484,17 +497,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def as_sxpr(self, src: str = None,
-                showerrors: bool = True,
                 indentation: int = 2,
                 compact: bool = False) -> str:
         """
-        Returns content as S-expression, i.e. in lisp-like form.
+        Returns content as S-expression, i.e. in lisp-like form. If this
+        method is callad on a RootNode-object,
 
         Args:
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
                 reported as line and column.
-            showerrors: If True, error messages will be shown.
             indentation: The number of whitespaces for indentation
             compact:  If True, a compact representation is returned where
                 brackets are omitted and only the indentation indicates the
@@ -503,6 +515,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         left_bracket, right_bracket, density = ('', '', 1) if compact else ('(', '\n)', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
+        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[Node]
 
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""
@@ -513,8 +526,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if src:
                 line, col = line_col(lbreaks, node.pos)
                 txt.append(" `(pos %i %i %i)" % (node.pos, line, col))
-            if showerrors and node.errors:
-                txt.append(" `(err `%s)" % ' '.join(str(err) for err in node.errors))
+            if root and id(node) in root.error_nodes:
+                txt.append(" `(err `%s)" % ' '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt) + '\n'
 
         def closing(node) -> str:
@@ -531,7 +544,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def as_xml(self, src: str = None,
-               showerrors: bool = True,
                indentation: int = 2,
                inline_tags: Set[str] = set(),
                omit_tags: Set[str] = set(),
@@ -543,7 +555,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             src:  The source text or `None`. In case the source text is
                 given the position will also be reported as line and
                 column.
-            showerrors: If True, error messages will be shown.
             indentation: The number of whitespaces for indentation
             inline_tags:  A set of tag names, the content of which will always be written
                 on a single line, unless it contains explicit line feeds ('\n').
@@ -555,6 +566,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             empty_tags:  A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
         """
+        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[Node]
 
         def opening(node) -> str:
             """Returns the opening string for the representation of `node`."""
@@ -567,9 +579,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
-            if showerrors and node.errors and not has_reserved_attrs:
+            if root and id(node) in root.error_nodes and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
-                                                 for err in node.errors))
+                                                 for err in root.get_error(node)))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
@@ -712,14 +724,14 @@ class FrozenNode(Node):
     def attr(self):
         raise AssertionError("Attributes cannot be accessed on a frozen node")
 
-    @property
-    def errors(self) -> List[Error]:
-        return ()
-
-    @errors.setter
-    def errors(self, errors: List[Error]):
-        if errors:
-            raise AssertionError('Cannot assign error list to frozen node')
+    # @property
+    # def errors(self) -> List[Error]:
+    #     return ()
+    #
+    # @errors.setter
+    # def errors(self, errors: List[Error]):
+    #     if errors:
+    #         raise AssertionError('Cannot assign error list to frozen node')
 
     def init_pos(self, pos: int) -> 'Node':
         pass
@@ -741,7 +753,9 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None):
         super().__init__(ZOMBIE_TAG, '')
-        self.all_errors = []  # type: List[Error]
+        self.all_errors = []           # type: List[Error]
+        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
+        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
@@ -758,13 +772,14 @@ class RootNode(Node):
         else:
             duplicate.children = NoChildren
             duplicate._result = self._result
-        duplicate.errors = copy.deepcopy(self.errors) if self.errors else []
         duplicate._pos = self._pos
         duplicate._len = self._len
         if self.attr_active():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
-        duplicate.all_errors = copy.deepcopy(self.all_errors)
+        duplicate.all_errors = copy.copy(self.all_errors)
+        duplicate.error_nodes = copy.copy(self.error_nodes)
+        duplicate.error_positions = copy.deepcopy(self.error_positions)
         duplicate.error_flag = self.error_flag
         duplicate.inline_tags = self.inline_tags
         duplicate.omit_tags = self.omit_tags
@@ -793,6 +808,8 @@ class RootNode(Node):
         if node.attr_active():
             self._xml_attr = node._xml_attr
         self._content = node._content
+        if id(node) in self.error_nodes:
+            self.error_nodes[id(self)] = self.error_nodes[id(node)]
         return self
 
     def add_error(self, node: Node, error: Error) -> 'RootNode':
@@ -802,7 +819,8 @@ class RootNode(Node):
         assert not isinstance(node, FrozenNode)
         self.all_errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
-        node.errors.append(error)
+        self.error_nodes.setdefault(id(node), []).append(error)
+        self.error_positions.setdefault(node.pos, set()).add(id(node))
         return self
 
     def new_error(self,
@@ -820,7 +838,26 @@ class RootNode(Node):
         self.add_error(node, error)
         return self
 
-    def collect_errors(self) -> List[Error]:
+    def get_errors(self, node: Node) -> List[Error]:
+        """
+        Returns the List of errors that occured on the node or any child node
+        at the same position that has already been removed from the tree,
+        for example, because it was an anonymous empty child node.
+        """
+        node_id = id(node)           # type: int
+        errors = []                  # type: List[Error]
+        for nid in self.error_positions[node.pos]:
+            if nid == node_id:
+                errors.extend(self.error_nodes[nid])
+            else:
+                for nd in node.select(lambda n: id(n) == nid):
+                    break
+                else:
+                    # node is not connected to tree any more => display its errors on its parent
+                    errors.extend(self.error_nodes[nid])
+        return errors
+
+    def errors(self) -> List[Error]:
         """
         Returns the list of errors, ordered bv their position.
         """

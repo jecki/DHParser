@@ -69,7 +69,7 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         assert parser
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+        assert not syntax_tree.error_flag, str(syntax_tree.errors())
         assert snippet == str(syntax_tree)
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_direct.cst")
@@ -86,7 +86,7 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         assert parser
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+        assert not syntax_tree.error_flag, syntax_tree.errors()
         assert snippet == str(syntax_tree)
 
     def test_indirect_left_recursion1(self):
@@ -100,13 +100,13 @@ class TestInfiLoopsAndRecursion:
         assert parser
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+        assert not syntax_tree.error_flag, syntax_tree.errors()
         snippet = "7 + 8 * 4"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+        assert not syntax_tree.error_flag, syntax_tree.errors()
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.collect_errors()
+        assert not syntax_tree.error_flag, syntax_tree.errors()
         assert snippet == str(syntax_tree)
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
@@ -119,7 +119,7 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
         # print(syntax_tree.as_sxpr())
-        # print(syntax_tree.collect_errors())
+        # print(syntax_tree.errors())
 
 
 class TestFlowControl:
@@ -324,11 +324,11 @@ class TestSeries:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
-        # print(st.collect_errors())
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        # print(st.errors())
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
 
     def test_series_composition(self):
         TA, TB, TC, TD, TE = (TKN(b) for b in "ABCDE")
@@ -340,9 +340,9 @@ class TestSeries:
         st = parser("ABCDE");  assert not st.error_flag
         st = parser("A_CDE");  assert not st.error_flag
         st = parser("AB_DE");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
         st = parser("ABC_E");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
 
         combined = Alternative(s2 + s1, RegExp('.*'))
         parser = Grammar(combined)
@@ -352,7 +352,7 @@ class TestSeries:
         st = parser("DE_BC");  assert not st.error_flag
         st = parser("DEA_C");  assert not st.error_flag
         st = parser("DEAB_");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
 
     # def test_boundary_cases(self):
     #     lang = """
@@ -463,23 +463,23 @@ class TestPopRetrieve:
     def test_stackhandling(self):
         ambigous_opening = "<ABCnormal> normal tag <ABCnormal*>"
         syntax_tree = self.minilang_parser3(ambigous_opening)
-        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+        assert not syntax_tree.error_flag, str(syntax_tree.errors())
 
         ambigous_opening = "<ABCnormal> normal tag <ABCnormal/>"
         syntax_tree = self.minilang_parser3(ambigous_opening)
-        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+        assert not syntax_tree.error_flag, str(syntax_tree.errors())
 
         forgot_closing_tag = "<em> where is the closing tag?"
         syntax_tree = self.minilang_parser3(forgot_closing_tag)
-        assert syntax_tree.error_flag, str(syntax_tree.collect_errors())
+        assert syntax_tree.error_flag, str(syntax_tree.errors())
 
         proper = "<em> has closing tag <em/>"
         syntax_tree = self.minilang_parser3(proper)
-        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+        assert not syntax_tree.error_flag, str(syntax_tree.errors())
 
         proper = "<em> has closing tag <em*>"
         syntax_tree = self.minilang_parser3(proper)
-        assert not syntax_tree.error_flag, str(syntax_tree.collect_errors())
+        assert not syntax_tree.error_flag, str(syntax_tree.errors())
 
     def test_cache_neutrality(self):
         """Test that packrat-caching does not interfere with the variable-
@@ -496,12 +496,12 @@ class TestPopRetrieve:
         case = "(secret)*. secret"
         gr = grammar_provider(lang)()
         st = gr(case)
-        assert not st.error_flag, str(st.collect_errors())
+        assert not st.error_flag, str(st.errors())
 
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser(teststr)
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="delimiter"))))
         pop = str(next(syntax_tree.select(self.closing_delimiter)))
         assert delim == pop
@@ -518,7 +518,7 @@ class TestPopRetrieve:
             Mehrzeliger ```code block
             """
         syntax_tree = self.minilang_parser(teststr)
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="delimiter"))))
         pop = str(next(syntax_tree.select(self.closing_delimiter)))
         assert delim == pop
@@ -528,7 +528,7 @@ class TestPopRetrieve:
     def test_single_line_complement(self):
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
         syntax_tree = self.minilang_parser2(teststr)
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="braces"))))
         pop = str(next(syntax_tree.select(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
@@ -545,7 +545,7 @@ class TestPopRetrieve:
             Mehrzeliger }}}code block
             """
         syntax_tree = self.minilang_parser2(teststr)
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="braces"))))
         pop = str(next(syntax_tree.select(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
@@ -597,7 +597,7 @@ class TestErrorReporting:
         testcode2 = "XYZ"
         testcode3 = "hallo "
         cst = self.parser(testcode1)
-        assert not cst.error_flag, str(cst.collect_errors())
+        assert not cst.error_flag, str(cst.errors())
         cst = self.parser(testcode2)
         assert not cst.error_flag
         cst = self.parser(testcode3)
@@ -611,9 +611,9 @@ class TestBorderlineCases:
         cst = gr('X', 'parser')
         assert not cst.error_flag
         cst = gr(' ', 'parser')
-        assert cst.error_flag and cst.collect_errors()[0].code == Error.PARSER_DID_NOT_MATCH
+        assert cst.error_flag and cst.errors()[0].code == Error.PARSER_DID_NOT_MATCH
         cst = gr('', 'parser')
-        assert cst.error_flag and cst.collect_errors()[0].code == Error.PARSER_DID_NOT_MATCH
+        assert cst.error_flag and cst.errors()[0].code == Error.PARSER_DID_NOT_MATCH
 
     def test_matching(self):
         minilang = """parser = /.?/"""
@@ -621,7 +621,7 @@ class TestBorderlineCases:
         cst = gr(' ', 'parser')
         assert not cst.error_flag
         cst = gr('  ', 'parser')
-        assert cst.error_flag and cst.collect_errors()[0].code == Error.PARSER_STOPPED_BEFORE_END
+        assert cst.error_flag and cst.errors()[0].code == Error.PARSER_STOPPED_BEFORE_END
         cst = gr('', 'parser')
         assert not cst.error_flag
 
@@ -669,7 +669,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 1
+        assert len(cst.errors()) == 1
 
     def test_failing_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -692,7 +692,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 1
+        assert len(cst.errors()) == 1
 
     def test_several_reentry_points_second_point_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -704,7 +704,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 1
+        assert len(cst.errors()) == 1
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -718,7 +718,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 1
+        assert len(cst.errors()) == 1
         # multiple failures
         content = 'ALPHA acb BETA bad GAMMA cab .'
         cst = gr(content)
@@ -727,7 +727,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 2
+        assert len(cst.errors()) == 2
 
 
 class TestConfiguredErrorMessages:
@@ -740,9 +740,9 @@ class TestConfiguredErrorMessages:
             """
         parser = grammar_provider(lang)()
         st = parser("AB_D");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MALFORMED_ERROR_STRING
-        assert st.collect_errors()[1].code == Error.MANDATORY_CONTINUATION
-        # print(st.collect_errors())
+        assert st.errors()[0].code == Error.MALFORMED_ERROR_STRING
+        assert st.errors()[1].code == Error.MANDATORY_CONTINUATION
+        # print(st.errors())
 
 
 class TestUnknownParserError:

@@ -30,6 +30,7 @@ from DHParser.transform import traverse, reduce_single_child, \
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider
 from DHParser.error import Error
+from DHParser.parse import RE, Grammar
 
 
 class TestParseSxpression:
@@ -82,6 +83,7 @@ class TestNode:
 
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
+        tree.init_pos(0)
         tree_copy = copy.deepcopy(tree)
 
         assert tree == tree_copy
@@ -196,12 +198,18 @@ class TestRootNode:
         root.new_error(tree.children[0], "error B")
         root.swallow(tree)
         assert root.error_flag
-        errors = root.collect_errors()
+        errors = root.errors()
         assert root.error_flag
-        # assert errors == root.collect_errors(True)
-        # assert not root.error_flag and not root.collect_errors()
+        # assert errors == root.errors(True)
+        # assert not root.error_flag and not root.errors()
         error_str = "\n".join(str(e) for e in errors)
         assert error_str.find("A") < error_str.find("B")
+
+    def test_error_reporting(self):
+        number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+        result = str(Grammar(number)("3.1416"))
+        assert result == '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> ', \
+            str(result)
 
 
 class TestNodeFind():

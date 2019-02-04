@@ -225,16 +225,17 @@ def compile_source(source: str,
         log_ST(syntax_tree, log_file_name + '.cst')
         log_parsing_history(parser, log_file_name)
 
-    assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text)
+    assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
+        str(syntax_tree)
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None
     # efl = syntax_tree.error_flag
-    # messages = syntax_tree.collect_errors(clear_errors=True)
+    # messages = syntax_tree.errors(clear_errors=True)
     if not is_error(syntax_tree.error_flag):
         transformer(syntax_tree)
         # efl = max(efl, syntax_tree.error_flag)
-        # messages.extend(syntax_tree.collect_errors(clear_errors=True))
+        # messages.extend(syntax_tree.errors(clear_errors=True))
         if is_logging():
             log_ST(syntax_tree, log_file_name + '.ast')
         if not is_error(syntax_tree.error_flag):
@@ -242,10 +243,10 @@ def compile_source(source: str,
                 ast = copy.deepcopy(syntax_tree)
             result = compiler(syntax_tree)
         # print(syntax_tree.as_sxpr())
-        # messages.extend(syntax_tree.collect_errors())
+        # messages.extend(syntax_tree.errors())
         # syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
 
-    messages = syntax_tree.collect_errors()
+    messages = syntax_tree.errors()
     adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
 

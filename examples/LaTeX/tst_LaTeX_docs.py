@@ -50,7 +50,7 @@ compiler = get_compiler()
 def fail_on_error(src, result):
     if result.error_flag:
         print(result.as_sxpr())
-        for e in result.collect_errors():
+        for e in result.errors():
             print(str(e))
         sys.exit(1)
 

@@ -36,7 +36,7 @@ def run_doctests(module):
 
 if __name__ == "__main__":
     if platform.system() != "Windows":
-        interpreters = ['pypy3 ', 'python3 ']
+        interpreters = ['python3 ', 'pypy3 ']
     else:
         interpreters = ['python.exe ']
 

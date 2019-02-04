@@ -221,7 +221,7 @@ def adjust_error_locations(errors: List[Error],
 
     Args:
         errors:  The list of errors as returned by the method
-            ``collect_errors()`` of a Node object
+            ``errors()`` of a Node object
         original_text:  The source text on which the errors occurred.
             (Needed in order to determine the line and column numbers.)
         source_mapping:  A function that maps error positions to their

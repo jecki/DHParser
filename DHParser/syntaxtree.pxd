@@ -5,7 +5,6 @@
 
 
 cdef class Node:
-    cdef public list errors
     cdef public int _pos
     cdef public object _result
     cdef str _content
@@ -16,6 +15,8 @@ cdef class Node:
 
 cdef class RootNode(Node):
     cdef public list all_errors
+    cdef public object error_nodes
+    cdef public object error_positions
     cdef public int error_flag
     cdef public set inline_tags
     cdef public set omit_tags

@@ -410,7 +410,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
                 # log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
-            raw_errors = cst.collect_errors()
+            raw_errors = cst.errors()
             if is_error(cst.error_flag) and not lookahead_artifact(parser, raw_errors):
                 errors = adjust_error_locations(raw_errors, test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
@@ -454,7 +454,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
-            if not is_error(cst.error_flag) and not lookahead_artifact(parser, cst.collect_errors()):
+            if not is_error(cst.error_flag) and not lookahead_artifact(parser, cst.errors()):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
@@ -463,7 +463,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                     log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
                 tests.setdefault('__msg__', {})[test_name] = \
-                    "\n".join(str(e) for e in cst.collect_errors())
+                    "\n".join(str(e) for e in cst.errors())
             if verbose:
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 

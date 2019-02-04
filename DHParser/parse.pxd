@@ -11,8 +11,6 @@ cdef class Parser:
     cdef object recursion_counter
     cdef object cycle_detection
 
-    cpdef _return_node(self, node)
-    cpdef _return_node_from_results(self, results)
     cpdef _parse(self, text)
     cpdef reset(self)
     cpdef _apply(self, func, flip)
@@ -58,55 +56,59 @@ cdef class RegExp(Parser):
 cdef class Whitespace(RegExp):
     pass
 
-cdef class UnaryOperator(Parser):
+cdef class MetaParser(Parser):
+    cpdef _return_value(self, node)
+    cpdef _return_values(self, results)
+
+cdef class UnaryParser(MetaParser):
     cdef public object parser
 
-cdef class NaryOperator(Parser):
+cdef class NaryParser(MetaParser):
     cdef public object parsers
 
-cdef class Option(UnaryOperator):
+cdef class Option(UnaryParser):
     pass
 
 cdef class ZeroOrMore(Option):
     pass
 
-cdef class OneOrMore(UnaryOperator):
+cdef class OneOrMore(UnaryParser):
     pass
 
-cdef class Series(NaryOperator):
+cdef class Series(NaryParser):
     cdef public int mandatory
     cdef public object err_msgs
     cdef public object skip
 
-cdef class Alternative(NaryOperator):
+cdef class Alternative(NaryParser):
     pass
 
-cdef class AllOf(NaryOperator):
+cdef class AllOf(NaryParser):
     cdef public int num_parsers
     cdef public int mandatory
     cdef public object err_msgs
     cdef public object skip
 
-cdef class SomeOf(NaryOperator):
+cdef class SomeOf(NaryParser):
     pass
 
-cdef class FlowOperator(UnaryOperator):
+cdef class FlowParser(UnaryParser):
     pass
 
-cdef class Lookahead(FlowOperator):
+cdef class Lookahead(FlowParser):
     pass
 
 cdef class NegativeLookahead(Lookahead):
     pass
 
-cdef class Lookbehind(FlowOperator):
+cdef class Lookbehind(FlowParser):
     cdef public object regexp
     cdef public str text
 
 cdef class NegativeLookbehind(Lookbehind):
     pass
 
-cdef class Capture(UnaryOperator):
+cdef class Capture(UnaryParser):
     pass
 
 cdef class Retrieve(Parser):
@@ -116,7 +118,7 @@ cdef class Retrieve(Parser):
 cdef class Pop(Retrieve):
     cdef public list values
 
-cdef class Synonym(UnaryOperator):
+cdef class Synonym(UnaryParser):
     pass
 
 cdef class Forward(Parser):

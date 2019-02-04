@@ -53,6 +53,7 @@ import contextlib
 import html
 import os
 
+from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node
 from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS, typing
@@ -192,7 +193,7 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'text', 'line_col')
+    __slots__ = ('call_stack', 'node', 'text', 'line_col', 'errors')
 
     MATCH = "MATCH"
     ERROR = "ERROR"
@@ -221,12 +222,14 @@ class HistoryRecord:
     def __init__(self, call_stack: List[str],
                  node: Node,
                  text: StringView,
-                 line_col: Tuple[int, int]) -> None:
+                 line_col: Tuple[int, int],
+                 errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         self.call_stack = [tn for tn in call_stack if tn != ":Forward"]  # type: List[str]
         self.node = node                # type: Node
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
+        self.errors = errors            # type: List[Error]
 
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
@@ -278,7 +281,7 @@ class HistoryRecord:
                                    for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(str(e) for e in (self.node.errors))
+        return self.ERROR + ": " + "; ".join(str(e) for e in (self.errors))
 
     @property
     def stack(self) -> str:
@@ -287,7 +290,7 @@ class HistoryRecord:
     @property
     def status(self) -> str:
         return self.FAIL if self.node is None else \
-            ('"%s"' % self.err_msg()) if self.node.errors else self.MATCH
+            ('"%s"' % self.err_msg()) if self.errors else self.MATCH
 
     @property
     def excerpt(self):

@@ -52,36 +52,36 @@ class TestDirectives:
         assert parser
         syntax_tree = parser("3 + 4 * 12")
         # parser.log_parsing_history("WSP")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n * 12")
         # parser.log_parsing_history("WSPLF")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n \n * 12")
-        assert syntax_tree.collect_errors()
+        assert syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n\n * 12")
-        assert syntax_tree.collect_errors()
+        assert syntax_tree.errors()
 
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language
         parser = grammar_provider(lang)()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n * 12")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n \n * 12")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n\n * 12")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
 
     def test_whitespace_horizontal(self):
         lang = "@ whitespace = horizontal\n" + self.mini_language
         parser = grammar_provider(lang)()
         assert parser
         syntax_tree = parser("3 + 4 * 12")
-        assert not syntax_tree.collect_errors()
+        assert not syntax_tree.errors()
         syntax_tree = parser("3 + 4 \n * 12")
-        assert syntax_tree.collect_errors()
+        assert syntax_tree.errors()
 
 
 class TestReservedSymbols:
@@ -176,7 +176,7 @@ class TestParserNameOverwriteBug:
         get_ebnf_transformer()(st)
         # print(st.as_sxpr())
         result = get_ebnf_compiler()(st)
-        messages = st.collect_errors()
+        messages = st.errors()
         assert not has_errors(messages), str(messages)
 
     def test_single_mandatory_bug(self):
@@ -194,9 +194,9 @@ class TestSemanticValidation:
     def check(self, minilang, bool_filter=lambda x: x):
         grammar = get_ebnf_grammar()
         st = grammar(minilang)
-        assert not st.collect_errors()
+        assert not st.errors()
         EBNFTransform()(st)
-        assert bool_filter(st.collect_errors())
+        assert bool_filter(st.errors())
 
     def test_illegal_nesting(self):
         self.check('impossible = { [ "an optional requirement" ] }')
@@ -477,12 +477,12 @@ class TestErrorCustomization:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message == "a user defined error message"
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message == "a user defined error message"
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message == "a user defined error message"
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message == "a user defined error message"
 
     def test_customized_error_case_sensitive(self):
         lang = """
@@ -493,8 +493,8 @@ class TestErrorCustomization:
             """
         parser = grammar_provider(lang)()
         st = parser("ABC_");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message == "a user defined error message"
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message == "a user defined error message"
 
     def test_multiple_error_messages(self):
         lang = """
@@ -509,21 +509,21 @@ class TestErrorCustomization:
             """
         parser = grammar_provider(lang)()
         st = parser("AB*D");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message == "the asterix is wrong in this place"
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message == "the asterix is wrong in this place"
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message == "the underscore is wrong in this place"
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message == "the underscore is wrong in this place"
         st = parser("ABiD");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message.startswith('wrong letter')
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message.startswith('wrong letter')
         st = parser("AB+D");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message == "fallback error message"
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message == "fallback error message"
         st = parser("ABCi");  assert st.error_flag
-        assert st.collect_errors()[0].code == Error.MANDATORY_CONTINUATION
-        assert st.collect_errors()[0].message.startswith('C cannot be followed by')
+        assert st.errors()[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors()[0].message.startswith('C cannot be followed by')
 
 
 class TestErrorCustomizationErrors:
@@ -600,7 +600,7 @@ class TestCustomizedResumeParsing:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 1
+        assert len(cst.errors()) == 1
 
         content = 'ALPHA acb BETA bad GAMMA cab .'
         cst = gr(content)
@@ -609,7 +609,7 @@ class TestCustomizedResumeParsing:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 2
+        assert len(cst.errors()) == 2
 
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
@@ -618,7 +618,7 @@ class TestCustomizedResumeParsing:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
-        assert len(cst.collect_errors()) == 1
+        assert len(cst.errors()) == 1
 
 
 class TestInSeriesResume:
@@ -634,29 +634,29 @@ class TestInSeriesResume:
         st = self.gr('ABCDEFG')
         assert not st.error_flag
         st = self.gr('AB XYZ CDEFG')
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) == 1 and errors[0].code == Error.MANDATORY_CONTINUATION
         st = self.gr('AB XYZ CDE XYZ FG')
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
         st = self.gr('AB XYZ CDE XNZ FG')  # fails to resume parsing
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) >= 1 and errors[0].code == Error.MANDATORY_CONTINUATION
 
     def test_series_gap(self):
         st = self.gr('ABDEFG')
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) == 1 and errors[0].code == Error.MANDATORY_CONTINUATION
         st = self.gr('ABXEFG')  # two missing, one wrong element added
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
         st = self.gr('AB_DE_G')
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
 
     def test_series_permutation(self):
         st = self.gr('ABEDFG')
-        errors = st.collect_errors()
+        errors = st.errors()
         assert len(errors) >= 1  # cannot really recover from permutation errors
 
 
@@ -674,7 +674,7 @@ class TestAllOfResume:
         st = self.gr('GFCBAED')
         assert not st.error_flag
         st = self.gr('GFCB XYZ AED')
-        errors = st.collect_errors()
+        errors = st.errors()
         assert errors[0].code == Error.MANDATORY_CONTINUATION
         assert str(errors[0]).find(':-(') >= 0
 
@@ -697,9 +697,9 @@ class TestAllOfResume:
         assert not st.error_flag
         st = gr('EDXYZ.')
         assert st.error_flag
-        assert len(st.collect_errors()) == 1
+        assert len(st.errors()) == 1
         st = gr('FCB_GAED.')
-        assert len(st.collect_errors()) == 1
+        assert len(st.errors()) == 1
 
 
     def test_complex_resume_task(self):
@@ -722,11 +722,11 @@ class TestAllOfResume:
         assert not st.error_flag
         st = gr('EDXYZ.')
         assert st.error_flag
-        assert len(st.collect_errors()) == 1
+        assert len(st.errors()) == 1
         st = gr('FCB_GAED.')
-        assert len(st.collect_errors()) == 2
+        assert len(st.errors()) == 2
         st = gr('EXY EXYZ.')
-        assert len(st.collect_errors()) == 1
+        assert len(st.errors()) == 1
 
 
 

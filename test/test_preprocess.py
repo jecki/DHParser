@@ -156,7 +156,7 @@ class TestTokenParsing:
 
     def test_parse_tokenized(self):
         cst = self.grammar(self.tokenized)
-        # for e in cst.collect_errors(self.tokenized):
+        # for e in cst.errors(self.tokenized):
         #     print(e.visualize(self.tokenized) + str(e))
         #     print()
         assert not cst.error_flag

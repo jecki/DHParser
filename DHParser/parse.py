@@ -55,6 +55,7 @@ __all__ = ('Parser',
            'Whitespace',
            'DropWhitespace',
            'mixin_comment',
+           'MetaParser',
            'UnaryParser',
            'NaryParser',
            'Synonym',
@@ -352,11 +353,17 @@ class Parser:
             if grammar.history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)
-                if (grammar.moving_forward__ or (node and node.errors)):
+                if grammar.moving_forward__:
                     record = HistoryRecord(grammar.call_stack__, node or EMPTY_NODE, text,
                                            grammar.line_col__(text))
                     grammar.history__.append(record)
-                    # print(record.stack, record.status, rest[:20].replace('\n', '|'))
+                elif node:
+                    nid = id(node)  # type: int
+                    if nid in grammar.tree__.error_nodes:
+                        record = HistoryRecord(grammar.call_stack__, node or EMPTY_NODE, text,
+                                               grammar.line_col__(text),
+                                               grammar.tree__.error_nodes[nid])
+                        grammar.history__.append(record)
                 grammar.moving_forward__ = False
                 grammar.call_stack__.pop()
 
@@ -937,7 +944,7 @@ class Grammar:
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
         # result.pos = 0  # calculate all positions
-        # result.collect_errors(self.document__)
+        # result.errors(self.document__)
         if result:
             self.tree__.swallow(result)
         self.start_parser__ = None
@@ -1248,12 +1255,12 @@ class MetaParser(Parser):
                 return Node(self.tag_name, node) if self.pname else node
             elif self.pname:
                 nd1 = Node(self.tag_name, ())  # type: Node
-                nd1.errors = node.errors
+                # nd1.errors = node.errors
                 return nd1
-            elif node.errors:
-                nd2 = Node(self.tag_name, ())  # type: Node
-                nd2.errors = node.errors
-                return nd2
+            # elif node.errors:
+            #     nd2 = Node(self.tag_name, ())  # type: Node
+            #     nd2.errors = node.errors
+            #     return nd2
         elif self.pname:
             return Node(self.tag_name, ())  # type: Node
         return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
@@ -1585,7 +1592,7 @@ class Series(NaryParser):
                     else:
                         results += (node,)
                         break
-            if node._result or parser.pname or node.errors:  # optimization
+            if node._result or parser.pname:  # optimization
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
@@ -1673,7 +1680,7 @@ class Alternative(NaryParser):
             node, text_ = parser(text)
             if node:
                 return Node(self.tag_name,
-                            node if node._result or parser.pname or node.errors else ()), text_
+                            node if node._result or parser.pname else ()), text_
         return None, text
 
     def __repr__(self):
@@ -1784,7 +1791,7 @@ class AllOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or parser.pname or node.errors:
+                    if node._result or parser.pname:
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -1849,7 +1856,7 @@ class SomeOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or parser.pname or node.errors:
+                    if node._result or parser.pname:
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -2129,7 +2136,7 @@ class Pop(Retrieve):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = self.retrieve_and_match(text)
-        if node and not node.errors:
+        if node and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol.pname].pop())
             location = self.grammar.document_length__ - len(text)
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
