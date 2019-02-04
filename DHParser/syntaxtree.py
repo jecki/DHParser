@@ -752,7 +752,7 @@ class RootNode(Node):
     """
 
     def __init__(self, node: Optional[Node] = None):
-        super().__init__(ZOMBIE_TAG, '')
+        super().__init__('__not_yet_ready__', '')
         self.all_errors = []           # type: List[Error]
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
         self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
@@ -817,7 +817,12 @@ class RootNode(Node):
         Adds an Error object to the tree, locating it at a specific node.
         """
         assert not isinstance(node, FrozenNode)
-        self.all_errors.append(error)
+        assert node.pos == error.pos
+        # self.all_errors.append(error)
+        for i in range(len(self.all_errors)):
+            if node.pos < self.all_errors[i].pos:
+                break
+        self.all_errors.insert(i, error)
         self.error_flag = max(self.error_flag, error.code)
         self.error_nodes.setdefault(id(node), []).append(error)
         self.error_positions.setdefault(node.pos, set()).add(id(node))
@@ -857,11 +862,12 @@ class RootNode(Node):
                     errors.extend(self.error_nodes[nid])
         return errors
 
+    @property
     def errors(self) -> List[Error]:
         """
         Returns the list of errors, ordered bv their position.
         """
-        self.all_errors.sort(key=lambda e: e.pos)
+        # self.all_errors.sort(key=lambda e: e.pos)
         return self.all_errors
 
     def customized_XML(self):
