@@ -193,7 +193,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __str__(self):
         if isinstance(self, RootNode):
             root = cast(RootNode, self)
-            errors = root.errors()
+            errors = root.errors_sorted
             if errors:
                 e_pos = errors[0].pos
                 return self.content[:e_pos] + \
@@ -743,7 +743,7 @@ PLACEHOLDER = Node('__PLACEHOLDER__', '')
 class RootNode(Node):
     """TODO: Add Documentation!!!
 
-        all_errors (list):  A list of all errors that have occured so far during
+        errors (list):  A list of all errors that have occured so far during
                 processing (i.e. parsing, AST-transformation, compiling)
                 of this tree.
 
@@ -753,7 +753,7 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None):
         super().__init__('__not_yet_ready__', '')
-        self.all_errors = []           # type: List[Error]
+        self.errors = []           # type: List[Error]
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
         self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
         self.error_flag = 0
@@ -777,7 +777,7 @@ class RootNode(Node):
         if self.attr_active():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
-        duplicate.all_errors = copy.copy(self.all_errors)
+        duplicate.errors = copy.copy(self.errors)
         duplicate.error_nodes = copy.copy(self.error_nodes)
         duplicate.error_positions = copy.deepcopy(self.error_positions)
         duplicate.error_flag = self.error_flag
@@ -818,11 +818,7 @@ class RootNode(Node):
         """
         assert not isinstance(node, FrozenNode)
         assert node.pos == error.pos
-        # self.all_errors.append(error)
-        for i in range(len(self.all_errors)):
-            if node.pos < self.all_errors[i].pos:
-                break
-        self.all_errors.insert(i, error)
+        self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         self.error_nodes.setdefault(id(node), []).append(error)
         self.error_positions.setdefault(node.pos, set()).add(id(node))
@@ -863,12 +859,12 @@ class RootNode(Node):
         return errors
 
     @property
-    def errors(self) -> List[Error]:
+    def errors_sorted(self) -> List[Error]:
         """
         Returns the list of errors, ordered bv their position.
         """
-        # self.all_errors.sort(key=lambda e: e.pos)
-        return self.all_errors
+        self.errors.sort(key=lambda e: e.pos)
+        return self.errors
 
     def customized_XML(self):
         """

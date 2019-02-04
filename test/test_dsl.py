@@ -52,7 +52,7 @@ class TestCompileFunctions:
         assert callable(factory)
         parser = factory()
         result = parser("5 + 3 * 4")
-        assert not result.error_flag, str(result.errors())
+        assert not result.error_flag, str(result.errors_sorted)
         result = parser("5A + 4B ** 4C")
         assert is_error(result.error_flag)
 

@@ -283,4 +283,4 @@ syntax_tree = parse(markdown_text, parser)
 ASTTransform(syntax_tree, MDTransTable)
 
 print(syntax_tree.as_sxpr())
-print(error_messages(markdown_text, syntax_tree.errors()))
+print(error_messages(markdown_text, syntax_tree.errors_sorted()))

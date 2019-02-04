@@ -91,7 +91,7 @@ class TestNode:
         assert tree_copy.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
 
         tree.add_error(tree, Error('Test Error', 0))
-        assert not tree_copy.all_errors
+        assert not tree_copy.errors
         assert tree.as_sxpr() != parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
         assert tree_copy.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
 
@@ -198,7 +198,7 @@ class TestRootNode:
         root.new_error(tree.children[0], "error B")
         root.swallow(tree)
         assert root.error_flag
-        errors = root.errors()
+        errors = root.errors_sorted
         assert root.error_flag
         # assert errors == root.errors(True)
         # assert not root.error_flag and not root.errors()

@@ -246,7 +246,7 @@ def compile_source(source: str,
         # messages.extend(syntax_tree.errors())
         # syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
 
-    messages = syntax_tree.errors()
+    messages = syntax_tree.errors_sorted
     adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
 
