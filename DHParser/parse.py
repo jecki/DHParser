@@ -1267,6 +1267,7 @@ class MetaParser(Parser):
         # return Node(self.tag_name, results)  # unoptimized code
         assert isinstance(results, tuple)
         N = len(results)
+        # TODO: if N >= 2, flatten results!
         if N > 1:
             return Node(self.tag_name, results)
         elif N == 1:

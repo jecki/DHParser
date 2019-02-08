@@ -562,17 +562,17 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar']
-        transtable.append('    "<": remove_empty,')
+        transtable.append('    "<": eliminate_anonymous_nodes,')
         for name in self.rules:
             transformations = '[]'
-            rule = self.definitions[name]
-            if rule.startswith('Alternative'):
-                transformations = '[replace_or_reduce]'
-            elif rule.startswith('Synonym'):
-                transformations = '[reduce_single_child]'
+            # rule = self.definitions[name]
+            # if rule.startswith('Alternative'):
+            #     transformations = '[replace_or_reduce]'
+            # elif rule.startswith('Synonym'):
+            #     transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        transtable.append('    ":Token": reduce_single_child,')
-        transtable += ['    "*": replace_by_single_child', '}', '']
+        # transtable.append('    ":Token": reduce_single_child,')
+        # transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(transtable)
 

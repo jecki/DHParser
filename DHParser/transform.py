@@ -46,6 +46,8 @@ __all__ = ('TransformationDict',
            'key_tag_name',
            'traverse',
            'is_named',
+           'update_attr',
+           'eliminate_anonymous_nodes',
            'replace_by_single_child',
            'reduce_single_child',
            'replace_or_reduce',
@@ -484,6 +486,16 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 #######################################################################
 
 
+def update_attr(node: Node, child: Node):
+    if hasattr(child, '_xml_attr'):
+        for k, v in child.attr:
+            if k in node.attr and v != node.attr[k]:
+                raise ValueError('Conflicting attribute values %s and %s for key %s '
+                                 'when reducing %s to %s ! Tree transformation stopped.'
+                                 % (v, node.attr[k], k, str(child), str(node)))
+            node.attr[k] = v
+
+
 def _replace_by(node: Node, child: Node):
     if node.is_anonymous() or not child.is_anonymous():
         node.tag_name = child.tag_name
@@ -491,14 +503,12 @@ def _replace_by(node: Node, child: Node):
         # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node.result = child.result
-    if hasattr(child, '_xml_attr'):
-        node.attr.update(child.attr)
+    update_attr(node, child)
 
 
 def _reduce_child(node: Node, child: Node):
     node.result = child.result
-    if hasattr(child, '_xml_attr'):
-        node.attr.update(child.attr)
+    update_attr(node, child)
 
 
 #######################################################################
@@ -549,6 +559,32 @@ def _reduce_child(node: Node, child: Node):
 #         _reduce_child(context[-1], child)
 
 
+@transformation_factory
+def eliminate_anonymous_nodes(context: List[Node]):
+    node = context[-1]
+    if node.children:
+        new_result = []
+        for child in node.children:
+            if child.is_anonymous():
+                if child.children:
+                    new_result.extend(child.children)
+                    update_attr(node, child)
+                elif child.result:
+                    new_result.append(child)
+            else:
+                new_result.append(child)
+        if len(new_result) == 1:
+            child = new_result[0]
+            if node.is_anonymous():
+                node.tag_name = child.tag_name
+                new_result = [child.result]
+                update_attr(node, child)
+            elif child.is_anonymous():
+                new_result = [child.result]
+                update_attr(node, child)
+        node.result = tuple(new_result)
+
+
 def replace_by_single_child(context: List[Node]):
     """
     Removes single branch node, replacing it by its immediate descendant.
@@ -581,7 +617,7 @@ def replace_or_reduce(context: List[Node], condition: Callable = is_named):
     node = context[-1]
     if len(node.children) == 1:
         child = node.children[0]
-        if condition(context):
+        if condition(context):   # TODO: bug here?
             _replace_by(node, child)
         else:
             _reduce_child(node, child)
@@ -631,6 +667,7 @@ def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: 
                 if recursive:
                     flatten(context, condition, recursive)
                 new_result.extend(child.children)
+                update_attr(node, child)
             else:
                 new_result.append(child)
         context.pop()
