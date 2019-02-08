@@ -290,7 +290,6 @@ XML_AST_transformation_table = {
     "Char": [],
     "S": [],
     "EOF": [],
-    ":_Token, :_RE": reduce_single_child,
     "*": replace_by_single_child
 }
 

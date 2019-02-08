@@ -1,0 +1,34 @@
+@ whitespace = horizontal
+@ drop = whitespace
+
+gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text /\s*/ ENDE
+
+bibliographisches = autor §"," [NZ~] werk "," [NZ~] ort "," [NZ~] jahr "."
+autor             = namenfolge [verknüpfung]
+werk              = wortfolge ["." §untertitel] [verknüpfung]
+untertitel        = wortfolge [verknüpfung]
+ort               = wortfolge [verknüpfung]
+jahr              = JAHRESZAHL ~
+
+wortfolge         = { WORT [L] }+
+namenfolge        = { NAME [L] }+
+verknüpfung       = "<" ziel ">"
+ziel              = ZEICHENFOLGE ~
+
+serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
+
+titel             = { NZ [L] zeile { LEERZEILE }+ }+
+zeile             = { ZEICHENFOLGE [L] }+
+
+text              = { strophe {LEERZEILE} }+
+strophe           = { NZ vers }+
+vers              = { ZEICHENFOLGE [L] }+
+
+WORT              = /\w+/
+NAME              = /\w+\.?/
+ZEICHENFOLGE      = /[^ \n<>]+/
+NZ                = /\n/
+LEERZEILE         = /\n[ \t]*(?=\n)/~
+JAHRESZAHL        = /\d\d\d\d/
+ENDE              = !/./
+L                 = /[ \t]+/~           # signifikanter leerraum

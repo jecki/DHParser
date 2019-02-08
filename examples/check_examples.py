@@ -19,6 +19,13 @@ if __name__ == "__main__":
     example_dirs = os.listdir(os.path.join(rootdir, 'examples'))
     run = 0
     failures = 0
+
+    def check(ret):
+        global run, failures
+        run += 1
+        if ret > 0:
+            failures += 1
+
     for example in example_dirs:
         example_path = os.path.join(rootdir, 'examples', example)
         if os.path.isdir(example_path):
@@ -28,10 +35,14 @@ if __name__ == "__main__":
                 if os.path.isfile(name) \
                         and (name == "recompile_grammar.py" or fnmatch.fnmatch(name, 'tst_*.py')):
                     print(os.path.join(example_path, name))
-                    ret = os.system(interpreter + name)
-                    run += 1
-                    if ret > 0:
-                        failures += 1
+                    check(os.system(interpreter + name))
             os.chdir(save)
+
+    save = os.getcwd()
+    os.chdir(os.path.join(scriptdir, 'Tutorial'))
+    check(os.system('python LyrikCompiler.py Lyrisches_Intermezzo_IV.txt'))
+    check(os.system('python LyrikCompiler_example.py Lyrisches_Intermezzo_IV.txt'))
+
+    os.chdir(save)
     print()
     print("{} tests run, {} tests failed".format(run, failures))

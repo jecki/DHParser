@@ -382,7 +382,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         This function recursively reassigns the position values
         of the child nodes, too.
         """
-        assert self._pos < 0 or self.pos == pos, str("pos mismatch %i != %i" % (self._pos, pos))
+        # condition self.pos == pos cannot be assumed when tokens or whitespace
+        # are dropped early!
+        # assert self._pos < 0 or self.pos == pos, ("pos mismatch %i != %i at Node: %s"
+        #                                           % (self._pos, pos, repr(self)))
         self._pos = pos
         # recursively adjust pos-values of all children
         offset = self.pos

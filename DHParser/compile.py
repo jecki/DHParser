@@ -226,7 +226,7 @@ def compile_source(source: str,
         log_parsing_history(parser, log_file_name)
 
     assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
-        str(syntax_tree)
+        str(syntax_tree) # TODO: Ony valid if neither tokens or whitespace are dropped early!s
     # only compile if there were no syntax errors, for otherwise it is
     # likely that error list gets littered with compile error messages
     result = None

@@ -369,29 +369,53 @@ up, how the AST-transformation is specified with DHParser. For this
 purpose, you can have a look in file `LyrikCompiler_example.py`. If you
 scroll down to the AST section, you'll see something like this:
 
-    Lyrik_AST_transformation_table = {
-        # AST Transformations for the Lyrik-grammar
-        "+": remove_empty,
-        "bibliographisches": [remove_nodes('NZ'), remove_tokens],
-        "autor, werk, untertitel, ort": [],
-        "jahr": [content_from_sinlge_child],
-        "wortfolge": [flatten(is_one_of('WORT'), recursive=False), remove_last(is_whitespace), collapse],
-        "namenfolge": [flatten(is_one_of('NAME'), recursive=False), remove_last(is_whitespace), collapse],
-        "verknüpfung": [remove_tokens('<', '>'), content_from_sinlge_child],
-        "ziel": content_from_sinlge_child,
-        "gedicht, strophe, text": [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
-        "titel, serie": [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'), collapse],
-        "vers": collapse,
-        "zeile": [],
-        "ZEICHENFOLGE, NZ, JAHRESZAHL": content_from_sinlge_child,
-        "WORT, NAME, LEERZEILE, ENDE": [],
-        ":Whitespace": replace_content(lambda node : " "),
-        ":Token": content_from_sinlge_child,
-        "*": replace_by_single_child
-    }
+Lyrik_AST_transformation_table = {
+    # AST Transformations for the Lyrik-grammar
+    "<": remove_empty,
+    "bibliographisches":
+        [flatten, remove_nodes('NZ'), remove_whitespace, remove_tokens],
+    "autor": [],
+    "werk": [],
+    "untertitel": [],
+    "ort": [],
+    "jahr":
+        [reduce_single_child, remove_whitespace, reduce_single_child],
+    "wortfolge":
+        [flatten(is_one_of('WORT'), recursive=False), peek, rstrip,
+         collapse],
+    "namenfolge":
+        [flatten(is_one_of('NAME'), recursive=False), peek, rstrip,
+         collapse],
+    "verknüpfung":
+        [flatten, remove_tokens('<', '>'), remove_whitespace,
+         reduce_single_child],
+    "ziel":
+        [reduce_single_child, remove_whitespace, reduce_single_child],
+    "gedicht, strophe, text":
+        [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
+    "titel, serie":
+        [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'),
+         collapse],
+    "zeile": [strip],
+    "vers":
+        [strip, collapse],
+    "WORT": [],
+    "NAME": [],
+    "ZEICHENFOLGE":
+        reduce_single_child,
+    "NZ":
+        reduce_single_child,
+    "LEERZEILE": [],
+    "JAHRESZAHL":
+        [reduce_single_child],
+    "ENDE": [],
+    ":Whitespace":
+        replace_content(lambda node: " "),
+    "*": replace_by_single_child
+}
 
-As you can see, AST-transformations are specified declaratively (with the
-option to add your own Python-programmed transformation rules). This
+As you can see, AST-transformations are specified declaratively (with
+the option to add your own Python-programmed transformation rules). This
 keeps the specification of the AST-transformation simple and concise. At
 the same, we avoid adding hints for the AST-transformation in the
 grammar specification, which would render the grammar less readable.

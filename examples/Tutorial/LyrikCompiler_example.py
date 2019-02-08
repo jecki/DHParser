@@ -25,7 +25,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
     is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
-    is_whitespace, TOKEN_PTYPE
+    is_whitespace, TOKEN_PTYPE, GLOBALS
 from DHParser.log import logging
 
 
@@ -83,7 +83,7 @@ class LyrikGrammar(Grammar):
     ENDE              = !/./
     """
     source_hash__ = "6602d99972ef2883e28bd735e1fe0401"
-    parser_initialization__ = "upon instantiation"
+    parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
@@ -116,12 +116,12 @@ class LyrikGrammar(Grammar):
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
-    global thread_local_Lyrik_grammar_singleton
+    global GLOBALS
     try:
-        grammar = thread_local_Lyrik_grammar_singleton
-    except NameError:
-        thread_local_Lyrik_grammar_singleton = LyrikGrammar()
-        grammar = thread_local_Lyrik_grammar_singleton
+        grammar = GLOBALS.Lyrik_grammar_singleton
+    except AttributeError:
+        GLOBALS.Lyrik_grammar_singleton = LyrikGrammar()
+        grammar = GLOBALS.Lyrik_grammar_singleton
     return grammar
 
 
@@ -171,15 +171,22 @@ Lyrik_AST_transformation_table = {
         [reduce_single_child],
     "ENDE": [],
     ":Whitespace":
-        replace_content(lambda node : " "),
+        replace_content(lambda node: " "),
     "*": replace_by_single_child
 }
 
-LyrikTransform = partial(traverse, processing_table=Lyrik_AST_transformation_table)
+def LyrikTransform() -> TransformationDict:
+    return partial(traverse, processing_table=Lyrik_AST_transformation_table)
 
 
 def get_transformer() -> TransformationFunc:
-    return LyrikTransform
+    global GLOBALS
+    try:
+        transform = GLOBALS.Lyrik_transformer_singleton
+    except AttributeError:
+        GLOBALS.Lyrik_transformer_singleton = LyrikTransform()
+        transform = GLOBALS.Lyrik_transformer_singleton
+    return transform
 
 
 #######################################################################
@@ -266,13 +273,13 @@ class LyrikCompiler(Compiler):
 
 
 def get_compiler() -> LyrikCompiler:
-    global thread_local_Lyrik_compiler_singleton
+    global GLOBALS
     try:
-        compiler = thread_local_Lyrik_compiler_singleton
-        return compiler
-    except NameError:
-        thread_local_Lyrik_compiler_singleton = LyrikCompiler()
-        return thread_local_Lyrik_compiler_singleton 
+        compiler = GLOBALS.Lyrik_compiler_singleton
+    except AttributeError:
+        GLOBALS.Lyrik_compiler_singleton = LyrikCompiler()
+        compiler = GLOBALS.Lyrik_compiler_singleton
+    return compiler
 
 
 #######################################################################
