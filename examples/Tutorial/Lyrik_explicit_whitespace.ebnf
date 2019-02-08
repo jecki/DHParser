@@ -1,5 +1,5 @@
 @ whitespace = horizontal
-@ drop = whitespace
+@ drop = whitespace, token
 
 gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text /\s*/ ENDE
 

@@ -401,7 +401,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
             except UnknownParserError as upe:
                 cst = RootNode()
-                cst = cst.new_error(Node(ZOMBIE_TAG, "").init_pos(0), str(upe))
+                cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
             # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
@@ -450,7 +450,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             try:
                 cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
             except UnknownParserError as upe:
-                node = Node(ZOMBIE_TAG, "").init_pos(0)
+                node = Node(ZOMBIE_TAG, "").with_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]

@@ -27,12 +27,13 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compile_python_object
 from DHParser.log import logging, is_logging, log_ST, log_parsing_history
 from DHParser.error import Error
-from DHParser.parse import Retrieve, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
+from DHParser.parse import Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError
+    UnknownParserError, MetaParser, EMPTY_NODE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
+from DHParser.syntaxtree import Node
 
 
 class TestParserClass:
@@ -783,6 +784,51 @@ class TestEarlyTokenWhitespaceDrop:
             pass
         cst = self.gr('X * y')
         assert next(cst.select(lambda node: node.content == 'X'))
+
+
+class TestMetaParser:
+    def test_meta_parser(self):
+        mp = MetaParser()
+        mp.pname = "named"
+        mp.tag_name = mp.pname
+        nd = mp._return_value(Node('tagged', 'non-empty'))
+        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert len(nd.children) == 1
+        assert nd.children[0].tag_name == 'tagged'
+        assert nd.children[0].result == "non-empty"
+        nd = mp._return_value(Node('tagged', ''))
+        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert len(nd.children) == 1
+        assert nd.children[0].tag_name == 'tagged'
+        assert not nd.children[0].result
+        nd = mp._return_value(Node(':anonymous', 'content'))
+        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert not nd.children
+        assert nd.result == 'content'
+        nd = mp._return_value(Node(':anonymous', ''))
+        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert not nd.children
+        assert not nd.content
+        mp.pname = ''
+        mp.tag_name = ':unnamed'
+        nd = mp._return_value(Node('tagged', 'non-empty'))
+        assert nd.tag_name == 'tagged', nd.as_sxpr()
+        assert len(nd.children) == 0
+        assert nd.content == 'non-empty'
+        nd = mp._return_value(Node('tagged', ''))
+        assert nd.tag_name == 'tagged', nd.as_sxpr()
+        assert len(nd.children) == 0
+        assert not nd.content
+        nd = mp._return_value(Node(':anonymous', 'content'))
+        assert nd.tag_name == ':anonymous', nd.as_sxpr()
+        assert not nd.children
+        assert nd.result == 'content'
+        nd = mp._return_value(Node('', ''))
+        assert nd.tag_name == '', nd.as_sxpr()
+        assert not nd.children
+        assert not nd.content
+        assert mp._return_value(None) == EMPTY_NODE
+
 
 
 if __name__ == "__main__":

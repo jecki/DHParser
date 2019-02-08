@@ -83,7 +83,7 @@ class TestNode:
 
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
-        tree.init_pos(0)
+        tree.with_pos(0)
         tree_copy = copy.deepcopy(tree)
 
         assert tree == tree_copy
@@ -179,7 +179,7 @@ class TestNode:
         assert len(nd2) == 3, "Expected Node.len == 3, got %i" % len(nd2)
         nd = Node(ZOMBIE_TAG, (nd1, nd2))
         assert len(nd) == 6, "Expected Node.len == 6, got %i" % len(nd)
-        nd.init_pos(0)
+        nd.with_pos(0)
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
         assert nd2.pos == 3, "Expected Node.pos == 3, got %i" % nd2.pos
@@ -192,7 +192,7 @@ class TestNode:
 class TestRootNode:
     def test_error_handling(self):
         tree = parse_sxpr('(A (B D) (C E))')
-        tree.init_pos(0)
+        tree.with_pos(0)
         root = RootNode()
         root.new_error(tree.children[1], "error C")
         root.new_error(tree.children[0], "error B")

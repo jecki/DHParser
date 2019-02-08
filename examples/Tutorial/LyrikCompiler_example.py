@@ -146,9 +146,9 @@ Lyrik_AST_transformation_table = {
     "jahr":
         [reduce_single_child, remove_whitespace, reduce_single_child],
     "wortfolge":
-        [flatten(is_one_of('WORT'), recursive=False), peek, rstrip, collapse],
+        [flatten(is_one_of('WORT'), recursive=False), rstrip, collapse],
     "namenfolge":
-        [flatten(is_one_of('NAME'), recursive=False), peek, rstrip, collapse],
+        [flatten(is_one_of('NAME'), recursive=False), rstrip, collapse],
     "verknüpfung":
         [flatten, remove_tokens('<', '>'), remove_whitespace, reduce_single_child],
     "ziel":

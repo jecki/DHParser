@@ -15,7 +15,7 @@ cdef class Node:
 
     cpdef get(self,  index_or_tagname, surrogate)
     cpdef is_anonymous(self)
-    cpdef init_pos(self, pos)
+    cpdef with_pos(self, pos)
     cpdef attr_active(self)
     # cpdef compare_attr(self, other)
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
@@ -28,7 +28,7 @@ cdef class Node:
 
 
 cdef class FrozenNode(Node):
-    cpdef init_pos(self, pos)
+    cpdef with_pos(self, pos)
 
 
 cdef class RootNode(Node):

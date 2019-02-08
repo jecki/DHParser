@@ -46,6 +46,7 @@ from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, O
 __all__ = ('Parser',
            'UnknownParserError',
            'Grammar',
+           'EMPTY_NODE',
            'PreprocessorToken',
            'Token',
            'DropToken',
@@ -866,7 +867,7 @@ class Grammar:
         if not rest:
             result, _ = parser(rest)
             if result is None:
-                result = Node(ZOMBIE_TAG, '').init_pos(0)
+                result = Node(ZOMBIE_TAG, '').with_pos(0)
                 self.tree__.new_error(result,
                                       'Parser "%s" did not match empty document.' % str(parser),
                                       Error.PARSER_DID_NOT_MATCH)
@@ -905,7 +906,7 @@ class Grammar:
                             if len(stitches) < MAX_DROPOUTS
                             else " too often! Terminating parser.")
                     error_code = Error.PARSER_STOPPED_BEFORE_END
-                stitches.append(Node(ZOMBIE_TAG, skip).init_pos(tail_pos(stitches)))
+                stitches.append(Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
                 if self.history_tracking__:
                     # # some parsers may have matched and left history records with nodes != None.
@@ -914,7 +915,7 @@ class Grammar:
                     # # to zero. Therefore, their pos properties need to be initialized here
                     # for record in self.history__:
                     #     if record.node and record.node._pos < 0:
-                    #         record.node.init_pos(0)
+                    #         record.node.with_pos(0)
                     record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest,
                                            self.line_col__(rest))
                     self.history__.append(record)
@@ -924,7 +925,7 @@ class Grammar:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
             #try:
-            result = Node(ZOMBIE_TAG, tuple(stitches)).init_pos(0)
+            result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
             # except AssertionError as error:
             #     # some debugging output
             #     print(Node(ZOMBIE_TAG, tuple(stitches)).as_sxpr())
@@ -938,7 +939,7 @@ class Grammar:
                     # add another child node at the end to ensure that the position
                     # of the error will be the end of the text. Otherwise, the error
                     # message above ("...after end of parsing") would appear illogical.
-                    error_node = Node(ZOMBIE_TAG, '').init_pos(tail_pos(result.children))
+                    error_node = Node(ZOMBIE_TAG, '').with_pos(tail_pos(result.children))
                     self.tree__.new_error(error_node, error_msg, error_code)
                     result.result = result.children + (error_node,)
                 else:
@@ -1251,17 +1252,12 @@ class MetaParser(Parser):
         # Node(self.tag_name, node)  # unoptimized code
         assert node is None or isinstance(node, Node)
         if node:
-            if node._result:
-                return Node(self.tag_name, node) if self.pname else node
-            elif self.pname:
-                nd1 = Node(self.tag_name, ())  # type: Node
-                # nd1.errors = node.errors
-                return nd1
-            # elif node.errors:
-            #     nd2 = Node(self.tag_name, ())  # type: Node
-            #     nd2.errors = node.errors
-            #     return nd2
-        elif self.pname:
+            if self.pname:
+                if node.tag_name[0] == ':':  # faster than node.is_anonymous()
+                    return Node(self.tag_name, node._result)
+                return Node(self.tag_name, node)
+            return node
+        if self.pname:
             return Node(self.tag_name, ())  # type: Node
         return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
 
@@ -1486,7 +1482,7 @@ def mandatory_violation(grammar: Grammar,
                         reloc: int) -> Tuple[Error, Node, StringView]:
     i = reloc if reloc >= 0 else 0
     location = grammar.document_length__ - len(text_)
-    err_node = Node(ZOMBIE_TAG, text_[:i]).init_pos(location)
+    err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
     found = text_[:10].replace('\n', '\\n ')
     for search, message in err_msgs:
         rxs = not isinstance(search, str)

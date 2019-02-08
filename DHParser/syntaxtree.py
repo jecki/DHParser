@@ -175,7 +175,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
-        # assert tag_name is not None
         self.tag_name = tag_name        # type: str
 
     def __deepcopy__(self, memo):
@@ -298,7 +297,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def is_anonymous(self):
-        return self.tag_name[0] == ':'
+        return not self.tag_name or self.tag_name[0] == ':'
 
 
     @property
@@ -368,30 +367,34 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pos(self) -> int:
         """Returns the position of the Node's content in the source text."""
         if self._pos < 0:
-            raise AssertionError("Position value not initialized!")
+            raise AssertionError("Position value not initialized! Use Node.with_pos()")
         return self._pos
 
 
-    def init_pos(self, pos: int) -> 'Node':
+    def with_pos(self, pos: int) -> 'Node':
         """
-        (Re-)initialize position value. Usually, the parser guard
+        Initialize position value. Usually, the parser guard
         (`parsers.add_parser_guard()`) takes care of assigning the
         position in the document to newly created nodes. However,
-        where Nodes are created outside the reach of the parser
+        when Nodes are created outside the reach of the parser
         guard, their document-position must be assigned manually.
-        This function recursively reassigns the position values
-        of the child nodes, too.
+        Position values of the child nodes are assigned recursively, too.
+        Returns the node itself for convenience.
         """
         # condition self.pos == pos cannot be assumed when tokens or whitespace
         # are dropped early!
         # assert self._pos < 0 or self.pos == pos, ("pos mismatch %i != %i at Node: %s"
         #                                           % (self._pos, pos, repr(self)))
-        self._pos = pos
-        # recursively adjust pos-values of all children
-        offset = self.pos
-        for child in self.children:
-            child.init_pos(offset)
-            offset = child.pos + len(child)
+        if pos != self._pos >= 0:
+            raise AssertionError("Position value cannot be reassigned to a different value!")
+        if self._pos < 0:
+            self._pos = pos
+            # recursively adjust pos-values of all children
+            offset = self.pos
+            for child in self.children:
+                if child._pos < 0:
+                    child.with_pos(offset)
+                offset = child.pos + len(child)
         return self
 
 
@@ -736,7 +739,7 @@ class FrozenNode(Node):
     #     if errors:
     #         raise AssertionError('Cannot assign error list to frozen node')
 
-    def init_pos(self, pos: int) -> 'Node':
+    def with_pos(self, pos: int) -> 'Node':
         pass
 
 
