@@ -4,13 +4,9 @@
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 
-#: top-level
-
 syntax     = [~//] { definition | directive } §EOF
 definition = symbol §"=" expression
 directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
-
-#: components
 
 expression = term { "|" term }
 term       = { ["§"] factor }+                       # "§" means all following factors mandatory
@@ -25,21 +21,15 @@ factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be 
            | repetition
            | option
 
-#: flow-operators
-
 flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
            | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
 retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
-
-#: groups
 
 group      = "(" §expression ")"
 unordered  = "<" §expression ">"                # elements of expression in arbitrary order
 oneormore  = "{" expression "}+"
 repetition = "{" §expression "}"
 option     = "[" §expression "]"
-
-#: leaf-elements
 
 symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
 literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'

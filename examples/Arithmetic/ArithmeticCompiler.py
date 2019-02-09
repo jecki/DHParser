@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "5a5e8df98d9c78186acdd7f602aa51da"
+    source_hash__ = "48fe89871e7ba344eb238c1d1a927167"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*'
@@ -70,12 +70,12 @@ class ArithmeticGrammar(Grammar):
     VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     SIGN = RegExp('-')
-    TERM_OP = Alternative(Series(DropToken("*"), dwsp__), Series(DropToken("/"), dwsp__))
-    EXPR_OP = Alternative(Series(DropToken("+"), dwsp__), Series(DropToken("-"), dwsp__))
+    TERM_OP = Alternative(RegExp('\\*'), RegExp('/'))
+    EXPR_OP = Alternative(RegExp('\\+'), RegExp('-'))
     group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
     factor = Series(Option(SIGN), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
-    term = Series(factor, ZeroOrMore(Series(TERM_OP, factor)))
-    expression.set(Series(term, ZeroOrMore(Series(EXPR_OP, term))))
+    term = Series(factor, ZeroOrMore(Series(TERM_OP, dwsp__, factor)))
+    expression.set(Series(term, ZeroOrMore(Series(EXPR_OP, dwsp__, term))))
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
