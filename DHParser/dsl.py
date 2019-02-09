@@ -102,7 +102,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
-    error_on, recompile_grammar, GLOBALS
+    reduce_anonymous_nodes, error_on, recompile_grammar, GLOBALS
 '''.format(dhparserdir=dhparserdir)
 
 

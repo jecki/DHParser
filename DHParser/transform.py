@@ -47,7 +47,7 @@ __all__ = ('TransformationDict',
            'traverse',
            'is_named',
            'update_attr',
-           'eliminate_anonymous_nodes',
+           'reduce_anonymous_nodes',
            'replace_by_single_child',
            'reduce_single_child',
            'replace_or_reduce',
@@ -559,8 +559,13 @@ def _reduce_child(node: Node, child: Node):
 #         _reduce_child(context[-1], child)
 
 
-@transformation_factory
-def eliminate_anonymous_nodes(context: List[Node]):
+def reduce_anonymous_nodes(context: List[Node]):
+    """
+    Reduces (non-recursively) all anonymous non-leaf children by adding
+    their result to the result of the last node in the context. If the
+    last node is anonymous itself, it will be replaced by a single child.
+    Also drops any empty anonymous nodes.
+    """
     node = context[-1]
     if node.children:
         new_result = []
@@ -577,11 +582,13 @@ def eliminate_anonymous_nodes(context: List[Node]):
             child = new_result[0]
             if node.is_anonymous():
                 node.tag_name = child.tag_name
-                new_result = [child.result]
+                node.result = child.result
                 update_attr(node, child)
+                return
             elif child.is_anonymous():
-                new_result = [child.result]
+                node.result = child.result
                 update_attr(node, child)
+                return
         node.result = tuple(new_result)
 
 

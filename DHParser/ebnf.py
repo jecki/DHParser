@@ -562,7 +562,7 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar']
-        transtable.append('    "<": eliminate_anonymous_nodes,')
+        transtable.append('    "<": reduce_anonymous_nodes,')
         for name in self.rules:
             transformations = '[]'
             # rule = self.definitions[name]

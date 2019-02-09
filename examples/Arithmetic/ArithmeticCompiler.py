@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, reduce_anonymous_nodes, GLOBALS
 
 
 #######################################################################
@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "d03e397fb4cabd6f20f3ae7c9add4ad5"
+    source_hash__ = "a94242482d508901d1692b82c48ba903"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*'
@@ -95,10 +95,11 @@ def get_grammar() -> ArithmeticGrammar:
 
 Arithmetic_AST_transformation_table = {
     # AST Transformations for the Arithmetic-grammar
-    "<": remove_empty,
+    "<": reduce_anonymous_nodes,
     "expression": [],
-    "term": [],
-    "factor": [replace_or_reduce],
+    "term": [reduce_single_child],
+    "factor": [reduce_single_child],
+    "group": [remove_tokens('(', ')'), replace_by_single_child],
     "NUMBER": [],
     "VARIABLE": [],
     ":Token": reduce_single_child,

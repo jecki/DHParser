@@ -313,9 +313,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @result.setter
     def result(self, result: ResultType):
         # # made obsolete by static type checking with mypy
-        # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
-        #         or isinstance(result, Node)
-        #         or isinstance(result, str)), str(result)
+        assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
+                or isinstance(result, Node)
+                or isinstance(result, str)
+                or isinstance(result, StringView)), "%s (%s)" % (str(result), str(type(result)))
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
         self._len = -1        # lazy evaluation
