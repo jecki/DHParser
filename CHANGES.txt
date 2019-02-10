@@ -1,11 +1,15 @@
 DHParser Version 0.8.5 (DATE?)
 ..............................
 
-- drops empty anonymous nodes already during parsing
+- pending optimization: flattens anonymous nodes already while parsing
+- optimization: drops empty anonymous nodes already during parsing
+- optimization: optionally allows to drop anonymous whitespace and tokens
+  while parsing
 - major refactorings of node and parser class hierarchy: much simpler now,
   no zombie classes needed any more
-- parser_guard() is now integrated into the Parser class: Parsing functionality
-  moved to _parse() method, while Parser.__call__() is now the new parser guard
+- parser_guard() is now integrated into the Parser class: Parsing
+  functionality moved to _parse() method, while Parser.__call__() is now the
+  new parser guard
 - better support for customized error messages + bug fixes
 - better cython support (makes it about 2.5 times as fast if cython is used)
 - testing.grammar_suite now uses multiprocessing to run tests
