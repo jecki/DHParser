@@ -1,5 +1,5 @@
-DHParser Version 0.8.5 (DATE?)
-..............................
+DHParser Version 0.8.5 (10.2.2019)
+..................................
 
 - optimization: flattens anonymous nodes already while parsing
 - optimization: drops empty anonymous nodes already during parsing
