@@ -99,8 +99,8 @@ class TestLoggingAndLoading:
         except AttributeError:
             pass
         with logging("TESTLOGS"):
-            assert not os.path.exists("TESTSLOGS"), \
-                "Log dir should not be created before first use!"
+            assert os.path.exists("TESTLOGS"), \
+                "Log dir should be created if it does not exist!"
             dirname = log_dir()
             assert dirname == "TESTLOGS"
             assert is_logging(), "is_logging() should return True, if logging is on"

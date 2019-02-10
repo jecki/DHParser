@@ -1247,6 +1247,7 @@ class DropWhitespace(Whitespace):
 
 
 class MetaParser(Parser):
+    # TODO: Allow to turn optimization off
 
     def _return_value(self, node: Optional[Node]) -> Node:
         # Node(self.tag_name, node)  # unoptimized code
@@ -1267,9 +1268,14 @@ class MetaParser(Parser):
         # return Node(self.tag_name, results)  # unoptimized code
         assert isinstance(results, tuple)
         N = len(results)
-        # TODO: if N >= 2, flatten results!
         if N > 1:
-            return Node(self.tag_name, results)
+            nr = []
+            for child in results:
+                if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
+                    nr.extend(child.children)
+                else:
+                    nr.append(child)
+            return Node(self.tag_name, tuple(nr))
         elif N == 1:
             return self._return_value(results[0])
         elif self.pname:

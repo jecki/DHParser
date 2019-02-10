@@ -1,7 +1,7 @@
 DHParser Version 0.8.5 (DATE?)
 ..............................
 
-- pending optimization: flattens anonymous nodes already while parsing
+- optimization: flattens anonymous nodes already while parsing
 - optimization: drops empty anonymous nodes already during parsing
 - optimization: optionally allows to drop anonymous whitespace and tokens
   while parsing
