@@ -19,7 +19,7 @@ try:
 except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_preprocessor, \
-    PreprocessorToken, Whitespace, DropWhitespace, DropToken, reduce_anonymous_nodes, \
+    PreprocessorToken, Whitespace, DropWhitespace, DropToken, flatten_anonymous_nodes, \
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
@@ -140,7 +140,7 @@ def get_grammar() -> XMLSnippetGrammar:
 
 XMLSnippet_AST_transformation_table = {
     # AST Transformations for the XMLSnippet-grammar
-    "<": reduce_anonymous_nodes,
+    "<": flatten_anonymous_nodes,
     "document": [],
     "prolog": [],
     "XMLDecl": [],

@@ -47,7 +47,7 @@ __all__ = ('TransformationDict',
            'traverse',
            'is_named',
            'update_attr',
-           'reduce_anonymous_nodes',
+           'flatten_anonymous_nodes',
            'replace_by_single_child',
            'reduce_single_child',
            'replace_or_reduce',
@@ -559,12 +559,13 @@ def _reduce_child(node: Node, child: Node):
 #         _reduce_child(context[-1], child)
 
 
-def reduce_anonymous_nodes(context: List[Node]):
+def flatten_anonymous_nodes(context: List[Node]):
     """
-    Reduces (non-recursively) all anonymous non-leaf children by adding
-    their result to the result of the last node in the context. If the
-    last node is anonymous itself, it will be replaced by a single child.
-    Also drops any empty anonymous nodes.
+    Flattens non-recursively all anonymous non-leaf children by adding
+    their result to the result of the parent node. Empty anonymous children
+    will be dropped altogether. If the parent node (i.e. `context[-1]) is
+    anonymous itself and has only one child node, it will be replaced by
+    its single child node.
     """
     node = context[-1]
     if node.children:

@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    reduce_anonymous_nodes, error_on, recompile_grammar, GLOBALS
+    flatten_anonymous_nodes, error_on, recompile_grammar, GLOBALS
 
 
 #######################################################################
@@ -107,7 +107,7 @@ def get_grammar() -> EBNFGrammar:
 
 EBNF_AST_transformation_table = {
     # AST Transformations for the EBNF-grammar
-    "<": reduce_anonymous_nodes,
+    "<": flatten_anonymous_nodes,
     "syntax": [],
     "definition": [],
     "directive": [],

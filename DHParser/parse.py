@@ -39,7 +39,8 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, re, typing, cython
+from DHParser.toolkit import sane_parser_name, escape_control_characters, get_config_value,\
+    CONFIG_PRESET, re, typing, cython
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
 
@@ -82,8 +83,13 @@ __all__ = ('Parser',
            'Forward')
 
 
+########################################################################
+#
+# Presets
+#
+########################################################################
 
-EMPTY_NODE = FrozenNode(':EMPTY__', '')
+CONFIG_PRESET['flatten_tree_while_parsing'] = True
 
 
 ########################################################################
@@ -98,6 +104,7 @@ LEFT_RECURSION_DEPTH = 8  # type: int
 # set too high. PyPy allows higher values than CPython
 MAX_DROPOUTS = 3  # type: int
 # stop trying to recover parsing after so many errors
+EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 
 class ParserError(Exception):
@@ -330,6 +337,11 @@ class Parser:
                     if location in self.visited:
                         node, rest = self.visited[location]
                         # TODO: maybe add a warning about occurrence of left-recursion here?
+                        if location != grammar.last_recursion_location__:
+                            grammar.tree__.add_error(node, Error("Left recursion encountered. "
+                                                                 "Refactor grammar to avoid slow parsing.",
+                                                                 node.pos, Error.LEFT_RECURSION_WARING))
+                            grammar.last_recursion_location__ = location
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
@@ -671,8 +683,11 @@ class Grammar:
         recursion_locations__:  Stores the locations where left recursion was
                 detected. Needed to provide minimal memoization for the left
                 recursion detection algorithm, but, strictly speaking, superfluous
-                if full memoization is enabled. (See :func:`add_parser_guard` and its
-                local function :func:`guarded_call`)
+                if full memoization is enabled. (See :func:`Parser.__call__()`)
+
+        last_recursion_location__:  Last location where left recursion was
+                detected. This is used to avoid reduplicating warning messages
+                about left recursion.
 
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
@@ -682,6 +697,12 @@ class Grammar:
         left_recursion_handling__:  Turns left recursion handling on or off.
                 If turned off, a recursion error will result in case of left
                 recursion.
+
+        flatten_tree__:  If True (default), anonymous nodes will be flattened
+                during parsing already. This greatly reduces the concrete syntax
+                tree and simplifies and speeds up abstract syntax tree generation.
+                The initial value will be read from the config variable
+                'flatten_tree_while_parsing' upon class instantiation.
     """
     python_src__ = ''  # type: str
     root__ = PARSER_PLACEHOLDER  # type: Parser
@@ -736,6 +757,7 @@ class Grammar:
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
         self.left_recursion_handling__ = True  # type: bool
+        self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')  # type: bool
         self._reset__()
 
         # prepare parsers in the class, first
@@ -784,6 +806,7 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
         self.recursion_locations__ = set()    # type: Set[int]
+        self.last_recursion_location__ = -1   # type: int
 
 
     @property
@@ -1247,40 +1270,52 @@ class DropWhitespace(Whitespace):
 
 
 class MetaParser(Parser):
-    # TODO: Allow to turn optimization off
-
     def _return_value(self, node: Optional[Node]) -> Node:
-        # Node(self.tag_name, node)  # unoptimized code
+        """
+        Generate a return node if a single node has been returned from
+        any descendant parsers. Empty nodes will be dropped silently.
+        If `self` is an unnamed parser, a non-empty descendant node
+        will be passed through. If the descendant node is anonymous,
+        it will be dropped and only its result will be kept.
+        In all other cases or if the optimization is turned off by
+        setting `grammar.flatten_tree__` to False, a new node will be
+        generated and the descendant node will be its gingle child.
+        """
         assert node is None or isinstance(node, Node)
-        if node:
-            if self.pname:
-                if node.tag_name[0] == ':':  # faster than node.is_anonymous()
-                    return Node(self.tag_name, node._result)
-                return Node(self.tag_name, node)
-            return node
-        if self.pname:
-            return Node(self.tag_name, ())  # type: Node
-        return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        if self.grammar.flatten_tree__:
+            if node:
+                if self.pname:
+                    if node.tag_name[0] == ':':  # faster than node.is_anonymous()
+                        return Node(self.tag_name, node._result)
+                    return Node(self.tag_name, node)
+                return node
+            elif self.pname:
+                return Node(self.tag_name, ())  # type: Node
+            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        return Node(self.tag_name, node or ())  # unoptimized code
 
 
     @cython.locals(N=cython.int)
     def _return_values(self, results: Tuple[Node, ...]) -> Node:
-        # return Node(self.tag_name, results)  # unoptimized code
         assert isinstance(results, tuple)
         N = len(results)
         if N > 1:
-            nr = []
-            for child in results:
-                if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
-                    nr.extend(child.children)
-                else:
-                    nr.append(child)
-            return Node(self.tag_name, tuple(nr))
+            if self.grammar.flatten_tree__:
+                nr = []
+                for child in results:
+                    if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
+                        nr.extend(child.children)
+                    else:
+                        nr.append(child)
+                return Node(self.tag_name, tuple(nr))
+            return Node(self.tag_name, results)  # unoptimized code
         elif N == 1:
             return self._return_value(results[0])
-        elif self.pname:
-            return Node(self.tag_name, ())
-        return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        elif self.grammar.flatten_tree__:
+            if self.pname:
+                return Node(self.tag_name, ())
+            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        return Node(self.tag_name, results)  # unoptimized code
 
 
 class UnaryParser(MetaParser):

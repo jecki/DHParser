@@ -24,9 +24,9 @@ from functools import partial
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import compile_python_object
+from DHParser.toolkit import compile_python_object, get_config_value, set_config_value
 from DHParser.log import logging, is_logging, log_ST, log_parsing_history
-from DHParser.error import Error
+from DHParser.error import Error, is_error
 from DHParser.parse import Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
     UnknownParserError, MetaParser, EMPTY_NODE
@@ -70,8 +70,8 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         assert parser
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, str(syntax_tree.errors_sorted)
-        assert snippet == str(syntax_tree)
+        assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
+        assert snippet == syntax_tree.content, str(syntax_tree)
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_direct.cst")
             log_parsing_history(parser, "test_LeftRecursion_direct")
@@ -87,8 +87,8 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         assert parser
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.errors_sorted
-        assert snippet == str(syntax_tree)
+        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+        assert snippet == syntax_tree.content
 
     def test_indirect_left_recursion1(self):
         minilang = """
@@ -101,14 +101,14 @@ class TestInfiLoopsAndRecursion:
         assert parser
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.errors_sorted
+        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         snippet = "7 + 8 * 4"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.errors_sorted
+        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
-        assert not syntax_tree.error_flag, syntax_tree.errors_sorted
-        assert snippet == str(syntax_tree)
+        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+        assert snippet == syntax_tree.content
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
             log_parsing_history(parser, "test_LeftRecursion_indirect")
@@ -788,7 +788,10 @@ class TestEarlyTokenWhitespaceDrop:
 
 class TestMetaParser:
     def test_meta_parser(self):
+        save = get_config_value('flatten_tree_while_parsing')
+        set_config_value('flatten_tree_while_parsing', True)
         mp = MetaParser()
+        mp.grammar = Grammar()  # override placeholder warning
         mp.pname = "named"
         mp.tag_name = mp.pname
         nd = mp._return_value(Node('tagged', 'non-empty'))
@@ -828,6 +831,7 @@ class TestMetaParser:
         assert not nd.children
         assert not nd.content
         assert mp._return_value(None) == EMPTY_NODE
+        set_config_value('flatten_tree_while_parsing', save)
 
 
 

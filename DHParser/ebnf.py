@@ -62,6 +62,15 @@ __all__ = ('get_ebnf_preprocessor',
 
 ########################################################################
 #
+# Presets
+#
+########################################################################
+
+CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
+
+
+########################################################################
+#
 # EBNF scanning
 #
 ########################################################################
@@ -562,7 +571,7 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar']
-        transtable.append('    "<": reduce_anonymous_nodes,')
+        transtable.append('    "<": flatten_anonymous_nodes,')
         for name in self.rules:
             transformations = '[]'
             # rule = self.definitions[name]
@@ -1276,11 +1285,3 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL') \
                           get_ebnf_transformer(),
                           get_ebnf_compiler(branding, ebnf_source))
 
-
-########################################################################
-#
-# Presets
-#
-########################################################################
-
-CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False

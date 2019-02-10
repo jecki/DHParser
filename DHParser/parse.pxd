@@ -39,6 +39,7 @@ cdef class Grammar:
     cdef public list history__
     cdef public bint moving_forward__
     cdef public set recursion_locations__
+    cdef public int last_recursion_location__
 
 cdef class PreprocessorToken(Parser):
     pass
