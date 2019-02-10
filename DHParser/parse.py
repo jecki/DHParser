@@ -336,7 +336,6 @@ class Parser:
                 if location in grammar.recursion_locations__:
                     if location in self.visited:
                         node, rest = self.visited[location]
-                        # TODO: maybe add a warning about occurrence of left-recursion here?
                         if location != grammar.last_recursion_location__:
                             grammar.tree__.add_error(node, Error("Left recursion encountered. "
                                                                  "Refactor grammar to avoid slow parsing.",
@@ -430,11 +429,6 @@ class Parser:
             pass  # ignore setting of grammar attribute for placeholder parser
         except NameError:  # Cython: No access to GRAMMA_PLACEHOLDER, yet :-(
             self._grammar = grammar
-
-    # def _grammar_assigned_notifier(self):
-    #     """A function that notifies the parser object that it has been
-    #     assigned to a grammar."""
-    #     pass
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         """
@@ -595,7 +589,7 @@ class Grammar:
     whitespace and comments that should be overwritten, if the defaults
     (no comments, horizontal right aligned whitespace) don't fit:
 
-    Attributes:
+    Class Attributes:
         root__:  The root parser of the grammar. Theoretically, all parsers of the
                  grammar should be reachable by the root parser. However, for testing
                  of yet incomplete grammars class Grammar does not assume that this
@@ -615,7 +609,7 @@ class Grammar:
                  take the python src of the concrete grammar class
                  (see `dsl.grammar_provider`).
 
-    Attributes:
+    Instance Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
 
         start_parser__:  During parsing, the parser with which the parsing process
@@ -1130,10 +1124,8 @@ class Token(Parser):
 
 class DropToken(Token):
     """
-    EXPERIMENTAL AND UNTESTED! Violates the invariant: str(parse(text)) == text
-
     Parses play text string, but returns EMPTY_NODE rather than the parsed
-    string on a match.
+    string on a match. Violates the invariant: str(parse(text)) == text !
     """
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         assert not self.pname, "DropToken must not be used for named parsers!"
@@ -1245,10 +1237,8 @@ class Whitespace(RegExp):
 
 class DropWhitespace(Whitespace):
     """
-    EXPERIMENTAL AND UNTESTED! Violates the invariant: str(parse(text)) == text
-
     Parses whitespace but never returns it. Instead EMPTY_NODE is returned
-    on a match.
+    on a match. Violates the invariant: str(parse(text)) == text !
     """
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1522,6 +1512,30 @@ def mandatory_violation(grammar: Grammar,
                         expected: str,
                         err_msgs: MessagesType,
                         reloc: int) -> Tuple[Error, Node, StringView]:
+    """
+    Choses the right error message in case of a mandatory violation and
+    returns an error with this message, an error node, to which the error
+    is attached, and the text segment where parsing is to continue.
+
+    This is a helper function that abstracts functionality that is
+    needed by the AllOf- as well as the Series-parser.
+
+    :param grammar: the grammar
+    :param text_: the point, where the mandatory vialoation. As usual the
+            string view represents the remaining text from this point.
+    :param expected:  the expected (but not found) text at this point.
+    :param err_msgs:  A list of pairs of regular expressions (or simple
+            strings for that matter) and error messages that are chosen
+            if the regular expression matches the text where the error
+            occurred.
+    :param reloc: A position value that represents the reentry point for
+            parsing after the error occurred.
+
+    :return:   a tuple of an error object, a zombie node at the position
+            where the mandatory violation occured and to which the error
+            object is attached and a string view for continuing the
+            parsing process
+    """
     i = reloc if reloc >= 0 else 0
     location = grammar.document_length__ - len(text_)
     err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
