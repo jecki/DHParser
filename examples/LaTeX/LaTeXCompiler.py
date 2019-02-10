@@ -22,7 +22,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, reduce_anonymous_nodes, \
     flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
     is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, GLOBALS
 from DHParser.log import logging
@@ -191,7 +191,7 @@ def streamline_whitespace(context):
 def watch(node):
     print(node.as_sxpr())
 
-flatten_structure = flatten(lambda context: is_anonymous(context) or is_one_of(
+flatten_structure = flatten(lambda context: is_one_of(
     context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
               "SubParagraphs", "sequence"}), recursive=True)
 
@@ -219,7 +219,7 @@ drop_expendables = remove_children_if(lambda context: is_empty(context) or
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "<": [drop_expendables, flatten_structure],
+    "<": [reduce_anonymous_nodes, flatten_structure],
     "latexdoc": [],
     "preamble": [traverse_locally({'<': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],

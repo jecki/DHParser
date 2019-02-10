@@ -129,6 +129,8 @@ def logging(dirname="LOGS"):
     except AttributeError:
         save = ""
     GLOBALS.LOGGING = dirname or ""
+    if dirname and not os.path.exists(dirname):
+        os.mkdir(dirname)
     yield
     GLOBALS.LOGGING = save
 

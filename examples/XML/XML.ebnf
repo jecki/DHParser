@@ -10,6 +10,7 @@
 @ literalws   = none            # literals have no implicit whitespace
 @ comment     = //              # no implicit comments
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
+@ drop        = token, whitespace  # drop anonymous tokens and whitespace
 
 
 #######################################################################

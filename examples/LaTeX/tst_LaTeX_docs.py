@@ -64,8 +64,6 @@ def count_nodes(tree, condition=lambda n: True):
 
 def tst_func():
     with DHParser.log.logging(LOGGING):
-        if not os.path.exists('REPORT'):
-            os.mkdir('REPORT')
         files = os.listdir('testdata')
         files.sort()
         for file in files:
@@ -80,7 +78,7 @@ def tst_func():
                 #                                                 lambda n: not bool(n.result))))
                 if DHParser.log.is_logging():
                     print('Saving CST')
-                    with open('REPORT/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
+                    with open('LOGS/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
                         f.write(result.as_sxpr(compact=True))
                     print('Saving parsing history')
                     log_parsing_history(parser, os.path.basename(file), html=True)

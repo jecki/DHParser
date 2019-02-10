@@ -18,7 +18,8 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
+from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_preprocessor, \
+    PreprocessorToken, Whitespace, DropWhitespace, DropToken, reduce_anonymous_nodes, \
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
@@ -59,18 +60,19 @@ class XMLSnippetGrammar(Grammar):
     """
     Name = Forward()
     element = Forward()
-    source_hash__ = "2efb839574bee3f63b5b9d1ea5c96386"
+    source_hash__ = "49e51a7b2ad79e95ba239427830ba02f"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    dwsp__ = DropWhitespace(WSP_RE__)
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     S = RegExp('\\s+')
     Char = RegExp('\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]')
     Chars = RegExp('(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF])+')
-    CharRef = Alternative(Series(Token('&#'), RegExp('[0-9]+'), Token(';')), Series(Token('&#x'), RegExp('[0-9a-fA-F]+'), Token(';')))
+    CharRef = Alternative(Series(DropToken('&#'), RegExp('[0-9]+'), DropToken(';')), Series(DropToken('&#x'), RegExp('[0-9a-fA-F]+'), DropToken(';')))
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     PIChars = RegExp('(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     IgnoreChars = RegExp('(?:(?!(?:<!\\[)|(?:\\]\\]>))(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
@@ -78,10 +80,10 @@ class XMLSnippetGrammar(Grammar):
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
     PubidChars = RegExp("(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
     PubidCharsSingleQuoted = RegExp('(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
-    CDSect = Series(Token('<![CDATA['), CData, Token(']]>'))
+    CDSect = Series(DropToken('<![CDATA['), CData, DropToken(']]>'))
     PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
-    PI = Series(Token('<?'), PITarget, Option(Series(wsp__, PIChars)), Token('?>'))
-    Comment = Series(Token('<!--'), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), Token('-->'))
+    PI = Series(DropToken('<?'), PITarget, Option(Series(dwsp__, PIChars)), DropToken('?>'))
+    Comment = Series(DropToken('<!--'), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), DropToken('-->'))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     NameChars = RegExp('(?x)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
     NameStartChar = RegExp('(?x)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
@@ -89,44 +91,44 @@ class XMLSnippetGrammar(Grammar):
     Names = Series(Name, ZeroOrMore(Series(RegExp(' '), Name)))
     Nmtoken = Synonym(NameChars)
     Nmtokens = Series(Nmtoken, ZeroOrMore(Series(RegExp(' '), Nmtoken)))
-    PEReference = Series(Token('%'), Name, Token(';'))
-    EntityRef = Series(Token('&'), Name, Token(';'))
+    PEReference = Series(DropToken('%'), Name, DropToken(';'))
+    EntityRef = Series(DropToken('&'), Name, DropToken(';'))
     Reference = Alternative(EntityRef, CharRef)
-    PubidLiteral = Alternative(Series(Token('"'), Option(PubidChars), Token('"')), Series(Token("'"), Option(PubidCharsSingleQuoted), Token("'")))
-    SystemLiteral = Alternative(Series(Token('"'), RegExp('[^"]*'), Token('"')), Series(Token("'"), RegExp("[^']*"), Token("'")))
-    AttValue = Alternative(Series(Token('"'), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Token('"')), Series(Token("'"), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Token("'")))
-    EntityValue = Alternative(Series(Token('"'), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Token('"')), Series(Token("'"), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Token("'")))
+    PubidLiteral = Alternative(Series(DropToken('"'), Option(PubidChars), DropToken('"')), Series(DropToken("'"), Option(PubidCharsSingleQuoted), DropToken("'")))
+    SystemLiteral = Alternative(Series(DropToken('"'), RegExp('[^"]*'), DropToken('"')), Series(DropToken("'"), RegExp("[^']*"), DropToken("'")))
+    AttValue = Alternative(Series(DropToken('"'), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), DropToken('"')), Series(DropToken("'"), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), DropToken("'")))
+    EntityValue = Alternative(Series(DropToken('"'), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), DropToken('"')), Series(DropToken("'"), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), DropToken("'")))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
-    Attribute = Series(Name, wsp__, Token('='), wsp__, AttValue, mandatory=2)
+    Attribute = Series(Name, dwsp__, DropToken('='), dwsp__, AttValue, mandatory=2)
     TagName = Capture(Name)
-    emptyElement = Series(Token('<'), Name, ZeroOrMore(Series(wsp__, Attribute)), wsp__, Token('/>'))
-    ETag = Series(Token('</'), Pop(TagName), wsp__, Token('>'), mandatory=1)
-    STag = Series(Token('<'), TagName, ZeroOrMore(Series(wsp__, Attribute)), wsp__, Token('>'))
+    emptyElement = Series(DropToken('<'), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, DropToken('/>'))
+    ETag = Series(DropToken('</'), Pop(TagName), dwsp__, DropToken('>'), mandatory=1)
+    STag = Series(DropToken('<'), TagName, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, DropToken('>'))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     intSubset = RegExp('(?:(?!\\][^\\]])[^<&])+')
-    ExternalID = Series(Token('SYSTEM'), S, SystemLiteral, mandatory=1)
-    doctypedecl = Series(Token('<!DOCTYPE'), wsp__, Name, Option(Series(wsp__, ExternalID)), wsp__, Option(Series(Token('['), intSubset, Token(']'), wsp__)), Token('>'))
+    ExternalID = Series(DropToken('SYSTEM'), S, SystemLiteral, mandatory=1)
+    doctypedecl = Series(DropToken('<!DOCTYPE'), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Option(Series(DropToken('['), intSubset, DropToken(']'), dwsp__)), DropToken('>'))
     No = Token('no')
     Yes = Token('yes')
-    SDDecl = Series(wsp__, Token('standalone'), wsp__, Token('='), wsp__, Alternative(Alternative(Series(Token("'"), Yes), Series(No, Token("'"))), Alternative(Series(Token('"'), Yes), Series(No, Token('"')))))
+    SDDecl = Series(dwsp__, DropToken('standalone'), dwsp__, DropToken('='), dwsp__, Alternative(Alternative(Series(DropToken("'"), Yes), Series(No, DropToken("'"))), Alternative(Series(DropToken('"'), Yes), Series(No, DropToken('"')))))
     EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
-    EncodingDecl = Series(wsp__, Token('encoding'), wsp__, Token('='), wsp__, Alternative(Series(Token("'"), EncName, Token("'")), Series(Token('"'), EncName, Token('"'))))
+    EncodingDecl = Series(dwsp__, DropToken('encoding'), dwsp__, DropToken('='), dwsp__, Alternative(Series(DropToken("'"), EncName, DropToken("'")), Series(DropToken('"'), EncName, DropToken('"'))))
     VersionNum = RegExp('[0-9]+\\.[0-9]+')
-    VersionInfo = Series(wsp__, Token('version'), wsp__, Token('='), wsp__, Alternative(Series(Token("'"), VersionNum, Token("'")), Series(Token('"'), VersionNum, Token('"'))))
-    XMLDecl = Series(Token('<?xml'), VersionInfo, Option(EncodingDecl), Option(SDDecl), wsp__, Token('?>'))
-    prolog = Series(Option(Series(wsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
+    VersionInfo = Series(dwsp__, DropToken('version'), dwsp__, DropToken('='), dwsp__, Alternative(Series(DropToken("'"), VersionNum, DropToken("'")), Series(DropToken('"'), VersionNum, DropToken('"'))))
+    XMLDecl = Series(DropToken('<?xml'), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, DropToken('?>'))
+    prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
 def get_grammar() -> XMLSnippetGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.XMLSnippet_1_grammar_singleton
+        grammar = GLOBALS.XMLSnippet_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.XMLSnippet_1_grammar_singleton = XMLSnippetGrammar()
+        GLOBALS.XMLSnippet_00000001_grammar_singleton = XMLSnippetGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.XMLSnippet_1_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.XMLSnippet_1_grammar_singleton
+            GLOBALS.XMLSnippet_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.XMLSnippet_00000001_grammar_singleton
     return grammar
 
 
@@ -138,7 +140,7 @@ def get_grammar() -> XMLSnippetGrammar:
 
 XMLSnippet_AST_transformation_table = {
     # AST Transformations for the XMLSnippet-grammar
-    "<": remove_empty,
+    "<": reduce_anonymous_nodes,
     "document": [],
     "prolog": [],
     "XMLDecl": [],
