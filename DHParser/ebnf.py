@@ -41,7 +41,7 @@ from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content
 from DHParser.versionnumber import __version__
-from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
+from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any, cast
 
 
 __all__ = ('get_ebnf_preprocessor',
@@ -572,7 +572,7 @@ class EBNFCompiler(Compiler):
             #     transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
         # transtable.append('    ":Token": reduce_single_child,')
-        # transtable += ['    "*": replace_by_single_child', '}', '']
+        transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(transtable)
 
@@ -1264,10 +1264,12 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL') \
         -> Tuple[Optional[Any], List[Error], Optional[Node]]:
-    """Compiles an `ebnf_source` (file_name or EBNF-string) and returns
+    """
+    Compiles an `ebnf_source` (file_name or EBNF-string) and returns
     a tuple of the python code of the compiler, a list of warnings or errors
     and the abstract syntax tree of the EBNF-source.
-    This function is merely syntactic sugar."""
+    This function is merely syntactic sugar.
+    """
     return compile_source(ebnf_source,
                           get_ebnf_preprocessor(),
                           get_ebnf_grammar(),

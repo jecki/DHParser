@@ -44,6 +44,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'RootNode',
            'parse_sxpr',
            'parse_xml',
+           'parse_tree',
            'flatten_sxpr',
            'flatten_xml')
 
@@ -1080,6 +1081,19 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
     _, tree = parse_full_content(xml[start:])
     assert _.match(RX_WHITESPACE_TAIL)
     return tree
+
+
+def parse_tree(xml_or_sxpr: str) -> Optional[Node]:
+    if re.match('\s*<', xml_or_sxpr):
+        return parse_xml(xml_or_sxpr)
+    elif re.match('\s*\(', xml_or_sxpr):
+        return parse_sxpr(xml_or_sxpr)
+    elif re.match('\s*', xml_or_sxpr):
+        return None
+    else:
+        m = re.match('\s*(.*)\n?', xml_or_sxpr)
+        snippet = m.group(1) if m else ''
+        raise ValueError('Snippet seems to be neither S-expression nor XML: ' + snippet + ' ...')
 
 # if __name__ == "__main__":
 #     st = parse_sxpr("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")

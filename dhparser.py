@@ -138,6 +138,12 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
+    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
+    if not os.path.exists(grammar_tests_dir) \
+            or not any(os.path.isfile(os.path.join(grammar_tests_dir, entry))
+                       for entry in os.listdir(grammar_tests_dir)):
+        print('No grammar-tests found, generating test templates.')
+        testing.create_test_templates(grammar_src, grammar_tests_dir)
     with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
         if not dsl.recompile_grammar(grammar_src, force=force):

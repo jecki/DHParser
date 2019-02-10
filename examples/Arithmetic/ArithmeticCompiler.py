@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "48fe89871e7ba344eb238c1d1a927167"
+    source_hash__ = "50681341ebb2536b3eadd7eb5540ece0"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*'

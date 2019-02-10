@@ -16,7 +16,7 @@ scriptpath = os.path.dirname(__file__)
 try:
     from DHParser import dsl
     import DHParser.log
-    from DHParser import testing
+    from DHParser import testing, create_test_templates
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -24,6 +24,12 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
+    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
+    if not os.path.exists(grammar_tests_dir) \
+            or not any(os.path.isfile(os.path.join(grammar_tests_dir, entry))
+                       for entry in os.listdir(grammar_tests_dir)):
+        print('No grammar-tests found, generating test templates.')
+        create_test_templates(grammar_src, grammar_tests_dir)
     with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
         if not dsl.recompile_grammar(grammar_src, force=force):
@@ -35,9 +41,10 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(glob_pattern):
+    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
     with DHParser.log.logging(LOGGING):
         error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
+            grammar_tests_dir,
             get_grammar, get_transformer,
             fn_patterns=[glob_pattern], report=True, verbose=True)
     return error_report

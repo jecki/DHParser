@@ -40,10 +40,10 @@ import sys
 from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
-from DHParser.syntaxtree import Node, RootNode, parse_sxpr, flatten_sxpr, ZOMBIE_TAG
-from DHParser.toolkit import re, typing
+from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
+from DHParser.toolkit import load_if_file, re, typing
 
-from typing import Tuple
+from typing import Dict, List, Union, cast
 
 __all__ = ('unit_from_config',
            'unit_from_json',
@@ -52,6 +52,9 @@ __all__ = ('unit_from_config',
            'get_report',
            'grammar_unit',
            'grammar_suite',
+           'SymbolsDictType',
+           'extract_symbols',
+           'create_test_templates',
            'reset_unit',
            'runner')
 
@@ -130,8 +133,8 @@ def unit_from_config(config_str):
         pos = eat_comments(cfg, section_match.span()[1])
 
         entry_match = RX_ENTRY.match(cfg, pos)
-        if entry_match is None:
-            raise SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
+        # if entry_match is None:
+        #     SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
         while entry_match:
             testkey, testcode = [group for group in entry_match.groups() if group is not None]
             lines = testcode.split('\n')
@@ -148,7 +151,7 @@ def unit_from_config(config_str):
 
         section_match = RX_SECTION.match(cfg, pos)
 
-    if pos != len(cfg):
+    if pos != len(cfg) and not re.match('\s+$', cfg[pos:]):
         raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 1))
 
     return unit
@@ -298,13 +301,14 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         except AttributeError:
             return k
 
-    def get(tests, category, key):
+    def get(tests, category, key) -> str:
         try:
             value = tests[category][key] if key in tests[category] \
                 else tests[category][clean_key(key)]
         except KeyError:
-            raise AssertionError('%s-test %s for parser %s missing !?'
-                                 % (category, test_name, parser_name))
+            return ''
+            # raise AssertionError('%s-test %s for parser %s missing !?'
+            #                      % (category, test_name, parser_name))
         return value
 
     if isinstance(test_unit, str):
@@ -393,10 +397,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         # run match tests
 
         for test_name, test_code in tests.get('match', dict()).items():
-            errflag = 0
-            if verbose:
-                infostr = '    match-test "' + test_name + '" ... '
-                errflag = len(errata)
+            errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
             except UnknownParserError as upe:
@@ -420,21 +421,35 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 # write parsing-history log only in case of failure!
                 if is_logging():
                     log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
-            elif "cst" in tests and parse_sxpr(get(tests, "cst", test_name)) != cst:
-                errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                              (test_name, parser_name, cst.as_sxpr()))
-            elif "ast" in tests:
-                compare = parse_sxpr(get(tests, "ast", test_name))
-                if compare != ast:
-                    errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
-                                  '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
-                                  % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                     flatten_sxpr(compare.as_sxpr()),
-                                     flatten_sxpr(ast.as_sxpr())))
-            if errata:
-                tests.setdefault('__err__', {})[test_name] = errata[-1]
             if verbose:
+                infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+
+            if "cst" in tests and len(errata) == errflag:
+                compare = parse_tree(get(tests, "cst", test_name))
+                if compare:
+                    if compare != cst:
+                        errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
+                                      (test_name, parser_name, cst.as_sxpr()))
+                    if verbose:
+                        infostr = '      cst-test "' + test_name + '" ... '
+                        write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+
+            if "ast" in tests and len(errata) == errflag:
+                compare = parse_tree(get(tests, "ast", test_name))
+                if compare:
+                    if compare != ast:
+                        errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
+                                      '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
+                                      % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
+                                         flatten_sxpr(compare.as_sxpr()),
+                                         flatten_sxpr(ast.as_sxpr())))
+                    if verbose:
+                        infostr = '      ast-test "' + test_name + '" ... '
+                        write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+
+            if len(errata) > errflag:
+                tests.setdefault('__err__', {})[test_name] = errata[-1]
 
         if verbose and 'fail' in tests:
             write('  Fail-Tests for parser "' + parser_name + '"')
@@ -442,10 +457,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         # run fail tests
 
         for test_name, test_code in tests.get('fail', dict()).items():
-            errflag = 0
-            if verbose:
-                infostr = '    fail-test  "' + test_name + '" ... '
-                errflag = len(errata)
+            errflag = len(errata)
             # cst = parser(test_code, parser_name)
             try:
                 cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
@@ -465,15 +477,18 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors_sorted)
             if verbose:
+                infostr = '    fail-test  "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
     # write test-report
     if report:
         report_dir = "REPORT"
-        if not os.path.exists(report_dir):
-            os.mkdir(report_dir)
-        with open(os.path.join(report_dir, unit_name + '.md'), 'w', encoding='utf8') as f:
-            f.write(get_report(test_unit))
+        test_report = get_report(test_unit)
+        if test_report:
+            if not os.path.exists(report_dir):
+                os.mkdir(report_dir)
+            with open(os.path.join(report_dir, unit_name + '.md'), 'w', encoding='utf8') as f:
+                f.write(test_report)
 
     print('\n'.join(output))
     return errata
@@ -541,6 +556,116 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     if verbose:
         print("\nSUCCESS! All tests passed :-)\n")
     return ''
+
+
+########################################################################
+#
+# Support for unit-testing of ebnf-grammars
+#
+########################################################################
+
+
+RX_DEFINITION_OR_SECTION = re.compile('(?:^|\n)[ \t]*(\w+(?=[ \t]*=)|#:.*(?=\n|$|#))')
+SymbolsDictType = Dict[str, List[str]]
+
+
+def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
+    """
+    Extracts all defined symbols from an EBNF-grammar. This can be used to
+    prepare grammar-tests. The symbols will be returned as lists of strings
+    which are grouped by the sections to which they belong and returned as
+    an ordered dictionary, they keys of which are the section names.
+    In order to define a section in the ebnf-source, add a comment-line
+    starting with "#:", followed by the section name. It is recommended
+    to use valid file names as section names. Example:
+
+        #: components
+
+        expression = term  { EXPR_OP~ term}
+        term       = factor  { TERM_OP~ factor}
+        factor     = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+        group      = "(" expression ")"
+
+
+        #: leaf_expressions
+
+        EXPR_OP    = /\+/ | /-/
+        TERM_OP    = /\*/ | /\//
+        SIGN       = /-/
+
+        NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+        VARIABLE   = /[A-Za-z]/~
+
+    If no sections have been defined in the comments, there will be only
+    one group with the empty string as a key.
+
+    :param ebnf_text_or_file: Either an ebnf-grammar or the file-name
+            of an ebnf-grammar
+    :return: Ordered dictionary mapping the section names of the grammar
+            to lists of symbols that appear under that section.
+    """
+    def trim_section_name(name: str) -> str:
+        return re.sub('[^\w-]', '_', name.replace('#:', '').strip())
+
+    ebnf = load_if_file(ebnf_text_or_file)
+    deflist = RX_DEFINITION_OR_SECTION.findall(ebnf)
+    if not deflist:
+        raise AssertionError('No symbols found in: ' + ebnf_text_or_file[:40])
+    symbols = collections.OrderedDict()  # type: SymbolsDictType
+    if deflist[0][:2] != '#:':
+        curr_section = ''
+        symbols[curr_section] = []
+    for df in deflist:
+        if df[:2] == '#:':
+            curr_section = trim_section_name(df)
+            if curr_section in symbols:
+                raise AssertionError('Section name must not be repeated: ' + curr_section)
+            symbols[curr_section] = []
+        else:
+            symbols[curr_section].append(df)
+    return symbols
+
+
+def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
+                          path: str,
+                          fmt: str = '.ini') -> None:
+    """
+    Creates template files for grammar unit-tests for the given symbols .
+
+    Args:
+        symbols_or_ebnf: Either a dictionary that matches section names to
+                the grammar's symbols under that section or an EBNF-grammar
+                or file name of an EBNF-grammar from which the symbols shall
+                be extracted.
+        path: the path to the grammar-test directory (usually 'grammar_tests').
+                If the last element of the path does not exist, the directory
+                will be created.
+        fmt: the test-file-format. At the moment only '.ini' is supported
+    """
+    assert fmt == '.ini'
+    if isinstance(symbols_or_ebnf, str):
+        symbols = extract_symbols(cast(str, symbols_or_ebnf))  # type: SymbolsDictType
+    else:
+        symbols = cast(Dict, symbols_or_ebnf)
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if os.path.isdir(path):
+        save = os.getcwd()
+        os.chdir(path)
+        keys = reversed(list(symbols.keys()))
+        for i, k in enumerate(keys):
+            filename = '{num:0>2}_test_{section}'.format(num=i+1, section=k) + fmt
+            if os.path.exists(filename):
+                print('File "{name}" not created, because it already exists!')
+            else:
+                with open(filename, 'w', encoding='utf-8') as f:
+                    for sym in symbols[k]:
+                        f.write('\n[match:{sym}]\n\n'.format(sym=sym))
+                        f.write('[ast:{sym}]\n\n'.format(sym=sym))
+                        f.write('[fail:{sym}]\n\n'.format(sym=sym))
+        os.chdir(save)
+    else:
+        raise ValueError(path + ' is not a directory!')
 
 
 #######################################################################
