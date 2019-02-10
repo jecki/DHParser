@@ -75,12 +75,25 @@ development or just using DHParser.
 Disclaimer
 ----------
 
-DHParser is still in an early development stage. While it is definitaly
-usable, features may be dropped or added without notice and class or
-function names changed in future versions. The API is NOT YET STABLE!
+DHParser is still in development stage. While it is already quite mature, 
+there may still be changes to the API.
 
-Use it for testing an evaluation, but not in an production environment
-or contact me first, if you intend to do so.
+Features
+--------
+
+* _Python-based_ parser-generator for context free grammars that is very easy
+  to use and set up.
+  
+* Specific focus on _XML-workflows_ as these are the most common in the digital 
+  humanities. Other output formats are of course also possible. (For example,
+  DHParser is self-hosting and uses Python-Code as output format.)
+  
+* Supports *unit-testing of grammars* and piecewise step-by-step development
+  as well as debugging of grammars.
+
+* *Customizable parsing errors and error recovery* to make it easy to locate 
+  parsing errors at the right spot and deliver them with a meaningful error
+  message for users that do not habitually deal with formal notations!  
 
 Purpose
 -------
