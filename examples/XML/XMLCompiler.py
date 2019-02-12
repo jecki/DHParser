@@ -28,7 +28,7 @@ from DHParser import logging, is_filename, load_if_file, \
     Node, TransformationFunc, TransformationDict, Token, DropToken, DropWhitespace, \
     traverse, remove_children_if, is_anonymous, GLOBALS, flatten_anonymous_nodes, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_whitespace, \
+    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, is_expendable, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \

@@ -428,7 +428,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if "cst" in tests and len(errata) == errflag:
                 compare = parse_tree(get(tests, "cst", test_name))
                 if compare:
-                    if compare != cst:
+                    if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                                       (test_name, parser_name, cst.as_sxpr()))
                     if verbose:
@@ -438,7 +438,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             if "ast" in tests and len(errata) == errflag:
                 compare = parse_tree(get(tests, "ast", test_name))
                 if compare:
-                    if compare != ast:
+                    if not compare.equals(ast):
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                       '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                       % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),

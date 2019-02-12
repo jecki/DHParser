@@ -25,7 +25,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
     is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
-    is_whitespace, TOKEN_PTYPE, GLOBALS
+    is_insignificant_whitespace, TOKEN_PTYPE, GLOBALS
 from DHParser.log import logging
 
 

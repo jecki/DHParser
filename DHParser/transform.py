@@ -58,12 +58,14 @@ __all__ = ('TransformationDict',
            'replace_content',
            'replace_content_by',
            'normalize_whitespace',
-           'move_whitespace',
+           'move_adjacent',
            'apply_if',
            'apply_unless',
            'traverse_locally',
            'is_anonymous',
-           'is_whitespace',
+           'is_insignificant_whitespace',
+           'contains_only_whitespace',
+           'is_any_kind_of_whitespace',
            'is_empty',
            'is_expendable',
            'is_token',
@@ -400,10 +402,29 @@ def is_anonymous(context: List[Node]) -> bool:
     return context[-1].is_anonymous()
 
 
-def is_whitespace(context: List[Node]) -> bool:
+def is_insignificant_whitespace(context: List[Node]) -> bool:
     """Returns ``True`` for whitespace and comments defined with the
     ``@comment``-directive."""
     return context[-1].tag_name == WHITESPACE_PTYPE
+
+
+RX_WHITESPACE = re.compile(r'\s*')
+
+
+def contains_only_whitespace(context: List[Node]) -> bool:
+    """Returns ``True`` for nodes that contain only whitespace regardless
+    of the tag_name, i.e. nodes the content of which matches the regular
+    expression /\s*/, including empty nodes. Note, that this is not true
+    for anonymous whitespace nodes that contain comments."""
+    return bool(RX_WHITESPACE.match(context[-1].content))
+
+
+def is_any_kind_of_whitespace(context: List[Node]) -> bool:
+    """Returns ``True`` for nodes that either contain only whitespace or
+    are insignificant whitespace nodes, i.e. nodes with the ``tag_name``
+    ``PTYPE_WHITESPACE``, including those that contain comment-text."""
+    node = context[-1]
+    return node.tag_name == WHITESPACE_PTYPE or RX_WHITESPACE.match(node.content)
 
 
 def is_empty(context: List[Node]) -> bool:
@@ -414,7 +435,7 @@ def is_empty(context: List[Node]) -> bool:
 def is_expendable(context: List[Node]) -> bool:
     """Returns ``True`` if the current node either is a node containing
     whitespace or an empty node."""
-    return is_empty(context) or is_whitespace(context)
+    return is_empty(context) or is_insignificant_whitespace(context)
 
 
 @transformation_factory(collections.abc.Set)
@@ -768,7 +789,7 @@ def normalize_whitespace(context):
     """
     node = context[-1]
     assert not node.children
-    if is_whitespace(context):
+    if is_insignificant_whitespace(context):
         if node.result:
             node.result = ' '
     else:
@@ -796,21 +817,22 @@ def merge_whitespace(context):
     node.result = tuple(new_result)
 
 
-def move_whitespace(context):
+@transformation_factory(collections.abc.Callable)
+def move_adjacent(context, condition: Callable = is_insignificant_whitespace):
     """
-    Moves adjacent whitespace nodes to the parent node.
+    Moves adjacent nodes that fulfill the given condition to the parent node.
     """
     node = context[-1]
     if len(context) <= 1 or not node.children:
         return
     parent = context[-2]
     children = node.children
-    if children[0].tag_name == WHITESPACE_PTYPE:
+    if condition([children[0]]):
         before = (children[0],)
         children = children[1:]
     else:
         before = ()
-    if children and children[-1].tag_name == WHITESPACE_PTYPE:
+    if children and condition([children[-1]]):
         after = (children[-1],)
         children = children[:-1]
     else:
@@ -819,20 +841,20 @@ def move_whitespace(context):
     if before or after:
         node.result = children
         for i, child in enumerate(parent.children):
-            if child == node:
+            if id(child) == id(node):
                 break
 
         # merge adjacent whitespace
         prevN = parent.children[i - 1] if i > 0 else None
         nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
-        if before and prevN and prevN.tag_name == WHITESPACE_PTYPE:
+        if before and prevN and condition([prevN]):
             prevN.result = prevN.result + before[0].result
             before = ()
-        if after and nextN and nextN.tag_name == WHITESPACE_PTYPE:
+        if after and nextN and condition([nextN]):
             nextN.result = after[0].result + nextN.result
             after = ()
 
-        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i + 1:]
+        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
 
 
 #######################################################################
@@ -949,7 +971,7 @@ def remove_children_if(context: List[Node], condition: Callable):
 #         #     node.result = tuple(selection)
 
 
-remove_whitespace = remove_children_if(is_whitespace)
+remove_whitespace = remove_children_if(is_insignificant_whitespace)
 # partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))

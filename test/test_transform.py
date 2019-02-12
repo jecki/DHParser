@@ -25,8 +25,8 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACEHOLDER, \
-    TOKEN_PTYPE
-from DHParser.transform import traverse, reduce_single_child, remove_whitespace, \
+    tree_sanity_check, TOKEN_PTYPE
+from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
     transformation_factory, has_parent
 from DHParser.toolkit import typing
@@ -238,6 +238,32 @@ class TestComplexTransformations:
         collapse_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT', self.Text)
         assert tree.as_xml(inline_tags={'Stelle'}) == \
                "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"
+
+
+class TestWhitespaceTransformations:
+    def test_move_adjacent(self):
+        sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
+                              '(WORD (LETTERS "be") (:Whitespace " ")) '
+                              '(WORD (LETTERS "or") (:Whitespace " ")) '
+                              '(WORD (LETTERS "not") (:Whitespace " ")) '
+                              '(WORD (LETTERS "to") (:Whitespace " "))'
+                              '(WORD (LETTERS "be") (:Whitespace " ")))')
+        transformations = { 'WORD': move_adjacent }
+        traverse(sentence, transformations)
+        assert tree_sanity_check(sentence)
+        assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
+
+    def test_move_and_merge_adjacent(self):
+        sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
+                              '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")) '
+                              '(WORD (:Whitespace " ") (LETTERS "or") (:Whitespace " ")) '
+                              '(WORD (:Whitespace " ") (LETTERS "not") (:Whitespace " ")) '
+                              '(WORD (:Whitespace " ") (LETTERS "to") (:Whitespace " "))'
+                              '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
+        transformations = { 'WORD': move_adjacent }
+        traverse(sentence, transformations)
+        assert tree_sanity_check(sentence)
+        assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
 
 
 if __name__ == "__main__":

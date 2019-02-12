@@ -57,7 +57,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "e09808ecd485c07b3455c3a2bf4eada3"
+    source_hash__ = "dacb1f9ad5b1c18cdc29c7ddb7878959"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'%.*'

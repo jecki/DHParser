@@ -86,7 +86,7 @@ class TestNode:
         tree.with_pos(0)
         tree_copy = copy.deepcopy(tree)
 
-        assert tree == tree_copy
+        assert tree.equals(tree_copy)
         assert tree.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
         assert tree_copy.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
 
@@ -96,11 +96,11 @@ class TestNode:
         assert tree_copy.as_sxpr() == parse_sxpr('(a (b c) (d (e f) (h i)))').as_sxpr()
 
         tree['d'].result = "x"
-        assert tree != tree_copy
-        assert tree_copy == parse_sxpr('(a (b c) (d (e f) (h i)))')
+        assert not tree.equals(tree_copy)
+        assert tree_copy.equals(parse_sxpr('(a (b c) (d (e f) (h i)))'))
         # print(tree.as_sxpr())
         # print(parse_sxpr('(a (b c) (d x))').as_sxpr())
-        assert tree == parse_sxpr('(a (b c) (d x))')
+        assert tree.equals(parse_sxpr('(a (b c) (d x))'))
 
         # this also checks for errors equality...
         assert parse_sxpr('(a (b c) (d x))').as_sxpr() != tree.as_sxpr()
@@ -123,10 +123,10 @@ class TestNode:
         assert found[0].result == 'x' and found[1].result == 'y'
 
     def test_equality1(self):
-        assert self.unique_tree == self.unique_tree
-        assert self.recurr_tree != self.unique_tree
-        assert parse_sxpr('(a (b c))') != parse_sxpr('(a (b d))')
-        assert parse_sxpr('(a (b c))') == parse_sxpr('(a (b c))')
+        assert self.unique_tree.equals(self.unique_tree)
+        assert not self.recurr_tree.equals(self.unique_tree)
+        assert not parse_sxpr('(a (b c))').equals(parse_sxpr('(a (b d))'))
+        assert parse_sxpr('(a (b c))').equals(parse_sxpr('(a (b c))'))
 
     def test_equality2(self):
         ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
@@ -137,14 +137,14 @@ class TestNode:
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
         compare_tree = parse_sxpr("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
-        assert tree == compare_tree, tree.as_sxpr()
+        assert tree.equals(compare_tree), tree.as_sxpr()
 
     def test_copy(self):
         cpy = copy.deepcopy(self.unique_tree)
-        assert cpy == self.unique_tree
+        assert cpy.equals(self.unique_tree)
         assert cpy.result[0].result != "epsilon" # just to make sure...
         cpy.result[0].result = "epsilon"
-        assert cpy != self.unique_tree
+        assert not cpy.equals(self.unique_tree)
 
     def test_copy2(self):
         # test if Node.__deepcopy__ goes sufficiently deep for ast-
@@ -225,8 +225,8 @@ class TestNodeFind():
         assert len(matches) == 2, len(matches)
         assert str(matches[0]) == 'd', str(matches[0])
         assert str(matches[1]) == 'F', str(matches[1])
-        assert matches[0] == parse_sxpr('(X (c d))')
-        assert matches[1] == parse_sxpr('(X F)')
+        assert matches[0].equals(parse_sxpr('(X (c d))'))
+        assert matches[1].equals(parse_sxpr('(X F)'))
         # check default: root is included in search:
         matchf2 = lambda node: match_tag_name(node, 'a')
         assert list(tree.select(matchf2, include_root=True))
@@ -234,16 +234,16 @@ class TestNodeFind():
 
     def test_getitem(self):
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
-        assert tree[0] == parse_sxpr('(b X)')
-        assert tree[2] == parse_sxpr('(e (X F))')
+        assert tree[0].equals(parse_sxpr('(b X)'))
+        assert tree[2].equals(parse_sxpr('(e (X F))'))
         try:
             node = tree[3]
             assert False, "IndexError expected!"
         except IndexError:
             pass
         matches = list(tree.select_by_tag('X', False))
-        assert matches[0] == parse_sxpr('(X (c d))')
-        assert matches[1] == parse_sxpr('(X F)')
+        assert matches[0].equals(parse_sxpr('(X (c d))'))
+        assert matches[1].equals(parse_sxpr('(X F)'))
 
     def test_contains(self):
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')

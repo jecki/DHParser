@@ -41,6 +41,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'ChildrenType',
            'Node',
            'FrozenNode',
+           'tree_sanity_check',
            'RootNode',
            'parse_sxpr',
            'parse_xml',
@@ -222,14 +223,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return True
 
 
-    def __eq__(self, other):
-        """
-        Equality of nodes: Two nodes are considered as equal, if their tag
-        name is the same, if their results are equal and if their attributes
-        and attribute values are the same.
-        """
-        return self.tag_name == other.tag_name and self.result == other.result \
-            and self.compare_attr(other)
+    # can lead to obscure mistakes, where default object comparison behaviour is expected
+    # def __eq__(self, other):
+    #     """
+    #     Equality of nodes: Two nodes are considered as equal, if their tag
+    #     name is the same, if their results are equal and if their attributes
+    #     and attribute values are the same.
+    #     """
+    #     return self.tag_name == other.tag_name and self.result == other.result \
+    #         and self.compare_attr(other)
 
 
     def __hash__(self):
@@ -281,6 +283,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     return True
             return False
         raise ValueError('Leave node cannot contain other nodes')
+
+
+    def equals(self, other):
+        """
+        Equality of nodes: Two nodes are considered as equal, if their tag
+        name is the same, if their results are equal and if their attributes
+        and attribute values are the same.
+        """
+        if self.tag_name == other.tag_name and self.compare_attr(other):
+            if self.children:
+                return (len(self.children) == len(other.children)
+                        and all(a.equals(b) for a, b in zip(self.children, other.children)))
+            else:
+                return self.result == other.result
+        return False
 
 
     def get(self, index_or_tagname: Union[int, str],
@@ -529,6 +546,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             txt = [left_bracket, node.tag_name]
             # s += " '(pos %i)" % node.add_pos
+            # txt.append(str(id(node)))  # for debugging
             if node.attr_active():
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
@@ -746,6 +764,16 @@ class FrozenNode(Node):
 
 
 PLACEHOLDER = Node('__PLACEHOLDER__', '')
+
+
+def tree_sanity_check(tree: Node) -> bool:
+    node_set = set()
+    for node in tree.select(lambda nd: True, include_root=True):
+        if node in node_set and not (isinstance(node, FrozenNode)
+                                     or node.tag_name == '__PLACEHOLDER__'):
+            return False
+        node_set.add(node)
+    return True
 
 
 class RootNode(Node):
