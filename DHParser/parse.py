@@ -1512,6 +1512,7 @@ NO_MANDATORY = 1000
 
 def mandatory_violation(grammar: Grammar,
                         text_: StringView,
+                        failed_on_lookahead: bool,
                         expected: str,
                         err_msgs: MessagesType,
                         reloc: int) -> Tuple[Error, Node, StringView]:
@@ -1526,6 +1527,8 @@ def mandatory_violation(grammar: Grammar,
     :param grammar: the grammar
     :param text_: the point, where the mandatory vialoation. As usual the
             string view represents the remaining text from this point.
+    :param failed_on_lookahead: True if the violating parser was a
+            Lookahead-Parser.
     :param expected:  the expected (but not found) text at this point.
     :param err_msgs:  A list of pairs of regular expressions (or simple
             strings for that matter) and error messages that are chosen
@@ -1556,8 +1559,8 @@ def mandatory_violation(grammar: Grammar,
                 grammar.tree__.add_error(err_node, error)
     else:
         msg = '%s expected, "%s" found!' % (expected, found)
-    error = Error(msg, location, Error.MANDATORY_CONTINUATION if text_
-            else Error.MANDATORY_CONTINUATION_AT_EOF)
+    error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
+            if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)
     return error, err_node, text_[i:]
 
@@ -1637,7 +1640,8 @@ class Series(NaryParser):
                 else:
                     reloc = reentry_point(text_, self.skip) if self.skip else -1
                     error, node, text_ = mandatory_violation(
-                        self.grammar, text_, parser.repr, self.err_msgs, reloc)
+                        self.grammar, text_, isinstance(parser, Lookahead), parser.repr,
+                        self.err_msgs, reloc)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
@@ -1859,8 +1863,9 @@ class AllOf(NaryParser):
                 else:
                     reloc = reentry_point(text_, self.skip) if self.skip else -1
                     expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
+                    lookahead = any(isinstance(p, Lookahead) for p in parsers)
                     error, err_node, text_ = mandatory_violation(
-                        self.grammar, text_, expected, self.err_msgs, reloc)
+                        self.grammar, text_, lookahead, expected, self.err_msgs, reloc)
                     results += (err_node,)
                     if reloc < 0:
                         parsers = []

@@ -58,7 +58,7 @@ class TestCompileFunctions:
 
 
 class TestCompilerGeneration:
-    trivial_lang = """
+    trivial_lang = r"""
         text = { word | WSPC } "." [/\s/]
         word = /\w+/
         WSPC = /\s+/

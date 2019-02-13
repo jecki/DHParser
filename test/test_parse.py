@@ -133,10 +133,10 @@ class TestFlowControl:
         self.t2 = "All word and not play makes Jack a dull boy END\n"
 
     def test_lookbehind(self):
-        ws = RegExp('\s*')
+        ws = RegExp(r'\s*')
         end = RegExp("END")
         doc_end = Lookbehind(RegExp('\\s*?\\n')) + end
-        word = RegExp('\w+')
+        word = RegExp(r'\w+')
         sequence = OneOrMore(NegativeLookahead(end) + word + ws)
         document = ws + sequence + doc_end + ws
 
@@ -149,11 +149,11 @@ class TestFlowControl:
     def test_lookbehind_indirect(self):
         class LookbehindTestGrammar(Grammar):
             parser_initialization__ = ["upon instantiation"]
-            ws = RegExp('\\s*')
+            ws = RegExp(r'\s*')
             end = RegExp('END')
             SUCC_LB = RegExp('\\s*?\\n')
             doc_end = Series(Lookbehind(SUCC_LB), end)
-            word = RegExp('\w+')
+            word = RegExp(r'\w+')
             sequence = OneOrMore(Series(NegativeLookahead(end), word, ws))
             document = Series(ws, sequence, doc_end, ws)
             root__ = document
@@ -176,7 +176,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
-        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
         assert node.tag_name == "regex"
@@ -192,7 +192,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
-        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
         assert node.tag_name == "regex"
@@ -207,7 +207,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
-        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node, rest = parser.regex('Alpha')
         assert node
         assert not node.error_flag
@@ -223,7 +223,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
-        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node, rest = parser.regex('Alpha')
         assert node.error_flag
 
@@ -244,7 +244,7 @@ class TestRegex:
                                     get_ebnf_transformer(), get_ebnf_compiler("TokenTest"))
         assert result
         assert not messages, str(messages)
-        parser = compile_python_object(DHPARSER_IMPORTS + result, '\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         result = parser(testdoc)
         # log_parsing_history(parser, "test.log")
         assert not result.error_flag
@@ -267,13 +267,13 @@ class TestGrammar:
         # checks whether pos values in the parsing result and in the
         # history record have been initialized
         with logging("LOGS"):
-            grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
+            grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, r'\w+Grammar$')()
             grammar("no_file_name*")
         for record in grammar.history__:
             assert not record.node or record.node.pos >= 0
 
     def test_select_parsing(self):
-        grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, '\w+Grammar$')()
+        grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, r'\w+Grammar$')()
         grammar("wort", "WORT")
         grammar("eine Zeile", "textzeile")
         grammar("kein Haupt", "haupt")
@@ -281,7 +281,7 @@ class TestGrammar:
 
     def test_grammar_subclassing(self):
         class Arithmetic(Grammar):
-            '''
+            r'''
             expression =  term  { ("+" | "-") term }
             term       =  factor  { ("*" | "/") factor }
             factor     =  INTEGER | "("  expression  ")"
@@ -413,14 +413,14 @@ class TestAllOfSomeOf:
 
 
 class TestPopRetrieve:
-    mini_language = """
+    mini_language = r"""
         document       = { text | codeblock }
         codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
         delimiter      = delimiter_sign  # never use delimiter between capture and pop except for retrival!
         delimiter_sign = /`+/
         text           = /[^`]+/
         """
-    mini_lang2 = """
+    mini_lang2 = r"""
         @braces_filter=counterpart
         document       = { text | codeblock }
         codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
@@ -429,7 +429,7 @@ class TestPopRetrieve:
         closing_braces = /\}+/
         text           = /[^{}]+/
         """
-    mini_lang3 = """
+    mini_lang3 = r"""
         document       = { text | env }
         env            = (specialtag | opentag) text [closespecial | closetag]
         opentag        = "<" name ">"
@@ -485,7 +485,7 @@ class TestPopRetrieve:
     def test_cache_neutrality(self):
         """Test that packrat-caching does not interfere with the variable-
         changing parsers: Capture and Retrieve."""
-        lang = """
+        lang = r"""
             text = opening closing
             opening = (unmarked_package | marked_package)
             closing = ::variable
@@ -758,7 +758,7 @@ class TestUnknownParserError:
 
 class TestEarlyTokenWhitespaceDrop:
     def setup(self):
-        self.lang = """
+        self.lang = r"""
             @ drop = token, whitespace
             expression = term  { ("+" | "-") term}
             term       = factor  { ("*"|"/") factor}

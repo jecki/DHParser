@@ -151,7 +151,7 @@ def unit_from_config(config_str):
 
         section_match = RX_SECTION.match(cfg, pos)
 
-    if pos != len(cfg) and not re.match('\s+$', cfg[pos:]):
+    if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
         raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 1))
 
     return unit
@@ -322,39 +322,18 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
 
-    # is_lookahead = set()    # type: Set[str]  # Dictionary of parser names
-    with_lookahead = set()  # type: Set[Optional[Parser]]
-    # lookahead_flag = False  # type: bool
+    def has_lookahead(parser_name: str) -> bool:
+        """Returns True if the parser or any of its descendant parsers it a
+        Lookahead parser."""
+        lookahead_found = False
 
-    def find_lookahead(p: Parser):
-        """Raises a StopIterationError if parser `p` is or contains
-        a Lookahead-parser."""
-        nonlocal is_lookahead, with_lookahead, lookahead_flag
-        if p in with_lookahead:
-            lookahead_flag = True
-        else:
-            if isinstance(p, Lookahead):
-                is_lookahead.add(p.tag_name)
-                with_lookahead.add(p)
-                lookahead_flag = True
-            else:
-                if any(child for child in (getattr(p, 'parsers', [])
-                       or [getattr(p, 'parser', None)]) if isinstance(child, Lookahead)):
-                    with_lookahead.add(p)
-                    lookahead_flag = True
+        def find_lookahead(p: Parser):
+            nonlocal lookahead_found
+            if not lookahead_found:
+                lookahead_found = isinstance(p, Lookahead)
 
-    def has_lookahead(parser_name: str):
-        """Returns `True`, if given parser is or contains a Lookahead-parser."""
-        nonlocal is_lookahead, with_lookahead, lookahead_flag, parser
-        p = parser[parser_name]
-        if p in with_lookahead:
-            return True
-        lookahead_flag = False
-        p.apply(find_lookahead)
-        if lookahead_flag:
-            with_lookahead.add(p)
-            return True
-        return False
+        parser[parser_name].apply(find_lookahead)
+        return lookahead_found
 
     def lookahead_artifact(parser, raw_errors):
         """
@@ -364,14 +343,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         This is required for testing of parsers that put a lookahead
         operator at the end. See test_testing.TestLookahead.
         """
-        nonlocal is_lookahead
         return ((len(raw_errors) == 2  # case 1:  superfluous data for lookahead
                  and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
                  and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END)
                 #  case 2:  mandatory lookahead failure at end of text
                 or (len(raw_errors) == 1
-                    and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)
-                    and any(tn in with_lookahead for tn in parser.history__[-1].call_stack))
+                    and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF))
 
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
@@ -566,12 +543,12 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 ########################################################################
 
 
-RX_DEFINITION_OR_SECTION = re.compile('(?:^|\n)[ \t]*(\w+(?=[ \t]*=)|#:.*(?=\n|$|#))')
+RX_DEFINITION_OR_SECTION = re.compile(r'(?:^|\n)[ \t]*(\w+(?=[ \t]*=)|#:.*(?=\n|$|#))')
 SymbolsDictType = Dict[str, List[str]]
 
 
 def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
-    """
+    r"""
     Extracts all defined symbols from an EBNF-grammar. This can be used to
     prepare grammar-tests. The symbols will be returned as lists of strings
     which are grouped by the sections to which they belong and returned as
@@ -606,7 +583,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
             to lists of symbols that appear under that section.
     """
     def trim_section_name(name: str) -> str:
-        return re.sub('[^\w-]', '_', name.replace('#:', '').strip())
+        return re.sub(r'[^\w-]', '_', name.replace('#:', '').strip())
 
     ebnf = load_if_file(ebnf_text_or_file)
     deflist = RX_DEFINITION_OR_SECTION.findall(ebnf)

@@ -346,7 +346,7 @@ class TestBoundaryCases:
                 "not an error: " + str(messages)
             grammar_src = result
             grammar = compile_python_object(DHPARSER_IMPORTS + grammar_src,
-                                            'get_(?:\w+_)?grammar$')()
+                                            r'get_(?:\w+_)?grammar$')()
         else:
             assert False, "EBNF compiler should warn about unconnected rules."
 
@@ -405,7 +405,7 @@ class TestFlowControlOperators:
         """Tests whether failures to comply with the required operator '§'
         are correctly reported as such.
         """
-        lang1 = "nonsense == /\w+/~  # wrong_equal_sign"
+        lang1 = r"nonsense == /\w+/~  # wrong_equal_sign"
         lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions"
         try:
             parser_class = grammar_provider(lang1)
@@ -477,6 +477,7 @@ class TestErrorCustomization:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
+        print(st.errors_sorted)
         assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "a user defined error message"
         # transitivity of mandatory-operator
@@ -497,7 +498,7 @@ class TestErrorCustomization:
         assert st.errors_sorted[0].message == "a user defined error message"
 
     def test_multiple_error_messages(self):
-        lang = """
+        lang = r"""
             document = series | /.*/
             @series_error = '_', "the underscore is wrong in this place"
             @series_error = '*', "the asterix is wrong in this place"
@@ -573,7 +574,7 @@ class TestErrorCustomizationErrors:
 
 class TestCustomizedResumeParsing:
     def setup(self):
-        lang = """
+        lang = r"""
             @ alpha_resume = 'BETA', GAMMA_STR
             @ beta_resume = GAMMA_RE
             @ bac_resume = /GA\w+/

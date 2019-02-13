@@ -206,7 +206,7 @@ class TestRootNode:
         assert error_str.find("A") < error_str.find("B")
 
     def test_error_reporting(self):
-        number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+        number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         result = str(Grammar(number)("3.1416"))
         assert result == '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> ', \
             str(result)
