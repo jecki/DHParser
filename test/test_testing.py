@@ -135,7 +135,7 @@ ARITHMETIC_EBNF = """
 ARITHMETIC_EBNF_transformation_table = {
     # AST Transformations for the DSL-grammar
     "formula": [remove_expendables],
-    "term, expr": [replace_by_single_child, flatten],
+    "term, expr": [remove_expendables, replace_by_single_child, flatten],
     "factor": [remove_expendables, reduce_single_child],
     (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
     "*": [remove_expendables, replace_by_single_child]

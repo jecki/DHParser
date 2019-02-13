@@ -1731,8 +1731,10 @@ class Alternative(NaryParser):
         for parser in self.parsers:
             node, text_ = parser(text)
             if node:
-                return Node(self.tag_name,
-                            node if node._result or parser.pname else ()), text_
+                return self._return_value(node), text_
+                # return self._return_value(node if node._result or parser.pname else None), text_
+                # return Node(self.tag_name,
+                #             node if node._result or parser.pname else ()), text_
         return None, text
 
     def __repr__(self):

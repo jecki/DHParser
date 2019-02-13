@@ -30,13 +30,11 @@ Match-test "nested_braces"
       <:Token>{</:Token>
       <text>
         <CONTENT_STRING>\url</CONTENT_STRING>
-        <:Series>
-          <:Token>{</:Token>
-          <text>
-            <CONTENT_STRING>https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/</CONTENT_STRING>
-          </text>
-          <:Token>}</:Token>
-        </:Series>
+        <:Token>{</:Token>
+        <text>
+          <CONTENT_STRING>https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/</CONTENT_STRING>
+        </text>
+        <:Token>}</:Token>
       </text>
       <:Token>}</:Token>
     </content>
