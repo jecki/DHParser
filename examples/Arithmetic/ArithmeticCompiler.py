@@ -25,7 +25,7 @@ from DHParser import logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
-    remove_children_if, move_whitespace, normalize_whitespace, is_anonymous, matches_re, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
     is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "50681341ebb2536b3eadd7eb5540ece0"
+    source_hash__ = "d77842f8b59d2ec3736b21778c0c9c78"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*'

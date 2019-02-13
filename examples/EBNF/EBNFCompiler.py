@@ -25,7 +25,7 @@ from DHParser import logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
-    remove_children_if, move_whitespace, normalize_whitespace, is_anonymous, matches_re, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
     is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -59,7 +59,7 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "a7119a157d38270e4215972858d0b930"
+    source_hash__ = "de6d0516ea104e7d8318b998e488b2d1"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'

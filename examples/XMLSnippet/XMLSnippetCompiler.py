@@ -25,7 +25,7 @@ from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
-    remove_children_if, move_whitespace, normalize_whitespace, is_anonymous, matches_re, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
     is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -60,7 +60,7 @@ class XMLSnippetGrammar(Grammar):
     """
     Name = Forward()
     element = Forward()
-    source_hash__ = "49e51a7b2ad79e95ba239427830ba02f"
+    source_hash__ = "ef0fa6d8c7a96ee0fe2a8e209c3f2ae9"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''

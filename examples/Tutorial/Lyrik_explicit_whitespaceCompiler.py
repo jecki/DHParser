@@ -25,7 +25,7 @@ from DHParser import logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
-    remove_children_if, move_whitespace, normalize_whitespace, is_anonymous, matches_re, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
     is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -58,7 +58,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class Lyrik_explicit_whitespaceGrammar(Grammar):
     r"""Parser for a Lyrik_explicit_whitespace source file.
     """
-    source_hash__ = "824c3970f8997489b9a0faa53f2dff51"
+    source_hash__ = "bcb3cee425961a2148941b492e614bd2"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''

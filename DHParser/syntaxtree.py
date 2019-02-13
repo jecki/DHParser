@@ -285,11 +285,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         raise ValueError('Leave node cannot contain other nodes')
 
 
-    def equals(self, other):
+    def equals(self, other: 'Node') -> bool:
         """
-        Equality of nodes: Two nodes are considered as equal, if their tag
-        name is the same, if their results are equal and if their attributes
-        and attribute values are the same.
+        Equality of value: Two nodes are considered as having the same value,
+        if their tag name is the same, if their results are equal and
+        if their attributes and attribute values are the same.
+
+        Returns True, if the tree originating in node `self` is equal by
+        value to the tree originating in node `other`.
         """
         if self.tag_name == other.tag_name and self.compare_attr(other):
             if self.children:
@@ -314,7 +317,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return surrogate
 
 
-    def is_anonymous(self):
+    def is_anonymous(self) -> bool:
         return not self.tag_name or self.tag_name[0] == ':'
 
 
@@ -729,6 +732,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
 class FrozenNode(Node):
+    """
+    FrozenNode is an immutable kind of Node, i.e. it must not be changed
+    after initialization. The purpose is mainly to allow certain kinds of
+    optimization, like not having to instantiate empty nodes (because they
+    are always the same and will be dropped while parsing, anyway).
+
+    Frozen nodes must be used only temporarily during parsing or
+    tree-transformation and should not occur in the product of the
+    transformation any more. This can be verified with `tree_sanity_check()`.
+    """
 
     def __init__(self, tag_name: str, result: ResultType) -> None:
         if isinstance(result, str) or isinstance(result, StringView):
@@ -750,41 +763,55 @@ class FrozenNode(Node):
     def attr(self):
         raise AssertionError("Attributes cannot be accessed on a frozen node")
 
-    # @property
-    # def errors(self) -> List[Error]:
-    #     return ()
-    #
-    # @errors.setter
-    # def errors(self, errors: List[Error]):
-    #     if errors:
-    #         raise AssertionError('Cannot assign error list to frozen node')
-
     def with_pos(self, pos: int) -> 'Node':
         pass
 
 
-PLACEHOLDER = Node('__PLACEHOLDER__', '')
+PLACEHOLDER = FrozenNode('__PLACEHOLDER__', '')
 
 
 def tree_sanity_check(tree: Node) -> bool:
+    """
+    Sanity check for syntax trees: One and the same node must never appear
+    twice in the syntax tree. Frozen Nodes (EMTPY_NODE, PLACEHOLDER)
+    should only exist temporarily and must have been dropped or eliminated
+    before any kind of tree generation (i.e. parsing) or transformation
+    is finished.
+    :param tree: the root of the tree to be checked
+    :return: True, if the tree is `sane`, False otherwise.
+    """
     node_set = set()
     for node in tree.select(lambda nd: True, include_root=True):
-        if node in node_set and not (isinstance(node, FrozenNode)
-                                     or node.tag_name == '__PLACEHOLDER__'):
+        if node in node_set or isinstance(Node, FrozenNode):
             return False
         node_set.add(node)
     return True
 
 
 class RootNode(Node):
-    """TODO: Add Documentation!!!
+    """The root node for the syntax tree is a special kind of node that keeps
+    and manages global properties of the tree as a whole. These are first and
+    foremost the list off errors that occurred during tree generation
+    (i.e. parsing) or any transformation of the tree. Other properties concern
+    the customization of the XML-serialization.
 
-        errors (list):  A list of all errors that have occured so far during
+    The root node can be instantiated before the tree is fully parsed. This is
+    necessary, because the root node is needed for managing error messages
+    during the parsing process, already. In order to connect the root node to
+    the tree, when parsing is finished, the swallow()-method must be called.
+
+        errors (list):  A list of all errors that have occurred so far during
                 processing (i.e. parsing, AST-transformation, compiling)
                 of this tree.
 
         error_flag (int):  the highest warning or error level of all errors
                 that occurred.
+
+        inline_tags (set of strings): see `Node.as_xml()` for an explanation.
+
+        omit_tags (set of strings): see `Node.as_xml()` for an explanation.
+
+        empty_tags (set oif strings): see `Node.as_xml()` for an explanation.
     """
 
     def __init__(self, node: Optional[Node] = None):
@@ -1037,7 +1064,8 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
     # mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
-        """Parses a sqeuence of XML-Attributes. Returns the string-slice
+        """
+        Parses a sqeuence of XML-Attributes. Returns the string-slice
         beginning after the end of the attr.
         """
         attributes = OrderedDict()  # type: OrderedDict[str, str]
@@ -1049,7 +1077,8 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         return (s[restart:], attributes)
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
-        """Parses an opening tag. Returns the string segment following the
+        """
+        Parses an opening tag. Returns the string segment following the
         the opening tag, the tag name, a dictionary of attr and
         a flag indicating whether the tag is actually a solitary tag as
         indicated by a slash at the end, i.e. <br/>.
@@ -1064,7 +1093,8 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         return s[i + 1:], tagname, attributes, s[i - 1] == "/"
 
     def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
-        """Parses a closing tag and returns the string segment, just after
+        """
+        Parses a closing tag and returns the string segment, just after
         the closing tag.
         """
         match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
@@ -1073,7 +1103,8 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         return s[s.index(match.end()):], tagname
 
     def parse_leaf_content(s: StringView) -> Tuple[StringView, StringView]:
-        """Parses a piece of the content of a tag, just until the next opening,
+        """
+        Parses a piece of the content of a tag, just until the next opening,
         closing or solitary tag is reached.
         """
         i = 0
@@ -1082,7 +1113,8 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         return s[i:], s[:i]
 
     def parse_full_content(s: StringView) -> Tuple[StringView, Node]:
-        """Parses the full content of a tag, starting right at the beginning
+        """
+        Parses the full content of a tag, starting right at the beginning
         of the opening tag and ending right after the closing tag.
         """
         res = []  # type: List[Node]
@@ -1112,6 +1144,9 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
 
 
 def parse_tree(xml_or_sxpr: str) -> Optional[Node]:
+    """
+    Parses either XML or S-expressions. Which of these is detected automatically.
+    """
     if re.match('\s*<', xml_or_sxpr):
         return parse_xml(xml_or_sxpr)
     elif re.match('\s*\(', xml_or_sxpr):

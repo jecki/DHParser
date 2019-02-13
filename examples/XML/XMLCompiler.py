@@ -67,7 +67,7 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "afe79281456bb2625a0c90c58a699d32"
+    source_hash__ = "3b6f8c0aafa133d9139684e42a30adfa"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''

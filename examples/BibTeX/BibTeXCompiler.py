@@ -57,7 +57,7 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "e402951b290cb0fce63ba0cbca3f23e9"
+    source_hash__ = "f0e945d8b504317cdfb6e08fd2fcf596"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'(?i)%.*(?:\n|$)'
@@ -85,12 +85,12 @@ class BibTeXGrammar(Grammar):
 def get_grammar() -> BibTeXGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.BibTeX_1_grammar_singleton
+        grammar = GLOBALS.BibTeX_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.BibTeX_1_grammar_singleton = BibTeXGrammar()
+        GLOBALS.BibTeX_00000001_grammar_singleton = BibTeXGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.BibTeX_1_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.BibTeX_1_grammar_singleton
+            GLOBALS.BibTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.BibTeX_00000001_grammar_singleton
     return grammar
 
 

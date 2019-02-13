@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     digit = Forward()
     expression = Forward()
     variable = Forward()
-    source_hash__ = "120070baa84f5a2bd1bbb900627078fc"
+    source_hash__ = "cf537b22b7a1a2a58c426f99f784285d"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
