@@ -408,7 +408,7 @@ def is_insignificant_whitespace(context: List[Node]) -> bool:
     return context[-1].tag_name == WHITESPACE_PTYPE
 
 
-RX_WHITESPACE = re.compile(r'\s*')
+RX_WHITESPACE = re.compile(r'\s+')
 
 
 def contains_only_whitespace(context: List[Node]) -> bool:
@@ -416,7 +416,8 @@ def contains_only_whitespace(context: List[Node]) -> bool:
     of the tag_name, i.e. nodes the content of which matches the regular
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""
-    return bool(RX_WHITESPACE.match(context[-1].content))
+    content = context[-1].content
+    return bool(not content or RX_WHITESPACE.match(context[-1].content))
 
 
 def is_any_kind_of_whitespace(context: List[Node]) -> bool:
@@ -869,7 +870,7 @@ def move_adjacent(context, condition: Callable = is_insignificant_whitespace):
 
 
 @transformation_factory(collections.abc.Callable)
-def lstrip(context: List[Node], condition: Callable = is_expendable):
+def lstrip(context: List[Node], condition: Callable = contains_only_whitespace):
     """Recursively removes all leading child-nodes that fulfill a given condition."""
     node = context[-1]
     i = 1
@@ -883,7 +884,7 @@ def lstrip(context: List[Node], condition: Callable = is_expendable):
 
 
 @transformation_factory(collections.abc.Callable)
-def rstrip(context: List[Node], condition: Callable = is_expendable):
+def rstrip(context: List[Node], condition: Callable = contains_only_whitespace):
     """Recursively removes all leading nodes that fulfill a given condition."""
     node = context[-1]
     i, L = 0, len(node.children)
@@ -898,7 +899,7 @@ def rstrip(context: List[Node], condition: Callable = is_expendable):
 
 
 @transformation_factory(collections.abc.Callable)
-def strip(context: List[Node], condition: Callable = is_expendable):
+def strip(context: List[Node], condition: Callable = contains_only_whitespace):
     """Removes leading and trailing child-nodes that fulfill a given condition."""
     lstrip(context, condition)
     rstrip(context, condition)

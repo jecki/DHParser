@@ -28,13 +28,20 @@ from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACE
     tree_sanity_check, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
-    transformation_factory, has_parent
+    transformation_factory, has_parent, contains_only_whitespace
 from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
 
 
 class TestRemoval:
     """Tests removing transformations."""
+
+    def test_contains_only_whitespace(self):
+        assert contains_only_whitespace([Node('test', ' ')])
+        assert contains_only_whitespace([Node('test', '')])
+        assert contains_only_whitespace([Node('test', '\n')])
+        assert not contains_only_whitespace([Node('test', 'Katze')])
+        assert contains_only_whitespace([Node('test', ' tag ')])
 
     def test_lstrip(self):
         cst = parse_sxpr('(_Token (:Whitespace " ") (:Re test))')
