@@ -610,7 +610,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if root and id(node) in root.error_nodes and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
-                                                 for err in root.get_error(node)))
+                                                 for err in root.get_errors(node)))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
