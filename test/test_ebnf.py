@@ -165,16 +165,12 @@ class TestParserNameOverwriteBug:
     def test_term_bug(self):
         grammar = get_ebnf_grammar()
         st = grammar('impossible = [§"an optional requirement"]')
-        # print(st.as_sxpr())
         get_ebnf_transformer()(st)
-        # print(st.as_sxpr())
         lang = """series = "A" "B" §"C" "D"
         """
         parser = get_ebnf_grammar()
         st = grammar(lang)
-        # print(st.as_sxpr())
         get_ebnf_transformer()(st)
-        # print(st.as_sxpr())
         result = get_ebnf_compiler()(st)
         messages = st.errors_sorted
         assert not has_errors(messages), str(messages)
@@ -182,7 +178,6 @@ class TestParserNameOverwriteBug:
     def test_single_mandatory_bug(self):
         lang = """series = § /B/"""
         result, messages, ast = compile_ebnf(lang)
-        # print(result)
         assert result.find('Required') < 0
         parser = grammar_provider(lang)()
         st = parser('B')
@@ -477,7 +472,6 @@ class TestErrorCustomization:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
-        print(st.errors_sorted)
         assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "a user defined error message"
         # transitivity of mandatory-operator

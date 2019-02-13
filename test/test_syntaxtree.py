@@ -98,8 +98,6 @@ class TestNode:
         tree['d'].result = "x"
         assert not tree.equals(tree_copy)
         assert tree_copy.equals(parse_sxpr('(a (b c) (d (e f) (h i)))'))
-        # print(tree.as_sxpr())
-        # print(parse_sxpr('(a (b c) (d x))').as_sxpr())
         assert tree.equals(parse_sxpr('(a (b c) (d x))'))
 
         # this also checks for errors equality...
@@ -301,7 +299,6 @@ class TestSerialization:
         assert tree.as_xml() == "<A>\n  <B>C</B>\n  <D>E</D>\n</A>", xml
 
         tree.attr['xml:space'] = 'preserve'
-        # print(tree.attr)
         xml = tree.as_xml()
         assert xml == '<A xml:space="preserve"><B>C</B><D>E</D></A>', xml
 

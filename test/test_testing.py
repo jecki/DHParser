@@ -224,8 +224,6 @@ class TestGrammarTest:
         report = get_report(self.cases)
         assert report.find('### CST') >= 0
         errata = grammar_unit(self.failure_cases, parser_fac, trans_fac)
-        # for e in errata:
-        #     print(e)
         assert len(errata) == 3, str(errata)
 
     # def test_get_report(self):
@@ -310,9 +308,6 @@ class TestLookahead:
         grammar = self.grammar_fac()
         cst = grammar(doc)
         assert not cst.error_flag
-        # trans = self.trans_fac()
-        # trans(cst)
-        # print(cst.as_sxpr())
 
     def test_unit_lookahead(self):
         errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac)

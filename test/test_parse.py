@@ -55,7 +55,6 @@ class TestParserClass:
         l = []
         gr.root__.apply(visitor)
         s3 = ", ".join(l)
-        # print(s1);  print(s2);  print(s3)
         assert s1 == s2 == s3
 
 
@@ -119,8 +118,6 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         syntax_tree = parser(snippet)
         assert syntax_tree.error_flag
-        # print(syntax_tree.as_sxpr())
-        # print(syntax_tree.errors())
 
 
 class TestFlowControl:
@@ -325,7 +322,6 @@ class TestSeries:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
-        # print(st.errors())
         assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
@@ -646,7 +642,6 @@ class TestReentryAfterError:
         gr = self.gr;  gr.resume_rules = dict()
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -655,7 +650,6 @@ class TestReentryAfterError:
         gr = self.gr;  gr.resume_rules = dict()
         content = 'ALPHA acb'
         cst = gr(content, 'alpha')
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -665,7 +659,6 @@ class TestReentryAfterError:
         gr.resume_rules__['alpha'] = ['BETA']
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -677,7 +670,6 @@ class TestReentryAfterError:
         gr.resume_rules__['alpha'] = ['XXX']
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         # assert cst.pick('alpha').content.startswith('ALPHA')
@@ -688,7 +680,6 @@ class TestReentryAfterError:
         gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -700,7 +691,6 @@ class TestReentryAfterError:
         gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -714,7 +704,6 @@ class TestReentryAfterError:
         gr.resume_rules__['bac'] = ['GAMMA']
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -723,7 +712,6 @@ class TestReentryAfterError:
         # multiple failures
         content = 'ALPHA acb BETA bad GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -743,7 +731,6 @@ class TestConfiguredErrorMessages:
         st = parser("AB_D");  assert st.error_flag
         assert st.errors_sorted[0].code == Error.MALFORMED_ERROR_STRING
         assert st.errors_sorted[1].code == Error.MANDATORY_CONTINUATION
-        # print(st.errors())
 
 
 class TestUnknownParserError:
@@ -773,7 +760,6 @@ class TestEarlyTokenWhitespaceDrop:
 
     def test_drop(self):
         cst = self.gr('4 + 3 * 5')
-        # print(cst.as_sxpr())
         assert not cst.pick(':Token')
         assert not cst.pick(':Whitespace')
         cst = self.gr('A + B')
