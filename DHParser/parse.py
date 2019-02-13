@@ -155,7 +155,6 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
     if i == upper_limit:
         i = -1
     return i
-    # return Node(ZOMBIE_TAG, rest[:i]), rest[i:]
 
 
 ApplyFunc = Callable[['Parser'], None]
@@ -325,7 +324,11 @@ class Parser:
                     raise ParserError(error.node, error.rest, first_throw=False)
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]), error.node) if gap else error.node  # type: ResultType
-                    raise ParserError(Node(self.tag_name, result), text, first_throw=False)
+                    if grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:  # EXPERIMENTAL!!
+                        node = error.node
+                    else:
+                        raise ParserError(Node(self.tag_name, result), text, first_throw=False)
+
 
             if grammar.left_recursion_handling__:
                 self.recursion_counter[location] -= 1
@@ -1554,7 +1557,7 @@ def mandatory_violation(grammar: Grammar,
     else:
         msg = '%s expected, "%s" found!' % (expected, found)
     error = Error(msg, location, Error.MANDATORY_CONTINUATION if text_
-    else Error.MANDATORY_CONTINUATION_AT_EOF)
+            else Error.MANDATORY_CONTINUATION_AT_EOF)
     grammar.tree__.add_error(err_node, error)
     return error, err_node, text_[i:]
 

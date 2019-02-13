@@ -322,9 +322,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     parser = parser_factory()
     transform = transformer_factory()
 
-    is_lookahead = set()    # type: Set[str]  # Dictionary of parser names
+    # is_lookahead = set()    # type: Set[str]  # Dictionary of parser names
     with_lookahead = set()  # type: Set[Optional[Parser]]
-    lookahead_flag = False  # type: bool
+    # lookahead_flag = False  # type: bool
 
     def find_lookahead(p: Parser):
         """Raises a StopIterationError if parser `p` is or contains
@@ -339,8 +339,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 lookahead_flag = True
             else:
                 if any(child for child in (getattr(p, 'parsers', [])
-                       or [getattr(p, 'parser', None)]) if child in with_lookahead):
+                       or [getattr(p, 'parser', None)]) if isinstance(child, Lookahead)):
                     with_lookahead.add(p)
+                    lookahead_flag = True
 
     def has_lookahead(parser_name: str):
         """Returns `True`, if given parser is or contains a Lookahead-parser."""
@@ -370,7 +371,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 #  case 2:  mandatory lookahead failure at end of text
                 or (len(raw_errors) == 1
                     and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)
-                    and any(tn in is_lookahead for tn in parser.history__[-1].call_stack))
+                    and any(tn in with_lookahead for tn in parser.history__[-1].call_stack))
 
     for parser_name, tests in test_unit.items():
         assert parser_name, "Missing parser name in test %s!" % unit_name
