@@ -97,6 +97,8 @@ class Compiler:
     Attributes:
         context:  A list of parent nodes that ends with the currently
                 compiled node.
+        tree:  The root of the abstract syntax tree.
+        source:  The source code.
 
         _dirty_flag:  A flag indicating that the compiler has already been
                 called at least once and that therefore all compilation
@@ -107,11 +109,12 @@ class Compiler:
         self._reset()
 
     def _reset(self):
+        self.source = ''
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._dirty_flag = False
 
-    def __call__(self, root: RootNode) -> Any:
+    def __call__(self, root: RootNode, source: str='') -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
         returns the compiled code. It is up to subclasses implementing
@@ -123,7 +126,8 @@ class Compiler:
         if self._dirty_flag:
             self._reset()
         self._dirty_flag = True
-        self.tree = root
+        self.tree = root  # type: Node
+        self.source = source  # type: str
         result = self.compile(root)
         return result
 
@@ -242,7 +246,7 @@ def compile_source(source: str,
         if not is_error(syntax_tree.error_flag):
             if preserve_ast:
                 ast = copy.deepcopy(syntax_tree)
-            result = compiler(syntax_tree)
+            result = compiler(syntax_tree, original_text)
         # print(syntax_tree.as_sxpr())
         # messages.extend(syntax_tree.errors())
         # syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
