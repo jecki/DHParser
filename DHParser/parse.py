@@ -1863,7 +1863,7 @@ class AllOf(NaryParser):
                 else:
                     reloc = reentry_point(text_, self.skip) if self.skip else -1
                     expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
-                    lookahead = any(isinstance(p, Lookahead) for p in parsers)
+                    lookahead = any([isinstance(p, Lookahead) for p in parsers])
                     error, err_node, text_ = mandatory_violation(
                         self.grammar, text_, lookahead, expected, self.err_msgs, reloc)
                     results += (err_node,)
