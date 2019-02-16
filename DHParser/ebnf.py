@@ -664,7 +664,7 @@ class EBNFCompiler(Compiler):
         value = node.content.strip("~")
         if value[0] + value[-1] in {'""', "''"}:
             value = escape_re(value[1:-1])
-        elif value[0] + value[-1] == '//':
+        elif value[0] + value[-1] == '//' and value != '//':
             value = self._check_rx(node, value[1:-1])
         return value
 

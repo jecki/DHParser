@@ -503,8 +503,9 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     nesting comments is not possible. It also makes it much harder to
     use directives inside comments (which isn't recommended, anyway).
     """
-    wspc = '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
-    return wspc
+    if comment:
+        return '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
+    return whitespace
 
 
 class UnknownParserError(KeyError):
