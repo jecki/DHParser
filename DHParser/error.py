@@ -94,7 +94,6 @@ class Error:
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
         assert isinstance(code, ErrorCode)
         assert not isinstance(pos, ErrorCode)
-        assert pos >= 0
         assert code >= 0
         self.message = message    # type: str
         self._pos = pos           # type: int
@@ -116,6 +115,12 @@ class Error:
     @property
     def pos(self):
         return self._pos
+
+    @pos.setter
+    def pos(self, value: int):
+        self._pos = value
+        # reset line and column values, because they might now not be valid any more
+        self.line, self.column = -1, -1
 
     @property
     def severity(self):

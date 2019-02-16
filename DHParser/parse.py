@@ -221,8 +221,9 @@ class Parser:
 
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
-        self.pname = ''  # type: str
-        self.tag_name = self.ptype  # type: str
+        self.pname = ''               # type: str
+        self.tag_name = self.ptype    # type: str
+        self.cycle_detection = set()  # type: Set[ApplyFunc]
         try:
             self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
         except NameError:
@@ -264,7 +265,6 @@ class Parser:
         `reset()`-method of the derived class."""
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
-        self.cycle_detection = set()  # type: Set[ApplyFunc]
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -710,6 +710,7 @@ class Grammar:
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
+    static_analysis_done__ = False
 
 
     @classmethod
@@ -770,6 +771,15 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
 
+        if not self.__class__.static_analysis_done__:
+            try:
+                result = self.static_analysis()
+                if result:
+                    raise AssertionError(str(result))
+                self.__class__.static_analysis_done__ = True
+            except (NameError, AttributeError):
+                pass  # don't fail the initialization of PLACEHOLDER
+
 
     def __getitem__(self, key):
         try:
@@ -784,8 +794,10 @@ class Grammar:
                 return self[key]
             raise UnknownParserError('Unknown parser "%s" !' % key)
 
+
     def __contains__(self, key):
         return key in self.__dict__ or hasattr(self, key)
+
 
     def _reset__(self):
         self.tree__ = RootNode()              # type: RootNode
@@ -1007,6 +1019,37 @@ class Grammar:
         parsed document.
         """
         return line_col(self.document_lbreaks__, self.document_length__ - len(text))
+
+
+    def static_analysis(self) -> List[Tuple[str, Parser, Error]]:
+        """
+        Checks the parser tree statically for possible errors. At the moment only
+        infinite loops will be detected.
+        :return: a list of error-tuples consisting of the narrowest containing
+            named parser (i.e. the symbol on which the failure occurred),
+            the actual parser that failed and an error object.
+        """
+        containing_named_parser = ''  # type: str
+        error_list = []  # type: List[Tuple[str, Parser, Error]]
+
+        def visit_parser(parser: Parser) -> None:
+            nonlocal containing_named_parser, error_list
+            if parser.pname:
+                containing_named_parser = parser.pname
+            if isinstance(parser, ZeroOrMore) or isinstance(parser, OneOrMore):
+                inner_parser = cast(UnaryParser, parser).parser
+                tree = self('', inner_parser)
+                if not tree.error_flag:
+                    if not parser.pname:
+                        msg = 'Parser "%s" in %s can become caught up in an infinite loop!' \
+                              % (str(parser), containing_named_parser)
+                    else:
+                        msg = 'Parser "%s" can become caught up in an infinite loop!' % str(parser)
+                    error_list.append((containing_named_parser, parser,
+                                       Error(msg, -1, Error.INFINITE_LOOP)))
+
+        self.root_parser__.apply(visit_parser)
+        return error_list
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
