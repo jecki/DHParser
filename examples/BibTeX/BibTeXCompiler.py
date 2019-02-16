@@ -57,10 +57,10 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "4e4011722001b0019b7b980a02559de1"
+    source_hash__ = "d9a1a1b431a3185dab127be165a37719"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
-    COMMENT__ = r'(?i)%%.*\n'
+    COMMENT__ = r'//'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)

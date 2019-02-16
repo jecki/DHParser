@@ -1266,8 +1266,8 @@ class DropWhitespace(Whitespace):
 class MetaParser(Parser):
     def _return_value(self, node: Optional[Node]) -> Node:
         """
-        Generate a return node if a single node has been returned from
-        any descendant parsers. Empty nodes will be dropped silently.
+        Generates a return node if a single node has been returned from
+        any descendant parsers. Anonymous empty nodes will be dropped.
         If `self` is an unnamed parser, a non-empty descendant node
         will be passed through. If the descendant node is anonymous,
         it will be dropped and only its result will be kept.
@@ -1288,9 +1288,14 @@ class MetaParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.tag_name, node or ())  # unoptimized code
 
-
     @cython.locals(N=cython.int)
     def _return_values(self, results: Tuple[Node, ...]) -> Node:
+        """
+        Generates a return node from a tuple of returned nodes from
+        descendant parsers. Anonymous empty nodes will be removed from
+        the tuple. Anonymous child nodes will be flattened if
+        `grammar.flatten_tree__` is True.
+        """
         assert isinstance(results, tuple)
         N = len(results)
         if N > 1:
@@ -1310,6 +1315,21 @@ class MetaParser(Parser):
                 return Node(self.tag_name, ())
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.tag_name, results)  # unoptimized code
+
+    def add_infinite_loop_error(self, node):
+        """
+        Add an "infitnite loop detected" error to the given node, unless an infinite
+        loop detection error has already been notified at the same location. (As a
+        consequence, only the innermost parser where an infinite loop is detected
+        will be set the error message, which is prefereble to a stack of error
+        messages from failed as well as its calling parsers.)
+        """
+        if (not node.pos in
+            (err.pos for err in
+             filter(lambda e: e.code == Error.INFINITE_LOOP, self.grammar.tree__.errors))):
+            self.grammar.tree__.add_error(
+                node, Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
+                            node.pos, Error.INFINITE_LOOP))
 
 
 class UnaryParser(MetaParser):
@@ -1447,8 +1467,7 @@ class ZeroOrMore(Option):
             if not node:
                 break
             if len(text) == n:
-                self.grammar.tree__.add_error(
-                    node, Error(dsl_error_msg(self, 'Infinite Loop encountered.'), node.pos))
+                self.add_infinite_loop_error(node)
             results += (node,)
         nd = self._return_values(results)  # type: Node
         return nd, text
@@ -1494,8 +1513,7 @@ class OneOrMore(UnaryParser):
             if not node:
                 break
             if len(text_) == n:
-                self.grammar.tree__.add_error(
-                    node, Error(dsl_error_msg(self, 'Infinite Loop encountered.'), node.pos))
+                self.add_infinite_loop_error(node)
             results += (node,)
         if results == ():
             return None, text
