@@ -9,7 +9,7 @@
 
 @ whitespace  = /\s*/
 @ ignorecase  = True
-@ comment     = /%.*(?:\n|$)/
+@ comment     = //
 
 
 #######################################################################
@@ -25,10 +25,10 @@ pre_code      = { /[^"%]+/ | /%.*\n/ }
 
 comment       = "@Comment{" text §"}"
 
-entry         = /@/ type "{" key { "," field §"=" content } §"}"
+entry         = /@/ type "{" key { "," field §"=" content } [","] §"}"
 type          = WORD
 key           = NO_BLANK_STRING
-field         = WORD_
+field         = WORD
 content       = "{" text "}" | plain_content
 
 plain_content = COMMA_TERMINATED_STRING
@@ -41,8 +41,9 @@ text          = { CONTENT_STRING | "{" text "}" }
 #
 #######################################################################
 
-WORD          = /\w+/
-WORD_         = /\w+/~
+WORD          = /\w+/~
 NO_BLANK_STRING         = /[^ \t\n,%]+/~
 COMMA_TERMINATED_STRING = { /[^,%]+/ | /(?=%)/~ }
 CONTENT_STRING = { /[^{}%]+/ | /(?=%)/~ }+
+
+EOF           =  !/./

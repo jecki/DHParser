@@ -57,25 +57,25 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "f0e945d8b504317cdfb6e08fd2fcf596"
+    source_hash__ = "d9a1a1b431a3185dab127be165a37719"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
-    COMMENT__ = r'(?i)%.*(?:\n|$)'
+    COMMENT__ = r'(?i)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
+    EOF = NegativeLookahead(RegExp('(?i).'))
     CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
     COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
     NO_BLANK_STRING = Series(RegExp('(?i)[^ \\t\\n,%]+'), wsp__)
-    WORD_ = Series(RegExp('(?i)\\w+'), wsp__)
-    WORD = RegExp('(?i)\\w+')
+    WORD = Series(RegExp('(?i)\\w+'), wsp__)
     text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)))))
     plain_content = Synonym(COMMA_TERMINATED_STRING)
     content = Alternative(Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)), plain_content)
-    field = Synonym(WORD_)
+    field = Synonym(WORD)
     key = Synonym(NO_BLANK_STRING)
     type = Synonym(WORD)
-    entry = Series(RegExp('(?i)@'), type, Series(Token("{"), wsp__), key, ZeroOrMore(Series(Series(Token(","), wsp__), field, Series(Token("="), wsp__), content, mandatory=2)), Series(Token("}"), wsp__), mandatory=5)
+    entry = Series(RegExp('(?i)@'), type, Series(Token("{"), wsp__), key, ZeroOrMore(Series(Series(Token(","), wsp__), field, Series(Token("="), wsp__), content, mandatory=2)), Option(Series(Token(","), wsp__)), Series(Token("}"), wsp__), mandatory=6)
     comment = Series(Series(Token("@Comment{"), wsp__), text, Series(Token("}"), wsp__), mandatory=2)
     pre_code = ZeroOrMore(Alternative(RegExp('(?i)[^"%]+'), RegExp('(?i)%.*\\n')))
     preamble = Series(Series(Token("@Preamble{"), wsp__), RegExp('(?i)"'), pre_code, RegExp('(?i)"'), wsp__, Series(Token("}"), wsp__), mandatory=5)

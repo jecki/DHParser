@@ -773,51 +773,62 @@ class TestEarlyTokenWhitespaceDrop:
 
 
 class TestMetaParser:
-    def test_meta_parser(self):
+    def setup(self):
+        self.mp = MetaParser()
+        self.mp.grammar = Grammar()  # override placeholder warning
+        self.mp.pname = "named"
+        self.mp.tag_name = self.mp.pname
+
+    def test_return_value(self):
         save = get_config_value('flatten_tree_while_parsing')
         set_config_value('flatten_tree_while_parsing', True)
-        mp = MetaParser()
-        mp.grammar = Grammar()  # override placeholder warning
-        mp.pname = "named"
-        mp.tag_name = mp.pname
-        nd = mp._return_value(Node('tagged', 'non-empty'))
+        nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'named', nd.as_sxpr()
         assert len(nd.children) == 1
         assert nd.children[0].tag_name == 'tagged'
         assert nd.children[0].result == "non-empty"
-        nd = mp._return_value(Node('tagged', ''))
+        nd = self.mp._return_value(Node('tagged', ''))
         assert nd.tag_name == 'named', nd.as_sxpr()
         assert len(nd.children) == 1
         assert nd.children[0].tag_name == 'tagged'
         assert not nd.children[0].result
-        nd = mp._return_value(Node(':anonymous', 'content'))
+        nd = self.mp._return_value(Node(':anonymous', 'content'))
         assert nd.tag_name == 'named', nd.as_sxpr()
         assert not nd.children
         assert nd.result == 'content'
-        nd = mp._return_value(Node(':anonymous', ''))
+        nd = self.mp._return_value(Node(':anonymous', ''))
         assert nd.tag_name == 'named', nd.as_sxpr()
         assert not nd.children
         assert not nd.content
-        mp.pname = ''
-        mp.tag_name = ':unnamed'
-        nd = mp._return_value(Node('tagged', 'non-empty'))
+        nd = self.mp._return_value(EMPTY_NODE)
+        assert nd.tag_name == 'named' and not nd.children, nd.as_sxpr()
+        self.mp.pname = ''
+        self.mp.tag_name = ':unnamed'
+        nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'tagged', nd.as_sxpr()
         assert len(nd.children) == 0
         assert nd.content == 'non-empty'
-        nd = mp._return_value(Node('tagged', ''))
+        nd = self.mp._return_value(Node('tagged', ''))
         assert nd.tag_name == 'tagged', nd.as_sxpr()
         assert len(nd.children) == 0
         assert not nd.content
-        nd = mp._return_value(Node(':anonymous', 'content'))
+        nd = self.mp._return_value(Node(':anonymous', 'content'))
         assert nd.tag_name == ':anonymous', nd.as_sxpr()
         assert not nd.children
         assert nd.result == 'content'
-        nd = mp._return_value(Node('', ''))
+        nd = self.mp._return_value(Node('', ''))
         assert nd.tag_name == '', nd.as_sxpr()
         assert not nd.children
         assert not nd.content
-        assert mp._return_value(None) == EMPTY_NODE
+        assert self.mp._return_value(None) == EMPTY_NODE
+        assert self.mp._return_value(EMPTY_NODE) == EMPTY_NODE
         set_config_value('flatten_tree_while_parsing', save)
+
+    def test_return_values(self):
+        self.mp.pname = "named"
+        self.mp.tag_name = self.mp.pname
+        rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
+        assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
 
 

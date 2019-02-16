@@ -1272,7 +1272,7 @@ class MetaParser(Parser):
         it will be dropped and only its result will be kept.
         In all other cases or if the optimization is turned off by
         setting `grammar.flatten_tree__` to False, a new node will be
-        generated and the descendant node will be its gingle child.
+        generated and the descendant node will be its single child.
         """
         assert node is None or isinstance(node, Node)
         if self.grammar.flatten_tree__:
@@ -1298,7 +1298,7 @@ class MetaParser(Parser):
                 for child in results:
                     if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
                         nr.extend(child.children)
-                    else:
+                    elif child._result or child.tag_name[0] != ':':
                         nr.append(child)
                 return Node(self.tag_name, tuple(nr))
             return Node(self.tag_name, results)  # unoptimized code

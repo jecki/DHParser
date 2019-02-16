@@ -879,12 +879,11 @@ class RootNode(Node):
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
-        assert not isinstance(node, FrozenNode)
-        assert node.pos == error.pos
+        assert node.pos == error.pos or isinstance(node, FrozenNode)
         self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         self.error_nodes.setdefault(id(node), []).append(error)
-        self.error_positions.setdefault(node.pos, set()).add(id(node))
+        self.error_positions.setdefault(error.pos, set()).add(id(node))
         return self
 
     def new_error(self,
@@ -904,13 +903,13 @@ class RootNode(Node):
 
     def get_errors(self, node: Node) -> List[Error]:
         """
-        Returns the List of errors that occured on the node or any child node
+        Returns the List of errors that occurred on the node or any child node
         at the same position that has already been removed from the tree,
         for example, because it was an anonymous empty child node.
         """
         node_id = id(node)           # type: int
         errors = []                  # type: List[Error]
-        for nid in self.error_positions[node.pos]:
+        for nid in self.error_positions.get(node.pos, frozenset()):
             if nid == node_id:
                 errors.extend(self.error_nodes[nid])
             else:
