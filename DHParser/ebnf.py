@@ -178,6 +178,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
+    static_analysis_pending__ = False
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
@@ -926,8 +927,11 @@ class EBNFCompiler(Compiler):
         grammar_python_src = self.assemble_parser(definitions, node)
         if get_config_value('static_analysis') == 'early':
             try:
-                grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src, self.grammar_name)
+                grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,
+                                                      self.grammar_name)
                 _ = grammar_class()
+                grammar_python_src = grammar_python_src.replace(
+                    'static_analysis_pending__ = True', 'static_analysis_pending__ = False', 1)
             except NameError:
                 pass  # undefined name in the grammar are already cuaght and reported
             except GrammarError as error:
