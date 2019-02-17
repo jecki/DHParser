@@ -57,7 +57,7 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "d9a1a1b431a3185dab127be165a37719"
+    source_hash__ = "ece0314c999ac86f22796331c05efd62"
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'//'
@@ -65,8 +65,8 @@ class BibTeXGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('(?i).'))
-    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
-    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(RegExp('(?i)(?=%)'), wsp__)))
+    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(Lookahead(RegExp('(?i)%')), wsp__)))
+    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(Lookahead(RegExp('(?i)%')), wsp__)))
     NO_BLANK_STRING = Series(RegExp('(?i)[^ \\t\\n,%]+'), wsp__)
     WORD = Series(RegExp('(?i)\\w+'), wsp__)
     text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)))))

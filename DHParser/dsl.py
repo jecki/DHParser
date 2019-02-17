@@ -26,8 +26,9 @@ import os
 import platform
 import stat
 
+import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source
-from DHParser.ebnf import EBNFCompiler, grammar_changed, \
+from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
@@ -37,12 +38,12 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
 from DHParser.transform import TransformationFunc
 from DHParser.toolkit import load_if_file, is_python_code, compile_python_object, \
-    re, typing
-from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, Callable
+    re
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
+    Callable, Generator
 
 
-__all__ = ('DHPARSER_IMPORTS',
-           'GrammarError',
+__all__ = ('DefinitionError',
            'CompilationError',
            'load_compiler_suite',
            'compileDSL',
@@ -70,41 +71,6 @@ PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
 END_SECTIONS_MARKER = "END OF DHPARSER-SECTIONS"
-
-
-dhparserdir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-
-
-DHPARSER_IMPORTS = '''
-import collections
-from functools import partial
-import os
-import sys
-
-sys.path.append(r'{dhparserdir}')
-
-try:
-    import regex as re
-except ImportError:
-    import re
-from DHParser import logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, is_empty, \\
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
-    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
-    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
-    is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
-    remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
-    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
-    flatten_anonymous_nodes, error_on, recompile_grammar, GLOBALS
-'''.format(dhparserdir=dhparserdir)
-
 
 DHPARSER_MAIN = '''
 def compile_src(source, log_dir=''):
@@ -156,19 +122,23 @@ class DSLException(Exception):
     """
     Base class for DSL-exceptions.
     """
-    def __init__(self, errors):
+    def __init__(self, errors: Union[List[Error], Generator[Error, None, None]]):
         assert isinstance(errors, Iterator) or isinstance(errors, list) \
             or isinstance(errors, tuple)
-        self.errors = errors
+        self.errors = list(errors)
 
     def __str__(self):
-        return '\n'.join(str(err) for err in self.errors)
+        if len(self.errors) == 1:
+            return str(self.errors[0])
+        return '\n' + '\n'.join(("%i. " % (i + 1) + str(err))
+                                for i, err in enumerate(self.errors))
+        # return '\n'.join(str(err) for err in self.errors)
 
 
-class GrammarError(DSLException):
+class DefinitionError(DSLException):
     """
     Raised when (already) the grammar of a domain specific language (DSL)
-    contains errors.
+    contains errors. Usually, these are repackaged parse.GrammarError(s).
     """
     def __init__(self, errors, grammar_src):
         super().__init__(errors)
@@ -178,7 +148,8 @@ class GrammarError(DSLException):
 class CompilationError(DSLException):
     """
     Raised when a string or file in a domain specific language (DSL)
-    contains errors.
+    contains errors. These can also contain definition errors that
+    have been caught early.
     """
     def __init__(self, errors, dsl_text, dsl_grammar, AST, result):
         super().__init__(errors)
@@ -215,7 +186,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
                     get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
                 parser_py = cast(str, result)
         if has_errors(messages):
-            raise GrammarError(only_errors(messages), grammar_src)
+            raise DefinitionError(only_errors(messages), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')()
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
@@ -360,7 +331,7 @@ def load_compiler_suite(compiler_suite: str) -> \
                                                       get_ebnf_transformer(),
                                                       get_ebnf_compiler(compiler_suite, source))
         if has_errors(messages):
-            raise GrammarError(only_errors(messages), source)
+            raise DefinitionError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
@@ -476,7 +447,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         ebnf_compiler = cast(EBNFCompiler, compiler1)
         global SECTION_MARKER, RX_SECTION_MARKER, PREPROCESSOR_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
-            DHPARSER_MAIN, DHPARSER_IMPORTS
+            DHPARSER_MAIN
         f = None
         try:
             f = open(rootname + 'Compiler.py', 'r', encoding="utf-8")
@@ -503,7 +474,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(outro):
             outro = DHPARSER_MAIN.format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
-            imports = DHPARSER_IMPORTS
+            imports = DHParser.ebnf.DHPARSER_IMPORTS
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):

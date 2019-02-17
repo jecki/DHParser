@@ -32,11 +32,12 @@ import os
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token
+    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
+    GrammarError
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, CONFIG_PRESET, get_config_value, unrepr, typing
+    GLOBALS, CONFIG_PRESET, get_config_value, unrepr, compile_python_object, typing
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content
@@ -67,6 +68,48 @@ __all__ = ('get_ebnf_preprocessor',
 ########################################################################
 
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
+CONFIG_PRESET['early_static_analysis'] = True  # do a static analysis right after ebnf compilation
+
+
+########################################################################
+#
+# source code support
+#
+########################################################################
+
+
+dhparserdir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+
+DHPARSER_IMPORTS = '''
+import collections
+from functools import partial
+import os
+import sys
+
+sys.path.append(r'{dhparserdir}')
+
+try:
+    import regex as re
+except ImportError:
+    import re
+from DHParser import logging, is_filename, load_if_file, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \\
+    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
+    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
+    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, is_empty, \\
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
+    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
+    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
+    is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
+    remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
+    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
+    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
+    flatten_anonymous_nodes, error_on, recompile_grammar, GLOBALS
+'''.format(dhparserdir=dhparserdir)
 
 
 ########################################################################
@@ -799,6 +842,7 @@ class EBNFCompiler(Compiler):
                         + ' source file'
                         + ('. Grammar:' if self.grammar_source and show_source else '.')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
+        definitions.append(('static_analysis_pending__', 'True'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -877,7 +921,17 @@ class EBNFCompiler(Compiler):
             # node.error_flag = max(node.error_flag, nd.error_flag)
         self.definitions.update(definitions)
 
-        return self.assemble_parser(definitions, node)
+        grammar_python_src = self.assemble_parser(definitions, node)
+        if get_config_value('early_static_analysis'):
+            grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src, self.grammar_name)
+            try:
+                _ = grammar_class()
+            except GrammarError as error:
+                for sym, prs, err in error.errors:
+                    symdef_node = self.rules[sym][0]
+                    err.pos = self.rules[sym][0].pos
+                    self.tree.add_error(symdef_node, err)
+        return grammar_python_src
 
 
     def on_definition(self, node: Node) -> Tuple[str, str]:

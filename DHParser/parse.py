@@ -46,6 +46,8 @@ from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, O
 
 __all__ = ('Parser',
            'UnknownParserError',
+           'GrammarErrorType',
+           'GrammarError',
            'Grammar',
            'EMPTY_NODE',
            'PreprocessorToken',
@@ -369,13 +371,13 @@ class Parser:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)
                 if grammar.moving_forward__:
-                    record = HistoryRecord(grammar.call_stack__, node or EMPTY_NODE, text,
+                    record = HistoryRecord(grammar.call_stack__, node, text,
                                            grammar.line_col__(text))
                     grammar.history__.append(record)
                 elif node:
                     nid = id(node)  # type: int
                     if nid in grammar.tree__.error_nodes:
-                        record = HistoryRecord(grammar.call_stack__, node or EMPTY_NODE, text,
+                        record = HistoryRecord(grammar.call_stack__, node, text,
                                                grammar.line_col__(text),
                                                grammar.tree__.error_nodes[nid])
                         grammar.history__.append(record)
@@ -514,6 +516,24 @@ class UnknownParserError(KeyError):
     is referred to that does not exist."""
 
 
+GrammarErrorType = List[Tuple[str, Parser, Error]]      # TODO: replace with a named tuple?
+
+
+class GrammarError(Exception):
+    """GrammarError will be raised if static analysis reveals errors
+    in the grammar.
+    """
+    def __init__(self, static_analysis_result: List[GrammarErrorType]):
+        assert static_analysis_result  # must not be empty
+        self.errors = static_analysis_result
+
+    def __str__(self):
+        if len(self.errors) == 1:
+            return str(self.errors[0][2])
+        return '\n' + '\n'.join(("%i. " % (i + 1) + str(err_tuple[2]))
+                                for i, err_tuple in enumerate(self.errors))
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -608,6 +628,14 @@ class Grammar:
                  :func:_assign_parser_names()` for an explanation), this class
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
+
+        static_analysis_pending__: True as long as no static analysis (see the method
+                with the same name for more information) has been done to check
+                parser tree for correctness (e.g. no infinite loops). Static analysis
+                is done at instiantiation and the flag is then set to false, but it
+                can also be carried out once the class has been generated
+                (by DHParser.ebnf.EBNFCompiler) and then be set to false in the
+                definition of the grammar clase already.
 
         python__src__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
@@ -710,7 +738,7 @@ class Grammar:
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
-    static_analysis_done__ = False
+    static_analysis_pending__ = True  # type: bool
 
 
     @classmethod
@@ -771,12 +799,12 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
 
-        if not self.__class__.static_analysis_done__:
+        if self.__class__.static_analysis_pending__:
             try:
                 result = self.static_analysis()
                 if result:
-                    raise AssertionError(str(result))
-                self.__class__.static_analysis_done__ = True
+                    raise GrammarError(result)
+                self.__class__.static_analysis_pending__ = False
             except (NameError, AttributeError):
                 pass  # don't fail the initialization of PLACEHOLDER
 
@@ -875,6 +903,40 @@ class Grammar:
             predecessors to the node."""
             return predecessors[-1].pos + len(predecessors[-1]) if predecessors else 0
 
+        def lookahead_failure_only(parser):
+            """EXPERIMENTAL!
+
+            Checks if failure to match document was only due to a succeeding
+            lookahead parser, which is a common design pattern that can break test
+            cases. (Testing for this case allows to modify the error message, so
+            that the testing framework can know that the failure is only a
+            test-case-artifact and no real failure.
+            (See test/test_testing.TestLookahead !)
+            """
+            last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
+            # # TODO: Checking match status of history__[-2] is inaccurate if ending
+            # #       lookahead parser is part of an Alternative-parser !!!
+            # #       (Need a test-case!)
+            # return last_record and parser != self.root_parser__ \
+            #         and last_record.status == HistoryRecord.MATCH \
+            #         and last_record.node.pos \
+            #         + len(last_record.node) >= len(self.document__) \
+            #         and any(tn in self and isinstance(self[tn], Lookahead)
+            #                 or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
+            #                 for tn in last_record.call_stack)
+            last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
+            # TODO: Checking match status of history__[-2] is inaccurate if ending
+            #       lookahead parser is part of an Alternative-parser !!!
+            #       (Need a test-case!)
+            return last_record and parser != self.root_parser__ \
+                    and any(self.history__[i].status == HistoryRecord.MATCH \
+                            and self.history__[i].node.pos \
+                            + len(self.history__[i].node) >= len(self.document__) \
+                            and any(tn in self and isinstance(self[tn], Lookahead)
+                                    or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
+                                    for tn in self.history__[i].call_stack)
+                            for i in range(-2, -len(self.history__)-1, -1))
+
         # assert isinstance(document, str), type(document)
         if self._dirty_flag__:
             self._reset__()
@@ -901,9 +963,16 @@ class Grammar:
             result, _ = parser(rest)
             if result is None:
                 result = Node(ZOMBIE_TAG, '').with_pos(0)
-                self.tree__.new_error(result,
-                                      'Parser "%s" did not match empty document.' % str(parser),
-                                      Error.PARSER_DID_NOT_MATCH)
+                if lookahead_failure_only(parser):
+                    self.tree__.new_error(
+                        result, 'Parser "%s" did not match empty document except for lookahead'
+                                % str(parser),
+                        Error.PARSER_LOOKAHEAD_MATCH_ONLY)
+                else:
+                    self.tree__.new_error(
+                        result, 'Parser "%s" did not match empty document.' % str(parser),
+                        Error.PARSER_DID_NOT_MATCH)
+
         while rest and len(stitches) < MAX_DROPOUTS:
             result, rest = parser(rest)
             if rest:
@@ -916,15 +985,7 @@ class Grammar:
                                 str(HistoryRecord.last_match(self.history__)))
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
-                    last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
-
-                    if last_record and parser != self.root_parser__ \
-                            and last_record.status == HistoryRecord.MATCH \
-                            and last_record.node.pos \
-                            + len(last_record.node) >= len(self.document__) \
-                            and any(tn in self and isinstance(self[tn], Lookahead)
-                                    or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
-                                    for tn in last_record.call_stack):
+                    if lookahead_failure_only(parser):
                         error_msg = 'Parser did not match except for lookahead! ' + err_info
                         error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
                     else:
@@ -1021,8 +1082,10 @@ class Grammar:
         return line_col(self.document_lbreaks__, self.document_length__ - len(text))
 
 
-    def static_analysis(self) -> List[Tuple[str, Parser, Error]]:
+    def static_analysis(self) -> List[GrammarErrorType]:
         """
+        EXPERIMENTAL (does not catch inifinite loops due to regular expressions...)
+
         Checks the parser tree statically for possible errors. At the moment only
         infinite loops will be detected.
         :return: a list of error-tuples consisting of the narrowest containing
@@ -1030,7 +1093,7 @@ class Grammar:
             the actual parser that failed and an error object.
         """
         containing_named_parser = ''  # type: str
-        error_list = []  # type: List[Tuple[str, Parser, Error]]
+        error_list = []  # type: List[GrammarErrorType]
 
         def visit_parser(parser: Parser) -> None:
             nonlocal containing_named_parser, error_list
@@ -1038,7 +1101,7 @@ class Grammar:
                 containing_named_parser = parser.pname
             if isinstance(parser, ZeroOrMore) or isinstance(parser, OneOrMore):
                 inner_parser = cast(UnaryParser, parser).parser
-                tree = self('', inner_parser)
+                tree = self('', inner_parser, True)
                 if not tree.error_flag:
                     if not parser.pname:
                         msg = 'Parser "%s" in %s can become caught up in an infinite loop!' \
@@ -2057,8 +2120,10 @@ class Lookahead(FlowParser):
     """
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
-        if self.sign(node is not None):
-            return Node(self.tag_name, ''), text
+        if (self.sign(node is not None)
+                # static analysis requires lookahead to be disabled at document end
+                or (self.grammar.static_analysis_pending__ and not text)):
+            return Node(self.tag_name, '') if self.pname else EMPTY_NODE, text
         else:
             return None, text
 
@@ -2220,7 +2285,7 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.pname]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            node = Node(self.tag_name, '')
+            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - len(text))
             self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text

@@ -31,8 +31,8 @@ from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    get_ebnf_compiler, compile_ebnf
-from DHParser.dsl import CompilationError, compileDSL, DHPARSER_IMPORTS, grammar_provider
+    get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+from DHParser.dsl import CompilationError, compileDSL, grammar_provider
 from DHParser.testing import grammar_unit
 
 
@@ -723,6 +723,9 @@ class TestAllOfResume:
         st = gr('EXY EXYZ.')
         assert len(st.errors_sorted) == 1
 
+
+class TestStaticAnalysis:
+    pass
 
 
 if __name__ == "__main__":

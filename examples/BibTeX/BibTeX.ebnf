@@ -43,7 +43,7 @@ text          = { CONTENT_STRING | "{" text "}" }
 
 WORD          = /\w+/~
 NO_BLANK_STRING         = /[^ \t\n,%]+/~
-COMMA_TERMINATED_STRING = { /[^,%]+/ | /(?=%)/~ }
-CONTENT_STRING = { /[^{}%]+/ | /(?=%)/~ }+
+COMMA_TERMINATED_STRING = { /[^,%]+/ | &/%/~ }
+CONTENT_STRING = { /[^{}%]+/ | &/%/~ }+
 
 EOF           =  !/./

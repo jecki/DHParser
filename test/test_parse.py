@@ -29,10 +29,10 @@ from DHParser.log import logging, is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError, MetaParser, EMPTY_NODE
+    UnknownParserError, MetaParser, GrammarError, EMPTY_NODE
 from DHParser import compile_source
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.dsl import grammar_provider, DHPARSER_IMPORTS
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
+from DHParser.dsl import grammar_provider, CompilationError
 from DHParser.syntaxtree import Node
 
 
@@ -115,7 +115,16 @@ class TestInfiLoopsAndRecursion:
     def test_infinite_loops(self):
         minilang = """forever = { // } \n"""
         snippet = " "
-        parser = grammar_provider(minilang)()
+        try:
+            parser_class = grammar_provider(minilang)
+        except CompilationError as error:
+            assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
+            print(error)
+        save = get_config_value('early_static_analysis')
+        set_config_value('early_static_analysis', False)
+        parser_class = grammar_provider(minilang)
+        parser = parser_class()
+        set_config_value('early_static_analysis', save)
         syntax_tree = parser(snippet)
         assert any(e.code == Error.INFINITE_LOOP for e in syntax_tree.errors)
         res = parser.static_analysis()
@@ -835,6 +844,46 @@ class TestMetaParser:
         self.mp.tag_name = self.mp.pname
         rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
+
+
+class TestStaticAnalysis:
+    bibtex_grammar = """# bad bibtex-grammar
+    @ whitespace  = /\s*/
+    @ ignorecase  = True
+    @ comment     = //
+
+    bibliography = { preamble | comment | entry }
+    
+    preamble      = "@Preamble{" /"/ pre_code /"/~ §"}"
+    pre_code      = { /[^"%]+/ | /%.*\n/ }
+    
+    comment       = "@Comment{" text §"}"
+    
+    entry         = /@/ type "{" key { "," field §"=" content } [","] §"}"
+    type          = WORD
+    key           = NO_BLANK_STRING
+    field         = WORD
+    content       = "{" text "}" | plain_content
+    
+    plain_content = COMMA_TERMINATED_STRING
+    text          = { CONTENT_STRING | "{" text "}" }
+ 
+    WORD          = /\w+/~
+    NO_BLANK_STRING         = /[^ \t\n,%]+/~
+    COMMA_TERMINATED_STRING = { /[^,%]+/ | &/%/~ }      # BOOM !!!
+    CONTENT_STRING = { /[^{}%]+/ | &/%/~ }+             # BOOM !!!
+    
+    EOF           =  !/./    
+    """
+
+    def test_static_analysis(self):
+        gr_class = grammar_provider(self.bibtex_grammar, 'BibTex')
+        try:
+            gr_instance = gr_class()
+        except GrammarError as error:
+            affected_parsers = {e[0] for e in error.errors}
+            assert affected_parsers == {'CONTENT_STRING', 'COMMA_TERMINATED_STRING'}
+            assert all(e[2].code == Error.INFINITE_LOOP for e in error.errors)
 
 
 
