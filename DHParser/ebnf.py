@@ -188,7 +188,7 @@ class EBNFGrammar(Grammar):
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
     # plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
-    plaintext = RegExp('`(?:\\\\`|[^"])*?`')
+    plaintext = Series(RegExp('`(?:\\\\`|[^"])*?`'), wsp__)
     # literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
     literal = Alternative(Series(RegExp('"(?:\\\\"|[^"])*?"'), wsp__),
                           Series(RegExp("'(?:\\\\'|[^'])*?'"), wsp__))

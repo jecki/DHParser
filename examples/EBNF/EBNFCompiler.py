@@ -59,7 +59,7 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "6578e0df755d9206e8a78aa4d3a183bd"
+    source_hash__ = "946ad6d28df1350f1f8cd2502fcf012f"
     static_analysis_pending__ = False
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -70,7 +70,7 @@ class EBNFGrammar(Grammar):
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
-    plaintext = RegExp('`(?:\\\\`|[^"])*?`')
+    plaintext = Series(RegExp('`(?:\\\\`|[^"])*?`'), wsp__)
     literal = Alternative(Series(RegExp('"(?:\\\\"|[^"])*?"'), wsp__), Series(RegExp("'(?:\\\\'|[^'])*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
     option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
@@ -107,27 +107,35 @@ def get_grammar() -> EBNFGrammar:
 #######################################################################
 
 EBNF_AST_transformation_table = {
-    # AST Transformations for the EBNF-grammar
-    "<": flatten_anonymous_nodes,
-    "syntax": [],
-    "definition": [],
-    "directive": [],
-    "expression": [],
-    "term": [],
-    "factor": [],
-    "flowmarker": [],
-    "retrieveop": [],
-    "group": [],
-    "unordered": [],
-    "oneormore": [],
-    "repetition": [],
-    "option": [],
-    "symbol": [],
-    "literal": [],
-    "plaintext": [],
-    "regexp": [],
-    "whitespace": [],
-    "EOF": []
+    # AST Transformations for EBNF-grammar
+    "<":
+        remove_expendables,
+    "syntax":
+        [],  # otherwise '"*": replace_by_single_child' would be applied
+    "directive, definition":
+        [flatten, remove_tokens('@', '=', ',')],
+    "expression":
+        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
+    "term":
+        [replace_by_single_child, flatten],  # supports both idioms:
+                                             # "{ factor }+" and "factor { factor }"
+    "factor, flowmarker, retrieveop":
+        replace_by_single_child,
+    "group":
+        [remove_brackets, replace_by_single_child],
+    "unordered":
+        remove_brackets,
+    "oneormore, repetition, option":
+        [reduce_single_child, remove_brackets,
+         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
+    "symbol, literal, regexp":
+        reduce_single_child,
+    (TOKEN_PTYPE, WHITESPACE_PTYPE):
+        reduce_single_child,
+    # "list_":
+    #     [flatten, remove_infix_operator],
+    "*":
+        replace_by_single_child
 }
 
 def EBNFTransform() -> TransformationDict:
