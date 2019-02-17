@@ -152,7 +152,7 @@ def unit_from_config(config_str):
         section_match = RX_SECTION.match(cfg, pos)
 
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
-        raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 2))
+        raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 2))  # TODO: Add file name
 
     return unit
 

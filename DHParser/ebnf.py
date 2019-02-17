@@ -187,8 +187,11 @@ class EBNFGrammar(Grammar):
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
-    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
-    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    # plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
+    plaintext = RegExp('`(?:\\\\`|[^"])*?`')
+    # literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    literal = Alternative(Series(RegExp('"(?:\\\\"|[^"])*?"'), wsp__),
+                          Series(RegExp("'(?:\\\\'|[^'])*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
     option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
     repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)

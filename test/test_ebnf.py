@@ -433,14 +433,14 @@ class TestWhitespace:
         cst = parser("DOCWörter Wörter Wörter")
         assert not cst.error_flag
 
-        lang2 = r'document = `DOC` { WORD } EOF' + tail
+        lang2 = r'document = `DOC`{ WORD } EOF' + tail
         parser = grammar_provider(lang2)()
         cst = parser("DOC Wörter Wörter Wörter")
         assert cst.error_flag
         cst = parser("DOCWörter Wörter Wörter")
         assert not cst.error_flag
 
-        lang3 = r'document = `DOC` ~ { WORD } EOF' + tail
+        lang3 = r'document = `DOC`~ { WORD } EOF' + tail
         parser = grammar_provider(lang3)()
         cst = parser("DOC Wörter Wörter Wörter")
         assert not cst.error_flag

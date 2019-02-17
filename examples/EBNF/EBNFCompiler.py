@@ -59,7 +59,8 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "de6d0516ea104e7d8318b998e488b2d1"
+    source_hash__ = "6578e0df755d9206e8a78aa4d3a183bd"
+    static_analysis_pending__ = False
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
@@ -69,8 +70,8 @@ class EBNFGrammar(Grammar):
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:\\\\/|[^/])*?/'), wsp__)
-    plaintext = Series(RegExp('`(?:[^"]|\\\\")*?`'), wsp__)
-    literal = Alternative(Series(RegExp('"(?:[^"]|\\\\")*?"'), wsp__), Series(RegExp("'(?:[^']|\\\\')*?'"), wsp__))
+    plaintext = RegExp('`(?:\\\\`|[^"])*?`')
+    literal = Alternative(Series(RegExp('"(?:\\\\"|[^"])*?"'), wsp__), Series(RegExp("'(?:\\\\'|[^'])*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
     option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
     repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
