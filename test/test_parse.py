@@ -114,17 +114,20 @@ class TestInfiLoopsAndRecursion:
 
     def test_infinite_loops(self):
         minilang = """forever = { // } \n"""
-        snippet = " "
         try:
             parser_class = grammar_provider(minilang)
         except CompilationError as error:
             assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
-            print(error)
-        save = get_config_value('early_static_analysis')
-        set_config_value('early_static_analysis', False)
-        parser_class = grammar_provider(minilang)
-        parser = parser_class()
-        set_config_value('early_static_analysis', save)
+        save = get_config_value('static_analysis')
+        set_config_value('static_analysis', 'late')
+        provider = grammar_provider(minilang)
+        try:
+            parser = provider()
+        except GrammarError as error:
+            assert error.errors[0][2].code == Error.INFINITE_LOOP
+        set_config_value('static_analysis', 'none')
+        parser = provider()
+        snippet = " "
         syntax_tree = parser(snippet)
         assert any(e.code == Error.INFINITE_LOOP for e in syntax_tree.errors)
         res = parser.static_analysis()
@@ -133,7 +136,7 @@ class TestInfiLoopsAndRecursion:
         parser = grammar_provider(minilang)()
         res = parser.static_analysis()
         assert not res
-
+        set_config_value('static_analysis', save)
 
 class TestFlowControl:
     def setup(self):
@@ -877,6 +880,8 @@ class TestStaticAnalysis:
     """
 
     def test_static_analysis(self):
+        save = get_config_value('static_analysis')
+        set_config_value('static_analysis', 'late')
         gr_class = grammar_provider(self.bibtex_grammar, 'BibTex')
         try:
             gr_instance = gr_class()
@@ -884,6 +889,7 @@ class TestStaticAnalysis:
             affected_parsers = {e[0] for e in error.errors}
             assert affected_parsers == {'CONTENT_STRING', 'COMMA_TERMINATED_STRING'}
             assert all(e[2].code == Error.INFINITE_LOOP for e in error.errors)
+        set_config_value('static_analysis', save)
 
 
 

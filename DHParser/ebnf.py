@@ -68,8 +68,10 @@ __all__ = ('get_ebnf_preprocessor',
 ########################################################################
 
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
-CONFIG_PRESET['early_static_analysis'] = True  # do a static analysis right after ebnf compilation
-
+# CONFIG_PRESET['static_analysis'] = "early" # do a static analysis right
+#                                            # after ebnf compilation
+# already set in parse.py - config vars should probably moved to a
+#                           a dedicated global module
 
 ########################################################################
 #
@@ -586,7 +588,7 @@ class EBNFCompiler(Compiler):
         assert grammar_name == "" or re.match(r'\w+\Z', grammar_name)
         if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
-        self.grammar_name = grammar_name
+        self.grammar_name = grammar_name or "NameUnknown"
         self.grammar_source = load_if_file(grammar_source)
         return self
 
@@ -922,10 +924,12 @@ class EBNFCompiler(Compiler):
         self.definitions.update(definitions)
 
         grammar_python_src = self.assemble_parser(definitions, node)
-        if get_config_value('early_static_analysis'):
-            grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src, self.grammar_name)
+        if get_config_value('static_analysis') == 'early':
             try:
+                grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src, self.grammar_name)
                 _ = grammar_class()
+            except NameError:
+                pass  # undefined name in the grammar are already cuaght and reported
             except GrammarError as error:
                 for sym, prs, err in error.errors:
                     symdef_node = self.rules[sym][0]

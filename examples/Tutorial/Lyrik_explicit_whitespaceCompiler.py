@@ -59,6 +59,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     r"""Parser for a Lyrik_explicit_whitespace source file.
     """
     source_hash__ = "bcb3cee425961a2148941b492e614bd2"
+    static_analysis_pending__ = True
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''

@@ -92,6 +92,11 @@ __all__ = ('Parser',
 ########################################################################
 
 CONFIG_PRESET['flatten_tree_while_parsing'] = True
+CONFIG_PRESET['static_analysis'] = "early"
+# 'early': do static analysis already when compiling and EBNF grammar, see ebnf.py
+# 'late': do a static analysis, the first time a grammar class is instantiated
+# 'none': no static analysis of the grammar
+# TODO:  move all presests to a dedicated configuration module
 
 
 ########################################################################
@@ -799,7 +804,8 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
 
-        if self.__class__.static_analysis_pending__:
+        if self.__class__.static_analysis_pending__ \
+                and get_config_value('static_analysis') in {'early', 'late'}:
             try:
                 result = self.static_analysis()
                 if result:

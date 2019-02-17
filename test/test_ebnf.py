@@ -25,7 +25,7 @@ from multiprocessing import Pool
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import compile_python_object, re
+from DHParser.toolkit import compile_python_object, get_config_value, set_config_value, re
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
 from DHParser.error import has_errors, Error
@@ -216,12 +216,18 @@ class TestCompilerErrors:
     def test_undefined_symbols(self):
         """Use of undefined symbols should be reported.
         """
+        save = get_config_value('static_analysis')
+        set_config_value('static_analysis', 'early')
+
         ebnf = """syntax = { intermediary }
                   intermediary = "This symbol is " [ badly_spelled ] "!"
                   bedly_spilled = "wrong" """
         result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
             get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
+        # print(messages)
         assert messages
+
+        set_config_value('static_analysis', save)
 
     def test_no_error(self):
         """But reserved symbols should not be repoted as undefined.
@@ -532,7 +538,7 @@ class TestErrorCustomizationErrors:
             parser = grammar_provider(lang)()
             assert False, "CompilationError because of ambiguous error message exptected!"
         except CompilationError as compilation_error:
-            err = next(compilation_error.errors)
+            err = compilation_error.errors[0]
             assert err.code == Error.AMBIGUOUS_ERROR_HANDLING, str(compilation_error)
 
     def test_unsed_error_customization(self):
@@ -725,7 +731,17 @@ class TestAllOfResume:
 
 
 class TestStaticAnalysis:
-    pass
+    def test_static_analysis(self):
+        save = get_config_value('static_analysis')
+        set_config_value('static_analysis', 'early')
+
+        minilang = """forever = { // } \n"""
+        try:
+            parser_class = grammar_provider(minilang)
+        except CompilationError as error:
+            assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
+
+        set_config_value('static_analysis', save)
 
 
 if __name__ == "__main__":
