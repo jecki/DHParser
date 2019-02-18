@@ -27,14 +27,20 @@ sys.path.extend(['../', './'])
 from DHParser.toolkit import compile_python_object, get_config_value, set_config_value
 from DHParser.log import logging, is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
-from DHParser.parse import Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
+from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
     UnknownParserError, MetaParser, GrammarError, EMPTY_NODE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
 from DHParser.dsl import grammar_provider, CompilationError
 from DHParser.syntaxtree import Node
+from DHParser.stringview import StringView
 
+
+class TestParserError:
+    def test_parser_error_str(self):
+        pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), True)
+        assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
 class TestParserClass:
     def test_apply(self):

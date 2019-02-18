@@ -307,7 +307,7 @@ class Parser:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:
                         i = 1
-                    nd = Node(ZOMBIE_TAG, rest[:i])
+                    nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
                     rest = rest[i:]
                     assert error.node.children or (not error.node.result)
                     if error.first_throw:
@@ -316,15 +316,19 @@ class Parser:
                     else:
                         # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht anfügen
                         #       dürfte allerdings erst an den nächsten(!) Knoten angehängt werden (wie?)
-                        node = Node(self.tag_name, (Node(ZOMBIE_TAG, text[:gap]), error.node, nd))
+                        node = Node(self.tag_name,
+                                    (Node(ZOMBIE_TAG, text[:gap]).with_pos(location),
+                                     error.node, nd))
                 elif error.first_throw:
                     raise ParserError(error.node, error.rest, first_throw=False)
                 else:
-                    result = (Node(ZOMBIE_TAG, text[:gap]), error.node) if gap else error.node  # type: ResultType
+                    result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), error.node) if gap \
+                        else error.node  # type: ResultType
                     if grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:  # EXPERIMENTAL!!
                         node = error.node
                     else:
-                        raise ParserError(Node(self.tag_name, result), text, first_throw=False)
+                        raise ParserError(Node(self.tag_name, result).with_pos(location),
+                                          text, first_throw=False)
 
 
             if grammar.left_recursion_handling__:
