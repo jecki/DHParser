@@ -1768,7 +1768,8 @@ class Series(NaryParser):
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         ret_node = self._return_values(results)  # type: Node
         if error:
-            raise ParserError(ret_node, text, first_throw=True)
+            raise ParserError(ret_node.with_pos(len(self.grammar.document__) - len(text)),
+                              text, first_throw=True)
         return ret_node, text_
 
     def __repr__(self):
