@@ -57,7 +57,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "dacb1f9ad5b1c18cdc29c7ddb7878959"
+    source_hash__ = "242fb29d844ed8eb0024286ea5b78bff"
     static_analysis_pending__ = False
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -79,7 +79,7 @@ class LaTeXGrammar(Grammar):
     NAME = Capture(Series(RegExp('\\w+'), wsp__))
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
-    SPECIAL = RegExp('[$&_\\\\\\\\/]')
+    SPECIAL = RegExp('[$&_/\\\\\\\\]')
     ESCAPED = RegExp('\\\\[%$&_/{}]')
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\(?:(?!_)\\w)+'), wsp__)

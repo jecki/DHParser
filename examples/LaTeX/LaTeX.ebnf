@@ -156,7 +156,7 @@ structural = "subsection" | "section" | "chapter" | "subsubsection"
 CMDNAME    = /\\(?:(?!_)\w)+/~
 TXTCOMMAND = /\\text\w+/
 ESCAPED    = /\\[%$&_\/{}]/
-SPECIAL    = /[$&_\\\\\/]/
+SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/
 

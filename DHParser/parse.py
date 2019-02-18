@@ -920,20 +920,6 @@ class Grammar:
             (See test/test_testing.TestLookahead !)
             """
             last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
-            # # TODO: Checking match status of history__[-2] is inaccurate if ending
-            # #       lookahead parser is part of an Alternative-parser !!!
-            # #       (Need a test-case!)
-            # return last_record and parser != self.root_parser__ \
-            #         and last_record.status == HistoryRecord.MATCH \
-            #         and last_record.node.pos \
-            #         + len(last_record.node) >= len(self.document__) \
-            #         and any(tn in self and isinstance(self[tn], Lookahead)
-            #                 or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
-            #                 for tn in last_record.call_stack)
-            last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
-            # TODO: Checking match status of history__[-2] is inaccurate if ending
-            #       lookahead parser is part of an Alternative-parser !!!
-            #       (Need a test-case!)
             return last_record and parser != self.root_parser__ \
                     and any(self.history__[i].status == HistoryRecord.MATCH \
                             and self.history__[i].node.pos \

@@ -277,7 +277,7 @@ class TestSelfHosting:
         literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                    | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
         plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-        regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        regexp     = /\/(?:\\(?:\/)|[^\/])*?\//~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
         whitespace = /~/~                               # insignificant whitespace
         
         EOF = !/./
