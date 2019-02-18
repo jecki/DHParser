@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """test_dsl.py - tests of the dsl-module of DHParser 
 
