@@ -146,7 +146,8 @@ def recompile_grammar(grammar_src, force):
         testing.create_test_templates(grammar_src, grammar_tests_dir)
     with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
-        if not dsl.recompile_grammar(grammar_src, force=force):
+        if not dsl.recompile_grammar(grammar_src, force=force,
+                notify=lambda: print('recompiling ' + grammar_src)):
             print('\nErrors while recompiling "%s":' % grammar_src +
                   '\n--------------------------------------\n\n')
             with open('{name}_ebnf_ERRORS.txt') as f:
