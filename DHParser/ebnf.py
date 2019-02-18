@@ -936,7 +936,7 @@ class EBNFCompiler(Compiler):
         rule = node.children[0].content
         if rule in self.rules:
             first = self.rules[rule][0]
-            if not first.errors:
+            if not id(first) in self.tree.error_nodes:
                 self.tree.new_error(first, 'First definition of rule "%s" '
                                     'followed by illegal redefinitions.' % rule)
             self.tree.new_error(node, 'A rule "%s" has already been defined earlier.' % rule)

@@ -340,10 +340,11 @@ class Parser:
                 if location in grammar.recursion_locations__:
                     if location in self.visited:
                         node, rest = self.visited[location]
-                        if location != grammar.last_recursion_location__:
-                            grammar.tree__.add_error(node, Error("Left recursion encountered. "
-                                                                 "Refactor grammar to avoid slow parsing.",
-                                                                 node.pos, Error.LEFT_RECURSION_WARING))
+                        if node and location != grammar.last_recursion_location__:
+                            grammar.tree__.add_error(
+                                node, Error("Left recursion encountered. "
+                                            "Refactor grammar to avoid slow parsing.",
+                                            node.pos, Error.LEFT_RECURSION_WARNING))
                             grammar.last_recursion_location__ = location
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
@@ -515,7 +516,7 @@ class UnknownParserError(KeyError):
     is referred to that does not exist."""
 
 
-GrammarErrorType = List[Tuple[str, Parser, Error]]      # TODO: replace with a named tuple?
+GrammarErrorType = Tuple[str, Parser, Error]      # TODO: replace with a named tuple?
 
 
 class GrammarError(Exception):
@@ -915,9 +916,9 @@ class Grammar:
             """
             last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
-                    and any(self.history__[i].status == HistoryRecord.MATCH \
-                            and self.history__[i].node.pos \
-                            + len(self.history__[i].node) >= len(self.document__) \
+                    and any(self.history__[i].status == HistoryRecord.MATCH
+                            and ((self.history__[i].node.pos + len(self.history__[i].node))
+                                 if self.history__[i].node else 0) >= len(self.document__)
                             and any(tn in self and isinstance(self[tn], Lookahead)
                                     or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
                                     for tn in self.history__[i].call_stack)
@@ -1376,7 +1377,7 @@ class MetaParser(Parser):
                     return Node(self.tag_name, node)
                 return node
             elif self.pname:
-                return Node(self.tag_name, ())  # type: Node
+                return Node(self.tag_name, ())
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.tag_name, node or ())  # unoptimized code
 
@@ -1392,7 +1393,7 @@ class MetaParser(Parser):
         N = len(results)
         if N > 1:
             if self.grammar.flatten_tree__:
-                nr = []
+                nr = []  # type: List[Node]
                 for child in results:
                     if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
                         nr.extend(child.children)

@@ -73,7 +73,7 @@ class Error:
 
     REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
     UNUSED_ERROR_HANDLING_WARNING            = ErrorCode(130)
-    LEFT_RECURSION_WARING                    = ErrorCode(140)
+    LEFT_RECURSION_WARNING                   = ErrorCode(140)
 
     UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
 

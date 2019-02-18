@@ -25,11 +25,11 @@ parser classes are defined in the ``parse`` module.
 
 from collections import OrderedDict
 import copy
+from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional, Dict
 
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
 from DHParser.toolkit import get_config_value, re
-from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -544,9 +544,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         left_bracket, right_bracket, density = ('', '', 1) if compact else ('(', '\n)', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
-        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[Node]
+        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[RootNode]
 
-        def opening(node) -> str:
+        def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             txt = [left_bracket, node.tag_name]
             # s += " '(pos %i)" % node.add_pos
@@ -560,11 +560,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(" `(err `%s)" % ' '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt) + '\n'
 
-        def closing(node) -> str:
+        def closing(node: Node) -> str:
             """Returns the closing string for the representation of `node`."""
             return right_bracket
 
-        def pretty(strg):
+        def pretty(strg: str) -> str:
             """Encloses `strg` with the right kind of quotation marks."""
             return '"%s"' % strg if strg.find('"') < 0 \
                 else "'%s'" % strg if strg.find("'") < 0 \
@@ -596,9 +596,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             empty_tags:  A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
         """
-        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[Node]
+        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[RootNode]
 
-        def opening(node) -> str:
+        def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             if node.tag_name in omit_tags:
                 return ''
@@ -620,7 +620,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 ending = ">\n"
             return "".join(txt + [ending])
 
-        def closing(node):
+        def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in omit_tags or node.tag_name in empty_tags:
                 return ''
@@ -632,8 +632,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             content = content.replace('<', '&lt;').replace('>', '&gt;')
             return content
 
-
-        def inlining(node):
+        def inlining(node: Node):
             """Returns True, if `node`'s tag name is contained in `inline_tags`,
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
@@ -808,7 +807,7 @@ def tree_sanity_check(tree: Node) -> bool:
     :param tree: the root of the tree to be checked
     :return: True, if the tree is `sane`, False otherwise.
     """
-    node_set = set()
+    node_set = set()  # type: Set[Node]
     for node in tree.select(lambda nd: True, include_root=True):
         if node in node_set or isinstance(Node, FrozenNode):
             return False
@@ -832,6 +831,12 @@ class RootNode(Node):
                 processing (i.e. parsing, AST-transformation, compiling)
                 of this tree.
 
+        error_nodes (dict): A mapping of node-ids to a list of errors that
+                occurred on the node with the respective id.
+
+        error_positions (dict): A mapping of locations to a set of ids of
+                nodes that contain an error at that particular location
+
         error_flag (int):  the highest warning or error level of all errors
                 that occurred.
 
@@ -844,7 +849,7 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None):
         super().__init__('__not_yet_ready__', '')
-        self.errors = []           # type: List[Error]
+        self.errors = []               # type: List[Error]
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
         self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
         self.error_flag = 0
@@ -852,8 +857,8 @@ class RootNode(Node):
             self.swallow(node)
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
-        self.omit_tags = set()  # type: Set[str]
-        self.empty_tags = set()  # type: Set[str]
+        self.omit_tags = set()    # type: Set[str]
+        self.empty_tags = set()   # type: Set[str]
 
     def __deepcopy__(self, memodict={}):
         duplicate = self.__class__(None)
