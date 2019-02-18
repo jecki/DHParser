@@ -18,10 +18,12 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+# Flat namespace for the DHParser Package. Is this a good idea...?
+
 from .compile import *
+from .configuration import *
 from .dsl import *
 from .ebnf import *
-# Flat namespace for the DHParser Package. Is this a good idea...?
 from .error import *
 from .log import *
 from .parse import *
@@ -37,4 +39,4 @@ name = "DHParser"
 __author__ = "Eckhart Arnold <arnold@badw.de>"
 __copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
 # __all__ = ['toolkit', 'stringview', 'error', 'syntaxtree', 'preprocess', 'parse',
-# 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber']
+# 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber', 'configuration']

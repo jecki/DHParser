@@ -22,7 +22,6 @@ several of the the other DHParser-Modules or that are just very generic
 so that they are best defined in a toolkit-module.
 """
 
-import codecs
 import hashlib
 import io
 import multiprocessing
@@ -34,14 +33,8 @@ try:
 except ImportError:
     import re
 import sys
-
-try:
-    import typing
-except ImportError:
-    import DHParser.foreign_typing as typing
-    sys.modules['typing'] = typing  # make it possible to import from typing
-
-from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable, cast
+import typing
+from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable
 
 try:
     import cython
@@ -51,6 +44,8 @@ try:
 except ImportError:
     cython_optimized = False            # type: bool
     import DHParser.shadow_cython as cython
+
+from DHParser.configuration import CONFIG_PRESET
 
 
 __all__ = ('typing',
@@ -72,7 +67,6 @@ __all__ = ('typing',
            'smart_list',
            'sane_parser_name',
            'GLOBALS',
-           'CONFIG_PRESET',
            'get_config_value',
            'set_config_value')
 
@@ -84,8 +78,6 @@ __all__ = ('typing',
 #######################################################################
 
 GLOBALS = threading.local()
-CONFIG_PRESET = dict()  # type: Dict[Hashable, Any]
-
 
 def get_config_value(key: Hashable) -> Any:
     """

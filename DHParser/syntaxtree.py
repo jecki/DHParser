@@ -28,7 +28,7 @@ import copy
 
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import re
+from DHParser.toolkit import get_config_value, re
 from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional
 
 
@@ -40,6 +40,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'StrictResultType',
            'ChildrenType',
            'Node',
+           'serialize',
            'FrozenNode',
            'tree_sanity_check',
            'RootNode',
@@ -729,6 +730,33 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Recursively counts the number of nodes in the tree including the root node.
         """
         return sum(child.tree_size() for child in self.children) + 1
+
+
+def serialize(node: Node, how: str='default') -> str:
+    """
+    Serializes the tree starting with `node` either as S-expression, XML
+    or in compact form. Possible values for `how` are 'S-expression',
+    'XML', 'compact' accordingly, or 'AST', 'CST', 'default' in which case
+    the value of respective configuration variable determines the
+    serialization format. (See module `configuration.py`.)
+    """
+    switch = how.lower()
+
+    if switch == 'ast':
+        switch = get_config_value('ast_serialization').lower()
+    elif switch == 'cst':
+        switch = get_config_value('cst_serialization').lower()
+    elif switch == 'default':
+        switch = get_config_value('default_serialization').lower()
+
+    if switch == 's-expression':
+        return node.as_sxpr()
+    elif switch == 'xml':
+        return node.as_xml()
+    elif switch == 'compact':
+        return node.as_sxpr(compact=True)
+    else:
+        raise ValueError('Unknown serialization %s, %s' % (how, switch))
 
 
 class FrozenNode(Node):

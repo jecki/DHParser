@@ -23,9 +23,13 @@ import sys
 
 sys.path.extend(['../../', '../', './'])
 
+from DHParser import configuration
 from DHParser import dsl
 import DHParser.log
 from DHParser import testing
+
+
+configuration.CONFIG_PRESET['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):

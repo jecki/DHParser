@@ -25,16 +25,23 @@ if __name__ == "__main__":
         run += 1
         if ret > 0:
             failures += 1
+            print("********** FAILURE **********")
 
     for example in example_dirs:
         example_path = os.path.join(rootdir, 'examples', example)
         if os.path.isdir(example_path):
             save = os.getcwd()
             os.chdir(example_path)
+            ebnf = []
+            for name in os.listdir(example_path):
+                if name.lower().endswith('.ebnf'):
+                    ebnf.append(name)
             for name in os.listdir(example_path):
                 if os.path.isfile(name) \
                         and (name == "recompile_grammar.py" or fnmatch.fnmatch(name, 'tst_*.py')):
                     print(os.path.join(example_path, name))
+                    for grammar in ebnf:
+                        check(os.system(interpreter + name + ' ' + grammar))
                     check(os.system(interpreter + name))
             os.chdir(save)
 

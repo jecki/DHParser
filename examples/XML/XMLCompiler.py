@@ -67,10 +67,11 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "3b6f8c0aafa133d9139684e42a30adfa"
+    source_hash__ = "05c24553a9c13db86136495bd1b5fed8"
+    static_analysis_pending__ = False
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
-    COMMENT__ = r''
+    COMMENT__ = r'//'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)

@@ -28,7 +28,6 @@ main cause of trouble when constructing a context free Grammar.
 
 import collections
 import concurrent.futures
-# import configparser
 import copy
 import fnmatch
 import inspect
@@ -36,14 +35,14 @@ import json
 import multiprocessing
 import os
 import sys
+from typing import Dict, List, Union, cast
 
 from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
-from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
-from DHParser.toolkit import load_if_file, re, typing
+from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, serialize, ZOMBIE_TAG
+from DHParser.toolkit import get_config_value, set_config_value, load_if_file, re
 
-from typing import Dict, List, Union, cast
 
 __all__ = ('unit_from_config',
            'unit_from_json',
@@ -262,10 +261,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
-                report.append(indent(cst.as_sxpr(compact=True)))
+                report.append(indent(serialize(cst, 'cst')))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(ast.as_xml()))
+                report.append(indent(serialize(ast, 'ast')))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
@@ -408,7 +407,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 if compare:
                     if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                      (test_name, parser_name, cst.as_sxpr()))
+                                      (test_name, parser_name, serialize(cst, 'cst')))
                     if verbose:
                         infostr = '      cst-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
@@ -502,21 +501,33 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     os.chdir(directory)
     if is_logging():
         clear_logs()
-    with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
-        errata_futures = []
-        for filename in sorted(os.listdir()):
+
+    if get_config_value('test_parallelization'):
+        with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+            results = []
+            for filename in sorted(os.listdir('.')):
+                if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
+                    parameters = filename, parser_factory, transformer_factory, report, verbose
+                    results.append((filename, pool.submit(grammar_unit, *parameters)))
+                    # grammar_unit(*parameters)
+            for filename, err_future in results:
+                try:
+                    errata = err_future.result()
+                    if errata:
+                        all_errors[filename] = errata
+                except ValueError as e:
+                    if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
+                        raise e
+    else:
+        results = []
+        for filename in sorted(os.listdir('.')):
             if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                 parameters = filename, parser_factory, transformer_factory, report, verbose
-                errata_futures.append((filename, pool.submit(grammar_unit, *parameters)))
-                # grammar_unit(*parameters)
-        for filename, err_future in errata_futures:
-            try:
-                errata = err_future.result()
-                if errata:
-                    all_errors[filename] = errata
-            except ValueError as e:
-                if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
-                    raise e
+                results.append((filename, grammar_unit(*parameters)))
+        for filename, errata in results:
+            if errata:
+                all_errors[filename] = errata
+
     os.chdir(save_cwd)
     error_report = []
     err_N = 0
@@ -760,15 +771,21 @@ def run_path(path):
         sys.path.append(path)
         files = os.listdir(path)
         result_futures = []
-        with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+
+        if get_config_value('test_parallelization'):
+            with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+                for f in files:
+                    result_futures.append(pool.submit(run_file, f))
+                    # run_file(f)  # for testing!
+                for r in result_futures:
+                    try:
+                        _ = r.result()
+                    except AssertionError as failure:
+                        print(failure)
+        else:
             for f in files:
-                result_futures.append(pool.submit(run_file, f))
-                # run_file(f)  # for testing!
-            for r in result_futures:
-                try:
-                    _ = r.result()
-                except AssertionError as failure:
-                    print(failure)
+                run_file(f)
+
     else:
         path, fname = os.path.split(path)
         sys.path.append(path)

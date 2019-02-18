@@ -37,7 +37,8 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, CONFIG_PRESET, get_config_value, unrepr, compile_python_object, typing
+    GLOBALS, get_config_value, unrepr, compile_python_object, typing
+from DHParser.configuration import CONFIG_PRESET
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_expendables, \
     remove_tokens, flatten, forbid, assert_content
@@ -60,18 +61,6 @@ __all__ = ('get_ebnf_preprocessor',
            'TransformerFactoryFunc',
            'CompilerFactoryFunc')
 
-
-########################################################################
-#
-# Presets
-#
-########################################################################
-
-CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
-# CONFIG_PRESET['static_analysis'] = "early" # do a static analysis right
-#                                            # after ebnf compilation
-# already set in parse.py - config vars should probably moved to a
-#                           a dedicated global module
 
 ########################################################################
 #

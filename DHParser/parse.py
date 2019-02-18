@@ -39,8 +39,9 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, get_config_value,\
-    CONFIG_PRESET, re, typing, cython
+from DHParser.toolkit import sane_parser_name, escape_control_characters, get_config_value, \
+    re, typing, cython
+from DHParser.configuration import CONFIG_PRESET
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
 
@@ -83,20 +84,6 @@ __all__ = ('Parser',
            'Retrieve',
            'Pop',
            'Forward')
-
-
-########################################################################
-#
-# Presets
-#
-########################################################################
-
-CONFIG_PRESET['flatten_tree_while_parsing'] = True
-CONFIG_PRESET['static_analysis'] = "early"
-# 'early': do static analysis already when compiling and EBNF grammar, see ebnf.py
-# 'late': do a static analysis, the first time a grammar class is instantiated
-# 'none': no static analysis of the grammar
-# TODO:  move all presests to a dedicated configuration module
 
 
 ########################################################################
