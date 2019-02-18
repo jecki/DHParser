@@ -118,7 +118,7 @@ class ParserError(Exception):
         self.first_throw = first_throw  # type: bool
 
     def __str__(self):
-        return "%i: %s    %s" % (self.node.pos, self.rest[:25], repr(self.node))
+        return "%i: %s    %s" % (self.node.pos, str(self.rest[:25]), repr(self.node))
 
 
 ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
