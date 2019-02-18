@@ -591,7 +591,7 @@ def flatten_anonymous_nodes(context: List[Node]):
     """
     node = context[-1]
     if node.children:
-        new_result = []
+        new_result = []  # type: List[Node]
         for child in node.children:
             if child.is_anonymous():
                 if child.children:
@@ -819,22 +819,35 @@ def merge_whitespace(context):
 
 
 @transformation_factory(collections.abc.Callable)
-def move_adjacent(context, condition: Callable = is_insignificant_whitespace):
+def move_adjacent(context: List[Node], condition: Callable = is_insignificant_whitespace):
     """
     Moves adjacent nodes that fulfill the given condition to the parent node.
     """
+    def join_results(a: Node, b: Node, c: Node) -> bool:
+        """Joins the results of node `a` and `b` and write them to the result
+        of `c` type-safely, if possible. Return True, if join was possible
+        and done, False otherwise."""
+        if a.children and b.children:
+            c.result = cast(Tuple[Node, ...], a.result) + cast(Tuple[Node, ...], b.result)
+            return True
+        elif not a.children and not b.children:
+            c.result = cast(str, a.result) + cast(str, b.result)
+            return True
+        return False
+
+
     node = context[-1]
     if len(context) <= 1 or not node.children:
         return
     parent = context[-2]
     children = node.children
     if condition([children[0]]):
-        before = (children[0],)
+        before = (children[0],)   # type: Tuple[Node, ...]
         children = children[1:]
     else:
         before = ()
     if children and condition([children[-1]]):
-        after = (children[-1],)
+        after = (children[-1],)   # type: Tuple[Node, ...]
         children = children[:-1]
     else:
         after = tuple()
@@ -849,11 +862,15 @@ def move_adjacent(context, condition: Callable = is_insignificant_whitespace):
         prevN = parent.children[i - 1] if i > 0 else None
         nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
         if before and prevN and condition([prevN]):
-            prevN.result = prevN.result + before[0].result
-            before = ()
+            # prevN.result = prevN.result + before[0].result
+            # before = ()
+            if join_results(prevN, before[0], prevN):
+                before = ()
         if after and nextN and condition([nextN]):
-            nextN.result = after[0].result + nextN.result
-            after = ()
+            # nextN.result = after[0].result + nextN.result
+            # after = ()
+            if join_results(after[0], nextN, nextN):
+                after = ()
 
         parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
 

@@ -52,12 +52,12 @@ import collections
 import contextlib
 import html
 import os
+from typing import List, Tuple, Union, Optional
 
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node
-from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS, typing
-from typing import List, Tuple, Union
+from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS
 
 __all__ = ('log_dir',
            'logging',
@@ -222,13 +222,13 @@ class HistoryRecord:
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List[str],
-                 node: Node,
+                 node: Optional[Node],
                  text: StringView,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         self.call_stack = [tn for tn in call_stack if tn != ":Forward"]  # type: List[str]
-        self.node = node                # type: Node
+        self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
         self.errors = errors            # type: List[Error]

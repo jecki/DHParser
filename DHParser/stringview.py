@@ -42,7 +42,7 @@ try:
     cython_optimized = cython.compiled  # type: bool
 except ImportError:
     # import DHParser.Shadow as cython
-    cython_optimized = False            # type: bool
+    cython_optimized = False
     import DHParser.shadow_cython as cython
 
 
