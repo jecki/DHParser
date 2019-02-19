@@ -7,7 +7,6 @@
 cdef class Node:
     cdef public int _pos
     cdef public object _result
-    cdef str _content
     cdef public tuple children
     cdef public int _len
     cdef public str tag_name
@@ -15,6 +14,7 @@ cdef class Node:
 
     cpdef get(self,  index_or_tagname, surrogate)
     cpdef is_anonymous(self)
+    cpdef _content(self)
     cpdef with_pos(self, pos)
     cpdef attr_active(self)
     # cpdef compare_attr(self, other)

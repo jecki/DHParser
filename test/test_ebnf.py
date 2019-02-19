@@ -216,18 +216,18 @@ class TestCompilerErrors:
     def test_undefined_symbols(self):
         """Use of undefined symbols should be reported.
         """
-        save = get_config_value('static_analysis')
-        set_config_value('static_analysis', 'early')
+        # save = get_config_value('static_analysis')
+        # set_config_value('static_analysis', 'early')
 
         ebnf = """syntax = { intermediary }
                   intermediary = "This symbol is " [ badly_spelled ] "!"
                   bedly_spilled = "wrong" """
         result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
             get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
-        # print(messages)
+        print(messages)
         assert messages
 
-        set_config_value('static_analysis', save)
+        # set_config_value('static_analysis', save)
 
     def test_no_error(self):
         """But reserved symbols should not be repoted as undefined.
@@ -730,18 +730,18 @@ class TestAllOfResume:
         assert len(st.errors_sorted) == 1
 
 
-class TestStaticAnalysis:
-    def test_static_analysis(self):
-        save = get_config_value('static_analysis')
-        set_config_value('static_analysis', 'early')
-
-        minilang = """forever = { // } \n"""
-        try:
-            parser_class = grammar_provider(minilang)
-        except CompilationError as error:
-            assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
-
-        set_config_value('static_analysis', save)
+# class TestStaticAnalysis:
+#     def test_static_analysis(self):
+#         save = get_config_value('static_analysis')
+#         set_config_value('static_analysis', 'early')
+#
+#         minilang = """forever = { // } \n"""
+#         try:
+#             parser_class = grammar_provider(minilang)
+#         except CompilationError as error:
+#             assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
+#
+#         set_config_value('static_analysis', save)
 
 
 if __name__ == "__main__":

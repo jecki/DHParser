@@ -915,20 +915,20 @@ class EBNFCompiler(Compiler):
         self.definitions.update(definitions)
 
         grammar_python_src = self.assemble_parser(definitions, node)
-        if get_config_value('static_analysis') == 'early':
-            try:
-                grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,
-                                                      self.grammar_name)
-                _ = grammar_class()
-                grammar_python_src = grammar_python_src.replace(
-                    'static_analysis_pending__ = [True]', 'static_analysis_pending__ = []', 1)
-            except NameError:
-                pass  # undefined name in the grammar are already cuaght and reported
-            except GrammarError as error:
-                for sym, prs, err in error.errors:
-                    symdef_node = self.rules[sym][0]
-                    err.pos = self.rules[sym][0].pos
-                    self.tree.add_error(symdef_node, err)
+        # if get_config_value('static_analysis') == 'early':
+        #     try:
+        #         grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,
+        #                                               self.grammar_name)
+        #         _ = grammar_class()
+        #         grammar_python_src = grammar_python_src.replace(
+        #             'static_analysis_pending__ = [True]', 'static_analysis_pending__ = []', 1)
+        #     except NameError:
+        #         pass  # undefined name in the grammar are already caught and reported
+        #     except GrammarError as error:
+        #         for sym, prs, err in error.errors:
+        #             symdef_node = self.rules[sym][0]
+        #             err.pos = self.rules[sym][0].pos
+        #             self.tree.add_error(symdef_node, err)
         return grammar_python_src
 
 

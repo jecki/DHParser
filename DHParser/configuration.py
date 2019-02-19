@@ -49,20 +49,20 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # reflects the parser structure may be helpful.
 CONFIG_PRESET['flatten_tree_while_parsing'] = True
 
-# Carries out static analysis on the the parser tree before parsing starts
-# to ensure its correctness. Possible values are:
-# 'early' - static analysis is carried out by DHParser.ebnf.EBNFCompiler,
-#           already. Any errors it revealed will be located in the EBNF
-#           source code. This naturally only works for parser that are
-#           generated from an EBNF syntax declaration.
-# 'late' -  static analysis is carried out when instantiating a Grammar
-#           (sub-)class. This works also for parser trees that are
-#           handwritten in Python using the parser classes from module
-#           `parse`. It slightly slows down instantiation of Grammar
-#           clasees, though.
-# 'none' -  no static analysis at all (not recommended).
-# Default value: "early"
-CONFIG_PRESET['static_analysis'] = "early"
+# # Carries out static analysis on the the parser tree before parsing starts
+# # to ensure its correctness. Possible values are:
+# # 'early' - static analysis is carried out by DHParser.ebnf.EBNFCompiler,
+# #           already. Any errors it revealed will be located in the EBNF
+# #           source code. This naturally only works for parser that are
+# #           generated from an EBNF syntax declaration.
+# # 'late' -  static analysis is carried out when instantiating a Grammar
+# #           (sub-)class. This works also for parser trees that are
+# #           handwritten in Python using the parser classes from module
+# #           `parse`. It slightly slows down instantiation of Grammar
+# #           clasees, though.
+# # 'none' -  no static analysis at all (not recommended).
+# # Default value: "early"
+# CONFIG_PRESET['static_analysis'] = "early"
 
 # Defines the output format for the serialization of syntax trees.
 # Possible values are:

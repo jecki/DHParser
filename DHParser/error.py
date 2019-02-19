@@ -88,7 +88,7 @@ class Error:
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
-    INFINITE_LOOP                            = ErrorCode(1090)
+    # INFINITE_LOOP                            = ErrorCode(1090)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:

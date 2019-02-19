@@ -417,7 +417,7 @@ def contains_only_whitespace(context: List[Node]) -> bool:
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""
     content = context[-1].content
-    return bool(not content or RX_WHITESPACE.match(context[-1].content))
+    return bool(not content or RX_WHITESPACE.match(content))
 
 
 def is_any_kind_of_whitespace(context: List[Node]) -> bool:

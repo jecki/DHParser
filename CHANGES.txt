@@ -1,6 +1,10 @@
 DHParser Version 0.8.6 (date ?)
 ...............................
 
+- static analysis of parser tree
+  (detects infinite loops except for those caused by regular expressions)
+- default configuration now centralized in DHParser/configuration.py
+
 
 DHParser Version 0.8.5 (10.2.2019)
 ..................................

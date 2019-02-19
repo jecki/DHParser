@@ -60,7 +60,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "7a7c3764b7b37241534fbb65b44b219d"
-    static_analysis_pending__ = False
+    static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'

@@ -33,8 +33,6 @@ declarations to fully exploit the potential of the Cython-compiler.
 """
 
 import collections
-
-from DHParser.toolkit import typing
 from typing import Optional, Union, Iterable, Tuple
 
 try:
