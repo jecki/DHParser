@@ -198,9 +198,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             errors = root.errors_sorted
             if errors:
                 e_pos = errors[0].pos
-                return self.content[:e_pos] + \
+                content = self.content
+                return content[:e_pos] + \
                    ' <<< Error on "%s" | %s >>> ' % \
-                   (self.content[e_pos - self.pos:], '; '.join(e.message for e in errors))
+                   (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
         return self.content
 
     def __repr__(self):
@@ -376,8 +377,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return ''.join(self._content())
         ## unoptimized
-        # return "".join(child.content for child in self.children) if self.children else str(
-        # self._result)
+        # return "".join(child.content for child in self.children) if self.children \
+        #     else str(self._result)
         ## obsolete
         # if self._content is None:
         #     if self.children:

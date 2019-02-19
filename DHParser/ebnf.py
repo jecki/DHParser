@@ -1006,8 +1006,9 @@ class EBNFCompiler(Compiler):
         elif key == 'drop':
             check_argnum(2)
             for child in node.children[1:]:
-                node_type = child.content.lower()
-                assert node_type in DROP_VALUES, child.content
+                content = child.content
+                node_type = content.lower()
+                assert node_type in DROP_VALUES, content
                 self.directives[key].add(node_type)
 
         elif key == 'ignorecase':
@@ -1190,8 +1191,8 @@ class EBNFCompiler(Compiler):
                             if len(symlist) == 1:
                                 nd = symlist[0].children[1]
                             break
-                    if (nd.tag_name != "regexp" or nd.content[:1] != '/'
-                            or nd.content[-1:] != '/'):
+                    content = nd.content
+                    if (nd.tag_name != "regexp" or content[:1] != '/' or content[-1:] != '/'):
                         self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
                                             "-parsers, not: " + nd.tag_name)
 
