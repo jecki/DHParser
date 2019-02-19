@@ -161,7 +161,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', '_xml_attr', '_content'
+    __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', '_xml_attr'
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -173,7 +173,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
-            self._content = None        # type: Optional[str]
+            # self._content = None        # type: Optional[str]
             self.children = NoChildren  # type: ChildrenType
             self._len = -1              # type: int  # lazy evaluation
         else:
@@ -342,7 +342,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
         self._len = -1        # lazy evaluation
-        self._content = None
+        # self._content = None
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
@@ -904,7 +904,7 @@ class RootNode(Node):
         self.tag_name = node.tag_name
         if node.attr_active():
             self._xml_attr = node._xml_attr
-        self._content = node._content
+        # self._content = node._content
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
         return self
