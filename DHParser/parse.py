@@ -738,7 +738,7 @@ class Grammar:
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
-    static_analysis_pending__ = True  # type: bool
+    static_analysis_pending__ = [True]  # type: List[bool]
 
 
     @classmethod
@@ -805,7 +805,7 @@ class Grammar:
                 result = self.static_analysis()
                 if result:
                     raise GrammarError(result)
-                self.__class__.static_analysis_pending__ = False
+                self.__class__.static_analysis_pending__.pop()
             except (NameError, AttributeError):
                 pass  # don't fail the initialization of PLACEHOLDER
 

@@ -167,7 +167,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
-    static_analysis_pending__ = False
+    static_analysis_pending__ = []
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
@@ -835,7 +835,7 @@ class EBNFCompiler(Compiler):
                         + ' source file'
                         + ('. Grammar:' if self.grammar_source and show_source else '.')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
-        definitions.append(('static_analysis_pending__', 'True'))
+        definitions.append(('static_analysis_pending__', '[True]'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -921,7 +921,7 @@ class EBNFCompiler(Compiler):
                                                       self.grammar_name)
                 _ = grammar_class()
                 grammar_python_src = grammar_python_src.replace(
-                    'static_analysis_pending__ = True', 'static_analysis_pending__ = False', 1)
+                    'static_analysis_pending__ = [True]', 'static_analysis_pending__ = []', 1)
             except NameError:
                 pass  # undefined name in the grammar are already cuaght and reported
             except GrammarError as error:
