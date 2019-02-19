@@ -181,13 +181,7 @@ END OF TERMS AND CONDITIONS
 The following modules have been copied from other programs and
 may be licensed under a different but compatible license:
 
-   1. DHParser/foreign_typing.py
-
-      was taken from the Python 3.5 distribution.  Its copyright is
-      held by the Python Software Foundation and it is licensed under
-      the Python Software Foundation License.
-
-   2. DHParser/foreign_cython.py
+   1. DHParser/foreign_cython.py
 
       was taken from the Cython Python to C compiler www.cython.org
       Its copyright is held by Greg Ewing. It is also licensed under

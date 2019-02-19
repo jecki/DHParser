@@ -1,11 +1,26 @@
 DHParser
 ========
 
-A parser-combinator-based parsing and compiling infrastructure for domain
-specific languages (DSL) in Digital Humanities projects.
+DHParser - The domian specific language (DSL) construction kit for the Digit Humanities
 
-Author: Eckhart Arnold, Bavarian Academy of Sciences
-Email:  arnold@badw.de
+
+Features
+--------
+
+* Very beginner-friendly *Python-based* DSL construction kit. Setup, program and 
+  test your own DSL with the widely used Python language.
+  
+* Specific focus on *XML-workflows* as these are the most common in the Digital 
+  Humanities. Other output formats are of course also possible. (For example,
+  DHParser is self-hosting and uses Python-Code as output format.)
+  
+* Supports *unit-testing of grammars* and piecewise step-by-step development
+  as well as debugging of grammars.
+
+* *Customizable parsing errors and error recovery* to make it easy to locate 
+  parsing errors at the right spot and deliver them with a meaningful error
+  message for users that do not habitually deal with formal notations!  
+
 
 License
 -------
@@ -26,10 +41,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-**Exception**: The module ``DHParser/foreign_typing.py`` was directly taken from the
-Python 3.5 source code in order for DHParser to be backwards compatible
-with Python 3.4. The module ``DHParser/foreign_typing.py`` is licensed under the
-[Python Software Foundation License Version 2](https://docs.python.org/3.5/license.html)
+
+Author
+------
+
+Author: Eckhart Arnold, Bavarian Academy of Sciences
+Email:  arnold@badw.de
+
 
 Installation
 ------------
@@ -40,6 +58,7 @@ You can install DHParser from the Python package index (https://pypi.org)*:
 
 However, as the software is still in an early beta stage, it is
 recommended that you pull it directly from gitlab (see below).
+
 
 Post-Installaton
 ----------------
@@ -72,34 +91,21 @@ may occasionally lag behind a few commits.
 Please contact me, if you are intested in contributing to the
 development or just using DHParser.
 
+
 Disclaimer
 ----------
 
 DHParser is still in development stage. While it is already quite mature, 
 there may still be changes to the API.
 
-Features
---------
-
-* _Python-based_ parser-generator for context free grammars that is very easy
-  to use and set up.
-  
-* Specific focus on _XML-workflows_ as these are the most common in the digital 
-  humanities. Other output formats are of course also possible. (For example,
-  DHParser is self-hosting and uses Python-Code as output format.)
-  
-* Supports *unit-testing of grammars* and piecewise step-by-step development
-  as well as debugging of grammars.
-
-* *Customizable parsing errors and error recovery* to make it easy to locate 
-  parsing errors at the right spot and deliver them with a meaningful error
-  message for users that do not habitually deal with formal notations!  
 
 Purpose
 -------
 
-DHParser leverages the power of Domain specific languages for the
-Digital Humanities.
+DHParser is a parser-combinator-based parsing and compiling 
+infrastructure for domain specific languages (DSL) in Digital 
+Humanities projects. It leverages the power of Domain specific 
+languages for the Digital Humanities.
 
 Domain specific languages are widespread in
 computer sciences, but seem to be underused in the Digital Humanities.
@@ -162,10 +168,12 @@ Python-based parser class representing that grammar. The concrete and
 abstract syntax tree as well as a full and abbreviated log of the
 parsing process will be stored in a sub-directory named "LOG".
 
+
 Introduction
 ------------
 
 see [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md)
+
 
 References and Acknowledment
 ----------
