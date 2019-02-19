@@ -375,7 +375,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         string content of the child-nodes is recursively read and then
         concatenated.
         """
-        return ''.join(self._content())
+        return ''.join(self._content()) if self.children else str(self._result)
         ## unoptimized
         # return "".join(child.content for child in self.children) if self.children \
         #     else str(self._result)
