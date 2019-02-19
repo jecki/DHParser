@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """This testcase exposes a performance bug in the `re`-module of
 the python standard-library:
