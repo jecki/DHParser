@@ -730,20 +730,6 @@ class TestAllOfResume:
         assert len(st.errors_sorted) == 1
 
 
-# class TestStaticAnalysis:
-#     def test_static_analysis(self):
-#         save = get_config_value('static_analysis')
-#         set_config_value('static_analysis', 'early')
-#
-#         minilang = """forever = { // } \n"""
-#         try:
-#             parser_class = grammar_provider(minilang)
-#         except CompilationError as error:
-#             assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
-#
-#         set_config_value('static_analysis', save)
-
-
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

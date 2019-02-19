@@ -631,11 +631,11 @@ class Grammar:
 
         # static_analysis_pending__: True as long as no static analysis (see the method
         #         with the same name for more information) has been done to check
-        #         parser tree for correctness (e.g. no infinite loops). Static analysis
-        #         is done at instiantiation and the flag is then set to false, but it
+        #         parser tree for correctness. Static analysis
+        #         is done at instantiation and the flag is then set to false, but it
         #         can also be carried out once the class has been generated
         #         (by DHParser.ebnf.EBNFCompiler) and then be set to false in the
-        #         definition of the grammar clase already.
+        #         definition of the grammar class already.
 
         python__src__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
@@ -1079,24 +1079,10 @@ class Grammar:
     #         named parser (i.e. the symbol on which the failure occurred),
     #         the actual parser that failed and an error object.
     #     """
-    #     containing_named_parser = ''  # type: str
     #     error_list = []  # type: List[GrammarErrorType]
     #
     #     def visit_parser(parser: Parser) -> None:
-    #         nonlocal containing_named_parser, error_list
-    #         if parser.pname:
-    #             containing_named_parser = parser.pname
-    #         if isinstance(parser, ZeroOrMore) or isinstance(parser, OneOrMore):
-    #             inner_parser = cast(UnaryParser, parser).parser
-    #             tree = self('', inner_parser, True)
-    #             if not tree.error_flag:
-    #                 if not parser.pname:
-    #                     msg = 'Parser "%s" in %s can become caught up in an infinite loop!' \
-    #                           % (str(parser), containing_named_parser)
-    #                 else:
-    #                     msg = 'Parser "%s" can become caught up in an infinite loop!' % str(parser)
-    #                 error_list.append((containing_named_parser, parser,
-    #                                    Error(msg, -1, Error.INFINITE_LOOP)))
+    #         nonlocal error_list
     #
     #     self.root_parser__.apply(visit_parser)
     #     return error_list
@@ -1409,21 +1395,6 @@ class MetaParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.tag_name, results)  # unoptimized code
 
-    # def add_infinite_loop_error(self, node):
-    #     """
-    #     Add an "infitnite loop detected" error to the given node, unless an infinite
-    #     loop detection error has already been notified at the same location. (As a
-    #     consequence, only the innermost parser where an infinite loop is detected
-    #     will be set the error message, which is prefereble to a stack of error
-    #     messages from failed as well as its calling parsers.)
-    #     """
-    #     if (not node.pos in
-    #         (err.pos for err in
-    #          filter(lambda e: e.code == Error.INFINITE_LOOP, self.grammar.tree__.errors))):
-    #         self.grammar.tree__.add_error(
-    #             node, Error(dsl_error_msg(self, 'Infinite Loop encountered.'),
-    #                         node.pos, Error.INFINITE_LOOP))
-
 
 class UnaryParser(MetaParser):
     """
@@ -1561,7 +1532,6 @@ class ZeroOrMore(Option):
                 break
             if len(text) == n:
                 break  # avoid infinite loop
-                # self.add_infinite_loop_error(node)
             results += (node,)
         nd = self._return_values(results)  # type: Node
         return nd, text
@@ -1608,7 +1578,6 @@ class OneOrMore(UnaryParser):
                 break
             if len(text_) == n:
                 break  # avoid infinite loop
-                # self.add_infinite_loop_error(node)
             results += (node,)
         if results == ():
             return None, text

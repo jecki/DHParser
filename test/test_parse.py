@@ -855,50 +855,6 @@ class TestMetaParser:
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
 
-# class TestStaticAnalysis:
-#     bibtex_grammar = """# bad bibtex-grammar
-#     @ whitespace  = /\s*/
-#     @ ignorecase  = True
-#     @ comment     = //
-#
-#     bibliography = { preamble | comment | entry }
-#
-#     preamble      = "@Preamble{" /"/ pre_code /"/~ §"}"
-#     pre_code      = { /[^"%]+/ | /%.*\n/ }
-#
-#     comment       = "@Comment{" text §"}"
-#
-#     entry         = /@/ type "{" key { "," field §"=" content } [","] §"}"
-#     type          = WORD
-#     key           = NO_BLANK_STRING
-#     field         = WORD
-#     content       = "{" text "}" | plain_content
-#
-#     plain_content = COMMA_TERMINATED_STRING
-#     text          = { CONTENT_STRING | "{" text "}" }
-#
-#     WORD          = /\w+/~
-#     NO_BLANK_STRING         = /[^ \t\n,%]+/~
-#     COMMA_TERMINATED_STRING = { /[^,%]+/ | &/%/~ }      # BOOM !!!
-#     CONTENT_STRING = { /[^{}%]+/ | &/%/~ }+             # BOOM !!!
-#
-#     EOF           =  !/./
-#     """
-#
-#     def test_static_analysis(self):
-#         save = get_config_value('static_analysis')
-#         set_config_value('static_analysis', 'late')
-#         gr_class = grammar_provider(self.bibtex_grammar, 'BibTex')
-#         try:
-#             gr_instance = gr_class()
-#         except GrammarError as error:
-#             affected_parsers = {e[0] for e in error.errors}
-#             assert affected_parsers == {'CONTENT_STRING', 'COMMA_TERMINATED_STRING'}
-#             assert all(e[2].code == Error.INFINITE_LOOP for e in error.errors)
-#         set_config_value('static_analysis', save)
-
-
-
 if __name__ == "__main__":
     from DHParser.testing import runner
     with logging(False):
