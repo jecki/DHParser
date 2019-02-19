@@ -354,6 +354,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = NoChildren
                 self._result = result  # cast(StrictResultType, result)
 
+    def _content(self) -> List[str]:
+        """
+        Returns string content as list of string fragments
+        that are gathered from all child nodes in order.
+        """
+        if self.children:
+            fragments = []
+            for child in self.children:
+                fragments.extend(child._content())
+            return fragments
+        self._result = str(self._result)
+        return [self._result]
 
     @property
     def content(self) -> str:
@@ -362,7 +374,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         string content of the child-nodes is recursively read and then
         concatenated.
         """
-        return "".join(child.content for child in self.children) if self.children else str(self._result)
+        return ''.join(self._content())
+        ## unoptimized
+        # return "".join(child.content for child in self.children) if self.children else str(
+        # self._result)
+        ## obsolete
         # if self._content is None:
         #     if self.children:
         #         self._content = "".join(child.content for child in self.children)

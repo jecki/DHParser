@@ -81,6 +81,17 @@ class TestNode:
         self.recurring_nodes_sexpr = '(a (b x) (c (d e) (b y)))'
         self.recurr_tree = parse_sxpr(self.recurring_nodes_sexpr)
 
+    def test_content_property(self):
+        tree = RootNode(parse_sxpr('(a (b c) (d e))'))
+        content = tree.content
+        b = tree.pick('b')
+        d = tree.pick('d')
+        b.result = "recently "
+        d.result = "changed"
+        assert content != tree.content
+        assert content == 'ce'
+        assert tree.content == 'recently changed'
+
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
         tree.with_pos(0)
