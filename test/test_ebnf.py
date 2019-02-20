@@ -224,7 +224,6 @@ class TestCompilerErrors:
                   bedly_spilled = "wrong" """
         result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
             get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
-        print(messages)
         assert messages
 
         # set_config_value('static_analysis', save)
