@@ -16,11 +16,14 @@ scriptpath = os.path.dirname(__file__)
 try:
     from DHParser import dsl
     import DHParser.log
-    from DHParser import testing, create_test_templates
+    from DHParser import testing, create_test_templates, CONFIG_PRESET
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
     sys.exit(1)
+
+
+CONFIG_PRESET['ast_serialization'] = "S-expression"
 
 
 def recompile_grammar(grammar_src, force):

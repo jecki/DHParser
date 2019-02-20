@@ -27,7 +27,7 @@ overwriting the values in the CONFIG_PRESET dictionary.
 The recommended way to use a different configuration in any custom code using
 DHParser is to use the second method, i.e. to overwrite the values for which
 this is desired in the CONFIG_PRESET dictionary right after the start of the
-programm and before any DHParser-function is invoked.
+program and before any DHParser-function is invoked.
 """
 
 from typing import Dict, Hashable, Any
@@ -42,9 +42,9 @@ CONFIG_PRESET = dict()  # type: Dict[Hashable, Any]
 # Default value: False
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 
-# Flattens anonymous nodes, by removing the node and adding its childeren
+# Flattens anonymous nodes, by removing the node and adding its children
 # to the parent node in place of the removed node. This is a very useful
-# optimization that should be truned on except for learning or teaching
+# optimization that should be turned on except for learning or teaching
 # purposes, in which case a concrete syntax tree that more diligently
 # reflects the parser structure may be helpful.
 CONFIG_PRESET['flatten_tree_while_parsing'] = True
@@ -59,7 +59,7 @@ CONFIG_PRESET['flatten_tree_while_parsing'] = True
 # #           (sub-)class. This works also for parser trees that are
 # #           handwritten in Python using the parser classes from module
 # #           `parse`. It slightly slows down instantiation of Grammar
-# #           clasees, though.
+# #           classes, though.
 # # 'none' -  no static analysis at all (not recommended).
 # # Default value: "early"
 # CONFIG_PRESET['static_analysis'] = "early"
@@ -71,7 +71,7 @@ CONFIG_PRESET['flatten_tree_while_parsing'] = True
 # 'compact'      - compact tree output, i.e. children a represented
 #                  on indented lines with no opening or closing tags,
 #                  brackets etc.
-# Default values: "compact" for conctrete syntax trees and "XML" for
+# Default values: "compact" for concrete syntax trees and "XML" for
 #                 abstract syntax trees and "S-expression" for any
 #                 other kind of tree.
 CONFIG_PRESET['cst_serialization'] = "compact"

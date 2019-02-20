@@ -144,7 +144,10 @@ def unit_from_config(config_str):
                 for i in range(1, len(lines)):
                     lines[i] = lines[i][indent:]
                 testcode = '\n'.join(lines)
-            unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
+            # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
+            test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
+            assert testkey not in test, "Key %s already exists in text %s:%s !" % (testkey, stage, symbol)
+            test[testkey] = testcode
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
 
@@ -210,7 +213,8 @@ def unit_from_file(filename):
         intersection.sort()
         if intersection:
             errors.append("Same names %s assigned to match and fail test "
-                          "of parser %s." % (str(intersection), parser_name))
+                          "of parser %s." % (str(intersection), parser_name) +
+                          " Please, use different names!")
     if errors:
         raise EnvironmentError("Error(s) in Testfile %s :\n" % filename
                                + '\n'.join(errors))
@@ -244,6 +248,12 @@ def get_report(test_unit):
         lines = txt.split('\n')
         lines[0] = '    ' + lines[0]
         return "\n    ".join(lines)
+
+    def flatten(serialization):
+        if serialization.lstrip().startswith('(') and serialization.count('\n') <= 16:
+            return flatten_sxpr(serialization)
+        return serialization
+
     report = []
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
@@ -261,10 +271,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
-                report.append(indent(serialize(cst, 'cst')))
+                report.append(indent(flatten(serialize(cst, 'cst'))))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(serialize(ast, 'ast')))
+                report.append(indent(flatten(serialize(ast, 'ast'))))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
