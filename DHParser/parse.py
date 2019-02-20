@@ -1380,6 +1380,7 @@ class MetaParser(Parser):
         if N > 1:
             if self.grammar.flatten_tree__:
                 nr = []  # type: List[Node]
+                # flatten parse tree
                 for child in results:
                     if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
                         nr.extend(child.children)
@@ -1514,6 +1515,9 @@ class ZeroOrMore(Option):
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
         '.'
+        >>> forever = ZeroOrMore(RegExp(''))
+        >>> Grammar(forever)('')  # infinite loops will automatically be broken
+        Node(:EMPTY__, )
 
     EBNF-Notation: ``{ ... }``
 
@@ -1524,15 +1528,15 @@ class ZeroOrMore(Option):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         n = len(text) + 1  # type: int
-        infinite_loop_error = None  # type: Optional[Error]
-        while text and len(text) < n:
+        while len(text) < n:  # text and len(text) < n:
             n = len(text)
             node, text = self.parser(text)
             if not node:
                 break
+            if node._result or self.parser.pname:
+                results += (node,)
             if len(text) == n:
                 break  # avoid infinite loop
-            results += (node,)
         nd = self._return_values(results)  # type: Node
         return nd, text
 
@@ -1554,6 +1558,9 @@ class OneOrMore(UnaryParser):
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
         ' <<< Error on "." | Parser did not match! >>> '
+        >>> forever = OneOrMore(RegExp(''))
+        >>> Grammar(forever)('')  # infinite loops will automatically be broken
+        Node(:EMPTY__, )
 
     EBNF-Notation: ``{ ... }+``
 
@@ -1569,17 +1576,19 @@ class OneOrMore(UnaryParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
+        match_flag = False
         n = len(text) + 1  # type: int
-        infinite_loop_error = None  # type: Optional[Error]
-        while text_ and len(text_) < n:
+        while len(text_) < n:  # text_ and len(text_) < n:
             n = len(text_)
             node, text_ = self.parser(text_)
             if not node:
                 break
+            match_flag = True
+            if node._result or self.parser.pname:
+                results += (node,)
             if len(text_) == n:
                 break  # avoid infinite loop
-            results += (node,)
-        if results == ():
+        if not match_flag:
             return None, text
         nd = self._return_values(results)  # type: Node
         return nd, text_

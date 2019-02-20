@@ -118,6 +118,16 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
             log_parsing_history(parser, "test_LeftRecursion_indirect")
 
+    def test_break_inifnite_loop_ZeroOrMore(self):
+        forever = ZeroOrMore(RegExp(''))
+        result = Grammar(forever)('')  # infinite loops will automatically be broken
+        assert repr(result) == "Node(:EMPTY__, )", repr(result)
+
+    def test_break_inifnite_loop_OneOrMore(self):
+        forever = OneOrMore(RegExp(''))
+        result = Grammar(forever)('')  # infinite loops will automatically be broken
+        assert repr(result) == "Node(:EMPTY__, )", str(result)
+
     # def test_infinite_loops(self):
     #     minilang = """forever = { // } \n"""
     #     try:
