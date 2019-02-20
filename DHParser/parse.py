@@ -1198,7 +1198,9 @@ class Token(Parser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
-            return Node(self.tag_name, self.text, True), text[self.len:]
+            if self.text or self.pname:
+                return Node(self.tag_name, self.text, True), text[self.len:]
+            return EMPTY_NODE, text[0:]
         return None, text
 
     def __repr__(self):
@@ -1257,8 +1259,11 @@ class RegExp(Parser):
         match = text.match(self.regexp)
         if match:
             capture = match.group(0)
-            end = text.index(match.end())
-            return Node(self.tag_name, capture, True), text[end:]
+            if capture or self.pname:
+                end = text.index(match.end())
+                return Node(self.tag_name, capture, True), text[end:]
+            assert text.index(match.end()) == 0
+            return EMPTY_NODE, text[0:]
         return None, text
 
     def __repr__(self):
