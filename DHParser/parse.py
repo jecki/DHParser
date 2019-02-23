@@ -297,6 +297,10 @@ class Parser:
             try:
                 # PARSER CALL: run _parse() method
                 node, rest = self._parse(text)
+                # TODO: infinite loop protection. Definition "infinite loop":
+                #       1. same parser, 2. same postion, 3. same recursion depth
+                # if is_logging() and self.pname:
+                #     print(len(text), len(grammar.call_stack__), bool(node), location in self.visited, self.pname, text)
             except ParserError as error:
                 # does this play well with variable setting? add rollback clause here? tests needed...
                 gap = len(text) - len(error.rest)
@@ -340,11 +344,12 @@ class Parser:
                 if location in grammar.recursion_locations__:
                     if location in self.visited:
                         node, rest = self.visited[location]
-                        if node and location != grammar.last_recursion_location__:
+                        if location != grammar.last_recursion_location__:
                             grammar.tree__.add_error(
                                 node, Error("Left recursion encountered. "
                                             "Refactor grammar to avoid slow parsing.",
-                                            node.pos, Error.LEFT_RECURSION_WARNING))
+                                            node.pos if node else location,
+                                            Error.LEFT_RECURSION_WARNING))
                             grammar.last_recursion_location__ = location
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!

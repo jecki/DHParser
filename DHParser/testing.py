@@ -249,11 +249,6 @@ def get_report(test_unit):
         lines[0] = '    ' + lines[0]
         return "\n    ".join(lines)
 
-    def flatten(serialization):
-        if serialization.lstrip().startswith('(') and serialization.count('\n') <= 16:
-            return flatten_sxpr(serialization)
-        return serialization
-
     report = []
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
@@ -271,10 +266,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
-                report.append(indent(flatten(serialize(cst, 'cst'))))
+                report.append(indent(serialize(cst, 'cst')))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(flatten(serialize(ast, 'ast'))))
+                report.append(indent(serialize(ast, 'ast')))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
@@ -360,6 +355,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                     and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF))
 
     for parser_name, tests in test_unit.items():
+        if not get_config_value('test_parallelization'):
+            print('  ' + parser_name)
+
         assert parser_name, "Missing parser name in test %s!" % unit_name
         assert not any(test_type in RESULT_STAGES for test_type in tests), \
             ("Test %s in %s already has results. Use reset_unit() before running again!"
@@ -384,6 +382,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         # run match tests
 
         for test_name, test_code in tests.get('match', dict()).items():
+            if not get_config_value('test_parallelization'):
+                print('    ' + test_name)
+
             errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
@@ -533,6 +534,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         for filename in sorted(os.listdir('.')):
             if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                 parameters = filename, parser_factory, transformer_factory, report, verbose
+                print(filename)
                 results.append((filename, grammar_unit(*parameters)))
         for filename, errata in results:
             if errata:

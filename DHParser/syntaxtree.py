@@ -76,17 +76,27 @@ StrictResultType = Union[ChildrenType, StringView, str]
 ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 
-def flatten_sxpr(sxpr: str) -> str:
+def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     """
     Returns S-expression ``sxpr`` as a one-liner without unnecessary
     whitespace.
+
+    The ``threshold`` value is a maximum number of
+    characters allowed in the flattened expression. If this number
+    is exceeded the the unflattened S-expression is returned. A
+    negative number means that the S-expression will always be
+    flattened. Zero or (any postive integer <= 3) essentially means
+    that the expression will not be flattened.
 
     Example:
     >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
     '(a (b c))'
     """
 
-    return re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
+    flat = re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
+    if threshold >= 0 and len(flat) > threshold:
+        return sxpr.strip()
+    return flat
 
 
 def flatten_xml(xml: str) -> str:
@@ -537,7 +547,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_sxpr(self, src: str = None,
                 indentation: int = 2,
-                compact: bool = False) -> str:
+                compact: bool = False,
+                flatten_threshold: int = 0) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form. If this
         method is callad on a RootNode-object,
@@ -550,6 +561,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             compact:  If True, a compact representation is returned where
                 brackets are omitted and only the indentation indicates the
                 tree structure.
+            flatten_threshold:  Return the S-expression in flattened form if
+                the flattened expression does not exceed the threshold length.
+                A negative number means that it will always be flattened.
         """
 
         left_bracket, right_bracket, density = ('', '', 1) if compact else ('(', '\n)', 0)
@@ -580,7 +594,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
-        return self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
+        sxpr = self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
+        return flatten_sxpr(sxpr, flatten_threshold)
 
 
     def as_xml(self, src: str = None,
@@ -759,7 +774,7 @@ def serialize(node: Node, how: str='default') -> str:
         switch = get_config_value('default_serialization').lower()
 
     if switch == 's-expression':
-        return node.as_sxpr()
+        return node.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
     elif switch == 'xml':
         return node.as_xml()
     elif switch == 'compact':
@@ -918,15 +933,17 @@ class RootNode(Node):
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
         return self
 
-    def add_error(self, node: Node, error: Error) -> 'RootNode':
+    def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
+        if not node:
+            node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
         assert node.pos == error.pos or isinstance(node, FrozenNode)
-        self.errors.append(error)
-        self.error_flag = max(self.error_flag, error.code)
         self.error_nodes.setdefault(id(node), []).append(error)
         self.error_positions.setdefault(error.pos, set()).add(id(node))
+        self.errors.append(error)
+        self.error_flag = max(self.error_flag, error.code)
         return self
 
     def new_error(self,

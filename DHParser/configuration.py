@@ -78,6 +78,13 @@ CONFIG_PRESET['cst_serialization'] = "compact"
 CONFIG_PRESET['ast_serialization'] = "XML"
 CONFIG_PRESET['default_serialization'] = "S-expression"
 
+# Defines the maximum line length for flattened S-expressions.
+# Below this threshold S-expressions will be returned in flattened
+# form by DhParser.syntaxtree.serialize() and other functions
+# that use serialize(), like, for example, the reporting functions
+# in DHParser.testing.
+CONFIG_PRESET['flatten_sxpr_threshold'] = 120
+
 # Allows (coarse-grained) parallelization for running tests via the
 # Python multiprocessing module
 # Default value: True

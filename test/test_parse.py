@@ -91,7 +91,8 @@ class TestInfiLoopsAndRecursion:
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
         assert parser
-        syntax_tree = parser(snippet)
+        with logging():
+            syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         assert snippet == syntax_tree.content
 
