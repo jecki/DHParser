@@ -175,7 +175,7 @@ Lyrik_AST_transformation_table = {
     "*": replace_by_single_child
 }
 
-def LyrikTransform() -> TransformationDict:
+def LyrikTransform() -> TransformationFunc:
     return partial(traverse, processing_table=Lyrik_AST_transformation_table)
 
 

@@ -51,7 +51,7 @@ __all__ = ('TransformationDict',
            'replace_by_single_child',
            'reduce_single_child',
            'replace_or_reduce',
-           'replace_parser',
+           'exchange_parser',
            'collapse',
            'collapse_if',
            # 'merge_children',
@@ -654,7 +654,7 @@ def replace_or_reduce(context: List[Node], condition: Callable = is_named):
 
 
 @transformation_factory
-def replace_parser(context: List[Node], name: str):
+def exchange_parser(context: List[Node], name: str):
     """
     Replaces the parser of a Node with a mock parser with the given
     name.

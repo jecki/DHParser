@@ -95,7 +95,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
     is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
-    remove_nodes, remove_content, remove_brackets, replace_parser, remove_anonymous_tokens, \\
+    remove_nodes, remove_content, remove_brackets, exchange_parser, remove_anonymous_tokens, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
@@ -330,7 +330,7 @@ def get_grammar() -> {NAME}Grammar:
 
 
 TRANSFORMER_FACTORY = '''
-def {NAME}Transform() -> TransformationDict:
+def {NAME}Transform() -> TransformationFunc:
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
@@ -915,20 +915,20 @@ class EBNFCompiler(Compiler):
         self.definitions.update(definitions)
 
         grammar_python_src = self.assemble_parser(definitions, node)
-        # if get_config_value('static_analysis') == 'early':
-        #     try:
-        #         grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,
-        #                                               self.grammar_name)
-        #         _ = grammar_class()
-        #         grammar_python_src = grammar_python_src.replace(
-        #             'static_analysis_pending__ = [True]', 'static_analysis_pending__ = []', 1)
-        #     except NameError:
-        #         pass  # undefined name in the grammar are already caught and reported
-        #     except GrammarError as error:
-        #         for sym, prs, err in error.errors:
-        #             symdef_node = self.rules[sym][0]
-        #             err.pos = self.rules[sym][0].pos
-        #             self.tree.add_error(symdef_node, err)
+        if get_config_value('static_analysis') == 'early':
+            try:
+                grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,
+                                                      self.grammar_name)
+                _ = grammar_class()
+                grammar_python_src = grammar_python_src.replace(
+                    'static_analysis_pending__ = [True]', 'static_analysis_pending__ = []', 1)
+            except NameError:
+                pass  # undefined name in the grammar are already caught and reported
+            except GrammarError as error:
+                for sym, prs, err in error.errors:
+                    symdef_node = self.rules[sym][0]
+                    err.pos = self.rules[sym][0].pos
+                    self.tree.add_error(symdef_node, err)
         return grammar_python_src
 
 

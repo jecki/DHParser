@@ -6,9 +6,9 @@
 import os
 import sys
 
-LOGGING = True
+LOGGING = False
 
-sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
+sys.path.extend(['../../', '../', './'])
 
 scriptpath = os.path.dirname(__file__)
 
@@ -24,7 +24,6 @@ except ModuleNotFoundError:
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
-CONFIG_PRESET['test_parallelization'] = False
 
 
 def recompile_grammar(grammar_src, force):
@@ -70,10 +69,10 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, 'Arithmetic.ebnf'),
+        recompile_grammar(os.path.join(scriptpath, 'ArithmeticFlatTree.ebnf'),
                           force=False)
         sys.path.append('.')
-        from ArithmeticCompiler import get_grammar, get_transformer
+        from ArithmeticFlatTreeCompiler import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
             print('\n')

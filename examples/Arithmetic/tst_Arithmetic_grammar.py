@@ -8,7 +8,7 @@ import sys
 
 LOGGING = False
 
-sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
+sys.path.extend(['../../', '../', './'])
 
 scriptpath = os.path.dirname(__file__)
 
@@ -24,6 +24,7 @@ except ModuleNotFoundError:
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
+CONFIG_PRESET['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):

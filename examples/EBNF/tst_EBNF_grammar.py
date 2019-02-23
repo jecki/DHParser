@@ -8,7 +8,7 @@ import sys
 
 LOGGING = False
 
-sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
+sys.path.extend(['../../', '../', './'])
 
 scriptpath = os.path.dirname(__file__)
 

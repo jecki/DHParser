@@ -12,26 +12,47 @@
 @ ignorecase  = False              # literals and regular expressions are case-sensitive
 @ drop        = whitespace, token  # drop anonymous whitespace
 
-#######################################################################
-#
-#: Structure and Components
-#
-#######################################################################
-
-expression = term  { EXPR_OP~ term}
-term       = factor  { TERM_OP~ factor}
-factor     = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
-group      = "(" expression ")"
 
 #######################################################################
 #
-#: "Leaf"-Expressions
+#: Expressions
 #
 #######################################################################
 
-EXPR_OP    = /\+/ | /-/
-TERM_OP    = /\*/ | /\//
-SIGN       = /-/
+expression     = addition | subtraction | term
+addition       = (term "+" (addition|term)) | (subtraction "+" term)
+subtraction    = expression "-" term
 
+
+#######################################################################
+#
+#: Terms
+#
+#######################################################################
+
+term           = multiplication | division | factor
+multiplication = factor ["*"] term
+division       = term "/" (multiplication | factor)
+
+
+#######################################################################
+#
+#: Factors
+#
+#######################################################################
+
+factor         = [sign] ( NUMBER | VARIABLE | group )
+sign           = PLUS | MINUS
+group          = "(" §expression ")"
+
+
+#######################################################################
+#
+#: Tokens
+#
+#######################################################################
+
+PLUS       = /\+/
+MINUS      = /-/
 NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
 VARIABLE   = /[A-Za-z]/~

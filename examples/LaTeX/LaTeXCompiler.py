@@ -288,7 +288,7 @@ LaTeX_AST_transformation_table = {
 }
 
 
-def LaTeXTransform() -> TransformationDict:
+def LaTeXTransform() -> TransformationFunc:
     return partial(traverse, processing_table=LaTeX_AST_transformation_table.copy())
 
 

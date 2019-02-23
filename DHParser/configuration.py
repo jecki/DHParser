@@ -37,32 +37,41 @@ __all__ = ('CONFIG_PRESET',)
 CONFIG_PRESET = dict()  # type: Dict[Hashable, Any]
 
 
-# DHParser.ebnfy.EBNFCompiler class adds the the EBNF-grammar to the
-# docstring of the generated Grammar-class
-# Default value: False
-CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
+########################################################################
+#
+# parser configuration
+#
+########################################################################
 
 # Flattens anonymous nodes, by removing the node and adding its children
 # to the parent node in place of the removed node. This is a very useful
 # optimization that should be turned on except for learning or teaching
 # purposes, in which case a concrete syntax tree that more diligently
 # reflects the parser structure may be helpful.
+# Default value: True
 CONFIG_PRESET['flatten_tree_while_parsing'] = True
 
-# # Carries out static analysis on the the parser tree before parsing starts
-# # to ensure its correctness. Possible values are:
-# # 'early' - static analysis is carried out by DHParser.ebnf.EBNFCompiler,
-# #           already. Any errors it revealed will be located in the EBNF
-# #           source code. This naturally only works for parser that are
-# #           generated from an EBNF syntax declaration.
-# # 'late' -  static analysis is carried out when instantiating a Grammar
-# #           (sub-)class. This works also for parser trees that are
-# #           handwritten in Python using the parser classes from module
-# #           `parse`. It slightly slows down instantiation of Grammar
-# #           classes, though.
-# # 'none' -  no static analysis at all (not recommended).
-# # Default value: "early"
-# CONFIG_PRESET['static_analysis'] = "early"
+# Maximum depth of parser's left recursion
+# This limit should not be set to high, because the left recursion
+# catching algorithm can take exponential time, and, of course,
+# because of python's recursion depth limit
+# Left recursion handling can be turned off by setting this value to zero
+# Default value: 5
+CONFIG_PRESET['left_recursion_depth'] = 5
+
+# Maximum allowed number of retries after errors where the parser
+# would exit before the complete document has been parsed. Should
+# not be set too high, because automatic retry works poorly.
+# This value does not affect the @resume-directive.
+# Default value: 3
+CONFIG_PRESET['max_parser_dropouts'] = 3
+
+
+########################################################################
+#
+# syntaxtree configuration
+#
+########################################################################
 
 # Defines the output format for the serialization of syntax trees.
 # Possible values are:
@@ -83,7 +92,42 @@ CONFIG_PRESET['default_serialization'] = "S-expression"
 # form by DhParser.syntaxtree.serialize() and other functions
 # that use serialize(), like, for example, the reporting functions
 # in DHParser.testing.
+# Default value: 120
 CONFIG_PRESET['flatten_sxpr_threshold'] = 120
+
+
+########################################################################
+#
+# ebnf compiler configuration
+#
+########################################################################
+
+# Carries out static analysis on the the parser tree before parsing starts
+# to ensure its correctness. Possible values are:
+# 'early' - static analysis is carried out by DHParser.ebnf.EBNFCompiler,
+#           already. Any errors it revealed will be located in the EBNF
+#           source code. This naturally only works for parser that are
+#           generated from an EBNF syntax declaration.
+# 'late' -  static analysis is carried out when instantiating a Grammar
+#           (sub-)class. This works also for parser trees that are
+#           handwritten in Python using the parser classes from module
+#           `parse`. It slightly slows down instantiation of Grammar
+#           classes, though.
+# 'none' -  no static analysis at all (not recommended).
+# Default value: "early"
+CONFIG_PRESET['static_analysis'] = "none"
+
+# DHParser.ebnfy.EBNFCompiler class adds the the EBNF-grammar to the
+# docstring of the generated Grammar-class
+# Default value: False
+CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
+
+
+########################################################################
+#
+# testing framework configuration
+#
+########################################################################
 
 # Allows (coarse-grained) parallelization for running tests via the
 # Python multiprocessing module

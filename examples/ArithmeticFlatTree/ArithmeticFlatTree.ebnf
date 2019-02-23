@@ -14,42 +14,24 @@
 
 #######################################################################
 #
-#: Expressions
+#: Structure and Components
 #
 #######################################################################
 
-expression     = addition | subtraction
-addition       = (expression | term) "+" (expression | term)
-subtraction    = (expression | term) "-" (expression | term)
-
-
-#######################################################################
-#
-#: Terms
-#
-#######################################################################
-
-term           = multiplication | division
-multiplication = (term | factor) "*" (term | factor)
-division       = (term | factor) "/" (term | factor)
-
+expression = term  { EXPR_OP term}
+term       = factor  { TERM_OP factor}
+factor     = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+group      = "(" expression ")"
 
 #######################################################################
 #
-#: Factors
+#: "Leaf"-Expressions
 #
 #######################################################################
 
-factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
-group          = "(" expression ")"
+EXPR_OP    = ( /\+/ | /-/ ) ~
+TERM_OP    = ( /\*/ | /\// ) ~
+SIGN       = /[-+]/
 
-
-#######################################################################
-#
-#: Tokens
-#
-#######################################################################
-
-SIGN       = /[+-]/
 NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
 VARIABLE   = /[A-Za-z]/~

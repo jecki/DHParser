@@ -101,7 +101,7 @@ class TestInfiLoopsAndRecursion:
             Expr    = //~ (Product | Sum | Value)
             Product = Expr { ('*' | '/') Expr }+
             Sum     = Expr { ('+' | '-') Expr }+
-            Value   = /[0-9.]+/~ | '(' Expr ')'
+            Value   = /[0-9.]+/~ | '(' §Expr ')'
             """
         parser = grammar_provider(minilang)()
         assert parser
@@ -118,6 +118,27 @@ class TestInfiLoopsAndRecursion:
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
             log_parsing_history(parser, "test_LeftRecursion_indirect")
+
+    # BEWARE: EXPERIMENTAL TEST can be long running
+    def test_indirect_left_recursion2(self):
+        arithmetic_syntax = """
+            expression     = addition | subtraction
+            addition       = (expression | term) "+" (expression | term)
+            subtraction    = (expression | term) "-" (expression | term)
+            term           = multiplication | division
+            multiplication = (term | factor) "*" (term | factor)
+            division       = (term | factor) "/" (term | factor)
+            factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+            group          = "(" §expression ")"
+            SIGN           = /[+-]/
+            NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+            VARIABLE       = /[A-Za-z]/~
+            """
+        arithmetic = grammar_provider(arithmetic_syntax)()
+        arithmetic.left_recursion_depth__ = 2
+        assert arithmetic
+        syntax_tree = arithmetic("(a + b) * (a - b)")
+        assert syntax_tree.errors
 
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp(''))

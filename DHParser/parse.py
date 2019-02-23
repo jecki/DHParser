@@ -93,11 +93,6 @@ __all__ = ('Parser',
 ########################################################################
 
 
-LEFT_RECURSION_DEPTH = 8  # type: int
-# because of python's recursion depth limit, this value ought not to be
-# set too high. PyPy allows higher values than CPython
-MAX_DROPOUTS = 3  # type: int
-# stop trying to recover parsing after so many errors
 EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 
@@ -283,8 +278,8 @@ class Parser:
                 return self.visited[location]
 
             # break left recursion at the maximum allowed depth
-            if grammar.left_recursion_handling__:
-                if self.recursion_counter[location] > LEFT_RECURSION_DEPTH:
+            if grammar.left_recursion_depth__:
+                if self.recursion_counter[location] > grammar.left_recursion_depth__:
                     grammar.recursion_locations__.add(location)
                     return None, text
                 self.recursion_counter[location] += 1
@@ -297,10 +292,6 @@ class Parser:
             try:
                 # PARSER CALL: run _parse() method
                 node, rest = self._parse(text)
-                # TODO: infinite loop protection. Definition "infinite loop":
-                #       1. same parser, 2. same postion, 3. same recursion depth
-                # if is_logging() and self.pname:
-                #     print(len(text), len(grammar.call_stack__), bool(node), location in self.visited, self.pname, text)
             except ParserError as error:
                 # does this play well with variable setting? add rollback clause here? tests needed...
                 gap = len(text) - len(error.rest)
@@ -334,8 +325,7 @@ class Parser:
                         raise ParserError(Node(self.tag_name, result).with_pos(location),
                                           text, first_throw=False)
 
-
-            if grammar.left_recursion_handling__:
+            if grammar.left_recursion_depth__:
                 self.recursion_counter[location] -= 1
                 # don't clear recursion_locations__ !!!
 
@@ -634,13 +624,13 @@ class Grammar:
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
 
-        # static_analysis_pending__: True as long as no static analysis (see the method
-        #         with the same name for more information) has been done to check
-        #         parser tree for correctness. Static analysis
-        #         is done at instantiation and the flag is then set to false, but it
-        #         can also be carried out once the class has been generated
-        #         (by DHParser.ebnf.EBNFCompiler) and then be set to false in the
-        #         definition of the grammar class already.
+        static_analysis_pending__: True as long as no static analysis (see the method
+                with the same name for more information) has been done to check
+                parser tree for correctness. Static analysis
+                is done at instantiation and the flag is then set to false, but it
+                can also be carried out once the class has been generated
+                (by DHParser.ebnf.EBNFCompiler) and then be set to false in the
+                definition of the grammar class already.
 
         python__src__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
@@ -725,15 +715,19 @@ class Grammar:
                 In some situations it may drastically increase parsing time, so
                 it is safer to leave it on. (Default: on)
 
-        left_recursion_handling__:  Turns left recursion handling on or off.
-                If turned off, a recursion error will result in case of left
-                recursion.
-
         flatten_tree__:  If True (default), anonymous nodes will be flattened
                 during parsing already. This greatly reduces the concrete syntax
                 tree and simplifies and speeds up abstract syntax tree generation.
                 The initial value will be read from the config variable
                 'flatten_tree_while_parsing' upon class instantiation.
+
+        left_recursion_depth__: the maximum allowed depth for left-recursion.
+                A depth of zero means that no left recursion handling will
+                take place. See 'left_recursion_depth' in config.py.
+
+        max_parser_dropouts__: Maximum allowed number of retries after errors
+                where the parser would exit before the complete document has
+                been parsed. See config.py
     """
     python_src__ = ''  # type: str
     root__ = PARSER_PLACEHOLDER  # type: Parser
@@ -743,7 +737,7 @@ class Grammar:
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
-    # static_analysis_pending__ = [True]  # type: List[bool]
+    static_analysis_pending__ = [True]  # type: List[bool]
 
 
     @classmethod
@@ -788,8 +782,9 @@ class Grammar:
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
-        self.left_recursion_handling__ = True  # type: bool
-        self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')  # type: bool
+        self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')    # type: bool
+        self.left_recursion_depth__ = get_config_value('left_recursion_depth')  # type: int
+        self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')    # type: int
         self._reset__()
 
         # prepare parsers in the class, first
@@ -804,15 +799,15 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
 
-        # if self.__class__.static_analysis_pending__ \
-        #         and get_config_value('static_analysis') in {'early', 'late'}:
-        #     try:
-        #         result = self.static_analysis()
-        #         if result:
-        #             raise GrammarError(result)
-        #         self.__class__.static_analysis_pending__.pop()
-        #     except (NameError, AttributeError):
-        #         pass  # don't fail the initialization of PLACEHOLDER
+        if self.__class__.static_analysis_pending__ \
+                and get_config_value('static_analysis') in {'early', 'late'}:
+            try:
+                result = self.static_analysis()
+                if result:
+                    raise GrammarError(result)
+                self.__class__.static_analysis_pending__.pop()
+            except (NameError, AttributeError):
+                pass  # don't fail the initialization of PLACEHOLDER
 
 
     def __getitem__(self, key):
@@ -945,7 +940,7 @@ class Grammar:
         self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = -1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
-        self.start_parser__ = parser
+        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
         result = None  # type: Optional[Node]
@@ -965,7 +960,7 @@ class Grammar:
                         result, 'Parser "%s" did not match empty document.' % str(parser),
                         Error.PARSER_DID_NOT_MATCH)
 
-        while rest and len(stitches) < MAX_DROPOUTS:
+        while rest and len(stitches) < self.max_parser_dropouts__:
             result, rest = parser(rest)
             if rest:
                 fwd = rest.find("\n") + 1 or len(rest)
@@ -989,7 +984,7 @@ class Grammar:
                         + (("! trying to recover"
                             + (" but stopping history recording at this point."
                                if self.history_tracking__ else "..."))
-                            if len(stitches) < MAX_DROPOUTS
+                            if len(stitches) < self.max_parser_dropouts__
                             else " too often! Terminating parser.")
                     error_code = Error.PARSER_STOPPED_BEFORE_END
                 stitches.append(Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches)))
@@ -1074,23 +1069,23 @@ class Grammar:
         return line_col(self.document_lbreaks__, self.document_length__ - len(text))
 
 
-    # def static_analysis(self) -> List[GrammarErrorType]:
-    #     """
-    #     EXPERIMENTAL (does not catch infinite loops due to regular expressions...)
-    #
-    #     Checks the parser tree statically for possible errors. At the moment only
-    #     infinite loops will be detected.
-    #     :return: a list of error-tuples consisting of the narrowest containing
-    #         named parser (i.e. the symbol on which the failure occurred),
-    #         the actual parser that failed and an error object.
-    #     """
-    #     error_list = []  # type: List[GrammarErrorType]
-    #
-    #     def visit_parser(parser: Parser) -> None:
-    #         nonlocal error_list
-    #
-    #     self.root_parser__.apply(visit_parser)
-    #     return error_list
+    def static_analysis(self) -> List[GrammarErrorType]:
+        """
+        EXPERIMENTAL (does not catch infinite loops due to regular expressions...)
+
+        Checks the parser tree statically for possible errors. At the moment only
+        infinite loops will be detected.
+        :return: a list of error-tuples consisting of the narrowest containing
+            named parser (i.e. the symbol on which the failure occurred),
+            the actual parser that failed and an error object.
+        """
+        error_list = []  # type: List[GrammarErrorType]
+
+        def visit_parser(parser: Parser) -> None:
+            nonlocal error_list
+
+        self.root_parser__.apply(visit_parser)
+        return error_list
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
