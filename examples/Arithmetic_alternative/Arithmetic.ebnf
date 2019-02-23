@@ -1,0 +1,55 @@
+# Arithmetic-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical           # implicit whitespace, includes any number of line feeds
+@ literalws   = right              # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/              # comments range from a '#'-character to the end of the line
+@ ignorecase  = False              # literals and regular expressions are case-sensitive
+@ drop        = whitespace, token  # drop anonymous whitespace
+
+#######################################################################
+#
+#: Expressions
+#
+#######################################################################
+
+expression     = addition | subtraction
+addition       = (expression | term) "+" (expression | term)
+subtraction    = (expression | term) "-" (expression | term)
+
+
+#######################################################################
+#
+#: Terms
+#
+#######################################################################
+
+term           = multiplication | division
+multiplication = (term | factor) "*" (term | factor)
+division       = (term | factor) "/" (term | factor)
+
+
+#######################################################################
+#
+#: Factors
+#
+#######################################################################
+
+factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+group          = "(" expression ")"
+
+
+#######################################################################
+#
+#: Tokens
+#
+#######################################################################
+
+SIGN       = /[+-]/
+NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+VARIABLE   = /[A-Za-z]/~
