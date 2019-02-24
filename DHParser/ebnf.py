@@ -28,6 +28,7 @@ from collections import OrderedDict
 from functools import partial
 import keyword
 import os
+from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any, cast
 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.error import Error
@@ -37,13 +38,12 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, get_config_value, unrepr, compile_python_object, typing
-from DHParser.configuration import CONFIG_PRESET
+    GLOBALS, get_config_value, unrepr, compile_python_object
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
-    reduce_single_child, replace_by_single_child, remove_expendables, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
 from DHParser.versionnumber import __version__
-from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any, cast
+
 
 
 __all__ = ('get_ebnf_preprocessor',
@@ -93,13 +93,13 @@ from DHParser import logging, is_filename, load_if_file, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
-    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
-    is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
-    remove_nodes, remove_content, remove_brackets, exchange_parser, remove_anonymous_tokens, \\
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
+    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
+    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
-    flatten_anonymous_nodes, error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, GLOBALS
 '''.format(dhparserdir=dhparserdir)
 
 
@@ -254,7 +254,7 @@ def get_ebnf_grammar() -> EBNFGrammar:
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
-        remove_expendables,
+        [remove_whitespace, remove_empty],
     "syntax":
         [],  # otherwise '"*": replace_by_single_child' would be applied
     "directive, definition":
@@ -607,7 +607,7 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar']
-        transtable.append('    "<": flatten_anonymous_nodes,')
+        transtable.append('    "<": flatten,')
         for name in self.rules:
             transformations = '[]'
             # rule = self.definitions[name]

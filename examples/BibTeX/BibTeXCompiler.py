@@ -26,8 +26,8 @@ from DHParser import is_filename, load_if_file, \
     Node, TransformationDict, Whitespace, \
     traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    is_empty, is_expendable, collapse, replace_content, remove_nodes, remove_content, remove_brackets, exchange_parser, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    is_empty, collapse, replace_content, remove_nodes, remove_content, remove_brackets, change_tag_name, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
     WHITESPACE_PTYPE, TOKEN_PTYPE, GLOBALS
 from DHParser.transform import TransformationFunc

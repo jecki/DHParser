@@ -45,16 +45,15 @@ __all__ = ('TransformationDict',
            'transformation_factory',
            'key_tag_name',
            'traverse',
+           'always',
            'is_named',
            'update_attr',
-           'flatten_anonymous_nodes',
            'replace_by_single_child',
            'reduce_single_child',
            'replace_or_reduce',
-           'exchange_parser',
+           'change_tag_name',
            'collapse',
            'collapse_if',
-           # 'merge_children',
            'replace_content',
            'replace_content_by',
            'normalize_whitespace',
@@ -67,7 +66,6 @@ __all__ = ('TransformationDict',
            'contains_only_whitespace',
            'is_any_kind_of_whitespace',
            'is_empty',
-           'is_expendable',
            'is_token',
            'is_one_of',
            'not_one_of',
@@ -90,9 +88,7 @@ __all__ = ('TransformationDict',
            'remove_whitespace',
            'remove_empty',
            'remove_anonymous_empty',
-           'remove_anonymous_expendables',
            'remove_anonymous_tokens',
-           'remove_expendables',
            'remove_brackets',
            'remove_infix_operator',
            'remove_single_child',
@@ -233,11 +229,11 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         return decorator
 
 
-# def key_parser_name(node: Node) -> str:
-#     return node.parser.name
-
-
 def key_tag_name(node: Node) -> str:
+    """
+    Returns the tag name of the node as key of selecting transformations
+    from the transformation table.
+    """
     return node.tag_name
 
 
@@ -245,7 +241,7 @@ def traverse(root_node: Node,
              processing_table: ProcessingTableType,
              key_func: KeyFunc = key_tag_name) -> None:
     """
-    Traverses the snytax tree starting with the given ``node`` depth
+    Traverses the syntax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
     in the ``processing_table``-dictionary.
 
@@ -387,6 +383,11 @@ def apply_unless(context: List[Node], transformation: Callable, condition: Calla
 #######################################################################
 
 
+def always(context: List[Node]) -> bool:
+    """Always returns True, no matter that the state of the context."""
+    return True
+
+
 def is_single_child(context: List[Node]) -> bool:
     """Returns ``True`` if the current node does not have any siblings."""
     return len(context[-2].children) == 1
@@ -433,10 +434,11 @@ def is_empty(context: List[Node]) -> bool:
     return not context[-1].result
 
 
-def is_expendable(context: List[Node]) -> bool:
-    """Returns ``True`` if the current node either is a node containing
-    whitespace or an empty node."""
-    return is_empty(context) or is_insignificant_whitespace(context)
+# DEPRECATED, because name is too ambiguous
+# def is_expendable(context: List[Node]) -> bool:
+#     """Returns ``True`` if the current node either is a node containing
+#     whitespace or an empty node."""
+#     return is_empty(context) or is_insignificant_whitespace(context)
 
 
 @transformation_factory(collections.abc.Set)
@@ -545,74 +547,39 @@ def _reduce_child(node: Node, child: Node):
 #
 #######################################################################
 
-
-# @transformation_factory(int, str, Callable)
-# def replace_by_child(context: List[Node], criteria: CriteriaType=is_single_child):
+# DEPRECATED
+# def flatten_anonymous_nodes(context: List[Node]):
 #     """
-#     Replaces a node by the first of its immediate descendants
-#     that meets the `criteria`. The criteria can either be the
-#     index of the child (counting from zero), or the tag name or
-#     a boolean-valued function on the context of the child.
-#     If no child matching the criteria is found, the node will
-#     not be replaced.
-#     With the default value for `criteria` the same semantics is
-#     the same that of `replace_by_single_child`.
+#     Flattens non-recursively all anonymous non-leaf children by adding
+#     their result to the result of the parent node. Empty anonymous children
+#     will be dropped altogether. If the parent node (i.e. `context[-1]) is
+#     anonymous itself and has only one child node, it will be replaced by
+#     its single child node.
 #     """
-#     child = _pick_child(context, criteria)
-#     if child:
-#         _replace_by(context[-1], child)
-#
-#
-# @transformation_factory(int, str, Callable)
-# def content_from_child(context: List[Node], criteria: CriteriaType = is_single_child):
-#     """
-#     Reduces a node, by transferring the result of the first of its
-#     immediate descendants that meets the `criteria` to this node,
-#     but keeping this node's parser entry. The criteria can either
-#     be the index of the child (counting from zero), or the tag
-#     name or a boolean-valued function on the context of the child.
-#     If no child matching the criteria is found, the node will
-#     not be replaced.
-#     With the default value for `criteria` this has the same semantics
-#     as `content_from_single_child`.
-#     """
-#     child = _pick_child(context, criteria)
-#     if child:
-#         _reduce_child(context[-1], child)
-
-
-def flatten_anonymous_nodes(context: List[Node]):
-    """
-    Flattens non-recursively all anonymous non-leaf children by adding
-    their result to the result of the parent node. Empty anonymous children
-    will be dropped altogether. If the parent node (i.e. `context[-1]) is
-    anonymous itself and has only one child node, it will be replaced by
-    its single child node.
-    """
-    node = context[-1]
-    if node.children:
-        new_result = []  # type: List[Node]
-        for child in node.children:
-            if child.is_anonymous():
-                if child.children:
-                    new_result.extend(child.children)
-                    update_attr(node, child)
-                elif child.result:
-                    new_result.append(child)
-            else:
-                new_result.append(child)
-        if len(new_result) == 1:
-            child = new_result[0]
-            if node.is_anonymous():
-                node.tag_name = child.tag_name
-                node.result = child.result
-                update_attr(node, child)
-                return
-            elif child.is_anonymous():
-                node.result = child.result
-                update_attr(node, child)
-                return
-        node.result = tuple(new_result)
+#     node = context[-1]
+#     if node.children:
+#         new_result = []  # type: List[Node]
+#         for child in node.children:
+#             if child.is_anonymous():
+#                 if child.children:
+#                     new_result.extend(child.children)
+#                     update_attr(node, child)
+#                 elif child.result:
+#                     new_result.append(child)
+#             else:
+#                 new_result.append(child)
+#         if len(new_result) == 1:
+#             child = new_result[0]
+#             if node.is_anonymous():
+#                 node.tag_name = child.tag_name
+#                 node.result = child.result
+#                 update_attr(node, child)
+#                 return
+#             elif child.is_anonymous():
+#                 node.result = child.result
+#                 update_attr(node, child)
+#                 return
+#         node.result = tuple(new_result)
 
 
 def replace_by_single_child(context: List[Node]):
@@ -647,24 +614,26 @@ def replace_or_reduce(context: List[Node], condition: Callable = is_named):
     node = context[-1]
     if len(node.children) == 1:
         child = node.children[0]
-        if condition(context):   # TODO: bug here?
+        if condition(context):
             _replace_by(node, child)
         else:
             _reduce_child(node, child)
 
 
-@transformation_factory
-def exchange_parser(context: List[Node], name: str):
+@transformation_factory(str)
+def change_tag_name(context: List[Node], tag_name: str, restriction: Callable = always):
     """
-    Replaces the parser of a Node with a mock parser with the given
-    name.
+    Changes the tag name of a node.
 
     Parameters:
+        restriction: A function of the context that returns False in cases
+                where the tag name shall not be exchanged
         context: the context where the parser shall be replaced
-        name: "NAME:PTYPE" of the surrogate. The ptype is optional
+        tag_name: The new tag name.
     """
-    node = context[-1]
-    node.tag_name = name
+    if restriction(context):
+        node = context[-1]
+        node.tag_name = tag_name
 
 
 @transformation_factory(collections.abc.Callable)
@@ -875,6 +844,13 @@ def move_adjacent(context: List[Node], condition: Callable = is_insignificant_wh
         parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
 
 
+def left_associative(context: List[Node]):
+    """
+    Rearranges a flat node into a left associative tree.
+    """
+
+
+
 #######################################################################
 #
 # destructive transformations:
@@ -966,41 +942,11 @@ def remove_children_if(context: List[Node], condition: Callable):
         node.result = tuple(c for c in node.children if not condition(context + [c]))
     pass
 
-# @transformation_factory(Callable)
-# def remove_children(context: List[Node],
-#                     condition: Callable = TRUE_CONDITION,
-#                     section: slice = slice(None)):
-#     """Removes all nodes from a slice of the result field if the function
-#     `condition(child_node)` evaluates to `True`."""
-#     node = context[-1]
-#     if node.children:
-#         c = node.children
-#         N = len(c)
-#         rng = range(*section.indices(N))
-#         node.result = tuple(c[i] for i in range(N)
-#                             if i not in rng or not condition(context + [c[i]]))
-#         # selection = []
-#         # for i in range(N):
-#         #     context.append(c[i])
-#         #     if not i in rng or not condition(context):
-#         #         selection.append(c[i])
-#         #     context.pop()
-#         # if len(selection) != c:
-#         #     node.result = tuple(selection)
-
 
 remove_whitespace = remove_children_if(is_insignificant_whitespace)
-# partial(remove_children_if, condition=is_whitespace)
 remove_empty = remove_children_if(is_empty)
 remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
-remove_expendables = remove_children_if(is_expendable)
-# partial(remove_children_if, condition=is_expendable)
-remove_anonymous_expendables = remove_children_if(lambda ctx: is_anonymous(ctx)
-                                                  and is_expendable(ctx))
 remove_anonymous_tokens = remove_children_if(lambda ctx: is_token(ctx) and is_anonymous(ctx))
-# remove_first = apply_if(keep_children(slice(1, None)), lambda ctx: len(ctx[-1].children) > 1)
-# remove_last = apply_if(keep_children(slice(None, -1)), lambda ctx: len(ctx[-1].children) > 1)
-# remove_brackets = apply_if(keep_children(slice(1, -1)), lambda ctx: len(ctx[-1].children) >= 2)
 remove_infix_operator = keep_children(slice(0, None, 2))
 remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
 

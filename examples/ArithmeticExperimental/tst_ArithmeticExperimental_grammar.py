@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""tst_Arithmetic_grammar.py - runs the unit tests for the Arithmetic-grammar
+"""tst_ArithmeticExperimental_grammar.py - runs the unit tests for the ArithmeticExperimental-grammar
 """
 
 import os
@@ -24,6 +24,7 @@ except ModuleNotFoundError:
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
+CONFIG_PRESET['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):
@@ -69,10 +70,10 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, 'ArithmeticFlatTree.ebnf'),
+        recompile_grammar(os.path.join(scriptpath, 'ArithmeticExperimental.ebnf'),
                           force=False)
         sys.path.append('.')
-        from ArithmeticFlatTreeCompiler import get_grammar, get_transformer
+        from ArithmeticExperimentalCompiler import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
             print('\n')

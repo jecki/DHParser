@@ -22,7 +22,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, flatten_anonymous_nodes, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
     is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, GLOBALS
 from DHParser.log import logging
@@ -220,7 +220,7 @@ drop_expendables = remove_children_if(lambda context: is_empty(context) or
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "<": [flatten_anonymous_nodes, flatten_structure],
+    "<": [flatten, flatten_structure],
     "latexdoc": [],
     "preamble": [traverse_locally({'<': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],

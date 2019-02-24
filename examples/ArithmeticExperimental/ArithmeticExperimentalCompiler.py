@@ -27,13 +27,13 @@ from DHParser import logging, is_filename, load_if_file, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, exchange_parser, remove_anonymous_tokens, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
+    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, flatten_anonymous_nodes, GLOBALS
+    error_on, recompile_grammar, GLOBALS
 
 
 #######################################################################
@@ -42,11 +42,11 @@ from DHParser import logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def ArithmeticFlatTreePreprocessor(text):
+def ArithmeticExperimentalPreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return ArithmeticFlatTreePreprocessor
+    return ArithmeticExperimentalPreprocessor
 
 
 #######################################################################
@@ -55,11 +55,15 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class ArithmeticFlatTreeGrammar(Grammar):
-    r"""Parser for an ArithmeticFlatTree source file.
+class ArithmeticExperimentalGrammar(Grammar):
+    r"""Parser for an ArithmeticExperimental source file.
     """
+    addition = Forward()
     expression = Forward()
-    source_hash__ = "d0074a0a7b827e932608af86a5390de7"
+    multiplication = Forward()
+    subtraction = Forward()
+    term = Forward()
+    source_hash__ = "1811447b927aae855ee58328bce76d20"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -70,24 +74,28 @@ class ArithmeticFlatTreeGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    SIGN = RegExp('[-+]')
-    TERM_OP = Series(Alternative(RegExp('\\*'), RegExp('/')), dwsp__)
-    EXPR_OP = Series(Alternative(RegExp('\\+'), RegExp('-')), dwsp__)
-    group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
-    factor = Series(Option(SIGN), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
-    term = Series(factor, ZeroOrMore(Series(TERM_OP, factor)))
-    expression.set(Series(term, ZeroOrMore(Series(EXPR_OP, term))))
+    MINUS = RegExp('-')
+    PLUS = RegExp('\\+')
+    group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__), mandatory=1)
+    sign = Alternative(PLUS, MINUS)
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
+    division = Series(term, Series(DropToken("/"), dwsp__), Alternative(multiplication, factor))
+    multiplication.set(Series(factor, Option(Series(DropToken("*"), dwsp__)), term))
+    term.set(Alternative(multiplication, division, factor))
+    subtraction.set(Series(Alternative(addition, subtraction, term), Series(DropToken("-"), dwsp__), term))
+    addition.set(Series(Alternative(subtraction, addition, term), Series(DropToken("+"), dwsp__), term))
+    expression.set(Alternative(Series(Alternative(addition, subtraction, term), NegativeLookahead(RegExp('[+-]'))), Series(Alternative(subtraction, addition, term), NegativeLookahead(RegExp('[-+]')))))
     root__ = expression
     
-def get_grammar() -> ArithmeticFlatTreeGrammar:
+def get_grammar() -> ArithmeticExperimentalGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.ArithmeticFlatTree_00000001_grammar_singleton
+        grammar = GLOBALS.ArithmeticExperimental_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.ArithmeticFlatTree_00000001_grammar_singleton = ArithmeticFlatTreeGrammar()
+        GLOBALS.ArithmeticExperimental_00000001_grammar_singleton = ArithmeticExperimentalGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.ArithmeticFlatTree_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.ArithmeticFlatTree_00000001_grammar_singleton
+            GLOBALS.ArithmeticExperimental_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.ArithmeticExperimental_00000001_grammar_singleton
     return grammar
 
 
@@ -97,29 +105,23 @@ def get_grammar() -> ArithmeticFlatTreeGrammar:
 #
 #######################################################################
 
-ArithmeticFlatTree_AST_transformation_table = {
-    # AST Transformations for the ArithmeticFlatTree-grammar
-    "<": flatten_anonymous_nodes,
-    "expression": [],
-    "term": [reduce_single_child],
-    "factor": [reduce_single_child],
-    "group": [remove_tokens('(', ')'), replace_by_single_child],
-    "NUMBER": [],
-    "VARIABLE": [],
-    ":Token": reduce_single_child,
-    "*": replace_by_single_child
+
+ArithmeticExperimental_AST_transformation_table = {
+    # AST Transformations for the ArithmeticExperimental-grammar
+    # "<": flatten_anonymous_nodes,
+    "expression, term, sign, group, factor": [replace_by_single_child],
 }
 
 
-def ArithmeticFlatTreeTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=ArithmeticFlatTree_AST_transformation_table.copy())
+def ArithmeticExperimentalTransform() -> TransformationFunc:
+    return partial(traverse, processing_table=ArithmeticExperimental_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.ArithmeticFlatTree_00000001_transformer_singleton
+        transformer = GLOBALS.ArithmeticExperimental_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.ArithmeticFlatTree_00000001_transformer_singleton = ArithmeticFlatTreeTransform()
-        transformer = GLOBALS.ArithmeticFlatTree_00000001_transformer_singleton
+        GLOBALS.ArithmeticExperimental_00000001_transformer_singleton = ArithmeticExperimentalTransform()
+        transformer = GLOBALS.ArithmeticExperimental_00000001_transformer_singleton
     return transformer
 
 
@@ -129,12 +131,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class ArithmeticFlatTreeCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a ArithmeticFlatTree source file.
+class ArithmeticExperimentalCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a ArithmeticExperimental source file.
     """
 
     def __init__(self):
-        super(ArithmeticFlatTreeCompiler, self).__init__()
+        super(ArithmeticExperimentalCompiler, self).__init__()
 
     def _reset(self):
         super()._reset()
@@ -155,12 +157,12 @@ class ArithmeticFlatTreeCompiler(Compiler):
     #     return node
 
 
-def get_compiler() -> ArithmeticFlatTreeCompiler:
+def get_compiler() -> ArithmeticExperimentalCompiler:
     try:
-        compiler = GLOBALS.ArithmeticFlatTree_00000001_compiler_singleton
+        compiler = GLOBALS.ArithmeticExperimental_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.ArithmeticFlatTree_00000001_compiler_singleton = ArithmeticFlatTreeCompiler()
-        compiler = GLOBALS.ArithmeticFlatTree_00000001_compiler_singleton
+        GLOBALS.ArithmeticExperimental_00000001_compiler_singleton = ArithmeticExperimentalCompiler()
+        compiler = GLOBALS.ArithmeticExperimental_00000001_compiler_singleton
     return compiler
 
 
@@ -212,4 +214,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: ArithmeticFlatTreeCompiler.py [FILENAME]")
+        print("Usage: ArithmeticExperimentalCompiler.py [FILENAME]")

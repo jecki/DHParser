@@ -27,13 +27,13 @@ from DHParser import logging, is_filename, load_if_file, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_expendables, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    is_expendable, collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, exchange_parser, remove_anonymous_tokens, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
+    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, flatten_anonymous_nodes, GLOBALS
+    error_on, recompile_grammar, GLOBALS
 
 
 #######################################################################
@@ -58,11 +58,8 @@ def get_preprocessor() -> PreprocessorFunc:
 class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
-    addition = Forward()
     expression = Forward()
-    multiplication = Forward()
-    term = Forward()
-    source_hash__ = "6707df7f53e835c1e97330f132324ce8"
+    source_hash__ = "9f06b2623e1d797c32efc3b864fec5bd"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -73,17 +70,17 @@ class ArithmeticGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    MINUS = RegExp('-')
-    PLUS = RegExp('\\+')
-    group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__), mandatory=1)
-    sign = Alternative(PLUS, MINUS)
+    NEGATIVE = RegExp('[-]')
+    POSITIVE = RegExp('[+]')
+    DIV = Series(Token("/"), dwsp__)
+    MUL = Series(Token("*"), dwsp__)
+    MINUS = Series(Token("-"), dwsp__)
+    PLUS = Series(Token("+"), dwsp__)
+    group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
+    sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
-    division = Series(term, Series(DropToken("/"), dwsp__), Alternative(multiplication, factor))
-    multiplication.set(Series(factor, Option(Series(DropToken("*"), dwsp__)), term))
-    term.set(Alternative(multiplication, division, factor))
-    subtraction = Series(expression, Series(DropToken("-"), dwsp__), term)
-    addition.set(Alternative(Series(term, Series(DropToken("+"), dwsp__), Alternative(addition, term)), Series(subtraction, Series(DropToken("+"), dwsp__), term)))
-    expression.set(Alternative(addition, subtraction, term))
+    term = Series(factor, ZeroOrMore(Series(Alternative(DIV, Option(MUL)), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
@@ -104,11 +101,17 @@ def get_grammar() -> ArithmeticGrammar:
 #
 #######################################################################
 
-
 Arithmetic_AST_transformation_table = {
     # AST Transformations for the Arithmetic-grammar
-    # "<": flatten_anonymous_nodes,
-    "expression, term, sign, group, factor": [replace_by_single_child],
+    "<": flatten,
+    "expression": [],
+    "term": [reduce_single_child],
+    "factor": [reduce_single_child],
+    "group": [remove_tokens('(', ')'), replace_by_single_child],
+    "NUMBER": [],
+    "VARIABLE": [],
+    ":Token": reduce_single_child,
+    "*": replace_by_single_child
 }
 
 

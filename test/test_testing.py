@@ -27,7 +27,7 @@ from functools import partial
 sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
-from DHParser.transform import traverse, remove_expendables, remove_empty, \
+from DHParser.transform import traverse, remove_whitespace, remove_empty, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
 from DHParser.error import Error
@@ -135,11 +135,11 @@ ARITHMETIC_EBNF = """
 
 ARITHMETIC_EBNF_transformation_table = {
     # AST Transformations for the DSL-grammar
-    "formula": [remove_expendables],
-    "term, expr": [remove_expendables, replace_by_single_child, flatten],
-    "factor": [remove_expendables, reduce_single_child],
-    (TOKEN_PTYPE): [remove_expendables, reduce_single_child],
-    "*": [remove_expendables, replace_by_single_child]
+    "formula": [remove_empty, remove_whitespace],
+    "term, expr": [remove_empty, remove_whitespace, replace_by_single_child, flatten],
+    "factor": [remove_empty, remove_whitespace, reduce_single_child],
+    (TOKEN_PTYPE): [remove_empty, remove_whitespace, reduce_single_child],
+    "*": [remove_empty, remove_whitespace, replace_by_single_child]
 }
 
 

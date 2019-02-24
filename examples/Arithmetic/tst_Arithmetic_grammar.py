@@ -24,7 +24,6 @@ except ModuleNotFoundError:
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
-CONFIG_PRESET['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):

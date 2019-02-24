@@ -12,47 +12,31 @@
 @ ignorecase  = False              # literals and regular expressions are case-sensitive
 @ drop        = whitespace, token  # drop anonymous whitespace
 
-
 #######################################################################
 #
-#: Expressions
-#
-#######################################################################
-
-expression     = addition | subtraction | term
-addition       = (term "+" (addition|term)) | (subtraction "+" term)
-subtraction    = expression "-" term
-
-
-#######################################################################
-#
-#: Terms
+#: Structure and Components
 #
 #######################################################################
 
-term           = multiplication | division | factor
-multiplication = factor ["*"] term
-division       = term "/" (multiplication | factor)
-
-
-#######################################################################
-#
-#: Factors
-#
-#######################################################################
-
-factor         = [sign] ( NUMBER | VARIABLE | group )
-sign           = PLUS | MINUS
-group          = "(" §expression ")"
-
+expression = term  { (PLUS|MINUS) term}
+term       = factor  { (DIV|[MUL]) factor}
+factor     = [sign] ( NUMBER | VARIABLE | group )
+sign       = POSITIVE | NEGATIVE
+group      = "(" expression ")"
 
 #######################################################################
 #
-#: Tokens
+#: "Leaf"-Expressions
 #
 #######################################################################
 
-PLUS       = /\+/
-MINUS      = /-/
+PLUS       = "+"
+MINUS      = "-"
+MUL        = "*"
+DIV        = "/"
+
+POSITIVE   = /[+]/      # no implicit whitespace after signs
+NEGATIVE   = /[-]/
+
 NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
 VARIABLE   = /[A-Za-z]/~
