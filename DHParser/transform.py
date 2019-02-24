@@ -511,6 +511,10 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 
 
 def update_attr(node: Node, child: Node):
+    """
+    Adds all attributes from `child` to `node`.This is needed, in order
+    to keep the attributes if the child node is going to be eliminated.
+    """
     if hasattr(child, '_xml_attr'):
         for k, v in child.attr:
             if k in node.attr and v != node.attr[k]:
@@ -520,7 +524,29 @@ def update_attr(node: Node, child: Node):
             node.attr[k] = v
 
 
+def swap_attributes(node: Node, other: Node):
+    """
+    Exchanges the attributes between node and other. This might be
+    needed when rearanging trees.
+    """
+    NA = node.attr_active()
+    OA = other.attr_active()
+    if NA or OA:
+        save = node._xml_attr if NA else None
+        if OA:
+            node._xml_attr = other._xml_attr
+        elif NA:
+            node._xml_attr = None
+        if NA:
+            other._xml_attr = node._xml_attr
+        elif OA:
+            other._xml_attr = None
+
+
 def _replace_by(node: Node, child: Node):
+    """
+    Replaces node's contents by child's content including the tag name.
+    """
     if node.is_anonymous() or not child.is_anonymous():
         node.tag_name = child.tag_name
         # name, ptype = (node.tag_name.split(':') + [''])[:2]
@@ -531,6 +557,9 @@ def _replace_by(node: Node, child: Node):
 
 
 def _reduce_child(node: Node, child: Node):
+    """
+    Sets node's results to the child's result, keeping node's tag_name.
+    """
     node.result = child.result
     update_attr(node, child)
 
@@ -846,9 +875,68 @@ def move_adjacent(context: List[Node], condition: Callable = is_insignificant_wh
 
 def left_associative(context: List[Node]):
     """
-    Rearranges a flat node into a left associative tree.
+    Rearranges a flat node with infix operators into a left associative tree.
     """
+    node = context[-1]
+    assert len(node.children) >= 3
+    assert (len(node.children) + 1) % 2 == 0
+    rest = list(node.result)
+    left, rest = rest[0], rest[1:]
+    while rest:
+        infix, right, rest = rest[:2], rest[2:]
+        assert not infix.children
+        assert infix.tag_name[0:1] != ":"
+        left = Node(infix.tag_name, (left, right))
+    node.result = left
 
+
+@transformation_factory(collections.abc.Set)
+def left_swing(context: List[Node], operators: AbstractSet[str]):
+    """
+    Rearranges a node that contains a sub-node on the right
+    with a left-associative operator so that the tree structure
+    reflects its left-associative character.
+    """
+    node = context[-1]
+    assert node.children and len(node.children) == 2
+    assert node.tag_name in operators
+    right = node.children[1]
+    if right.tag_name in operators:
+        assert right.children and len(right.children) == 2
+        a, b, c = node.children[0], right.children[0], right.children[1]
+        op1 = node.tag_name
+        op2 = right.tag_name
+        right.result = (a, b)
+        right.tag_name = op1
+        node.result = (right, c)
+        node.tag_name = op2
+        swap_attributes(node, right)
+
+
+# @transformation_factory(collections.abc.Set)
+# def left_associative_tree(context: List[Node], operators: AbstracSet[str]):
+#     """
+#     Rearranges a right associative tree into a left associative tree.
+#     ``operators`` is a list of tag names of nodes that shall be rearranged.
+#     Other nodes will be lelft untouched.
+#     """
+#     node = context[-1]
+#     assert node.tag_name in operators
+#     right = node.children[1]
+#     while right.tag_name in operators:
+#         node.result = (node.children[0], right.children[0])
+#         right.result = (node, right.children[1])
+#         node = right
+#         right = node.children[1]
+#     parent = context[-2]
+#     result = list(parent.result)
+#     for i in range(len(result)):
+#         if result[i] == contexnt[-1]:
+#             result[i] = node
+#             parent.result = tuple(result)
+#             break
+#     else:
+#         assert False, "???"
 
 
 #######################################################################

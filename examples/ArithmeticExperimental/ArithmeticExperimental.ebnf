@@ -19,10 +19,9 @@
 #
 #######################################################################
 
-expression     = ((addition | subtraction | term) !/[+-]/)
-               | ((subtraction | addition | term) !/[-+]/)
-addition       = (subtraction | addition | term) "+" term
-subtraction    = (addition | subtraction | term) "-" term
+expression  = add | sub | term
+add         = term "+" expression
+sub         = term "-" expression
 
 
 #######################################################################
@@ -31,9 +30,9 @@ subtraction    = (addition | subtraction | term) "-" term
 #
 #######################################################################
 
-term           = multiplication | division | factor
-multiplication = factor ["*"] term
-division       = term "/" (multiplication | factor)
+term        = mul | div | factor
+mul         = factor ["*"] term
+div         = factor "/" term
 
 
 #######################################################################
@@ -42,9 +41,9 @@ division       = term "/" (multiplication | factor)
 #
 #######################################################################
 
-factor         = [sign] ( NUMBER | VARIABLE | group )
-sign           = PLUS | MINUS
-group          = "(" §expression ")"
+factor      = [sign] ( NUMBER | VARIABLE | group )
+sign        = PLUS | MINUS
+group       = "(" §expression ")"
 
 
 #######################################################################
@@ -53,7 +52,7 @@ group          = "(" §expression ")"
 #
 #######################################################################
 
-PLUS       = /\+/
-MINUS      = /-/
-NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-VARIABLE   = /[A-Za-z]/~
+PLUS        = /\+/
+MINUS       = /-/
+NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+VARIABLE    = /[A-Za-z]/~

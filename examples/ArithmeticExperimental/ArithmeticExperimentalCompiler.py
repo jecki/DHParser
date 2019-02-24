@@ -58,12 +58,9 @@ def get_preprocessor() -> PreprocessorFunc:
 class ArithmeticExperimentalGrammar(Grammar):
     r"""Parser for an ArithmeticExperimental source file.
     """
-    addition = Forward()
     expression = Forward()
-    multiplication = Forward()
-    subtraction = Forward()
     term = Forward()
-    source_hash__ = "1811447b927aae855ee58328bce76d20"
+    source_hash__ = "59c96ad0b1c0703bea6ba8fc50253bea"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -79,12 +76,12 @@ class ArithmeticExperimentalGrammar(Grammar):
     group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__), mandatory=1)
     sign = Alternative(PLUS, MINUS)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
-    division = Series(term, Series(DropToken("/"), dwsp__), Alternative(multiplication, factor))
-    multiplication.set(Series(factor, Option(Series(DropToken("*"), dwsp__)), term))
-    term.set(Alternative(multiplication, division, factor))
-    subtraction.set(Series(Alternative(addition, subtraction, term), Series(DropToken("-"), dwsp__), term))
-    addition.set(Series(Alternative(subtraction, addition, term), Series(DropToken("+"), dwsp__), term))
-    expression.set(Alternative(Series(Alternative(addition, subtraction, term), NegativeLookahead(RegExp('[+-]'))), Series(Alternative(subtraction, addition, term), NegativeLookahead(RegExp('[-+]')))))
+    div = Series(factor, Series(DropToken("/"), dwsp__), term)
+    mul = Series(factor, Option(Series(DropToken("*"), dwsp__)), term)
+    term.set(Alternative(mul, div, factor))
+    sub = Series(term, Series(DropToken("-"), dwsp__), expression)
+    add = Series(term, Series(DropToken("+"), dwsp__), expression)
+    expression.set(Alternative(add, sub, term))
     root__ = expression
     
 def get_grammar() -> ArithmeticExperimentalGrammar:
