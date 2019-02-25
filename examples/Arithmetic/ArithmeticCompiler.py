@@ -59,7 +59,8 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "a8142ddc723ae56bbdf6c898efc7af45"
+    factor = Forward()
+    source_hash__ = "6bca790f81db2b6dda4c92abdbe06d90"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -73,12 +74,12 @@ class ArithmeticGrammar(Grammar):
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
     DIV = Series(Token("/"), dwsp__)
-    MUL = Series(Token("*"), dwsp__)
+    MUL = Alternative(Series(DropToken("*"), dwsp__), Lookahead(factor))
     MINUS = Series(Token("-"), dwsp__)
     PLUS = Series(Token("+"), dwsp__)
     group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
-    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
+    factor.set(Series(Option(sign), Alternative(NUMBER, VARIABLE, group)))
     term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
     expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
@@ -101,7 +102,7 @@ def get_grammar() -> ArithmeticGrammar:
 #
 #######################################################################
 
-def group_no_asterix_mul(context: List[Node]):
+def group_no_asterix_mul(context):
     pass
     # TODO: Find an algorithm, here
 

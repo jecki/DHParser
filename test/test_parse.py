@@ -897,7 +897,7 @@ class TestMetaParser:
             """
         gr = grammar_provider(minilang)()
         cst = gr("2x")
-        assert bool(cst.pick('MUL'))
+        assert bool(cst.pick('MUL')), "Named empty nodes should not be dropped!!!"
 
 if __name__ == "__main__":
     from DHParser.testing import runner

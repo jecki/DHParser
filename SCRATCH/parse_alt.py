@@ -1348,17 +1348,6 @@ class DropWhitespace(Whitespace):
 
 
 class MetaParser(Parser):
-    """Class Meta-Parser contains functions for the optimization of
-    retrun values of parsers that call other parsers (i.e descendants
-    of classes UnaryParser and NaryParser).
-
-    The optimization consists in flattening the tree by eliminating
-    anonymous nodes. This is the same as what the function
-    DHParser.transform.flatten() does, only at an earlier stage.
-    The reasoning is that the earlier the tree is reduced, the less work
-    reamins to do at all the later processing stages.
-    """
-
     def _return_value(self, node: Optional[Node]) -> Node:
         """
         Generates a return node if a single node has been returned from
@@ -1411,6 +1400,29 @@ class MetaParser(Parser):
                 return Node(self.tag_name, ())
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.tag_name, results)  # unoptimized code
+
+    def _keep_node(self, node):
+        """
+        Returns True, if a node returned by a descendant parser should be kept.
+        False, if it should be sorted out. A node is kept, if it is empty and
+        neither the parser of the descendant parser is a named parser.
+        """
+        if self.grammar.flatten_tree__:
+            return node._result or node.tag_name[0:1] != ':'
+        return node != EMPTY_NODE   # EMPTY_NODE will always be sorted out...
+
+    def _optimized_result(self, node):
+        """
+        Returns True, if a node returned by a descendant parser should be kept.
+        False, if it should be sorted out. A node is kept, if it is empty and
+        neither the parser of the descendant parser is a named parser.
+        """
+        if self.grammar.flatten_tree__:
+            if node._result or node.tag_name[0:1] != ':':
+                return (node,)
+            return ()
+        return (Node(':VOID__', ''),) if node == EMPTY_NODE else (node,)
+
 
 
 class UnaryParser(MetaParser):
@@ -1549,8 +1561,7 @@ class ZeroOrMore(Option):
             node, text = self.parser(text)
             if not node:
                 break
-            if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
-                results += (node,)
+            results += self._optimized_result(node)
             if len(text) == n:
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
@@ -1600,8 +1611,7 @@ class OneOrMore(UnaryParser):
             if not node:
                 break
             match_flag = True
-            if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
-                results += (node,)
+            results += self._optimized_result(node)
             if len(text_) == n:
                 break  # avoid infinite loop
         if not match_flag:
@@ -1759,8 +1769,7 @@ class Series(NaryParser):
                     else:
                         results += (node,)
                         break
-            if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
-                results += (node,)
+            results += self._optimized_result(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         ret_node = self._return_values(results)  # type: Node
@@ -1961,8 +1970,9 @@ class AllOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
-                        results += (node,)
+                    tail = self._optimized_result(node)
+                    if tail:
+                        results += tail
                         text_ = text__
                     del parsers[i]
                     break
@@ -2028,8 +2038,9 @@ class SomeOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
-                        results += (node,)
+                    tail = self._optimized_result(node)
+                    if tail:
+                        results += tail
                         text_ = text__
                     del parsers[i]
                     break
