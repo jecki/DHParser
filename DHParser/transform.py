@@ -58,6 +58,8 @@ __all__ = ('TransformationDict',
            'replace_content_by',
            'normalize_whitespace',
            'move_adjacent',
+           'left_associative',
+           'swing_left',
            'apply_if',
            'apply_unless',
            'traverse_locally',
@@ -878,20 +880,20 @@ def left_associative(context: List[Node]):
     Rearranges a flat node with infix operators into a left associative tree.
     """
     node = context[-1]
-    assert len(node.children) >= 3
-    assert (len(node.children) + 1) % 2 == 0
-    rest = list(node.result)
-    left, rest = rest[0], rest[1:]
-    while rest:
-        infix, right, rest = rest[:2], rest[2:]
-        assert not infix.children
-        assert infix.tag_name[0:1] != ":"
-        left = Node(infix.tag_name, (left, right))
-    node.result = left
+    if len(node.children) >= 3:
+        assert (len(node.children) + 1) % 2 == 0
+        rest = list(node.result)
+        left, rest = rest[0], rest[1:]
+        while rest:
+            infix, right, rest = rest[0], rest[1], rest[2:]
+            assert not infix.children
+            assert infix.tag_name[0:1] != ":"
+            left = Node(infix.tag_name, (left, right))
+        node.result = left
 
 
 @transformation_factory(collections.abc.Set)
-def left_swing(context: List[Node], operators: AbstractSet[str]):
+def swing_left(context: List[Node], operators: AbstractSet[str]):
     """
     Rearranges a node that contains a sub-node on the right
     with a left-associative operator so that the tree structure

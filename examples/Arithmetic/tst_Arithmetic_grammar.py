@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
-
+CONFIG_PRESET['test_parallelization'] = False
 
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')

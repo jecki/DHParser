@@ -1748,7 +1748,7 @@ class Series(NaryParser):
                     else:
                         results += (node,)
                         break
-            if node._result or parser.pname:  # optimization
+            if node._result or parser.pname or node.tag_name[0:1] != ':':  # optimization
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])

@@ -119,26 +119,26 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
             log_parsing_history(parser, "test_LeftRecursion_indirect")
 
-    # BEWARE: EXPERIMENTAL TEST can be long running
-    def test_indirect_left_recursion2(self):
-        arithmetic_syntax = """
-            expression     = addition | subtraction
-            addition       = (expression | term) "+" (expression | term)
-            subtraction    = (expression | term) "-" (expression | term)
-            term           = multiplication | division
-            multiplication = (term | factor) "*" (term | factor)
-            division       = (term | factor) "/" (term | factor)
-            factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
-            group          = "(" §expression ")"
-            SIGN           = /[+-]/
-            NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-            VARIABLE       = /[A-Za-z]/~
-            """
-        arithmetic = grammar_provider(arithmetic_syntax)()
-        arithmetic.left_recursion_depth__ = 2
-        assert arithmetic
-        syntax_tree = arithmetic("(a + b) * (a - b)")
-        assert syntax_tree.errors
+    # # BEWARE: EXPERIMENTAL TEST can be long running
+    # def test_indirect_left_recursion2(self):
+    #     arithmetic_syntax = """
+    #         expression     = addition | subtraction
+    #         addition       = (expression | term) "+" (expression | term)
+    #         subtraction    = (expression | term) "-" (expression | term)
+    #         term           = multiplication | division
+    #         multiplication = (term | factor) "*" (term | factor)
+    #         division       = (term | factor) "/" (term | factor)
+    #         factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+    #         group          = "(" expression ")"
+    #         SIGN           = /[+-]/
+    #         NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+    #         VARIABLE       = /[A-Za-z]/~
+    #         """
+    #     arithmetic = grammar_provider(arithmetic_syntax)()
+    #     arithmetic.left_recursion_depth__ = 2
+    #     assert arithmetic
+    #     syntax_tree = arithmetic("(a + b) * (a - b)")
+    #     assert syntax_tree.errors
 
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp(''))
@@ -886,6 +886,18 @@ class TestMetaParser:
         rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
+    def test_in_context(self):
+        minilang = """
+            term       = factor  { (DIV|MUL) factor}
+            factor     = NUMBER | VARIABLE
+            MUL        = "*" | &factor
+            DIV        = "/"            
+            NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+            VARIABLE   = /[A-Za-z]/~
+            """
+        gr = grammar_provider(minilang)()
+        cst = gr("2x")
+        assert bool(cst.pick('MUL'))
 
 if __name__ == "__main__":
     from DHParser.testing import runner

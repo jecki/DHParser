@@ -19,7 +19,7 @@
 #######################################################################
 
 expression = term  { (PLUS|MINUS) term}
-term       = factor  { (DIV|[MUL]) factor}
+term       = factor { (DIV|MUL) factor}
 factor     = [sign] ( NUMBER | VARIABLE | group )
 sign       = POSITIVE | NEGATIVE
 group      = "(" expression ")"
@@ -32,7 +32,7 @@ group      = "(" expression ")"
 
 PLUS       = "+"
 MINUS      = "-"
-MUL        = "*"
+MUL        = "*" | &factor  # TODO: higher precedence of &factor
 DIV        = "/"
 
 POSITIVE   = /[+]/      # no implicit whitespace after signs

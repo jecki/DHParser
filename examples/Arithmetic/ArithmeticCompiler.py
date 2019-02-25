@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, left_associative, GLOBALS
 
 
 #######################################################################
@@ -59,7 +59,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "9f06b2623e1d797c32efc3b864fec5bd"
+    source_hash__ = "a8142ddc723ae56bbdf6c898efc7af45"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -79,7 +79,7 @@ class ArithmeticGrammar(Grammar):
     group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
-    term = Series(factor, ZeroOrMore(Series(Alternative(DIV, Option(MUL)), factor)))
+    term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
     expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
     
@@ -101,17 +101,17 @@ def get_grammar() -> ArithmeticGrammar:
 #
 #######################################################################
 
+def group_no_asterix_mul(context: List[Node]):
+    pass
+    # TODO: Find an algorithm, here
+
 Arithmetic_AST_transformation_table = {
     # AST Transformations for the Arithmetic-grammar
-    "<": flatten,
-    "expression": [],
-    "term": [reduce_single_child],
-    "factor": [reduce_single_child],
+    "expression": [left_associative, replace_by_single_child],
+    "term": [left_associative, replace_by_single_child],
+    "factor": [replace_by_single_child],
     "group": [remove_tokens('(', ')'), replace_by_single_child],
-    "NUMBER": [],
-    "VARIABLE": [],
-    ":Token": reduce_single_child,
-    "*": replace_by_single_child
+    "sign": [replace_by_single_child]
 }
 
 
