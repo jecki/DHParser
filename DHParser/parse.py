@@ -1401,6 +1401,16 @@ class MetaParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.tag_name, results)  # unoptimized code
 
+    def _keep_node(self, node):
+        """
+        Returns True, if a node returned by a descendant parser should be kept.
+        False, if it should be sorted out. A node is kept, if it is empty and
+        neither the parser of the descendant parser is a named parser.
+        """
+        if self.grammar.flatten_tree__:
+            return node._result or node.tag_name[0:1] != ':'
+        return node != EMPTY_NODE   # EMPTY_NODE will always be sorted out...
+
 
 class UnaryParser(MetaParser):
     """
@@ -1538,7 +1548,7 @@ class ZeroOrMore(Option):
             node, text = self.parser(text)
             if not node:
                 break
-            if node._result or self.parser.pname:
+            if self._keep_node(node):
                 results += (node,)
             if len(text) == n:
                 break  # avoid infinite loop
@@ -1589,7 +1599,7 @@ class OneOrMore(UnaryParser):
             if not node:
                 break
             match_flag = True
-            if node._result or self.parser.pname:
+            if self._keep_node(node):
                 results += (node,)
             if len(text_) == n:
                 break  # avoid infinite loop
@@ -1748,7 +1758,7 @@ class Series(NaryParser):
                     else:
                         results += (node,)
                         break
-            if node._result or parser.pname or node.tag_name[0:1] != ':':  # optimization
+            if self._keep_node(node):  # optimization
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
@@ -1950,7 +1960,7 @@ class AllOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or parser.pname:
+                    if self._keep_node(node):
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -2017,7 +2027,7 @@ class SomeOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or parser.pname:
+                    if self._keep_node(node):
                         results += (node,)
                         text_ = text__
                     del parsers[i]
