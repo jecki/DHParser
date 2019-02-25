@@ -1371,7 +1371,7 @@ class MetaParser(Parser):
         generated and the descendant node will be its single child.
         """
         assert node is None or isinstance(node, Node)
-        if self.grammar.flatten_tree__:
+        if self._grammar.flatten_tree__:
             if node:
                 if self.pname:
                     if node.tag_name[0] == ':':  # faster than node.is_anonymous()
@@ -1394,7 +1394,7 @@ class MetaParser(Parser):
         assert isinstance(results, tuple)
         N = len(results)
         if N > 1:
-            if self.grammar.flatten_tree__:
+            if self._grammar.flatten_tree__:
                 nr = []  # type: List[Node]
                 # flatten parse tree
                 for child in results:
@@ -1406,7 +1406,7 @@ class MetaParser(Parser):
             return Node(self.tag_name, results)  # unoptimized code
         elif N == 1:
             return self._return_value(results[0])
-        elif self.grammar.flatten_tree__:
+        elif self._grammar.flatten_tree__:
             if self.pname:
                 return Node(self.tag_name, ())
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
