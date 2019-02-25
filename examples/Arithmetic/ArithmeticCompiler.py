@@ -59,8 +59,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    factor = Forward()
-    source_hash__ = "6bca790f81db2b6dda4c92abdbe06d90"
+    source_hash__ = "a8a1011bf1a9e1204d87031054b831f4"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -74,12 +73,12 @@ class ArithmeticGrammar(Grammar):
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
     DIV = Series(Token("/"), dwsp__)
-    MUL = Alternative(Series(DropToken("*"), dwsp__), Lookahead(factor))
+    MUL = Series(Token("*"), dwsp__)
     MINUS = Series(Token("-"), dwsp__)
     PLUS = Series(Token("+"), dwsp__)
     group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
-    factor.set(Series(Option(sign), Alternative(NUMBER, VARIABLE, group)))
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
     term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
     expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
@@ -108,11 +107,9 @@ def group_no_asterix_mul(context):
 
 Arithmetic_AST_transformation_table = {
     # AST Transformations for the Arithmetic-grammar
-    "expression": [left_associative, replace_by_single_child],
-    "term": [left_associative, replace_by_single_child],
-    "factor": [replace_by_single_child],
+    "expression, term": [left_associative, replace_by_single_child],
+    "factor, sign": replace_by_single_child,
     "group": [remove_tokens('(', ')'), replace_by_single_child],
-    "sign": [replace_by_single_child]
 }
 
 
