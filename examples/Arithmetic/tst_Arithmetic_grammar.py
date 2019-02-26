@@ -8,7 +8,7 @@ import sys
 
 LOGGING = False
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend(['../../', '..', '.'])
 
 scriptpath = os.path.dirname(__file__)
 
@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
-CONFIG_PRESET['test_parallelization'] = True
+CONFIG_PRESET['test_parallelization'] = False
 
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
