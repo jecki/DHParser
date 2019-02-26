@@ -40,7 +40,7 @@ cpdef _reduce_child(node: Node, child: Node)
 cpdef replace_by_single_child(context: List[Node])
 cpdef reduce_single_child(context: List[Node])
 # cpdef replace_or_reduce(context: List[Node], condition: Callable = ?)
-# cpdef replace_parser(context: List[Node], name: str)
+# cpdef change_tag_name(context: List[Node], name: str)
 # cpdef flatten(context: List[Node], condition: Callable = ?,
 #               recursive: bool = ?)
 cpdef collapse(context: List[Node])

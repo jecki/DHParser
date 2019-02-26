@@ -218,6 +218,8 @@ def issubtype(sub_type, base_type):
         try:
             ot = t.__origin__
         except AttributeError:
+            if t == 'unicode':  # work-around for cython bug
+                return str
             return t
         return ot if ot is not None else t
     return issubclass(origin(sub_type), origin(base_type))
