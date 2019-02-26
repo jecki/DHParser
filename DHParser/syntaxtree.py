@@ -70,12 +70,6 @@ ZOMBIE_TAG = "__ZOMBIE__"
 #######################################################################
 
 
-ChildrenType = Tuple['Node', ...]
-NoChildren = cast(ChildrenType, ())  # type: ChildrenType
-StrictResultType = Union[ChildrenType, StringView, str]
-ResultType = Union[ChildrenType, 'Node', StringView, str, None]
-
-
 def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     """
     Returns S-expression ``sxpr`` as a one-liner without unnecessary
@@ -113,6 +107,11 @@ def flatten_xml(xml: str) -> str:
         return m.groupdict()['closing_tag']
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
+
+ChildrenType = Tuple['Node', ...]
+NoChildren = cast(ChildrenType, ())  # type: ChildrenType
+StrictResultType = Union[ChildrenType, StringView, str]
+ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 RX_AMP = re.compile(r'&(?!\w+;)')
 
@@ -365,6 +364,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = NoChildren
                 self._result = result  # cast(StrictResultType, result)
 
+
     def _content(self) -> List[str]:
         """
         Returns string content as list of string fragments
@@ -377,6 +377,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return fragments
         self._result = str(self._result)
         return [self._result]
+
 
     @property
     def content(self) -> str:
@@ -697,8 +698,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             yield self
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
-            for node in child.select(match_function, True, reverse):
-                yield node
+            if match_function(child):
+                yield child
+            yield from child.select(match_function, False, reverse)
+        # The above variant is slightly faster
+        # for child in child_iterator:
+        #     yield from child.select(match_function, True, reverse)
 
 
     def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
