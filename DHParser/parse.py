@@ -1549,7 +1549,7 @@ class ZeroOrMore(Option):
             node, text = self.parser(text)
             if not node:
                 break
-            if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
+            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
             if len(text) == n:
                 break  # avoid infinite loop
@@ -1600,7 +1600,7 @@ class OneOrMore(UnaryParser):
             if not node:
                 break
             match_flag = True
-            if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
+            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
             if len(text_) == n:
                 break  # avoid infinite loop
@@ -1759,7 +1759,7 @@ class Series(NaryParser):
                     else:
                         results += (node,)
                         break
-            if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
+            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
@@ -1961,7 +1961,7 @@ class AllOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
+                    if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -2028,7 +2028,7 @@ class SomeOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node:
-                    if node._result or node.tag_name[0:1] != ':':  # drop anonymous empty nodes
+                    if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                         results += (node,)
                         text_ = text__
                     del parsers[i]
