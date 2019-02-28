@@ -327,7 +327,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
     transform = transformer_factory()
 
     def has_lookahead(parser_name: str) -> bool:
-        """Returns True if the parser or any of its descendant parsers it a
+        """Returns True if the parser or any of its descendant parsers is a
         Lookahead parser."""
         lookahead_found = False
 
@@ -339,7 +339,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         parser[parser_name].apply(find_lookahead)
         return lookahead_found
 
-    def lookahead_artifact(parser, raw_errors):
+    def lookahead_artifact(st):
         """
         Returns True, if the error merely occurred, because the parser
         stopped in front of a sequence that was captured by a lookahead
@@ -347,12 +347,21 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         This is required for testing of parsers that put a lookahead
         operator at the end. See test_testing.TestLookahead.
         """
-        return ((len(raw_errors) == 2  # case 1:  superfluous data for lookahead
-                 and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
-                 and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END)
-                #  case 2:  mandatory lookahead failure at end of text
-                or (len(raw_errors) == 1
-                    and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF))
+        raw_errors = st.errors_sorted
+        is_artifact = ((len(raw_errors) == 2  # case 1:  superfluous data for lookahead
+                        and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
+                        and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END)
+                       #  case 2:  mandatory lookahead failure at end of text
+                       or (len(raw_errors) == 1
+                           and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF))
+        if is_artifact:
+            # remove zombie node with error message at the end
+            for parent in st.select(lambda node: any(child.tag_name == ZOMBIE_TAG
+                                                     for child in node.children),
+                                     include_root=True, reverse=True):
+                parent.result = tuple(c for c in parent.children if c.tag_name != ZOMBIE_TAG)
+                break
+        return is_artifact
 
     for parser_name, tests in test_unit.items():
         if not get_config_value('test_parallelization'):
@@ -394,14 +403,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             clean_test_name = str(test_name).replace('*', '')
             # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
-            if "ast" in tests or report:
-                ast = copy.deepcopy(cst)
-                transform(ast)
-                tests.setdefault('__ast__', {})[test_name] = ast
-                # log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
-            raw_errors = cst.errors_sorted
-            if is_error(cst.error_flag) and not lookahead_artifact(parser, raw_errors):
-                errors = adjust_error_locations(raw_errors, test_code)
+            if is_error(cst.error_flag) and not lookahead_artifact(cst):
+                errors = adjust_error_locations(cst.errors_sorted, test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
@@ -409,6 +412,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 # write parsing-history log only in case of failure!
                 if is_logging():
                     log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
+            if "ast" in tests or report:
+                ast = copy.deepcopy(cst)
+                transform(ast)
+                tests.setdefault('__ast__', {})[test_name] = ast
+                # log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
@@ -454,7 +462,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
-            if not is_error(cst.error_flag) and not lookahead_artifact(parser, cst.errors_sorted):
+            if not is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
