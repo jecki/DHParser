@@ -31,7 +31,7 @@ sub         = term "-" expression
 #######################################################################
 
 term        = mul | div | factor
-mul         = factor ["*"] term
+mul         = factor "*" term
 div         = factor "/" term
 
 
@@ -41,7 +41,25 @@ div         = factor "/" term
 #
 #######################################################################
 
-factor      = [sign] ( NUMBER | VARIABLE | group )
+factor      = [sign] [element] tail
+tail        = seq | tail_elem
+seq         = tail_elem tail
+
+
+#######################################################################
+#
+#: Elements
+#
+#######################################################################
+
+element     = pow | atom
+pow         = atom "^" pow
+atom        = NUMBER | VARIABLE | group
+
+tail_elem   = tail_pow | tail_atom
+tail_pow    = fragment "^" pow
+tail_atom   = VARIABLE | group
+
 sign        = PLUS | MINUS
 group       = "(" §expression ")"
 
@@ -55,4 +73,4 @@ group       = "(" §expression ")"
 PLUS        = /\+/
 MINUS       = /-/
 NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-VARIABLE    = /[A-Za-z]/~
+VARIABLE    = /[i-z]/~

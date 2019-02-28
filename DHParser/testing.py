@@ -358,7 +358,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             # remove zombie node with error message at the end
             for parent in st.select(lambda node: any(child.tag_name == ZOMBIE_TAG
                                                      for child in node.children),
-                                     include_root=True, reverse=True):
+                                    include_root=True, reverse=True):
                 parent.result = tuple(c for c in parent.children if c.tag_name != ZOMBIE_TAG)
                 break
         return is_artifact
