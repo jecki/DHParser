@@ -41,9 +41,10 @@ div         = factor "/" term
 #
 #######################################################################
 
-factor      = [sign] [element] tail
+factor      = [sign] [element] tail ~
 tail        = seq | tail_elem
 seq         = tail_elem tail
+sign        = PLUS | MINUS
 
 
 #######################################################################
@@ -52,16 +53,38 @@ seq         = tail_elem tail
 #
 #######################################################################
 
-element     = pow | atom
-pow         = atom "^" pow
-atom        = NUMBER | VARIABLE | group
+element     = pow | value
+pow         = value `^` pow
+value       = NUMBER | tail_value
 
-tail_elem   = tail_pow | tail_atom
-tail_pow    = fragment "^" pow
-tail_atom   = VARIABLE | group
+tail_elem   = tail_pow | tail_value
+tail_pow    = tail_value `^` pow
+tail_value  = special | function | VARIABLE | group
+group       = `(` §expression `)`
 
-sign        = PLUS | MINUS
-group       = "(" §expression ")"
+
+#######################################################################
+#
+#: Special Values
+#
+#######################################################################
+
+special     = pi | e
+pi          = `pi` | `π`
+e           = `e`
+
+
+#######################################################################
+#
+#: Functions
+#
+#######################################################################
+
+function    = sin | cos | tan | log
+sin         = 'sin(' §expression `)`
+cos         = 'cos(' §expression `)`
+tan         = 'tan(' §expression `)`
+log         = 'log(' §expression `)`
 
 
 #######################################################################
@@ -72,5 +95,5 @@ group       = "(" §expression ")"
 
 PLUS        = /\+/
 MINUS       = /-/
-NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-VARIABLE    = /[i-z]/~
+NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?i?/
+VARIABLE    = /[j-z]/

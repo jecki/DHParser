@@ -59,8 +59,10 @@ class ArithmeticExperimentalGrammar(Grammar):
     r"""Parser for an ArithmeticExperimental source file.
     """
     expression = Forward()
+    pow = Forward()
+    tail = Forward()
     term = Forward()
-    source_hash__ = "59c96ad0b1c0703bea6ba8fc50253bea"
+    source_hash__ = "eee86a4b8fdffdf468581501debf2461"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -69,15 +71,31 @@ class ArithmeticExperimentalGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
     wsp__ = Whitespace(WSP_RE__)
-    VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
-    NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+    VARIABLE = RegExp('[j-z]')
+    NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?i?')
     MINUS = RegExp('-')
     PLUS = RegExp('\\+')
-    group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__), mandatory=1)
+    log = Series(Series(DropToken('log('), dwsp__), expression, DropToken(")"), mandatory=1)
+    tan = Series(Series(DropToken('tan('), dwsp__), expression, DropToken(")"), mandatory=1)
+    cos = Series(Series(DropToken('cos('), dwsp__), expression, DropToken(")"), mandatory=1)
+    sin = Series(Series(DropToken('sin('), dwsp__), expression, DropToken(")"), mandatory=1)
+    function = Alternative(sin, cos, tan, log)
+    e = Token("e")
+    pi = Alternative(DropToken("pi"), DropToken("π"))
+    special = Alternative(pi, e)
+    group = Series(DropToken("("), expression, DropToken(")"), mandatory=1)
+    tail_value = Alternative(special, function, VARIABLE, group)
+    tail_pow = Series(tail_value, DropToken("^"), pow)
+    tail_elem = Alternative(tail_pow, tail_value)
+    value = Alternative(NUMBER, tail_value)
+    pow.set(Series(value, DropToken("^"), pow))
+    element = Alternative(pow, value)
     sign = Alternative(PLUS, MINUS)
-    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
+    seq = Series(tail_elem, tail)
+    tail.set(Alternative(seq, tail_elem))
+    factor = Series(Option(sign), Option(element), tail, dwsp__)
     div = Series(factor, Series(DropToken("/"), dwsp__), term)
-    mul = Series(factor, Option(Series(DropToken("*"), dwsp__)), term)
+    mul = Series(factor, Series(DropToken("*"), dwsp__), term)
     term.set(Alternative(mul, div, factor))
     sub = Series(term, Series(DropToken("-"), dwsp__), expression)
     add = Series(term, Series(DropToken("+"), dwsp__), expression)

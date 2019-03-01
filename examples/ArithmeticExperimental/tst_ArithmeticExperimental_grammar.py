@@ -37,7 +37,8 @@ def recompile_grammar(grammar_src, force):
     with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
         name = os.path.splitext(os.path.basename(grammar_src))[0]
-        if not dsl.recompile_grammar(grammar_src, force=force):
+        if not dsl.recompile_grammar(grammar_src, force=force,
+                                     notify=lambda: print('recompiling ' + grammar_src)):
             print('\nErrors while recompiling "{}":'.format(grammar_src) +
                   '\n--------------------------------------\n\n')
             with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
