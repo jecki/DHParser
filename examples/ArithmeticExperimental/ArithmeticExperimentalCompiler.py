@@ -58,11 +58,13 @@ def get_preprocessor() -> PreprocessorFunc:
 class ArithmeticExperimentalGrammar(Grammar):
     r"""Parser for an ArithmeticExperimental source file.
     """
+    element = Forward()
     expression = Forward()
     pow = Forward()
+    sign = Forward()
     tail = Forward()
     term = Forward()
-    source_hash__ = "eee86a4b8fdffdf468581501debf2461"
+    source_hash__ = "728734b427a80706ded8fe35fc451fdf"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -72,25 +74,28 @@ class ArithmeticExperimentalGrammar(Grammar):
     dwsp__ = DropWhitespace(WSP_RE__)
     wsp__ = Whitespace(WSP_RE__)
     VARIABLE = RegExp('[j-z]')
-    NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?i?')
+    NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
     MINUS = RegExp('-')
     PLUS = RegExp('\\+')
+    real = Series(NUMBER, NegativeLookahead(DropToken("i")))
+    imaginary = Series(Option(NUMBER), DropToken("i"))
+    e = Token("e")
+    pi = Alternative(DropToken("pi"), DropToken("π"))
+    special = Alternative(pi, e)
+    number = Alternative(special, imaginary, real)
     log = Series(Series(DropToken('log('), dwsp__), expression, DropToken(")"), mandatory=1)
     tan = Series(Series(DropToken('tan('), dwsp__), expression, DropToken(")"), mandatory=1)
     cos = Series(Series(DropToken('cos('), dwsp__), expression, DropToken(")"), mandatory=1)
     sin = Series(Series(DropToken('sin('), dwsp__), expression, DropToken(")"), mandatory=1)
     function = Alternative(sin, cos, tan, log)
-    e = Token("e")
-    pi = Alternative(DropToken("pi"), DropToken("π"))
-    special = Alternative(pi, e)
     group = Series(DropToken("("), expression, DropToken(")"), mandatory=1)
     tail_value = Alternative(special, function, VARIABLE, group)
     tail_pow = Series(tail_value, DropToken("^"), pow)
     tail_elem = Alternative(tail_pow, tail_value)
-    value = Alternative(NUMBER, tail_value)
-    pow.set(Series(value, DropToken("^"), pow))
-    element = Alternative(pow, value)
-    sign = Alternative(PLUS, MINUS)
+    value = Alternative(number, tail_value)
+    pow.set(Series(value, DropToken("^"), Option(sign), element))
+    element.set(Alternative(pow, value))
+    sign.set(Alternative(PLUS, MINUS))
     seq = Series(tail_elem, tail)
     tail.set(Alternative(seq, tail_elem))
     factor = Series(Option(sign), Option(element), tail, dwsp__)

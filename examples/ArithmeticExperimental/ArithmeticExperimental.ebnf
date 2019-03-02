@@ -54,24 +54,13 @@ sign        = PLUS | MINUS
 #######################################################################
 
 element     = pow | value
-pow         = value `^` pow
-value       = NUMBER | tail_value
+pow         = value `^` [sign] element
+value       = number | tail_value
 
 tail_elem   = tail_pow | tail_value
 tail_pow    = tail_value `^` pow
 tail_value  = special | function | VARIABLE | group
 group       = `(` §expression `)`
-
-
-#######################################################################
-#
-#: Special Values
-#
-#######################################################################
-
-special     = pi | e
-pi          = `pi` | `π`
-e           = `e`
 
 
 #######################################################################
@@ -89,11 +78,25 @@ log         = 'log(' §expression `)`
 
 #######################################################################
 #
+#: Numbers
+#
+#######################################################################
+
+number      = special | imaginary | real
+special     = pi | e
+pi          = `pi` | `π`
+e           = `e`
+imaginary   = [NUMBER] `i`
+real        = NUMBER !`i`
+
+
+#######################################################################
+#
 #: Tokens
 #
 #######################################################################
 
 PLUS        = /\+/
 MINUS       = /-/
-NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?i?/
+NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/
 VARIABLE    = /[j-z]/

@@ -285,7 +285,8 @@ class Parser:
                 self.recursion_counter[location] += 1
 
             if grammar.history_tracking__:
-                grammar.call_stack__.append(self.repr if self.tag_name in (':RegExp', ':Token')
+                grammar.call_stack__.append(self.repr if self.tag_name in
+                                                         (':RegExp', ':Token', ':DropToken')
                                             else self.tag_name)
                 grammar.moving_forward__ = True
 

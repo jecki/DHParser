@@ -1261,6 +1261,7 @@ class EBNFCompiler(Compiler):
             return 'DropToken('
         return 'Token('
 
+
     def WSPC_PARSER(self):
         if DROP_WSPC in self.directives.drop and (self.context[-2].tag_name != "definition"
                                                   or self.context[-1].tag_name == 'literal'):

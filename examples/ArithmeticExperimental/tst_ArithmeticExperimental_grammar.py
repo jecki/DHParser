@@ -6,7 +6,7 @@
 import os
 import sys
 
-LOGGING = False
+LOGGING = True
 
 sys.path.extend(['../../', '../', './'])
 
@@ -29,11 +29,7 @@ CONFIG_PRESET['test_parallelization'] = True
 
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
-    if not os.path.exists(grammar_tests_dir) \
-            or not any(os.path.isfile(os.path.join(grammar_tests_dir, entry))
-                       for entry in os.listdir(grammar_tests_dir)):
-        print('No grammar-tests found, generating test templates.')
-        create_test_templates(grammar_src, grammar_tests_dir)
+    create_test_templates(grammar_src, grammar_tests_dir)
     with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
         name = os.path.splitext(os.path.basename(grammar_src))[0]

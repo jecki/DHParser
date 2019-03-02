@@ -664,9 +664,8 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
         keys = reversed(list(symbols.keys()))
         for i, k in enumerate(keys):
             filename = '{num:0>2}_test_{section}'.format(num=i+1, section=k) + fmt
-            if os.path.exists(filename):
-                print('File "{name}" not created, because it already exists!')
-            else:
+            if not os.path.exists(filename):
+                print('Creating test file template "{name}".'.format(name=filename))
                 with open(filename, 'w', encoding='utf-8') as f:
                     for sym in symbols[k]:
                         f.write('\n[match:{sym}]\n\n'.format(sym=sym))
