@@ -3,6 +3,16 @@ DHParser Version 0.8.6 (date ?)
 
 
 - default configuration now centralized in DHParser/configuration.py
+- dropped python 3.4 support
+- infinite loops in ZeroOrMore, OneOrMore and the like will now simply
+  be broken rather than reported as an error
+- better parser-optimization, i.e. flattening and dropping of irrelevant
+  nodes while parsing already.
+- no caching of node.content any more, because this was conceptually
+  unsound. Trees are refactored and nodes dropped all the time which
+  would require invalidating the cache, which would be hard to implement.
+- mini-framework for static grammar analysis added (see parse.Grammar).
+  As of now: no use case
 
 
 DHParser Version 0.8.5 (10.2.2019)

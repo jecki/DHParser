@@ -1085,7 +1085,7 @@ class Grammar:
         def visit_parser(parser: Parser) -> None:
             nonlocal error_list
 
-        self.root_parser__.apply(visit_parser)
+        # self.root_parser__.apply(visit_parser)  # disabled, because no use case as of now
         return error_list
 
 
