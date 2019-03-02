@@ -60,11 +60,10 @@ class ArithmeticExperimentalGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    pow = Forward()
     sign = Forward()
     tail = Forward()
     term = Forward()
-    source_hash__ = "275cee2bc98d92d9330bcc71dde3afe3"
+    source_hash__ = "01e521bb6dbca853cb7eef515c2dc8d7"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -88,14 +87,14 @@ class ArithmeticExperimentalGrammar(Grammar):
     function = Alternative(sin, cos, tan, log)
     group = Series(DropToken("("), expression, DropToken(")"), mandatory=1)
     tail_value = Alternative(special, function, VARIABLE, group)
-    tail_pow = Series(tail_value, DropToken("^"), pow)
+    tail_pow = Series(tail_value, Option(imaginary), DropToken("^"), element)
     tail_elem = Alternative(tail_pow, tail_value)
     value = Series(Alternative(number, tail_value), Option(imaginary))
-    pow.set(Series(value, DropToken("^"), Option(sign), element))
+    pow = Series(value, DropToken("^"), Option(sign), element)
     element.set(Alternative(pow, value))
     sign.set(Alternative(PLUS, MINUS))
     seq = Series(tail_elem, tail)
-    tail.set(Alternative(seq, tail_elem))
+    tail.set(Series(Alternative(seq, tail_elem), Option(imaginary)))
     factor = Series(Option(sign), Alternative(Series(Option(element), tail), element), dwsp__)
     div = Series(factor, Series(DropToken("/"), dwsp__), term)
     mul = Series(factor, Series(DropToken("*"), dwsp__), term)
