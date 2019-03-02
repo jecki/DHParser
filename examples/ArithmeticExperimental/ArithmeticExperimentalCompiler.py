@@ -72,7 +72,6 @@ class ArithmeticExperimentalGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
-    wsp__ = Whitespace(WSP_RE__)
     VARIABLE = RegExp('[a-dj-z]')
     NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
     MINUS = RegExp('-')

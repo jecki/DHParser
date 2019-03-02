@@ -32,7 +32,7 @@ from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, 
 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, Whitespace, \
+from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
     GrammarError
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
@@ -172,7 +172,7 @@ class EBNFGrammar(Grammar):
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wsp__ = Whitespace(WSP_RE__)
+    wsp__ = DropWhitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), wsp__)
@@ -254,7 +254,7 @@ def get_ebnf_grammar() -> EBNFGrammar:
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
-        [remove_whitespace, remove_empty],
+        [remove_empty],  # remove_whitespace
     "syntax":
         [],  # otherwise '"*": replace_by_single_child' would be applied
     "directive, definition":
@@ -277,8 +277,6 @@ EBNF_AST_transformation_table = {
         reduce_single_child,
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         reduce_single_child,
-    # "list_":
-    #     [flatten, remove_infix_operator],
     "*":
         replace_by_single_child
 }
@@ -747,11 +745,12 @@ class EBNFCompiler(Compiler):
 
         # add special fields for Grammar class
 
-        definitions.append((self.WHITESPACE_PARSER_KEYWORD,
-                            'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
         if DROP_WSPC in self.directives.drop:
             definitions.append((self.DROP_WHITESPACE_PARSER_KEYWORD,
                                 'DropWhitespace(%s)' % self.WHITESPACE_KEYWORD))
+        else:
+            definitions.append((self.WHITESPACE_PARSER_KEYWORD,
+                                'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))

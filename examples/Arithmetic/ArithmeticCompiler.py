@@ -67,7 +67,6 @@ class ArithmeticGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
-    wsp__ = Whitespace(WSP_RE__)
     VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')

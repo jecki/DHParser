@@ -56,7 +56,7 @@ from typing import List, Tuple, Union, Optional
 
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node
+from DHParser.syntaxtree import Node, ZOMBIE_TAG
 from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS
 
 __all__ = ('log_dir',
@@ -129,8 +129,8 @@ def logging(dirname="LOGS"):
     except AttributeError:
         save = ""
     GLOBALS.LOGGING = dirname or ""
-    if dirname and not os.path.exists(dirname):
-        os.mkdir(dirname)
+    # if dirname and not os.path.exists(dirname):
+    #     os.mkdir(dirname)
     yield
     GLOBALS.LOGGING = save
 
@@ -291,7 +291,7 @@ class HistoryRecord:
 
     @property
     def status(self) -> str:
-        return self.FAIL if self.node is None else \
+        return self.FAIL if self.node is None or self.node.tag_name == ZOMBIE_TAG else \
             ('"%s"' % self.err_msg()) if self.errors else self.MATCH
 
     @property

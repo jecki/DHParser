@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #######################################################################
 #
@@ -11,6 +11,8 @@ import collections
 from functools import partial
 import os
 import sys
+sys.path.extend(['../../', '../', './'])
+
 
 sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
 
@@ -19,21 +21,20 @@ try:
 except ImportError:
     import re
 from DHParser import logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, is_empty, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
+    remove_nodes, remove_content, remove_brackets, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    replace_content, replace_content_by, error_on, recompile_grammar, GLOBALS
 
 
 #######################################################################
@@ -42,11 +43,11 @@ from DHParser import logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def Lyrik_explicit_whitespacePreprocessor(text):
+def LyrikPreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return Lyrik_explicit_whitespacePreprocessor
+    return LyrikPreprocessor
 
 
 #######################################################################
@@ -55,53 +56,52 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class Lyrik_explicit_whitespaceGrammar(Grammar):
-    r"""Parser for a Lyrik_explicit_whitespace source file.
+class LyrikGrammar(Grammar):
+    r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "2a7f0e987e796860b804a7e162df7e7b"
+    source_hash__ = "3ff2e39f8bfc07d37ea5481d61d026bb"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    dwsp__ = DropWhitespace(WSP_RE__)
-    L = Series(RegExp('[ \\t]+'), dwsp__)
+    wsp__ = Whitespace(WSP_RE__)
     ENDE = NegativeLookahead(RegExp('.'))
-    JAHRESZAHL = RegExp('\\d\\d\\d\\d')
-    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), dwsp__)
-    NZ = RegExp('\\n')
-    ZEICHENFOLGE = RegExp('[^ \\n<>]+')
-    NAME = RegExp('\\w+\\.?')
-    WORT = RegExp('\\w+')
-    vers = OneOrMore(Series(ZEICHENFOLGE, Option(L)))
+    JAHRESZAHL = Series(RegExp('\\d\\d\\d\\d'), wsp__)
+    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), wsp__)
+    NZ = Series(RegExp('\\n'), wsp__)
+    ZEICHENFOLGE = Series(RegExp('[^ \\n<>]+'), wsp__)
+    NAME = Series(RegExp('\\w+\\.?'), wsp__)
+    WORT = Series(RegExp('\\w+'), wsp__)
+    vers = OneOrMore(ZEICHENFOLGE)
     strophe = OneOrMore(Series(NZ, vers))
     text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
-    zeile = OneOrMore(Series(ZEICHENFOLGE, Option(L)))
-    titel = OneOrMore(Series(NZ, Option(L), zeile, OneOrMore(LEERZEILE)))
+    zeile = OneOrMore(ZEICHENFOLGE)
+    titel = Series(OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
-    ziel = Series(ZEICHENFOLGE, dwsp__)
-    verknüpfung = Series(Series(DropToken("<"), dwsp__), ziel, Series(DropToken(">"), dwsp__))
-    namenfolge = OneOrMore(Series(NAME, Option(L)))
-    wortfolge = OneOrMore(Series(WORT, Option(L)))
-    jahr = Series(JAHRESZAHL, dwsp__)
+    ziel = Synonym(ZEICHENFOLGE)
+    verknüpfung = Series(Series(Token("<"), wsp__), ziel, Series(Token(">"), wsp__))
+    namenfolge = OneOrMore(NAME)
+    wortfolge = OneOrMore(WORT)
+    jahr = Synonym(JAHRESZAHL)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(DropToken("."), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Series(Token("."), wsp__), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(DropToken("."), dwsp__), mandatory=1)
+    bibliographisches = Series(autor, Series(Token(","), wsp__), Option(NZ), werk, Series(Token(","), wsp__), Option(NZ), ort, Series(Token(","), wsp__), Option(NZ), jahr, Series(Token("."), wsp__), mandatory=1)
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
-def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
+def get_grammar() -> LyrikGrammar:
     global GLOBALS
     try:
-        grammar = GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+        grammar = GLOBALS.Lyrik_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
+        GLOBALS.Lyrik_00000001_grammar_singleton = LyrikGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+            GLOBALS.Lyrik_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.Lyrik_00000001_grammar_singleton
     return grammar
 
 
@@ -111,8 +111,8 @@ def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
 #
 #######################################################################
 
-Lyrik_explicit_whitespace_AST_transformation_table = {
-    # AST Transformations for the Lyrik_explicit_whitespace-grammar
+Lyrik_AST_transformation_table = {
+    # AST Transformations for the Lyrik-grammar
     "<": remove_empty,
     "gedicht": [],
     "bibliographisches": [],
@@ -120,11 +120,11 @@ Lyrik_explicit_whitespace_AST_transformation_table = {
     "werk": [],
     "untertitel": [],
     "ort": [],
-    "jahr": [],
+    "jahr": [reduce_single_child],
     "wortfolge": [],
     "namenfolge": [],
     "verknüpfung": [],
-    "ziel": [],
+    "ziel": [reduce_single_child],
     "serie": [],
     "titel": [],
     "zeile": [],
@@ -138,21 +138,20 @@ Lyrik_explicit_whitespace_AST_transformation_table = {
     "LEERZEILE": [],
     "JAHRESZAHL": [],
     "ENDE": [],
-    "L": [],
     ":Token": reduce_single_child,
     "*": replace_by_single_child
 }
 
 
-def Lyrik_explicit_whitespaceTransform() -> TransformationDict:
-    return partial(traverse, processing_table=Lyrik_explicit_whitespace_AST_transformation_table.copy())
+def LyrikTransform() -> TransformationFunc:
+    return partial(traverse, processing_table=Lyrik_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
+        transformer = GLOBALS.Lyrik_1_transformer_singleton
     except AttributeError:
-        GLOBALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = Lyrik_explicit_whitespaceTransform()
-        transformer = GLOBALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
+        GLOBALS.Lyrik_1_transformer_singleton = LyrikTransform()
+        transformer = GLOBALS.Lyrik_1_transformer_singleton
     return transformer
 
 
@@ -162,12 +161,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class Lyrik_explicit_whitespaceCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a Lyrik_explicit_whitespace source file.
+class LyrikCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a Lyrik source file.
     """
 
     def __init__(self):
-        super(Lyrik_explicit_whitespaceCompiler, self).__init__()
+        super(LyrikCompiler, self).__init__()
 
     def _reset(self):
         super()._reset()
@@ -244,16 +243,13 @@ class Lyrik_explicit_whitespaceCompiler(Compiler):
     # def on_ENDE(self, node):
     #     return node
 
-    # def on_L(self, node):
-    #     return node
 
-
-def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
+def get_compiler() -> LyrikCompiler:
     try:
-        compiler = GLOBALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
+        compiler = GLOBALS.Lyrik_1_compiler_singleton
     except AttributeError:
-        GLOBALS.Lyrik_explicit_whitespace_00000002_compiler_singleton = Lyrik_explicit_whitespaceCompiler()
-        compiler = GLOBALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
+        GLOBALS.Lyrik_1_compiler_singleton = LyrikCompiler()
+        compiler = GLOBALS.Lyrik_1_compiler_singleton
     return compiler
 
 
@@ -270,10 +266,10 @@ def compile_src(source, log_dir=''):
     with logging(log_dir):
         compiler = get_compiler()
         cname = compiler.__class__.__name__
-        result_tuple = compile_source(source, get_preprocessor(),
-                                      get_grammar(),
-                                      get_transformer(), compiler)
-    return result_tuple
+        result = compile_source(source, get_preprocessor(),
+                                get_grammar(),
+                                get_transformer(), compiler)
+    return result
 
 
 if __name__ == "__main__":
@@ -305,4 +301,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: Lyrik_explicit_whitespaceCompiler.py [FILENAME]")
+        print("Usage: LyrikCompiler.py [FILENAME]")

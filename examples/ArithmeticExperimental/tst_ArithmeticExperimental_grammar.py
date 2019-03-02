@@ -30,7 +30,7 @@ CONFIG_PRESET['test_parallelization'] = True
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
     create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(LOGGING):
+    with DHParser.log.logging(False):
         # recompiles Grammar only if it has changed
         name = os.path.splitext(os.path.basename(grammar_src))[0]
         if not dsl.recompile_grammar(grammar_src, force=force,

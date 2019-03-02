@@ -144,7 +144,7 @@ class TestEBNFParser:
         snippet = '"text" '
         result = self.EBNF(snippet, 'literal')
         assert not result.error_flag
-        assert str(result) == snippet
+        assert str(result) == snippet.strip()
         assert result.select(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
 
         result = self.EBNF('"text" ', 'literal')
@@ -244,6 +244,7 @@ class TestSelfHosting:
         @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
         @ whitespace = /\s*/                            # whitespace includes linefeed
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+        @ drop       = whitespace                       # no whitespace in concrete syntax tree
         
         syntax     = [~//] { definition | directive } §EOF
         definition = symbol §"=" expression

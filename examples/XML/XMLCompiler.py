@@ -75,7 +75,6 @@ class XMLGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
-    wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     S = RegExp('\\s+')
     Char = RegExp('\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]')

@@ -59,33 +59,33 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "7a7c3764b7b37241534fbb65b44b219d"
+    source_hash__ = "428380dcdcff7b2a3cbed187b71d248b"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = DropWhitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    whitespace = Series(RegExp('~'), wsp__)
-    regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), wsp__)
-    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^"])*?`'), wsp__)
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), wsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), wsp__))
-    symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
-    option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
-    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
-    oneormore = Series(Series(Token("{"), wsp__), expression, Series(Token("}+"), wsp__))
-    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
-    group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
-    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__), Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
-    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), wsp__), Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
-    syntax = Series(Option(Series(wsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    whitespace = Series(RegExp('~'), dwsp__)
+    regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
+    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^"])*?`'), dwsp__)
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
+    option = Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1)
+    repetition = Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1)
+    oneormore = Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__))
+    unordered = Series(Series(Token("<"), dwsp__), expression, Series(Token(">"), dwsp__), mandatory=1)
+    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":"), dwsp__))
+    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("-!"), dwsp__), Series(Token("-&"), dwsp__))
+    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    term = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), factor))
+    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), dwsp__), term))))
+    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
+    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
+    syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
