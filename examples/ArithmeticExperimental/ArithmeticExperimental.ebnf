@@ -41,7 +41,7 @@ div         = factor "/" term
 #
 #######################################################################
 
-factor      = [sign] [element] tail ~
+factor      = [sign] ([element] tail | element) ~
 tail        = seq | tail_elem
 seq         = tail_elem tail
 sign        = PLUS | MINUS
@@ -55,7 +55,7 @@ sign        = PLUS | MINUS
 
 element     = pow | value
 pow         = value `^` [sign] element
-value       = number | tail_value
+value       = (number | tail_value) [imaginary]
 
 tail_elem   = tail_pow | tail_value
 tail_pow    = tail_value `^` pow
@@ -82,12 +82,11 @@ log         = 'log(' §expression `)`
 #
 #######################################################################
 
-number      = special | imaginary | real
-special     = pi | e
+number      = NUMBER
+special     = (pi | e)
 pi          = `pi` | `π`
 e           = `e`
-imaginary   = [NUMBER] `i`
-real        = NUMBER !`i`
+imaginary   = `i`
 
 
 #######################################################################
@@ -99,4 +98,4 @@ real        = NUMBER !`i`
 PLUS        = /\+/
 MINUS       = /-/
 NUMBER      = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/
-VARIABLE    = /[j-z]/
+VARIABLE    = /[a-dj-z]/
