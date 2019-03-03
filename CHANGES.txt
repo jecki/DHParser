@@ -1,13 +1,16 @@
+DHParser Version 0.8.8 (xx.xx.2019)
+...................................
+
+
+
 DHParser Version 0.8.7 (3.3.2019)
 .................................
 
 - better packaging
 
 
-
 DHParser Version 0.8.6 (3.3.2019)
 .................................
-
 
 - default configuration now centralized in DHParser/configuration.py
 - dropped python 3.4 support
