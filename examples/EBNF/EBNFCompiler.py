@@ -89,7 +89,7 @@ class EBNFGrammar(Grammar):
     root__ = syntax
     
 def get_grammar() -> EBNFGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive EBNFGrammar-singleton."""
     try:
         grammar = GLOBALS.EBNF_00000001_grammar_singleton
     except AttributeError:

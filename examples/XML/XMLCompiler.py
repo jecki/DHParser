@@ -174,7 +174,7 @@ class XMLGrammar(Grammar):
     root__ = document
     
 def get_grammar() -> XMLGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive XMLGrammar-singleton."""
     try:
         grammar = GLOBALS.XML_00000001_grammar_singleton
     except AttributeError:

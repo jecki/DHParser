@@ -83,7 +83,7 @@ class ArithmeticGrammar(Grammar):
     root__ = expression
     
 def get_grammar() -> ArithmeticGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive ArithmeticGrammar-singleton."""
     try:
         grammar = GLOBALS.Arithmetic_00000001_grammar_singleton
     except AttributeError:

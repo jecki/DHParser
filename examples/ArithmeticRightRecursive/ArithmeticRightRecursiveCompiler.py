@@ -105,6 +105,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     root__ = expression
     
 def get_grammar() -> ArithmeticRightRecursiveGrammar:
+    """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
     try:
         grammar = GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton
     except AttributeError:

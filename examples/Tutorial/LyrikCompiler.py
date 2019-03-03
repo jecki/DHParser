@@ -94,7 +94,7 @@ class LyrikGrammar(Grammar):
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive LyrikGrammar-singleton."""
     try:
         grammar = GLOBALS.Lyrik_00000001_grammar_singleton
     except AttributeError:

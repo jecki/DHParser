@@ -121,7 +121,7 @@ class XMLSnippetGrammar(Grammar):
     root__ = document
     
 def get_grammar() -> XMLSnippetGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive XMLSnippetGrammar-singleton."""
     try:
         grammar = GLOBALS.XMLSnippet_00000001_grammar_singleton
     except AttributeError:

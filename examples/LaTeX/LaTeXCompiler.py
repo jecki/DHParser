@@ -154,7 +154,7 @@ class LaTeXGrammar(Grammar):
     root__ = latexdoc
     
 def get_grammar() -> LaTeXGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
     try:
         grammar = GLOBALS.LaTeX_00000001_grammar_singleton
     except AttributeError:

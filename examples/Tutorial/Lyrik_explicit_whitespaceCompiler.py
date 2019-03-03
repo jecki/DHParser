@@ -94,7 +94,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     root__ = gedicht
     
 def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
     try:
         grammar = GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
