@@ -12,5 +12,5 @@ rm DHParser/*.so
 # rm DHParser/transform.cpython*.so
 
 # CFLAGS="-O3 -march=native -mtune=native" 
-python3 setup.py build_ext --inplace
+export CC=clang; python3 setup.py build_ext --inplace
 strip `ls DHParser/*.so`
