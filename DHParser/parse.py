@@ -1072,10 +1072,11 @@ class Grammar:
 
     def static_analysis(self) -> List[GrammarErrorType]:
         """
-        EXPERIMENTAL (does not catch infinite loops due to regular expressions...)
+        EXPERIMENTAL 
 
-        Checks the parser tree statically for possible errors. At the moment only
-        infinite loops will be detected.
+        Checks the parser tree statically for possible errors. At the moment,
+        no checks are implemented
+
         :return: a list of error-tuples consisting of the narrowest containing
             named parser (i.e. the symbol on which the failure occurred),
             the actual parser that failed and an error object.
