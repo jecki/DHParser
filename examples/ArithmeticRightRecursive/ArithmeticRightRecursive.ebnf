@@ -42,7 +42,7 @@ div         = factor "/" term
 #######################################################################
 
 factor      = [sign] ([element] tail | element) ~
-tail        = (seq | tail_elem) [imaginary]
+tail        = (seq | tail_elem) [i]
 seq         = tail_elem tail
 sign        = PLUS | MINUS
 
@@ -55,10 +55,10 @@ sign        = PLUS | MINUS
 
 element     = pow | value
 pow         = value `^` [sign] element
-value       = (number | tail_value) [imaginary]
+value       = (number | tail_value) [i]
 
 tail_elem   = tail_pow | tail_value
-tail_pow    = tail_value [imaginary] `^` element
+tail_pow    = tail_value [i] `^` element
 tail_value  = special | function | VARIABLE | group
 group       = `(` §expression `)`
 
@@ -86,7 +86,7 @@ number      = NUMBER
 special     = (pi | e)
 pi          = `pi` | `π`
 e           = `e`
-imaginary   = `i`
+i           = `i`           # imaginary number unit
 
 
 #######################################################################

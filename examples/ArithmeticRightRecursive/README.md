@@ -1,9 +1,12 @@
-# Arithmetic
+# ArithmeticRightRecursive
 
-PLACE A SHORT DESCRIPTION HERE
+This is going to be a full-fledged grammar for arithmetic expressions.
+For simple text-book examples of arithmetic grammars, see the 
+"ArithemticSimple"-example. 
 
-Author: AUTHOR'S NAME <EMAIL>, AFFILIATION
+STILL WORK IN PROGRESS!!!
 
+Author: Eckhart Arnold (eckhart.arnold@posteo.de)
 
 ## License
 

@@ -1,5 +1,5 @@
-DHParser Version 0.8.6 (date ?)
-...............................
+DHParser Version 0.8.6 (3.3.2019)
+.................................
 
 
 - default configuration now centralized in DHParser/configuration.py

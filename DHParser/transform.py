@@ -59,7 +59,7 @@ __all__ = ('TransformationDict',
            'normalize_whitespace',
            'move_adjacent',
            'left_associative',
-           'swing_left',
+           'lean_left',
            'apply_if',
            'apply_unless',
            'traverse_locally',
@@ -893,11 +893,17 @@ def left_associative(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Set)
-def swing_left(context: List[Node], operators: AbstractSet[str]):
+def lean_left(context: List[Node], operators: AbstractSet[str]):
     """
-    Rearranges a node that contains a sub-node on the right
-    with a left-associative operator so that the tree structure
-    reflects its left-associative character.
+    Turns a right leaning tree into a left leaning tree:
+    (op1 a (op2 b c))  ->  (op2 (op1 a b) c)
+    If a left-associative operator is parsed with a right-recursive
+    parser, `lean_left' can be used to rearrange the tree structure
+    so that it properly reflects the order of association.
+
+    ATTENTION: This transformation function moves forward recursively,
+    so grouping nodes must not be eliminated during traversal! This
+    must be done in a second pass.
     """
     node = context[-1]
     assert node.children and len(node.children) == 2
@@ -913,6 +919,8 @@ def swing_left(context: List[Node], operators: AbstractSet[str]):
         node.result = (right, c)
         node.tag_name = op2
         swap_attributes(node, right)
+        # continue recursively on the left branch
+        lean_left([right], operators)
 
 
 # @transformation_factory(collections.abc.Set)

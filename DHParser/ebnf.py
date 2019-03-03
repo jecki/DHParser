@@ -99,7 +99,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
-    error_on, recompile_grammar, left_associative, swing_left, GLOBALS
+    error_on, recompile_grammar, left_associative, lean_left, GLOBALS
 '''.format(dhparserdir=dhparserdir)
 
 
@@ -315,7 +315,7 @@ def get_preprocessor() -> PreprocessorFunc:
 
 GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
-    global GLOBALS
+    """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
     try:
         grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
     except AttributeError:
@@ -328,14 +328,17 @@ def get_grammar() -> {NAME}Grammar:
 
 
 TRANSFORMER_FACTORY = '''
-def {NAME}Transform() -> TransformationFunc:
+def Create{NAME}Transformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
     try:
         transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_transformer_singleton = {NAME}Transform()
+        GLOBALS.{NAME}_{ID:08d}_transformer_singleton = Create{NAME}Transformer()
         transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
     return transformer
 '''
@@ -343,6 +346,7 @@ def get_transformer() -> TransformationFunc:
 
 COMPILER_FACTORY = '''
 def get_compiler() -> {NAME}Compiler:
+    """Returns a thread/process-exclusive {NAME}Compiler-singleton."""
     try:
         compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
     except AttributeError:

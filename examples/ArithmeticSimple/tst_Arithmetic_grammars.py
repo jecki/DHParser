@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 
-"""tst_ArithmeticExperimental_grammar.py - runs the unit tests for the ArithmeticExperimental-grammar
+"""tst_ArithmeticSimple_grammar.py - runs the unit tests for the ArithmeticSimple-grammar
 """
 
 import os
 import sys
 
-LOGGING = True
+LOGGING = False
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend(['../../', '..', '.'])
 
 scriptpath = os.path.dirname(__file__)
 
@@ -26,15 +26,17 @@ except ModuleNotFoundError:
 CONFIG_PRESET['ast_serialization'] = "S-expression"
 CONFIG_PRESET['test_parallelization'] = True
 
-
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
-    create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(False):
+    if not os.path.exists(grammar_tests_dir) \
+            or not any(os.path.isfile(os.path.join(grammar_tests_dir, entry))
+                       for entry in os.listdir(grammar_tests_dir)):
+        print('No grammar-tests found, generating test templates.')
+        create_test_templates(grammar_src, grammar_tests_dir)
+    with DHParser.log.logging(LOGGING):
         # recompiles Grammar only if it has changed
         name = os.path.splitext(os.path.basename(grammar_src))[0]
-        if not dsl.recompile_grammar(grammar_src, force=force,
-                                     notify=lambda: print('recompiling ' + grammar_src)):
+        if not dsl.recompile_grammar(grammar_src, force=force):
             print('\nErrors while recompiling "{}":'.format(grammar_src) +
                   '\n--------------------------------------\n\n')
             with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
@@ -67,13 +69,29 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, 'ArithmeticExperimental.ebnf'),
+        recompile_grammar(os.path.join(scriptpath, 'ArithmeticSimple.ebnf'),
+                          force=False)
+        recompile_grammar(os.path.join(scriptpath, 'ArithmeticRightRecursive.ebnf'),
                           force=False)
         sys.path.append('.')
-        from ArithmeticExperimentalCompiler import get_grammar, get_transformer
+
+        failure = False
+        from ArithmeticSimpleCompiler import get_grammar, get_transformer
+        print('Testing "ArithmeticSimple"')
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
             print('\n')
             print(error_report)
+            failure = True
+
+        from ArithmeticRightRecursiveCompiler import get_grammar, get_transformer
+        print('Testing "ArithmeticRightRecursive"')
+        error_report = run_grammar_tests(glob_pattern=arg)
+        if error_report:
+            print('\n')
+            print(error_report)
+            failure = True
+
+        if failure:
             sys.exit(1)
         print('ready.\n')

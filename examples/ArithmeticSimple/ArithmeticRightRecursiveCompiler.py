@@ -12,7 +12,7 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
 
 try:
     import regex as re
@@ -23,17 +23,17 @@ from DHParser import logging, is_filename, load_if_file, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, is_empty, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, left_associative, lean_left, GLOBALS
 
 
 #######################################################################
@@ -42,11 +42,11 @@ from DHParser import logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def ArithmeticExperimentalPreprocessor(text):
+def ArithmeticRightRecursivePreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return ArithmeticExperimentalPreprocessor
+    return ArithmeticRightRecursivePreprocessor
 
 
 #######################################################################
@@ -55,15 +55,12 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class ArithmeticExperimentalGrammar(Grammar):
-    r"""Parser for an ArithmeticExperimental source file.
+class ArithmeticRightRecursiveGrammar(Grammar):
+    r"""Parser for an ArithmeticRightRecursive source file.
     """
-    element = Forward()
     expression = Forward()
-    sign = Forward()
-    tail = Forward()
     term = Forward()
-    source_hash__ = "01e521bb6dbca853cb7eef515c2dc8d7"
+    source_hash__ = "de949295be0b4c5b67cee8aa9cd1a73e"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -71,31 +68,13 @@ class ArithmeticExperimentalGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
-    VARIABLE = RegExp('[a-dj-z]')
-    NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
-    MINUS = RegExp('-')
-    PLUS = RegExp('\\+')
-    imaginary = Token("i")
-    e = Token("e")
-    pi = Alternative(DropToken("pi"), DropToken("π"))
-    special = Alternative(pi, e)
-    number = Synonym(NUMBER)
-    log = Series(Series(DropToken('log('), dwsp__), expression, DropToken(")"), mandatory=1)
-    tan = Series(Series(DropToken('tan('), dwsp__), expression, DropToken(")"), mandatory=1)
-    cos = Series(Series(DropToken('cos('), dwsp__), expression, DropToken(")"), mandatory=1)
-    sin = Series(Series(DropToken('sin('), dwsp__), expression, DropToken(")"), mandatory=1)
-    function = Alternative(sin, cos, tan, log)
-    group = Series(DropToken("("), expression, DropToken(")"), mandatory=1)
-    tail_value = Alternative(special, function, VARIABLE, group)
-    tail_pow = Series(tail_value, Option(imaginary), DropToken("^"), element)
-    tail_elem = Alternative(tail_pow, tail_value)
-    value = Series(Alternative(number, tail_value), Option(imaginary))
-    pow = Series(value, DropToken("^"), Option(sign), element)
-    element.set(Alternative(pow, value))
-    sign.set(Alternative(PLUS, MINUS))
-    seq = Series(tail_elem, tail)
-    tail.set(Series(Alternative(seq, tail_elem), Option(imaginary)))
-    factor = Series(Option(sign), Alternative(Series(Option(element), tail), element), dwsp__)
+    VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
+    NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+    NEGATIVE = RegExp('[-]')
+    POSITIVE = RegExp('[+]')
+    group = Series(Series(DropToken("("), dwsp__), expression, Series(DropToken(")"), dwsp__))
+    sign = Alternative(POSITIVE, NEGATIVE)
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
     div = Series(factor, Series(DropToken("/"), dwsp__), term)
     mul = Series(factor, Series(DropToken("*"), dwsp__), term)
     term.set(Alternative(mul, div, factor))
@@ -104,15 +83,15 @@ class ArithmeticExperimentalGrammar(Grammar):
     expression.set(Alternative(add, sub, term))
     root__ = expression
     
-def get_grammar() -> ArithmeticExperimentalGrammar:
-    global GLOBALS
+def get_grammar() -> ArithmeticRightRecursiveGrammar:
+    """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
     try:
-        grammar = GLOBALS.ArithmeticExperimental_00000001_grammar_singleton
+        grammar = GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.ArithmeticExperimental_00000001_grammar_singleton = ArithmeticExperimentalGrammar()
+        GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.ArithmeticExperimental_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.ArithmeticExperimental_00000001_grammar_singleton
+            GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton
     return grammar
 
 
@@ -122,23 +101,37 @@ def get_grammar() -> ArithmeticExperimentalGrammar:
 #
 #######################################################################
 
-
-ArithmeticExperimental_AST_transformation_table = {
-    # AST Transformations for the ArithmeticExperimental-grammar
-    # "<": flatten_anonymous_nodes,
-    "expression, term, sign, group, factor": [replace_by_single_child],
+ArithmeticRightRecursive_AST_transformation_table = {
+    # AST Transformations for the ArithmeticRightRecursive-grammar
+    "sign, factor, term, expression": [replace_by_single_child],
+    "add, sub": [lean_left({'sub', 'add'})],
+    "mul, div": [lean_left({'mul', 'div'})],
 }
 
 
-def ArithmeticExperimentalTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=ArithmeticExperimental_AST_transformation_table.copy())
+def CreateArithmeticRightRecursiveTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
+    def transformation_func(cst: Node, pass_1, pass_2):
+        """Special transformation function requires two passes, because
+        otherwise elimination of grouping nodes (pass 2) would interfere
+        with the adjustment of the tree structure to the left-associativity
+        of the `add`, `sub`, `mul` and `div` operators."""
+        traverse(cst, pass_1)
+        traverse(cst, pass_2)
+    return partial(transformation_func,
+                   pass_1=ArithmeticRightRecursive_AST_transformation_table.copy(),
+                   pass_2={'group': [replace_by_single_child]}.copy())
+
 
 def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
     try:
-        transformer = GLOBALS.ArithmeticExperimental_00000001_transformer_singleton
+        transformer = GLOBALS.ArithmeticRightRecursive_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.ArithmeticExperimental_00000001_transformer_singleton = ArithmeticExperimentalTransform()
-        transformer = GLOBALS.ArithmeticExperimental_00000001_transformer_singleton
+        GLOBALS.ArithmeticRightRecursive_00000001_transformer_singleton = \
+            CreateArithmeticRightRecursiveTransformer()
+        transformer = GLOBALS.ArithmeticRightRecursive_00000001_transformer_singleton
     return transformer
 
 
@@ -148,12 +141,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class ArithmeticExperimentalCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a ArithmeticExperimental source file.
+class ArithmeticRightRecursiveCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a ArithmeticRightRecursive source file.
     """
 
     def __init__(self):
-        super(ArithmeticExperimentalCompiler, self).__init__()
+        super(ArithmeticRightRecursiveCompiler, self).__init__()
 
     def _reset(self):
         super()._reset()
@@ -161,10 +154,34 @@ class ArithmeticExperimentalCompiler(Compiler):
     def on_expression(self, node):
         return self.fallback_compiler(node)
 
+    # def on_add(self, node):
+    #     return node
+
+    # def on_sub(self, node):
+    #     return node
+
     # def on_term(self, node):
     #     return node
 
+    # def on_mul(self, node):
+    #     return node
+
+    # def on_div(self, node):
+    #     return node
+
     # def on_factor(self, node):
+    #     return node
+
+    # def on_sign(self, node):
+    #     return node
+
+    # def on_group(self, node):
+    #     return node
+
+    # def on_POSITIVE(self, node):
+    #     return node
+
+    # def on_NEGATIVE(self, node):
     #     return node
 
     # def on_NUMBER(self, node):
@@ -174,12 +191,13 @@ class ArithmeticExperimentalCompiler(Compiler):
     #     return node
 
 
-def get_compiler() -> ArithmeticExperimentalCompiler:
+def get_compiler() -> ArithmeticRightRecursiveCompiler:
+    """Returns a thread/process-exclusive ArithmeticRightRecursiveCompiler-singleton."""
     try:
-        compiler = GLOBALS.ArithmeticExperimental_00000001_compiler_singleton
+        compiler = GLOBALS.ArithmeticRightRecursive_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.ArithmeticExperimental_00000001_compiler_singleton = ArithmeticExperimentalCompiler()
-        compiler = GLOBALS.ArithmeticExperimental_00000001_compiler_singleton
+        GLOBALS.ArithmeticRightRecursive_00000001_compiler_singleton = ArithmeticRightRecursiveCompiler()
+        compiler = GLOBALS.ArithmeticRightRecursive_00000001_compiler_singleton
     return compiler
 
 
@@ -231,4 +249,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: ArithmeticExperimentalCompiler.py [FILENAME]")
+        print("Usage: ArithmeticRightRecursiveCompiler.py [FILENAME]")
