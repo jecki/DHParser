@@ -47,3 +47,4 @@ OLDSTUFF
 .pytest_cache
 *.c
 *.pyd
+docs/*

@@ -6,7 +6,8 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = DHParser
 SOURCEDIR     = .
-BUILDDIR      = _build
+BUILDDIR      = ../docs
+PYTHONPATH    = %PYTHONPATH:../
 
 # Put it first so that "make" without argument is like "make help".
 help:

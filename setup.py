@@ -1,5 +1,5 @@
 #from distutils.core import setup
-from setuptools import setup
+from setuptools import setup, find_packages
 try:
     from Cython.Build import cythonize
 except ImportError:
@@ -14,7 +14,8 @@ with open('README.md', encoding='utf-8') as f:
 setup(
     name='DHParser',
     version=__version__,
-    packages=['DHParser'],
+    packages=find_packages(exclude=['build', 'DevScripts', 'dist', 'documentation_src',
+                                    'experimental', 'external_resources']),
     ext_modules=cythonize(['DHParser/stringview.py',
                            'DHParser/toolkit.py',
                            'DHParser/preprocess.py',
@@ -52,7 +53,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'dhparser = dhparser.py'
+            'dhparser=dhparser.main'
         ]
     }
 )

@@ -9,7 +9,7 @@ import platform
 
 if __name__ == "__main__":
     scriptdir = os.path.dirname(os.path.realpath(__file__))
-    rootdir = scriptdir[:scriptdir.find('DHParser') + 8]
+    rootdir = scriptdir[:-8]
 
     if platform.system() != "Windows":
         interpreter = 'python3 '

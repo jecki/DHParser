@@ -59,7 +59,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "3ff2e39f8bfc07d37ea5481d61d026bb"
+    source_hash__ = "5b004b12da92b1fd4f6fc899f435c205"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
