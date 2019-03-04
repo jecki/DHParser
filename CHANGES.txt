@@ -1,6 +1,12 @@
-DHParser Version 0.8.8 (xx.xx.2019)
-...................................
+DHParser Version 0.8.9 (x.x.2019)
+.................................
 
+
+
+DHParser Version 0.8.8 (4.3.2019)
+.................................
+
+- setup: entry-script repaired
 
 
 DHParser Version 0.8.7 (3.3.2019)

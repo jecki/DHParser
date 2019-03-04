@@ -14,8 +14,7 @@ with open('README.md', encoding='utf-8') as f:
 setup(
     name='DHParser',
     version=__version__,
-    packages=find_packages(exclude=['build', 'DevScripts', 'dist', 'documentation_src',
-                                    'experimental', 'external_resources']),
+    packages=['DHParser'],
     ext_modules=cythonize(['DHParser/stringview.py',
                            'DHParser/toolkit.py',
                            'DHParser/preprocess.py',
@@ -51,10 +50,10 @@ setup(
         'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Compilers'
     ],
+    scripts=['dhparser.py'],
     entry_points={
         'console_scripts': [
-            'dhparser=dhparser.main'
+            'dhparser=dhparser:main'
         ]
     }
 )
-
