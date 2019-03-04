@@ -57,6 +57,7 @@ __all__ = ('unit_from_config',
            'reset_unit',
            'runner')
 
+
 UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst'}
 RESULT_STAGES = {'__cst__', '__ast__', '__err__'}
 
@@ -481,8 +482,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         report_dir = "REPORT"
         test_report = get_report(test_unit)
         if test_report:
-            if not os.path.exists(report_dir):
+            try:
                 os.mkdir(report_dir)
+            except FileExistsError:
+                pass
             with open(os.path.join(report_dir, unit_name + '.md'), 'w', encoding='utf8') as f:
                 f.write(test_report)
 
@@ -528,7 +531,6 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                     parameters = filename, parser_factory, transformer_factory, report, verbose
                     results.append((filename, pool.submit(grammar_unit, *parameters)))
-                    # grammar_unit(*parameters)
             for filename, err_future in results:
                 try:
                     errata = err_future.result()
@@ -542,7 +544,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         for filename in sorted(os.listdir('.')):
             if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                 parameters = filename, parser_factory, transformer_factory, report, verbose
-                print(filename)
+                # print(filename)
                 results.append((filename, grammar_unit(*parameters)))
         for filename, errata in results:
             if errata:
