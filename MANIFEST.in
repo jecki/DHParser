@@ -6,6 +6,7 @@ include test/run.py
 recursive-exclude docs *
 recursive-exclude DHParser *.c
 recursive-exclude DHParser *.so
+recursive-exclude DHParser *.pyd
 
 include examples/EBNF/EBNF.ebnf
 include examples/Tutorial/Lyrik.ebnf
@@ -19,8 +20,10 @@ recursive-exclude examples/ArithmeticRightRecursive *
 recursive-exclude examples/BibTeX *
 recursive-exclude examples/XMLSnippet *
 
+recursive-include scripts *
+
 recursive-exclude build *
-recursive-exclude DevScripts *
+recursive-exclude devscripts *
 recursive-exclude dist *
 recursive-exclude experimental *
 recursive-exclude external_resources *

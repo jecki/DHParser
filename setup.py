@@ -50,10 +50,10 @@ setup(
         'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Compilers'
     ],
-    scripts=['dhparser.py'],
+    scripts=['scripts/dhparser.py'],
     entry_points={
         'console_scripts': [
-            'dhparser=dhparser:main'
+            'dhparser=scripts.dhparser:main'
         ]
     }
 )
