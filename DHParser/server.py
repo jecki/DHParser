@@ -36,10 +36,33 @@ of module `server`, i.e. the compilation-modules, to decide.
 
 
 import asyncio
+from typing import Callable, Any
+
+from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER
+from DHParser.toolkit import get_config_value
 
 
 # TODO: implement compilation-server!
 
+SERVER_ERROR = "COMPILER-SERVER-ERROR"
+CompileFunc = Callable[[str, str], Any]     # compiler_src(source: str, log_dir: str) -> Any
+
+
+class CompilerServer:
+    def __init__(self, compiler: CompileFunc):
+        self.compiler = compiler
+        self.max_source_size = get_config_value('max_source_size')
+
+    def handle_compilation_request(self, reader, writer):
+        data = await reader.read(self.max_source_size + 1)
+        if len(data) > self.max_source_size:
+            writer.write(BEGIN_TOKEN + SERVER_ERROR + TOKEN_DELIMITER +
+                         "Source code to large! Only %iMB allowed." %
+                         (self.max_source_size // (1024**2)) + END_TOKEN)
+        else:
+            pass # TODO: to be continued
+        await writer.drain()
+        writer.close()
 
 async def handle_echo(reader, writer):
     # TODO: Add deliver/answer-challenge-mechanism here to verify the source

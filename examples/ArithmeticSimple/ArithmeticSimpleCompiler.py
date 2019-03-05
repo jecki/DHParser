@@ -115,6 +115,7 @@ ArithmeticSimple_AST_transformation_table = {
 def ArithmeticSimpleTransform() -> TransformationFunc:
     return partial(traverse, processing_table=ArithmeticSimple_AST_transformation_table.copy())
 
+
 def get_transformer() -> TransformationFunc:
     try:
         transformer = GLOBALS.ArithmeticSimple_00000001_transformer_singleton
@@ -177,11 +178,12 @@ def compile_src(source, log_dir=''):
     """
     with logging(log_dir):
         compiler = get_compiler()
-        cname = compiler.__class__.__name__
         result_tuple = compile_source(source, get_preprocessor(),
                                       get_grammar(),
                                       get_transformer(), compiler)
     return result_tuple
+
+
 
 
 if __name__ == "__main__":

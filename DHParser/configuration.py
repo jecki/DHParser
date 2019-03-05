@@ -125,6 +125,17 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 
 ########################################################################
 #
+# compiler server configuration
+#
+########################################################################
+
+# Maximum allowed source code size in bytes
+# Default value: 16 MB
+CONFIG_PRESET['max_source_size'] = 16 * 1024 * 1024
+
+
+########################################################################
+#
 # testing framework configuration
 #
 ########################################################################
