@@ -53,44 +53,26 @@ class CompilerServer:
         self.compiler = compiler
         self.max_source_size = get_config_value('max_source_size')
 
-    def handle_compilation_request(self, reader, writer):
+    async def handle_compilation_request(self,
+                                   reader: asyncio.StreamReader,
+                                   writer: asyncio.StreamWriter):
         data = await reader.read(self.max_source_size + 1)
         if len(data) > self.max_source_size:
             writer.write(BEGIN_TOKEN + SERVER_ERROR + TOKEN_DELIMITER +
                          "Source code to large! Only %iMB allowed." %
                          (self.max_source_size // (1024**2)) + END_TOKEN)
         else:
-            pass # TODO: to be continued
+            writer.write(data)   # for now, only echo
         await writer.drain()
         writer.close()
 
-async def handle_echo(reader, writer):
-    # TODO: Add deliver/answer-challenge-mechanism here to verify the source
-    #       see file:///usr/share/doc/python/html/library/multiprocessing.html?highlight=connection#module-multiprocessing.connection
-    data = await reader.read(100)
-    message = data.decode()
-    addr = writer.get_extra_info('peername')
+    async def _compiler_server(self, address: str, port: int):
+        server = await syncio.start_server(self.handle_compilation_request, address, port)
+        async with server:
+            await server.serve_forever
 
-    print(f"Received {message!r} from {addr!r}")
-
-    await asyncio.sleep(5)
-
-    print(f"Send: {message!r}")
-    writer.write(data)
-    await writer.drain()
-
-    print("Close the connection")
-    writer.close()
+    def serve(self, address: str='127.0.0.1', port: int=8888):
+        # TODO: Replace this by a python 3.5. compatible construct...
+        asyncio.run(self._compiler_server())
 
 
-async def main():
-    server = await asyncio.start_server(
-        handle_echo, '127.0.0.1', 8888)
-
-    addr = server.sockets[0].getsockname()
-    print(f'Serving on {addr}')
-
-    async with server:
-        await server.serve_forever()
-
-asyncio.run(main())
