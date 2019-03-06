@@ -41,6 +41,8 @@ class TestServer:
         cs = CompilerServer(compiler_dummy)
         p = Process(target=cs.run_server)
         p.start()
+        cs.wait_until_server_online()
+
         async def compile(src, log_dir):
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(src.encode())
