@@ -34,7 +34,6 @@ of module `server`, i.e. the compilation-modules, to decide.
 """
 
 
-
 import asyncio
 from typing import Callable, Any
 
@@ -66,13 +65,10 @@ class CompilerServer:
         await writer.drain()
         writer.close()
 
-    async def _compiler_server(self, address: str, port: int):
-        server = await syncio.start_server(self.handle_compilation_request, address, port)
+    async def serve(self, address: str='127.0.0.1', port: int=8888):
+        server = await asyncio.start_server(self.handle_compilation_request, address, port)
         async with server:
-            await server.serve_forever
+            await server.serve_forever()
 
-    def serve(self, address: str='127.0.0.1', port: int=8888):
-        # TODO: Replace this by a python 3.5. compatible construct...
-        asyncio.run(self._compiler_server())
-
-
+    def run_server(self, address: str='127.0.0.1', port: int=8888):
+        asyncio.run(self.serve(address, port))
