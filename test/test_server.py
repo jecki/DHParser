@@ -42,8 +42,7 @@ class TestServer:
         p = Process(target=cs.run_server)
         p.start()
         async def compile(src, log_dir):
-            reader, writer = await asyncio.open_connection(
-                '127.0.0.1', 8888)
+            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(src.encode())
             data = await reader.read(100)
             print(f'Received: {data.decode()!r}')

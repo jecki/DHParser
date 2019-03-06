@@ -103,7 +103,7 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, ast = compile_src(file_name, log_dir)
+        result, errors, _ = compile_src(file_name, log_dir)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
@@ -115,6 +115,7 @@ if __name__ == "__main__":
     else:
         print("Usage: {NAME}Compiler.py [FILENAME]")
 '''
+# TODO: Add support for spawning a compilation server via supprocess.Popen() to DHParser main
 
 
 class DSLException(Exception):
