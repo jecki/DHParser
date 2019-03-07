@@ -57,7 +57,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "ce7ad2f909c81bc5eb6aeee0c38874c0"
+    source_hash__ = "8ec9110209a992e0cf91b283b220fa83"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -154,7 +154,7 @@ class LaTeXGrammar(Grammar):
     root__ = latexdoc
     
 def get_grammar() -> LaTeXGrammar:
-    """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
+    global GLOBALS
     try:
         grammar = GLOBALS.LaTeX_00000001_grammar_singleton
     except AttributeError:

@@ -38,7 +38,6 @@ import asyncio
 from multiprocessing import Process, Value, Queue
 from typing import Callable, Optional, Any
 
-from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER
 from DHParser.toolkit import get_config_value
 
 
@@ -60,6 +59,7 @@ class CompilerServer:
         self.compiler = compiler
         self.max_source_size = get_config_value('max_source_size')
         self.stage = Value('b', SERVER_OFFLINE)
+        self.server = None  # type: Optional[asyncio.base_events.Server]
         self.server_messages = Queue()  # type: Queue
         self.server_process = None  # type: Optional[Process]
 
@@ -75,13 +75,18 @@ class CompilerServer:
             writer.write(data)   # for now, only echo
         await writer.drain()
         writer.close()
+        # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine
+        #  gracefully.
+        # self.server.cancel()
 
     async def serve(self, address: str = '127.0.0.1', port: int = 8888):
-        server = await asyncio.start_server(self.handle_compilation_request, address, port)
-        async with server:
+        self.server = await asyncio.start_server(self.handle_compilation_request, address, port)
+        print(type(self.server))
+        async with self.server:
             self.stage.value = SERVER_ONLINE
             self.server_messages.put(SERVER_ONLINE)
-            await server.serve_forever()
+            await self.server.serve_forever()
+        # self.server.wait_until_closed()
 
     def run_server(self, address: str = '127.0.0.1', port: int = 8888):
         self.stage.value = SERVER_STARTING
@@ -101,7 +106,7 @@ class CompilerServer:
     def terminate_server_process(self):
         self.server_process.terminate()
 
-    def wait_for_termination(self):
+    def wait_for_termination_request(self):
         assert self.server_process
         # self.wait_until_server_online()
         while self.server_messages.get() != SERVER_TERMINATE:

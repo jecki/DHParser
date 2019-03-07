@@ -49,6 +49,7 @@ class TestServer:
             data = await reader.read(100)
             print(f'Received: {data.decode()!r}')
             writer.close()
+
         asyncio.run(compile('Test', ''))
         cs.terminate_server_process()
 

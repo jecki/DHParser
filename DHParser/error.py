@@ -59,7 +59,7 @@ class ErrorCode(int):
 
 
 class Error:
-    __slots__ = ['message', 'level', 'code', '_pos', 'orig_pos', 'line', 'column', '_node_keep']
+    __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column']
 
     # error levels
 
@@ -132,6 +132,22 @@ class Error:
         start = document.rfind('\n', 0, self.pos) + 1
         stop = document.find('\n', self.pos)
         return document[start:stop] + '\n' + ' ' * (self.pos - start) + '^\n'
+
+    def to_json_obj(self) -> Dict:
+        """Serialize Error object as json-object."""
+        return { '__class__': 'DHParser.Error',
+                 'data': [self.message, self._pos, self.code, self.orig_pos,
+                          self.line, self.column] }
+
+    @static
+    def from_json_obj(self, json_obj: Dict) -> Error:
+        """Convert a json object representing an Error object back into an
+        Error object. Raises a ValueError, if json_obj does not represent
+        an error object"""
+        if json_obj.get('__class__', '') != 'DHParser.Error':
+            raise ValueError('JSON object: ' + str(json_obj) +
+                             ' does not represent an Error object.')
+        return Error(*json_obj['data'])
 
 
 def is_warning(code: int) -> bool:

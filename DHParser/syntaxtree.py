@@ -170,7 +170,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_len', '_pos', 'tag_name', '_xml_attr'
+    __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -182,9 +182,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
-            # self._content = None        # type: Optional[str]
             self.children = NoChildren  # type: ChildrenType
-            self._len = -1              # type: int  # lazy evaluation
         else:
             self.result = result
         self.tag_name = tag_name        # type: str
@@ -195,7 +193,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             duplicate = self.__class__(self.tag_name, self.result, True)
         duplicate._pos = self._pos
-        duplicate._len = self._len
         if self.attr_active():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
@@ -223,26 +220,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def __len__(self):
-        if self._len < 0:
-            self._len = sum(len(child) for child in self.children) \
-                if self.children else len(self._result)
-        return self._len
+        return (sum(len(child) for child in self.children)
+                if self.children else len(self._result))
 
 
     def __bool__(self):
-        # A node that is not None is always True, even if it's empty
+        """Returns the bool value of a node, which is always True. The reason
+        for this is that a boolean test on a variable that can contain a node
+        or None will only yield `False` in case of None.
+        """
         return True
-
-
-    # can lead to obscure mistakes, where default object comparison behaviour is expected
-    # def __eq__(self, other):
-    #     """
-    #     Equality of nodes: Two nodes are considered as equal, if their tag
-    #     name is the same, if their results are equal and if their attributes
-    #     and attribute values are the same.
-    #     """
-    #     return self.tag_name == other.tag_name and self.result == other.result \
-    #         and self.compare_attr(other)
 
 
     def __hash__(self):
@@ -761,6 +748,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return sum(child.tree_size() for child in self.children) + 1
 
 
+    def to_json_obj(self) -> Dict:
+        return { '__class__': 'DHParser.Nose',
+                 'content': [ self.tag_name,
+                              [child.to_json_obj() for child in self.children] if self.children
+                              else self.result_,
+                              self._pos,
+                              self._xmlattr if self.attr_active() else None ] }
+
+
+    @static
+    def from_json_obj(self, json_obj: Dict) -> Error:
+        pass
+
+
 def serialize(node: Node, how: str='default') -> str:
     """
     Serializes the tree starting with `node` either as S-expression, XML
@@ -899,7 +900,6 @@ class RootNode(Node):
             duplicate.children = NoChildren
             duplicate._result = self._result
         duplicate._pos = self._pos
-        duplicate._len = self._len
         if self.attr_active():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
