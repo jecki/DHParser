@@ -26,9 +26,10 @@ from multiprocessing import Process
 import sys
 from typing import Tuple
 
+sys.path.extend(['../', './'])
+
 from DHParser.server import CompilerServer
 
-sys.path.extend(['../', './'])
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
@@ -36,12 +37,11 @@ scriptdir = os.path.dirname(os.path.realpath(__file__))
 def compiler_dummy(src: str, log_dir: str) -> Tuple[str, str]:
     return (src, log_dir)
 
+
 class TestServer:
     def test_server(self):
         cs = CompilerServer(compiler_dummy)
-        p = Process(target=cs.run_server)
-        p.start()
-        cs.wait_until_server_online()
+        cs.run_as_process()
 
         async def compile(src, log_dir):
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
@@ -50,7 +50,7 @@ class TestServer:
             print(f'Received: {data.decode()!r}')
             writer.close()
         asyncio.run(compile('Test', ''))
-        p.terminate()
+        cs.terminate_server_process()
 
 
 
