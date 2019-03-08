@@ -749,17 +749,34 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def to_json_obj(self) -> Dict:
-        return { '__class__': 'DHParser.Nose',
-                 'content': [ self.tag_name,
-                              [child.to_json_obj() for child in self.children] if self.children
-                              else self.result_,
-                              self._pos,
-                              self._xmlattr if self.attr_active() else None ] }
+        """Seralize a node or tree as json-object"""
+        return { '__class__': 'DHParser.Node',
+                 'data': [ self.tag_name,
+                           [child.to_json_obj() for child in self.children] if self.children
+                           else str(self.result_),
+                           self._pos,
+                           self._xmlattr if self.attr_active() else None ] }
 
 
     @static
     def from_json_obj(self, json_obj: Dict) -> Error:
-        pass
+        """Convert a json object representing a node (or tree) back into a
+        Node object. Raises a ValueError, if `json_obj` does not represent
+        a node."""
+        if json_obj.get('__class__', '') != 'DHParser.Node':
+            raise ValueError('JSON object: ' + str(json_obj) +
+                             ' does not represent a Node object.')
+        tag_name, result, pos, attr = json_obj['data']
+        if isinstance(str):
+            leafhint = True
+        else:
+            leafhint = False
+            result = tuple(Node.from_json_obj(child) for child in result)
+        node = Node(tag_name, result, leafhint)
+        node._pos = pos
+        if attr:
+            node.attr = attr
+        return node
 
 
 def serialize(node: Node, how: str='default') -> str:

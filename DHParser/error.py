@@ -143,7 +143,7 @@ class Error:
     def from_json_obj(self, json_obj: Dict) -> Error:
         """Convert a json object representing an Error object back into an
         Error object. Raises a ValueError, if json_obj does not represent
-        an error object"""
+        an Error object"""
         if json_obj.get('__class__', '') != 'DHParser.Error':
             raise ValueError('JSON object: ' + str(json_obj) +
                              ' does not represent an Error object.')
