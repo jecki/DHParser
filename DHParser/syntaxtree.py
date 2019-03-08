@@ -338,7 +338,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 or isinstance(result, StringView)), "%s (%s)" % (str(result), str(type(result)))
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
-        self._len = -1        # lazy evaluation
         # self._content = None
         if isinstance(result, Node):
             self.children = (result,)
@@ -470,6 +469,98 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # other has empty attribute dictionary and self as no attributes
         return True  # neither self nor other have any attributes
 
+
+    def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
+            -> Iterator['Node']:
+        """
+        Finds nodes in the tree that fulfill a given criterion.
+
+        `select` is a generator that yields all nodes for which the
+        given `match_function` evaluates to True. The tree is
+        traversed pre-order.
+
+        See function `Node.select_by_tag` for some examples.
+
+        Args:
+            match_function (function): A function  that takes as Node
+                object as argument and returns True or False
+            include_root (bool): If False, only descendant nodes will be
+                checked for a match.
+            reverse (bool): If True, the tree will be walked in reverse
+                order, i.e. last children first.
+        Yields:
+            Node: All nodes of the tree for which
+            ``match_function(node)`` returns True
+        """
+        if include_root and match_function(self):
+            yield self
+        child_iterator = reversed(self.children) if reverse else self.children
+        for child in child_iterator:
+            if match_function(child):
+                yield child
+            yield from child.select(match_function, False, reverse)
+        # The above variant is slightly faster
+        # for child in child_iterator:
+        #     yield from child.select(match_function, True, reverse)
+
+
+    def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
+                      include_root: bool = False) -> Iterator['Node']:
+        """
+        Returns an iterator that runs through all descendants that have one
+        of the given tag names.
+
+        Examples::
+
+            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag("X", False))
+            ['(X (c "d"))', '(X "F")']
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag({"X", "b"}, False))
+            ['(b "X")', '(X (c "d"))', '(X "F")']
+            >>> any(tree.select_by_tag('a', False))
+            False
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag('a', True))
+            ['(a (b "X") (X (c "d")) (e (X "F")))']
+            >>> flatten_sxpr(next(tree.select_by_tag("X", False)).as_sxpr())
+            '(X (c "d"))'
+
+        Args:
+            tag_name(set): A tag name or set of tag names that is being
+                searched for
+            include_root (bool): If False, only descendant nodes will be
+                checked for a match.
+        Yields:
+            Node: All nodes which have a given tag name.
+        """
+        if isinstance(tag_names, str):
+            tag_names = frozenset({tag_names})
+        return self.select(lambda node: node.tag_name in tag_names, include_root)
+
+
+    def pick(self, tag_names: Union[str, Set[str]]) -> Optional['Node']:
+        """
+        Picks the first descendant with one of the given tag_names.
+
+        This function is mostly just syntactic sugar for
+        ``next(node.select_by_tag(tag_names, False))``. However, rather than
+        raising a StopIterationError if no descendant with the given tag-name
+        exists, it returns None.
+        """
+        try:
+            return next(self.select_by_tag(tag_names, False))
+        except StopIteration:
+            return None
+
+
+    def tree_size(self) -> int:
+        """
+        Recursively counts the number of nodes in the tree including the root node.
+        """
+        return sum(child.tree_size() for child in self.children) + 1
+
+    #
+    # serialization methods
+    #
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False) -> str:
@@ -659,107 +750,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                density=1, inline_fn=inlining)
 
 
-    def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
-            -> Iterator['Node']:
-        """
-        Finds nodes in the tree that fulfill a given criterion.
-
-        `select` is a generator that yields all nodes for which the
-        given `match_function` evaluates to True. The tree is
-        traversed pre-order.
-
-        See function `Node.select_by_tag` for some examples.
-
-        Args:
-            match_function (function): A function  that takes as Node
-                object as argument and returns True or False
-            include_root (bool): If False, only descendant nodes will be
-                checked for a match.
-            reverse (bool): If True, the tree will be walked in reverse
-                order, i.e. last children first.
-        Yields:
-            Node: All nodes of the tree for which
-            ``match_function(node)`` returns True
-        """
-        if include_root and match_function(self):
-            yield self
-        child_iterator = reversed(self.children) if reverse else self.children
-        for child in child_iterator:
-            if match_function(child):
-                yield child
-            yield from child.select(match_function, False, reverse)
-        # The above variant is slightly faster
-        # for child in child_iterator:
-        #     yield from child.select(match_function, True, reverse)
-
-
-    def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
-                      include_root: bool = False) -> Iterator['Node']:
-        """
-        Returns an iterator that runs through all descendants that have one
-        of the given tag names.
-
-        Examples::
-
-            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag("X", False))
-            ['(X (c "d"))', '(X "F")']
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag({"X", "b"}, False))
-            ['(b "X")', '(X (c "d"))', '(X "F")']
-            >>> any(tree.select_by_tag('a', False))
-            False
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag('a', True))
-            ['(a (b "X") (X (c "d")) (e (X "F")))']
-            >>> flatten_sxpr(next(tree.select_by_tag("X", False)).as_sxpr())
-            '(X (c "d"))'
-
-        Args:
-            tag_name(set): A tag name or set of tag names that is being
-                searched for
-            include_root (bool): If False, only descendant nodes will be
-                checked for a match.
-        Yields:
-            Node: All nodes which have a given tag name.
-        """
-        if isinstance(tag_names, str):
-            tag_names = frozenset({tag_names})
-        return self.select(lambda node: node.tag_name in tag_names, include_root)
-
-
-    def pick(self, tag_names: Union[str, Set[str]]) -> Optional['Node']:
-        """
-        Picks the first descendant with one of the given tag_names.
-
-        This function is mostly just syntactic sugar for
-        ``next(node.select_by_tag(tag_names, False))``. However, rather than
-        raising a StopIterationError if no descendant with the given tag-name
-        exists, it returns None.
-        """
-        try:
-            return next(self.select_by_tag(tag_names, False))
-        except StopIteration:
-            return None
-
-
-    def tree_size(self) -> int:
-        """
-        Recursively counts the number of nodes in the tree including the root node.
-        """
-        return sum(child.tree_size() for child in self.children) + 1
-
-
     def to_json_obj(self) -> Dict:
         """Seralize a node or tree as json-object"""
         return { '__class__': 'DHParser.Node',
                  'data': [ self.tag_name,
                            [child.to_json_obj() for child in self.children] if self.children
-                           else str(self.result_),
+                           else str(self._result),
                            self._pos,
-                           self._xmlattr if self.attr_active() else None ] }
+                           dict(self._xml_attr) if self.attr_active() else None ] }
 
 
-    @static
-    def from_json_obj(self, json_obj: Dict) -> Error:
+    @staticmethod
+    def from_json_obj(json_obj: Dict) -> 'Node':
         """Convert a json object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
@@ -767,7 +769,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             raise ValueError('JSON object: ' + str(json_obj) +
                              ' does not represent a Node object.')
         tag_name, result, pos, attr = json_obj['data']
-        if isinstance(str):
+        if isinstance(result, str):
             leafhint = True
         else:
             leafhint = False
@@ -775,7 +777,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         node = Node(tag_name, result, leafhint)
         node._pos = pos
         if attr:
-            node.attr = attr
+            node.attr.update(attr)
         return node
 
 

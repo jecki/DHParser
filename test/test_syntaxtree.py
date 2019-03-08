@@ -71,6 +71,17 @@ class TestParseXML:
         assert flat_xml == '<alpha><beta>gamma</beta></alpha>', flat_xml
 
 
+class TestParseJSON:
+    def test_roundtrip(self):
+        tree = parse_sxpr('(a (b c) (d (e f) (h i)))')
+        d = tree.pick('d')
+        d.attr['name'] = "James Bond"
+        d.attr['id'] = '007'
+        json_obj_tree = tree.to_json_obj()
+        tree_copy = Node.from_json_obj(json_obj_tree)
+        assert tree_copy.equals(tree)
+
+
 class TestNode:
     """
     Tests for class Node 

@@ -41,7 +41,7 @@ import bisect
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
 from DHParser.toolkit import typing
-from typing import Iterable, Iterator, Union, Tuple, List
+from typing import Iterable, Iterator, Union, Dict, Tuple, List
 
 __all__ = ('ErrorCode',
            'Error',
@@ -139,8 +139,8 @@ class Error:
                  'data': [self.message, self._pos, self.code, self.orig_pos,
                           self.line, self.column] }
 
-    @static
-    def from_json_obj(self, json_obj: Dict) -> Error:
+    @staticmethod
+    def from_json_obj(json_obj: Dict) -> 'Error':
         """Convert a json object representing an Error object back into an
         Error object. Raises a ValueError, if json_obj does not represent
         an Error object"""
