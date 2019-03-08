@@ -20,6 +20,7 @@ limitations under the License.
 """
 
 import copy
+import json
 import sys
 sys.path.extend(['../', './'])
 
@@ -72,14 +73,23 @@ class TestParseXML:
 
 
 class TestParseJSON:
-    def test_roundtrip(self):
-        tree = parse_sxpr('(a (b c) (d (e f) (h i)))')
-        d = tree.pick('d')
+    def setup(self):
+        self.tree = parse_sxpr('(a (b ä) (d (e ö) (h ü)))')
+        d = self.tree.pick('d')
         d.attr['name'] = "James Bond"
         d.attr['id'] = '007'
-        json_obj_tree = tree.to_json_obj()
+
+    def test_json_obj_roundtrip(self):
+        json_obj_tree = self.tree.to_json_obj()
         tree_copy = Node.from_json_obj(json_obj_tree)
-        assert tree_copy.equals(tree)
+        assert tree_copy.equals(self.tree)
+
+    def test_json_rountrip(self):
+        s = self.tree.as_json(indent=None, ensure_ascii=True)
+        tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree)
+        s = self.tree.as_json(indent=2, ensure_ascii=False)
+        tree_copy = Node.from_json_obj(json.loads(s))
 
 
 class TestNode:

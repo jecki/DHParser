@@ -25,6 +25,7 @@ parser classes are defined in the ``parse`` module.
 
 from collections import OrderedDict
 import copy
+import json
 from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional, Dict
 
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
@@ -752,12 +753,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def to_json_obj(self) -> Dict:
         """Seralize a node or tree as json-object"""
-        return { '__class__': 'DHParser.Node',
-                 'data': [ self.tag_name,
-                           [child.to_json_obj() for child in self.children] if self.children
-                           else str(self._result),
-                           self._pos,
-                           dict(self._xml_attr) if self.attr_active() else None ] }
+        data = [ self.tag_name,
+                [child.to_json_obj() for child in self.children] if self.children
+                else str(self._result)]
+        has_attr = self.attr_active()
+        if self._pos >= 0 or has_attr:
+            data.append(self._pos)
+        if has_attr:
+            data.append(dict(self._xml_attr))
+        return { '__class__': 'DHParser.Node', 'data': data }
 
 
     @staticmethod
@@ -768,7 +772,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if json_obj.get('__class__', '') != 'DHParser.Node':
             raise ValueError('JSON object: ' + str(json_obj) +
                              ' does not represent a Node object.')
-        tag_name, result, pos, attr = json_obj['data']
+        tag_name, result, pos, attr = (json_obj['data'] + [-1, None])[:4]
         if isinstance(result, str):
             leafhint = True
         else:
@@ -780,12 +784,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             node.attr.update(attr)
         return node
 
+    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
+        return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
+                          separators=(', ', ': ') if indent is not None else (',', ':'))
+
 
 def serialize(node: Node, how: str='default') -> str:
     """
-    Serializes the tree starting with `node` either as S-expression, XML
+    Serializes the tree starting with `node` either as S-expression, XML, JSON,
     or in compact form. Possible values for `how` are 'S-expression',
-    'XML', 'compact' accordingly, or 'AST', 'CST', 'default' in which case
+    'XML', 'JSON', 'compact' accordingly, or 'AST', 'CST', 'default' in which case
     the value of respective configuration variable determines the
     serialization format. (See module `configuration.py`.)
     """
@@ -802,6 +810,8 @@ def serialize(node: Node, how: str='default') -> str:
         return node.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
     elif switch == 'xml':
         return node.as_xml()
+    elif switch == 'json':
+        return node.as_json()
     elif switch == 'compact':
         return node.as_sxpr(compact=True)
     else:
@@ -947,7 +957,6 @@ class RootNode(Node):
         """
         self._result = node._result
         self.children = node.children
-        self._len = node._len
         self._pos = node._pos
         self.tag_name = node.tag_name
         if node.attr_active():

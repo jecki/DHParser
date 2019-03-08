@@ -31,21 +31,23 @@ compilation in serialized form, or just save the compilation results on the
 file system an merely return an success or failure message. Module `server`
 does not define any of these message. This is completely up to the clients
 of module `server`, i.e. the compilation-modules, to decide.
+
+The communication, i.e. requests and responses, follows the json-rpc protocol
+(https://www.jsonrpc.org/specification)
 """
 
 
 import asyncio
+import json
 from multiprocessing import Process, Value, Queue
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Union, Dict, List, Sequence, cast
 
 from DHParser.toolkit import get_config_value
 
-
-# TODO: implement compilation-server!
+RPC_Table = Dict[str, Callable]
+RPC_Type = Union[RPC_Table, List[Callable], Callable]
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
-CompileFunc = Callable[[str, str], Any]     # compiler_src(source: str, log_dir: str) -> Any
-
 
 SERVER_OFFLINE = 0
 SERVER_STARTING = 1
@@ -53,11 +55,20 @@ SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
 
 
+class Server:
+    def __init__(self, rpc_functions: RPC_Type):
+        if isinstance(rpc_functions, Dict):
+            self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
+        elif isinstance(rpc_functions, List):
+            self.rpc_table = {}
+            for func in cast(List, rpc_functions):
+                self.rpc_table[func.__name__] = func
+        else:
+            assert isinstance(rpc_functions, Callable)
+            func = cast(Callable, rpc_functions)
+            self.rpc_table = { func.__name__: func }
 
-class CompilerServer:
-    def __init__(self, compiler: CompileFunc):
-        self.compiler = compiler
-        self.max_source_size = get_config_value('max_source_size')
+        self.max_source_size = get_config_value('max_rpc_size')
         self.stage = Value('b', SERVER_OFFLINE)
         self.server = None  # type: Optional[asyncio.base_events.Server]
         self.server_messages = Queue()  # type: Queue
@@ -68,11 +79,39 @@ class CompilerServer:
                                          writer: asyncio.StreamWriter):
         data = await reader.read(self.max_source_size + 1)
         if len(data) > self.max_source_size:
-            writer.write(BEGIN_TOKEN + SERVER_ERROR + TOKEN_DELIMITER +
-                         "Source code to large! Only %iMB allowed." %
-                         (self.max_source_size // (1024**2)) + END_TOKEN)
+            writer.write('{"jsonrpc": "2.0", "error": {"code": -32600, "message": '
+                         '"Invaild Request: Source code too large! Only %i MB allowed"}, '
+                         '"id": null}' % (self.max_source_size // (1024**2)))
         else:
-            writer.write(data)   # for now, only echo
+            obj = json.loads(data)
+            rpc_error = None
+            json_id = obj.get('id', 'null') if isinstance(obj, Dict) else 'null'
+            if not isinstance(obj, Dict):
+                rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
+            elif obj.get('jsonrpc', 'unknown') != '2.0':
+                rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "%s" ' \
+                            'found.' % obj.get('jsonrpc', 'unknown')
+            elif not 'method' in obj:
+                rpc_error = -32600, 'Invalid Request: No method specified.'
+            elif obj['method'] not in self.rpc_table:
+                rpc_error = -32601, 'Method not found: ' + str(obj['method'])
+            else:
+                method = self.rpc_table[obj['method']]
+                params = obj['params'] if 'params' in obj else ()
+                try:
+                    if isinstance(params, Sequence):
+                        result = method(*params)
+                    elif isinstance(params, Dict):
+                        result = method(**params)
+                except Exception as e:
+                    rpc_error = -32602, "Invalid Params: " + str(e)
+
+            if rpc_error is None:
+                json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+                json.dump(writer, json_result)
+            else:
+                writer.write(b'{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}, "id": %s '
+                             % (rpc_error[0], rpc_error[1], json_id))
         await writer.drain()
         writer.close()
         # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine

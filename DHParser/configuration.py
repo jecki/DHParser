@@ -129,9 +129,11 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 #
 ########################################################################
 
-# Maximum allowed source code size in bytes
-# Default value: 16 MB
-CONFIG_PRESET['max_source_size'] = 16 * 1024 * 1024
+# Maximum allowed source size for reomote procedure calls (including
+# parameters) in server.Server. The default value is rather large in
+# order to allow transmitting complete source texts as parameter.
+# Default value: 4 MB
+CONFIG_PRESET['max_rpc_size'] = 4 * 1024 * 1024
 
 
 ########################################################################
