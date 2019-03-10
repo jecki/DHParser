@@ -753,9 +753,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def to_json_obj(self) -> Dict:
         """Seralize a node or tree as json-object"""
-        data = [ self.tag_name,
-                [child.to_json_obj() for child in self.children] if self.children
-                else str(self._result)]
+        data = [self.tag_name,
+                [child.to_json_obj() for child in self.children]
+                if self.children else str(self._result)]
         has_attr = self.attr_active()
         if self._pos >= 0 or has_attr:
             data.append(self._pos)

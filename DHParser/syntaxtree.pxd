@@ -25,6 +25,7 @@ cdef class Node:
     # cpdef select_by_tag(self, tag_names, include_root)
     cpdef pick(self, tag_names)
     # cpdef tree_size(self)
+    cpdef to_json_obj(self)
 
 
 cdef class FrozenNode(Node):

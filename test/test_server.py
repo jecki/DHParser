@@ -28,7 +28,7 @@ from typing import Tuple
 
 sys.path.extend(['../', './'])
 
-from DHParser.server import CompilerServer
+from DHParser.server import Server
 
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -40,13 +40,13 @@ def compiler_dummy(src: str, log_dir: str) -> Tuple[str, str]:
 
 class TestServer:
     def test_server(self):
-        cs = CompilerServer(compiler_dummy)
+        cs = Server(compiler_dummy)
         cs.run_as_process()
 
         async def compile(src, log_dir):
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(src.encode())
-            data = await reader.read(100)
+            data = await reader.read(500)
             print(f'Received: {data.decode()!r}')
             writer.close()
 

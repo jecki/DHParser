@@ -78,19 +78,29 @@ class Server:
                                          reader: asyncio.StreamReader,
                                          writer: asyncio.StreamWriter):
         data = await reader.read(self.max_source_size + 1)
+        rpc_error = None
+        json_id = 'null'
+
         if len(data) > self.max_source_size:
-            writer.write('{"jsonrpc": "2.0", "error": {"code": -32600, "message": '
-                         '"Invaild Request: Source code too large! Only %i MB allowed"}, '
-                         '"id": null}' % (self.max_source_size // (1024**2)))
-        else:
-            obj = json.loads(data)
-            rpc_error = None
-            json_id = obj.get('id', 'null') if isinstance(obj, Dict) else 'null'
-            if not isinstance(obj, Dict):
+            rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
+                                % (self.max_source_size // (1024**2))
+
+        if rpc_error is None:
+            try:
+                obj = json.loads(data)
+            except json.decoder.JSONDecodeError as e:
+                rpc_error = -32700, "JSONDecodeError: " + str(e)
+
+        if rpc_error is None:
+            if isinstance(obj, Dict):
+                json_id = obj.get('id', 'null') if isinstance(obj, Dict) else 'null'
+            else:
                 rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
-            elif obj.get('jsonrpc', 'unknown') != '2.0':
-                rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "%s" ' \
-                            'found.' % obj.get('jsonrpc', 'unknown')
+
+        if rpc_error is None:
+            if obj.get('jsonrpc', 'unknown') != '2.0':
+                rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
+                            ' "%s" found.' % obj.get('jsonrpc', b'unknown')
             elif not 'method' in obj:
                 rpc_error = -32600, 'Invalid Request: No method specified.'
             elif obj['method'] not in self.rpc_table:
@@ -106,12 +116,12 @@ class Server:
                 except Exception as e:
                     rpc_error = -32602, "Invalid Params: " + str(e)
 
-            if rpc_error is None:
-                json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                json.dump(writer, json_result)
-            else:
-                writer.write(b'{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}, "id": %s '
-                             % (rpc_error[0], rpc_error[1], json_id))
+        if rpc_error is None:
+            json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+            json.dump(writer, json_result)
+        else:
+            writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s '
+                          % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
         writer.close()
         # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine
@@ -120,7 +130,6 @@ class Server:
 
     async def serve(self, address: str = '127.0.0.1', port: int = 8888):
         self.server = await asyncio.start_server(self.handle_compilation_request, address, port)
-        print(type(self.server))
         async with self.server:
             self.stage.value = SERVER_ONLINE
             self.server_messages.put(SERVER_ONLINE)
