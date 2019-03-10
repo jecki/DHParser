@@ -32,8 +32,13 @@ file system an merely return an success or failure message. Module `server`
 does not define any of these message. This is completely up to the clients
 of module `server`, i.e. the compilation-modules, to decide.
 
-The communication, i.e. requests and responses, follows the json-rpc protocol
-(https://www.jsonrpc.org/specification)
+The communication, i.e. requests and responses, follows the json-rpc protocol:
+
+    https://www.jsonrpc.org/specification
+
+For JSON see:
+
+    https://json.org/
 """
 
 
@@ -42,7 +47,7 @@ import json
 from multiprocessing import Process, Value, Queue
 from typing import Callable, Optional, Union, Dict, List, Sequence, cast
 
-from DHParser.toolkit import get_config_value
+from DHParser.toolkit import get_config_value, re
 
 RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
@@ -53,6 +58,9 @@ SERVER_OFFLINE = 0
 SERVER_STARTING = 1
 SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
+
+
+RX_MAYBE_JSON = re.compile('\s*(?:\{|\[|"|\d|true|false|null)')
 
 
 class Server:
@@ -70,7 +78,7 @@ class Server:
 
         self.max_source_size = get_config_value('max_rpc_size')
         self.stage = Value('b', SERVER_OFFLINE)
-        self.server = None  # type: Optional[asyncio.base_events.Server]
+        self.server = None
         self.server_messages = Queue()  # type: Queue
         self.server_process = None  # type: Optional[Process]
 

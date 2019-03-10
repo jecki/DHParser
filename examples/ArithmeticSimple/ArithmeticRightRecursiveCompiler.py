@@ -151,6 +151,7 @@ class ArithmeticRightRecursiveCompiler(Compiler):
     def _reset(self):
         super()._reset()
         # initialize your variables here, not in the constructor!
+
     def on_expression(self, node):
         return self.fallback_compiler(node)
 

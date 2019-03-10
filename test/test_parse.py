@@ -42,6 +42,7 @@ class TestParserError:
         pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
+
 class TestParserClass:
     def test_apply(self):
         minilang ="""
@@ -66,7 +67,7 @@ class TestParserClass:
 
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion1(self):
-        minilang ="""
+        minilang = """
             expr = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
@@ -176,6 +177,7 @@ class TestInfiLoopsAndRecursion:
     #     assert not res
     #     set_config_value('static_analysis', save)
 
+
 class TestFlowControl:
     def setup(self):
         self.t1 = """
@@ -237,8 +239,8 @@ class TestRegex:
 
     def test_multilineRegex_wo_Comments(self):
         mlregex = r"""
-        regex =  /\w+ 
-                  [+]  
+        regex =  /\w+
+                  [+]
                   \w* /
         """
         result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
@@ -293,8 +295,9 @@ class TestRegex:
             test
             \end{document}
             """
-        result, messages, syntax_tree = compile_source(tokenlang, None, get_ebnf_grammar(),
-                                    get_ebnf_transformer(), get_ebnf_compiler("TokenTest"))
+        result, messages, syntax_tree = compile_source(
+            tokenlang, None, get_ebnf_grammar(), get_ebnf_transformer(),
+            get_ebnf_compiler("TokenTest"))
         assert result
         assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
@@ -635,7 +638,7 @@ class TestWhitespaceHandling:
 class TestErrorReporting:
     grammar = """
         root      = series alpha | anything
-        series    = subseries &alpha 
+        series    = subseries &alpha
         subseries = alpha §beta
         alpha     = /[a-z]+/
         beta      = /[A-Z]+/
@@ -805,12 +808,12 @@ class TestEarlyTokenWhitespaceDrop:
             @ drop = token, whitespace
             expression = term  { ("+" | "-") term}
             term       = factor  { ("*"|"/") factor}
-            factor     = number | variable | "("  expression  ")" 
+            factor     = number | variable | "("  expression  ")"
                        | constant | fixed
             variable   = /[a-z]/~
             number     = /\d+/~
             constant   = "A" | "B"
-            fixed      = "X"   
+            fixed      = "X"
             """
         self.gr = grammar_provider(self.lang)()
 
@@ -891,13 +894,14 @@ class TestMetaParser:
             term       = factor  { (DIV|MUL) factor}
             factor     = NUMBER | VARIABLE
             MUL        = "*" | &factor
-            DIV        = "/"            
+            DIV        = "/"
             NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
             VARIABLE   = /[A-Za-z]/~
             """
         gr = grammar_provider(minilang)()
         cst = gr("2x")
         assert bool(cst.pick('MUL')), "Named empty nodes should not be dropped!!!"
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

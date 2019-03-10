@@ -18,8 +18,10 @@
 
 """
 Module ``toolkit`` contains utility functions that are needed across
-several of the the other DHParser-Modules or that are just very generic
-so that they are best defined in a toolkit-module.
+several of the the other DHParser-Modules Helper funcions that are not
+needed in more than one module are best placed within that module and
+not in the toolkit-module. An acceptable exception from this rule are
+functions that are very generic.
 """
 
 import hashlib

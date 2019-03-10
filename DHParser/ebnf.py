@@ -641,7 +641,8 @@ class EBNFCompiler(Compiler):
                     '',
                     '    def _reset(self):',
                     '        super()._reset()',
-                    '        # initialize your variables here, not in the constructor!']
+                    '        # initialize your variables here, not in the constructor!',
+                    '']
         for name in self.rules:
             method_name = visitor_name(name)
             if name == self.root_symbol:
