@@ -53,8 +53,6 @@ class TestServer:
         asyncio.run(compile('Test', ''))
         cs.terminate_server_process()
 
-
-
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

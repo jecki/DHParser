@@ -63,6 +63,27 @@ SERVER_TERMINATE = 3
 RX_MAYBE_JSON = re.compile('\s*(?:\{|\[|"|\d|true|false|null)')
 
 
+response = b'''HTTP/1.1 200 OK
+Date: Sun, 18 Oct 2009 08:56:53 GMT
+Server: Apache/2.2.14 (Win32)
+Last-Modified: Sat, 20 Nov 2004 07:16:26 GMT
+ETag: "10000000565a5-2c-3e94b66c2e680"
+Accept-Ranges: bytes
+Content-Length: 60
+Connection: close
+Content-Type: text/html
+X-Pad: avoid browser bug
+
+<html>
+<head>
+</head>
+<body>
+<h1>Test</h1>
+</body>
+</html>
+'''
+
+
 class Server:
     def __init__(self, rpc_functions: RPC_Type):
         if isinstance(rpc_functions, Dict):
@@ -86,6 +107,10 @@ class Server:
                                          reader: asyncio.StreamReader,
                                          writer: asyncio.StreamWriter):
         data = await reader.read(self.max_source_size + 1)
+        # writer.write(response)
+        # await writer.drain()
+        # writer.close()
+
         rpc_error = None
         json_id = 'null'
 
@@ -128,7 +153,7 @@ class Server:
             json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
             json.dump(writer, json_result)
         else:
-            writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s '
+            writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                           % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
         writer.close()
