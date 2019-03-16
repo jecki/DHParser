@@ -51,6 +51,7 @@ from DHParser.toolkit import get_config_value, re
 
 RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
+JSON_Type = Union[Dict, Sequence, str, int, None]
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -60,7 +61,7 @@ SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
 
 
-RX_MAYBE_JSON = re.compile('\s*(?:\{|\[|"|\d|true|false|null)')
+RX_MAYBE_JSON = re.compile(r'\s*(?:{|\[|"|\d|true|false|null)')
 
 
 response = b'''HTTP/1.1 200 OK
@@ -95,24 +96,24 @@ class Server:
         else:
             assert isinstance(rpc_functions, Callable)
             func = cast(Callable, rpc_functions)
-            self.rpc_table = { func.__name__: func }
+            self.rpc_table = {func.__name__: func}
 
-        self.max_source_size = get_config_value('max_rpc_size')
-        self.stage = Value('b', SERVER_OFFLINE)
-        self.server = None
+        self.max_source_size = get_config_value('max_rpc_size')  #type: int
+        self.stage = Value('b', SERVER_OFFLINE)  # type: Value
+        self.server = None  # type: Optional[asyncio.AbstractServer]
         self.server_messages = Queue()  # type: Queue
         self.server_process = None  # type: Optional[Process]
 
     async def handle_compilation_request(self,
                                          reader: asyncio.StreamReader,
                                          writer: asyncio.StreamWriter):
-        data = await reader.read(self.max_source_size + 1)
-        # writer.write(response)
-        # await writer.drain()
-        # writer.close()
+        rpc_error = None  # type: Optional[Tuple[int, str]]
+        json_id = 'null'  # type: Tuple[int, str]
+        obj = {}          # type: Dict
+        result = None     # type: JSON_Type
+        raw = None        # type: JSON_Type
 
-        rpc_error = None
-        json_id = 'null'
+        data = await reader.read(self.max_source_size + 1)
 
         if len(data) > self.max_source_size:
             rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
@@ -120,21 +121,22 @@ class Server:
 
         if rpc_error is None:
             try:
-                obj = json.loads(data)
+                raw = json.loads(data)
             except json.decoder.JSONDecodeError as e:
                 rpc_error = -32700, "JSONDecodeError: " + str(e)
 
         if rpc_error is None:
-            if isinstance(obj, Dict):
-                json_id = obj.get('id', 'null') if isinstance(obj, Dict) else 'null'
+            if isinstance(raw, Dict):
+                obj = cast(Dict, raw)
+                json_id = obj.get('id', 'null')
             else:
                 rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
 
         if rpc_error is None:
             if obj.get('jsonrpc', 'unknown') != '2.0':
                 rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
-                            ' "%s" found.' % obj.get('jsonrpc', b'unknown')
-            elif not 'method' in obj:
+                                    ' "%s" found.' % obj.get('jsonrpc', b'unknown')
+            elif 'method' not in obj:
                 rpc_error = -32600, 'Invalid Request: No method specified.'
             elif obj['method'] not in self.rpc_table:
                 rpc_error = -32601, 'Method not found: ' + str(obj['method'])
@@ -162,7 +164,8 @@ class Server:
         # self.server.cancel()
 
     async def serve(self, address: str = '127.0.0.1', port: int = 8888):
-        self.server = await asyncio.start_server(self.handle_compilation_request, address, port)
+        self.server = cast(asyncio.base_events.Server,
+                           await asyncio.start_server(self.handle_compilation_request, address, port))
         async with self.server:
             self.stage.value = SERVER_ONLINE
             self.server_messages.put(SERVER_ONLINE)
