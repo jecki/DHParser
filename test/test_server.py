@@ -47,7 +47,7 @@ class TestServer:
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(src.encode())
             data = await reader.read(500)
-            print(f'Received: {data.decode()!r}')
+            # print(f'Received: {data.decode()!r}')
             writer.close()
 
         asyncio.run(compile('Test', ''))

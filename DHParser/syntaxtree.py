@@ -71,6 +71,10 @@ ZOMBIE_TAG = "__ZOMBIE__"
 #######################################################################
 
 
+RX_IS_SXPR = re.compile(r'\s*\(')
+RX_IS_XML = re.compile(r'\s*<')
+
+
 def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     """
     Returns S-expression ``sxpr`` as a one-liner without unnecessary
@@ -87,9 +91,11 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
     '(a (b c))'
     """
-
+    assert RX_IS_SXPR.match(sxpr)
+    if threshold == 0:
+        return sxpr
     flat = re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
-    if threshold >= 0 and len(flat) > threshold:
+    if len(flat) > threshold >= 0:
         return sxpr.strip()
     return flat
 
@@ -101,9 +107,9 @@ def flatten_xml(xml: str) -> str:
     A more precise alternative to `flatten_xml` is to use Node.as_xml()
     ans passing a set containing the top level tag to parameter `inline_tags`.
     """
-
     # works only with regex
     # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
+    assert RX_IS_XML.match(xml)
     def tag_only(m):
         return m.groupdict()['closing_tag']
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
@@ -386,15 +392,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     @property
-    def structure(self) -> str:
-        """
-        Return structure (and content) as S-expression on a single line
-        without any line breaks.
-        """
-        return flatten_sxpr(self.as_sxpr())
-
-
-    @property
     def pos(self) -> int:
         """Returns the position of the Node's content in the source text."""
         if self._pos < 0:
@@ -628,7 +625,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_sxpr(self, src: str = None,
                 indentation: int = 2,
                 compact: bool = False,
-                flatten_threshold: int = 0) -> str:
+                flatten_threshold: int = 92) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form. If this
         method is callad on a RootNode-object,
@@ -675,7 +672,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else '"%s"' % strg.replace('"', r'\"')
 
         sxpr = self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
-        return flatten_sxpr(sxpr, flatten_threshold)
+        return sxpr if compact else flatten_sxpr(sxpr, flatten_threshold)
 
 
     def as_xml(self, src: str = None,
@@ -1048,7 +1045,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     generate test data.
 
     Example:
-    >>> parse_sxpr("(a (b c))").as_sxpr()
+    >>> parse_sxpr("(a (b c))").as_sxpr(flatten_threshold=0)
     '(a\\n  (b\\n    "c"\\n  )\\n)'
     """
 

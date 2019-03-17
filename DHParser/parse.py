@@ -1495,7 +1495,7 @@ class Option(UnaryParser):
         >>> number = Option(TKN('-')) + RegExp(r'\d+') + Option(RegExp(r'\.\d+'))
         >>> Grammar(number)('3.14159').content
         '3.14159'
-        >>> Grammar(number)('3.14159').structure
+        >>> Grammar(number)('3.14159').as_sxpr()
         '(:Series (:RegExp "3") (:RegExp ".14159"))'
         >>> Grammar(number)('-1').content
         '-1'

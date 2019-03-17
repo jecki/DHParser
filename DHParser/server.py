@@ -49,9 +49,22 @@ from typing import Callable, Optional, Union, Dict, List, Sequence, cast
 
 from DHParser.toolkit import get_config_value, re
 
+__all__ = ('RPC_Table',
+           'RPC_Type',
+           'JSON_Type',
+           'SERVER_ERROR',
+           'SERVER_OFFLINE',
+           'SERVER_STARTING',
+           'SERVER_ONLINE',
+           'SERVER_TERMINATE',
+           'Server')
+
+
 RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 JSON_Type = Union[Dict, Sequence, str, int, None]
+
+RX_IS_JSON = re.compile(r'\s*(?:{|\[|"|\d|true|false|null)')
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -60,11 +73,7 @@ SERVER_STARTING = 1
 SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
 
-
-RX_MAYBE_JSON = re.compile(r'\s*(?:{|\[|"|\d|true|false|null)')
-
-
-response = b'''HTTP/1.1 200 OK
+response_test = b'''HTTP/1.1 200 OK
 Date: Sun, 18 Oct 2009 08:56:53 GMT
 Server: Apache/2.2.14 (Win32)
 Last-Modified: Sat, 20 Nov 2004 07:16:26 GMT
@@ -170,10 +179,17 @@ class Server:
             self.stage.value = SERVER_ONLINE
             self.server_messages.put(SERVER_ONLINE)
             await self.server.serve_forever()
-        # self.server.wait_until_closed()
+            # self.server.wait_until_closed()
 
     def run_server(self, address: str = '127.0.0.1', port: int = 8888):
         self.stage.value = SERVER_STARTING
+        # loop = asyncio.get_event_loop()
+        # try:
+        #     loop.run_until_complete(self.serve(address, port))
+        # finally:
+        #     print(type(self.server))
+        #     # self.server.cancel()
+        #     loop.close()
         asyncio.run(self.serve(address, port))
 
     def wait_until_server_online(self):
