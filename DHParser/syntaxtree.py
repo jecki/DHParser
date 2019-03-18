@@ -1276,7 +1276,7 @@ def parse_tree(xml_sxpr_json: str) -> Optional[Node]:
     """
     if RX_IS_XML.match(xml_sxpr_json):
         return parse_xml(xml_sxpr_json)
-    elif RX_IS_SXPR(xml_sxpr_json):
+    elif RX_IS_SXPR.match(xml_sxpr_json):
         return parse_sxpr(xml_sxpr_json)
     elif re.match('\s*', xml_sxpr_json):
         return None
