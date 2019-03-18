@@ -25,7 +25,7 @@ import sys
 sys.path.extend(['../', './'])
 
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, ZOMBIE_TAG
+    flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -90,6 +90,36 @@ class TestParseJSON:
         assert tree_copy.equals(self.tree)
         s = self.tree.as_json(indent=2, ensure_ascii=False)
         tree_copy = Node.from_json_obj(json.loads(s))
+
+    def test_attr_serialization_and_parsing(self):
+        n = Node('employee', 'James Bond').with_pos(46)
+        n.attr['branch'] = 'Secret Service'
+        n.attr['id'] = '007'
+        # json
+        json = n.as_json()
+        tree = parse_json_syntaxtree(json)
+        print()
+
+        # XML
+        xml = n.as_xml()
+        assert xml.find('_pos') < 0
+        xml = n.as_xml('')
+        assert xml.find('_pos') >= 0
+        tree = parse_xml(xml)
+        assert tree.pos == 46
+        assert not '_pos' in tree.attr
+        tree = parse_xml(xml, ignore_pos=True)
+        assert '_pos' in tree.attr
+        assert tree._pos < 0
+
+        # S-Expression
+        sxpr = n.as_sxpr()
+        assert sxpr.find('pos') < 0
+        sxpr = n.as_sxpr('')
+        assert sxpr.find('pos') >= 0
+        tree = parse_sxpr(sxpr)
+        assert tree.pos == 46
+        assert not 'pos' in tree.attr
 
 
 class TestNode:

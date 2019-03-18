@@ -47,20 +47,20 @@ except ImportError:
 __all__ = ('StringView', 'EMPTY_STRING_VIEW', 'cython_optimized')
 
 
-def first_char(text, begin: int, end: int) -> int:
+def first_char(text, begin: int, end: int, chars: str) -> int:
     """Returns the index of the first non-whitespace character in string
      `text` within the bounds [begin, end].
     """
-    while begin < end and text[begin] in ' \n\t':
+    while begin < end and text[begin] in chars:
         begin += 1
     return begin
 
 
-def last_char(text, begin: int, end: int) -> int:
+def last_char(text, begin: int, end: int, chars: str) -> int:
     """Returns the index of the first non-whitespace character in string
     `text` within the bounds [begin, end].
     """
-    while end > begin and text[end - 1] in ' \n\t':
+    while end > begin and text[end - 1] in chars:
         end -= 1
     return end
 
@@ -289,24 +289,24 @@ class StringView:  # collections.abc.Sized
         return regex.finditer(self._text, pos=self._begin, endpos=self._end)
 
     @cython.locals(begin=cython.int, end=cython.int)
-    def strip(self):
+    def strip(self, chars = ' \n\t'):
         """Returns a copy of the StringView `self` with leading and trailing
         whitespace removed.
         """
-        begin = first_char(self._text, self._begin, self._end) - self._begin
-        end = last_char(self._text, self._begin, self._end) - self._begin
+        begin = first_char(self._text, self._begin, self._end, chars) - self._begin
+        end = last_char(self._text, self._begin, self._end, chars) - self._begin
         return self if begin == 0 and end == self._len else self[begin:end]
 
     @cython.locals(begin=cython.int)
-    def lstrip(self):
+    def lstrip(self, chars = ' \n\t'):
         """Returns a copy of `self` with leading whitespace removed."""
-        begin = first_char(self._text, self._begin, self._end) - self._begin
+        begin = first_char(self._text, self._begin, self._end, chars) - self._begin
         return self if begin == 0 else self[begin:]
 
     @cython.locals(end=cython.int)
-    def rstrip(self):
+    def rstrip(self, chars = ' \n\t'):
         """Returns a copy of `self` with trailing whitespace removed."""
-        end = last_char(self._text, self._begin, self._end) - self._begin
+        end = last_char(self._text, self._begin, self._end, chars) - self._begin
         return self if end == self._len else self[:end]
 
     @cython.locals(length=cython.int, i=cython.int, k=cython.int)

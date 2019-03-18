@@ -133,6 +133,8 @@ class TestStringView:
         s = StringView('(a (b c))')
         assert s.strip() == '(a (b c))'
         assert s[1:].strip() == 'a (b c))'
+        s = StringView('"22"')
+        assert s.strip('"') == '22'
 
     def text_split(self):
         s = StringView(' 1,2,3,4,5 ', 1, -1)

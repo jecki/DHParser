@@ -47,6 +47,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'RootNode',
            'parse_sxpr',
            'parse_xml',
+           'parse_json_syntaxtree',
            'parse_tree',
            'flatten_sxpr',
            'flatten_xml')
@@ -73,6 +74,7 @@ ZOMBIE_TAG = "__ZOMBIE__"
 
 RX_IS_SXPR = re.compile(r'\s*\(')
 RX_IS_XML = re.compile(r'\s*<')
+RX_ATTR_NAME = re.compile(r'[\w.:-]')
 
 
 def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
@@ -622,7 +624,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return head + '\n'.join([usetab + data_fn(s) for s in res.split('\n')]) + tail
 
 
-    def as_sxpr(self, src: str = None,
+    def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = False,
                 flatten_threshold: int = 92) -> str:
@@ -633,7 +635,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Args:
             src:  The source text or `None`. In case the source text is
                 given the position of the element in the text will be
-                reported as line and column.
+                reported as position, line, column. In case the empty string is
+                given rather than None, only the position value will be
+                reported in case it has been initialized, i.e. pos >= 0.
             indentation: The number of whitespaces for indentation
             compact:  If True, a compact representation is returned where
                 brackets are omitted and only the indentation indicates the
@@ -656,7 +660,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
                 line, col = line_col(lbreaks, node.pos)
-                txt.append(" `(pos %i %i %i)" % (node.pos, line, col))
+                txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
+            elif src is not None and node._pos >= 0:
+                txt.append(' `(pos %i)' % node.pos)
             if root and id(node) in root.error_nodes:
                 txt.append(" `(err `%s)" % ' '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt) + '\n'
@@ -684,9 +690,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Returns content as XML-tree.
 
         Args:
-            src:  The source text or `None`. In case the source text is
-                given the position will also be reported as line and
-                column.
+            src:  The source text or `None`. In case the source text is given,
+                the position will also be reported as line and column.
             indentation: The number of whitespaces for indentation
             inline_tags:  A set of tag names, the content of which will always be written
                 on a single line, unless it contains explicit line feeds ('\n').
@@ -711,6 +716,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
+            if src == '' and not (node.attr_active() and '_pos' in node.attr) and node.pos >= 0:
+                txt.append(' _pos="%i"' % node.pos)
             if root and id(node) in root.error_nodes and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in root.get_errors(node)))
@@ -1031,7 +1038,7 @@ class RootNode(Node):
 
 #######################################################################
 #
-# S-expression- and XML-parsers
+# S-expression- and XML-parsers and JSON-reader
 #
 #######################################################################
 
@@ -1092,6 +1099,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
         attributes = OrderedDict()  # type: OrderedDict[str, str]
+        pos = -1  # type: int
         if sxpr[0] == '(':
             result = tuple(inner_parser(block) for block in next_block(sxpr))  # type: ResultType
         else:
@@ -1101,10 +1109,13 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 while sxpr[:2] == "`(":
                     i = sxpr.find('"')
                     k = sxpr.find(')')
+                    if i < 0:
+                        i = k + 1
+                    if k < 0:
+                        raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
                     # read very special attribute pos
-                    if sxpr[2:5] == "pos" and 0 < i < k:
-                        # pos = int(sxpr[5:k].strip().split(' ')[0])
-                        pass
+                    if sxpr[2:5] == "pos" and 0 < k < i:
+                        pos = int(sxpr[5:k].strip(' \'"').split(' ')[0])
                     # ignore very special attribute err
                     elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
                         m = sxpr.find('(', 5)
@@ -1113,7 +1124,9 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                             k = max(k, sxpr.find(')', max(m, 0)))
                     # read attr
                     else:
-                        attr = sxpr[2:i].strip()
+                        attr = str(sxpr[2:i].strip())
+                        if not RX_ATTR_NAME.match(attr):
+                            raise ValueError('Illegal attribute name: ' + attr)
                         value = sxpr[i:k].strip()[1:-1]
                         attributes[attr] = value
                     sxpr = sxpr[k + 1:].strip()
@@ -1133,6 +1146,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                     sxpr = sxpr[end:]
             result = "\n".join(lines)
         node = Node(name or ':' + class_name, result)
+        node._pos = pos
         if attributes:
             node.attr.update(attributes)
         return node
@@ -1143,9 +1157,14 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 
 
-def parse_xml(xml: Union[str, StringView]) -> Node:
+def parse_xml(xml: Union[str, StringView], ignore_pos: bool=False) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
+
+    If the flag `ignore_pos` is True, '_pos'-attributes will be understood as
+    normal XML-attributes. Otherwise '_pos' will be understood as special
+    attribute, i.e. its value will be written to `node._pos` and not
+    transferred to the `node.attr`-dictionary.
     """
 
     xml = StringView(str(xml))
@@ -1159,7 +1178,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         """
         attributes = OrderedDict()  # type: OrderedDict[str, str]
         restart = 0
-        for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*)"\s*')):
+        for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*?)"\s*')):
             d = match.groupdict()
             attributes[d['attr']] = d['value']
             restart = s.index(match.end())
@@ -1207,7 +1226,7 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
         of the opening tag and ending right after the closing tag.
         """
         res = []  # type: List[Node]
-        s, tagname, _, solitary = parse_opening_tag(s)
+        s, tagname, attrs, solitary = parse_opening_tag(s)
         name, class_name = (tagname.split(":") + [''])[:2]
         if not solitary:
             while s and not s[:2] == "</":
@@ -1223,7 +1242,14 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
             result = res[0].result
         else:
             result = tuple(res)
-        return s, Node(name or ':' + class_name, result)
+
+        node = Node(name or ':' + class_name, result)
+        if not ignore_pos and '_pos' in attrs:
+            node._pos = int(attrs['_pos'])
+            del attrs['_pos']
+        if attrs:
+            node.attr.update(attrs)
+        return s, node
 
     match_header = xml.search(re.compile(r'<(?!\?)'))
     start = xml.index(match_header.start()) if match_header else 0
@@ -1232,20 +1258,35 @@ def parse_xml(xml: Union[str, StringView]) -> Node:
     return tree
 
 
-def parse_tree(xml_or_sxpr: str) -> Optional[Node]:
+def parse_json_syntaxtree(json_str: str) -> Node:
     """
-    Parses either XML or S-expressions. Which of these is detected automatically.
+    Parses a JSON-representation of a syntaxtree. Other than parse_sxpr
+    and parse_xml, this function does not convert any json-text into
+    a syntax tree, but only json-text that represents a syntax tree, e.g.
+    that has been produced by `Node.as_json()`!
     """
-    if re.match('\s*<', xml_or_sxpr):
-        return parse_xml(xml_or_sxpr)
-    elif re.match('\s*\(', xml_or_sxpr):
-        return parse_sxpr(xml_or_sxpr)
-    elif re.match('\s*', xml_or_sxpr):
+    json_obj = json.loads(json_str)
+    return Node.from_json_obj(json_obj)
+
+
+def parse_tree(xml_sxpr_json: str) -> Optional[Node]:
+    """
+    Parses either XML or S-expressions or a JSON representation of a
+    syntax-tree. Which of these is detected automatically.
+    """
+    if RX_IS_XML.match(xml_sxpr_json):
+        return parse_xml(xml_sxpr_json)
+    elif RX_IS_SXPR(xml_sxpr_json):
+        return parse_sxpr(xml_sxpr_json)
+    elif re.match('\s*', xml_sxpr_json):
         return None
     else:
-        m = re.match('\s*(.*)\n?', xml_or_sxpr)
-        snippet = m.group(1) if m else ''
-        raise ValueError('Snippet seems to be neither S-expression nor XML: ' + snippet + ' ...')
+        try:
+            return parse_json_syntaxtree(xml_sxpr_json)
+        except json.decoder.JSONDecodeError:
+            m = re.match('\s*(.*)\n?', xml_sxpr_json)
+            snippet = m.group(1) if m else ''
+            raise ValueError('Snippet seems to be neither S-expression nor XML: ' + snippet + ' ...')
 
 # if __name__ == "__main__":
 #     st = parse_sxpr("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
