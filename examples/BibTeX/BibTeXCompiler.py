@@ -57,7 +57,7 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "ff0929f0cf7acc756b10afe64c0a390d"
+    source_hash__ = "090e7cf86e9f66967d5f94a9d1c1d99e"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

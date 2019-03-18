@@ -63,7 +63,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     sign = Forward()
     tail = Forward()
     term = Forward()
-    source_hash__ = "59dabcef8ed22bb237a3d16649cfd49b"
+    source_hash__ = "f1bf4bfc9852f779d0ffe210c1ccf0db"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
