@@ -112,6 +112,7 @@ def flatten_xml(xml: str) -> str:
     # works only with regex
     # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
     assert RX_IS_XML.match(xml)
+
     def tag_only(m):
         return m.groupdict()['closing_tag']
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
@@ -131,7 +132,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     TODO: Add some documentation and doc-tests here...
 
-    Attributes:
+    Attributes and Properties:
         tag_name (str):  The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name
 
@@ -145,13 +146,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         content (str):  Yields the contents of the tree as string. The
             difference to ``str(node)`` is that ``node.content`` does
             not add the error messages to the returned string.
-
-        parser (Parser):  The parser which generated this node.
-            WARNING: In case you use mock syntax trees for testing or
-            parser replacement during the AST-transformation: DO NOT
-            rely on this being a real parser object in any phase after
-            parsing (i.e. AST-transformation and compiling), for
-            example by calling ``isinstance(node.parer, ...)``.
 
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the concatenated string
@@ -196,6 +190,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self.result = result
         self.tag_name = tag_name        # type: str
 
+
     def __deepcopy__(self, memo):
         if self.children:
             duplicate = self.__class__(self.tag_name, copy.deepcopy(self.children), False)
@@ -207,6 +202,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
         return duplicate
 
+
     def __str__(self):
         if isinstance(self, RootNode):
             root = cast(RootNode, self)
@@ -214,10 +210,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if errors:
                 e_pos = errors[0].pos
                 content = self.content
-                return content[:e_pos] + \
-                   ' <<< Error on "%s" | %s >>> ' % \
-                   (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
+                return content[:e_pos] + ' <<< Error on "%s" | %s >>> ' % \
+                    (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
         return self.content
+
 
     def __repr__(self):
         # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
@@ -341,10 +337,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @result.setter
     def result(self, result: ResultType):
         # # made obsolete by static type checking with mypy
-        assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
-                or isinstance(result, Node)
-                or isinstance(result, str)
-                or isinstance(result, StringView)), "%s (%s)" % (str(result), str(type(result)))
+        # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
+        #         or isinstance(result, Node)
+        #         or isinstance(result, str)
+        #         or isinstance(result, StringView)), "%s (%s)" % (str(result), str(type(result)))
         # Possible optimization: Do not allow single nodes as argument:
         # assert not isinstance(result, Node)
         # self._content = None
@@ -525,7 +521,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             '(X (c "d"))'
 
         Args:
-            tag_name(set): A tag name or set of tag names that is being
+            tag_names(set): A tag name or set of tag names that is being
                 searched for
             include_root (bool): If False, only descendant nodes will be
                 checked for a match.
@@ -630,7 +626,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 flatten_threshold: int = 92) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form. If this
-        method is callad on a RootNode-object,
+        method is called on a RootNode-object,
 
         Args:
             src:  The source text or `None`. In case the source text is
@@ -733,7 +729,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in omit_tags or node.tag_name in empty_tags:
                 return ''
-            return ('\n</') + node.tag_name + '>'
+            return '\n</' + node.tag_name + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
@@ -756,7 +752,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def to_json_obj(self) -> Dict:
-        """Seralize a node or tree as json-object"""
+        """Serialize a node or tree as json-object"""
         data = [self.tag_name,
                 [child.to_json_obj() for child in self.children]
                 if self.children else str(self._result)]
@@ -793,7 +789,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
 
-def serialize(node: Node, how: str='default') -> str:
+def serialize(node: Node, how: str = 'default') -> str:
     """
     Serializes the tree starting with `node` either as S-expression, XML, JSON,
     or in compact form. Possible values for `how` are 'S-expression',
@@ -990,7 +986,7 @@ class RootNode(Node):
         """
         Adds an error to this tree, locating it at a specific node.
         Parameters:
-            pos(int):     The position of the error in the source text
+            node(Node):   The node where the error occurred
             message(str): A string with the error message.abs
             code(int):    An error code to identify the kind of error
         """
@@ -1182,7 +1178,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool=False) -> Node:
             d = match.groupdict()
             attributes[d['attr']] = d['value']
             restart = s.index(match.end())
-        return (s[restart:], attributes)
+        return s[restart:], attributes
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
         """
@@ -1287,6 +1283,7 @@ def parse_tree(xml_sxpr_json: str) -> Optional[Node]:
             m = re.match('\s*(.*)\n?', xml_sxpr_json)
             snippet = m.group(1) if m else ''
             raise ValueError('Snippet seems to be neither S-expression nor XML: ' + snippet + ' ...')
+
 
 # if __name__ == "__main__":
 #     st = parse_sxpr("(alpha (beta (gamma i\nj\nk) (delta y)) (epsilon z))")
