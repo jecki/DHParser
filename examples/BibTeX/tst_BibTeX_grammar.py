@@ -23,8 +23,11 @@ import sys
 
 sys.path.extend(['../../', '../'])
 
+from DHParser import configuration
 import DHParser.dsl
 from DHParser import testing
+
+configuration.CONFIG_PRESET['test_parallelization'] = True
 
 if __name__ == "__main__":
     if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles Grammar only if it has changed

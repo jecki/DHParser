@@ -38,10 +38,10 @@ import sys
 from typing import Dict, List, Union, cast
 
 from DHParser.error import Error, is_error, adjust_error_locations
-from DHParser.log import is_logging, clear_logs, log_parsing_history
+from DHParser.log import log_dir, logging, is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, serialize, ZOMBIE_TAG
-from DHParser.toolkit import get_config_value, set_config_value, load_if_file, re
+from DHParser.toolkit import GLOBALS, get_config_value, load_if_file, re
 
 
 __all__ = ('unit_from_config',
@@ -506,6 +506,17 @@ def reset_unit(test_unit):
                 del tests[key]
 
 
+def run_unit(logdir, *parameters):
+    """
+    Run `grammar_unit()` with logs written to `log_dir` or no logs if `log_dir`
+    evaluates to False. This helper functions is needed for running unit tests
+    in a multiprocessing environment, because log.log_dir(), log.logging() and
+    log.is_logging() are thread-local.
+    """
+    with logging(logdir):
+        return grammar_unit(*parameters)
+
+
 def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=['*test*'],
                   ignore_unknown_filetypes=False,
@@ -530,7 +541,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
             for filename in sorted(os.listdir('.')):
                 if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                     parameters = filename, parser_factory, transformer_factory, report, verbose
-                    results.append((filename, pool.submit(grammar_unit, *parameters)))
+                    results.append((filename, pool.submit(run_unit, log_dir(), *parameters)))
             for filename, err_future in results:
                 try:
                     errata = err_future.result()
@@ -785,6 +796,15 @@ def run_file(fname):
         exec('import ' + fname[:-3])
         runner('', eval(fname[:-3]).__dict__)
 
+def run_with_log(logdir, f):
+    """
+    Run `grammar_unit()` with logs written to `log_dir` or no logs if `log_dir`
+    evaluates to False. This helper functions is needed for running unit tests
+    in a multiprocessing environment, because log.log_dir(), log.logging() and
+    log.is_logging() are thread-local.
+    """
+    with logging(logdir):
+        run_file(f)
 
 def run_path(path):
     """Runs all unit tests in `path`"""
@@ -796,7 +816,7 @@ def run_path(path):
         if get_config_value('test_parallelization'):
             with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
                 for f in files:
-                    result_futures.append(pool.submit(run_file, f))
+                    result_futures.append(pool.submit(run_with_log, log_dir(), f))
                     # run_file(f)  # for testing!
                 for r in result_futures:
                     try:

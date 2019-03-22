@@ -49,6 +49,7 @@ __all__ = ('TransformationDict',
            'is_named',
            'update_attr',
            'replace_by_single_child',
+           'replace_by_children',
            'reduce_single_child',
            'replace_or_reduce',
            'change_tag_name',
@@ -93,7 +94,6 @@ __all__ = ('TransformationDict',
            'remove_anonymous_tokens',
            'remove_brackets',
            'remove_infix_operator',
-           'remove_single_child',
            'remove_tokens',
            'flatten',
            'forbid',
@@ -563,7 +563,9 @@ def _reduce_child(node: Node, child: Node):
     Sets node's results to the child's result, keeping node's tag_name.
     """
     node.result = child.result
-    update_attr(node, child)
+    update_attr(child, node)
+    if child.attr_active():
+        node._xml_attr = child._xml_attr
 
 
 #######################################################################
@@ -617,11 +619,26 @@ def replace_by_single_child(context: List[Node]):
     """
     Removes single branch node, replacing it by its immediate descendant.
     Replacement only takes place, if the last node in the context has
-    exactly one child.
+    exactly one child. Attributes will be merged. In case one and the same
+    attribute is defined for the child as well as the parent, the child's
+    attribute value take precedence.
     """
     node = context[-1]
     if len(node.children) == 1:
         _replace_by(node, node.children[0])
+
+
+def replace_by_children(context: List[Node]):
+    """
+    Eliminates the last node in the context by replacing it with its children.
+    The attributes of this node will be dropped.
+    """
+    node = context[-1]
+    assert node.children
+    parent = context[-2]
+    result = parent.result
+    i = result.index(node)
+    parent.result = result[:i] + node.children + result[i + 1:]
 
 
 def reduce_single_child(context: List[Node]):
@@ -629,7 +646,9 @@ def reduce_single_child(context: List[Node]):
     Reduces a single branch node by transferring the result of its
     immediate descendant to this node, but keeping this node's parser entry.
     Reduction only takes place if the last node in the context has
-    exactly one child.
+    exactly one child. Attributes will be merged. In case one and the same
+    attribute is defined for the child as well as the parent, the parent's
+    attribute value take precedence.
     """
     node = context[-1]
     if len(node.children) == 1:
@@ -1046,7 +1065,7 @@ remove_empty = remove_children_if(is_empty)
 remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
 remove_anonymous_tokens = remove_children_if(lambda ctx: is_token(ctx) and is_anonymous(ctx))
 remove_infix_operator = keep_children(slice(0, None, 2))
-remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
+# remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
 
 
 def remove_first(context: List[Node]):

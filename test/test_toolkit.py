@@ -92,12 +92,14 @@ class TestLoggingAndLoading:
 
 
     def test_logging(self):
-        try:
-            log_dir()
-            assert False, "AttributeError should be raised when log_dir() is called outside " \
-                          "a logging context."
-        except AttributeError:
-            pass
+        # try:
+        #     log_dir()
+        #     assert False, "AttributeError should be raised when log_dir() is called outside " \
+        #                   "a logging context."
+        # except AttributeError:
+        #     pass
+        res = log_dir()
+        assert isinstance(res, bool) and not res
         with logging("TESTLOGS"):
             assert not os.path.exists("TESTLOGS"), \
                 "Log dir should be created lazily!"

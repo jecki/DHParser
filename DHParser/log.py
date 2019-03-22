@@ -76,7 +76,7 @@ __all__ = ('log_dir',
 #######################################################################
 
 
-def log_dir() -> str:
+def log_dir() -> Union[str, bool]:
     """Creates a directory for log files (if it does not exist) and
     returns its path.
 
@@ -84,8 +84,15 @@ def log_dir() -> str:
     Don't use a directory name that could be the name of a directory
     for other purposes than logging.
 
+    ATTENTION: The log-dir is sotred thread locally, which means the log-dir
+    as well as the information whether logging is turned on or off will not
+    automatically be transferred to any subprocesses. This needs to be done
+    explicitly. (See `testing.grammar_suite()` for an example, how this can
+    be done.
+
     Returns:
-        name of the logging directory
+        name of the logging directory (str) or False (bool) if logging has
+        not been switched on with the logging-contextmanager (see below), yet.
     """
     # the try-except clauses in the following are precautions for multithreading
     try:
@@ -93,8 +100,9 @@ def log_dir() -> str:
         if not dirname:
             raise AttributeError  # raise a name error if LOGGING evaluates to False
     except AttributeError:
-        raise AttributeError("No access to log directory before logging has been "
-                             "turned on within the same thread/process.")
+        return False
+        # raise AttributeError("No access to log directory before logging has been "
+        #                      "turned on within the same thread/process.")
     if os.path.exists(dirname) and not os.path.isdir(dirname):
         raise IOError('"' + dirname + '" cannot be used as log directory, '
                                       'because it is not a directory!')

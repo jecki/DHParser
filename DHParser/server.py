@@ -169,7 +169,7 @@ class Server:
         await writer.drain()
         writer.close()
         # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine
-        #  gracefully.
+        #  gracefully. Is this needed?
         # self.server.cancel()
 
     async def serve(self, address: str = '127.0.0.1', port: int = 8888):
