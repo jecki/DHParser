@@ -631,11 +631,15 @@ def replace_by_single_child(context: List[Node]):
 def replace_by_children(context: List[Node]):
     """
     Eliminates the last node in the context by replacing it with its children.
-    The attributes of this node will be dropped.
+    The attributes of this node will be dropped. In case the last node is
+    the root-note (i.e. len(context) == 1), it will not be eliminated.
     """
+    try:
+        parent = context[-2]
+    except IndexError:
+        return
     node = context[-1]
     assert node.children
-    parent = context[-2]
     result = parent.result
     i = result.index(node)
     parent.result = result[:i] + node.children + result[i + 1:]
