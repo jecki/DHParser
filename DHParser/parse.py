@@ -273,18 +273,21 @@ class Parser:
 
             # if location has already been visited by the current parser,
             # return saved result
-            if location in self.visited:
+            visited = self.visited  # using local variable for better performance
+            if location in visited:
                 # no history recording in case of memoized results
-                return self.visited[location]
+                return visited[location]
 
             # break left recursion at the maximum allowed depth
-            if grammar.left_recursion_depth__:
-                if self.recursion_counter[location] > grammar.left_recursion_depth__:
+            left_recursion_depth__ = grammar.left_recursion_depth__
+            if left_recursion_depth__:
+                if self.recursion_counter[location] > left_recursion_depth__:
                     grammar.recursion_locations__.add(location)
                     return None, text
                 self.recursion_counter[location] += 1
 
-            if grammar.history_tracking__:
+            history_tracking__ = grammar.history_tracking__
+            if history_tracking__:
                 grammar.call_stack__.append(self.repr if self.tag_name in
                                                          (':RegExp', ':Token', ':DropToken')
                                             else self.tag_name)
@@ -326,15 +329,15 @@ class Parser:
                         raise ParserError(Node(self.tag_name, result).with_pos(location),
                                           text, first_throw=False)
 
-            if grammar.left_recursion_depth__:
+            if left_recursion_depth__:
                 self.recursion_counter[location] -= 1
                 # don't clear recursion_locations__ !!!
 
             if node is None:
                 # retrieve an earlier match result (from left recursion) if it exists
                 if location in grammar.recursion_locations__:
-                    if location in self.visited:
-                        node, rest = self.visited[location]
+                    if location in visited:
+                        node, rest = visited[location]
                         if location != grammar.last_recursion_location__:
                             grammar.tree__.add_error(
                                 node, Error("Left recursion encountered. "
@@ -346,7 +349,7 @@ class Parser:
                     # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
                     # otherwise also cache None-results
-                    self.visited[location] = (None, rest)
+                    visited[location] = (None, rest)
             else:
                 # assert node._pos < 0 or node == EMPTY_NODE
                 node._pos = location
@@ -359,11 +362,11 @@ class Parser:
                     # - in case of left recursion, the first recursive step that
                     #   matches will store its result in the cache
                     # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
-                    self.visited[location] = (node, rest)
+                    visited[location] = (node, rest)
 
             # Mind that memoized parser calls will not appear in the history record!
             # Does this make sense? Or should it be changed?
-            if grammar.history_tracking__:
+            if history_tracking__:
                 # don't track returning parsers except in case an error has occurred
                 # remaining = len(rest)
                 if grammar.moving_forward__:
