@@ -39,8 +39,12 @@ def compiler_dummy(src: str, log_dir: str) -> Tuple[str, str]:
 
 
 class TestServer:
-    def test_server(self):
-        cs = Server(compiler_dummy)
+    # def test_server(self):
+    #     cs = Server(compiler_dummy)
+    #     cs.run_server()
+
+    def test_server_proces(self):
+        cs = Server(compiler_dummy, cpu_bound=set())
         cs.run_as_process()
 
         async def compile(src, log_dir):
