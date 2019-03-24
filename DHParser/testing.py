@@ -405,7 +405,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
             # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
-                errors = adjust_error_locations(cst.errors_sorted, test_code)
+                errors = cst.errors_sorted
+                adjust_error_locations(errors, test_code)
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))

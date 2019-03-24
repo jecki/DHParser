@@ -238,8 +238,8 @@ def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
 
 def adjust_error_locations(errors: List[Error],
                            original_text: Union[StringView, str],
-                           source_mapping: SourceMapFunc = lambda i: i) -> List[Error]:
-    """Adds (or adjusts) line and column numbers of error messages in place.
+                           source_mapping: SourceMapFunc = lambda i: i):
+    """Adds (or adjusts) line and column numbers of error messages inplace.
 
     Args:
         errors:  The list of errors as returned by the method
@@ -248,15 +248,9 @@ def adjust_error_locations(errors: List[Error],
             (Needed in order to determine the line and column numbers.)
         source_mapping:  A function that maps error positions to their
             positions in the original source file.
-
-    Returns:
-        The list of errors. (Returning the list of errors is just syntactical
-        sugar. Be aware that the line, col and orig_pos attr have been
-        changed in place.)
     """
     line_breaks = linebreaks(original_text)
     for err in errors:
         assert err.pos >= 0
         err.orig_pos = source_mapping(err.pos)
         err.line, err.column = line_col(line_breaks, err.orig_pos)
-    return errors

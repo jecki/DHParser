@@ -32,7 +32,6 @@ speedup. The modules comes with a ``stringview.pxd`` that contains some type
 declarations to fully exploit the potential of the Cython-compiler.
 """
 
-import collections
 from typing import Optional, Union, Iterable, Tuple
 
 try:

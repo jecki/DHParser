@@ -33,7 +33,22 @@ from .syntaxtree import *
 from .testing import *
 from .toolkit import *
 from .transform import *
-from .versionnumber import __version__
+from .versionnumber import *
+
+__all__ = (compile.__all__ +
+           configuration.__all__ +
+           dsl.__all__ +
+           ebnf.__all__ +
+           error.__all__ +
+           log.__all__ +
+           parse.__all__ +
+           preprocess.__all__ +
+           stringview.__all__ +
+           syntaxtree.__all__ +
+           testing.__all__ +
+           toolkit.__all__ +
+           transform.__all__ +
+           versionnumber.__all__)
 
 name = "DHParser"
 __author__ = "Eckhart Arnold <arnold@badw.de>"

@@ -45,7 +45,6 @@ from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
 from DHParser.versionnumber import __version__
 
 
-
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
@@ -89,7 +88,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, is_empty, \\
+    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
@@ -111,6 +110,11 @@ from DHParser import logging, is_filename, load_if_file, \\
 
 
 def get_ebnf_preprocessor() -> PreprocessorFunc:
+    """
+    Returns the preprocessor function for the EBNF compiler.
+    As of now, no preprocessing is needed for EBNF-sources. Therefore,
+    just a dummy function is returned.
+    """
     return nil_preprocessor
 
 

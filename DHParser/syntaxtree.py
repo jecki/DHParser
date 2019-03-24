@@ -114,6 +114,7 @@ def flatten_xml(xml: str) -> str:
     assert RX_IS_XML.match(xml)
 
     def tag_only(m):
+        """Return only the tag, drop the whitespace."""
         return m.groupdict()['closing_tag']
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
@@ -321,6 +322,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def is_anonymous(self) -> bool:
+        """Returns True, if the Node is an "anonymous" Node, i.e. a node that
+        has not been created by a named parser.
+
+        The tag name of anonymous node is a colon followed by the class name
+        of the parser that created the node, i.e. ":Series". It is recommended
+        practice to remove (or name) all anonymous nodes during the
+        AST-transformation.
+        """
         return not self.tag_name or self.tag_name[0] == ':'
 
 
@@ -679,9 +688,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_xml(self, src: str = None,
                indentation: int = 2,
-               inline_tags: Set[str] = set(),
-               omit_tags: Set[str] = set(),
-               empty_tags: Set[str] = set()) -> str:
+               inline_tags: Set[str] = frozenset(),
+               omit_tags: Set[str] = frozenset(),
+               empty_tags: Set[str] = frozenset()) -> str:
         """
         Returns content as XML-tree.
 
@@ -761,7 +770,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             data.append(self._pos)
         if has_attr:
             data.append(dict(self._xml_attr))
-        return { '__class__': 'DHParser.Node', 'data': data }
+        return {'__class__': 'DHParser.Node', 'data': data}
 
 
     @staticmethod
@@ -1153,7 +1162,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 
 
-def parse_xml(xml: Union[str, StringView], ignore_pos: bool=False) -> Node:
+def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
 
@@ -1274,13 +1283,13 @@ def parse_tree(xml_sxpr_json: str) -> Optional[Node]:
         return parse_xml(xml_sxpr_json)
     elif RX_IS_SXPR.match(xml_sxpr_json):
         return parse_sxpr(xml_sxpr_json)
-    elif re.match('\s*', xml_sxpr_json):
+    elif re.match(r'\s*', xml_sxpr_json):
         return None
     else:
         try:
             return parse_json_syntaxtree(xml_sxpr_json)
         except json.decoder.JSONDecodeError:
-            m = re.match('\s*(.*)\n?', xml_sxpr_json)
+            m = re.match(r'\s*(.*)\n?', xml_sxpr_json)
             snippet = m.group(1) if m else ''
             raise ValueError('Snippet seems to be neither S-expression nor XML: ' + snippet + ' ...')
 

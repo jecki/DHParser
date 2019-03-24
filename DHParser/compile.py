@@ -35,16 +35,15 @@ compiler object.
 """
 
 import copy
-import re
+from typing import Any, Optional, Tuple, List
 
-from DHParser.preprocess import strip_tokens, with_source_mapping, PreprocessorFunc
+from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
 from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basename
-from DHParser.toolkit import typing, sane_parser_name, load_if_file
-from typing import Any, Optional, Tuple, List, Callable
+from DHParser.toolkit import load_if_file
 
 
 __all__ = ('CompilerError', 'Compiler', 'compile_source', 'visitor_name')
@@ -114,7 +113,7 @@ class Compiler:
         self.context = []  # type: List[Node]
         self._dirty_flag = False
 
-    def __call__(self, root: RootNode, source: str='') -> Any:
+    def __call__(self, root: RootNode, source: str = '') -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
         returns the compiled code. It is up to subclasses implementing
@@ -126,7 +125,7 @@ class Compiler:
         if self._dirty_flag:
             self._reset()
         self._dirty_flag = True
-        self.tree = root  # type: Node
+        self.tree = root  # type: RootNode
         self.source = source  # type: str
         result = self.compile(root)
         return result
@@ -216,12 +215,12 @@ def compile_source(source: str,
         3. The root-node of the abstract syntax tree if `preserve_ast` is True
            or `None` otherwise.
     """
-    ast = None
-    original_text = load_if_file(source)
-    log_file_name = logfile_basename(source, compiler)
+    ast = None  # type: Optional[Node]
+    original_text = load_if_file(source)  # type: str
+    log_file_name = logfile_basename(source, compiler)  # type: str
     if preprocessor is None:
-        source_text = original_text
-        source_mapping = lambda i: i
+        source_text = original_text  # type: str
+        source_mapping = lambda i: i  # type: SourceMapFunc
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
     syntax_tree = parser(source_text)  # type: RootNode
@@ -251,7 +250,7 @@ def compile_source(source: str,
         # messages.extend(syntax_tree.errors())
         # syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
 
-    messages = syntax_tree.errors_sorted
+    messages = syntax_tree.errors_sorted  # type: List[Error]
     adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
 

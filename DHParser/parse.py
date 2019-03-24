@@ -32,6 +32,7 @@ for an example.
 
 from collections import defaultdict
 import copy
+from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.log import is_logging, HistoryRecord
@@ -40,9 +41,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, get_config_value, \
-    re, typing, cython
-from DHParser.configuration import CONFIG_PRESET
-from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
+    re, cython
 
 
 __all__ = ('Parser',
@@ -1009,12 +1008,7 @@ class Grammar:
         if stitches:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
-            #try:
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
-            # except AssertionError as error:
-            #     # some debugging output
-            #     print(Node(ZOMBIE_TAG, tuple(stitches)).as_sxpr())
-            #     raise error
         if any(self.variables__.values()):
             error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
                 + str(self.variables__)
@@ -1029,8 +1023,6 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
-        # result.pos = 0  # calculate all positions
-        # result.errors(self.document__)
         if result:
             self.tree__.swallow(result)
         self.start_parser__ = None
@@ -1338,7 +1330,7 @@ class DropWhitespace(Whitespace):
         assert not self.pname, "DropWhitespace must not be used for named parsers!"
         match = text.match(self.regexp)
         if match:
-            capture = match.group(0)
+            # capture = match.group(0)
             end = text.index(match.end())
             return EMPTY_NODE, text[end:]
         return None, text
@@ -1673,7 +1665,7 @@ def mandatory_violation(grammar: Grammar,
     else:
         msg = '%s expected, "%s" found!' % (expected, found)
     error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
-            if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
+        if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)
     return error, err_node, text_[i:]
 
@@ -2214,15 +2206,21 @@ RetrieveFilter = Callable[[List[str]], str]
 
 
 def last_value(stack: List[str]) -> str:
+    """Returns the last value on the cpature stack. This is the default case
+    when retrieving cpatured substrings."""
     return stack[-1]
 
 
 def counterpart(stack: List[str]) -> str:
+    """Returns a closing bracket for the opening bracket on the capture stack,
+    i.e. if "[" was captured, "]" will be retrieved."""
     value = stack[-1]
     return value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
 
 
 def accumulate(stack: List[str]) -> str:
+    """Returns an accumulation of all values on the stack.
+    By the way: I cannot remember any reasonable use case for this!?"""
     return "".join(stack) if len(stack) > 1 else stack[-1]  # provoke IndexError if stack empty
 
 
@@ -2240,7 +2238,7 @@ class Retrieve(Parser):
         symbol: The parser that has stored the value to be retrieved, in
             other words: "the observed parser"
         rfilter: a procedure that through which the processing to the
-            retrieved symbols is channeld. In the simplemost case it merely
+            retrieved symbols is channeled. In the simplest case it merely
             returns the last string stored by the observed parser. This can
             be (mis-)used to execute any kind of semantic action.
     """

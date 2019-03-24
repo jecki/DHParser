@@ -45,9 +45,10 @@ For JSON see:
 import asyncio
 import json
 from multiprocessing import Process, Value, Queue
-from typing import Callable, Optional, Union, Dict, List, Sequence, cast
+import sys
+from typing import Callable, Optional, Union, Dict, List, Tuple, NamedTuple, Sequence, cast
 
-from DHParser.toolkit import get_config_value, re
+from DHParser.toolkit import get_config_value, is_filename, load_if_file, re
 
 __all__ = ('RPC_Table',
            'RPC_Type',
@@ -73,7 +74,7 @@ SERVER_STARTING = 1
 SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
 
-response_test = b'''HTTP/1.1 200 OK
+test_response_test = b'''HTTP/1.1 200 OK
 Date: Sun, 18 Oct 2009 08:56:53 GMT
 Server: Apache/2.2.14 (Win32)
 Last-Modified: Sat, 20 Nov 2004 07:16:26 GMT
@@ -92,6 +93,26 @@ X-Pad: avoid browser bug
 </body>
 </html>
 '''
+
+test_get = b'''GET /method/object HTTP/1.1
+Host: 127.0.0.1:8888
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+
+'''
+
+
+# CompilationItem = NamedTuple('CompilationItem',
+#                              [('uri', str),
+#                               ('hash', int),
+#                               ('errors', str),
+#                               ('preview', str)])
 
 
 class Server:
@@ -113,9 +134,11 @@ class Server:
         self.server_messages = Queue()  # type: Queue
         self.server_process = None  # type: Optional[Process]
 
-    async def handle_compilation_request(self,
-                                         reader: asyncio.StreamReader,
-                                         writer: asyncio.StreamWriter):
+        # self.registry = {}  # type: Dict[str, ]
+
+    async def handle_request(self,
+                             reader: asyncio.StreamReader,
+                             writer: asyncio.StreamWriter):
         rpc_error = None  # type: Optional[Tuple[int, str]]
         json_id = 'null'  # type: Tuple[int, str]
         obj = {}          # type: Dict
@@ -132,7 +155,7 @@ class Server:
             try:
                 raw = json.loads(data)
             except json.decoder.JSONDecodeError as e:
-                rpc_error = -32700, "JSONDecodeError: " + str(e)
+                rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
 
         if rpc_error is None:
             if isinstance(raw, Dict):
@@ -169,12 +192,12 @@ class Server:
         await writer.drain()
         writer.close()
         # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine
-        #  gracefully. Is this needed?
+        #  gracefully. Is this needed? Does it work?
         # self.server.cancel()
 
     async def serve(self, address: str = '127.0.0.1', port: int = 8888):
         self.server = cast(asyncio.base_events.Server,
-                           await asyncio.start_server(self.handle_compilation_request, address, port))
+                           await asyncio.start_server(self.handle_request, address, port))
         async with self.server:
             self.stage.value = SERVER_ONLINE
             self.server_messages.put(SERVER_ONLINE)
@@ -183,14 +206,16 @@ class Server:
 
     def run_server(self, address: str = '127.0.0.1', port: int = 8888):
         self.stage.value = SERVER_STARTING
-        # loop = asyncio.get_event_loop()
-        # try:
-        #     loop.run_until_complete(self.serve(address, port))
-        # finally:
-        #     print(type(self.server))
-        #     # self.server.cancel()
-        #     loop.close()
-        asyncio.run(self.serve(address, port))
+        if sys.version_info >= (3, 7):
+            asyncio.run(self.serve(address, port))
+        else:
+            loop = asyncio.get_event_loop()
+            try:
+                loop.run_until_complete(self.serve(address, port))
+            finally:
+                # self.server.cancel()
+                loop.close()
+
 
     def wait_until_server_online(self):
         if self.stage.value != SERVER_ONLINE:
@@ -204,12 +229,16 @@ class Server:
         self.wait_until_server_online()
 
     def terminate_server_process(self):
-        self.server_process.terminate()
+        if self.server_process:
+            self.stage.value = SERVER_TERMINATE
+            self.server_process.terminate()
+            self.server_process = None
+        self.stage.value = SERVER_OFFLINE
 
     def wait_for_termination_request(self):
-        assert self.server_process
-        # self.wait_until_server_online()
-        while self.server_messages.get() != SERVER_TERMINATE:
-            pass
-        self.terminate_server_process()
-        self.server_process = None
+        if self.server_process:
+            if self.stage.value in (SERVER_STARTING, SERVER_ONLINE):
+                while self.server_messages.get() != SERVER_TERMINATE:
+                    pass
+            if self.stage.value == SERVER_TERMINATE:
+                self.terminate_server_process()
