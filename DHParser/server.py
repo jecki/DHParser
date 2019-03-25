@@ -43,11 +43,12 @@ For JSON see:
 
 
 import asyncio
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import json
 from multiprocessing import Process, Value, Queue
 import sys
 from typing import Callable, Optional, Union, Dict, List, Tuple, NamedTuple, Sequence, Set, cast
+from urllib.parse import urlparse
 
 from DHParser.toolkit import get_config_value, is_filename, load_if_file, re
 
@@ -67,6 +68,7 @@ RPC_Type = Union[RPC_Table, List[Callable], Callable]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 
 RX_IS_JSON = re.compile(r'\s*(?:{|\[|"|\d|true|false|null)')
+RX_GREP_URL = re.compile(r'GET ([^ ]+) HTTP')
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -150,8 +152,8 @@ class Server:
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
         self.server = None  # type: Optional[asyncio.AbstractServer]
-        self.pp_executor = None  # type: Optional[concurrent.futures.ProcessPoolExecutor]
-        self.tp_executor = None  # type: Optional[concurrent.futures.ThreadPoolExecutor]
+        self.pp_executor = None  # type: Optional[ProcessPoolExecutor]
+        self.tp_executor = None  # type: Optional[ThreadPoolExecutor]
 
     async def handle_request(self,
                              reader: asyncio.StreamReader,
@@ -167,6 +169,18 @@ class Server:
         if len(data) > self.max_source_size:
             rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
                                 % (self.max_source_size // (1024**2))
+
+        if data.startswith(b'GET'):
+            m = RX_GREP_URL(str(data[:4096]))
+            if m:
+                parsed_url = urlparse(m.group(1))
+                # TODO: serve http request
+                pass
+        else:
+            head = str(data[:4096])
+            if is_filename(head) or RX_IS_JSON.match(head):
+                # TODO: compile file
+                pass
 
         if rpc_error is None:
             try:
@@ -202,14 +216,14 @@ class Server:
                     has_kw_params = isinstance(params, Dict)
                     assert has_kw_params or isinstance(params, Sequence)
                     loop = asyncio.get_running_loop()
-                    pool = pp_pool if method_name in self.cpu_bound else \
-                           tp_pool if method_name in self.blocking else None
-                    if pool is None:
+                    executor = self.pp_executor if method_name in self.cpu_bound else \
+                               self.tp_executor if method_name in self.blocking else None
+                    if executor is None:
                         result = method(**params) if has_kw_params else method(*params)
                     elif has_kw_params:
-                        result = await loop.run_in_executor(pool, method, **params)
+                        result = await loop.run_in_executor(executor, method, **params)
                     else:
-                        result = await loop.run_in_executor(pool, method, *params)
+                        result = await loop.run_in_executor(executor, method, *params)
                 except TypeError as e:
                     rpc_error = -32602, "Invalid Params: " + str(e)
                 except NameError as e:
@@ -230,8 +244,7 @@ class Server:
         # self.server.cancel()
 
     async def serve(self, address: str = '127.0.0.1', port: int = 8888):
-        with concurrent.futures.ProcessPoolExecutor() as p, \
-                concurrent.futures.ThreadPoolExecutor() as t:
+        with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
             self.server = cast(asyncio.base_events.Server,
                                await asyncio.start_server(self.handle_request, address, port))
             async with self.server:
