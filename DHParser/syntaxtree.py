@@ -198,7 +198,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             duplicate = self.__class__(self.tag_name, self.result, True)
         duplicate._pos = self._pos
-        if self.attr_active():
+        if self.has_attr():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
         return duplicate
@@ -437,6 +437,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def attr(self):
         """
         Returns a dictionary of XML-attr attached to the node.
+
+        Examples:
+            >>> node = Node(None, '')
+            >>> print('Any attributes present?', node.has_attr())
+            Any attributes present? False
+            >>> node.attr['id'] = 'identificator'
+            >>> node.attr
+            OrderedDict([('id', 'identificator')])
+            >>> node.attr['id']
+            'identificator'
+            >>> del node['id']
+            >>> node.attr
+            OrderedDict()
+
+        NOTE: Use `node.attr_active()` rather than bool(node.attr) to check the
+        presence of any attributes. Attribute dictionaries are created lazily
+        and node.attr would create a dictionary, even though it may never be
+        needed any more.
         """
         try:
             if self._xml_attr is None:          # cython compatibility
@@ -446,14 +464,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._xml_attr
 
 
-    def attr_active(self) -> bool:
+    def has_attr(self) -> bool:
         """
-        Returns True, if XML-Attributes of this node have ever been set
-        or queried, even if unsuccessfully.
+        Returns `True`, if the node has any attributes, `False` otherwise.
+
+        This function does not create an attribute dictionary, therefore
+        it should be prefered to querying node.attr when testing for the
+        existence of any attributes.
         """
         try:
-            if self._xml_attr is not None:
-                return True
+            # if self._xml_attr is not None:
+            #     return True
+            return bool(self._xml_attr)
         except AttributeError:
             pass
         return False
@@ -464,12 +486,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Returns True, if `self` and `other` have the same attributes with the
         same attribute values.
         """
-        if self.attr_active():
-            if other.attr_active():
+        if self.has_attr():
+            if other.has_attr():
                 return self.attr == other.attr
             return len(self.attr) == 0
             # self has empty dictionary and other has no attributes
-        elif other.attr_active():
+        elif other.has_attr():
             return len(other.attr) == 0
             # other has empty attribute dictionary and self as no attributes
         return True  # neither self nor other have any attributes
@@ -661,7 +683,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             txt = [left_bracket, node.tag_name]
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
-            if node.attr_active():
+            if node.has_attr():
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
                 line, col = line_col(lbreaks, node.pos)
@@ -715,13 +737,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if node.tag_name in omit_tags:
                 return ''
             txt = ['<', node.tag_name]
-            has_reserved_attrs = node.attr_active() \
+            has_reserved_attrs = node.has_attr() \
                 and any(r in node.attr for r in {'err', 'line', 'col'})
-            if node.attr_active():
+            if node.has_attr():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
-            if src == '' and not (node.attr_active() and '_pos' in node.attr) and node.pos >= 0:
+            if src == '' and not (node.has_attr() and '_pos' in node.attr) and node.pos >= 0:
                 txt.append(' _pos="%i"' % node.pos)
             if root and id(node) in root.error_nodes and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
@@ -752,7 +774,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             printed on several lines to avoid unwanted gaps in the output.
             """
             return node.tag_name in inline_tags \
-                or (node.attr_active()
+                or (node.has_attr()
                     and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
@@ -765,7 +787,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         data = [self.tag_name,
                 [child.to_json_obj() for child in self.children]
                 if self.children else str(self._result)]
-        has_attr = self.attr_active()
+        has_attr = self.has_attr()
         if self._pos >= 0 or has_attr:
             data.append(self._pos)
         if has_attr:
@@ -938,7 +960,7 @@ class RootNode(Node):
             duplicate.children = NoChildren
             duplicate._result = self._result
         duplicate._pos = self._pos
-        if self.attr_active():
+        if self.has_attr():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
         duplicate.errors = copy.copy(self.errors)
@@ -968,7 +990,7 @@ class RootNode(Node):
         self.children = node.children
         self._pos = node._pos
         self.tag_name = node.tag_name
-        if node.attr_active():
+        if node.has_attr():
             self._xml_attr = node._xml_attr
         # self._content = node._content
         if id(node) in self.error_nodes:

@@ -531,8 +531,8 @@ def swap_attributes(node: Node, other: Node):
     Exchanges the attributes between node and other. This might be
     needed when rearanging trees.
     """
-    NA = node.attr_active()
-    OA = other.attr_active()
+    NA = node.has_attr()
+    OA = other.has_attr()
     if NA or OA:
         save = node._xml_attr if NA else None
         if OA:
@@ -564,7 +564,7 @@ def _reduce_child(node: Node, child: Node):
     """
     node.result = child.result
     update_attr(child, node)
-    if child.attr_active():
+    if child.has_attr():
         node._xml_attr = child._xml_attr
 
 

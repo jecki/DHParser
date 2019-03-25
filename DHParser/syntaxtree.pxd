@@ -16,7 +16,7 @@ cdef class Node:
     cpdef is_anonymous(self)
     cpdef _content(self)
     cpdef with_pos(self, pos)
-    cpdef attr_active(self)
+    cpdef has_attr(self)
     # cpdef compare_attr(self, other)
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
     # cpdef as_sxpr(self, src, indentation, compact)
