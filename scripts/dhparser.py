@@ -18,10 +18,16 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
-#  TODO: This is still a stub...
-
 import os
 import sys
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
+i = scriptdir.find('DHParser')
+if i >= 0:
+    dhparserdir = scriptdir[:i + 8]
+    sys.path.append(dhparserdir)
+else:
+    dhparserdir = ''
 
 from DHParser.compile import compile_source
 from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
@@ -31,8 +37,6 @@ from DHParser.toolkit import re, typing
 from typing import cast
 
 LOGGING = False
-
-dhparserdir = os.path.dirname(os.path.realpath(__file__))
 
 EBNF_TEMPLATE = r"""-grammar
 

@@ -180,7 +180,7 @@ class EBNFGrammar(Grammar):
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), wsp__)
-    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^"])*?`'), wsp__)
+    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), wsp__)
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), wsp__),
                           Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)

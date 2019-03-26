@@ -1,0 +1,45 @@
+# json-grammar  see: https://json.org/
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
+@ literalws   = right           # literals have implicit whitespace on the right hand side
+@ comment     = /\/\/.*/        # comments range from a '#'-character to the end of the line
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+
+
+#######################################################################
+#
+#:  JSON elements
+#
+#######################################################################
+
+json       = ~ element EOF
+element    = value
+value      = object | array | string | number | "true" | "false" | "null"
+object     = "{" [member { "," member }] "}"
+member     = string ":" element
+array      = "[" [value { "," value }] "]"
+string     = `"` CHARACTERS `"` ~
+number     = INT FRAC EXP ~
+
+#######################################################################
+#
+#:  JSON primitives
+#
+#######################################################################
+
+CHARACTERS = { /[^"\\]+/ | ESCAPE }
+ESCAPE     = /\\[\/bnrt\\]/ | /\\u/ HEX HEX HEX HEX
+HEX        = /[0-9a-fA-F]/
+
+INT        = [`-`] /[0-9]/ | /[1-9][0-9]+/
+FRAC       = [ `.` /[0-9]+/ ]
+EXP        = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
+
+EOF      =  !/./        # no more characters ahead, end of file reached
+
