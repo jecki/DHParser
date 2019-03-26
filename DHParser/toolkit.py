@@ -105,7 +105,7 @@ def set_config_value(key: Hashable, value: Any):
     Changes a configuration value thread-safely. The configuration
     value will be set only for the current thread. In order to
     set configuration values for any new thread, add the key and value
-    to CONFIG_PRESET, before the thread is started.
+    to CONFIG_PRESET, before any thread accessing config values is started.
     :param key:    the key (an immutable, usually a string)
     :param value:  the value
     """

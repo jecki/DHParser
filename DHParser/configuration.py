@@ -32,7 +32,12 @@ program and before any DHParser-function is invoked.
 
 from typing import Dict, Hashable, Any
 
-__all__ = ('CONFIG_PRESET',)
+__all__ = ('CONFIG_PRESET',
+           'XML_SERIALIZATION',
+           'SXPRESSION_SERIALIZATION',
+           'COMPACT_SERIALIZATION',
+           'JSON_SERIALIZATION',
+           'SERIALIZATIONS')
 
 CONFIG_PRESET = dict()  # type: Dict[Hashable, Any]
 
@@ -77,15 +82,25 @@ CONFIG_PRESET['max_parser_dropouts'] = 3
 # Possible values are:
 # 'XML'          - output as XML
 # 'S-expression' - output as S-expression, i.e. a list-like format
-# 'compact'      - compact tree output, i.e. children a represented
-#                  on indented lines with no opening or closing tags,
-#                  brackets etc.
-# Default values: "compact" for concrete syntax trees and "XML" for
-#                 abstract syntax trees and "S-expression" for any
-#                 other kind of tree.
-CONFIG_PRESET['cst_serialization'] = "compact"
-CONFIG_PRESET['ast_serialization'] = "XML"
-CONFIG_PRESET['default_serialization'] = "S-expression"
+# 'compact'      - compact tree output, i.e. children a represented on
+#                  indented lines with no opening or closing tags, brackets
+#                  etc.
+# 'json'         - output in JSON-format. This is probably the least
+#                  readable representation, but useful for serialization, for
+#                  example, to return syntax trees from remote procedure calls.
+# Default values: "compact" for concrete syntax trees and "XML" for abstract
+#                 syntax trees and "S-expression" for any other kind of tree.
+XML_SERIALIZATION = "XML"
+SXPRESSION_SERIALIZATION = "S-expression"
+COMPACT_SERIALIZATION = "compact"
+JSON_SERIALIZATION = "json"
+
+SERIALIZATIONS = frozenset({XML_SERIALIZATION, SXPRESSION_SERIALIZATION,
+                            COMPACT_SERIALIZATION, JSON_SERIALIZATION})
+
+CONFIG_PRESET['cst_serialization'] = COMPACT_SERIALIZATION
+CONFIG_PRESET['ast_serialization'] = XML_SERIALIZATION
+CONFIG_PRESET['default_serialization'] = SXPRESSION_SERIALIZATION
 
 # Defines the maximum line length for flattened S-expressions.
 # Below this threshold S-expressions will be returned in flattened

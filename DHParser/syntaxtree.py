@@ -28,6 +28,8 @@ import copy
 import json
 from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional, Dict
 
+from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
 from DHParser.toolkit import get_config_value, re
@@ -837,16 +839,17 @@ def serialize(node: Node, how: str = 'default') -> str:
     elif switch == 'default':
         switch = get_config_value('default_serialization').lower()
 
-    if switch == 's-expression':
+    if switch == SXPRESSION_SERIALIZATION.lower():
         return node.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
-    elif switch == 'xml':
+    elif switch == XML_SERIALIZATION.lower():
         return node.as_xml()
-    elif switch == 'json':
+    elif switch == JSON_SERIALIZATION.lower():
         return node.as_json()
-    elif switch == 'compact':
+    elif switch == COMPACT_SERIALIZATION.lower():
         return node.as_sxpr(compact=True)
     else:
-        raise ValueError('Unknown serialization %s, %s' % (how, switch))
+        raise ValueError('Unknown serialization %s. Allowed values are either: %s or : %s'
+                         % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
 
 
 class FrozenNode(Node):
