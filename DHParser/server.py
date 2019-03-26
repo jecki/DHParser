@@ -47,8 +47,8 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import json
 from multiprocessing import Process, Value, Queue
 import sys
-from typing import Callable, Optional, Union, Dict, List, Tuple, NamedTuple, Sequence, Set, cast
-from urllib.parse import urlparse
+from typing import Callable, Optional, Union, Dict, List, Tuple, Sequence, Set, cast
+from urllib.parse import urlparse, parse_qs
 
 from DHParser.toolkit import get_config_value, is_filename, load_if_file, re
 
@@ -178,8 +178,8 @@ class Server:
                 pass
         else:
             head = str(data[:4096])
-            if is_filename(head) or RX_IS_JSON.match(head):
-                # TODO: compile file
+            if not RX_IS_JSON.match(head):
+                # TODO: compile file or data
                 pass
 
         if rpc_error is None:

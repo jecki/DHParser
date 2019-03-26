@@ -1630,7 +1630,7 @@ def mandatory_violation(grammar: Grammar,
     needed by the AllOf- as well as the Series-parser.
 
     :param grammar: the grammar
-    :param text_: the point, where the mandatory vialoation. As usual the
+    :param text_: the point, where the mandatory violation. As usual the
             string view represents the remaining text from this point.
     :param failed_on_lookahead: True if the violating parser was a
             Lookahead-Parser.
@@ -1650,7 +1650,7 @@ def mandatory_violation(grammar: Grammar,
     i = reloc if reloc >= 0 else 0
     location = grammar.document_length__ - len(text_)
     err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
-    found = text_[:10].replace('\n', '\\n ')
+    found = text_[:10].replace('\n', '\\n ') + '...'
     for search, message in err_msgs:
         rxs = not isinstance(search, str)
         if rxs and text_.match(search) or (not rxs and text_.startswith(search)):
