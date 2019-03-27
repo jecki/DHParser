@@ -68,7 +68,7 @@ Match test "entry" for parser "entry" failed:
 	  organization = {Wikipedia}
 	}
 
-	6:68: Error (1010): '}' ~ expected, "%E2\%80\%9" found!
+	6:68: Error (1010): '}' ~ expected, "%E2\%80\%9..." found!
 	6:69: Error (1040): Parser stopped before end! trying to recover but stopping history recording at this point.
 	7:1: Error (1020): Parser did not match!
 		    Most advanced:    6, 68:  entry->:ZeroOrMore->:Series->content->:Series->text->:Alternative->CONTENT_STRING->:Alternative->:Series->:Lookahead->/(?i)%/;  MATCH;  "%"

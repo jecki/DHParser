@@ -113,21 +113,6 @@ CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 
 ########################################################################
 #
-# compiler configuration
-#
-########################################################################
-
-# Turn checks for None-return of compiler-methods (a common mistake) in
-# the compile.Compiler class on. This can lead to problems in cases
-# where compile functions legitimately return `None` as value. See the
-# examples/json for an example. In this case the configuration variable
-# 'raise_error_on_None_return' should be set to False.
-# Possible values: True, False  Default value: True
-CONFIG_PRESET['raise_error_on_None_return'] = True
-
-
-########################################################################
-#
 # ebnf compiler configuration
 #
 ########################################################################
