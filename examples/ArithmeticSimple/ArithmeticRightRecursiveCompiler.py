@@ -12,7 +12,7 @@ from functools import partial
 import os
 import sys
 
-sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
+sys.path.extend(['../../', '../', './'])
 
 try:
     import regex as re

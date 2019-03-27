@@ -12,7 +12,6 @@ from functools import partial
 import os
 import sys
 
-
 sys.path.extend(['../', '../../'])
 
 try:

@@ -155,7 +155,7 @@ def recompile_grammar(grammar_src, force):
             sys.exit(1)
 
 
-def run_grammar_tests(glob_pattern):
+def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
     with DHParser.log.logging(LOGGING):
         error_report = testing.grammar_suite(
             os.path.join(scriptpath, 'grammar_tests'),
@@ -184,7 +184,7 @@ if __name__ == '__main__':
                           force=False)
         sys.path.append('.')
         from {name}Compiler import get_grammar, get_transformer
-        error_report = run_grammar_tests(glob_pattern=arg)
+        error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')
             print(error_report)

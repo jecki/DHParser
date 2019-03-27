@@ -8,15 +8,15 @@ import sys
 
 LOGGING = False
 
-sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
+sys.path.extend(['.', '../..'])
 
 scriptpath = os.path.dirname(__file__)
-
 
 try:
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
+    from DHParser.toolkit import set_config_value
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -37,7 +37,7 @@ def recompile_grammar(grammar_src, force):
             sys.exit(1)
 
 
-def run_grammar_tests(glob_pattern):
+def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
     with DHParser.log.logging(LOGGING):
         error_report = testing.grammar_suite(
             os.path.join(scriptpath, 'grammar_tests'),
@@ -66,7 +66,8 @@ if __name__ == '__main__':
                           force=False)
         sys.path.append('.')
         from jsonCompiler import get_grammar, get_transformer
-        error_report = run_grammar_tests(glob_pattern=arg)
+        # set_config_value('test_parallelization', False)
+        error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')
             print(error_report)

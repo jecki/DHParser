@@ -11,10 +11,8 @@ import collections
 from functools import partial
 import os
 import sys
+
 sys.path.extend(['../../', '../', './'])
-
-
-sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
 
 try:
     import regex as re

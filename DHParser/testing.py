@@ -540,6 +540,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
             results = []
             for filename in sorted(os.listdir('.')):
+                print(filename)
                 if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                     parameters = filename, parser_factory, transformer_factory, report, verbose
                     results.append((filename, pool.submit(run_unit, log_dir(), *parameters)))
