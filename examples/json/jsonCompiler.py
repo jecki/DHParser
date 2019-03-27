@@ -33,7 +33,9 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, GLOBALS
+    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
+    JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS
 
 
 #######################################################################
@@ -60,29 +62,31 @@ class jsonGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "06e67712cd6ccd3f0acd62f0cbe70ade"
+    source_hash__ = "2574f4ac3ec68cc615dd654da3490102"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'\/\/.*'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = DropWhitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Token("E"), Token("e")), Option(Alternative(Token("+"), Token("-"))), RegExp('[0-9]+')))
-    FRAC = Option(Series(Token("."), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(Token("-")), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    EXP = Option(Series(Alternative(DropToken("E"), DropToken("e")), Option(Alternative(DropToken("+"), DropToken("-"))), RegExp('[0-9]+')))
+    FRAC = Option(Series(DropToken("."), RegExp('[0-9]+')))
+    INT = Alternative(Series(Option(DropToken("-")), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
     HEX = RegExp('[0-9a-fA-F]')
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
     CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
-    number = Series(INT, FRAC, EXP, wsp__)
-    string = Series(Token('"'), CHARACTERS, Token('"'), wsp__)
-    array = Series(Series(Token("["), wsp__), Option(Series(value, ZeroOrMore(Series(Series(Token(","), wsp__), value)))), Series(Token("]"), wsp__))
-    member = Series(string, Series(Token(":"), wsp__), element)
-    object = Series(Series(Token("{"), wsp__), Option(Series(member, ZeroOrMore(Series(Series(Token(","), wsp__), member)))), Series(Token("}"), wsp__))
-    value.set(Alternative(object, array, string, number, Series(Token("true"), wsp__), Series(Token("false"), wsp__), Series(Token("null"), wsp__)))
+    null = Series(Token("null"), dwsp__)
+    bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
+    number = Series(INT, FRAC, EXP, dwsp__)
+    string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__)
+    array = Series(Series(DropToken("["), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(DropToken(","), dwsp__), value)))), Series(DropToken("]"), dwsp__))
+    member = Series(string, Series(DropToken(":"), dwsp__), element)
+    object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member)))), Series(DropToken("}"), dwsp__))
+    value.set(Alternative(object, array, string, number, bool, null))
     element.set(Synonym(value))
-    json = Series(wsp__, element, EOF)
+    json = Series(dwsp__, element, EOF)
     root__ = json
     
 def get_grammar() -> jsonGrammar:
@@ -106,14 +110,16 @@ def get_grammar() -> jsonGrammar:
 json_AST_transformation_table = {
     # AST Transformations for the json-grammar
     "<": flatten,
-    "json": [],
-    "element": [],
-    "value": [],
+    "json": [remove_nodes('EOF'), replace_by_single_child],
+    "element": [replace_by_single_child],
+    "value": [replace_by_single_child],
     "object": [],
     "member": [],
     "array": [],
-    "string": [],
-    "number": [],
+    "string": [collapse],
+    "number": [collapse],
+    "bool": [],
+    "null": [],
     "CHARACTERS": [],
     "ESCAPE": [],
     "HEX": [],
@@ -153,54 +159,27 @@ class jsonCompiler(Compiler):
     def __init__(self):
         super(jsonCompiler, self).__init__()
 
-    def _reset(self):
-        super()._reset()
-        # initialize your variables here, not in the constructor!
+    def on_object(self, node):
+        return dict(self.compile(child) for child in node.children)
 
-    def on_json(self, node):
-        return self.fallback_compiler(node)
+    def on_member(self, node) -> tuple:
+        return (self.compile(node.children[0]), self.compile(node.children[1]))
 
-    # def on_element(self, node):
-    #     return node
+    def on_array(self, node) -> list:
+        return [self.compile(child) for child in node.children]
 
-    # def on_value(self, node):
-    #     return node
+    def on_string(self, node) -> str:
+        return node.content
 
-    # def on_object(self, node):
-    #     return node
+    def on_number(self, node) -> float:
+        return float(node.content)
 
-    # def on_member(self, node):
-    #     return node
+    def on_bool(self, node) -> bool:
+        print(node.content)
+        return True if node.content == "true" else False
 
-    # def on_array(self, node):
-    #     return node
-
-    # def on_string(self, node):
-    #     return node
-
-    # def on_number(self, node):
-    #     return node
-
-    # def on_CHARACTERS(self, node):
-    #     return node
-
-    # def on_ESCAPE(self, node):
-    #     return node
-
-    # def on_HEX(self, node):
-    #     return node
-
-    # def on_INT(self, node):
-    #     return node
-
-    # def on_FRAC(self, node):
-    #     return node
-
-    # def on_EXP(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
-    #     return node
+    def on_null(self, node) -> None:
+        return None
 
 
 def get_compiler() -> jsonCompiler:
@@ -258,6 +237,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.as_sxpr() if isinstance(result, Node) else result)
     else:
         print("Usage: jsonCompiler.py [FILENAME]")

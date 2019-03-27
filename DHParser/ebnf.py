@@ -98,7 +98,9 @@ from DHParser import logging, is_filename, load_if_file, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
-    error_on, recompile_grammar, left_associative, lean_left, GLOBALS
+    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
+    JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS 
 '''.format(dhparserdir=dhparserdir)
 
 

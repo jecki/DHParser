@@ -10,6 +10,7 @@
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /\/\/.*/        # comments range from a '#'-character to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
+@ drop        = whitespace, token  # drop tokens and whitespace
 
 
 #######################################################################
@@ -20,12 +21,14 @@
 
 json       = ~ element EOF
 element    = value
-value      = object | array | string | number | "true" | "false" | "null"
+value      = object | array | string | number | bool | null
 object     = "{" [member { "," member }] "}"
 member     = string ":" element
 array      = "[" [value { "," value }] "]"
 string     = `"` CHARACTERS `"` ~
 number     = INT FRAC EXP ~
+bool       = /true/~ | /false/~
+null       = "null"
 
 #######################################################################
 #

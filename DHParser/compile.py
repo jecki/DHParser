@@ -43,7 +43,7 @@ from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basename
-from DHParser.toolkit import load_if_file
+from DHParser.toolkit import load_if_file, get_config_value
 
 
 __all__ = ('CompilerError', 'Compiler', 'compile_source', 'visitor_name')
@@ -111,6 +111,7 @@ class Compiler:
         self.source = ''
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
+        self._None_check = get_config_value('raise_error_on_None_return')
         self._dirty_flag = False
 
     def __call__(self, root: RootNode, source: str = '') -> Any:
@@ -172,7 +173,8 @@ class Compiler:
         self.context.append(node)
         result = compiler(node)
         self.context.pop()
-        if result is None:
+        if result is None and self._None_check and \
+                compiler.__annotations__['return'] not in (None, 'None'):
             raise CompilerError('Method on_%s returned `None` instead of a '
                                 'valid compilation result!' % elem)
         return result
