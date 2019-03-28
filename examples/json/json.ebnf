@@ -8,7 +8,7 @@
 
 @ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
 @ literalws   = right           # literals have implicit whitespace on the right hand side
-@ comment     = /\/\/.*/        # comments range from a '#'-character to the end of the line
+@ comment     = /(?:\/\/|#).*/  # comments range from a '#' odr '//' sign to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ drop        = whitespace, token  # drop tokens and whitespace
 
@@ -27,7 +27,7 @@ member     = string ":" element
 array      = "[" [value { "," value }] "]"
 string     = `"` CHARACTERS `"` ~
 number     = INT FRAC EXP ~
-bool       = /true/~ | /false/~
+bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
 null       = "null"
 
 #######################################################################
