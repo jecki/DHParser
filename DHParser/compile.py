@@ -178,7 +178,7 @@ class Compiler:
                                 'compilation result! Turn this check of by adding '
                                 '"self._None_check = False" to the _reset()-Method of your'
                                 'compiler class, in case on_%s actually SHOULD return None.'
-                                % elem)
+                                % (elem, elem))
         return result
 
 

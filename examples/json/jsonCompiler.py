@@ -62,11 +62,11 @@ class jsonGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "2574f4ac3ec68cc615dd654da3490102"
+    source_hash__ = "abc885159d84633d94e82c75709c9684"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
-    COMMENT__ = r'\/\/.*'
+    COMMENT__ = r'(?:\/\/|#).*'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
@@ -159,6 +159,10 @@ class jsonCompiler(Compiler):
     def __init__(self):
         super(jsonCompiler, self).__init__()
 
+    def _reset(self):
+        super()._reset()
+        self._None_check = False
+
     def on_object(self, node):
         return dict(self.compile(child) for child in node.children)
 
@@ -175,7 +179,6 @@ class jsonCompiler(Compiler):
         return float(node.content)
 
     def on_bool(self, node) -> bool:
-        print(node.content)
         return True if node.content == "true" else False
 
     def on_null(self, node) -> None:
