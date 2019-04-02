@@ -21,7 +21,7 @@ permissions and limitations under the License.
 import os
 import sys
 
-scriptdir = os.path.dirname(os.path.realpath(__file__))
+scriptdir = os.path.dirname(os.path.abspath(__file__))
 i = scriptdir.find('DHParser')
 if i >= 0:
     dhparserdir = scriptdir[:i + 8]
@@ -54,7 +54,7 @@ EBNF_TEMPLATE = r"""-grammar
 
 #######################################################################
 #
-#  Structure and Components
+#:  Structure and Components
 #
 #######################################################################
 
@@ -63,7 +63,7 @@ document = ~ { WORD } §EOF      # root parser: a sequence of words preceded
 
 #######################################################################
 #
-#  Regular Expressions
+#:  Regular Expressions
 #
 #######################################################################
 
@@ -126,10 +126,10 @@ import sys
 
 LOGGING = False
 
-sys.path.append(r'{dhparserdir}')
-
 scriptpath = os.path.dirname(__file__)
-
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '{reldhparserdir}'))
+if dhparserdir not in sys.path:
+    sys.path.append(dhparserdir)
 
 try:
     from DHParser import dsl
@@ -224,12 +224,14 @@ def create_project(path: str):
     else:
         os.mkdir('grammar_tests')
 
-    create_file(os.path.join('grammar_tests', '01_test_word.ini'), TEST_WORD_TEMPLATE)
-    create_file(os.path.join('grammar_tests', '02_test_document.ini'), TEST_DOCUMENT_TEMPLATE)
+    create_file(os.path.join('grammar_tests', '01_test_Regular_Expressions.ini'),
+                TEST_WORD_TEMPLATE)
+    create_file(os.path.join('grammar_tests', '02_test_Structure_and_Components.ini'),
+                TEST_DOCUMENT_TEMPLATE)
     create_file(name + '.ebnf', '# ' + name + EBNF_TEMPLATE)
     create_file('README.md', README_TEMPLATE.format(name=name))
-    create_file('tst_%s_grammar.py' % name,
-                GRAMMAR_TEST_TEMPLATE.format(name=name, dhparserdir=dhparserdir))
+    create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
+        name=name, reldhparserdir=os.path.relpath(dhparserdir, os.path.abspath('.'))))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     # The following is left to the user as an exercise

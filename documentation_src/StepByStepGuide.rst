@@ -54,7 +54,7 @@ files and directories for sure, but those will not concern us for now::
 
     DHParser/            - the DHParser python packages
     documentation/       - DHParser's documentation in html-form
-    documentation_source - DHParser's documentation in reStructedText-Format
+    documentation_src    - DHParser's documentation in reStructedText-Format
     examples/            - some examples for DHParser (mostly incomplete)
     experimental/        - an empty directory for experimenting
     test/                - DHParser's unit-tests
@@ -85,8 +85,8 @@ contains the following files::
     example.dsl         - an example file written in this grammar
     tst_poetry_grammar.py - a python script ("test-script") that re-compiles
                             the grammar (if necessary) and runs the unit tests
-    grammar_tests/01_test_word.ini     - a demo unit test
-    grammar_tests/02_test_document.ini - another unit test
+    grammar_tests/01_test_Regular_Expressions.ini      - a demo unit test
+    grammar_tests/02_test_Structure_and_Components.ini - another unit test
 
 Now, if you look into the file "example.dsl" you will find that it contains a
 simple sequence of words, namely "Life is but a walking shadow". In fact, the
@@ -301,19 +301,29 @@ the parser simply would not match, which in itself is not considered an error.
    between significant whitespace and insignificant whitespace. For example,
    whitespace at the beginning of a text could be considered insignificant,
    because the text does not change when the whitespace at the beginning is
-   removed. By the same token, whitespace between words could be considered as significant. It is, however, a matter of convention and purpose, when and whether whitespace is to be considered insignificant. For example, a typesetter might not quite agree that whitespace at the beginning of a text is insignificant. And in our example, whitespace between words is considered
+   removed. By the same token, whitespace between words could be considered as
+   significant. It is, however, a matter of convention and purpose, when and
+   whether whitespace is to be considered insignificant. For example, a
+   typesetter might not quite agree that whitespace at the beginning of a text
+   is insignificant. And in our example, whitespace between words is considered
    as semantically insiginificant, because -- even though it is needed during
    the parsing process -- we know by definition that words must be separated by
-   whitespace, so that we can safely leave it out of our data model (see below). In fact, all whitespace in our example is thus considered as insignificant.
+   whitespace, so that we can safely leave it out of our data model (see below).
+   In fact, all whitespace in our example is thus considered as insignificant.
 
-   If, however, the distinction is made between a significant and an insignificant type of whitespace -- which is often reasonable, then the insignificant whitespace should be denoted by DHParser's default sign for whitespace, that is a tilde "~", while significant whitespace should be explicitely defined in the grammar, for example by introducing a
+   If, however, the distinction is made between a significant and an
+   insignificant type of whitespace -- which is often reasonable, then the
+   insignificant whitespace should be denoted by DHParser's default sign for
+   whitespace, that is a tilde "~", while significant whitespace should be
+   explicitely defined in the grammar, for example by introducing a
    definition like `S = /\s+/` into the grammar.
 
    Here is a little exercise: Can you rewrite the grammar of this example
    so as to distinguish between significant whitespace between words and
    insignificant whitespace at the beginning of the text? Why could it be
    useful to keep whitespace in the data model, even if the presence of
-   whitespace follows strict conventions (e.g. between any two consecuitive words there must be whitespace and at the beginning of the second and
+   whitespace follows strict conventions (e.g. between any two consecuitive
+   words there must be whitespace and at the beginning of the second and
    all following paragraphs there is to be whitespace and the like)? Discuss.
 
 Now, let's look at our two matching rules. Both of these rules contain regular
@@ -363,9 +373,9 @@ grammar. So we will have to update our test-cases. Actually, the grammar
 gets compiled never the less and we could just ignore the test failures and
 carry on with compiling our "example.dsl"-file again. But, for this time,
 we'll follow good practice and adjust the test cases. So open the test that
-failed, "grammar_tests/02_test_document.ini", in the editor and add full stops
-at the end of the "match"-cases and remove the full stop at the end of the
-"fail"-case::
+failed, "grammar_tests/02_test_Structure_and_Components.ini", in the editor
+and add full stops at the end of the "match"-cases and remove the full stop
+at the end of the "fail"-case::
 
     [match:document]
     M1: """This is a sequence of words
@@ -483,7 +493,7 @@ without any whitespace in between, otherwise DHParser won't understannd it.)
 At this point the worry may arise that the same problem could reoccur at
 another level, if the rule for WORD would match empty strings as well. Let's
 quickly add a test case for this to the file
-``grammar_tests/01_test_word.ini``::
+``grammar_tests/01_test_Regular_Expressions.ini``::
 
     [fail:WORD]
     F1: two words
@@ -564,14 +574,14 @@ the list of allowed characters in a word by changing the respective line in
 the grammar definition to ``WORD = /[\w’]+/~``. Now, before we even change the
 grammar we first add another test case to capture this kind of error. Since we
 have decided that "Life’s" should be parsed as a singe word, let's open the
-file "grammar_tests/01_test_word.ini" and add the following test::
+file "grammar_tests/01_test_Regular_Expressions.ini" and add the following test::
 
     [match:WORD]
     M3: Life’s
 
 To be sure that the new test captures the error we have found you might want
 to run the script "tst_poetry_grammar.py" and verify that it reports the
-failure of test "M3" in the suite "01_test_word.ini". After that, change the
+failure of test "M3" in the suite "01_test_Regular_Expressions.ini". After that, change the
 regular expression for the symbol WORD in the grammar file "poetry.ebnf" as
 just described. Now both the tests and the compilation of the file
 "macbeth.dsl" should run through smoothly.
