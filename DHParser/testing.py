@@ -55,7 +55,8 @@ __all__ = ('unit_from_config',
            'extract_symbols',
            'create_test_templates',
            'reset_unit',
-           'runner')
+           'runner',
+           'clean_report')
 
 
 UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst'}
@@ -798,6 +799,7 @@ def run_file(fname):
         exec('import ' + fname[:-3])
         runner('', eval(fname[:-3]).__dict__)
 
+
 def run_with_log(logdir, f):
     """
     Run `grammar_unit()` with logs written to `log_dir` or no logs if `log_dir`
@@ -807,6 +809,7 @@ def run_with_log(logdir, f):
     """
     with logging(logdir):
         run_file(f)
+
 
 def run_path(path):
     """Runs all unit tests in `path`"""
@@ -835,3 +838,17 @@ def run_path(path):
         run_file(fname)
     sys.path.pop()
 
+
+def clean_report():
+    """Deletes any test-report-files in the REPORT sub-directory and removes
+    the REPORT sub-directory, if it is empty after deleting the files."""
+    if os.path.exists('REPORT'):
+        files = os.listdir('REPORT')
+        flag = False
+        for file in files:
+            if re.match(r'\w*_test_\d+\.md', file):
+                os.remove(os.path.join('REPORT', file))
+            else:
+                flag = True
+        if not flag:
+            os.rmdir('REPORT')

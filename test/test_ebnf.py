@@ -20,8 +20,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 from multiprocessing import Pool
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 sys.path.extend(['../', './'])
 
@@ -33,7 +36,7 @@ from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import CompilationError, compileDSL, grammar_provider
-from DHParser.testing import grammar_unit
+from DHParser.testing import grammar_unit, clean_report
 
 
 class TestDirectives:
@@ -130,7 +133,13 @@ class TestEBNFParser:
     }
 
     def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptdir)
         self.EBNF = get_ebnf_grammar()
+
+    def teardown(self):
+        clean_report()
+        os.chdir(self.save_dir)
 
     def test_RE(self):
         gr = get_ebnf_grammar()

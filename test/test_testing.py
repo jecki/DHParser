@@ -20,9 +20,10 @@ limitations under the License.
 """
 
 import os
-import re
 import sys
 from functools import partial
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 sys.path.extend(['../', './'])
 
@@ -32,9 +33,7 @@ from DHParser.transform import traverse, remove_whitespace, remove_empty, \
 from DHParser.dsl import grammar_provider
 from DHParser.error import Error
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
-    reset_unit
-from DHParser.log import logging
-
+    clean_report
 
 CFG_FILE_1 = '''
 # a comment
@@ -92,6 +91,8 @@ M1*: """Trigger CST-output with an asterix!"""
 
 class TestTestfiles:
     def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptdir)
         with open('configfile_test_1.ini', 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_1)
         with open('configfile_test_2.ini', 'w', encoding="utf-8") as f:
@@ -103,6 +104,7 @@ class TestTestfiles:
         os.remove('configfile_test_1.ini')
         os.remove('configfile_test_2.ini')
         os.remove('configfile_test_3.ini')
+        os.chdir(self.save_dir)
 
     def test_unit_from_config_file(self):
         unit = unit_from_file('configfile_test_1.ini')
@@ -144,19 +146,6 @@ ARITHMETIC_EBNF_transformation_table = {
 
 
 ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
-
-
-def clean_report():
-    if os.path.exists('REPORT'):
-        files = os.listdir('REPORT')
-        flag = False
-        for file in files:
-            if re.match(r'unit_test_\d+\.md', file):
-                os.remove(os.path.join('REPORT', file))
-            else:
-                flag = True
-        if not flag:
-            os.rmdir('REPORT')
 
 
 class TestGrammarTest:
@@ -213,8 +202,13 @@ class TestGrammarTest:
         }
     }
 
+    def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptdir)
+
     def teardown(self):
         clean_report()
+        os.chdir(self.save_dir)
 
     def test_testing_grammar(self):
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
@@ -289,11 +283,14 @@ class TestLookahead:
     }
 
     def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptdir)
         self.grammar_fac = grammar_provider(TestLookahead.EBNF)
         self.trans_fac = lambda : partial(traverse, processing_table={"*": [flatten, remove_empty]})
 
     def teardown(self):
         clean_report()
+        os.chdir(self.save_dir)
 
     def test_selftest(self):
         doc = """
