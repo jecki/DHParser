@@ -449,7 +449,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             OrderedDict([('id', 'identificator')])
             >>> node.attr['id']
             'identificator'
-            >>> del node['id']
+            >>> del node.attr['id']
             >>> node.attr
             OrderedDict()
 

@@ -35,6 +35,8 @@ class TestDHParserCommandLineTool:
         os.chdir(scriptdir)
         if not os.path.exists('testdata'):
             os.mkdir('testdata')
+        self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
+        self.python = 'python3 ' if os.system('python3 -V' + self.nulldevice) == 0 else 'python '
 
     def teardown(self):
         if os.path.exists('testdata/neu') and os.path.isdir('testdata/neu'):
@@ -44,10 +46,9 @@ class TestDHParserCommandLineTool:
         os.chdir(self.cwd)
 
     def test_dhparser(self):
-        nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
-        os.system('python3 ../scripts/dhparser.py testdata/neu ' + nulldevice)
-        os.system('python3 testdata/neu/tst_neu_grammar.py ' + nulldevice)
-        os.system('python3 testdata/neu/neuCompiler.py testdata/neu/example.dsl '
+        os.system(self.python + '../scripts/dhparser.py testdata/neu ' + self.nulldevice)
+        os.system(self.python + 'testdata/neu/tst_neu_grammar.py ' + self.nulldevice)
+        os.system(self.python + 'testdata/neu/neuCompiler.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
