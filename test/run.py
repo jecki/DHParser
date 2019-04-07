@@ -35,10 +35,11 @@ def run_doctests(module):
 
 
 if __name__ == "__main__":
-    if platform.system() != "Windows":
-        interpreters = ['python3 ', 'pypy3 ']
-    else:
-        interpreters = ['python.exe ']
+    interpreters = ['python3 ' if os.system('python3 -V') == 0 else 'python ']
+    if os.system('pypy3 -V') == 0:
+        interpreters.append('pypy3 ')
+    elif os.system('pypy -V') == 0:
+        interpreters.append('pypy ')
 
     cwd = os.getcwd()
     os.chdir(os.path.join(scriptdir, '..'))
@@ -59,17 +60,17 @@ if __name__ == "__main__":
 
         # unit tests
         for interpreter in interpreters:
-            os.system(interpreter + '--version')
-            # for filename in os.listdir('test'):
-            #     if filename.startswith('test_'):
-            #         command = interpreter + os.path.join('test', filename)
-            #         results.append(pool.submit(run_unittests, command))
-            os.system(' '.join([interpreter, '-c',
-                                '''"import sys; '''
-                                '''sys.path.extend(['DHParser']);''' 
-                                '''import testing; testing.run_path('%s')"''' %
-                                scriptdir.replace('\\', '\\\\'),
-                            os.path.join(os.getcwd(), 'test')]))
+            if os.system(interpreter + '--version') == 0:
+                # for filename in os.listdir('test'):
+                #     if filename.startswith('test_'):
+                #         command = interpreter + os.path.join('test', filename)
+                #         results.append(pool.submit(run_unittests, command))
+                os.system(' '.join([interpreter, '-c',
+                                    '''"import sys; '''
+                                    '''sys.path.extend(['DHParser']);''' 
+                                    '''import testing; testing.run_path('%s')"''' %
+                                    scriptdir.replace('\\', '\\\\'),
+                                os.path.join(os.getcwd(), 'test')]))
 
         concurrent.futures.wait(results)
 

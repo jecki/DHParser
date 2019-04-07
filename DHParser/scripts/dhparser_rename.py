@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""rename_project.py - rename a dhparser project properly
+"""dhparser_rename.py - rename a dhparser project properly
 
 Copyright 2019  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -97,4 +97,4 @@ if __name__ == "__main__":
             print(error)
             sys.exit(1)
     else:
-        print('Usage: python rename_project.py PROJECT_DIRECTORY NEW_NAME')
+        print('Usage: python dhparser_rename.py PROJECT_DIRECTORY NEW_PROJECT_NAME')

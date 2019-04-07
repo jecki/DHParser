@@ -795,6 +795,7 @@ def runner(tests, namespace):
 
 def run_file(fname):
     if fname.lower().startswith('test_') and fname.endswith('.py'):
+        print("RUNNING " + fname)
         # print('\nRUNNING UNIT TESTS IN: ' + fname)
         exec('import ' + fname[:-3])
         runner('', eval(fname[:-3]).__dict__)

@@ -134,10 +134,15 @@ class EBNFGrammar(Grammar):
     @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
     @ whitespace = /\s*/                            # whitespace includes linefeed
     @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+    @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+
+    #: top-level
 
     syntax     = [~//] { definition | directive } §EOF
     definition = symbol §"=" expression
     directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
+
+    #: components
 
     expression = term { "|" term }
     term       = { ["§"] factor }+                       # "§" means all following factors mandatory
@@ -152,9 +157,13 @@ class EBNFGrammar(Grammar):
                | repetition
                | option
 
+    #: flow-operators
+
     flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
                | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
     retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+
+    #: groups
 
     group      = "(" §expression ")"
     unordered  = "<" §expression ">"                # elements of expression in arbitrary order
@@ -162,11 +171,13 @@ class EBNFGrammar(Grammar):
     repetition = "{" §expression "}"
     option     = "[" §expression "]"
 
+    #: leaf-elements
+
     symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-    regexp     = /\/(?:\\\/|[^\/])*?\//~            # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+               | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+    plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+    regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
     whitespace = /~/~                               # insignificant whitespace
 
     EOF = !/./

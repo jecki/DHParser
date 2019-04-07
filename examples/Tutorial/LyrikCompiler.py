@@ -44,6 +44,7 @@ from DHParser import logging, is_filename, load_if_file, \
 def LyrikPreprocessor(text):
     return text, lambda i: i
 
+
 def get_preprocessor() -> PreprocessorFunc:
     return LyrikPreprocessor
 
