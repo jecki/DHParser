@@ -1,7 +1,8 @@
-DHParser Version 0.8.9 (x.x.2019)
+DHParser Version 0.8.9 (5.4.2019)
 .................................
 
-
+- experimental server module
+- json-serialization of Nodes
 
 
 DHParser Version 0.8.8 (4.3.2019)
