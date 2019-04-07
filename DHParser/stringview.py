@@ -46,7 +46,7 @@ except ImportError:
 __all__ = ('StringView', 'EMPTY_STRING_VIEW', 'cython_optimized')
 
 
-def first_char(text: str, begin: int, end: int, chars: str) -> int:
+def first_char(text, begin: int, end: int, chars) -> int:
     """Returns the index of the first non-whitespace character in string
      `text` within the bounds [begin, end].
     """
@@ -55,7 +55,7 @@ def first_char(text: str, begin: int, end: int, chars: str) -> int:
     return begin
 
 
-def last_char(text, begin: int, end: int, chars: str) -> int:
+def last_char(text, begin: int, end: int, chars) -> int:
     """Returns the index of the first non-whitespace character in string
     `text` within the bounds [begin, end].
     """
