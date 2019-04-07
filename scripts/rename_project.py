@@ -69,27 +69,32 @@ def rename_projectdir(path: str, new: str) -> bool:
     os.chdir(save)
 
 
+def rename_project(projectdir: str, new_name: str) -> str:
+    """Renames a project. Returns an error string in case of failure
+    or the empty string if successful."""
+    if not os.path.isdir(projectdir):
+        return projectdir + " is not a directory!"
+    elif check_projectdir(projectdir):
+        m = re.match('\w+', new_name)
+        if m and len(m.group(0)) == len(new_name):
+            if save_project(projectdir):
+                rename_projectdir(projectdir, new_name)
+            else:
+                return 'Could not save old project to ' + os.path.basename(projectdir) + '_saved!'
+        else:
+            return new_name + " is not a valid project name!"
+    else:
+        return projectdir + " does not seem to be a DHParser-project directory!"
+    return ''
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         projectdir = sys.argv[1]
         new_name = sys.argv[2]
-        if not os.path.isdir(projectdir):
-            print(projectdir + " is not a directory!")
-            sys.exit(1)
-        elif check_projectdir(projectdir):
-            m = re.match('\w+', new_name)
-            if m and len(m.group(0)) == len(new_name):
-                if save_project(projectdir):
-                    rename_projectdir(projectdir, new_name)
-                else:
-                    print('Could not save old project to '
-                          + os.path.basename(projectdir) + '_saved!')
-                    sys.exit(1)
-            else:
-                print(new_name + " is not a valid project name!")
-                sys.exit(1)
-        else:
-            print(projectdir + " does not seem to be a DHParser-project directory!")
+        error = rename_project(projectdir, new_name)
+        if error:
+            print(error)
             sys.exit(1)
     else:
         print('Usage: python rename_project.py PROJECT_DIRECTORY NEW_NAME')

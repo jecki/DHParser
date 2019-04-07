@@ -1,7 +1,12 @@
 // json-example
 
 {
-  "object": { "one": 1, "two": 2, "three": ["3"] },
+  "object":
+    {
+      "one": 1,
+      "two": 2,
+      "three": ["3"]
+    },
   "array": ["one", 2, 3],
   "string": "string example",
   "true": true,

@@ -53,7 +53,7 @@ setup(
     scripts=['scripts/dhparser.py'],
     entry_points={
         'console_scripts': [
-            'dhparser=scripts.dhparser:main'
+            'dhparser=dhparser:main'
         ]
     }
 )
