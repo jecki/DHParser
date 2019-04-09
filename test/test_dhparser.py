@@ -46,7 +46,7 @@ class TestDHParserCommandLineTool:
         os.chdir(self.cwd)
 
     def test_dhparser(self):
-        os.system(self.python + '../scripts/dhparser.py testdata/neu ' + self.nulldevice)
+        os.system(self.python + '../DHParser/scripts/dhparser.py testdata/neu ' + self.nulldevice)
         os.system(self.python + 'testdata/neu/tst_neu_grammar.py ' + self.nulldevice)
         os.system(self.python + 'testdata/neu/neuCompiler.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')

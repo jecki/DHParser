@@ -58,6 +58,7 @@ __all__ = ('TransformationDict',
            'replace_content',
            'replace_content_by',
            'normalize_whitespace',
+           'merge_adjacent',
            'move_adjacent',
            'left_associative',
            'lean_left',
@@ -411,7 +412,7 @@ def is_insignificant_whitespace(context: List[Node]) -> bool:
     return context[-1].tag_name == WHITESPACE_PTYPE
 
 
-RX_WHITESPACE = re.compile(r'\s+')
+RX_WHITESPACE = re.compile(r'\s*$')
 
 
 def contains_only_whitespace(context: List[Node]) -> bool:
@@ -419,8 +420,7 @@ def contains_only_whitespace(context: List[Node]) -> bool:
     of the tag_name, i.e. nodes the content of which matches the regular
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""
-    content = context[-1].content
-    return bool(not content or RX_WHITESPACE.match(content))
+    return bool(RX_WHITESPACE.match(context[-1].content))
 
 
 def is_any_kind_of_whitespace(context: List[Node]) -> bool:
@@ -820,9 +820,11 @@ def normalize_whitespace(context):
         node.result = re.sub(r'\s+', ' ', node.result)
 
 
-def merge_whitespace(context):
+def merge_adjacent(context, condition: Callable):
     """
-    Merges adjacent whitespace. UNTESTED!
+    Merges adjacent nodes that fulfill the given `condition`. It is
+    is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
+    alike. Otherwise a type-error might ensue.
     """
     node = context[-1]
     children = node.children
@@ -830,26 +832,42 @@ def merge_whitespace(context):
     i = 0
     L = len(children)
     while i < L:
-        if children[i].tag_name == WHITESPACE_PTYPE:
+        if condition([children[i]]):
+            initial = () if children[i].children else ''
             k = i
-            while i < L and children[k].tag_name == WHITESPACE_PTYPE:
+            while i < L and condition([children[k]]):
                 i += 1
             if i > k:
-                children[k].result = sum(children[n].result for n in range(k, i + 1))
+                children[k].result = sum((children[n].result for n in range(k, i + 1)), initial)
             new_result.append(children[k])
         i += 1
     node.result = tuple(new_result)
 
 
 @transformation_factory(collections.abc.Callable)
-def move_adjacent(context: List[Node], condition: Callable = is_insignificant_whitespace):
+def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     """
     Moves adjacent nodes that fulfill the given condition to the parent node.
+    If the `merge`-flag is set, a moved node will be merged with its
+    predecessor (or successor, respectively) in the parent node in case it
+    also fulfill the given `condition`.
     """
-    def join_results(a: Node, b: Node, c: Node) -> bool:
-        """Joins the results of node `a` and `b` and write them to the result
-        of `c` type-safely, if possible. Return True, if join was possible
-        and done, False otherwise."""
+    def merge_results(a: Node, b: Node, c: Node) -> bool:
+        """
+        Merges the results of node `a` and `b` and writes them to the result
+        of `c` type-safely, if b and c are either both leaf-nodes (in which case
+        their result-strings are concatenated) or both non-leaf-nodes (in which
+        case the tuples of children are concatenated).
+        Returns `True` in case of a successful merge, `False` if only one node
+        was a leaf node and the merge could thus not be done.
+
+        Example:
+            >>> head, tail = Node('head', '123'), Node('tail', '456')
+            >>> merge_results(head, tail, head)  # merge head and tail (in that order) into head
+            True
+            >>> str(head)
+            '123456'
+        """
         if a.children and b.children:
             c.result = cast(Tuple[Node, ...], a.result) + cast(Tuple[Node, ...], b.result)
             return True
@@ -857,7 +875,6 @@ def move_adjacent(context: List[Node], condition: Callable = is_insignificant_wh
             c.result = cast(str, a.result) + cast(str, b.result)
             return True
         return False
-
 
     node = context[-1]
     if len(context) <= 1 or not node.children:
@@ -881,19 +898,20 @@ def move_adjacent(context: List[Node], condition: Callable = is_insignificant_wh
             if id(child) == id(node):
                 break
 
-        # merge adjacent whitespace
-        prevN = parent.children[i - 1] if i > 0 else None
-        nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
-        if before and prevN and condition([prevN]):
-            # prevN.result = prevN.result + before[0].result
-            # before = ()
-            if join_results(prevN, before[0], prevN):
-                before = ()
-        if after and nextN and condition([nextN]):
-            # nextN.result = after[0].result + nextN.result
-            # after = ()
-            if join_results(after[0], nextN, nextN):
-                after = ()
+        # merge adjacent nodes that fulfil the condition
+        if merge:
+            prevN = parent.children[i - 1] if i > 0 else None
+            nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
+            if before and prevN and condition([prevN]):
+                # prevN.result = prevN.result + before[0].result
+                # before = ()
+                if merge_results(prevN, before[0], prevN):
+                    before = ()
+            if after and nextN and condition([nextN]):
+                # nextN.result = after[0].result + nextN.result
+                # after = ()
+                if merge_results(after[0], nextN, nextN):
+                    after = ()
 
         parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
 

@@ -28,7 +28,7 @@ from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACE
     tree_sanity_check, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
-    transformation_factory, has_parent, contains_only_whitespace
+    transformation_factory, has_parent, contains_only_whitespace, is_insignificant_whitespace
 from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -41,7 +41,7 @@ class TestRemoval:
         assert contains_only_whitespace([Node('test', '')])
         assert contains_only_whitespace([Node('test', '\n')])
         assert not contains_only_whitespace([Node('test', 'Katze')])
-        assert contains_only_whitespace([Node('test', ' tag ')])
+        assert not contains_only_whitespace([Node('test', ' tag ')])
 
     def test_lstrip(self):
         cst = parse_sxpr('(_Token (:Whitespace " ") (:Re test))')
@@ -255,7 +255,7 @@ class TestWhitespaceTransformations:
                               '(WORD (LETTERS "not") (:Whitespace " ")) '
                               '(WORD (LETTERS "to") (:Whitespace " "))'
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
-        transformations = { 'WORD': move_adjacent }
+        transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
@@ -267,7 +267,7 @@ class TestWhitespaceTransformations:
                               '(WORD (:Whitespace " ") (LETTERS "not") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
-        transformations = { 'WORD': move_adjacent }
+        transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
