@@ -67,8 +67,8 @@ RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 
-RX_IS_JSON = re.compile(r'\s*(?:{|\[|"|\d|true|false|null)')
-RX_GREP_URL = re.compile(r'GET ([^ ]+) HTTP')
+RX_IS_JSON = re.compile(b'\s*(?:{|\[|"|\d|true|false|null)')
+RX_GREP_URL = re.compile(b'GET ([^ ]+) HTTP')
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -165,78 +165,86 @@ class Server:
         raw = None        # type: JSON_Type
 
         data = await reader.read(self.max_source_size + 1)
-
-        if len(data) > self.max_source_size:
-            rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
-                                % (self.max_source_size // (1024**2))
+        oversized = len(data) > self.max_source_size
 
         if data.startswith(b'GET'):
-            m = RX_GREP_URL(str(data[:4096]))
+            # HTTP request
+            m = RX_GREP_URL(data)
             if m:
                 parsed_url = urlparse(m.group(1))
                 # TODO: serve http request
                 pass
-        else:
-            head = str(data[:4096])
-            if not RX_IS_JSON.match(head):
+
+        elif not RX_IS_JSON.match(data):
+            # plain data
+            if oversized:
+                writer.write("Source code too large! Only %i MB allowed" \
+                             % (self.max_source_size // (1024 ** 2)))
+            else:
                 # TODO: compile file or data
                 pass
 
-        if rpc_error is None:
-            try:
-                raw = json.loads(data)
-            except json.decoder.JSONDecodeError as e:
-                rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
-
-        if rpc_error is None:
-            if isinstance(raw, Dict):
-                obj = cast(Dict, raw)
-                json_id = obj.get('id', 'null')
-            else:
-                rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
-
-        if rpc_error is None:
-            if obj.get('jsonrpc', 'unknown') != '2.0':
-                rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
-                                    ' "%s" found.' % obj.get('jsonrpc', b'unknown')
-            elif 'method' not in obj:
-                rpc_error = -32600, 'Invalid Request: No method specified.'
-            elif obj['method'] not in self.rpc_table:
-                rpc_error = -32601, 'Method not found: ' + str(obj['method'])
-            else:
-                method_name = obj['method']
-                method = self.rpc_table[method_name]
-                params = obj['params'] if 'params' in obj else ()
-                try:
-                    # run method either a) directly if it is short running or
-                    # b) in a thread pool if it contains blocking io or
-                    # c) in a process pool if it is cpu bound
-                    # see: https://docs.python.org/3/library/asyncio-eventloop.html
-                    #      #executing-code-in-thread-or-process-pools
-                    has_kw_params = isinstance(params, Dict)
-                    assert has_kw_params or isinstance(params, Sequence)
-                    loop = asyncio.get_running_loop()
-                    executor = self.pp_executor if method_name in self.cpu_bound else \
-                               self.tp_executor if method_name in self.blocking else None
-                    if executor is None:
-                        result = method(**params) if has_kw_params else method(*params)
-                    elif has_kw_params:
-                        result = await loop.run_in_executor(executor, method, **params)
-                    else:
-                        result = await loop.run_in_executor(executor, method, *params)
-                except TypeError as e:
-                    rpc_error = -32602, "Invalid Params: " + str(e)
-                except NameError as e:
-                    rpc_error = -32601, "Method not found: " + str(e)
-                except Exception as e:
-                    rpc_error = -32000, "Server Error: " + str(e)
-
-        if rpc_error is None:
-            json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-            json.dump(writer, json_result)
         else:
-            writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
-                          % (rpc_error[0], rpc_error[1], json_id)).encode())
+            # JSON RPC
+            if oversized:
+                rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
+                            % (self.max_source_size // (1024 ** 2))
+
+            if rpc_error is None:
+                try:
+                    raw = json.loads(data)
+                except json.decoder.JSONDecodeError as e:
+                    rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
+
+            if rpc_error is None:
+                if isinstance(raw, Dict):
+                    obj = cast(Dict, raw)
+                    json_id = obj.get('id', 'null')
+                else:
+                    rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
+
+            if rpc_error is None:
+                if obj.get('jsonrpc', 'unknown') != '2.0':
+                    rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
+                                        ' "%s" found.' % obj.get('jsonrpc', b'unknown')
+                elif 'method' not in obj:
+                    rpc_error = -32600, 'Invalid Request: No method specified.'
+                elif obj['method'] not in self.rpc_table:
+                    rpc_error = -32601, 'Method not found: ' + str(obj['method'])
+                else:
+                    method_name = obj['method']
+                    method = self.rpc_table[method_name]
+                    params = obj['params'] if 'params' in obj else ()
+                    try:
+                        # run method either a) directly if it is short running or
+                        # b) in a thread pool if it contains blocking io or
+                        # c) in a process pool if it is cpu bound
+                        # see: https://docs.python.org/3/library/asyncio-eventloop.html
+                        #      #executing-code-in-thread-or-process-pools
+                        has_kw_params = isinstance(params, Dict)
+                        assert has_kw_params or isinstance(params, Sequence)
+                        loop = asyncio.get_running_loop()
+                        executor = self.pp_executor if method_name in self.cpu_bound else \
+                                   self.tp_executor if method_name in self.blocking else None
+                        if executor is None:
+                            result = method(**params) if has_kw_params else method(*params)
+                        elif has_kw_params:
+                            result = await loop.run_in_executor(executor, method, **params)
+                        else:
+                            result = await loop.run_in_executor(executor, method, *params)
+                    except TypeError as e:
+                        rpc_error = -32602, "Invalid Params: " + str(e)
+                    except NameError as e:
+                        rpc_error = -32601, "Method not found: " + str(e)
+                    except Exception as e:
+                        rpc_error = -32000, "Server Error: " + str(e)
+
+            if rpc_error is None:
+                json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+                json.dump(writer, json_result)
+            else:
+                writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
+                              % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
         writer.close()
         # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine
