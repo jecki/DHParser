@@ -358,11 +358,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                        or (len(raw_errors) == 1
                            and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF))
         if is_artifact:
-            # remove zombie node with error message at the end
+            # don't remove zombie node with error message at the end
+            # but change it's tag_name to indicate that it is an artifact!
             for parent in st.select(lambda node: any(child.tag_name == ZOMBIE_TAG
                                                      for child in node.children),
                                     include_root=True, reverse=True):
-                parent.result = tuple(c for c in parent.children if c.tag_name != ZOMBIE_TAG)
+                zombie = parent[ZOMBIE_TAG]
+                zombie.tag_name = '__TESTING_ARTIFACT__'
+                zombie.result = 'Artifact can be ignored, but tree structure may not be fully reliable!'
+                # parent.result = tuple(c for c in parent.children if c.tag_name != ZOMBIE_TAG)
                 break
         return is_artifact
 
