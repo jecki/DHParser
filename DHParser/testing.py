@@ -148,7 +148,8 @@ def unit_from_config(config_str):
                 testcode = '\n'.join(lines)
             # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
             test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
-            assert testkey not in test, "Key %s already exists in text %s:%s !" % (testkey, stage, symbol)
+            assert testkey.strip('*') not in test and (testkey.strip('*') + '*') not in test, \
+                "Key %s already exists in text %s:%s !" % (testkey, stage, symbol)
             test[testkey] = testcode
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
