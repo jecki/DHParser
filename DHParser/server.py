@@ -47,8 +47,8 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import json
 from multiprocessing import Process, Value, Queue
 import sys
+import time
 from typing import Callable, Optional, Union, Dict, List, Tuple, Sequence, Set, cast
-from urllib.parse import urlparse, parse_qs
 
 from DHParser.toolkit import get_config_value, is_filename, load_if_file, re
 
@@ -77,25 +77,27 @@ SERVER_STARTING = 1
 SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
 
-test_response_test = b'''HTTP/1.1 200 OK
-Date: Sun, 18 Oct 2009 08:56:53 GMT
-Server: Apache/2.2.14 (Win32)
-Last-Modified: Sat, 20 Nov 2004 07:16:26 GMT
-ETag: "10000000565a5-2c-3e94b66c2e680"
-Accept-Ranges: bytes
-Content-Length: 60
+RESPONSE_HEADER = b'''HTTP/1.1 200 OK
+Date: {date}
+Server: DHParser
+Accept-Ranges: none
+Content-Length: {length}
 Connection: close
-Content-Type: text/html
+Content-Type: text/html; charset=utf-8
 X-Pad: avoid browser bug
+'''
 
-<html>
+UNKNOWN_FUNC_HTML = """<!DOCTYPE html>
+<html lang="en" xml:lang="en">
 <head>
+  <meta charset="UTF-8" />
 </head>
 <body>
-<h1>Test</h1>
+<h1>DHParser Error: Function {func} unknown or not registered!</h1>
 </body>
 </html>
-'''
+"""
+
 
 test_get = b'''GET /method/object HTTP/1.1
 Host: 127.0.0.1:8888
@@ -110,6 +112,9 @@ Upgrade-Insecure-Requests: 1
 
 '''
 
+
+def gmtstamp() -> str:
+    return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
 # CompilationItem = NamedTuple('CompilationItem',
 #                              [('uri', str),
@@ -171,9 +176,16 @@ class Server:
             # HTTP request
             m = RX_GREP_URL(data)
             if m:
-                parsed_url = urlparse(m.group(1))
-                # TODO: serve http request
-                pass
+                func_name, argument = m.group(1).decode().strip('/').split('/', 1)
+                func = self.rpc_table.get(func_name, lambda arg: UNKNOWN_FUNC_HTML.format(func = func_name))
+                result = func(argument)
+                if isinstance(result, str):
+                    gmt = gmtstamp.encode()
+                    res = result.encode()
+                    response = RESPONSE_HEADER.format(date = gmt, length = str(len(res)).encode) + res
+                    writer.write(response)
+                else:
+                    json.dump(writer, result)
 
         elif not RX_IS_JSON.match(data):
             # plain data
@@ -181,8 +193,16 @@ class Server:
                 writer.write("Source code too large! Only %i MB allowed" \
                              % (self.max_source_size // (1024 ** 2)))
             else:
-                # TODO: compile file or data
-                pass
+                if len(self.rpc_table) == 1:
+                    func = self.rpc_table[tuple(self.rpc_table.keys())[0]]
+                else:
+                    err = lambda arg: 'function "compile_src" not registered!'
+                    func = self.rpc_table.get('compile_src', self.rpc_table.get('compile', err))
+                result = func(data.decode())
+                if isinstance(result, str):
+                    writer.write(result.encode())
+                else:
+                    json.dump(writer, result)
 
         else:
             # JSON RPC
