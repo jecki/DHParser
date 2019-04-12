@@ -1658,12 +1658,12 @@ def mandatory_violation(grammar: Grammar,
                 msg = message.format(expected, found)
                 break
             except (ValueError, KeyError, IndexError) as e:
-                error = Error("Malformed error format string '{}' lead to '{}'"
+                error = Error("Malformed error format string »{}« leads to »{}«"
                               .format(message, str(e)),
                               location, Error.MALFORMED_ERROR_STRING)
                 grammar.tree__.add_error(err_node, error)
     else:
-        msg = '%s expected, "%s" found!' % (expected, found)
+        msg = '%s expected, »%s« found!' % (expected, found)
     error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
         if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)
