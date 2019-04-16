@@ -98,8 +98,10 @@ UNKNOWN_FUNC_HTML = """<!DOCTYPE html>
 </html>
 """
 
+STOP_SERVER_REQUEST = b"__STOP_SERVER__"
 
-test_get = b'''GET /method/object HTTP/1.1
+
+__test_get = b'''GET /method/object HTTP/1.1
 Host: 127.0.0.1:8888
 User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0
 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
@@ -156,18 +158,20 @@ class Server:
 
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
-        self.server = None  # type: Optional[asyncio.AbstractServer]
-        self.pp_executor = None  # type: Optional[ProcessPoolExecutor]
-        self.tp_executor = None  # type: Optional[ThreadPoolExecutor]
+        self.server = None        # type: Optional[asyncio.AbstractServer]
+        self.stop_response = ''   # type: str
+        self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
+        self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
 
     async def handle_request(self,
                              reader: asyncio.StreamReader,
                              writer: asyncio.StreamWriter):
-        rpc_error = None  # type: Optional[Tuple[int, str]]
-        json_id = 'null'  # type: Tuple[int, str]
-        obj = {}          # type: Dict
-        result = None     # type: JSON_Type
-        raw = None        # type: JSON_Type
+        rpc_error = None   # type: Optional[Tuple[int, str]]
+        json_id = 'null'   # type: Tuple[int, str]
+        obj = {}           # type: Dict
+        result = None      # type: JSON_Type
+        raw = None         # type: JSON_Type
+        killswitch = False # type: bool
 
         data = await reader.read(self.max_source_size + 1)
         oversized = len(data) > self.max_source_size
@@ -176,22 +180,30 @@ class Server:
             # HTTP request
             m = RX_GREP_URL(data)
             if m:
-                func_name, argument = m.group(1).decode().strip('/').split('/', 1)
-                func = self.rpc_table.get(func_name, lambda arg: UNKNOWN_FUNC_HTML.format(func = func_name))
-                result = func(argument)
-                if isinstance(result, str):
-                    gmt = gmtstamp.encode()
-                    res = result.encode()
-                    response = RESPONSE_HEADER.format(date = gmt, length = str(len(res)).encode) + res
-                    writer.write(response)
+                func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
+                if func_name.encode() == STOP_SERVER_REQUEST:
+                    writer.write(self.stop_response.encode())
+                    killswitch = True
                 else:
-                    json.dump(writer, result)
+                    func = self.rpc_table.get(func_name,
+                                              lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
+                    result = func(argument) if argument is not None else func()
+                    if isinstance(result, str):
+                        gmt = gmtstamp.encode()
+                        response = RESPONSE_HEADER.format(date=gmt, length=str(len(res)).encode) \
+                                   + result.encode()
+                        writer.write(response)
+                    else:
+                        writer.write(json.dumps(result).encode())
 
         elif not RX_IS_JSON.match(data):
             # plain data
             if oversized:
                 writer.write("Source code too large! Only %i MB allowed" \
                              % (self.max_source_size // (1024 ** 2)))
+            elif data == STOP_SERVER_REQUEST:
+                writer.write(self.stop_response.encode())
+                killswitch = True
             else:
                 if len(self.rpc_table) == 1:
                     func = self.rpc_table[tuple(self.rpc_table.keys())[0]]
@@ -224,11 +236,14 @@ class Server:
                     rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
 
             if rpc_error is None:
-                if obj.get('jsonrpc', 'unknown') != '2.0':
+                if obj.get('jsonrpc', '0.0') < '2.0':
                     rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
                                         ' "%s" found.' % obj.get('jsonrpc', b'unknown')
                 elif 'method' not in obj:
                     rpc_error = -32600, 'Invalid Request: No method specified.'
+                elif obj['method'] == STOP_SERVER_REQUEST.decode():
+                    result = self.stop_response
+                    killswitch = True
                 elif obj['method'] not in self.rpc_table:
                     rpc_error = -32601, 'Method not found: ' + str(obj['method'])
                 else:
@@ -267,14 +282,14 @@ class Server:
                               % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
         writer.close()
-        # TODO: add these lines in case a terminate signal is received, i.e. exit server coroutine
-        #  gracefully. Is this needed? Does it work?
-        # self.server.cancel()
+        if killswitch:
+            self.server.cancel()
 
-    async def serve(self, address: str = '127.0.0.1', port: int = 8888):
+    async def serve(self, host: str = '127.0.0.1', port: int = 8888):
         with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
+            self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.server = cast(asyncio.base_events.Server,
-                               await asyncio.start_server(self.handle_request, address, port))
+                               await asyncio.start_server(self.handle_request, host, port))
             async with self.server:
                 self.stage.value = SERVER_ONLINE
                 self.server_messages.put(SERVER_ONLINE)
@@ -282,6 +297,7 @@ class Server:
             # self.server.wait_until_closed()
 
     def run_server(self, address: str = '127.0.0.1', port: int = 8888):
+        assert self.stage.value == SERVER_OFFLINE
         self.stage.value = SERVER_STARTING
         if sys.version_info >= (3, 7):
             asyncio.run(self.serve(address, port))
