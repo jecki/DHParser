@@ -202,7 +202,7 @@ class Server:
                 if isinstance(result, str):
                     writer.write(result.encode())
                 else:
-                    json.dump(writer, result)
+                    writer.write(json.dumps(result).encode())
 
         else:
             # JSON RPC

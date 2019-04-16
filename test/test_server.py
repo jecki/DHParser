@@ -34,8 +34,8 @@ from DHParser.server import Server
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 
-def compiler_dummy(src: str, log_dir: str) -> Tuple[str, str]:
-    return (src, log_dir)
+def compiler_dummy(src: str, log_dir: str='') -> Tuple[str, str]:
+    return src
 
 
 class TestServer:
