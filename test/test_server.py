@@ -21,6 +21,7 @@ limitations under the License.
 """
 
 import asyncio
+import json
 import os
 from multiprocessing import Process
 import sys
@@ -28,14 +29,14 @@ from typing import Tuple
 
 sys.path.extend(['../', './'])
 
-from DHParser.server import Server
+from DHParser.server import Server, STOP_SERVER_REQUEST, SERVER_OFFLINE
 
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 
-def compiler_dummy(src: str, log_dir: str='') -> Tuple[str, str]:
-    return src
+# def compiler_dummy(src: str, log_dir: str='') -> Tuple[str, str]:
+#     return src
 
 
 class TestServer:
@@ -43,20 +44,61 @@ class TestServer:
     #     cs = Server(compiler_dummy)
     #     cs.run_server()
 
-    def test_server_proces(self):
-        cs = Server(compiler_dummy, cpu_bound=set())
-        cs.run_as_process()
+    def compiler_dummy(self, src: str, log_dir: str = '') -> Tuple[str, str]:
+        return src
 
-        async def compile(src, log_dir):
+    def test_server_proces(self):
+        """Basic Test of server module."""
+        async def compile(src):
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(src.encode())
             data = await reader.read(500)
-            # print(f'Received: {data.decode()!r}')
             writer.close()
+            assert data.decode() == "Test"
 
-        asyncio.run(compile('Test', ''))
-        cs.terminate_server_process()
-        cs.wait_for_termination_request()
+        try:
+            cs = Server(self.compiler_dummy, cpu_bound=set())
+            cs.spawn_server('127.0.0.1', 8888)
+            asyncio.run(compile('Test'))
+        finally:
+            cs.terminate_server_process()
+            cs.wait_for_termination()
+
+    def test_terminate(self):
+        async def terminate_server(termination_request, expected_response):
+            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            writer.write(termination_request)
+            data = await reader.read(500)
+            writer.close()
+            # print(data)
+            assert data.find(expected_response) >= 0, str(data)
+
+        try:
+            cs = Server(self.compiler_dummy, cpu_bound=set())
+
+            cs.spawn_server('127.0.0.1', 8888)
+            asyncio.run(terminate_server(STOP_SERVER_REQUEST,
+                                         b'DHParser server at 127.0.0.1:8888 stopped!'))
+            cs.wait_for_termination()
+            assert cs.stage.value == SERVER_OFFLINE
+
+            cs.spawn_server('127.0.0.1', 8888)
+            asyncio.run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
+                                         b'DHParser server at 127.0.0.1:8888 stopped!'))
+            cs.wait_for_termination()
+            assert cs.stage.value == SERVER_OFFLINE
+
+            cs.spawn_server('127.0.0.1', 8888)
+            jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode()})
+            asyncio.run(terminate_server(jsonrpc.encode(),
+                                         b'DHParser server at 127.0.0.1:8888 stopped!'))
+            cs.wait_for_termination()
+            assert cs.stage.value == SERVER_OFFLINE
+
+        finally:
+            cs.terminate_server_process()
+            cs.wait_for_termination()
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
