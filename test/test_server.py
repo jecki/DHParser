@@ -44,7 +44,7 @@ class TestServer:
     #     cs = Server(compiler_dummy)
     #     cs.run_server()
 
-    def compiler_dummy(self, src: str, log_dir: str = '') -> Tuple[str, str]:
+    def compiler_dummy(self, src: str, log_dir: str = '') -> str:
         return src
 
     def test_server_proces(self):
@@ -55,9 +55,8 @@ class TestServer:
             data = await reader.read(500)
             writer.close()
             assert data.decode() == "Test"
-
+        cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
-            cs = Server(self.compiler_dummy, cpu_bound=set())
             cs.spawn_server('127.0.0.1', 8888)
             asyncio.run(compile('Test'))
         finally:
@@ -73,9 +72,8 @@ class TestServer:
             # print(data)
             assert data.find(expected_response) >= 0, str(data)
 
+        cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
-            cs = Server(self.compiler_dummy, cpu_bound=set())
-
             cs.spawn_server('127.0.0.1', 8888)
             asyncio.run(terminate_server(STOP_SERVER_REQUEST,
                                          b'DHParser server at 127.0.0.1:8888 stopped!'))
@@ -94,7 +92,6 @@ class TestServer:
                                          b'DHParser server at 127.0.0.1:8888 stopped!'))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
-
         finally:
             cs.terminate_server_process()
             cs.wait_for_termination()
