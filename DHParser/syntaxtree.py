@@ -32,7 +32,7 @@ from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION
     COMPACT_SERIALIZATION, JSON_SERIALIZATION
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import get_config_value, re
+from DHParser.toolkit import JSONSerializable, get_config_value, gen_id, re
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -46,8 +46,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'FrozenNode',
            'tree_sanity_check',
            'RootNode',
-           'Node_JSONEncoder',
-           'node_obj_hook',
+           'DHParser_JSONEncoder',
+           'dhparser_obj_hook',
            'parse_sxpr',
            'parse_xml',
            'parse_json_syntaxtree',
@@ -130,7 +130,7 @@ ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 RX_AMP = re.compile(r'&(?!\w+;)')
 
 
-class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
+class Node(JSONSerializable):  # (collections.abc.Sized): Base class omitted for cython-compatibility
     """
     Represents a node in the concrete or abstract syntax tree.
 
@@ -177,7 +177,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
+    __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr', '_id'
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
         """
@@ -282,6 +282,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     return True
             return False
         raise ValueError('Leave node cannot contain other nodes')
+
+    @property
+    def id(self) -> int:
+        """Returns the unique id of the Node."""
+        try:
+            return self._id
+        except AttributeError:
+            self._id = gen_id()
+            return self._id
+
 
     def equals(self, other: 'Node') -> bool:
         """
@@ -660,7 +670,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             txt = [left_bracket, node.tag_name]
             # s += " '(pos %i)" % node.add_pos
-            # txt.append(str(id(node)))  # for debugging
+            # txt.append(str(node.id))  # for debugging
             if node.has_attr():
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
             if src:
@@ -668,7 +678,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
             elif src is not None and node._pos >= 0:
                 txt.append(' `(pos %i)' % node.pos)
-            if root and id(node) in root.error_nodes:
+            if root and node.id in root.error_nodes:
                 txt.append(" `(err `%s)" % ' '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt) + '\n'
 
@@ -722,7 +732,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node.pos >= 0:
                 txt.append(' _pos="%i"' % node.pos)
-            if root and id(node) in root.error_nodes and not has_reserved_attrs:
+            if root and node.id in root.error_nodes and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
                                                  for err in root.get_errors(node)))
             if node.tag_name in empty_tags:
@@ -762,16 +772,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def to_json_obj(self) -> Dict:
         """Serialize a node or tree as json-object"""
-        json = {'__class__': 'DHParser.Node', 'tag_name': self.tag_name }
+        json_obj = {'__class__': 'DHParser.Node', 'tag_name': self.tag_name }
         if self.children:
-            json['result'] = [child.to_json_obj() for child in self.children]
+            json_obj['result'] = [child.to_json_obj() for child in self.children]
         else:
-            json['result'] = str(self._result)
+            json_obj['result'] = str(self._result)
         if self.has_attr():
-            json['attr'] = dict(self._xml_attr)
+            json_obj['attr'] = dict(self._xml_attr)
         if self._pos >= 0:
-            json['pos'] = self._pos
-        return json
+            json_obj['pos'] = self._pos
+        json_obj['id'] = self.id
+        return json_obj
 
     @staticmethod
     def from_json_obj(json_obj: Dict) -> 'Node':
@@ -779,7 +790,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
         assert isinstance(json_obj, Dict)
-        if json_obj.get('__class__', '') != 'DHParser.Node':
+        if json_obj.get('__class__', '') not in ('DHParser.Node', 'DHParser.RootNode'):
             raise ValueError('JSON object: ' + str(json_obj) +
                              ' does not represent a Node object.')
         tag_name = json_obj['tag_name']
@@ -794,6 +805,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         attr = json_obj.get('attr', {})
         if attr:
             node.attr.update(attr)
+        node._id = json_obj['id']
         return node
 
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
@@ -850,7 +862,7 @@ class FrozenNode(Node):
         if isinstance(result, str) or isinstance(result, StringView):
             result = str(result)
         else:
-            raise TypeError('FrozenNode only accepts string as results. '
+            raise TypeError('FrozenNode only accepts string as result. '
                             '(Only leaf-nodes can be frozen nodes.)')
         super(FrozenNode, self).__init__(tag_name, result, True)
 
@@ -868,6 +880,13 @@ class FrozenNode(Node):
 
     def with_pos(self, pos: int) -> 'Node':
         pass
+
+    def to_json_obj(self) -> Dict:
+        raise NotImplementedError("Frozen nodes cannot and should not be serialized!")
+
+    @staticmethod
+    def from_json_obj(json_obj: Dict) -> 'JSONSerializable':
+        raise NotImplementedError("Frozen nodes cannot and should not be deserialized!")
 
 
 PLACEHOLDER = FrozenNode('__PLACEHOLDER__', '')
@@ -926,8 +945,8 @@ class RootNode(Node):
     def __init__(self, node: Optional[Node] = None):
         super().__init__('__not_yet_ready__', '')
         self.errors = []               # type: List[Error]
-        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
-        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
+        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # node.id -> error list
+        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of node.id
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
@@ -978,8 +997,8 @@ class RootNode(Node):
         if node.has_attr():
             self._xml_attr = node._xml_attr
         # self._content = node._content
-        if id(node) in self.error_nodes:
-            self.error_nodes[id(self)] = self.error_nodes[id(node)]
+        if node.id in self.error_nodes:
+            self.error_nodes[self.id] = self.error_nodes[node.id]
         return self
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
@@ -989,8 +1008,8 @@ class RootNode(Node):
         if not node:
             node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
         assert node.pos == error.pos or isinstance(node, FrozenNode)
-        self.error_nodes.setdefault(id(node), []).append(error)
-        self.error_positions.setdefault(error.pos, set()).add(id(node))
+        self.error_nodes.setdefault(node.id, []).append(error)
+        self.error_positions.setdefault(error.pos, set()).add(node.id)
         self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         return self
@@ -1016,16 +1035,17 @@ class RootNode(Node):
         at the same position that has already been removed from the tree,
         for example, because it was an anonymous empty child node.
         """
-        node_id = id(node)           # type: int
+        node_id = node.id            # type: int
         errors = []                  # type: List[Error]
         for nid in self.error_positions.get(node.pos, frozenset()):
             if nid == node_id:
                 errors.extend(self.error_nodes[nid])
             else:
-                for nd in node.select(lambda n: id(n) == nid):
+                for nd in node.select(lambda n: n.id == nid):
                     break
                 else:
-                    # node is not connected to tree any more => display its errors on its parent
+                    # node is not connected to tree any more, but since errors
+                    # should not get lost, display its errors on its parent
                     errors.extend(self.error_nodes[nid])
         return errors
 
@@ -1047,18 +1067,65 @@ class RootNode(Node):
                            omit_tags=self.omit_tags,
                            empty_tags=self.empty_tags)
 
+    def to_json_obj(self) -> Dict:
+        """Serialize object as json-object."""
+        dct = super().to_json_obj()
+        dct['__class__'] = 'DHParser.RootNode'
+        dct['errors'] = [err.to_json_obj() for err in self.errors]
+        dct['error_nodes'] = {nid: [err.id for err in err_list]
+                              for nid, err_list in self.error_nodes.items()}
+        dct['error_positions'] = {pos: [nid for nid in nid_set]
+                                  for pos, nid_set in self.error_positions.items()}
+        dct['error_flag'] = self.error_flag
+        dct['inline_tags'] = [tag for tag in self.inline_tags]
+        dct['omit_tags'] = [tag for tag in self.omit_tags]
+        dct['empty_tags'] = [tag for tag in self.empty_tags]
+        return dct
 
-class Node_JSONEncoder(json.JSONEncoder):
+    @staticmethod
+    def from_json_obj(json_obj: Dict) -> 'JSONSerializable':
+        """Convert a json object representing a JSONSerializable back into
+        an JSONSerializable-object. Raises a ValueError, if json_obj does
+        not represent an instance of the (sub-)class from which this method
+        has been called."""
+        assert isinstance(json_obj, Dict)
+        if json_obj.get('__class__', '') != 'DHParser.RootNode':
+            raise ValueError('JSON object: ' + str(json_obj) +
+                             ' does not represent a RootNode object.')
+        node = cast(RootNode, Node.from_json_obj(json_obj))  # type: 'RootNode'
+        root = RootNode(node)
+        root.errors = [Error.from_json_obj(item) for item in json_obj['errors']]
+        err_dict = {err.id: err for err in root.errors}
+        root.error_nodes = {nid: [err_dict[eid] for eid in eid_list]
+                            for nid, eid_list in json_obj['error_nodes'].items()}
+        root.error_positions = {pos: set(id_list)
+                                for pos, id_list in json_obj['error_positions'].items()}
+        root.error_flag = json_obj['error_flag']
+        root.inline_tags = set(json_obj['inline_tags'])
+        root.omit_tags = set(json_obj['omit_tags'])
+        root.empty_tags = set(json_obj['empty_tags'])
+        return root
+
+
+class DHParser_JSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, Node):
+        if isinstance(obj, RootNode):
+            return cast(RootNode, obj).to_json_obj()
+        elif isinstance(obj, Node):
             return cast(Node, obj).to_json_obj()
+        elif isinstance(obj, Error):
+            return cast(Error, obj).to_json_obj()
         return json.JSONEncoder.default(self, obj)
 
 
-def node_obj_hook(dct):
+def dhparser_obj_hook(dct):
     cls = dct.get('__class__', '')
     if cls == "DHParser.Node":
         return Node.from_json_obj(dct)
+    elif cls == "DHParser.RootNode":
+        return RootNode.fromjson_obj(dct)
+    elif cls == "DHParser.Error":
+        return Error.from_json_obj(dct)
     return dct
 
 

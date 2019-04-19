@@ -37,11 +37,12 @@ the string representations of the error objects. For example::
 
 
 import bisect
+from typing import Iterable, Iterator, Union, Dict, Tuple, List
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
-from DHParser.toolkit import typing
-from typing import Iterable, Iterator, Union, Dict, Tuple, List
+from DHParser.toolkit import JSONSerializable, gen_id
+
 
 __all__ = ('ErrorCode',
            'Error',
@@ -58,8 +59,8 @@ class ErrorCode(int):
     pass
 
 
-class Error:
-    __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column']
+class Error(JSONSerializable):
+    __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column', '_id']
 
     # error levels
 
@@ -112,6 +113,15 @@ class Error:
                % (self.message, repr(self.code), self.pos, self.orig_pos, self.line, self.column)
 
     @property
+    def id(self) -> int:
+        """Returns the unique id of the Error."""
+        try:
+            return self._id
+        except AttributeError:
+            self._id = gen_id()
+            return self._id
+
+    @property
     def pos(self):
         return self._pos
 
@@ -137,7 +147,8 @@ class Error:
         """Serialize Error object as json-object."""
         return { '__class__': 'DHParser.Error',
                  'data': [self.message, self._pos, self.code, self.orig_pos,
-                          self.line, self.column] }
+                          self.line, self.column],
+                 'id': self.id }
 
     @staticmethod
     def from_json_obj(json_obj: Dict) -> 'Error':
@@ -147,7 +158,9 @@ class Error:
         if json_obj.get('__class__', '') != 'DHParser.Error':
             raise ValueError('JSON object: ' + str(json_obj) +
                              ' does not represent an Error object.')
-        return Error(*json_obj['data'])
+        err = Error(*json_obj['data'])
+        err._id = json_obj['id']
+        return err
 
 
 def is_warning(code: int) -> bool:

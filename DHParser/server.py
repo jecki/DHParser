@@ -50,7 +50,7 @@ import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, cast
 
-from DHParser.syntaxtree import Node_JSONEncoder
+from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.toolkit import get_config_value, re
 
 __all__ = ('RPC_Table',
@@ -319,7 +319,7 @@ class Server:
 
             if rpc_error is None:
                 json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                writer.write(json.dumps(json_result, cls=Node_JSONEncoder).encode())
+                writer.write(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
             else:
                 writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                               % (rpc_error[0], rpc_error[1], json_id)).encode())

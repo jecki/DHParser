@@ -70,7 +70,9 @@ __all__ = ('typing',
            'sane_parser_name',
            'GLOBALS',
            'get_config_value',
-           'set_config_value')
+           'set_config_value',
+           'gen_id',
+           'JSONSerializable')
 
 
 #######################################################################
@@ -114,6 +116,18 @@ def set_config_value(key: Hashable, value: Any):
     except AttributeError:
         GLOBALS.config = dict()
     GLOBALS.config[key] = value
+
+
+global_id_counter = multiprocessing.Value('Q', 0)
+
+
+def gen_id() -> int:
+    """Generates a unique id."""
+    global global_id_counter
+    with global_id_counter.get_lock():
+        next_id = global_id_counter.value + 1
+        global_id_counter.value = next_id
+    return next_id
 
 
 #######################################################################
@@ -458,3 +472,27 @@ except AttributeError:
     pass
 
 
+#######################################################################
+#
+# Serialization
+#
+#######################################################################
+
+
+class JSONSerializable:
+    """
+    JSONSerializable is an Interface for objects that can be serialized
+    as json-objects.
+    """
+
+    def to_json_obj(self) -> Dict:
+        """Serialize object as json-object."""
+        raise NotImplementedError
+
+    @staticmethod
+    def from_json_obj(json_obj: Dict) -> 'JSONSerializable':
+        """Convert a json object representing a JSONSerializable back into
+        an JSONSerializable-object. Raises a ValueError, if json_obj does
+        not represent an instance of the (sub-)class from which this method
+        has been called."""
+        raise NotImplementedError
