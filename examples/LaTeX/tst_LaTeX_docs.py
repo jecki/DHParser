@@ -55,6 +55,13 @@ def fail_on_error(src, result):
         sys.exit(1)
 
 
+def tree_size(tree) -> int:
+    """
+    Recursively counts the number of nodes in the tree including the root node.
+    """
+    return sum(tree_size(child) for child in tree.children) + 1
+
+
 def tst_func():
     with DHParser.log.logging(LOGGING):
         files = os.listdir('testdata')
@@ -66,7 +73,7 @@ def tst_func():
 
                 print('\n\nParsing document: "%s"' % file)
                 result = parser(doc)
-                print("Number of CST-nodes: " + str(result.tree_size()))
+                print("Number of CST-nodes: " + str(tree_size(result)))
                 # print("Number of empty nodes: " + str(count_nodes(result,
                 #                                                 lambda n: not bool(n.result))))
                 if DHParser.log.is_logging():
@@ -80,7 +87,7 @@ def tst_func():
                 fail_on_error(doc, result)
                 transformer(result)
                 fail_on_error(doc, result)
-                print("Number of AST-nodes: " + str(result.tree_size()))
+                print("Number of AST-nodes: " + str(tree_size(result)))
                 if DHParser.log.is_logging():
                     print('Saving AST')
                     with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:

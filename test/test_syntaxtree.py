@@ -74,13 +74,14 @@ class TestParseXML:
 
 class TestParseJSON:
     def setup(self):
-        self.tree = parse_sxpr('(a (b ä) (d (e ö) (h ü)))')
+        self.tree = parse_sxpr('(a (b ä) (d (e ö) (h über)))').with_pos(0)
         d = self.tree.pick('d')
         d.attr['name'] = "James Bond"
         d.attr['id'] = '007'
 
     def test_json_obj_roundtrip(self):
         json_obj_tree = self.tree.to_json_obj()
+        # print(json.dumps(json_obj_tree, ensure_ascii=False, indent=2))
         tree_copy = Node.from_json_obj(json_obj_tree)
         assert tree_copy.equals(self.tree)
 

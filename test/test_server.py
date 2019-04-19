@@ -25,11 +25,12 @@ import json
 import os
 from multiprocessing import Process
 import sys
+import time
 from typing import Tuple
 
 sys.path.extend(['../', './'])
 
-from DHParser.server import Server, STOP_SERVER_REQUEST, SERVER_OFFLINE
+from DHParser.server import Server, STOP_SERVER_REQUEST, SERVER_OFFLINE, asyncio_run
 
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -44,12 +45,16 @@ class TestServer:
     #     cs = Server(compiler_dummy)
     #     cs.run_server()
 
-    def compiler_dummy(self, src: str, log_dir: str = '') -> str:
+    def compiler_dummy(self, src: str) -> str:
         return src
+
+    def long_running(self, duration: str) -> str:
+        time.sleep(float(duration))
+        return(duration)
 
     def test_server_proces(self):
         """Basic Test of server module."""
-        async def compile(src):
+        async def compile_remote(src):
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(src.encode())
             data = await reader.read(500)
@@ -58,12 +63,13 @@ class TestServer:
         cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
             cs.spawn_server('127.0.0.1', 8888)
-            asyncio.run(compile('Test'))
+            asyncio_run(compile_remote('Test'))
         finally:
-            cs.terminate_server_process()
-            cs.wait_for_termination()
+            cs.terminate_server()
 
     def test_terminate(self):
+        """Test different ways of sending a termination message to server:
+        http-request, plain-text and json-rpc."""
         async def terminate_server(termination_request, expected_response):
             reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
             writer.write(termination_request)
@@ -75,26 +81,73 @@ class TestServer:
         cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
             cs.spawn_server('127.0.0.1', 8888)
-            asyncio.run(terminate_server(STOP_SERVER_REQUEST,
+            asyncio_run(terminate_server(STOP_SERVER_REQUEST,
                                          b'DHParser server at 127.0.0.1:8888 stopped!'))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
 
             cs.spawn_server('127.0.0.1', 8888)
-            asyncio.run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
+            asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
                                          b'DHParser server at 127.0.0.1:8888 stopped!'))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
 
             cs.spawn_server('127.0.0.1', 8888)
             jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode()})
-            asyncio.run(terminate_server(jsonrpc.encode(),
+            asyncio_run(terminate_server(jsonrpc.encode(),
                                          b'DHParser server at 127.0.0.1:8888 stopped!'))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
         finally:
-            cs.terminate_server_process()
-            cs.wait_for_termination()
+            cs.terminate_server()
+
+    def test_long_running_task(self):
+        """Test, whether delegation of (long-running) tasks to
+        processes or threads works."""
+        sequence = []
+
+        async def call_remote(argument):
+            sequence.append(argument)
+            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            writer.write(argument.encode())
+            sequence.append((await reader.read(500)).decode())
+            writer.close()
+
+        async def run_tasks():
+            await asyncio.gather(call_remote('0.01'),
+                                 call_remote('0.001'))
+
+        cs = Server(self.long_running,
+                    cpu_bound=frozenset(['long_running']),
+                    blocking=frozenset())
+        try:
+            cs.spawn_server('127.0.0.1', 8888)
+            asyncio_run(run_tasks())
+            assert sequence == ['0.01', '0.001', '0.001', '0.01']
+        finally:
+            cs.terminate_server()
+
+        cs = Server(self.long_running,
+                    cpu_bound=frozenset(),
+                    blocking=frozenset(['long_running']))
+        try:
+            sequence = []
+            cs.spawn_server('127.0.0.1', 8888)
+            asyncio_run(run_tasks())
+            assert sequence == ['0.01', '0.001', '0.001', '0.01']
+        finally:
+            cs.terminate_server()
+
+        cs = Server(self.long_running,
+                    cpu_bound=frozenset(),
+                    blocking=frozenset())
+        try:
+            sequence = []
+            cs.spawn_server('127.0.0.1', 8888)
+            asyncio_run(run_tasks())
+            assert sequence == ['0.01', '0.001', '0.01', '0.001']
+        finally:
+            cs.terminate_server()
 
 
 if __name__ == "__main__":

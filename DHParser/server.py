@@ -45,12 +45,13 @@ For JSON see:
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
 import json
-from multiprocessing import Process, Value, Queue
+from multiprocessing import Process, Queue, Value, Array
 import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, cast
 
-from DHParser.toolkit import get_config_value, is_filename, load_if_file, re
+from DHParser.syntaxtree import Node_JSONEncoder
+from DHParser.toolkit import get_config_value, re
 
 __all__ = ('RPC_Table',
            'RPC_Type',
@@ -67,7 +68,7 @@ RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 
-RE_IS_JSON = b'\s*(?:{|\[|"|\d|true|false|null)'
+RE_IS_JSONRPC = b'\s*{'  # b'\s*(?:{|\[|"|\d|true|false|null)'
 RE_GREP_URL = b'GET ([^ \n]+) HTTP'
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
@@ -173,10 +174,13 @@ class Server:
         assert not (self.blocking - self.rpc_table.keys())
 
         self.max_source_size = get_config_value('max_rpc_size')  #type: int
-        self.stage = Value('b', SERVER_OFFLINE)  # type: Value
-        self.server = None  # type: Optional[asyncio.AbstractServer]
         self.server_messages = Queue()  # type: Queue
         self.server_process = None  # type: Optional[Process]
+
+        # shared variables
+        self.stage = Value('b', SERVER_OFFLINE)  # type: Value
+        self.host = Array('c', b' ' * 1024)      # type: Array
+        self.port = Value('H', 0)                # type: Value
 
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
@@ -204,6 +208,33 @@ class Server:
             response = RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
             return response.encode() + encoded_html
 
+        async def run(method_name: str, method: Callable, params: Union[Dict, Sequence]) \
+                -> Tuple[JSON_Type, Optional[Tuple[int, str]]]:
+            nonlocal result, rpc_error
+            try:
+                # run method either a) directly if it is short running or
+                # b) in a thread pool if it contains blocking io or
+                # c) in a process pool if it is cpu bound
+                # see: https://docs.python.org/3/library/asyncio-eventloop.html
+                #      #executing-code-in-thread-or-process-pools
+                has_kw_params = isinstance(params, Dict)
+                assert has_kw_params or isinstance(params, Sequence)
+                loop = asyncio.get_running_loop()
+                executor = self.pp_executor if method_name in self.cpu_bound else \
+                    self.tp_executor if method_name in self.blocking else None
+                if executor is None:
+                    result = method(**params) if has_kw_params else method(*params)
+                elif has_kw_params:
+                    result = await loop.run_in_executor(executor, method, **params)
+                else:
+                    result = await loop.run_in_executor(executor, method, *params)
+            except TypeError as e:
+                rpc_error = -32602, "Invalid Params: " + str(e)
+            except NameError as e:
+                rpc_error = -32601, "Method not found: " + str(e)
+            except Exception as e:
+                rpc_error = -32000, "Server Error: " + str(e)
+
         if data.startswith(b'GET'):
             # HTTP request
             m = re.match(RE_GREP_URL, data)
@@ -217,15 +248,19 @@ class Server:
                     func = self.rpc_table.get(func_name,
                                               lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
                     result = func(argument) if argument is not None else func()
-                    if isinstance(result, str):
-                        writer.write(http_response(result))
+                    await run(func.__name__, func, (argumnet,) if argument else ())
+                    if rpc_error is None:
+                        if isinstance(result, str):
+                            writer.write(http_response(result))
+                        else:
+                            writer.write(http_response(json.dumps(result, indent=2)))
                     else:
-                        writer.write(http_response(json.dumps(result, indent=2)))
+                        writer.write(http_response(rpc_error[1]))
 
-        elif not re.match(RE_IS_JSON, data):
+        elif not re.match(RE_IS_JSONRPC, data):
             # plain data
             if oversized:
-                writer.write("Source code too large! Only %i MB allowed" \
+                writer.write("Source code too large! Only %i MB allowed"
                              % (self.max_source_size // (1024 ** 2)))
             elif data == STOP_SERVER_REQUEST:
                 writer.write(self.stop_response.encode())
@@ -236,11 +271,15 @@ class Server:
                 else:
                     err = lambda arg: 'function "compile_src" not registered!'
                     func = self.rpc_table.get('compile_src', self.rpc_table.get('compile', err))
-                result = func(data.decode())
-                if isinstance(result, str):
-                    writer.write(result.encode())
+                # result = func(data.decode())
+                await run(func.__name__, func, (data.decode(),))
+                if rpc_error is None:
+                    if isinstance(result, str):
+                        writer.write(result.encode())
+                    else:
+                        writer.write(json.dumps(result).encode())
                 else:
-                    writer.write(json.dumps(result).encode())
+                    writer.write(rpc_error[1].encode())
 
         else:
             # JSON RPC
@@ -276,33 +315,11 @@ class Server:
                     method_name = obj['method']
                     method = self.rpc_table[method_name]
                     params = obj['params'] if 'params' in obj else ()
-                    try:
-                        # run method either a) directly if it is short running or
-                        # b) in a thread pool if it contains blocking io or
-                        # c) in a process pool if it is cpu bound
-                        # see: https://docs.python.org/3/library/asyncio-eventloop.html
-                        #      #executing-code-in-thread-or-process-pools
-                        has_kw_params = isinstance(params, Dict)
-                        assert has_kw_params or isinstance(params, Sequence)
-                        loop = asyncio.get_running_loop()
-                        executor = self.pp_executor if method_name in self.cpu_bound else \
-                                   self.tp_executor if method_name in self.blocking else None
-                        if executor is None:
-                            result = method(**params) if has_kw_params else method(*params)
-                        elif has_kw_params:
-                            result = await loop.run_in_executor(executor, method, **params)
-                        else:
-                            result = await loop.run_in_executor(executor, method, *params)
-                    except TypeError as e:
-                        rpc_error = -32602, "Invalid Params: " + str(e)
-                    except NameError as e:
-                        rpc_error = -32601, "Method not found: " + str(e)
-                    except Exception as e:
-                        rpc_error = -32000, "Server Error: " + str(e)
+                    await run(method_name, method, params)
 
             if rpc_error is None:
                 json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                writer.write(json.dumps(json_result).encode())
+                writer.write(json.dumps(json_result, cls=Node_JSONEncoder).encode())
             else:
                 writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                               % (rpc_error[0], rpc_error[1], json_id)).encode())
@@ -317,6 +334,8 @@ class Server:
             self.pp_executor = p
             self.tp_executor = t
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
+            self.host.value = host.encode()
+            self.port.value = port
             self.server = cast(asyncio.base_events.Server,
                                await asyncio.start_server(self.handle_request, host, port))
             async with self.server:
@@ -341,6 +360,7 @@ class Server:
         except CancelledError:
             self.pp_executor = None
             self.tt_exectuor = None
+            asyncio_run(self.server.wait_closed())
             self.server_messages.put(SERVER_OFFLINE)
             self.stage.value = SERVER_OFFLINE
 
@@ -365,11 +385,26 @@ class Server:
         self.server_process.start()
         self.wait_until_server_online()
 
-    def terminate_server_process(self):
+    async def termination_request(self):
+        try:
+            host, port = self.host.value.decode(), self.port.value
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(STOP_SERVER_REQUEST)
+            await reader.read(500)
+            while self.stage.value != SERVER_OFFLINE \
+                    and self.server_messages.get() != SERVER_OFFLINE:
+                pass
+            writer.close()
+        except ConnectionRefusedError:
+            pass
+
+    def terminate_server(self):
         """
         Terminates the server process.
         """
         try:
+            if self.stage.value in (SERVER_STARTING, SERVER_ONLINE):
+                asyncio_run(self.termination_request())
             if self.server_process and self.server_process.is_alive():
                 if self.stage.value in (SERVER_STARTING, SERVER_ONLINE):
                     self.stage.value = SERVER_TERMINATE
@@ -390,4 +425,4 @@ class Server:
         if self.stage.value in (SERVER_STARTING, SERVER_ONLINE, SERVER_TERMINATE):
             while self.server_messages.get() != SERVER_OFFLINE:
                 pass
-        self.terminate_server_process()
+        self.terminate_server()

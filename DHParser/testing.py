@@ -40,7 +40,7 @@ from typing import Dict, List, Union, cast
 from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import log_dir, logging, is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
-from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, serialize, ZOMBIE_TAG
+from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.toolkit import GLOBALS, get_config_value, load_if_file, re
 
 
@@ -269,10 +269,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
-                report.append(indent(serialize(cst, 'cst')))
+                report.append(indent(cst.serialize_as('cst')))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(serialize(ast, 'ast')))
+                report.append(indent(ast.serialize_as('ast')))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
@@ -434,7 +434,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 if compare:
                     if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                      (test_name, parser_name, serialize(cst, 'cst')))
+                                      (test_name, parser_name, cst.serialize_as('cst')))
                     if verbose:
                         infostr = '      cst-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

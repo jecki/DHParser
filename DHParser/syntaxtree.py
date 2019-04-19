@@ -43,10 +43,11 @@ __all__ = ('WHITESPACE_PTYPE',
            'StrictResultType',
            'ChildrenType',
            'Node',
-           'serialize',
            'FrozenNode',
            'tree_sanity_check',
            'RootNode',
+           'Node_JSONEncoder',
+           'node_obj_hook',
            'parse_sxpr',
            'parse_xml',
            'parse_json_syntaxtree',
@@ -193,7 +194,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self.result = result
         self.tag_name = tag_name        # type: str
 
-
     def __deepcopy__(self, memo):
         if self.children:
             duplicate = self.__class__(self.tag_name, copy.deepcopy(self.children), False)
@@ -204,7 +204,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
         return duplicate
-
 
     def __str__(self):
         if isinstance(self, RootNode):
@@ -217,7 +216,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
         return self.content
 
-
     def __repr__(self):
         # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
         # name, ptype = (self._tag_name.split(':') + [''])[:2]
@@ -226,11 +224,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             "(" + ", ".join(child.__repr__() for child in self.children) + ")"
         return "Node(%s, %s)" % (self.tag_name, rarg)
 
-
     def __len__(self):
         return (sum(len(child) for child in self.children)
                 if self.children else len(self._result))
-
 
     def __bool__(self):
         """Returns the bool value of a node, which is always True. The reason
@@ -239,10 +235,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return True
 
-
     def __hash__(self):
         return hash(self.tag_name)
-
 
     def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
         """
@@ -271,7 +265,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 raise KeyError(index_or_tagname)
         raise ValueError('Leave nodes have no children that can be indexed!')
 
-
     def __contains__(self, tag_name: str) -> bool:
         """
         Returns true if a child with the given tag name exists.
@@ -290,7 +283,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return False
         raise ValueError('Leave node cannot contain other nodes')
 
-
     def equals(self, other: 'Node') -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
@@ -308,7 +300,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return self.result == other.result
         return False
 
-
     def get(self, index_or_tagname: Union[int, str],
             surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
         """Returns the child node with the given index if ``index_or_tagname``
@@ -322,7 +313,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except KeyError:
             return surrogate
 
-
     def is_anonymous(self) -> bool:
         """Returns True, if the Node is an "anonymous" Node, i.e. a node that
         has not been created by a named parser.
@@ -334,6 +324,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return not self.tag_name or self.tag_name[0] == ':'
 
+    ## node content
 
     @property
     def result(self) -> StrictResultType:
@@ -343,7 +334,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if the result plus any error messages is needed.
         """
         return self._result
-
 
     @result.setter
     def result(self, result: ResultType):
@@ -366,7 +356,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = NoChildren
                 self._result = result  # cast(StrictResultType, result)
 
-
     def _content(self) -> List[str]:
         """
         Returns string content as list of string fragments
@@ -379,7 +368,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return fragments
         self._result = str(self._result)
         return [self._result]
-
 
     @property
     def content(self) -> str:
@@ -399,6 +387,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # return "".join(child.content for child in self.children) if self.children \
         #     else str(self._result)
 
+    ## node position
 
     @property
     def pos(self) -> int:
@@ -406,7 +395,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._pos < 0:
             raise AssertionError("Position value not initialized! Use Node.with_pos()")
         return self._pos
-
 
     def with_pos(self, pos: int) -> 'Node':
         """
@@ -434,6 +422,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 offset = child.pos + len(child)
         return self
 
+    ## (XML-)attributes
+
+    def has_attr(self) -> bool:
+        """
+        Returns `True`, if the node has any attributes, `False` otherwise.
+
+        This function does not create an attribute dictionary, therefore
+        it should be preferred to querying node.attr when testing for the
+        existence of any attributes.
+        """
+        try:
+            # if self._xml_attr is not None:
+            #     return True
+            return bool(self._xml_attr)
+        except AttributeError:
+            pass
+        return False
 
     @property
     def attr(self):
@@ -465,24 +470,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._xml_attr = OrderedDict()
         return self._xml_attr
 
-
-    def has_attr(self) -> bool:
-        """
-        Returns `True`, if the node has any attributes, `False` otherwise.
-
-        This function does not create an attribute dictionary, therefore
-        it should be prefered to querying node.attr when testing for the
-        existence of any attributes.
-        """
-        try:
-            # if self._xml_attr is not None:
-            #     return True
-            return bool(self._xml_attr)
-        except AttributeError:
-            pass
-        return False
-
-
     def compare_attr(self, other: 'Node') -> bool:
         """
         Returns True, if `self` and `other` have the same attributes with the
@@ -498,6 +485,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # other has empty attribute dictionary and self as no attributes
         return True  # neither self nor other have any attributes
 
+    ## tree traversal and node selection
 
     def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
             -> Iterator['Node']:
@@ -532,7 +520,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # for child in child_iterator:
         #     yield from child.select(match_function, True, reverse)
 
-
     def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
                       include_root: bool = False) -> Iterator['Node']:
         """
@@ -565,7 +552,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             tag_names = frozenset({tag_names})
         return self.select(lambda node: node.tag_name in tag_names, include_root)
 
-
     def pick(self, tag_names: Union[str, Set[str]]) -> Optional['Node']:
         """
         Picks the first descendant with one of the given tag_names.
@@ -580,16 +566,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return None
 
-
-    def tree_size(self) -> int:
-        """
-        Recursively counts the number of nodes in the tree including the root node.
-        """
-        return sum(child.tree_size() for child in self.children) + 1
-
-    #
-    # serialization methods
-    #
+    ## serialization methods
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False) -> str:
@@ -652,7 +629,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             return head + '\n'.join([usetab + data_fn(s) for s in res.split('\n')]) + tail
 
-
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = False,
@@ -708,7 +684,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         sxpr = self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
         return sxpr if compact else flatten_sxpr(sxpr, flatten_threshold)
-
 
     def as_xml(self, src: str = None,
                indentation: int = 2,
@@ -783,36 +758,40 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._tree_repr(' ' * indentation, opening, closing, sanitizer,
                                density=1, inline_fn=inlining)
 
+    ## JSON reading and writing
 
     def to_json_obj(self) -> Dict:
         """Serialize a node or tree as json-object"""
-        data = [self.tag_name,
-                [child.to_json_obj() for child in self.children]
-                if self.children else str(self._result)]
-        has_attr = self.has_attr()
-        if self._pos >= 0 or has_attr:
-            data.append(self._pos)
-        if has_attr:
-            data.append(dict(self._xml_attr))
-        return {'__class__': 'DHParser.Node', 'data': data}
-
+        json = {'__class__': 'DHParser.Node', 'tag_name': self.tag_name }
+        if self.children:
+            json['result'] = [child.to_json_obj() for child in self.children]
+        else:
+            json['result'] = str(self._result)
+        if self.has_attr():
+            json['attr'] = dict(self._xml_attr)
+        if self._pos >= 0:
+            json['pos'] = self._pos
+        return json
 
     @staticmethod
     def from_json_obj(json_obj: Dict) -> 'Node':
         """Convert a json object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
+        assert isinstance(json_obj, Dict)
         if json_obj.get('__class__', '') != 'DHParser.Node':
             raise ValueError('JSON object: ' + str(json_obj) +
                              ' does not represent a Node object.')
-        tag_name, result, pos, attr = (json_obj['data'] + [-1, None])[:4]
+        tag_name = json_obj['tag_name']
+        result = json_obj['result']
         if isinstance(result, str):
             leafhint = True
         else:
             leafhint = False
             result = tuple(Node.from_json_obj(child) for child in result)
         node = Node(tag_name, result, leafhint)
-        node._pos = pos
+        node._pos = json_obj.get('pos', -1)
+        attr = json_obj.get('attr', {})
         if attr:
             node.attr.update(attr)
         return node
@@ -821,35 +800,36 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
+    ## generalized serialization methoed
 
-def serialize(node: Node, how: str = 'default') -> str:
-    """
-    Serializes the tree starting with `node` either as S-expression, XML, JSON,
-    or in compact form. Possible values for `how` are 'S-expression',
-    'XML', 'JSON', 'compact' accordingly, or 'AST', 'CST', 'default' in which case
-    the value of respective configuration variable determines the
-    serialization format. (See module `configuration.py`.)
-    """
-    switch = how.lower()
+    def serialize_as(self: 'Node', how: str = 'default') -> str:
+        """
+        Serializes the tree starting with `node` either as S-expression, XML, JSON,
+        or in compact form. Possible values for `how` are 'S-expression',
+        'XML', 'JSON', 'compact' accordingly, or 'AST', 'CST', 'default' in which case
+        the value of respective configuration variable determines the
+        serialization format. (See module `configuration.py`.)
+        """
+        switch = how.lower()
 
-    if switch == 'ast':
-        switch = get_config_value('ast_serialization').lower()
-    elif switch == 'cst':
-        switch = get_config_value('cst_serialization').lower()
-    elif switch == 'default':
-        switch = get_config_value('default_serialization').lower()
+        if switch == 'ast':
+            switch = get_config_value('ast_serialization').lower()
+        elif switch == 'cst':
+            switch = get_config_value('cst_serialization').lower()
+        elif switch == 'default':
+            switch = get_config_value('default_serialization').lower()
 
-    if switch == SXPRESSION_SERIALIZATION.lower():
-        return node.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
-    elif switch == XML_SERIALIZATION.lower():
-        return node.as_xml()
-    elif switch == JSON_SERIALIZATION.lower():
-        return node.as_json()
-    elif switch == COMPACT_SERIALIZATION.lower():
-        return node.as_sxpr(compact=True)
-    else:
-        raise ValueError('Unknown serialization %s. Allowed values are either: %s or : %s'
-                         % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
+        if switch == SXPRESSION_SERIALIZATION.lower():
+            return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
+        elif switch == XML_SERIALIZATION.lower():
+            return self.as_xml()
+        elif switch == JSON_SERIALIZATION.lower():
+            return self.as_json()
+        elif switch == COMPACT_SERIALIZATION.lower():
+            return self.as_sxpr(compact=True)
+        else:
+            raise ValueError('Unknown serialization %s. Allowed values are either: %s or : %s'
+                             % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
 
 
 class FrozenNode(Node):
@@ -857,9 +837,11 @@ class FrozenNode(Node):
     FrozenNode is an immutable kind of Node, i.e. it must not be changed
     after initialization. The purpose is mainly to allow certain kinds of
     optimization, like not having to instantiate empty nodes (because they
-    are always the same and will be dropped while parsing, anyway).
+    are always the same and will be dropped while parsing, anyway) or,
+    rather, throw errors if the program tries to treat a node that is
+    supposed to be a temporary (frozen) node as if it was a regular node.
 
-    Frozen nodes must be used only temporarily during parsing or
+    Frozen nodes must only be used temporarily during parsing or
     tree-transformation and should not occur in the product of the
     transformation any more. This can be verified with `tree_sanity_check()`.
     """
@@ -1064,6 +1046,20 @@ class RootNode(Node):
         return self.as_xml(inline_tags=self.inline_tags,
                            omit_tags=self.omit_tags,
                            empty_tags=self.empty_tags)
+
+
+class Node_JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Node):
+            return cast(Node, obj).to_json_obj()
+        return json.JSONEncoder.default(self, obj)
+
+
+def node_obj_hook(dct):
+    cls = dct.get('__class__', '')
+    if cls == "DHParser.Node":
+        return Node.from_json_obj(dct)
+    return dct
 
 
 #######################################################################
