@@ -83,7 +83,7 @@ class TestParseJSON:
         json_obj_tree = self.tree.to_json_obj()
         # print(json.dumps(json_obj_tree, ensure_ascii=False, indent=2))
         tree_copy = Node.from_json_obj(json_obj_tree)
-        assert tree_copy.equals(self.tree)
+        assert tree_copy.equals(self.tree), tree_copy.as_sxpr()
 
     def test_json_rountrip(self):
         s = self.tree.as_json(indent=None, ensure_ascii=True)
