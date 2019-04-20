@@ -87,7 +87,7 @@ CONFIG_PRESET['max_parser_dropouts'] = 3
 #                  etc.
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
-#                  example, to return syntax trees from remote procedure calls.
+#                  example, to return syntax trees from remote procedure calls.     
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
 XML_SERIALIZATION = "XML"
