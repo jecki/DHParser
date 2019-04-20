@@ -59,7 +59,7 @@ class TestServer:
             writer.write(src.encode())
             data = await reader.read(500)
             writer.close()
-            assert data.decode() == "Test"
+            assert data.decode() == "Test", data.decode()
         cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
             cs.spawn_server('127.0.0.1', 8888)
@@ -123,7 +123,7 @@ class TestServer:
         try:
             cs.spawn_server('127.0.0.1', 8888)
             asyncio_run(run_tasks())
-            assert sequence == ['0.01', '0.001', '0.001', '0.01']
+            assert sequence == ['0.01', '0.001', '0.001', '0.01'], str(sequence)
         finally:
             cs.terminate_server()
 

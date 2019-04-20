@@ -52,6 +52,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
 
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.toolkit import get_config_value, re
+from DHParser.versionnumber import __version__
 
 __all__ = ('RPC_Table',
            'RPC_Type',
@@ -103,7 +104,7 @@ UNKNOWN_FUNC_HTML = ONELINER_HTML.format(
     line="DHParser Error: Function {func} unknown or not registered!")
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"
-
+IDENTIFY_REQUEST = "identify"
 
 # __test_get = b'''GET /method/object HTTP/1.1
 # Host: 127.0.0.1:8888
@@ -156,14 +157,22 @@ class Server:
                  blocking: Set[str] = frozenset()):
         if isinstance(rpc_functions, Dict):
             self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
+            self.default = tuple(self.rpc_table.keys())[0]   # type: str
         elif isinstance(rpc_functions, List):
             self.rpc_table = {}
-            for func in cast(List, rpc_functions):
+            func_list = cast(List, rpc_functions)
+            assert len(func_list) >= 1
+            for func in func_list:
                 self.rpc_table[func.__name__] = func
+            self.default = func_list[0].__name__
         else:
             assert isinstance(rpc_functions, Callable)
             func = cast(Callable, rpc_functions)
             self.rpc_table = {func.__name__: func}
+            self.default = func.__name__
+        assert STOP_SERVER_REQUEST.decode() not in self.rpc_table
+        if IDENTIFY_REQUEST not in self.rpc_table:
+            self.rpc_table[IDENTIFY_REQUEST] = lambda : "DHParser " + __version__
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -248,12 +257,13 @@ class Server:
                     func = self.rpc_table.get(func_name,
                                               lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
                     result = func(argument) if argument is not None else func()
-                    await run(func.__name__, func, (argumnet,) if argument else ())
+                    await run(func.__name__, func, (argument,) if argument else ())
                     if rpc_error is None:
                         if isinstance(result, str):
                             writer.write(http_response(result))
                         else:
-                            writer.write(http_response(json.dumps(result, indent=2)))
+                            writer.write(http_response(
+                                json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
                     else:
                         writer.write(http_response(rpc_error[1]))
 
@@ -262,22 +272,23 @@ class Server:
             if oversized:
                 writer.write("Source code too large! Only %i MB allowed"
                              % (self.max_source_size // (1024 ** 2)))
-            elif data == STOP_SERVER_REQUEST:
+            elif data.startswith(STOP_SERVER_REQUEST):
                 writer.write(self.stop_response.encode())
                 kill_switch = True
             else:
-                if len(self.rpc_table) == 1:
-                    func = self.rpc_table[tuple(self.rpc_table.keys())[0]]
+                if data.find(b'\n') < 0 and data.find(b'/') >= 0:
+                    func_name, argument = data.decode().strip('/').split('/', 1) + [None]
                 else:
-                    err = lambda arg: 'function "compile_src" not registered!'
-                    func = self.rpc_table.get('compile_src', self.rpc_table.get('compile', err))
-                # result = func(data.decode())
-                await run(func.__name__, func, (data.decode(),))
+                    func_name = self.default
+                    argument = data.decode()
+                err_func = lambda arg: 'Function %() no found!' % func_name
+                func = self.rpc_table.get(func_name, err_func)
+                await run(func_name, func, (argument,))
                 if rpc_error is None:
                     if isinstance(result, str):
                         writer.write(result.encode())
                     else:
-                        writer.write(json.dumps(result).encode())
+                        writer.write(json.dumps(result, cls=DHParser_JSONEncoder).encode())
                 else:
                     writer.write(rpc_error[1].encode())
 
