@@ -88,15 +88,20 @@ CONFIG_PRESET['max_parser_dropouts'] = 3
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
+# 'simple-json'  - a more readable JSON-format
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
 XML_SERIALIZATION = "XML"
 SXPRESSION_SERIALIZATION = "S-expression"
 COMPACT_SERIALIZATION = "compact"
 JSON_SERIALIZATION = "json"
+SIMPLE_JSON_SERIALIZATION = "simple-json"
 
-SERIALIZATIONS = frozenset({XML_SERIALIZATION, SXPRESSION_SERIALIZATION,
-                            COMPACT_SERIALIZATION, JSON_SERIALIZATION})
+SERIALIZATIONS = frozenset({XML_SERIALIZATION,
+                            SXPRESSION_SERIALIZATION,
+                            COMPACT_SERIALIZATION,
+                            JSON_SERIALIZATION,
+                            SIMPLE_JSON_SERIALIZATION})
 
 CONFIG_PRESET['cst_serialization'] = COMPACT_SERIALIZATION
 CONFIG_PRESET['ast_serialization'] = XML_SERIALIZATION

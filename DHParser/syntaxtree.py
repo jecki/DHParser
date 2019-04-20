@@ -26,7 +26,8 @@ parser classes are defined in the ``parse`` module.
 from collections import OrderedDict
 import copy
 import json
-from typing import Callable, cast, Iterator, List, AbstractSet, Set, Union, Tuple, Optional, Dict
+from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, Union, Tuple, \
+    Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION
@@ -291,7 +292,6 @@ class Node(JSONSerializable):  # (collections.abc.Sized): Base class omitted for
         except AttributeError:
             self._id = gen_id()
             return self._id
-
 
     def equals(self, other: 'Node') -> bool:
         """
@@ -771,45 +771,62 @@ class Node(JSONSerializable):  # (collections.abc.Sized): Base class omitted for
     ## JSON reading and writing
 
     def to_json_obj(self) -> Dict:
-        """Serialize a node or tree as json-object"""
+        """Serialize a node or tree as JSON-object."""
         json_obj = {'__class__': 'DHParser.Node', 'tag_name': self.tag_name }
         if self.children:
             json_obj['result'] = [child.to_json_obj() for child in self.children]
         else:
-            json_obj['result'] = str(self._result)
+            json_obj['result'] = str(self.result)
+        if self.pos >= 0:
+            json_obj['pos'] = self.pos
         if self.has_attr():
-            json_obj['attr'] = dict(self._xml_attr)
-        if self._pos >= 0:
-            json_obj['pos'] = self._pos
+            json_obj['attr'] = dict(self.attr)
         json_obj['id'] = self.id
         return json_obj
 
+    def to_simplified_json_obj(self) -> List:
+        """Serialize node or tree as JSON-serializable nested list."""
+        l = [self.tag_name, list[self.result] if self.children else str(self.result)]
+        pos = self.pos
+        if pos >= 0:
+            l.append(pos)
+        if self.has_attr():
+            l.append(dict(self.attr))
+        return l
+
     @staticmethod
-    def from_json_obj(json_obj: Dict) -> 'Node':
-        """Convert a json object representing a node (or tree) back into a
+    def from_json_obj(json_obj: Union[Dict, Sequence]) -> 'Node':
+        """Convert a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
-        assert isinstance(json_obj, Dict)
-        if json_obj.get('__class__', '') not in ('DHParser.Node', 'DHParser.RootNode'):
-            raise ValueError('JSON object: ' + str(json_obj) +
-                             ' does not represent a Node object.')
-        tag_name = json_obj['tag_name']
-        result = json_obj['result']
-        if isinstance(result, str):
-            leafhint = True
-        else:
-            leafhint = False
+        if isinstance(json_obj, Dict):
+            if json_obj.get('__class__', '') not in ('DHParser.Node', 'DHParser.RootNode'):
+                raise ValueError('JSON object: ' + str(json_obj) +
+                                 ' does not represent a Node object.')
+            tag_name = json_obj['tag_name']
+            result = json_obj['result']
             result = tuple(Node.from_json_obj(child) for child in result)
-        node = Node(tag_name, result, leafhint)
-        node._pos = json_obj.get('pos', -1)
-        attr = json_obj.get('attr', {})
-        if attr:
-            node.attr.update(attr)
-        node._id = json_obj['id']
+            node = Node(tag_name, result)
+            node._pos = json_obj.get('pos', -1)
+            attr = json_obj.get('attr', {})
+            if attr:
+                node.attr.update(attr)
+            node._id = json_obj['id']
+        else:
+            assert isinstance(json_obj, Sequence)
+            assert 2 <= len(json_obj) <= 4
+            node = Node(json_obj[0], json_obj[1])
+            for extra in json_obj[2:]:
+                if isinstance(extra, dict):
+                    node.attr.update(extra)
+                else:
+                    assert isinstance(extra, int)
+                    node._pos = extra
         return node
 
-    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
-        return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
+    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False, simplified=False) -> str:
+        return json.dumps(self.to_simplified_json_obj() if simplified else self.to_json_obj(),
+                          indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
     ## generalized serialization methoed
