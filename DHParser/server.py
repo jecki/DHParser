@@ -48,7 +48,7 @@ import json
 from multiprocessing import Process, Queue, Value, Array
 import sys
 import time
-from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, cast
+from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, Any, cast
 
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.toolkit import get_config_value, re
@@ -62,6 +62,12 @@ __all__ = ('RPC_Table',
            'SERVER_STARTING',
            'SERVER_ONLINE',
            'SERVER_TERMINATE',
+           'USE_DEFAULT_HOST',
+           'USE_DEFAULT_PORT',
+           'STOP_SERVER_REQUEST',
+           'IDENTIFY_REQUEST',
+           'ALL_RPCs',
+           'identify_server',
            'Server')
 
 
@@ -103,38 +109,32 @@ ONELINER_HTML = """<!DOCTYPE html>
 UNKNOWN_FUNC_HTML = ONELINER_HTML.format(
     line="DHParser Error: Function {func} unknown or not registered!")
 
-STOP_SERVER_REQUEST = b"__STOP_SERVER__"
-IDENTIFY_REQUEST = "identify"
+USE_DEFAULT_HOST = ''
+USE_DEFAULT_PORT = -1
 
-# __test_get = b'''GET /method/object HTTP/1.1
-# Host: 127.0.0.1:8888
-# User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:66.0) Gecko/20100101 Firefox/66.0
-# Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-# Accept-Language: de,en-US;q=0.7,en;q=0.3
-# Accept-Encoding: gzip, deflate
-# DNT: 1
-# Connection: keep-alive
-# Upgrade-Insecure-Requests: 1
-#
-#
-# '''
+STOP_SERVER_REQUEST = b"__STOP_SERVER__"
+IDENTIFY_REQUEST = "identify/"
+
+
+def identify_server():
+    return "DHParser " + __version__
 
 
 def json_rpc(func: Callable,
-             params: Union[List[JSON_Type], Dict[str, JSON_Type]],
+             params: Union[List[JSON_Type], Dict[str, JSON_Type]]=[],
              ID: Optional[int]=None) -> str:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def asyncio_run(coroutine: Coroutine):
+def asyncio_run(coroutine: Coroutine) -> Any:
     """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
-        asyncio.run(coroutine)
+        return asyncio.run(coroutine)
     else:
         loop = asyncio.get_event_loop()
         try:
-            loop.run_until_complete(coroutine)
+            return loop.run_until_complete(coroutine)
         finally:
             loop.close()
 
@@ -171,8 +171,8 @@ class Server:
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
         assert STOP_SERVER_REQUEST.decode() not in self.rpc_table
-        if IDENTIFY_REQUEST not in self.rpc_table:
-            self.rpc_table[IDENTIFY_REQUEST] = lambda : "DHParser " + __version__
+        if IDENTIFY_REQUEST.strip('/') not in self.rpc_table:
+            self.rpc_table[IDENTIFY_REQUEST.strip('/')] = identify_server
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -256,7 +256,7 @@ class Server:
                 else:
                     func = self.rpc_table.get(func_name,
                                               lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
-                    result = func(argument) if argument is not None else func()
+                    # result = func(argument) if argument is not None else func()
                     await run(func.__name__, func, (argument,) if argument else ())
                     if rpc_error is None:
                         if isinstance(result, str):
@@ -283,7 +283,7 @@ class Server:
                     argument = data.decode()
                 err_func = lambda arg: 'Function %() no found!' % func_name
                 func = self.rpc_table.get(func_name, err_func)
-                await run(func_name, func, (argument,))
+                await run(func_name, func, () if argument is None else (argument,))
                 if rpc_error is None:
                     if isinstance(result, str):
                         writer.write(result.encode())
@@ -340,7 +340,12 @@ class Server:
             self.stage.value = SERVER_TERMINATE
             self.server.close()
 
-    async def serve(self, host: str = '127.0.0.1', port: int = 8888):
+    async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
+        if host == USE_DEFAULT_HOST:
+            host = get_config_value('server_default_host')
+        if port == USE_DEFAULT_PORT:
+            port = get_config_value('server_default_port')
+        assert port >= 0
         with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
             self.pp_executor = p
             self.tp_executor = t
@@ -358,7 +363,7 @@ class Server:
         while not self.server_messages.empty():
             self.server_messages.get()
 
-    def run_server(self, host: str = '127.0.0.1', port: int = 8888):
+    def run_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         """
         Starts a DHParser-Server. This function will not return until the
         DHParser-Server ist stopped by sending a STOP_SERVER_REQUEST.
@@ -382,7 +387,7 @@ class Server:
                 raise AssertionError('could not start server!?')
             assert self.stage.value == SERVER_ONLINE
 
-    def spawn_server(self, host: str = '127.0.0.1', port: int = 8888):
+    def spawn_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         """
         Start DHParser-Server in a separate process and return.
         """

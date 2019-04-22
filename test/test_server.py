@@ -30,7 +30,7 @@ from typing import Tuple
 
 sys.path.extend(['../', './'])
 
-from DHParser.server import Server, STOP_SERVER_REQUEST, SERVER_OFFLINE, asyncio_run
+from DHParser.server import Server, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE, asyncio_run
 
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -64,6 +64,23 @@ class TestServer:
         try:
             cs.spawn_server('127.0.0.1', 8888)
             asyncio_run(compile_remote('Test'))
+        finally:
+            cs.terminate_server()
+
+    def test_indentify(self):
+        """Test server's 'identify/'-command."""
+        async def send_request(request):
+            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            writer.write(request.encode() if isinstance(request, str) else request)
+            data = await reader.read(500)
+            writer.close()
+            return data.decode()
+
+        cs = Server(self.compiler_dummy)
+        try:
+            cs.spawn_server('127.0.0.1', 8888)
+            result = asyncio_run(send_request(IDENTIFY_REQUEST))
+            assert result.startswith('DHParser')
         finally:
             cs.terminate_server()
 
