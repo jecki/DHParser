@@ -121,7 +121,7 @@ def identify_server():
 
 
 def json_rpc(func: Callable,
-             params: Union[List[JSON_Type], Dict[str, JSON_Type]]=[],
+             params: Union[List[JSON_Type], Dict[str, JSON_Type]]=(),
              ID: Optional[int]=None) -> str:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
@@ -202,7 +202,7 @@ class Server:
                              reader: asyncio.StreamReader,
                              writer: asyncio.StreamWriter):
         rpc_error = None    # type: Optional[Tuple[int, str]]
-        json_id = 'null'    # type: Tuple[int, str]
+        json_id = 'null'    # type: Union[int, str]
         obj = {}            # type: Dict
         result = None       # type: JSON_Type
         raw = None          # type: JSON_Type
@@ -217,8 +217,7 @@ class Server:
             response = RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
             return response.encode() + encoded_html
 
-        async def run(method_name: str, method: Callable, params: Union[Dict, Sequence]) \
-                -> Tuple[JSON_Type, Optional[Tuple[int, str]]]:
+        async def run(method_name: str, method: Callable, params: Union[Dict, Sequence]):
             nonlocal result, rpc_error
             try:
                 # run method either a) directly if it is short running or
@@ -281,7 +280,7 @@ class Server:
                 else:
                     func_name = self.default
                     argument = data.decode()
-                err_func = lambda arg: 'Function %() no found!' % func_name
+                err_func = lambda arg: 'Function %s no found!' % func_name
                 func = self.rpc_table.get(func_name, err_func)
                 await run(func_name, func, () if argument is None else (argument,))
                 if rpc_error is None:
