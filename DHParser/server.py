@@ -77,6 +77,7 @@ JSON_Type = Union[Dict, Sequence, str, int, None]
 
 RE_IS_JSONRPC = b'\s*{'  # b'\s*(?:{|\[|"|\d|true|false|null)'
 RE_GREP_URL = b'GET ([^ \n]+) HTTP'
+RE_FUNCTION_CALL = b'\s*(\w+)\(([^)]*)\)'
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -113,7 +114,7 @@ USE_DEFAULT_HOST = ''
 USE_DEFAULT_PORT = -1
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"
-IDENTIFY_REQUEST = "identify/"
+IDENTIFY_REQUEST = "identify()"
 
 
 def identify_server():
@@ -125,6 +126,14 @@ def json_rpc(func: Callable,
              ID: Optional[int]=None) -> str:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
+
+
+def maybe_int(s: str) -> Union[int, str]:
+    """Convert string to int if possible, otherwise return string."""
+    try:
+        return int(s)
+    except ValueError:
+        return s
 
 
 def asyncio_run(coroutine: Coroutine) -> Any:
@@ -171,8 +180,8 @@ class Server:
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
         assert STOP_SERVER_REQUEST.decode() not in self.rpc_table
-        if IDENTIFY_REQUEST.strip('/') not in self.rpc_table:
-            self.rpc_table[IDENTIFY_REQUEST.strip('/')] = identify_server
+        if IDENTIFY_REQUEST.strip('()') not in self.rpc_table:
+            self.rpc_table[IDENTIFY_REQUEST.strip('()')] = identify_server
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -275,14 +284,20 @@ class Server:
                 writer.write(self.stop_response.encode())
                 kill_switch = True
             else:
-                if data.find(b'\n') < 0 and data.find(b'/') >= 0:
-                    func_name, argument = data.decode().strip('/').split('/', 1) + [None]
+                m = re.match(RE_FUNCTION_CALL, data)
+                if m:
+                    func_name = m.group(1).decode()
+                    argstr = m.group(2).decode()
+                    if argstr:
+                        argument = tuple(maybe_int(s.strip('" \'')) for s in argstr.split(','))
+                    else:
+                        argument = ()
                 else:
                     func_name = self.default
-                    argument = data.decode()
+                    argument = (data.decode(),)
                 err_func = lambda arg: 'Function %s no found!' % func_name
                 func = self.rpc_table.get(func_name, err_func)
-                await run(func_name, func, () if argument is None else (argument,))
+                await run(func_name, func, argument)
                 if rpc_error is None:
                     if isinstance(result, str):
                         writer.write(result.encode())
