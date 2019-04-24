@@ -77,7 +77,7 @@ JSON_Type = Union[Dict, Sequence, str, int, None]
 
 RE_IS_JSONRPC = b'\s*{'  # b'\s*(?:{|\[|"|\d|true|false|null)'
 RE_GREP_URL = b'GET ([^ \n]+) HTTP'
-RE_FUNCTION_CALL = b'\s*(\w+)\(([^)]*)\)'
+RE_FUNCTION_CALL = b'\s*(\w+)\(([^)\n]*)\)'
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
