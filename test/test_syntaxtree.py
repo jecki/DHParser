@@ -317,6 +317,17 @@ class TestNodeFind():
         assert 'c' not in tree
         assert any(tree.select_by_tag('c', False))
 
+    def test_index(self):
+        tree = parse_sxpr('(a (b 0) (c 1) (d 2))')
+        assert tree.index('d') == 2
+        assert tree.index('b') == 0
+        assert tree.index('c') == 1
+        try:
+            i = tree.index('x')
+            raise AssertionError('ValueError expected!')
+        except ValueError:
+            pass
+
 
 class TestSerialization:
     def test_sxpr_roundtrip(self):

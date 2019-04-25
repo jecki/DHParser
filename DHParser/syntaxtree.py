@@ -505,6 +505,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if child.tag_name == tag_name:
                 return i
             i += 1
+        raise ValueError("Node with tag name '%s' not among child-nodes." % tag_name)
 
     def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
             -> Iterator['Node']:
