@@ -365,7 +365,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                                     include_root=True, reverse=True):
                 zombie = parent[ZOMBIE_TAG]
                 zombie.tag_name = '__TESTING_ARTIFACT__'
-                zombie.result = 'Artifact can be ignored, but tree structure may not be fully reliable!'
+                zombie.result = 'Artifact can be ignored. Be aware, though, that also the' \
+                                'tree structure may not be the same as in a non-testing ' \
+                                'environment, when a testing artifact has occurred!'
                 # parent.result = tuple(c for c in parent.children if c.tag_name != ZOMBIE_TAG)
                 break
         return is_artifact

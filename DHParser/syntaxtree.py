@@ -26,6 +26,7 @@ parser classes are defined in the ``parse`` module.
 from collections import OrderedDict
 import copy
 import json
+import sys
 from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, Union, Tuple, \
     Optional, Dict
 
@@ -238,51 +239,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __hash__(self):
         return hash(self.tag_name)
 
-    def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
-        """
-        Returns the child node with the given index if ``index_or_tagname`` is
-        an integer or the first child node with the given tag name. Examples::
-
-            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
-            >>> flatten_sxpr(tree[0].as_sxpr())
-            '(b "X")'
-            >>> flatten_sxpr(tree["X"].as_sxpr())
-            '(X (c "d"))'
-
-        Args:
-            index_or_tagname(str): Either an index of a child node or a
-                tag name.
-        Returns:
-            Node: All nodes which have a given tag name.
-        """
-        if self.children:
-            if isinstance(index_or_tagname, int):
-                return self.children[index_or_tagname]
-            else:
-                for child in self.children:
-                    if child.tag_name == index_or_tagname:
-                        return child
-                raise KeyError(index_or_tagname)
-        raise ValueError('Leave nodes have no children that can be indexed!')
-
-    def __contains__(self, tag_name: str) -> bool:
-        """
-        Returns true if a child with the given tag name exists.
-        Args:
-            tag_name (str): tag_name which will be searched among to immediate
-                descendants of this node.
-        Returns:
-            bool:  True, if at least one descendant node with the given tag
-                name exists, False otherwise
-        """
-        # assert isinstance(tag_name, str)
-        if self.children:
-            for child in self.children:
-                if child.tag_name == tag_name:
-                    return True
-            return False
-        raise ValueError('Leave node cannot contain other nodes')
-
     def equals(self, other: 'Node') -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
@@ -324,7 +280,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return not self.tag_name or self.tag_name[0] == ':'
 
-    ## node content
+    # node content ###
 
     @property
     def result(self) -> StrictResultType:
@@ -387,7 +343,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # return "".join(child.content for child in self.children) if self.children \
         #     else str(self._result)
 
-    ## node position
+    # node position ###
 
     @property
     def pos(self) -> int:
@@ -422,7 +378,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 offset = child.pos + len(child)
         return self
 
-    ## (XML-)attributes
+    # (XML-)attributes ###
 
     def has_attr(self) -> bool:
         """
@@ -485,7 +441,70 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # other has empty attribute dictionary and self as no attributes
         return True  # neither self nor other have any attributes
 
-    ## tree traversal and node selection
+    # tree traversal and node selection ###
+
+    def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
+        """
+        Returns the child node with the given index if ``index_or_tagname`` is
+        an integer or the first child node with the given tag name. Examples::
+
+            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
+            >>> flatten_sxpr(tree[0].as_sxpr())
+            '(b "X")'
+            >>> flatten_sxpr(tree["X"].as_sxpr())
+            '(X (c "d"))'
+
+        Args:
+            index_or_tagname(str): Either an index of a child node or a
+                tag name.
+        Returns:
+            Node: All nodes which have a given tag name.
+        """
+        if self.children:
+            if isinstance(index_or_tagname, int):
+                return self.children[index_or_tagname]
+            else:
+                for child in self.children:
+                    if child.tag_name == index_or_tagname:
+                        return child
+                raise KeyError(index_or_tagname)
+        raise ValueError('Leave nodes have no children that can be indexed!')
+
+    def __contains__(self, tag_name: str) -> bool:
+        """
+        Returns true if a child with the given tag name exists.
+        Args:
+            tag_name (str): tag_name which will be searched among to immediate
+                descendants of this node.
+        Returns:
+            bool:  True, if at least one descendant node with the given tag
+                name exists, False otherwise
+        """
+        # assert isinstance(tag_name, str)
+        if self.children:
+            for child in self.children:
+                if child.tag_name == tag_name:
+                    return True
+            return False
+        raise ValueError('Leave node cannot contain other nodes')
+
+    def index(self, tag_name: str, start: int = 0, stop: int = sys.maxsize) -> int:
+        """
+        Returns the first index of the child with the tag name `what`. If the
+        parameters start and stop are given, the search is restricted to the
+        children with indices from the half-open interval [start:end[.
+        If no such child exists a ValueError is raised.
+        :param tag_name: the child's tag name for which the index shall be returned
+        :param start: the first index to start searching.
+        :param stop: the last index that shall be searched
+        :return: the index of the first child with the given tag name.
+        """
+        assert 0 <= start <= stop
+        i = start
+        for child in self.children[start:stop]:
+            if child.tag_name == tag_name:
+                return i
+            i += 1
 
     def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
             -> Iterator['Node']:
@@ -566,7 +585,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return None
 
-    ## serialization methods
+    # serialization ###
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False) -> str:
@@ -758,7 +777,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._tree_repr(' ' * indentation, opening, closing, sanitizer,
                                density=1, inline_fn=inlining)
 
-    ## JSON reading and writing
+    # JSON serialization ###
 
     def to_json_obj(self) -> List:
         """Serialize node or tree as JSON-serializable nested list."""
@@ -796,7 +815,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                           indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
-    ## generalized serialization methoed
+    # serialization meta-method ###
 
     def serialize_as(self: 'Node', how: str = 'default') -> str:
         """
