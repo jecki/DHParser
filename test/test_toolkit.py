@@ -38,7 +38,7 @@ class TestLoggingAndLoading:
         self.filename = os.path.join("test", self.tmpname, "test.py") if os.path.isdir('test') \
             else os.path.join(self.tmpname, "test.py")
         self.dirname = os.path.dirname(self.filename)
-        self.code1 = "x = 46"
+        self.code1 = "x = 46\n"
         self.code2 = "def f():\n    return 46"
         if not os.path.exists(self.dirname):
             os.mkdir(self.dirname)

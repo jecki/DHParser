@@ -249,6 +249,8 @@ def isgenerictype(t):
 #
 #######################################################################
 
+RX_FILEPATH = re.compile(r'[^ \t][^\n\t?*]+(?<![ \t])')  # r'[\w/:. \\]+'
+
 
 def load_if_file(text_or_file) -> str:
     """
@@ -264,7 +266,7 @@ def load_if_file(text_or_file) -> str:
                 content = f.read()
             return content
         except FileNotFoundError:
-            if re.fullmatch(r'[\w/:. \\]+', text_or_file):
+            if RX_FILEPATH.fullmatch(text_or_file):
                 raise FileNotFoundError('Not a valid file: ' + text_or_file + '!\n(Add "\\n" '
                                         'to distinguish source data from a file name.)')
             else:

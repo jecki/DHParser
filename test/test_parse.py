@@ -662,7 +662,7 @@ class TestErrorReporting:
 
 class TestBorderlineCases:
     def test_not_matching(self):
-        minilang = """parser = /X/"""
+        minilang = """parser = /X/\n"""
         gr = grammar_provider(minilang)()
         cst = gr('X', 'parser')
         assert not cst.error_flag

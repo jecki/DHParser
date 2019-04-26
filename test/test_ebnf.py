@@ -185,7 +185,7 @@ class TestParserNameOverwriteBug:
         assert not has_errors(messages), str(messages)
 
     def test_single_mandatory_bug(self):
-        lang = """series = § /B/"""
+        lang = """series = § /B/\n"""
         result, messages, ast = compile_ebnf(lang)
         assert result.find('Required') < 0
         parser = grammar_provider(lang)()
@@ -415,8 +415,8 @@ class TestFlowControlOperators:
         """Tests whether failures to comply with the required operator '§'
         are correctly reported as such.
         """
-        lang1 = r"nonsense == /\w+/~  # wrong_equal_sign"
-        lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions"
+        lang1 = r"nonsense == /\w+/~  # wrong_equal_sign "
+        lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions\n"
         try:
             parser_class = grammar_provider(lang1)
             assert False, "Compilation error expected."
