@@ -342,6 +342,12 @@ class Server:
                     params = obj['params'] if 'params' in obj else ()
                     await run(method_name, method, params)
 
+            try:
+                error = cast(Dict[str, str], result['error'])
+                rpc_error = error['code'], error['message']
+            except TypeError:
+                pass  # result is not a dictionary, never mind
+
             if rpc_error is None:
                 json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
                 writer.write(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
@@ -456,3 +462,34 @@ class Server:
             while self.server_messages.get() != SERVER_OFFLINE:
                 pass
         self.terminate_server()
+
+
+class LanguageServer(Server):
+    """Template for the implementation of a language server.
+    See: https://microsoft.github.io/language-server-protocol/"""
+
+    cpu_bound = ALL_RPCs    # type: Set[str]
+    blocking = frozenset()  # type: Set[str]
+
+    def __init__(self):
+        rpc_table = dict()  # type: RPC_Table
+        for attr in dir(self):
+            if attr.startswith('rpc_'):
+                name = attr[4:].replace('_', '/')
+                func = getattr(self, attr)
+                rpc_table[name] = func
+        super().__init__(rpc_table, self.cpu_bound, self.blocking)
+        self._initialized = False
+
+    def rpc_initialize(self,
+                       processId: Optional[int],
+                       rootPath: Optional[str],
+                       rootUri: Optional[str],
+                       initializeOptions: JSON_Type,
+                       capabilities: JSON_Type,
+                       trace: str,
+                       workspaceFolders: List[Dict[str, str]]):
+        if self._initialized:
+            pass
+
+        # Error Code -32002
