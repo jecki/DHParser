@@ -267,8 +267,9 @@ def load_if_file(text_or_file) -> str:
             return content
         except FileNotFoundError:
             if RX_FILEPATH.fullmatch(text_or_file):
-                raise FileNotFoundError('Not a valid file: ' + text_or_file + '!\n(Add "\\n" '
-                                        'to distinguish source data from a file name.)')
+                raise FileNotFoundError('Not a valid filepath or URL: "' + text_or_file + '". \n'
+                                        '(Add an empty line to distinguish source data from '
+                                        'a file name.)')
             else:
                 return text_or_file
     else:
