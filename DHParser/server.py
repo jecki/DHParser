@@ -211,7 +211,7 @@ class Server:
                              reader: asyncio.StreamReader,
                              writer: asyncio.StreamWriter):
         rpc_error = None    # type: Optional[Tuple[int, str]]
-        json_id = 'null'    # type: Union[int, str]
+        json_id = None      # type: Optional[int]
         obj = {}            # type: Dict
         result = None       # type: JSON_Type
         raw = None          # type: JSON_Type
@@ -321,7 +321,7 @@ class Server:
             if rpc_error is None:
                 if isinstance(raw, Dict):
                     obj = cast(Dict, raw)
-                    json_id = obj.get('id', 'null')
+                    json_id = obj.get('id', None)
                 else:
                     rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
 
@@ -349,8 +349,9 @@ class Server:
                 pass  # result is not a dictionary, never mind
 
             if rpc_error is None:
-                json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                writer.write(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
+                if json_id is not None:
+                    json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+                    writer.write(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
             else:
                 writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                               % (rpc_error[0], rpc_error[1], json_id)).encode())
@@ -464,6 +465,13 @@ class Server:
         self.terminate_server()
 
 
+#######################################################################
+#
+# Language-Server base class
+#
+#######################################################################
+
+
 class LanguageServer(Server):
     """Template for the implementation of a language server.
     See: https://microsoft.github.io/language-server-protocol/"""
@@ -479,17 +487,43 @@ class LanguageServer(Server):
                 func = getattr(self, attr)
                 rpc_table[name] = func
         super().__init__(rpc_table, self.cpu_bound, self.blocking)
-        self._initialized = False
+        self._server_initialized = False
+        self._client_initialized = False
 
-    def rpc_initialize(self,
-                       processId: Optional[int],
-                       rootPath: Optional[str],
-                       rootUri: Optional[str],
-                       initializeOptions: JSON_Type,
-                       capabilities: JSON_Type,
-                       trace: str,
-                       workspaceFolders: List[Dict[str, str]]):
-        if self._initialized:
-            pass
+    def initialize(self,
+                   processId: Optional[int],
+                   rootPath: Optional[str],
+                   rootUri: Optional[str],
+                   initializeOptions: JSON_Type,
+                   capabilities: JSON_Type,
+                   trace: str,
+                   workspaceFolders: List[Dict[str, str]]):
+        # return {'capabilities': {}}
+        return {"jsonrpc": "2.0",
+                "error": {"code": -322002,
+                          "message": 'Language Server Error: "initialize" is not implemented!'},
+                "id": 0}
 
-        # Error Code -32002
+    def rpc_initialize(self, **kwargs):
+        if self._server_initialized:
+            return {"jsonrpc": "2.0",
+                        "error": {"code": -322002,
+                        "message": "Server has already been initialized."},
+                    "id": 0}
+        else:
+            result = self.initialize(**kwargs)
+            if 'error' not in result:
+                self._server_initialized = True
+            return result
+
+    def rpc_initialized(self):
+        if self._client_initialized:
+            pass  # clients must not reply to notifations!
+            # print('double notification!')
+            # return {"jsonrpc": "2.0",
+            #             "error": {"code": -322002,
+            #             "message": "Initialize Notification already received!"},
+            #         "id": 0}
+        else:
+            self._client_initialized = True
+

@@ -113,7 +113,8 @@ class TestServer:
             assert cs.stage.value == SERVER_OFFLINE
 
             cs.spawn_server('127.0.0.1', 8888)
-            jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode()})
+            jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
+                                  'id': 1})
             asyncio_run(terminate_server(jsonrpc.encode(),
                                          b'DHParser server at 127.0.0.1:8888 stopped!'))
             cs.wait_for_termination()
