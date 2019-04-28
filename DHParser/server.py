@@ -143,8 +143,12 @@ def asyncio_run(coroutine: Coroutine) -> Any:
     if sys.version_info >= (3, 7):
         return asyncio.run(coroutine)
     else:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(coroutine)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(coroutine)
+        asyncio.set_event_loop(None)
+        loop.close()
+        return result
 
 
 def GMT_timestamp() -> str:
@@ -391,16 +395,18 @@ class Server:
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.host.value = host.encode()
             self.port.value = port
-            self.loop = asyncio.get_event_loop()
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
             self.server = cast(
                 asyncio.base_events.Server,
                 self.loop.run_until_complete(
-                    asyncio.start_server(self.handle_request, host, port)))
+                    asyncio.start_server(self.handle_request, host, port, loop=self.loop)))
             try:
                 self.stage.value = SERVER_ONLINE
                 self.server_messages.put(SERVER_ONLINE)
                 self.loop.run_forever()
             finally:
+                asyncio.set_event_loop(None)
                 self.server.close()
                 asyncio_run(self.server.wait_closed())
 
@@ -442,7 +448,8 @@ class Server:
         """
         if self.server_process:
             assert not self.server_process.is_alive()
-            self.server_process.close()
+            if sys.version_info >= (3, 7):
+                self.server_process.close()
             self.server_process = None
         self._empty_message_queue()
         self.server_process = Process(

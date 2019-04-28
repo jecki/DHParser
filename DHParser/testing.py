@@ -401,7 +401,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
 
         for test_name, test_code in tests.get('match', dict()).items():
             if not get_config_value('test_parallelization'):
-                print('    ' + test_name)
+                print('    ' + str(test_name))
 
             errflag = len(errata)
             try:

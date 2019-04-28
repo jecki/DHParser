@@ -6,7 +6,6 @@ import concurrent.futures
 import doctest
 import multiprocessing
 import os
-import platform
 import sys
 import time
 import threading
@@ -35,7 +34,7 @@ def run_doctests(module):
 
 
 if __name__ == "__main__":
-    interpreters = [] # ['python3 ' if os.system('python3 -V') == 0 else 'python ']
+    interpreters = ['python3 ' if os.system('python3 -V') == 0 else 'python ']
     if os.system('pypy3 -V') == 0:
         interpreters.append('pypy3 ')
     elif os.system('pypy -V') == 0:
@@ -58,21 +57,22 @@ if __name__ == "__main__":
                      "__init__.py"):
                 results.append(pool.submit(run_doctests, filename[:-3]))
 
-        # unit tests
-        for interpreter in interpreters:
-            if os.system(interpreter + '--version') == 0:
-                # for filename in os.listdir('test'):
-                #     if filename.startswith('test_'):
-                #         command = interpreter + os.path.join('test', filename)
-                #         results.append(pool.submit(run_unittests, command))
-                os.system(' '.join([interpreter, '-c',
-                                    '''"import sys; '''
-                                    '''sys.path.extend(['DHParser']);''' 
-                                    '''import testing; testing.run_path('%s')"''' %
-                                    scriptdir.replace('\\', '\\\\'),
-                                os.path.join(os.getcwd(), 'test')]))
-
         concurrent.futures.wait(results)
+
+    # unit tests
+    for interpreter in interpreters:
+        if os.system(interpreter + '--version') == 0:
+            # for filename in os.listdir('test'):
+            #     if filename.startswith('test_'):
+            #         command = interpreter + os.path.join('test', filename)
+            #         results.append(pool.submit(run_unittests, command))
+            os.system(' '.join([interpreter, '-c',
+                                '''"import sys; '''
+                                '''sys.path.extend(['DHParser']);''' 
+                                '''import testing; testing.run_path('%s')"''' %
+                                scriptdir.replace('\\', '\\\\'),
+                            os.path.join(os.getcwd(), 'test')]))
+
 
     elapsed = time.time() - timestamp
     print('\n Test-Duration: %.2f seconds' % elapsed)
