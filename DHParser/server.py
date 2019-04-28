@@ -138,16 +138,20 @@ def maybe_int(s: str) -> Union[int, str]:
         return s
 
 
-def asyncio_run(coroutine: Coroutine) -> Any:
+def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
     """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
         return asyncio.run(coroutine)
     else:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(coroutine)
-        asyncio.set_event_loop(None)
-        loop.close()
+        if loop is None:
+            myloop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        else:
+            myloop = loop
+        result = myloop.run_until_complete(coroutine)
+        if loop is None:
+            asyncio.set_event_loop(None)
+            myloop.close()
         return result
 
 
@@ -315,7 +319,7 @@ class Server:
 
             if rpc_error is None:
                 try:
-                    raw = json.loads(data)
+                    raw = json.loads(data.decode())
                 except json.decoder.JSONDecodeError as e:
                     rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
 
@@ -383,7 +387,7 @@ class Server:
                 self.server_messages.put(SERVER_ONLINE)
                 await self.server.serve_forever()
 
-    def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
+    def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         if host == USE_DEFAULT_HOST:
             host = get_config_value('server_default_host')
         if port == USE_DEFAULT_PORT:
@@ -395,8 +399,11 @@ class Server:
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.host.value = host.encode()
             self.port.value = port
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
+            if loop is None:
+                self.loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(self.loop)
+            else:
+                self.loop = loop
             self.server = cast(
                 asyncio.base_events.Server,
                 self.loop.run_until_complete(
@@ -406,7 +413,9 @@ class Server:
                 self.server_messages.put(SERVER_ONLINE)
                 self.loop.run_forever()
             finally:
-                asyncio.set_event_loop(None)
+                if loop is None:
+                    asyncio.set_event_loop(None)
+                    self.loop.close()
                 self.server.close()
                 asyncio_run(self.server.wait_closed())
 
@@ -414,7 +423,7 @@ class Server:
         while not self.server_messages.empty():
             self.server_messages.get()
 
-    def run_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
+    def run_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         """
         Starts a DHParser-Server. This function will not return until the
         DHParser-Server ist stopped by sending a STOP_SERVER_REQUEST.
@@ -426,7 +435,7 @@ class Server:
             if sys.version_info >= (3, 7):
                 asyncio.run(self.serve(host, port))
             else:
-                self.serve_py35(host, port)
+                self.serve_py35(host, port, loop)
         except CancelledError:
             pass
         self.pp_executor = None

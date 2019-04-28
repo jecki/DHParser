@@ -126,8 +126,10 @@ class TestServer:
         """Test, whether delegation of (long-running) tasks to
         processes or threads works."""
         sequence = []
-        SLOW = '0.1' if self.windows else '0.01'  # TODO: Test this with more linux systems
-        FAST = '0.01' if self.windows else '0.001'
+        if self.windows:
+            SLOW, FAST = '0.1', '0.01'
+        else:
+            SLOW, FAST = '0.01', '0.001'
 
         async def call_remote(argument):
             sequence.append(argument)
@@ -140,26 +142,27 @@ class TestServer:
             await asyncio.gather(call_remote(SLOW),
                                  call_remote(FAST))
 
-        cs = Server(self.long_running,
-                    cpu_bound=frozenset(['long_running']),
-                    blocking=frozenset())
-        try:
-            cs.spawn_server('127.0.0.1', 8888)
-            asyncio_run(run_tasks())
-            assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
-        finally:
-            cs.terminate_server()
+        if sys.version_info >= (3, 6):
+            cs = Server(self.long_running,
+                        cpu_bound=frozenset(['long_running']),
+                        blocking=frozenset())
+            try:
+                cs.spawn_server('127.0.0.1', 8888)
+                asyncio_run(run_tasks())
+                assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
+            finally:
+                cs.terminate_server()
 
-        cs = Server(self.long_running,
-                    cpu_bound=frozenset(),
-                    blocking=frozenset(['long_running']))
-        try:
-            sequence = []
-            cs.spawn_server('127.0.0.1', 8888)
-            asyncio_run(run_tasks())
-            assert sequence == [SLOW, FAST, FAST, SLOW]
-        finally:
-            cs.terminate_server()
+            cs = Server(self.long_running,
+                        cpu_bound=frozenset(),
+                        blocking=frozenset(['long_running']))
+            try:
+                sequence = []
+                cs.spawn_server('127.0.0.1', 8888)
+                asyncio_run(run_tasks())
+                assert sequence == [SLOW, FAST, FAST, SLOW]
+            finally:
+                cs.terminate_server()
 
         cs = Server(self.long_running,
                     cpu_bound=frozenset(),

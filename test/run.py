@@ -35,10 +35,13 @@ def run_doctests(module):
 
 if __name__ == "__main__":
     interpreters = ['python3 ' if os.system('python3 -V') == 0 else 'python ']
+    if os.system('python3.5 -V') == 0:
+        interpreters.append('python3.5 ')
     if os.system('pypy3 -V') == 0:
         interpreters.append('pypy3 ')
     elif os.system('pypy -V') == 0:
         interpreters.append('pypy ')
+    print('Interpreters found: ' + ''.join(interpreters))
 
     cwd = os.getcwd()
     os.chdir(os.path.join(scriptdir, '..'))
