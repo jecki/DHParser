@@ -155,11 +155,11 @@ CONFIG_PRESET['max_rpc_size'] = 4 * 1024 * 1024
 # Defaut host name or IP-adress for the compiler server. Should usually
 # be localhost (127.0.0.1)
 # Default value: 127.0.0.1.
-CONFIG_PRESET['default_server_host'] = "127.0.0.1"
+CONFIG_PRESET['server_default_host'] = "127.0.0.1"
 
 # Default port number for the compiler server.
 # Default value: 8888
-CONFIG_PRESET['default_server_port'] = 8888
+CONFIG_PRESET['server_default_port'] = 8888
 
 
 ########################################################################

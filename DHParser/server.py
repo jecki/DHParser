@@ -142,20 +142,12 @@ def asyncio_run(coroutine: Coroutine) -> Any:
         return asyncio.run(coroutine)
     else:
         loop = asyncio.get_event_loop()
-        try:
-            return loop.run_until_complete(coroutine)
-        finally:
-            loop.close()
+        return loop.run_until_complete(coroutine)
 
 
 def GMT_timestamp() -> str:
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
-# CompilationItem = NamedTuple('CompilationItem',
-#                              [('uri', str),
-#                               ('hash', int),
-#                               ('errors', str),
-#                               ('preview', str)])
 
 ALL_RPCs = frozenset('*')  # Magic value denoting all remove procedures
 
@@ -207,6 +199,8 @@ class Server:
         self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
         self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
 
+        self.loop = None  # just for python 3.5 compatibility...
+
     async def handle_request(self,
                              reader: asyncio.StreamReader,
                              writer: asyncio.StreamWriter):
@@ -236,7 +230,8 @@ class Server:
                 #      #executing-code-in-thread-or-process-pools
                 has_kw_params = isinstance(params, Dict)
                 assert has_kw_params or isinstance(params, Sequence)
-                loop = asyncio.get_running_loop()
+                loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                    else asyncio.get_event_loop()
                 executor = self.pp_executor if method_name in self.cpu_bound else \
                     self.tp_executor if method_name in self.blocking else None
                 if executor is None:
@@ -357,9 +352,11 @@ class Server:
                               % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
         if kill_switch:
-            # TODO: terminate processes and threads!
+            # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
             self.server.close()
+            if self.loop is not None:
+                self.loop.stop()
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         if host == USE_DEFAULT_HOST:
@@ -380,6 +377,31 @@ class Server:
                 self.server_messages.put(SERVER_ONLINE)
                 await self.server.serve_forever()
 
+    def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
+        if host == USE_DEFAULT_HOST:
+            host = get_config_value('server_default_host')
+        if port == USE_DEFAULT_PORT:
+            port = get_config_value('server_default_port')
+        assert port >= 0
+        with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
+            self.pp_executor = p
+            self.tp_executor = t
+            self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
+            self.host.value = host.encode()
+            self.port.value = port
+            self.loop = asyncio.get_event_loop()
+            self.server = cast(
+                asyncio.base_events.Server,
+                self.loop.run_until_complete(
+                    asyncio.start_server(self.handle_request, host, port)))
+            try:
+                self.stage.value = SERVER_ONLINE
+                self.server_messages.put(SERVER_ONLINE)
+                self.loop.run_forever()
+            finally:
+                self.server.close()
+                self.server.wait_closed()
+
     def _empty_message_queue(self):
         while not self.server_messages.empty():
             self.server_messages.get()
@@ -393,13 +415,17 @@ class Server:
         self.stage.value = SERVER_STARTING
         self._empty_message_queue()
         try:
-            asyncio_run(self.serve(host, port))
+            if sys.version_info >= (3, 7):
+                asyncio.run(self.serve(host, port))
+            else:
+                self.serve_py35(host, port)
         except CancelledError:
-            self.pp_executor = None
-            self.tt_exectuor = None
-            asyncio_run(self.server.wait_closed())
-            self.server_messages.put(SERVER_OFFLINE)
-            self.stage.value = SERVER_OFFLINE
+            pass
+        self.pp_executor = None
+        self.tt_exectuor = None
+        asyncio_run(self.server.wait_closed())
+        self.server_messages.put(SERVER_OFFLINE)
+        self.stage.value = SERVER_OFFLINE
 
     def wait_until_server_online(self):
         if self.stage.value != SERVER_ONLINE:
@@ -447,7 +473,8 @@ class Server:
                     self.stage.value = SERVER_TERMINATE
                     self.server_process.terminate()
                 self.server_process.join()
-                self.server_process.close()
+                if sys.version_info >= (3, 7):
+                    self.server_process.close()
                 self.server_process = None
                 self.stage.value = SERVER_OFFLINE
         except AssertionError as debugger_err:

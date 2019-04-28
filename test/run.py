@@ -35,7 +35,7 @@ def run_doctests(module):
 
 
 if __name__ == "__main__":
-    interpreters = ['python3 ' if os.system('python3 -V') == 0 else 'python ']
+    interpreters = [] # ['python3 ' if os.system('python3 -V') == 0 else 'python ']
     if os.system('pypy3 -V') == 0:
         interpreters.append('pypy3 ')
     elif os.system('pypy -V') == 0:

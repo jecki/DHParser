@@ -83,7 +83,7 @@ class TestServer:
         try:
             cs.spawn_server('127.0.0.1', 8888)
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
-            assert result.startswith('DHParser')
+            assert result.startswith('DHParser'), result
         finally:
             cs.terminate_server()
 
