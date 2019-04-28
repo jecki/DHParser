@@ -41,6 +41,7 @@ For JSON see:
     https://json.org/
 """
 
+# TODO: Test with python 3.5
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
@@ -53,6 +54,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.toolkit import get_config_value, re
 from DHParser.versionnumber import __version__
+
 
 __all__ = ('RPC_Table',
            'RPC_Type',
@@ -400,7 +402,7 @@ class Server:
                 self.loop.run_forever()
             finally:
                 self.server.close()
-                self.server.wait_closed()
+                asyncio_run(self.server.wait_closed())
 
     def _empty_message_queue(self):
         while not self.server_messages.empty():
