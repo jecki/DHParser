@@ -1667,7 +1667,7 @@ def mandatory_violation(grammar: Grammar,
     found = text_[:10].replace('\n', '\\n ') + '...'
     for search, message in err_msgs:
         rxs = not isinstance(search, str)
-        if rxs and text_.match(search) or (not rxs and text_.startswith(search)):
+        if (rxs and text_.match(search)) or (not rxs and text_.startswith(search)):
             try:
                 msg = message.format(expected, found)
                 break
