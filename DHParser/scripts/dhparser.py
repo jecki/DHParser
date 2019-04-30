@@ -22,9 +22,11 @@ import os
 import sys
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
-i = scriptdir.find('DHParser')
+i, k = scriptdir.find('DHParser-submodule'), len('DHParser-submodule')
+if i < 0:
+    i, k = scriptdir.find('DHParser'), len('DHParser')
 if i >= 0:
-    dhparserdir = scriptdir[:i + 8]
+    dhparserdir = scriptdir[:i + k]
     sys.path.append(dhparserdir)
 else:
     dhparserdir = ''

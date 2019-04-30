@@ -106,9 +106,10 @@ class ParserError(Exception):
     different kind of error like `UnknownParserError`, is when a `Series`-
     detects a missing mandatory element.
     """
-    def __init__(self, node: Node, rest: StringView, first_throw: bool):
-        self.node = node  # type: Node
-        self.rest = rest  # type: StringView
+    def __init__(self, node: Node, rest: StringView, error: Optional[Error], first_throw: bool):
+        self.node = node   # type: Node
+        self.rest = rest   # type: StringView
+        self.error = error # type: Optional[Error]
         self.first_throw = first_throw  # type: bool
 
     def __str__(self):
@@ -263,6 +264,15 @@ class Parser:
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method `_parse()`.
         """
+        def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
+            if error_node:
+                error_node_id = id(error_node)
+                while error_node_id not in grammar.tree__.error_nodes and error_node.children:
+                    error_node = error_node.result[-1]
+                    error_node_id = id(error_node)
+            else:
+                error_node_id = 0
+
         grammar = self._grammar
         location = grammar.document_length__ - len(text)
 
@@ -291,15 +301,16 @@ class Parser:
                                                          (':RegExp', ':Token', ':DropToken')
                                             else self.tag_name)
                 grammar.moving_forward__ = True
+                error = None
 
             try:
                 # PARSER CALL: run _parse() method
                 node, rest = self._parse(text)
-            except ParserError as error:
+            except ParserError as pe:
                 # does this play well with variable setting? add rollback clause here? tests needed...
-                gap = len(text) - len(error.rest)
+                gap = len(text) - len(pe.rest)
                 rules = grammar.resume_rules__.get(self.pname, [])
-                rest = error.rest[len(error.node):]
+                rest = pe.rest[len(pe.node):]
                 i = reentry_point(rest, rules)
                 if i >= 0 or self == grammar.start_parser__:
                     # apply reentry-rule or catch error at root-parser
@@ -307,26 +318,28 @@ class Parser:
                         i = 1
                     nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
                     rest = rest[i:]
-                    assert error.node.children or (not error.node.result)
-                    if error.first_throw:
-                        node = error.node
+                    assert pe.node.children or (not pe.node.result)
+                    if pe.first_throw:
+                        node = pe.node
                         node.result = node.children + (nd,)
                     else:
-                        # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht anfügen
+                        # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht, anfügen;
                         #       dürfte allerdings erst an den nächsten(!) Knoten angehängt werden (wie?)
                         node = Node(self.tag_name,
                                     (Node(ZOMBIE_TAG, text[:gap]).with_pos(location),
-                                     error.node, nd))
-                elif error.first_throw:
-                    raise ParserError(error.node, error.rest, first_throw=False)
+                                     pe.node, nd))
+                elif pe.first_throw:
+                    raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 else:
-                    result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), error.node) if gap \
-                        else error.node  # type: ResultType
+                    result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
+                        else pe.node  # type: ResultType
                     if grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:  # EXPERIMENTAL!!
-                        node = error.node
+                        node = pe.node
                     else:
                         raise ParserError(Node(self.tag_name, result).with_pos(location),
-                                          text, first_throw=False)
+                                          text, pe.error, first_throw=False)
+                error = pe.error  # needed for history tracking
+
 
             if left_recursion_depth__:
                 self.recursion_counter[location] -= 1
@@ -343,6 +356,7 @@ class Parser:
                                             "Refactor grammar to avoid slow parsing.",
                                             node.pos if node else location,
                                             Error.LEFT_RECURSION_WARNING))
+                            error_id = id(node)
                             grammar.last_recursion_location__ = location
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
@@ -372,13 +386,13 @@ class Parser:
                     record = HistoryRecord(grammar.call_stack__, node, text,
                                            grammar.line_col__(text))
                     grammar.history__.append(record)
-                elif node:
-                    nid = id(node)  # type: int
-                    if nid in grammar.tree__.error_nodes:
-                        record = HistoryRecord(grammar.call_stack__, node, text,
-                                               grammar.line_col__(text),
-                                               grammar.tree__.error_nodes[nid])
-                        grammar.history__.append(record)
+                elif error:
+                    # error_nid = id(node)  # type: int
+                    # if error_nid in grammar.tree__.error_nodes:
+                    record = HistoryRecord(grammar.call_stack__, node, text,
+                                           grammar.line_col__(text),
+                                           [error])
+                    grammar.history__.append(record)
                 grammar.moving_forward__ = False
                 grammar.call_stack__.pop()
 
@@ -1763,7 +1777,7 @@ class Series(NaryParser):
         ret_node = self._return_values(results)  # type: Node
         if error:
             raise ParserError(ret_node.with_pos(self.grammar.document_length__ - len(text)),
-                              text, first_throw=True)
+                              text, error, first_throw=True)
         return ret_node, text_
 
     def __repr__(self):
@@ -1980,7 +1994,7 @@ class AllOf(NaryParser):
         nd = self._return_values(results)  # type: Node
         if error:
             raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
-                              text, first_throw=True)
+                              text, error, first_throw=True)
         return nd, text_
 
     def __repr__(self):

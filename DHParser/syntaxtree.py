@@ -178,7 +178,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-Expression-output.
     """
 
-    __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr', '_id'
+    __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
         """

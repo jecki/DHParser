@@ -552,8 +552,8 @@ class LanguageServer(Server):
     def rpc_initialize(self, **kwargs):
         if self._server_initialized:
             return {"jsonrpc": "2.0",
-                        "error": {"code": -322002,
-                        "message": "Server has already been initialized."},
+                    "error": {"code": -322002,
+                    "message": "Server has already been initialized."},
                     "id": 0}
         else:
             result = self.initialize(**kwargs)
@@ -566,8 +566,8 @@ class LanguageServer(Server):
             pass  # clients must not reply to notifations!
             # print('double notification!')
             # return {"jsonrpc": "2.0",
-            #             "error": {"code": -322002,
-            #             "message": "Initialize Notification already received!"},
+            #         "error": {"code": -322002,
+            #         "message": "Initialize Notification already received!"},
             #         "id": 0}
         else:
             self._client_initialized = True

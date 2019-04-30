@@ -372,8 +372,8 @@ def log_ST(syntax_tree, log_file_name):
     """
     if is_logging():
         path = os.path.join(log_dir(), log_file_name)
-        if os.path.exists(path):
-            print('WARNING: Log-file "%s" already exists and will be overwritten!' % path)
+        # if os.path.exists(path):
+        #     print('WARNING: Log-file "%s" already exists and will be overwritten!' % path)
         with open(path, "w", encoding="utf-8") as f:
             f.write(syntax_tree.as_sxpr())
 
@@ -401,7 +401,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
         path = os.path.join(log_dir(), log_name + "_parser.log" + htm)
         if os.path.exists(path):
             os.remove(path)
-            print('WARNING: Log-file "%s" already existed and was deleted.' % path)
+            # print('WARNING: Log-file "%s" already existed and was deleted.' % path)
         if history:
             with open(path, "w", encoding="utf-8") as f:
                 if html:

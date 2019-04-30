@@ -39,7 +39,7 @@ from DHParser.stringview import StringView
 
 class TestParserError:
     def test_parser_error_str(self):
-        pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), True)
+        pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), None, True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
 
@@ -779,7 +779,7 @@ class TestReentryAfterError:
 
 
 class TestConfiguredErrorMessages:
-    def test_(self):
+    def test_configured_error_message(self):
         lang = """
             document = series | /.*/
             @series_error = "a badly configured error message {5}"
