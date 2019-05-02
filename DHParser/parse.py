@@ -315,7 +315,7 @@ class Parser:
                 if i >= 0 or self == grammar.start_parser__:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:
-                        i = 1
+                        i = 1   # else: maybe add continuation point to error message?
                     nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
                     rest = rest[i:]
                     assert pe.node.children or (not pe.node.result)
