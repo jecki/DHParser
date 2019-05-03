@@ -172,8 +172,8 @@ class ArithmeticRightRecursiveCompiler(Compiler):
     def __init__(self):
         super(ArithmeticRightRecursiveCompiler, self).__init__()
 
-    def _reset(self):
-        super()._reset()
+    def reset(self):
+        super().reset()
         # initialize your variables here, not in the constructor!
     def on_expression(self, node):
         return self.fallback_compiler(node)

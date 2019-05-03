@@ -559,12 +559,12 @@ class EBNFCompiler(Compiler):
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
         self.grammar_id = 0
-        super(EBNFCompiler, self).__init__()  # calls the _reset()-method
+        super(EBNFCompiler, self).__init__()  # calls the reset()-method
         self.set_grammar_name(grammar_name, grammar_source)
 
 
-    def _reset(self):
-        super(EBNFCompiler, self)._reset()
+    def reset(self):
+        super(EBNFCompiler, self).reset()
         self._result = ''           # type: str
         self.re_flags = set()       # type: Set[str]
         self.rules = OrderedDict()  # type: OrderedDict[str, List[Node]]
@@ -656,8 +656,8 @@ class EBNFCompiler(Compiler):
                     '    def __init__(self):',
                     '        super(' + self.grammar_name + 'Compiler, self).__init__()',
                     '',
-                    '    def _reset(self):',
-                    '        super()._reset()',
+                    '    def reset(self):',
+                    '        super().reset()',
                     '        # initialize your variables here, not in the constructor!',
                     '']
         for name in self.rules:
