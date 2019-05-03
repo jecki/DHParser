@@ -573,7 +573,7 @@ class XMLCompiler(Compiler):
             node.attr.update(attributes)
             preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
         node.tag_name = tag_name
-        content = self.compile_children(node.get('content', PLACEHOLDER))
+        content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children)
         if len(content) == 1:
             if content[0].tag_name == "CharData":
                 # reduce single CharData children
