@@ -45,6 +45,7 @@ from DHParser.stringview import StringView
 
 __all__ = ('ErrorCode',
            'Error',
+           'is_fatal',
            'is_error',
            'is_warning',
            'has_errors',
@@ -63,11 +64,12 @@ class Error:
 
     # error levels
 
-    NO_ERROR  = ErrorCode(0)
-    MESSAGE   = ErrorCode(1)
-    WARNING   = ErrorCode(100)
-    ERROR     = ErrorCode(1000)
-    HIGHEST   = ERROR
+    NO_ERROR = ErrorCode(0)
+    MESSAGE  = ErrorCode(1)
+    WARNING  = ErrorCode(100)
+    ERROR    = ErrorCode(1000)
+    FATAL    = ErrorCode(10000)
+    HIGHEST  = FATAL
 
     # warning codes
 
@@ -88,6 +90,11 @@ class Error:
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
+
+    # fatal errors
+
+    AST_TRANSFORM_CRASH                      = ErrorCode(10010)
+    COMPILER_CRASH                           = ErrorCode(10020)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
@@ -135,13 +142,20 @@ class Error:
 
 
 def is_warning(code: int) -> bool:
-    """Returns True, if error is merely a warning."""
+    """Returns True, if error is merely a warning or a message."""
     return code < Error.ERROR
 
 
 def is_error(code: int) -> bool:
-    """Returns True, if error is an error, not just a warning."""
+    """Returns True, if error is a (fatal) error, not just a warning."""
     return code >= Error.ERROR
+
+
+def is_fatal(code: int) -> bool:
+    """Returns True, ir error is fatal. Fatal errors are typically raised
+    when a crash (i.e. Python exception) occurs at later stages of the
+    processing pipline (e.g. ast transformation, compiling). """
+    return code >= Error.FATAL
 
 
 # def Warning(message: str, pos, code: ErrorCode = Error.WARNING,
