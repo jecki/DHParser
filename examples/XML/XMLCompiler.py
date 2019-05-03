@@ -342,8 +342,8 @@ class XMLCompiler(Compiler):
         super(XMLCompiler, self).__init__()
         self.cleanup_whitespace = True  # remove empty CharData from mixed elements
 
-    def _reset(self):
-        super()._reset()
+    def reset(self):
+        super().reset()
         self.mock_parsers = dict()
 
     def extract_attributes(self, node_sequence):

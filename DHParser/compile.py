@@ -35,7 +35,7 @@ compiler object.
 """
 
 import copy
-from typing import Any, Optional, Tuple, List
+from typing import Any, Optional, Tuple, List, cast
 
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
 from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
@@ -46,7 +46,12 @@ from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basena
 from DHParser.toolkit import load_if_file
 
 
-__all__ = ('CompilerError', 'Compiler', 'compile_source', 'visitor_name')
+__all__ = ('CompilerError',
+           'Compiler',
+           'compile_source',
+           'visitor_name',
+           'TreeProcessor',
+           'process_tree')
 
 
 class CompilerError(Exception):
@@ -105,16 +110,16 @@ class Compiler:
     """
 
     def __init__(self):
-        self._reset()
+        self.reset()
 
-    def _reset(self):
-        self.source = ''
+    def reset(self):
+        # self.source = ''
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
         self._dirty_flag = False
 
-    def __call__(self, root: RootNode, source: str = '') -> Any:
+    def __call__(self, root: RootNode) -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
         returns the compiled code. It is up to subclasses implementing
@@ -124,10 +129,10 @@ class Compiler:
         """
         assert root.tag_name != ZOMBIE_TAG
         if self._dirty_flag:
-            self._reset()
+            self.reset()
         self._dirty_flag = True
         self.tree = root  # type: RootNode
-        self.source = source  # type: str
+        # self.source = source  # type: str
         result = self.compile(root)
         return result
 
@@ -176,7 +181,7 @@ class Compiler:
         if result is None and self._None_check:
             raise CompilerError('Method on_%s returned `None` instead of a valid compilation '
                                 'compilation result! Turn this check of by adding '
-                                '"self._None_check = False" to the _reset()-Method of your'
+                                '"self._None_check = False" to the reset()-Method of your'
                                 'compiler class, in case on_%s actually SHOULD return None.'
                                 % (elem, elem))
         return result
@@ -186,7 +191,7 @@ def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
-                   compiler: Compiler,  # Node (AST) -> Any
+                   compiler: Compiler,  # Node (AST), Source -> Any
                    preserve_ast: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles a source in four stages:
@@ -273,7 +278,7 @@ def compile_source(source: str,
                 # assume Python crashes are merely a consequence of earlier
                 # errors, so let's catch them
                 try:
-                    result = compiler(syntax_tree, original_text)
+                    result = compiler(syntax_tree)
                 except Exception as e:
                     node = compiler.context[-1] if compiler.context else syntax_tree
                     syntax_tree.new_error(
@@ -283,11 +288,69 @@ def compile_source(source: str,
             else:
                 # assume Python crashes are programming mistakes, so let
                 # the exceptions through
-                result = compiler(syntax_tree, original_text)
+                result = compiler(syntax_tree)
 
     messages = syntax_tree.errors_sorted  # type: List[Error]
     adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
+
+
+class TreeProcessor(Compiler):
+    """A special kind of Compiler class that take a tree as input (just like
+    `Compiler`) but always yields a tree as result.
+
+    The intended use case for TreeProcessor are digital-humanities-applications
+    where domain specific languages often describe data structures that, again,
+    most of the times are tree structures that can be serialized as XML or HTML.
+    Typically, these tree structures pass through several processing stages in
+    sequence that - as long as no fatal errors occur on the way - end with
+    HTML-preview or a preprint-XML.
+
+    The tree-processors can most suitably be invoked with the `process-tree()`-
+    functions which makes sure that a tree-processor is only invoked if no
+    fatal errors have occurred in any of the earlier stages.
+    """
+    def __call__(self, root: RootNode) -> RootNode:
+        result = super().__call__(root)
+        assert isinstance(result, RootNode)
+        return cast(RootNode, result)
+
+
+def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
+    """Process a tree with the tree-processor `tp` only if no fatal error
+    has occurred so far. Process, but catch any Python exceptions, in case
+    any normal errors have occurred earlier in the processing pipeline.
+    Don't catch Python-exceptions if not errors have occurred earlier.
+
+    This behaviour is based on the assumption that given any non-fatal
+    errors have occurred earlier, the tree passed through the pipeline
+    might not be in a state that is expected by the later stages, thus if
+    an exception occurs it is not really to be considered a programming
+    error. Processing stages should be written with possible errors
+    occurring in earlier stages in mind, though. However, because it could
+    be difficult to provide for all possible kinds of badly structured
+    trees resulting from errors, exceptions occurring on code processing
+    potentially faulty trees will be dealt with gracefully.
+    """
+    assert isinstance(tp, TreeProcessor)
+    if not is_fatal(tree.error_flag):
+        if is_error(tree.error_flag):
+            # assume Python crashes are merely a consequence of earlier
+            # errors, so let's catch them
+            try:
+                tree = tp(tree)
+            except Exception as e:
+                node = tp.context[-1] if tp.context else tree
+                tree.new_error(
+                    node, "Tree-processing failed, most likely, due to errors earlier in "
+                          "in the processing pipeline. Crash Message: " + str(e),
+                    Error.TREE_PROCESSING_CRASH)
+        else:
+            # assume Python crashes are programming mistakes, so let
+            # the exceptions through
+            tree = tp(tree)
+        assert isinstance(tree, RootNode)
+        return tree
 
 
 # TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser

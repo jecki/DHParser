@@ -221,8 +221,8 @@ class XMLSnippetCompiler(Compiler):
     def __init__(self):
         super(XMLSnippetCompiler, self).__init__()
 
-    def _reset(self):
-        super()._reset()
+    def reset(self):
+        super().reset()
         # initialize your variables here, not in the constructor!
     def on_document(self, node):
         return self.fallback_compiler(node)

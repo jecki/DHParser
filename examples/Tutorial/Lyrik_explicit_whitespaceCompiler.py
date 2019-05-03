@@ -169,8 +169,8 @@ class Lyrik_explicit_whitespaceCompiler(Compiler):
     def __init__(self):
         super(Lyrik_explicit_whitespaceCompiler, self).__init__()
 
-    def _reset(self):
-        super()._reset()
+    def reset(self):
+        super().reset()
         # initialize your variables here, not in the constructor!
     def on_gedicht(self, node):
         return self.fallback_compiler(node)

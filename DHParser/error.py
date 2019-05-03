@@ -95,6 +95,7 @@ class Error:
 
     AST_TRANSFORM_CRASH                      = ErrorCode(10010)
     COMPILER_CRASH                           = ErrorCode(10020)
+    TREE_PROCESSING_CRASH                    = ErrorCode(10030)
 
     def __init__(self, message: str, pos, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:

@@ -159,8 +159,8 @@ class jsonCompiler(Compiler):
     def __init__(self):
         super(jsonCompiler, self).__init__()
 
-    def _reset(self):
-        super()._reset()
+    def reset(self):
+        super().reset()
         self._None_check = False
 
     def on_object(self, node):
