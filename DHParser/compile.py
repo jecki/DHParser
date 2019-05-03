@@ -41,7 +41,7 @@ from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMap
 from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
-from DHParser.error import adjust_error_locations, is_error, Error
+from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basename
 from DHParser.toolkit import load_if_file
 
@@ -195,8 +195,9 @@ def compile_source(source: str,
     3. AST-transformation
     4. Compiling.
 
-    The compilations stage is only invoked if no errors occurred in
-    either of the two previous stages.
+    The later stages AST-transformation, compilation will only be invoked if
+    no fatal errors occurred in any of the earlier stages of the processing
+    pipeline.
 
     Args:
         source (str): The input text for compilation or a the name of a
@@ -222,11 +223,17 @@ def compile_source(source: str,
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
     log_file_name = logfile_basename(source, compiler)  # type: str
+
+    # preprocessing
+
     if preprocessor is None:
         source_text = original_text  # type: str
         source_mapping = lambda i: i  # type: SourceMapFunc
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
+
+    # parsing
+
     syntax_tree = parser(source_text)  # type: RootNode
     if is_logging():
         log_ST(syntax_tree, log_file_name + '.cst')
@@ -235,24 +242,48 @@ def compile_source(source: str,
     # assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
     #     str(syntax_tree) # Ony valid if neither tokens or whitespace are dropped early
 
-    # only compile if there were no syntax errors, for otherwise it is
-    # likely that error list gets littered with compile error messages
     result = None
-    # efl = syntax_tree.error_flag
-    # messages = syntax_tree.errors(clear_errors=True)
-    if not is_error(syntax_tree.error_flag):
-        transformer(syntax_tree)
-        # efl = max(efl, syntax_tree.error_flag)
-        # messages.extend(syntax_tree.errors(clear_errors=True))
+    if not is_fatal(syntax_tree.error_flag):
+
+        # AST-transformation
+
+        if is_error(syntax_tree.error_flag):
+            # catch Python exception, because if an error has occured
+            # earlier, the syntax tree might not look like expected,
+            # which could (fatally) break AST transformations.
+            try:
+                transformer(syntax_tree)
+            except Excpetion as e:
+                syntax_tree.new_error(syntax_tree,
+                                      "AST-Transformation failed due to earlier parser errors. "
+                                      "Crash Message: " + str(e), Error.AST_TRANSFORM_CRASH)
+        else:
+            transformer(syntax_tree)
+
         if is_logging():
             log_ST(syntax_tree, log_file_name + '.ast')
-        if not is_error(syntax_tree.error_flag):
+
+        if not is_fatal(syntax_tree.error_flag):
             if preserve_ast:
                 ast = copy.deepcopy(syntax_tree)
-            result = compiler(syntax_tree, original_text)
-        # print(syntax_tree.as_sxpr())
-        # messages.extend(syntax_tree.errors())
-        # syntax_tree.error_flag = max(syntax_tree.error_flag, efl)
+
+            # Compilation
+
+            if is_error(syntax_tree.error_flag):
+                # assume Python crashes are merely a consequence of earlier
+                # errors, so let's catch them
+                try:
+                    result = compiler(syntax_tree, original_text)
+                except Exception as e:
+                    node = compiler.context[-1] if compiler.context else syntax_tree
+                    syntax_tree.new_error(
+                        node, "Compilation failed, most likely, due to errors earlier "
+                        "in the processing pipeline. Crash Message: " + str(e),
+                        Error.COMPILER_CRASH)
+            else:
+                # assume Python crashes are programming mistakes, so let
+                # the exceptions through
+                result = compiler(syntax_tree, original_text)
 
     messages = syntax_tree.errors_sorted  # type: List[Error]
     adjust_error_locations(messages, original_text, source_mapping)
@@ -260,3 +291,4 @@ def compile_source(source: str,
 
 
 # TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser
+# TODO: AST validation against an ASDSL-Specification
