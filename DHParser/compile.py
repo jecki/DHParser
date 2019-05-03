@@ -131,23 +131,23 @@ class Compiler:
         result = self.compile(root)
         return result
 
-    def compile_children(self, node: Node) -> StrictResultType:
-        """Compiles all children of the given node and returns the tuple
-        of the compiled children or the node's (potentially empty) result
-        in case the node does not have any children.
-        """
-        if node.children:
-            return tuple(self.compile(child) for child in node.children)
-        else:
-            return node.result
+    # Obsolete, because never used...
+    # def compile_children(self, node: Node) -> StrictResultType:
+    #     """Compiles all children of the given node and returns the tuple
+    #     of the compiled children or the node's (potentially empty) result
+    #     in case the node does not have any children.
+    #     """
+    #     if node.children:
+    #         return tuple(self.compile(child) for child in node.children)
+    #     else:
+    #         return node.result
 
     def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
         if node.children:
-            result = tuple(self.compile(nd) for nd in node.children)
-            node.result = result
+            node.result = tuple(self.compile(nd) for nd in node.children)
         return node
 
     def compile(self, node: Node) -> Any:
@@ -253,7 +253,7 @@ def compile_source(source: str,
             # which could (fatally) break AST transformations.
             try:
                 transformer(syntax_tree)
-            except Excpetion as e:
+            except Exception as e:
                 syntax_tree.new_error(syntax_tree,
                                       "AST-Transformation failed due to earlier parser errors. "
                                       "Crash Message: " + str(e), Error.AST_TRANSFORM_CRASH)
