@@ -151,6 +151,7 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
         result = myloop.run_until_complete(coroutine)
         if loop is None:
             asyncio.set_event_loop(None)
+            myloop.run_until_complete(loop.shutdown_asyncgens())
             myloop.close()
         return result
 
@@ -415,6 +416,7 @@ class Server:
             finally:
                 if loop is None:
                     asyncio.set_event_loop(None)
+                    self.loop.run_until_complete(loop.shutdown_asyncgens())
                     self.loop.close()
                 self.server.close()
                 asyncio_run(self.server.wait_closed())
