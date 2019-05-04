@@ -67,7 +67,7 @@ __all__ = ('WHITESPACE_PTYPE',
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
 
-ZOMBIE_TAG = "__ZOMBIE__"
+ZOMBIE_TAG = "ZOMBIE__"
 
 #######################################################################
 #

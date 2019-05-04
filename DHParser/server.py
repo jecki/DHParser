@@ -526,14 +526,18 @@ class LanguageServer(Server):
     cpu_bound = ALL_RPCs    # type: Set[str]
     blocking = frozenset()  # type: Set[str]
 
-    def __init__(self):
+    def __init__(self, additional_rpcs: RPC_Table,
+                 cpu_bound: Set[str] = ALL_RPCs,
+                 blocking: Set[str] = frozenset()):
+        assert isinstance(additional_rpcs, Dict)
         rpc_table = dict()  # type: RPC_Table
+        rpc_table.update(additional_rpcs)
         for attr in dir(self):
             if attr.startswith('rpc_'):
                 name = attr[4:].replace('_', '/')
                 func = getattr(self, attr)
                 rpc_table[name] = func
-        super().__init__(rpc_table, self.cpu_bound, self.blocking)
+        super().__init__(rpc_table, cpu_bound, blocking)
         self._server_initialized = False
         self._client_initialized = False
 
