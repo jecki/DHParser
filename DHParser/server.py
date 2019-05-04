@@ -166,8 +166,7 @@ ALL_RPCs = frozenset('*')  # Magic value denoting all remove procedures
 class Server:
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
-                 blocking: Set[str] = frozenset(),
-                 idle_timeout: int = -1):
+                 blocking: Set[str] = frozenset()):
         if isinstance(rpc_functions, Dict):
             self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
             self.default = tuple(self.rpc_table.keys())[0]   # type: str
@@ -186,11 +185,6 @@ class Server:
         assert STOP_SERVER_REQUEST.decode() not in self.rpc_table
         if IDENTIFY_REQUEST.strip('()') not in self.rpc_table:
             self.rpc_table[IDENTIFY_REQUEST.strip('()')] = identify_server
-
-        assert idle_timeout < 0 or idle_timeout >= 3
-        self.idle_timeout = idle_timeout  # type: int
-        self.idle_renew = -1              # type: int
-        self.idle_task = None             # Optional[asyncio.Task]
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -229,7 +223,6 @@ class Server:
         kill_switch = False # type: bool
 
         data = await reader.read(self.max_source_size + 1)
-        self.idle_renew = -1  # suspend idle kill
         oversized = len(data) > self.max_source_size
 
         def http_response(html: str) -> bytes:
@@ -369,37 +362,12 @@ class Server:
                 writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                               % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
-        self.idle_renew = round(time.time())   # last point in time when having been active
         if kill_switch:
             # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
             self.server.close()
             if self.loop is not None:
                 self.loop.stop()
-
-    # async def terminate_server(self):
-    #     self.stage.value = SERVER_TERMINATE
-    #     self.server.close()
-    #     if self.loop is not None:
-    #         self.loop.stop()
-
-    async def idle_kill(self):
-        """Kill server process, if it was idle for too long..."""
-        keep_alive = True
-        while self.idle_timeout > 0 and keep_alive:
-            if self.idle_renew < 0:
-                timeout = self.idle_timeout
-            else:
-                passed = round(time.time()) - self.idle_renew
-                timeout = self.idle_timeout - passed
-            if timeout > 0:
-                asyncio.sleep(timeout)
-            else:
-                keep_alive = False
-                self.stage.value = SERVER_TERMINATE
-                self.server.close()
-                if self.loop is not None:
-                    self.loop.stop()
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         if host == USE_DEFAULT_HOST:

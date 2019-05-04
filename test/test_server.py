@@ -23,10 +23,8 @@ limitations under the License.
 import asyncio
 import json
 import os
-from multiprocessing import Process
 import sys
 import time
-from typing import Tuple
 
 sys.path.extend(['../', './'])
 
