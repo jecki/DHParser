@@ -551,6 +551,11 @@ def recompile_grammar(ebnf_filename, force=False,
         notify(Callable):  'notify' is a function without parameters that
             is called when recompilation actually takes place. This can
             be used to inform the user.
+    Returns:
+        bool:  True, if recompilation of grammar has been successful or did
+            not take place, because the Grammar hasn't changed since the last
+            compilation. False, if the recompilation of the grammar has been
+            attempted but failed.
     """
     if os.path.isdir(ebnf_filename):
         success = True
