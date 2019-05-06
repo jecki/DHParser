@@ -28,7 +28,7 @@ import copy
 import json
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, Union, Tuple, \
-    Optional, Dict
+    Container, Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION
@@ -536,15 +536,31 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if match_function(child):
                 yield child
             yield from child.select(match_function, False, reverse)
-        # The above variant is slightly faster
-        # for child in child_iterator:
-        #     yield from child.select(match_function, True, reverse)
 
-    def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
+
+    def select_by_tag(self, criterion: Union[str, Container[str], Callable],
                       include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
-        Returns an iterator that runs through all descendants that have one
-        of the given tag names.
+        Finds nodes in the tree that fulfill a given criterion. This criterion
+        can either be general, if criterion is a Callable or a tag_name or
+        a set of tag_names.
+
+        `select` is a generator that yields all nodes for which the
+        given `match_function` evaluates to True. The tree is
+        traversed pre-order.
+
+        See function `Node.select_by_tag` for some examples.
+
+        Args:
+            criterion: A function  that takes as Node
+                object as argument and returns True or False
+            include_root (bool): If False, only descendant nodes will be
+                checked for a match.
+            reverse (bool): If True, the tree will be walked in reverse
+                order, i.e. last children first.
+        Yields:
+            Node: All nodes of the tree for which
+            ``match_function(node)`` returns True
 
         Examples::
 
@@ -568,9 +584,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Yields:
             Node: All nodes which have a given tag name.
         """
-        if isinstance(tag_names, str):
-            tag_names = frozenset({tag_names})
-        return self.select(lambda node: node.tag_name in tag_names, include_root, reverse)
+        if isinstance(criterion, str):
+            return self.select(lambda node: node.tag_name == criterion, include_root, reverse)
+        elif isinstance(criterion, Container):
+            return self.select(lambda node: node.tag_name in criterion, include_root, reverse)
+        else:
+            assert isinstance(criterion, Callable)
+            return self._select(criterion, include_root, reverse)
 
     def pick(self, tag_names: Union[str, Set[str]], reverse: bool = False) -> Optional['Node']:
         """

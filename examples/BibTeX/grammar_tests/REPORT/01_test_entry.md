@@ -77,7 +77,7 @@ Match test "entry" for parser "entry" failed:
 
 
 ### AST
-    <__ZOMBIE__>
+    <ZOMBIE__>
       <entry>
         <:RegExp>@</:RegExp>
         <type>
@@ -183,15 +183,15 @@ Match test "entry" for parser "entry" failed:
         <plain_content>
           <COMMA_TERMINATED_STRING>{https://en.wikipedia.org/w/index.php?title=Duhem\</COMMA_TERMINATED_STRING>
         </plain_content>
-        <__ZOMBIE__>%</__ZOMBIE__>
+        <ZOMBIE__>%</ZOMBIE__>
       </entry>
-      <__ZOMBIE__>
+      <ZOMBIE__>
         E2\%80\%93Quine\_thesis\&amp;oldid=772834991},
         
-      </__ZOMBIE__>
-      <__ZOMBIE__>
+      </ZOMBIE__>
+      <ZOMBIE__>
           organization = {Wikipedia}
         
-      </__ZOMBIE__>
-      <__ZOMBIE__>}</__ZOMBIE__>
-    </__ZOMBIE__>
+      </ZOMBIE__>
+      <ZOMBIE__>}</ZOMBIE__>
+    </ZOMBIE__>
