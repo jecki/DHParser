@@ -43,7 +43,7 @@ from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basename
-from DHParser.toolkit import load_if_file
+from DHParser.toolkit import load_if_file, get_config_value
 
 
 __all__ = ('CompilerError',
@@ -107,6 +107,12 @@ class Compiler:
         _dirty_flag:  A flag indicating that the compiler has already been
                 called at least once and that therefore all compilation
                 variables must be reset when it is called again.
+        _debug: A flag indicating that debugging is turned on the value
+                for this flag is read before each call of the configuration
+                (see debugging section in DHParser.configuration)
+                If debugging is turned on the compiler class raises en
+                error if a node is attempted to be compiled twice.
+        _debug_already_compiled: A set of nodes that have already been compiled.
     """
 
     def __init__(self):
@@ -118,6 +124,8 @@ class Compiler:
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
         self._dirty_flag = False
+        self._debug = get_config_value('debug') # type: bool
+        self._debug_already_compiled = set()  # type: Set[Node]
 
     def __call__(self, root: RootNode) -> Any:
         """
@@ -151,8 +159,9 @@ class Compiler:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
-        if node.children:
-            node.result = tuple(self.compile(nd) for nd in node.children)
+        children = node.children
+        if children:
+            node.result = tuple(self.compile(nd) for nd in children)
         return node
 
     def compile(self, node: Node) -> Any:
@@ -168,6 +177,10 @@ class Compiler:
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
         """
+        if self._debug:
+            assert node not in self._debug_already_compiled
+            self._debug_already_compiled.add(node)
+
         elem = node.tag_name
         if elem.startswith(':'):
             elem = elem[1:]
