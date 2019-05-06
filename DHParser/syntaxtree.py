@@ -507,27 +507,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             i += 1
         raise ValueError("Node with tag name '%s' not among child-nodes." % tag_name)
 
-    def select(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
+    def select_if(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
             -> Iterator['Node']:
         """
-        Finds nodes in the tree that fulfill a given criterion.
-
-        `select` is a generator that yields all nodes for which the
-        given `match_function` evaluates to True. The tree is
-        traversed pre-order.
-
-        See function `Node.select_by_tag` for some examples.
-
-        Args:
-            match_function (function): A function  that takes as Node
-                object as argument and returns True or False
-            include_root (bool): If False, only descendant nodes will be
-                checked for a match.
-            reverse (bool): If True, the tree will be walked in reverse
-                order, i.e. last children first.
-        Yields:
-            Node: All nodes of the tree for which
-            ``match_function(node)`` returns True
+        Finds nodes in the tree for which `match_function` returns True.
+        See see more general function `Node.select()` for a detailed description.
         """
         if include_root and match_function(self):
             yield self
@@ -535,21 +519,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         for child in child_iterator:
             if match_function(child):
                 yield child
-            yield from child.select(match_function, False, reverse)
+            yield from child.select_if(match_function, False, reverse)
 
-
-    def select_by_tag(self, criterion: Union[str, Container[str], Callable],
-                      include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
+    def select(self, criterion: Union[str, Container[str], Callable],
+               include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion. This criterion
         can either be general, if criterion is a Callable or a tag_name or
         a set of tag_names.
 
-        `select` is a generator that yields all nodes for which the
+        `select_if` is a generator that yields all nodes for which the
         given `match_function` evaluates to True. The tree is
         traversed pre-order.
 
-        See function `Node.select_by_tag` for some examples.
+        See function `Node.select` for some examples.
 
         Args:
             criterion: A function  that takes as Node
@@ -565,15 +548,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Examples::
 
             >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag("X", False))
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select("X", False))
             ['(X (c "d"))', '(X "F")']
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag({"X", "b"}, False))
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select({"X", "b"}, False))
             ['(b "X")', '(X (c "d"))', '(X "F")']
-            >>> any(tree.select_by_tag('a', False))
+            >>> any(tree.select('a', False))
             False
-            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select_by_tag('a', True))
+            >>> list(flatten_sxpr(item.as_sxpr()) for item in tree.select('a', True))
             ['(a (b "X") (X (c "d")) (e (X "F")))']
-            >>> flatten_sxpr(next(tree.select_by_tag("X", False)).as_sxpr())
+            >>> flatten_sxpr(next(tree.select("X", False)).as_sxpr())
             '(X (c "d"))'
 
         Args:
@@ -585,24 +568,27 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             Node: All nodes which have a given tag name.
         """
         if isinstance(criterion, str):
-            return self.select(lambda node: node.tag_name == criterion, include_root, reverse)
+            return self.select_if(lambda node: node.tag_name == criterion, include_root, reverse)
         elif isinstance(criterion, Container):
-            return self.select(lambda node: node.tag_name in criterion, include_root, reverse)
+            return self.select_if(lambda node: node.tag_name in criterion, include_root, reverse)
         else:
             assert isinstance(criterion, Callable)
-            return self._select(criterion, include_root, reverse)
+            return self.select_if(criterion, include_root, reverse)
 
-    def pick(self, tag_names: Union[str, Set[str]], reverse: bool = False) -> Optional['Node']:
+    def pick(self, criterion: Union[str, Container[str], Callable],
+             reverse: bool = False) -> Optional['Node']:
         """
-        Picks the first descendant with one of the given tag_names.
+        Picks the first (or last if run in reverse mode) descendant that fulfills
+        the given criterion which can be either a match-function or a tag-name or
+        a container of tag-names.
 
         This function is mostly just syntactic sugar for
-        ``next(node.select_by_tag(tag_names, False))``. However, rather than
+        ``next(node.select(criterion, False))``. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.
         """
         try:
-            return next(self.select_by_tag(tag_names, False, reverse))
+            return next(self.select(criterion, False, reverse))
         except StopIteration:
             return None
 
@@ -927,7 +913,7 @@ def tree_sanity_check(tree: Node) -> bool:
     :return: True, if the tree is `sane`, False otherwise.
     """
     node_set = set()  # type: Set[Node]
-    for node in tree.select(lambda nd: True, include_root=True):
+    for node in tree.select_if(lambda nd: True, include_root=True):
         if node in node_set or isinstance(Node, FrozenNode):
             return False
         node_set.add(node)
@@ -1065,7 +1051,7 @@ class RootNode(Node):
             if nid == node_id:
                 errors.extend(self.error_nodes[nid])
             else:
-                for nd in node.select(lambda n: id(n) == nid):
+                for nd in node.select_if(lambda n: id(n) == nid):
                     break
                 else:
                     # node is not connected to tree any more, but since errors

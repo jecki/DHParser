@@ -558,8 +558,8 @@ class TestPopRetrieve:
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="delimiter"))))
-        pop = str(next(syntax_tree.select(self.closing_delimiter)))
+        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="delimiter"))))
+        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
         assert delim == pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
@@ -575,8 +575,8 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="delimiter"))))
-        pop = str(next(syntax_tree.select(self.closing_delimiter)))
+        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="delimiter"))))
+        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
         assert delim == pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
@@ -585,8 +585,8 @@ class TestPopRetrieve:
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
         syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="braces"))))
-        pop = str(next(syntax_tree.select(self.closing_delimiter)))
+        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="braces"))))
+        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
@@ -602,8 +602,8 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select(partial(self.opening_delimiter, name="braces"))))
-        pop = str(next(syntax_tree.select(self.closing_delimiter)))
+        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="braces"))))
+        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
@@ -823,12 +823,12 @@ class TestEarlyTokenWhitespaceDrop:
         assert not cst.pick(':Whitespace')
         cst = self.gr('A + B')
         try:
-            _ = next(cst.select(lambda node: node.content == 'A'))
+            _ = next(cst.select_if(lambda node: node.content == 'A'))
             assert False, "Tokens in compound expressions should be dropped!"
         except StopIteration:
             pass
         cst = self.gr('X * y')
-        assert next(cst.select(lambda node: node.content == 'X'))
+        assert next(cst.select_if(lambda node: node.content == 'X'))
 
 
 class TestMetaParser:

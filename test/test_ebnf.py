@@ -154,7 +154,7 @@ class TestEBNFParser:
         result = self.EBNF(snippet, 'literal')
         assert not result.error_flag
         assert str(result) == snippet.strip()
-        assert result.select(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
+        assert result.select_if(lambda node: node.parser.ptype == WHITESPACE_PTYPE)
 
         result = self.EBNF('"text" ', 'literal')
         assert not result.error_flag

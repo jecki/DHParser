@@ -360,9 +360,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         if is_artifact:
             # don't remove zombie node with error message at the end
             # but change it's tag_name to indicate that it is an artifact!
-            for parent in st.select(lambda node: any(child.tag_name == ZOMBIE_TAG
-                                                     for child in node.children),
-                                    include_root=True, reverse=True):
+            for parent in st.select_if(lambda node: any(child.tag_name == ZOMBIE_TAG
+                                                        for child in node.children),
+                                       include_root=True, reverse=True):
                 zombie = parent[ZOMBIE_TAG]
                 zombie.tag_name = '__TESTING_ARTIFACT__'
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the' \

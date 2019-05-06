@@ -172,14 +172,14 @@ class TestNode:
 
     def test_select_subnodes(self):
         tags = [node.tag_name
-                for node in self.unique_tree.select(lambda nd: True, include_root=True)]
+                for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
 
     def test_find(self):
-        found = list(self.unique_tree.select(lambda nd: not nd.children and nd.result == "e"))
+        found = list(self.unique_tree.select_if(lambda nd: not nd.children and nd.result == "e"))
         assert len(found) == 1
         assert found[0].result == 'e'
-        found = list(self.recurr_tree.select(lambda nd: nd.tag_name == 'b'))
+        found = list(self.recurr_tree.select_if(lambda nd: nd.tag_name == 'b'))
         assert len(found) == 2
         assert found[0].result == 'x' and found[1].result == 'y'
 
@@ -274,7 +274,7 @@ class TestRootNode:
 
 
 class TestNodeFind():
-    """Test the select-functions of class Node.
+    """Test the select_if-functions of class Node.
     """
 
     def test_find(self):
@@ -282,7 +282,7 @@ class TestNodeFind():
             return node.tag_name == tag_name
         matchf = lambda node: match_tag_name(node, "X")
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
-        matches = list(tree.select(matchf))
+        matches = list(tree.select_if(matchf))
         assert len(matches) == 2, len(matches)
         assert str(matches[0]) == 'd', str(matches[0])
         assert str(matches[1]) == 'F', str(matches[1])
@@ -290,8 +290,8 @@ class TestNodeFind():
         assert matches[1].equals(parse_sxpr('(X F)'))
         # check default: root is included in search:
         matchf2 = lambda node: match_tag_name(node, 'a')
-        assert list(tree.select(matchf2, include_root=True))
-        assert not list(tree.select(matchf2, include_root=False))
+        assert list(tree.select_if(matchf2, include_root=True))
+        assert not list(tree.select_if(matchf2, include_root=False))
 
     def test_getitem(self):
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
@@ -302,20 +302,20 @@ class TestNodeFind():
             assert False, "IndexError expected!"
         except IndexError:
             pass
-        matches = list(tree.select_by_tag('X', False))
+        matches = list(tree.select('X', False))
         assert matches[0].equals(parse_sxpr('(X (c d))'))
         assert matches[1].equals(parse_sxpr('(X F)'))
 
     def test_contains(self):
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
         assert 'a' not in tree
-        assert any(tree.select_by_tag('a', True))
-        assert not any(tree.select_by_tag('a', False))
+        assert any(tree.select('a', True))
+        assert not any(tree.select('a', False))
         assert 'b' in tree
         assert 'X' in tree
         assert 'e' in tree
         assert 'c' not in tree
-        assert any(tree.select_by_tag('c', False))
+        assert any(tree.select('c', False))
 
     def test_index(self):
         tree = parse_sxpr('(a (b 0) (c 1) (d 2))')

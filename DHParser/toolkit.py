@@ -178,7 +178,7 @@ def is_filename(strg: str) -> bool:
 
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
-    #   and strg.select('*') < 0 and strg.select('?') < 0
+    #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
 
 
 def concurrent_ident() -> str:

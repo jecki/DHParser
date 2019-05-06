@@ -30,9 +30,9 @@ from DHParser import parse_sxpr, Compiler
 #     def test_error_propagations(self):
 #         tree = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))))')
 #         A = tree
-#         B = next(tree.select(lambda node: str(node) == "1"))
-#         D = next(tree.select(lambda node: node.parser.name == "D"))
-#         F = next(tree.select(lambda node: str(node) == "3"))
+#         B = next(tree.select_if(lambda node: str(node) == "1"))
+#         D = next(tree.select_if(lambda node: node.parser.name == "D"))
+#         F = next(tree.select_if(lambda node: str(node) == "3"))
 #         B.new_error("Error in child node")
 #         F.new_error("Error in child's child node")
 #         Compiler.propagate_error_flags(tree, lazy=True)
