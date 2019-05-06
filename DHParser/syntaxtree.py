@@ -541,7 +541,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         #     yield from child.select(match_function, True, reverse)
 
     def select_by_tag(self, tag_names: Union[str, AbstractSet[str]],
-                      include_root: bool = False) -> Iterator['Node']:
+                      include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
         Returns an iterator that runs through all descendants that have one
         of the given tag names.
@@ -570,9 +570,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if isinstance(tag_names, str):
             tag_names = frozenset({tag_names})
-        return self.select(lambda node: node.tag_name in tag_names, include_root)
+        return self.select(lambda node: node.tag_name in tag_names, include_root, reverse)
 
-    def pick(self, tag_names: Union[str, Set[str]]) -> Optional['Node']:
+    def pick(self, tag_names: Union[str, Set[str]], reverse: bool = False) -> Optional['Node']:
         """
         Picks the first descendant with one of the given tag_names.
 
@@ -582,7 +582,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         exists, it returns None.
         """
         try:
-            return next(self.select_by_tag(tag_names, False))
+            return next(self.select_by_tag(tag_names, False, reverse))
         except StopIteration:
             return None
 
