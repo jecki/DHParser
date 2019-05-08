@@ -1,8 +1,14 @@
-DHParser Version 0.9.0 (???)
-............................
+DHParser Version 0.9.0
+......................
 
--
-
+- language server support
+- translation pipeline only stops on fatal errors. This makes previews
+  even for partially erroneous code possible
+- better cython support
+- scripts (dhparser.py, dhparser_rename.py) moved to
+  DHParser/scripts-directory
+- syntaxtree.py streamlined
+  (breaking change: Node.select_by_tag() remove, use Node.select() instead
 
 
 DHParser Version 0.8.9 (5.4.2019)
