@@ -315,29 +315,26 @@ class Parser:
                 if i >= 0 or self == grammar.start_parser__:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:
-                        i = 1   # else: maybe add continuation point to error message?
+                        i = 1
                     nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
+                    nd.attr['err'] = pe.error.message
                     rest = rest[i:]
                     assert pe.node.children or (not pe.node.result)
                     if pe.first_throw:
                         node = pe.node
                         node.result = node.children + (nd,)
                     else:
-                        # TODO: ggf. Fehlermeldung, die sagt, wo es weitergeht, anfügen;
-                        #       dürfte allerdings erst an den nächsten(!) Knoten angehängt werden (wie?)
                         node = Node(self.tag_name,
-                                    (Node(ZOMBIE_TAG, text[:gap]).with_pos(location),
-                                     pe.node, nd))
+                                    (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node, nd))
                 elif pe.first_throw:
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
+                elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:  # EXPERIMENTAL!!
+                    node = pe.node
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
-                    if grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:  # EXPERIMENTAL!!
-                        node = pe.node
-                    else:
-                        raise ParserError(Node(self.tag_name, result).with_pos(location),
-                                          text, pe.error, first_throw=False)
+                    raise ParserError(Node(self.tag_name, result).with_pos(location),
+                                      text, pe.error, first_throw=False)
                 error = pe.error  # needed for history tracking
 
 
