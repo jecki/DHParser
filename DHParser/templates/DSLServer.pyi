@@ -25,6 +25,8 @@ import os
 import sys
 
 
+scriptpath = os.path.dirname(__file__)
+
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
 
@@ -92,12 +94,13 @@ def json_rpc(func, params=[], ID=None) -> str:
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def DSL_compiler(dateiname):
-    from DSLCompiler import compile_source
-    return compile_source(dateiname)
-
-
 def run_server(host, port):
+    try:
+        from DSLCompiler import compile_src
+    except ModuleNotFoundError:
+        from tst_DSL_grammar import recompile_grammar
+        recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
+        from DSLCompiler import compile_src
     from DHParser.server import LanguageServer
     config_filename = get_config_filename()
     try:
@@ -107,7 +110,7 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    DSL_server = LanguageServer({'DSL_compiler': DSL_compiler})
+    DSL_server = LanguageServer({'DSL_compiler': compile_src})
     DSL_server.run_server(host, port)
 
 

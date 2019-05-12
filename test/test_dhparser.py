@@ -39,6 +39,8 @@ class TestDHParserCommandLineTool:
         self.python = 'python3 ' if os.system('python3 -V' + self.nulldevice) == 0 else 'python '
 
     def teardown(self):
+        if os.path.exists('testdata/neu/neuServer.py'):
+            os.system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
         if os.path.exists('testdata/neu') and os.path.isdir('testdata/neu'):
             shutil.rmtree('testdata/neu')
         if os.path.exists('testdata') and not os.listdir('testdata'):
@@ -46,6 +48,7 @@ class TestDHParserCommandLineTool:
         os.chdir(self.cwd)
 
     def test_dhparser(self):
+        # test compiler creation and execution
         os.system(self.python + '../DHParser/scripts/dhparser.py testdata/neu ' + self.nulldevice)
         os.system(self.python + 'testdata/neu/tst_neu_grammar.py ' + self.nulldevice)
         os.system(self.python + 'testdata/neu/neuCompiler.py testdata/neu/example.dsl '
@@ -53,6 +56,20 @@ class TestDHParserCommandLineTool:
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('<document>') >= 0, xml
+        os.remove('testdata/neu/neuCompiler.py')
+        os.remove('testdata/neu/example.xml')
+
+        # test server
+        os.system(self.python + 'testdata/neu/neuServer.py --stopserver')
+        os.system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
+                  '>testdata/neu/example.xml')
+        with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
+            json = f.read()
+        assert json.find('document') >= 0, json
+        os.system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
+                  '>testdata/neu/example.xml')
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

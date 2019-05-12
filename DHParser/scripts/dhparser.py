@@ -69,6 +69,7 @@ def create_project(path: str):
     TEST_DOCUMENT_TEMPLATE = read_template('example_02_test_Structure_and_Components.ini')
     README_TEMPLATE = read_template('readme_template.md')
     GRAMMAR_TEST_TEMPLATE = read_template('tst_DSL_grammar.pyi')
+    SERVER_TEMPLATE = read_template('DSLServer.pyi')
 
     name = os.path.basename(path)
     if not re.match(r'(?!\d)\w+', name):
@@ -97,6 +98,7 @@ def create_project(path: str):
     create_file('README.md', README_TEMPLATE.format(name=name))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
         name=name, reldhparserdir=os.path.relpath(dhparserdir, os.path.abspath('.'))))
+    create_file('%sServer.py' %name, SERVER_TEMPLATE.replace('DSL', name))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     # The following is left to the user as an exercise
