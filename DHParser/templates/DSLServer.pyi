@@ -1,0 +1,240 @@
+#!/usr/bin/python3
+
+"""MLWServer.py - starts a server (if not already running) for the
+                  compilation of the MLW (medieval latin dictionary)
+
+Author: Eckhart Arnold <arnold@badw.de>
+
+Copyright 2017 Bavarian Academy of Sciences and Humanities
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import asyncio
+import os
+import sys
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
+sys.path.extend([os.path.join(scriptdir, 'DHParser-submodule')])
+
+STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
+IDENTIFY_REQUEST = "identify()"
+
+config_filename_cache = ''
+
+
+def get_config_filename() -> str:
+    """
+    Returns the file name of a temporary config file that stores
+    the host and port of the currently running server.
+    """
+    global config_filename_cache
+    if config_filename_cache:
+        return config_filename_cache
+
+    def probe(dir_list) -> str:
+        for tmpdir in []:
+            if os.path.exists(tmpdir) and os.path.isdir(tmpdir):
+                return tmpdir
+        return ''
+
+    if sys.platform.find('win') >= 0:
+        tmpdir = probe([r'C:\TEMP', r'C:\TMP', r'\TEMP', r'\TMP'])
+    else:
+        tmpdir = probe(['~/tmp', '/tmp', '/var/tmp', 'usr/tmp'])
+    config_filename_cache = os.path.join(tmpdir, os.path.basename(__file__)) + '.cfg'
+    return config_filename_cache
+
+
+def retrieve_host_and_port():
+    """
+    Retrieve host and port from temporary config file or return default values
+    for host and port, in case the temporary config file does not exist.
+    """
+    host = '127.0.0.1'  # default host
+    port = 8888
+    cfg_filename = get_config_filename()
+    try:
+        with open(cfg_filename) as f:
+            print('Reading host and port from file: ' + cfg_filename)
+            host, ports = f.read().strip(' \n').split(' ')
+            port = int(ports)
+    except FileNotFoundError:
+        pass
+    except ValueError:
+        print('removing invalid config file: ' + cfg_filename)
+        os.remove(cfg_filename)
+    return host, port
+
+
+def asyncio_run(coroutine):
+    """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
+    if sys.version_info >= (3, 7):
+        return asyncio.run(coroutine)
+    else:
+        loop = asyncio.get_event_loop()
+        try:
+            return loop.run_until_complete(coroutine)
+        finally:
+            loop.close()
+
+
+def json_rpc(func, params=[], ID=None) -> str:
+    """Generates a JSON-RPC-call for `func` with parameters `params`"""
+    return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
+
+
+def mlw_compiler(dateiname):
+    from MLWCompiler import verarbeite_mlw_artikel
+    print("Generiere HTML " + dateiname)
+    ergebnis = verarbeite_mlw_artikel(dateiname, '', {})
+    return ergebnis
+
+
+def run_server(host, port):
+    from DHParser.server import LanguageServer
+    config_filename = get_config_filename()
+    try:
+        with open(config_filename, 'w') as f:
+            f.write(host + ' ' + str(port))
+    except PermissionError:
+        print('PermissionError: Could not write temporary config file: ' + config_filename)
+
+    print('Starting server on %s:%i' % (host, port))
+    mlw_server = LanguageServer({'mlw_compiler': mlw_compiler})
+    mlw_server.run_server(host, port)
+
+
+async def send_request(request, host, port):
+    reader, writer = await asyncio.open_connection(host, port)
+    writer.write(request.encode() if isinstance(request, str) else request)
+    data = await reader.read(500)
+    writer.close()
+    return data.decode()
+
+
+def start_server_daemon(host, port):
+    import subprocess, time
+    try:
+        subprocess.Popen([__file__, '--startserver', host, str(port)])
+    except OSError:
+        try:
+            subprocess.Popen(['python3', __file__, '--startserver', host, str(port)])
+        except FileNotFoundError:
+            subprocess.Popen(['python', __file__, '--startserver', host, str(port)])
+    countdown = 20
+    delay = 0.05
+    result = None
+    while countdown > 0:
+        try:
+            result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
+            countdown = 0
+        except ConnectionRefusedError:
+            time.sleep(delay)
+            delay += 0.0
+            countdown -= 1
+    if result is None:
+        print('Could not start server or establish connection in time :-(')
+        sys.exit(1)
+    print(result)
+
+
+def print_usage_and_exit():
+    print('Usages:\n'
+          + '    python MLWServer.py --startserver [host] [port]\n'
+          + '    python MLWServer.py --stopserver\n'
+          + '    python MLWServer.py --status\n'
+          + '    python MLWServer.py FILENAME.mlw [--host host] [--port port]')
+    sys.exit(1)
+
+
+def assert_if(cond: bool, message: str):
+    if not cond:
+        if message:
+            print(message)
+        print_usage_and_exit()
+
+
+if __name__ == "__main__":
+    host, port = '', -1
+
+    # read and remove "--host ..." and "--port ..." parameters from sys.argv
+    argv = []
+    i = 0
+    while i < len(sys.argv):
+        if sys.argv[i] in ('--host', '-h'):
+            assert_if(i < len(sys.argv) - 1, 'host missing!')
+            host = sys.argv[i+1]
+            i += 1
+        elif sys.argv[i] in ('--port', '-p'):
+            assert_if(i < len(sys.argv) - 1, 'port number missing!')
+            try:
+                port = int(sys.argv[i+1])
+            except ValueError:
+                assert_if(False, 'invalid port number: ' + sys.argv[i+1])
+            i += 1
+        else:
+            argv.append(sys.argv[i])
+        i += 1
+
+    if len(argv) < 2:
+        print_usage_and_exit()
+
+    if port < 0 or not host:
+        # if host and port have not been specified explicitly on the command
+        # line, try to retrieve them from (temporary) config file or use
+        # hard coded default values
+        host, port = retrieve_host_and_port()
+
+    if sys.argv[1] == "--status":
+        try:
+            result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
+            print('Server ' + str(result) + ' running on ' + host + ' ' + str(port))
+        except ConnectionRefusedError:
+            print('No server running on: ' + host + ' ' + str(port))
+
+    elif argv[1] == "--startserver":
+        if len(argv) == 2:
+            argv.append(host)
+        if len(argv) == 3:
+            argv.append(str(port))
+        sys.exit(run_server(argv[2], int(argv[3])))
+
+    elif argv[1] in ("--stopserver", "--killserver"):
+        try:
+            result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
+            cfg_filename = get_config_filename()
+            try:
+                os.remove(cfg_filename)
+                print('removing temporary config file: ' + cfg_filename)
+            except FileNotFoundError:
+                pass
+        except ConnectionRefusedError as e:
+            print(e)
+            sys.exit(1)
+        print(result)
+    elif argv[1].startswith('-'):
+        print_usage_and_exit()
+    elif argv[1]:
+        if not argv[1].endswith(')'):
+            # argv does not seem to be a command (e.g. "identify()") but a file name or path
+            argv[1] = os.path.abspath(argv[1])
+            print(argv[1])
+        try:
+            result = asyncio_run(send_request(argv[1], host, port))
+        except ConnectionRefusedError:
+            start_server_daemon(host, port)               # start server first
+            result = asyncio_run(send_request(argv[1], host, port))
+        print(result)
+    else:
+        print_usage_and_exit()

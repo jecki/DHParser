@@ -1,0 +1,31 @@
+# GRAMMAR_NAME-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
+@ literalws   = right           # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/           # comments range from a '#'-character to the end of the line
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+
+
+#######################################################################
+#
+#:  Structure and Components
+#
+#######################################################################
+
+document = ~ { WORD } §EOF      # root parser: a sequence of words preceded
+                                # by whitespace until the end of file
+
+#######################################################################
+#
+#:  Regular Expressions
+#
+#######################################################################
+
+WORD     =  /\w+/~      # a sequence of letters, optional trailing whitespace
+EOF      =  !/./        # no more characters ahead, end of file reached

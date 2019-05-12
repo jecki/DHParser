@@ -31,6 +31,8 @@ if i >= 0:
 else:
     dhparserdir = ''
 
+templatedir = os.path.join(os.path.dirname(scriptdir.rstrip('/')), 'templates')
+
 from DHParser.compile import compile_source
 from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -40,159 +42,14 @@ from typing import cast
 
 LOGGING = False
 
-EBNF_TEMPLATE = r"""-grammar
 
-#######################################################################
-#
-#  EBNF-Directives
-#
-#######################################################################
-
-@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
-@ literalws   = right           # literals have implicit whitespace on the right hand side
-@ comment     = /#.*/           # comments range from a '#'-character to the end of the line
-@ ignorecase  = False           # literals and regular expressions are case-sensitive
-
-
-#######################################################################
-#
-#:  Structure and Components
-#
-#######################################################################
-
-document = ~ { WORD } §EOF      # root parser: a sequence of words preceded
-                                # by whitespace until the end of file
-
-#######################################################################
-#
-#:  Regular Expressions
-#
-#######################################################################
-
-WORD     =  /\w+/~      # a sequence of letters, optional trailing whitespace
-EOF      =  !/./        # no more characters ahead, end of file reached
-"""
-
-TEST_WORD_TEMPLATE = r'''[match:WORD]
-M1: word
-M2: one_word_with_underscores
-
-[fail:WORD]
-F1: two words
-'''
-
-TEST_DOCUMENT_TEMPLATE = r'''[match:document]
-M1: """This is a sequence of words
-    extending over several lines"""
-M2: """  This sequence contains leading whitespace"""
-
-[fail:document]
-F1: """This test should fail, because neither
-    comma nor full have been defined anywhere."""
-'''
-
-README_TEMPLATE = """# {name}
-
-PLACE A SHORT DESCRIPTION HERE
-
-Author: AUTHOR'S NAME <EMAIL>, AFFILIATION
-
-
-## License
-
-{name} is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
-
-Copyright YEAR AUTHOR'S NAME <EMAIL>, AFFILIATION
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-
-
-GRAMMAR_TEST_TEMPLATE = r'''#!/usr/bin/python3
-
-"""tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
-"""
-
-import os
-import sys
-
-LOGGING = False
-
-scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, '{reldhparserdir}'))
-if dhparserdir not in sys.path:
-    sys.path.append(dhparserdir)
-
-try:
-    from DHParser import dsl
-    import DHParser.log
-    from DHParser import testing
-except ModuleNotFoundError:
-    print('Could not import DHParser. Please adjust sys.path in file '
-          '"%s" manually' % __file__)
-    sys.exit(1)
-
-
-def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
-    testing.create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(False):
-        # recompiles Grammar only if it has changed
-        if not dsl.recompile_grammar(grammar_src, force=force,
-                notify=lambda: print('recompiling ' + grammar_src)):
-            print('\nErrors while recompiling "%s":' % grammar_src +
-                  '\n--------------------------------------\n\n')
-            with open('{name}_ebnf_ERRORS.txt') as f:
-                print(f.read())
-            sys.exit(1)
-
-
-def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
-    with DHParser.log.logging(LOGGING):
-        error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
-            get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report=True, verbose=True)
-    return error_report
-
-
-if __name__ == '__main__':
-    argv = sys.argv[:]
-    if len(argv) > 1 and sys.argv[1] == "--debug":
-        LOGGING = True
-        del argv[1]
-    if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
-        os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
-        # if called with a single filename that is either an EBNF file or a known
-        # test file type then use the given argument
-        arg = argv[1]
-    else:
-        # otherwise run all tests in the test directory
-        arg = '*_test_*.ini'
-    if arg.endswith('.ebnf'):
-        recompile_grammar(arg, force=True)
-    else:
-        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'),
-                          force=False)
-        sys.path.append('.')
-        from {name}Compiler import get_grammar, get_transformer
-        error_report = run_grammar_tests(arg, get_grammar, get_transformer)
-        if error_report:
-            print('\n')
-            print(error_report)
-            sys.exit(1)
-        print('ready.\n')
-'''
+def read_template(template_name: str) -> str:
+    """
+    Reads a script-template from a template file named `template_name`
+    in the template-directory and returns it as a string.
+    """
+    with open(os.path.join(templatedir, template_name), 'r') as f:
+        return f.read()
 
 
 def create_project(path: str):
@@ -206,6 +63,12 @@ def create_project(path: str):
                 f.write(content)
         else:
             print('"%s" already exists! Not overwritten.' % name)
+
+    EBNF_TEMPLATE = read_template('example_DSL.ebnf')
+    TEST_WORD_TEMPLATE = read_template('example_01_test_Regular_Expressions.ini')
+    TEST_DOCUMENT_TEMPLATE = read_template('example_02_test_Structure_and_Components.ini')
+    README_TEMPLATE = read_template('readme_template.md')
+    GRAMMAR_TEST_TEMPLATE = read_template('tst_DSL_grammar.pyi')
 
     name = os.path.basename(path)
     if not re.match(r'(?!\d)\w+', name):
@@ -230,7 +93,7 @@ def create_project(path: str):
                 TEST_WORD_TEMPLATE)
     create_file(os.path.join('grammar_tests', '02_test_Structure_and_Components.ini'),
                 TEST_DOCUMENT_TEMPLATE)
-    create_file(name + '.ebnf', '# ' + name + EBNF_TEMPLATE)
+    create_file(name + '.ebnf', EBNF_TEMPLATE.replace('GRAMMAR_NAME', name, 1))
     create_file('README.md', README_TEMPLATE.format(name=name))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
         name=name, reldhparserdir=os.path.relpath(dhparserdir, os.path.abspath('.'))))

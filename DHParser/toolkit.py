@@ -27,6 +27,7 @@ functions that are very generic.
 import hashlib
 import io
 import multiprocessing
+import os
 import parser
 import threading
 
@@ -68,6 +69,7 @@ __all__ = ('typing',
            'compile_python_object',
            'smart_list',
            'sane_parser_name',
+           'DHPARSER_DIR',
            'GLOBALS',
            'get_config_value',
            'set_config_value')
@@ -75,11 +77,14 @@ __all__ = ('typing',
 
 #######################################################################
 #
-# Thread local globals and configuration
+# (Thread-safe) global variables and configuration
 #
 #######################################################################
 
+
+DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
 GLOBALS = threading.local()
+
 
 def get_config_value(key: Hashable) -> Any:
     """
