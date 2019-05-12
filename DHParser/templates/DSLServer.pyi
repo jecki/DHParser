@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-"""MLWServer.py - starts a server (if not already running) for the
-                  compilation of the MLW (medieval latin dictionary)
+"""DSLServer.py - starts a server (if not already running) for the
+                    compilation of DSL
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -24,8 +24,6 @@ import asyncio
 import os
 import sys
 
-scriptdir = os.path.dirname(os.path.realpath(__file__))
-sys.path.extend([os.path.join(scriptdir, 'DHParser-submodule')])
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
@@ -94,11 +92,9 @@ def json_rpc(func, params=[], ID=None) -> str:
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def mlw_compiler(dateiname):
-    from MLWCompiler import verarbeite_mlw_artikel
-    print("Generiere HTML " + dateiname)
-    ergebnis = verarbeite_mlw_artikel(dateiname, '', {})
-    return ergebnis
+def DSL_compiler(dateiname):
+    from DSLCompiler import compile_source
+    return compile_source(dateiname)
 
 
 def run_server(host, port):
@@ -111,8 +107,8 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    mlw_server = LanguageServer({'mlw_compiler': mlw_compiler})
-    mlw_server.run_server(host, port)
+    DSL_server = LanguageServer({'DSL_compiler': DSL_compiler})
+    DSL_server.run_server(host, port)
 
 
 async def send_request(request, host, port):
@@ -151,10 +147,10 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python MLWServer.py --startserver [host] [port]\n'
-          + '    python MLWServer.py --stopserver\n'
-          + '    python MLWServer.py --status\n'
-          + '    python MLWServer.py FILENAME.mlw [--host host] [--port port]')
+          + '    python DSLServer.py --startserver [host] [port]\n'
+          + '    python DSLServer.py --stopserver\n'
+          + '    python DSLServer.py --status\n'
+          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]')
     sys.exit(1)
 
 

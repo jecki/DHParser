@@ -70,6 +70,7 @@ __all__ = ('typing',
            'smart_list',
            'sane_parser_name',
            'DHPARSER_DIR',
+           'DHPARSER_PARENTDIR',
            'GLOBALS',
            'get_config_value',
            'set_config_value')
@@ -83,6 +84,7 @@ __all__ = ('typing',
 
 
 DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
+DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
 GLOBALS = threading.local()
 
 

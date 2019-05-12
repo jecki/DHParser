@@ -36,6 +36,7 @@ __all__ = ('CONFIG_PRESET',
            'XML_SERIALIZATION',
            'SXPRESSION_SERIALIZATION',
            'COMPACT_SERIALIZATION',
+           'SMART_SERIALIZATION',
            'JSON_SERIALIZATION',
            'SERIALIZATIONS')
 
@@ -85,6 +86,9 @@ CONFIG_PRESET['max_parser_dropouts'] = 3
 # 'compact'      - compact tree output, i.e. children a represented on
 #                  indented lines with no opening or closing tags, brackets
 #                  etc.
+# 'smart'        - serialize as S-expression if the S-expression fits on
+#                  one line (see 'flatten_sxpr_threshold'), otherwise
+#                  serialize as compact tree output
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
@@ -93,6 +97,7 @@ CONFIG_PRESET['max_parser_dropouts'] = 3
 XML_SERIALIZATION = "XML"
 SXPRESSION_SERIALIZATION = "S-expression"
 COMPACT_SERIALIZATION = "compact"
+SMART_SERIALIZATION = "smart"
 JSON_SERIALIZATION = "json"
 
 SERIALIZATIONS = frozenset({XML_SERIALIZATION,
@@ -100,9 +105,9 @@ SERIALIZATIONS = frozenset({XML_SERIALIZATION,
                             COMPACT_SERIALIZATION,
                             JSON_SERIALIZATION})
 
-CONFIG_PRESET['cst_serialization'] = COMPACT_SERIALIZATION
-CONFIG_PRESET['ast_serialization'] = XML_SERIALIZATION
-CONFIG_PRESET['default_serialization'] = SXPRESSION_SERIALIZATION
+CONFIG_PRESET['cst_serialization'] = SMART_SERIALIZATION
+CONFIG_PRESET['ast_serialization'] = SMART_SERIALIZATION
+CONFIG_PRESET['default_serialization'] = SMART_SERIALIZATION
 
 # Defines the maximum line length for flattened S-expressions.
 # Below this threshold S-expressions will be returned in flattened

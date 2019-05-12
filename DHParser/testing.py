@@ -269,10 +269,10 @@ def get_report(test_unit):
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST')
-                report.append(indent(cst.serialize_as('cst')))
+                report.append(indent(cst.serialize('cst')))
             if ast:
                 report.append('\n### AST')
-                report.append(indent(ast.serialize_as('ast')))
+                report.append(indent(ast.serialize('ast')))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
@@ -436,7 +436,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 if compare:
                     if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                      (test_name, parser_name, cst.serialize_as('cst')))
+                                      (test_name, parser_name, cst.serialize('cst')))
                     if verbose:
                         infostr = '      cst-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

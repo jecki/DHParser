@@ -1,7 +1,8 @@
 DHParser
 ========
 
-DHParser - The domian specific language (DSL) construction kit for the Digit Humanities
+DHParser - A parser generator and domain specific language (DSL) construction 
+           kit for the Digit Humanities
 
 
 Features
@@ -20,6 +21,55 @@ Features
 * *Customizable parsing errors and error recovery* to make it easy to locate 
   parsing errors at the right spot and deliver them with a meaningful error
   message for users that do not habitually deal with formal notations!  
+
+
+Ease of use
+-----------
+
+key_value_store.py:
+
+    # A mini-DSL for a key value store
+    from DHParser import *
+  
+    # specify the grammar of your DSL in EBNF-notation
+    grammar = '''@ drop = whitespace, token
+    key_store   = ~ { entry }             
+    entry       = key "=" value 
+    key         = /\w+/~                  # Scannerless parsing, use regular
+    value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
+    
+    # generating a parser is almost as simple as compiling a regular expression    
+    parser_factory = grammar_provider(grammar)
+    parser = parser_factory()             # parser factory for thread-safety
+
+Now, parse some text and extract the data from the Python-shell:
+
+    >>> from key_value_store import parser
+    >>> text = '''
+            title    = "Odysee 2001"
+            director = "Stanley Kubrick"
+        '''         
+    >>> data = parser(text)  
+    >>> for entry in data.select('entry'):
+            print(entry['key'], entry['value'])
+    
+    title "Odysee 2001"
+    director "Stanley Kubrick"
+
+Or, serialize as XML:
+    
+    >>> print(data.as_xml())
+    
+    <key_store>
+      <entry>
+        <key>title</key>
+        <value>"Odysee 2001"</value>
+      </entry>
+      <entry>
+        <key>director</key>
+        <value>"Stanley Kubrick"</value>
+      </entry>
+    </key_store>    
 
 
 License

@@ -38,7 +38,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespa
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, get_config_value, unrepr, compile_python_object, DHPARSER_DIR
+    GLOBALS, get_config_value, unrepr, compile_python_object, DHPARSER_PARENTDIR
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
@@ -66,9 +66,6 @@ __all__ = ('get_ebnf_preprocessor',
 # source code support
 #
 ########################################################################
-
-
-dhparser_parentdir = os.path.dirname(DHPARSER_DIR)
 
 
 DHPARSER_IMPORTS = '''
@@ -101,7 +98,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
     JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS 
-'''.format(dhparser_parentdir=dhparser_parentdir)
+'''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 
 ########################################################################

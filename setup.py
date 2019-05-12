@@ -31,9 +31,9 @@ setup(
     license='[Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)',
     author='Eckhart Arnold',
     author_email='arnold@badw.de',
-    description='DHParser - Domain specific languages for the Digital Humanities',
+    description='DHParser - Parser generator and DSL-construction-kit',
     long_description = read_me,
-    keywords='Digital Humanities, domain specific languages, parser combinators, EBNF',
+    keywords='parser generator, domain specific languages, Digital Humanities, parser combinators, EBNF',
     classifiers = [
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

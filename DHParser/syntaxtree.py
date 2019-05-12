@@ -31,7 +31,7 @@ from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, U
     Container, Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
 from DHParser.toolkit import get_config_value, re
@@ -824,7 +824,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # serialization meta-method ###
 
-    def serialize_as(self: 'Node', how: str = 'default') -> str:
+    def serialize(self: 'Node', how: str = 'default') -> str:
         """
         Serializes the tree starting with `node` either as S-expression, XML, JSON,
         or in compact form. Possible values for `how` are 'S-expression',
@@ -849,6 +849,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.as_json()
         elif switch == COMPACT_SERIALIZATION.lower():
             return self.as_sxpr(compact=True)
+        elif switch == SMART_SERIALIZATION.lower():
+            threshold = get_config_value('flatten_sxpr_threshold')
+            if threshold <= 0:
+                return self.as_sxpr(compact=True)
+            sxpr = self.as_sxpr(flatten_threshold=threshold)
+            if sxpr.find('\n') >= 0:
+                sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
+                sxpr = re.sub(r'\n\s*\)', r'', sxpr)
+                sxpr = re.sub(r'\)', r'', sxpr)
+                sxpr = re.sub(r'^\(', r'', sxpr)
+            return sxpr
         else:
             raise ValueError('Unknown serialization %s. Allowed values are either: %s or : %s'
                              % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
