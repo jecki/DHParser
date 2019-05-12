@@ -5,7 +5,7 @@
 
 Author: Eckhart Arnold <arnold@badw.de>
 
-Copyright 2017 Bavarian Academy of Sciences and Humanities
+Copyright 2019 Bavarian Academy of Sciences and Humanities
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

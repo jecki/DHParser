@@ -8,19 +8,19 @@ DHParser - A parser generator and domain specific language (DSL) construction
 Features
 --------
 
-* Very beginner-friendly *Python-based* DSL construction kit. Setup, program and 
-  test your own DSL with the widely used Python language.
-  
-* Specific focus on *XML-workflows* as these are the most common in the Digital 
-  Humanities. Other output formats are of course also possible. (For example,
-  DHParser is self-hosting and uses Python-Code as output format.)
-  
-* Supports *unit-testing of grammars* and piecewise step-by-step development
-  as well as debugging of grammars.
+* *Fail-tolerant parsing* 
 
-* *Customizable parsing errors and error recovery* to make it easy to locate 
-  parsing errors at the right spot and deliver them with a meaningful error
-  message for users that do not habitually deal with formal notations!  
+* *Customizable error reporting*
+
+* *Unit testing and debugging of grammars*
+
+* *Language-server-support* (https://microsoft.github.io/language-server-protocol/)
+
+* *Beginner friendly*
+
+* *Digital Humanities oriented* (optional XML-workflows!), but open for any application domain
+
+* *Python-based*
 
 
 Ease of use
@@ -35,7 +35,7 @@ key_value_store.py:
     grammar = '''@ drop = whitespace, token
     key_store   = ~ { entry }             
     entry       = key "=" value 
-    key         = /\w+/~                  # Scannerless parsing, use regular
+    key         = /\w+/~                  # Scannerless parsing: Use regular
     value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
     
     # generating a parser is almost as simple as compiling a regular expression    
@@ -182,7 +182,16 @@ is concerned, the use cases, requirements and challenges are somewhat
 different. For example, in the humanities annotating text is a central
 use case, which is mostly absent in computer science treatments.
 These differences might sooner or later require to develop the
-DSL-construction toolkits in a different direction. Also,
+DSL-construction toolkits in a different direction. Also DHParser 
+emphasizes and evolutionary development model for grammars with
+unit-testing support, which fits the typical use cases in DH where DSLs 
+evolve in a discussion process between technicians and humanists. 
+Because the users of DSLs in the humanities are not necessarily very 
+technically mindes people, DHParser supports the construction of 
+fail-tolerant parsers with good error reporting in terms of locating
+the errors at the right spot and giving useful error messages. 
+
+Also,
 DHParser shall (in the future) serve as a teaching tool, which
 influences some of its design decisions such as, for example, clearly
 separating the parsing, syntax-tree-transformation and compilation
