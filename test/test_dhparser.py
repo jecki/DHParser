@@ -60,7 +60,7 @@ class TestDHParserCommandLineTool:
         os.remove('testdata/neu/example.xml')
 
         # test server
-        os.system(self.python + 'testdata/neu/neuServer.py --stopserver')
+        os.system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
         os.system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
@@ -68,6 +68,8 @@ class TestDHParserCommandLineTool:
         assert json.find('document') >= 0, json
         os.system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')
+        os.system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
+        pass
 
 
 

@@ -48,7 +48,7 @@ def read_template(template_name: str) -> str:
     Reads a script-template from a template file named `template_name`
     in the template-directory and returns it as a string.
     """
-    with open(os.path.join(templatedir, template_name), 'r') as f:
+    with open(os.path.join(templatedir, template_name), 'r', encoding='utf-8') as f:
         return f.read()
 
 
