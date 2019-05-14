@@ -273,8 +273,8 @@ class TestRootNode:
             str(result)
 
 
-class TestNodeFind():
-    """Test the select_if-functions of class Node.
+class TestNodeFind:
+    """Test the item-access-functions of class Node.
     """
 
     def test_find(self):
@@ -297,6 +297,7 @@ class TestNodeFind():
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
         assert tree[0].equals(parse_sxpr('(b X)'))
         assert tree[2].equals(parse_sxpr('(e (X F))'))
+        assert tree[-1].equals(parse_sxpr('(e (X F))'))
         try:
             node = tree[3]
             assert False, "IndexError expected!"

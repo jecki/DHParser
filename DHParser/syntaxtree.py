@@ -426,6 +426,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._xml_attr = OrderedDict()
         return self._xml_attr
 
+    def get_attr(self, attribute: str, default: str) -> str:
+        """
+        Returns the value of 'attribute' if attribute exists. If not, the
+        default value is returned. This function has the same semantics
+        as `node.attr.get(attribute, default)`, but with the advantage then
+        other than `node.attr.get` it does not automatically create an
+        attribute dictionary on (first) access.
+        :param attribute: The attribute, the value of which shall be looked up
+        :param default:   A default value that is returned, in case attribute
+                          does not exist.
+        :return: str
+        """
+        if self.has_attr():
+            return self.attr.get(attribute, default)
+        return default
+
     def compare_attr(self, other: 'Node') -> bool:
         """
         Returns True, if `self` and `other` have the same attributes with the
