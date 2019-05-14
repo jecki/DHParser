@@ -228,7 +228,7 @@ if __name__ == "__main__":
         if not argv[1].endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
             argv[1] = os.path.abspath(argv[1])
-            print(argv[1])
+            # print(argv[1])
         try:
             result = asyncio_run(send_request(argv[1], host, port))
         except ConnectionRefusedError:

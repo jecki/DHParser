@@ -23,11 +23,15 @@ limitations under the License.
 import os
 import platform
 import shutil
+import subprocess
 import sys
 
 sys.path.extend(['../', './'])
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
+
+def system(s: str) -> int:
+    return subprocess.call(s.split(' '), shell=True)
 
 class TestDHParserCommandLineTool:
     def setup(self):
@@ -40,7 +44,7 @@ class TestDHParserCommandLineTool:
 
     def teardown(self):
         if os.path.exists('testdata/neu/neuServer.py'):
-            os.system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
+            system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
         if os.path.exists('testdata/neu') and os.path.isdir('testdata/neu'):
             shutil.rmtree('testdata/neu')
         if os.path.exists('testdata') and not os.listdir('testdata'):
@@ -49,9 +53,9 @@ class TestDHParserCommandLineTool:
 
     def test_dhparser(self):
         # test compiler creation and execution
-        os.system(self.python + '../DHParser/scripts/dhparser.py testdata/neu ' + self.nulldevice)
-        os.system(self.python + 'testdata/neu/tst_neu_grammar.py ' + self.nulldevice)
-        os.system(self.python + 'testdata/neu/neuCompiler.py testdata/neu/example.dsl '
+        system(self.python + '../DHParser/scripts/dhparser.py testdata/neu ' + self.nulldevice)
+        system(self.python + 'testdata/neu/tst_neu_grammar.py ' + self.nulldevice)
+        system(self.python + 'testdata/neu/neuCompiler.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
@@ -60,15 +64,14 @@ class TestDHParserCommandLineTool:
         os.remove('testdata/neu/example.xml')
 
         # test server
-        os.system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
-        os.system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
+        system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
+        system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
                   '>testdata/neu/example.xml')
         with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
             json = f.read()
         assert json.find('document') >= 0, json
-        os.system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
-                  '>testdata/neu/example.xml')
-        os.system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
+        system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl ' + self.nulldevice)
+        system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
         pass
 
 
