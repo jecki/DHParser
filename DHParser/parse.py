@@ -994,13 +994,19 @@ class Grammar:
                         error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
-                    error_msg = "Parser stopped before end" \
-                        + (("! trying to recover"
-                            + (" but stopping history recording at this point."
-                               if self.history_tracking__ else "..."))
-                            if len(stitches) < self.max_parser_dropouts__
-                            else " too often! Terminating parser.")
-                    error_code = Error.PARSER_STOPPED_BEFORE_END
+                    h = self.history__[-1]
+                    if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
+                        # TODO: this case still needs unit-test and support in testing.py
+                        error_msg = "Parser stopped before end, but matched with lookahead."
+                        error_code = Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD
+                    else:
+                        error_msg = "Parser stopped before end" \
+                            + (("! trying to recover"
+                                + (" but stopping history recording at this point."
+                                   if self.history_tracking__ else "..."))
+                                if len(stitches) < self.max_parser_dropouts__
+                                else " too often! Terminating parser.")
+                        error_code = Error.PARSER_STOPPED_BEFORE_END
                 stitches.append(Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
                 if self.history_tracking__:
