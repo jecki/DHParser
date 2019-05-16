@@ -257,10 +257,11 @@ class TestLookahead:
             "match": {
                 1: """Mountains: big:
                           K2""",  # case 1: matches only with lookahead (but should not fail in a test)
-                2: """Rivers:"""  # case 2: lookahaead failure occurs at end of file and is mandatory. (should not fail as a test)
+                2: """Rivers:""", # case 2: lookahaead failure occurs at end of file and is mandatory. (should not fail as a test)
+                3: """Mountains: big:"""  # same here
             },
             "fail": {
-                6: """Mountains: big:"""
+                6: """Mountains: big: """
             }
         }
     }
