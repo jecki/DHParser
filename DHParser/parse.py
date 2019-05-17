@@ -974,7 +974,9 @@ class Grammar:
                         result, 'Parser "%s" did not match empty document.' % str(parser),
                         Error.PARSER_DID_NOT_MATCH)
 
-        while rest and len(stitches) < self.max_parser_dropouts__:
+        # copy to local variable, so break condition can be triggered manually
+        max_parser_dropouts = self.max_parser_dropouts__
+        while rest and len(stitches) < max_parser_dropouts:
             result, rest = parser(rest)
             if rest:
                 fwd = rest.find("\n") + 1 or len(rest)
@@ -1000,6 +1002,7 @@ class Grammar:
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD
+                        max_parser_dropouts = -1  # no further retries!
                     else:
                         error_msg = "Parser stopped before end" \
                             + (("! trying to recover"
