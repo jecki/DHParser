@@ -123,8 +123,33 @@ def flatten_xml(xml: str) -> str:
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
+# criteria for finding nodes:
+# - node itself (equality)
+# - tag_name
+# - one of several tag_names
+# - a function Node -> bool
+CriteriaType = Union['Node', str, Container[str], Callable]
+
+
+def create_match_function(criterion: CriteriaType) -> Callable:
+    """
+    Returns a valid match function (Node -> bool) for the given criterion.
+    Match functions are used to find an select particular nodes from a
+    tree of nodes.
+    """
+    if isinstance(criterion, Node):
+        return lambda nd: nd == criterion
+    elif isinstance(criterion, str):
+        return lambda nd: nd.tag_name == criterion
+    elif isinstance(criterion, Container):
+        return lambda nd: nd.tag_name in criterion
+    if isinstance(criterion, Callable):
+        return criterion
+    assert "Criterion %s of type %s does not represent a legal criteria type"
+
+
 ChildrenType = Tuple['Node', ...]
-NoChildren = cast(ChildrenType, ())  # type: ChildrenType
+NO_CHILDREN = cast(ChildrenType, ())  # type: ChildrenType
 StrictResultType = Union[ChildrenType, StringView, str]
 ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
@@ -190,7 +215,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
-            self.children = NoChildren  # type: ChildrenType
+            self.children = NO_CHILDREN  # type: ChildrenType
         else:
             self.result = result
         self.tag_name = tag_name        # type: str
@@ -309,7 +334,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = result
                 self._result = result or ''
             else:
-                self.children = NoChildren
+                self.children = NO_CHILDREN
                 self._result = result  # cast(StrictResultType, result)
 
     def _content(self) -> List[str]:
@@ -459,7 +484,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection ###
 
-    def __getitem__(self, index_or_tagname: Union[int, str]) -> Union['Node', Iterator['Node']]:
+    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', Iterator['Node']]:
         """
         Returns the child node with the given index if ``index_or_tagname`` is
         an integer or the first child node with the given tag name. Examples::
@@ -471,57 +496,69 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             '(X (c "d"))'
 
         Args:
-            index_or_tagname(str): Either an index of a child node or a
-                tag name.
+            key(str): A criterion (tag name(s), match function, node) or
+                an index of the child that shall be returned.
         Returns:
             Node: All nodes which have a given tag name.
+        Raises:
+            KeyError:   if no matching child was found.
+            IndexError: if key was an integer index that did not exist
+            ValueError: if the __getitem__ has been called on a leaf node.
         """
         if self.children:
-            if isinstance(index_or_tagname, int):
-                return self.children[index_or_tagname]
+            if isinstance(key, int):
+                return self.children[key]
             else:
+                mf = create_match_function(cast(CriteriaType, key))
                 for child in self.children:
-                    if child.tag_name == index_or_tagname:
+                    if mf(child):
                         return child
-                raise KeyError(index_or_tagname)
-        raise ValueError('Leave nodes have no children that can be indexed!')
+                raise KeyError(str(key))
+        raise ValueError('Leaf-nodes have no children that can be indexed!')
 
-    def __contains__(self, tag_name: str) -> bool:
+    def __contains__(self, what: CriteriaType) -> bool:
         """
         Returns true if a child with the given tag name exists.
         Args:
-            tag_name (str): tag_name which will be searched among to immediate
-                descendants of this node.
+            what: a criterion that describes what (kind of) child node
+            shall be looked for among the children of the node. This
+            can a node, a tag name or collection of tag names or an
+            arbitrary matching function (Node -> bool).
         Returns:
-            bool:  True, if at least one descendant node with the given tag
-                name exists, False otherwise
+            bool:  True, if at least one child which fulfills the criterion
+                exists
         """
-        # assert isinstance(tag_name, str)
         if self.children:
+            mf = create_match_function(what)
             for child in self.children:
-                if child.tag_name == tag_name:
+                if mf(child):
                     return True
             return False
-        raise ValueError('Leave node cannot contain other nodes')
+        raise ValueError('Leaf-node cannot contain other nodes')
 
-    def index(self, tag_name: str, start: int = 0, stop: int = sys.maxsize) -> int:
+    def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
-        Returns the first index of the child with the tag name `what`. If the
-        parameters start and stop are given, the search is restricted to the
-        children with indices from the half-open interval [start:end[.
-        If no such child exists a ValueError is raised.
-        :param tag_name: the child's tag name for which the index shall be returned
+        Returns the first index of the child that fulfills the criteriuon
+        `what`. If the parameters start and stop are given, the search is
+        restricted to the children with indices from the half-open interval
+        [start:end[. If no such child exists a ValueError is raised.
+        :param what: the criterion by which the child is identified, the index
+            of which shall be returned.
         :param start: the first index to start searching.
         :param stop: the last index that shall be searched
         :return: the index of the first child with the given tag name.
+        :raises: ValueError, if no child matching the criterion `what` was found.
         """
-        assert 0 <= start <= stop
+        assert 0 <= start < stop
         i = start
+        mf = create_match_function(what)
         for child in self.children[start:stop]:
-            if child.tag_name == tag_name:
+            if mf(child):
                 return i
             i += 1
-        raise ValueError("Node with tag name '%s' not among child-nodes." % tag_name)
+            if i >= stop:
+                break
+        raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
 
     def select_if(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
             -> Iterator['Node']:
@@ -537,7 +574,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 yield child
             yield from child.select_if(match_function, False, reverse)
 
-    def select(self, criterion: Union[str, Container[str], Callable],
+    def select(self, criterion: CriteriaType,
                include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion. This criterion
@@ -551,15 +588,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         See function `Node.select` for some examples.
 
         Args:
-            criterion: A function  that takes as Node
-                object as argument and returns True or False
+            criterion: A "criterion" for identifying the nodes to be selected.
+                This can either be a tag name (string), a collection of
+                tag names or a match function (Node -> bool)
             include_root (bool): If False, only descendant nodes will be
                 checked for a match.
             reverse (bool): If True, the tree will be walked in reverse
                 order, i.e. last children first.
         Yields:
-            Node: All nodes of the tree for which
-            ``match_function(node)`` returns True
+            Node: All nodes of the tree which fulfill the given criterion
 
         Examples::
 
@@ -574,24 +611,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ['(a (b "X") (X (c "d")) (e (X "F")))']
             >>> flatten_sxpr(next(tree.select("X", False)).as_sxpr())
             '(X (c "d"))'
-
-        Args:
-            tag_names(set): A tag name or set of tag names that is being
-                searched for
-            include_root (bool): If False, only descendant nodes will be
-                checked for a match.
-        Yields:
-            Node: All nodes which have a given tag name.
         """
-        if isinstance(criterion, str):
-            return self.select_if(lambda node: node.tag_name == criterion, include_root, reverse)
-        elif isinstance(criterion, Container):
-            return self.select_if(lambda node: node.tag_name in criterion, include_root, reverse)
-        else:
-            assert isinstance(criterion, Callable)
-            return self.select_if(criterion, include_root, reverse)
+        return self.select_if(create_match_function(criterion), include_root, reverse)
 
-    def pick(self, criterion: Union[str, Container[str], Callable],
+    def pick(self, criterion: CriteriaType,
              reverse: bool = False) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that fulfills
@@ -998,7 +1021,7 @@ class RootNode(Node):
             duplicate.children = copy.deepcopy(self.children)
             duplicate._result = duplicate.children
         else:
-            duplicate.children = NoChildren
+            duplicate.children = NO_CHILDREN
             duplicate._result = self._result
         duplicate._pos = self._pos
         if self.has_attr():

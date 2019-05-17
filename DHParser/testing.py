@@ -342,7 +342,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         parser[parser_name].apply(find_lookahead)
         return lookahead_found
 
-    def lookahead_artifact(st):
+    def lookahead_artifact(syntax_tree: Node):
         """
         Returns True, if the error merely occurred, because the parser
         stopped in front of a sequence that was captured by a lookahead
@@ -350,19 +350,22 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
         This is required for testing of parsers that put a lookahead
         operator at the end. See test_testing.TestLookahead.
         """
-        raw_errors = st.errors_sorted
-        is_artifact = ((len(raw_errors) == 2  # case 1:  superfluous data for lookahead
-                        and raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
-                        and raw_errors[-2].code == Error.PARSER_STOPPED_BEFORE_END)
-                       #  case 2:  mandatory lookahead failure at end of text
+        raw_errors = syntax_tree.errors_sorted
+        is_artifact = ((2 <= len(raw_errors) == 3  # case 1:  superfluous data for lookahead
+                        and {e.code for e in raw_errors} <=
+                            {Error.PARSER_LOOKAHEAD_MATCH_ONLY,
+                             # Error.PARSER_STOPPED_BEFORE_END,
+                             Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD})
                        or (len(raw_errors) == 1
-                           and raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF))
+                           and (raw_errors[-1].code == Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD
+                                #  case 2:  mandatory lookahead failure at end of text
+                                or raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)))
         if is_artifact:
             # don't remove zombie node with error message at the end
             # but change it's tag_name to indicate that it is an artifact!
-            for parent in st.select_if(lambda node: any(child.tag_name == ZOMBIE_TAG
-                                                        for child in node.children),
-                                       include_root=True, reverse=True):
+            for parent in syntax_tree.select_if(lambda node: any(child.tag_name == ZOMBIE_TAG
+                                                                 for child in node.children),
+                                                include_root=True, reverse=True):
                 zombie = parent[ZOMBIE_TAG]
                 zombie.tag_name = '__TESTING_ARTIFACT__'
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the' \
@@ -472,7 +475,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
-            if not is_error(cst.error_flag) and not lookahead_artifact(cst):
+            if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
@@ -850,6 +853,7 @@ def run_path(path):
 def clean_report():
     """Deletes any test-report-files in the REPORT sub-directory and removes
     the REPORT sub-directory, if it is empty after deleting the files."""
+    # TODO: make this thread safe, if possible!!!!
     if os.path.exists('REPORT'):
         files = os.listdir('REPORT')
         flag = False

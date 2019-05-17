@@ -257,10 +257,11 @@ class TestLookahead:
             "match": {
                 1: """Mountains: big:
                           K2""",  # case 1: matches only with lookahead (but should not fail in a test)
-                2: """Rivers:"""  # case 2: lookahaead failure occurs at end of file and is mandatory. (should not fail as a test)
+                2: """Rivers:""", # case 2: lookahaead failure occurs at end of file and is mandatory. (should not fail as a test)
+                3: """Mountains: big:"""  # same here
             },
             "fail": {
-                6: """Mountains: big:"""
+                6: """Mountains: big: """
             }
         }
     }
@@ -311,11 +312,15 @@ class TestLookahead:
         gr = self.grammar_fac()
         # Case 1: Lookahead string is part of the test case; parser fails but for the lookahead
         result = gr(self.cases['category']['match'][1], 'category', True)
-        assert any(e.code == Error.PARSER_LOOKAHEAD_MATCH_ONLY for e in result.errors)
+        assert any(e.code in (Error.PARSER_LOOKAHEAD_MATCH_ONLY,
+                              Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD)
+                   for e in result.errors)
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
         result = gr(self.cases['category']['match'][2], 'category', True)
         assert any(e.code == Error.MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
         errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac)
+        for e in errata:
+            print (e)
         assert not errata, str(errata)
         errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac)
         assert errata

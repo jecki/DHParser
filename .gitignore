@@ -28,7 +28,6 @@ DevScripts/DHParser.py
 DHParser/cstringview.c
 *.so
 .mypy_cache
-.vscode/
 DHParser.egg-info
 .noseids/
 *.build
@@ -42,7 +41,6 @@ _build
 _build
 _static
 _templates
-.vs
 OLDSTUFF
 .pytest_cache
 *.c

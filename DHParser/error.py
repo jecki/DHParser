@@ -86,6 +86,7 @@ class Error:
     PARSER_DID_NOT_MATCH                     = ErrorCode(1020)
     PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1030)
     PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
+    PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD      = ErrorCode(1045)
     CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
