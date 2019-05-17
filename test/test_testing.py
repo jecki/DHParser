@@ -207,18 +207,18 @@ class TestGrammarTest:
         os.chdir(scriptdir)
 
     def teardown(self):
-        clean_report()
+        clean_report('REPORT_TestGrammarTest')
         os.chdir(self.save_dir)
 
     def test_testing_grammar(self):
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
         # reset_unit(self.cases)
-        errata = grammar_unit(self.cases, parser_fac, trans_fac)
+        errata = grammar_unit(self.cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
         assert errata, "Unknown parser, but no error message!?"
         report = get_report(self.cases)
         assert report.find('### CST') >= 0
-        errata = grammar_unit(self.failure_cases, parser_fac, trans_fac)
+        errata = grammar_unit(self.failure_cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
         assert len(errata) == 3, str(errata)
 
     # def test_get_report(self):
@@ -236,7 +236,8 @@ class TestGrammarTest:
         fcases['berm']['fail'] = self.failure_cases['term']['fail']
         errata = grammar_unit(fcases,
                               grammar_provider(ARITHMETIC_EBNF),
-                              lambda : ARITHMETIC_EBNFTransform)
+                              lambda : ARITHMETIC_EBNFTransform,
+                              'REPORT_TestGrammarTest')
         assert errata
 
 
@@ -290,7 +291,7 @@ class TestLookahead:
         self.trans_fac = lambda : partial(traverse, processing_table={"*": [flatten, remove_empty]})
 
     def teardown(self):
-        clean_report()
+        clean_report('REPORT_TestLookahead')
         os.chdir(self.save_dir)
 
     def test_selftest(self):
@@ -318,11 +319,13 @@ class TestLookahead:
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
         result = gr(self.cases['category']['match'][2], 'category', True)
         assert any(e.code == Error.MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
-        errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac)
+        errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac,
+                              'REPORT_TestLookahead')
         for e in errata:
             print (e)
         assert not errata, str(errata)
-        errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac)
+        errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac,
+                              'REPORT_TestLookahead')
         assert errata
 
 

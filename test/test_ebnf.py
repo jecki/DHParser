@@ -138,7 +138,7 @@ class TestEBNFParser:
         self.EBNF = get_ebnf_grammar()
 
     def teardown(self):
-        clean_report()
+        clean_report('REPORT_TestEBNFParser')
         os.chdir(self.save_dir)
 
     def test_RE(self):
@@ -166,7 +166,7 @@ class TestEBNFParser:
         assert not result.error_flag
 
     def test_list(self):
-        grammar_unit(self.cases, get_ebnf_grammar, get_ebnf_transformer)
+        grammar_unit(self.cases, get_ebnf_grammar, get_ebnf_transformer, 'REPORT_TestEBNFParser')
 
 
 

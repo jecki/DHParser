@@ -44,8 +44,8 @@ For JSON see:
 # TODO: Test with python 3.5
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, CancelledError, \
-    BrokenExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
+from concurrent.futures.process import BrokenProcessPool
 import json
 from multiprocessing import Process, Queue, Value, Array
 import sys
@@ -233,20 +233,13 @@ class Server:
             response = RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
             return response.encode() + encoded_html
 
-        async def run(method_name: str, method: Callable, params: Union[Dict, Sequence]):
+        async def execute(executor: Executor, method: Callable, params: Union[Dict, Sequence]):
             nonlocal result, rpc_error
+            has_kw_params = isinstance(params, Dict)
+            assert has_kw_params or isinstance(params, Sequence)
+            loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
             try:
-                # run method either a) directly if it is short running or
-                # b) in a thread pool if it contains blocking io or
-                # c) in a process pool if it is cpu bound
-                # see: https://docs.python.org/3/library/asyncio-eventloop.html
-                #      #executing-code-in-thread-or-process-pools
-                has_kw_params = isinstance(params, Dict)
-                assert has_kw_params or isinstance(params, Sequence)
-                loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-                    else asyncio.get_event_loop()
-                executor = self.pp_executor if method_name in self.cpu_bound else \
-                    self.tp_executor if method_name in self.blocking else None
                 if executor is None:
                     result = method(**params) if has_kw_params else method(*params)
                 elif has_kw_params:
@@ -257,10 +250,25 @@ class Server:
                 rpc_error = -32602, "Invalid Params: " + str(e)
             except NameError as e:
                 rpc_error = -32601, "Method not found: " + str(e)
-            except BrokenExecutor as e:
-                rpc_error = -32000, "Broken Executor: " + str(e)
+            except BrokenProcessPool as e:
+                rpc_error = -32050, "Broken Executor: " + str(e)
             except Exception as e:
                 rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
+
+        async def run(method_name: str, method: Callable, params: Union[Dict, Sequence]):
+            # run method either a) directly if it is short running or
+            # b) in a thread pool if it contains blocking io or
+            # c) in a process pool if it is cpu bound
+            # see: https://docs.python.org/3/library/asyncio-eventloop.html
+            #      #executing-code-in-thread-or-process-pools
+            executor = self.pp_executor if method_name in self.cpu_bound else \
+                self.tp_executor if method_name in self.blocking else None
+            await execute(executor, method, params)
+            if rpc_error is not None and rpc_error[0] == -32050:
+                # if process pool is broken, try again:
+                self.pp_executor.shutdown(wait=True)
+                self.pp_executor = ProcessPoolExecutor()
+                await execute(self.pp_executor, method, params)
 
         if data.startswith(b'GET'):
             # HTTP request
@@ -379,9 +387,12 @@ class Server:
         if port == USE_DEFAULT_PORT:
             port = get_config_value('server_default_port')
         assert port >= 0
-        with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
-            self.pp_executor = p
-            self.tp_executor = t
+        # with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
+        try:
+            if self.pp_executor is None:
+                self.pp_executor = ProcessPoolExecutor()
+            if self.tp_executor is None:
+                self.tp_executor = ThreadPoolExecutor()
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.host.value = host.encode()
             self.port.value = port
@@ -391,6 +402,13 @@ class Server:
                 self.stage.value = SERVER_ONLINE
                 self.server_messages.put(SERVER_ONLINE)
                 await self.server.serve_forever()
+        finally:
+            if self.tp_executor is not None:
+                self.tp_executor.shutdown(wait=True)
+                self.tp_executor = None
+            if self.pp_executor is not None:
+                self.pp_executor.shutdown(wait=True)
+                self.pp_executor = None
 
     def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         if host == USE_DEFAULT_HOST:

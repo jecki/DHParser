@@ -289,7 +289,7 @@ def get_report(test_unit):
     return '\n'.join(report)
 
 
-def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, verbose=False):
+def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False):
     """
     Unit tests for a grammar-parser and ast transformations.
     """
@@ -491,14 +491,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report=True, ve
 
     # write test-report
     if report:
-        report_dir = "REPORT"
         test_report = get_report(test_unit)
         if test_report:
             try:
-                os.mkdir(report_dir)
+                os.mkdir(report)   # is a process-Lock needed, here?
             except FileExistsError:
                 pass
-            with open(os.path.join(report_dir, unit_name + '.md'), 'w', encoding='utf8') as f:
+            with open(os.path.join(report, unit_name + '.md'), 'w', encoding='utf8') as f:
                 f.write(test_report)
 
     print('\n'.join(output))
@@ -532,7 +531,7 @@ def run_unit(logdir, *parameters):
 def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=['*test*'],
                   ignore_unknown_filetypes=False,
-                  report=True, verbose=True):
+                  report='REPORT', verbose=True):
     """
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
@@ -850,17 +849,17 @@ def run_path(path):
     sys.path.pop()
 
 
-def clean_report():
+def clean_report(report_dir='REPORT'):
     """Deletes any test-report-files in the REPORT sub-directory and removes
     the REPORT sub-directory, if it is empty after deleting the files."""
     # TODO: make this thread safe, if possible!!!!
-    if os.path.exists('REPORT'):
-        files = os.listdir('REPORT')
+    if os.path.exists(report_dir):
+        files = os.listdir(report_dir)
         flag = False
         for file in files:
             if re.match(r'\w*_test_\d+\.md', file):
-                os.remove(os.path.join('REPORT', file))
+                os.remove(os.path.join(report_dir, file))
             else:
                 flag = True
         if not flag:
-            os.rmdir('REPORT')
+            os.rmdir(report_dir)
