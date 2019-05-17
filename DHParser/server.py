@@ -260,7 +260,7 @@ class Server:
             except BrokenExecutor as e:
                 rpc_error = -32000, "Broken Executor: " + str(e)
             except Exception as e:
-                rpc_error = -32000, "Server Error: " + str(e)
+                rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
 
         if data.startswith(b'GET'):
             # HTTP request
