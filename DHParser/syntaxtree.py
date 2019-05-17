@@ -502,6 +502,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             Node: All nodes which have a given tag name.
         Raises:
             KeyError:   if no matching child was found.
+            IndexError: if key was an integer index that did not exist
             ValueError: if the __getitem__ has been called on a leaf node.
         """
         if self.children:
@@ -513,7 +514,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     if mf(child):
                         return child
                 raise KeyError(str(key))
-        raise ValueError('Leave nodes have no children that can be indexed!')
+        raise ValueError('Leaf-nodes have no children that can be indexed!')
 
     def __contains__(self, what: CriteriaType) -> bool:
         """
@@ -533,7 +534,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if mf(child):
                     return True
             return False
-        raise ValueError('Leave node cannot contain other nodes')
+        raise ValueError('Leaf-node cannot contain other nodes')
 
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
@@ -546,6 +547,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param start: the first index to start searching.
         :param stop: the last index that shall be searched
         :return: the index of the first child with the given tag name.
+        :raises: ValueError, if no child matching the criterion `what` was found.
         """
         assert 0 <= start < stop
         i = start

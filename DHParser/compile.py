@@ -102,7 +102,8 @@ class Compiler:
         context:  A list of parent nodes that ends with the currently
                 compiled node.
         tree:  The root of the abstract syntax tree.
-        source:  The source code.
+        finalizers:  A stack of tuples (function, parameters) that will be
+                called in reverse order after compilation.
 
         _dirty_flag:  A flag indicating that the compiler has already been
                 called at least once and that therefore all compilation
@@ -120,12 +121,28 @@ class Compiler:
 
     def reset(self):
         # self.source = ''
+        self.finlizers = []  # type: List[Callable, Tuple]
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
         self._dirty_flag = False
         self._debug = get_config_value('debug') # type: bool
         self._debug_already_compiled = set()  # type: Set[Node]
+        self.finalizers = []  # type: List[Callable, Tuple]
+
+    def prepare(self) -> None:
+        """
+        A preparation method that will be called after everything else has
+        been initialized and immediately before compilation starts. This method
+        can be overwritten in order to implement preparation tasks.
+        """
+        pass
+
+    def finalize(self) -> None:
+        """
+        A finalization method that is called after compilation has finished and
+        after all tasks from the finalizers stack have been executed
+        """
 
     def __call__(self, root: RootNode) -> Any:
         """
@@ -141,7 +158,11 @@ class Compiler:
         self._dirty_flag = True
         self.tree = root  # type: RootNode
         # self.source = source  # type: str
+        self.prepare()
         result = self.compile(root)
+        while self.finalizers:
+            task, parameters = self.finalizers.pop()
+            task(*parameters)
         return result
 
     # Obsolete, because never used...
