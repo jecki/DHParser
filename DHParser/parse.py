@@ -994,9 +994,10 @@ class Grammar:
                         error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
-                    h = self.history__[-1]
+                    h = self.history__[-1] if self.history__ else \
+                        HistoryRecord([], None, StringView(''), (0, 0))
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
-                        # TODO: this case still needs unit-test and support in testing.py
+                        # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD
                     else:
