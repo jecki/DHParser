@@ -59,7 +59,7 @@ class EBNFGrammar(Grammar):
     r"""Parser for an EBNF source file.
     """
     expression = Forward()
-    source_hash__ = "9a341fad79f7e8eb46f1a657b553bec7"
+    source_hash__ = "be91994c910201cdf0bd2da656c7cc01"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

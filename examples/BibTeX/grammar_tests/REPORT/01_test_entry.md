@@ -11,13 +11,7 @@ Match-test "simple"
     {Edward N. Zalta}
 
 ### AST
-    <content>
-      <:Token>{</:Token>
-      <text>
-        <CONTENT_STRING>Edward N. Zalta</CONTENT_STRING>
-      </text>
-      <:Token>}</:Token>
-    </content>
+    (content (:Token "{") (text (CONTENT_STRING "Edward N. Zalta")) (:Token "}"))
 
 Match-test "nested_braces"
 --------------------------
@@ -26,18 +20,21 @@ Match-test "nested_braces"
     {\url{https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/}}
 
 ### AST
-    <content>
-      <:Token>{</:Token>
-      <text>
-        <CONTENT_STRING>\url</CONTENT_STRING>
-        <:Token>{</:Token>
-        <text>
-          <CONTENT_STRING>https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/</CONTENT_STRING>
-        </text>
-        <:Token>}</:Token>
-      </text>
-      <:Token>}</:Token>
-    </content>
+    content
+      :Token
+        "{"
+      text
+        CONTENT_STRING
+          "\url"
+        :Token
+          "{"
+        text
+          CONTENT_STRING
+            "https://plato.stanford.edu/archives/fall2013/entries/thomas-kuhn/"
+        :Token
+          "}"
+      :Token
+        "}"
 
 
 Test of parser: "entry"
@@ -77,121 +74,135 @@ Match test "entry" for parser "entry" failed:
 
 
 ### AST
-    <ZOMBIE__>
-      <entry>
-        <:RegExp>@</:RegExp>
-        <type>
-          <WORD>Online</WORD>
-        </type>
-        <:Token>{</:Token>
-        <key>
-          <NO_BLANK_STRING>wikipedia-duhem-quine</NO_BLANK_STRING>
-        </key>
-        <:Token>,</:Token>
-        <:Whitespace>
-          
-            
-        </:Whitespace>
-        <field>
-          <WORD>
-            <:RegExp>editor</:RegExp>
-            <:Whitespace>       </:Whitespace>
-          </WORD>
-        </field>
-        <:Token>=</:Token>
-        <:Whitespace> </:Whitespace>
-        <content>
-          <:Token>{</:Token>
-          <text>
-            <CONTENT_STRING>Wikipedia</CONTENT_STRING>
-          </text>
-          <:Token>}</:Token>
-        </content>
-        <:Token>,</:Token>
-        <:Whitespace>
-          
-            
-        </:Whitespace>
-        <field>
-          <WORD>
-            <:RegExp>title</:RegExp>
-            <:Whitespace>        </:Whitespace>
-          </WORD>
-        </field>
-        <:Token>=</:Token>
-        <:Whitespace> </:Whitespace>
-        <content>
-          <:Token>{</:Token>
-          <text>
-            <CONTENT_STRING>Duhem-Quine thesis</CONTENT_STRING>
-          </text>
-          <:Token>}</:Token>
-        </content>
-        <:Token>,</:Token>
-        <:Whitespace>
-          
-            
-        </:Whitespace>
-        <field>
-          <WORD>
-            <:RegExp>year</:RegExp>
-            <:Whitespace>         </:Whitespace>
-          </WORD>
-        </field>
-        <:Token>=</:Token>
-        <:Whitespace> </:Whitespace>
-        <content>
-          <:Token>{</:Token>
-          <text>
-            <CONTENT_STRING>2017</CONTENT_STRING>
-          </text>
-          <:Token>}</:Token>
-        </content>
-        <:Token>,</:Token>
-        <:Whitespace>
-          
-            
-        </:Whitespace>
-        <field>
-          <WORD>
-            <:RegExp>date</:RegExp>
-            <:Whitespace>         </:Whitespace>
-          </WORD>
-        </field>
-        <:Token>=</:Token>
-        <:Whitespace> </:Whitespace>
-        <content>
-          <:Token>{</:Token>
-          <text>
-            <CONTENT_STRING>2017-08-19</CONTENT_STRING>
-          </text>
-          <:Token>}</:Token>
-        </content>
-        <:Token>,</:Token>
-        <:Whitespace>
-          
-            
-        </:Whitespace>
-        <field>
-          <WORD>
-            <:RegExp>url</:RegExp>
-            <:Whitespace>          </:Whitespace>
-          </WORD>
-        </field>
-        <:Token>=</:Token>
-        <:Whitespace> </:Whitespace>
-        <plain_content>
-          <COMMA_TERMINATED_STRING>{https://en.wikipedia.org/w/index.php?title=Duhem\</COMMA_TERMINATED_STRING>
-        </plain_content>
-        <ZOMBIE__>%</ZOMBIE__>
-      </entry>
-      <ZOMBIE__>
-        E2\%80\%93Quine\_thesis\&amp;oldid=772834991},
-        
-      </ZOMBIE__>
-      <ZOMBIE__>
-          organization = {Wikipedia}
-        
-      </ZOMBIE__>
-      <ZOMBIE__>}</ZOMBIE__>
-    </ZOMBIE__>
+    ZOMBIE__
+      entry
+        :RegExp
+          "@"
+        type
+          WORD
+            "Online"
+        :Token
+          "{"
+        key
+          NO_BLANK_STRING
+            "wikipedia-duhem-quine"
+        :Token
+          ","
+        :Whitespace
+          ""
+          "  "
+        field
+          WORD
+            :RegExp
+              "editor"
+            :Whitespace
+              "       "
+        :Token
+          "="
+        :Whitespace
+          " "
+        content
+          :Token
+            "{"
+          text
+            CONTENT_STRING
+              "Wikipedia"
+          :Token
+            "}"
+        :Token
+          ","
+        :Whitespace
+          ""
+          "  "
+        field
+          WORD
+            :RegExp
+              "title"
+            :Whitespace
+              "        "
+        :Token
+          "="
+        :Whitespace
+          " "
+        content
+          :Token
+            "{"
+          text
+            CONTENT_STRING
+              "Duhem-Quine thesis"
+          :Token
+            "}"
+        :Token
+          ","
+        :Whitespace
+          ""
+          "  "
+        field
+          WORD
+            :RegExp
+              "year"
+            :Whitespace
+              "         "
+        :Token
+          "="
+        :Whitespace
+          " "
+        content
+          :Token
+            "{"
+          text
+            CONTENT_STRING
+              "2017"
+          :Token
+            "}"
+        :Token
+          ","
+        :Whitespace
+          ""
+          "  "
+        field
+          WORD
+            :RegExp
+              "date"
+            :Whitespace
+              "         "
+        :Token
+          "="
+        :Whitespace
+          " "
+        content
+          :Token
+            "{"
+          text
+            CONTENT_STRING
+              "2017-08-19"
+          :Token
+            "}"
+        :Token
+          ","
+        :Whitespace
+          ""
+          "  "
+        field
+          WORD
+            :RegExp
+              "url"
+            :Whitespace
+              "          "
+        :Token
+          "="
+        :Whitespace
+          " "
+        plain_content
+          COMMA_TERMINATED_STRING
+            "{https://en.wikipedia.org/w/index.php?title=Duhem\"
+        ZOMBIE__ `(err "'}' ~ expected, »%E2\%80\%9...« found!"
+          "%"
+      ZOMBIE__
+        "E2\%80\%93Quine\_thesis\&oldid=772834991},"
+        ""
+      ZOMBIE__
+        "  organization = {Wikipedia}"
+        ""
+      ZOMBIE__
+        "}"

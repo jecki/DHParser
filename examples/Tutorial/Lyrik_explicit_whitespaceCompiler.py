@@ -58,7 +58,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class Lyrik_explicit_whitespaceGrammar(Grammar):
     r"""Parser for a Lyrik_explicit_whitespace source file.
     """
-    source_hash__ = "5c2c8a19e31d7d731fac4a0187b44b32"
+    source_hash__ = "10fbc58b65d0fd5a178572b3776456f0"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

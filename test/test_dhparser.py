@@ -31,7 +31,8 @@ sys.path.extend(['../', './'])
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 def system(s: str) -> int:
-    return subprocess.call(s.split(' '), shell=True)
+    # return os.system(s)
+    return subprocess.call(s, shell=True)
 
 class TestDHParserCommandLineTool:
     def setup(self):

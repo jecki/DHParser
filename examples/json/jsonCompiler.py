@@ -62,7 +62,7 @@ class jsonGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "abc885159d84633d94e82c75709c9684"
+    source_hash__ = "ef3108350d5f28b0f32716ad3952316d"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
