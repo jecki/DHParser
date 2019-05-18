@@ -38,41 +38,41 @@ class TestDHParserCommandLineTool:
     def setup(self):
         self.cwd = os.getcwd()
         os.chdir(scriptdir)
-        if not os.path.exists('testdata'):
-            os.mkdir('testdata')
+        if not os.path.exists('test_dhparser_data'):
+            os.mkdir('test_dhparser_data')
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
         self.python = 'python3 ' if system('python3 -V' + self.nulldevice) == 0 else 'python '
 
     def teardown(self):
-        if os.path.exists('testdata/neu/neuServer.py'):
-            system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
-        if os.path.exists('testdata/neu') and os.path.isdir('testdata/neu'):
-            shutil.rmtree('testdata/neu')
-        if os.path.exists('testdata') and not os.listdir('testdata'):
-            os.rmdir('testdata')
+        if os.path.exists('test_dhparser_data/neu/neuServer.py'):
+            system(self.python + 'test_dhparser_data/neu/neuServer.py --stopserver' + self.nulldevice)
+        if os.path.exists('test_dhparser_data/neu') and os.path.isdir('test_dhparser_data/neu'):
+            shutil.rmtree('test_dhparser_data/neu')
+        if os.path.exists('test_dhparser_data') and not os.listdir('test_dhparser_data'):
+            os.rmdir('test_dhparser_data')
         os.chdir(self.cwd)
 
     def test_dhparser(self):
         # test compiler creation and execution
-        system(self.python + '../DHParser/scripts/dhparser.py testdata/neu ' + self.nulldevice)
-        system(self.python + 'testdata/neu/tst_neu_grammar.py ' + self.nulldevice)
-        system(self.python + 'testdata/neu/neuCompiler.py testdata/neu/example.dsl '
-                  '>testdata/neu/example.xml')
-        with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
+        system(self.python + '../DHParser/scripts/dhparser.py test_dhparser_data/neu ' + self.nulldevice)
+        system(self.python + 'test_dhparser_data/neu/tst_neu_grammar.py ' + self.nulldevice)
+        system(self.python + 'test_dhparser_data/neu/neuCompiler.py test_dhparser_data/neu/example.dsl '
+                  '>test_dhparser_data/neu/example.xml')
+        with open('test_dhparser_data/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('<document>') >= 0, xml
-        os.remove('testdata/neu/neuCompiler.py')
-        os.remove('testdata/neu/example.xml')
+        os.remove('test_dhparser_data/neu/neuCompiler.py')
+        os.remove('test_dhparser_data/neu/example.xml')
 
         # test server
-        system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
-        system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl '
-                  '>testdata/neu/example.xml')
-        with open('testdata/neu/example.xml', 'r', encoding='utf-8') as f:
+        system(self.python + 'test_dhparser_data/neu/neuServer.py --stopserver' + self.nulldevice)
+        system(self.python + 'test_dhparser_data/neu/neuServer.py test_dhparser_data/neu/example.dsl '
+                  '>test_dhparser_data/neu/example.xml')
+        with open('test_dhparser_data/neu/example.xml', 'r', encoding='utf-8') as f:
             json = f.read()
         assert json.find('document') >= 0, json
-        system(self.python + 'testdata/neu/neuServer.py testdata/neu/example.dsl ' + self.nulldevice)
-        system(self.python + 'testdata/neu/neuServer.py --stopserver' + self.nulldevice)
+        system(self.python + 'test_dhparser_data/neu/neuServer.py test_dhparser_data/neu/example.dsl ' + self.nulldevice)
+        system(self.python + 'test_dhparser_data/neu/neuServer.py --stopserver' + self.nulldevice)
         pass
 
 

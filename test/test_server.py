@@ -23,12 +23,14 @@ limitations under the License.
 import asyncio
 import json
 import os
+import subprocess
 import sys
 import time
 
 sys.path.extend(['../', './'])
 
 from DHParser.server import Server, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE, asyncio_run
+from DHParser.toolkit import concurrent_ident
 
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -173,6 +175,66 @@ class TestServer:
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
             cs.terminate_server()
+
+
+RUN_SERVER_SCRIPT = """
+def dummy(s: str) -> str:
+    return s
+
+def run_server(host, port):
+    from DHParser.server import Server
+    print('Starting server on %s:%i' % (host, port))
+    server = Server(dummy)
+    server.run_server(host, port)
+
+if __name__ == '__main__':
+    run_server('127.0.0.1', 8888)
+"""
+
+def asyncio_run(coroutine):
+    """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
+    if sys.version_info >= (3, 7):
+        return asyncio.run(coroutine)
+    else:
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coroutine)
+
+class TestSpawning:
+    """Tests spawning a server by starting a script via subprocess.Popen."""
+
+    def setup(self):
+        self.tmpdir = 'tmp_' + concurrent_ident()
+        os.mkdir(self.tmpdir)
+
+    def teardown(self):
+        for fname in os.listdir(self.tmpdir):
+            os.remove(os.path.join(self.tmpdir, fname))
+        os.rmdir(self.tmpdir)
+
+    def test_spawn(self):
+        scriptname = os.path.join(self.tmpdir, 'spawn_server.py')
+        with open(scriptname, 'w') as f:
+            f.write(RUN_SERVER_SCRIPT)
+        subprocess.Popen(['python', scriptname])
+        countdown = 20
+        delay = 0.05
+        connected = False
+        reader, writer = None, None
+        while countdown > 0:
+            try:
+                reader, writer = asyncio_run(asyncio.open_connection('127.0.0.1', 8888))
+                countdown = 0
+                connected = True
+            except ConnectionRefusedError:
+                time.sleep(delay)
+                delay += 0.0
+                countdown -= 1
+        if connected:
+            writer.write(IDENTIFY_REQUEST.encode())
+            data = asyncio_run(reader.read(500))
+            writer.close()
+        print(data.decode())
+
 
 
 if __name__ == "__main__":

@@ -147,7 +147,7 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
     else:
         if loop is None:
             myloop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            asyncio.set_event_loop(myloop)
         else:
             myloop = loop
         result = myloop.run_until_complete(coroutine)
