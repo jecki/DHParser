@@ -42,7 +42,7 @@ from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
-from DHParser.log import log_parsing_history, log_ST, is_logging, logfile_basename
+from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, get_config_value
 
 
@@ -126,7 +126,7 @@ class Compiler:
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
         self._dirty_flag = False
-        self._debug = get_config_value('debug') # type: bool
+        self._debug = get_config_value('debug_compiler') # type: bool
         self._debug_already_compiled = set()  # type: Set[Node]
         self.finalizers = []  # type: List[Callable, Tuple]
 
@@ -221,6 +221,21 @@ class Compiler:
         return result
 
 
+def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
+    """Generates a reasonable logfile-name (without extension) based on
+    the given information.
+    """
+    if is_filename(filename_or_text):
+        return os.path.basename(os.path.splitext(filename_or_text)[0])
+    else:
+        try:
+            name = function_or_class_or_instance.__qualname.__
+        except AttributeError:
+            name = function_or_class_or_instance.__class__.__name__
+        i = name.find('.')
+        return name[:i] + '_out' if i >= 0 else name
+
+
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: Grammar,  # str -> Node (concrete syntax tree (CST))
@@ -261,7 +276,7 @@ def compile_source(source: str,
     """
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
-    log_file_name = logfile_basename(source, compiler)  # type: str
+    log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
 
     # preprocessing
 

@@ -62,7 +62,7 @@ from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS
 __all__ = ('log_dir',
            'logging',
            'is_logging',
-           'logfile_basename',
+           'append_log',
            'clear_logs',
            'HistoryRecord',
            'log_ST',
@@ -151,19 +151,13 @@ def is_logging() -> bool:
         return False
 
 
-def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
-    """Generates a reasonable logfile-name (without extension) based on
-    the given information.
+def append_log(log_name: str, text: str) -> None:
+    """Appends text to the log-file with the name 'log_name' if logging is on.
     """
-    if is_filename(filename_or_text):
-        return os.path.basename(os.path.splitext(filename_or_text)[0])
-    else:
-        try:
-            name = function_or_class_or_instance.__qualname.__
-        except AttributeError:
-            name = function_or_class_or_instance.__class__.__name__
-        i = name.find('.')
-        return name[:i] + '_out' if i >= 0 else name
+    ldir = log_dir()
+    if ldir:
+        with open(os.path.join(ldir, log_name), 'a') as f:
+            f.write(text)
 
 
 def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):

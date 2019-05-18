@@ -178,6 +178,14 @@ class TestServer:
 
 
 RUN_SERVER_SCRIPT = """
+import os
+import sys
+
+path = '.'
+while not 'DHParser' in os.listdir(path) and len(path) < 20:
+    path = os.path.join('..', path)
+sys.path.append(path)
+
 def dummy(s: str) -> str:
     return s
 
@@ -191,22 +199,28 @@ if __name__ == '__main__':
     run_server('127.0.0.1', 8888)
 """
 
-def asyncio_run(coroutine):
-    """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
-    if sys.version_info >= (3, 7):
-        return asyncio.run(coroutine)
-    else:
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(coroutine)
 
 class TestSpawning:
     """Tests spawning a server by starting a script via subprocess.Popen."""
 
+    def stop_server(self):
+        async def send_stop_server():
+            try:
+                reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+                writer.write(STOP_SERVER_REQUEST)
+                _ = await reader.read(1024)
+                writer.close()
+            except ConnectionRefusedError:
+                pass
+        asyncio.run(send_stop_server())
+
     def setup(self):
         self.tmpdir = 'tmp_' + concurrent_ident()
         os.mkdir(self.tmpdir)
+        self.stop_server()
 
     def teardown(self):
+        self.stop_server()
         for fname in os.listdir(self.tmpdir):
             os.remove(os.path.join(self.tmpdir, fname))
         os.rmdir(self.tmpdir)
@@ -215,26 +229,32 @@ class TestSpawning:
         scriptname = os.path.join(self.tmpdir, 'spawn_server.py')
         with open(scriptname, 'w') as f:
             f.write(RUN_SERVER_SCRIPT)
-        subprocess.Popen(['python', scriptname])
-        countdown = 20
-        delay = 0.05
-        connected = False
-        reader, writer = None, None
-        while countdown > 0:
-            try:
-                reader, writer = asyncio_run(asyncio.open_connection('127.0.0.1', 8888))
-                countdown = 0
-                connected = True
-            except ConnectionRefusedError:
-                time.sleep(delay)
-                delay += 0.0
-                countdown -= 1
-        if connected:
-            writer.write(IDENTIFY_REQUEST.encode())
-            data = asyncio_run(reader.read(500))
-            writer.close()
-        print(data.decode())
+        subprocess.Popen(['python3', scriptname])
 
+        async def identify():
+            countdown = 20
+            delay = 0.05
+            connected = False
+            reader, writer = None, None
+            while countdown > 0:
+                try:
+                    reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+                    print(countdown)
+                    countdown = 0
+                    connected = True
+                except ConnectionRefusedError:
+                    time.sleep(delay)
+                    delay += 0.0
+                    countdown -= 1
+            if connected:
+                writer.write(IDENTIFY_REQUEST.encode())
+                data = await reader.read(500)
+                writer.close()
+                return data.decode()
+            return ''
+
+        result = asyncio.run(identify())
+        print(result)
 
 
 if __name__ == "__main__":

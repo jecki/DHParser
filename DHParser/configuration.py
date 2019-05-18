@@ -173,9 +173,10 @@ CONFIG_PRESET['server_default_port'] = 8888
 #
 ########################################################################
 
-# Turn on (costly) debugging functionality.
-# Default value: False
-CONFIG_PRESET['debug'] = False
+# Turn on (costly) debugging functionality for any of the respective
+# modules or subsystems.
+# Default value: always False
+CONFIG_PRESET['debug_compiler'] = False
 
 
 ########################################################################

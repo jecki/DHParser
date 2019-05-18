@@ -54,7 +54,8 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
     cast
 
 from DHParser.syntaxtree import DHParser_JSONEncoder
-from DHParser.toolkit import get_config_value, re
+from DHParser.log import is_logging
+from DHParser.toolkit import get_config_value, GLOBALS, re
 from DHParser.versionnumber import __version__
 
 
@@ -146,15 +147,10 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
         return asyncio.run(coroutine)
     else:
         if loop is None:
-            myloop = asyncio.new_event_loop()
-            asyncio.set_event_loop(myloop)
+            loop = asyncio.get_event_loop()
         else:
             myloop = loop
-        result = myloop.run_until_complete(coroutine)
-        if loop is None:
-            asyncio.set_event_loop(None)
-            myloop.run_until_complete(myloop.shutdown_asyncgens())
-            myloop.close()
+        result = loop.run_until_complete(coroutine)
         return result
 
 
@@ -211,6 +207,8 @@ class Server:
         self.stop_response = ''   # type: str
         self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
         self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
+
+        self.log_file = (self.__class__.__name__ + '.log') if is_logging() else ''  # type: str
 
         self.loop = None  # just for python 3.5 compatibility...
 
