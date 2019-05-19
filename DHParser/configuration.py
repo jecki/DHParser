@@ -181,6 +181,17 @@ CONFIG_PRESET['debug_compiler'] = False
 
 ########################################################################
 #
+# logging support configuration
+#
+########################################################################
+
+# Log server traffic (requests and responses)
+# Default value: False
+CONFIG_PRESET['log_server'] = False
+
+
+########################################################################
+#
 # testing framework configuration
 #
 ########################################################################

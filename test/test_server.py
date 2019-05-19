@@ -30,14 +30,31 @@ import time
 sys.path.extend(['../', './'])
 
 from DHParser.server import Server, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE, asyncio_run
-from DHParser.toolkit import concurrent_ident
+from DHParser.toolkit import concurrent_ident, GLOBALS
 
+# from DHParser.configuration import CONFIG_PRESET
+# GLOBALS.LOGGING = 'LOGS'
+# if not os.path.exists('LOGS'):
+#     os.mkdir('LOGS')
+# CONFIG_PRESET['log_server'] = True
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 
 # def compiler_dummy(src: str, log_dir: str='') -> Tuple[str, str]:
 #     return src
+
+def stop_server():
+    async def send_stop_server():
+        try:
+            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            writer.write(STOP_SERVER_REQUEST)
+            _ = await reader.read(1024)
+            writer.close()
+        except ConnectionRefusedError:
+            pass
+
+    asyncio.run(send_stop_server())
 
 
 class TestServer:
@@ -46,6 +63,7 @@ class TestServer:
     #     cs.run_server()
 
     def setup(self):
+        stop_server()
         self.windows = sys.platform.lower().find('win') >= 0
 
     def compiler_dummy(self, src: str) -> str:
@@ -191,7 +209,7 @@ def dummy(s: str) -> str:
 
 def run_server(host, port):
     from DHParser.server import Server
-    print('Starting server on %s:%i' % (host, port))
+    # print('Starting server on %s:%i' % (host, port))
     server = Server(dummy)
     server.run_server(host, port)
 
@@ -203,24 +221,13 @@ if __name__ == '__main__':
 class TestSpawning:
     """Tests spawning a server by starting a script via subprocess.Popen."""
 
-    def stop_server(self):
-        async def send_stop_server():
-            try:
-                reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
-                writer.write(STOP_SERVER_REQUEST)
-                _ = await reader.read(1024)
-                writer.close()
-            except ConnectionRefusedError:
-                pass
-        asyncio.run(send_stop_server())
-
     def setup(self):
         self.tmpdir = 'tmp_' + concurrent_ident()
         os.mkdir(self.tmpdir)
-        self.stop_server()
+        stop_server()
 
     def teardown(self):
-        self.stop_server()
+        stop_server()
         for fname in os.listdir(self.tmpdir):
             os.remove(os.path.join(self.tmpdir, fname))
         os.rmdir(self.tmpdir)
@@ -239,7 +246,7 @@ class TestSpawning:
             while countdown > 0:
                 try:
                     reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
-                    print(countdown)
+                    # print(countdown)
                     countdown = 0
                     connected = True
                 except ConnectionRefusedError:
@@ -254,7 +261,7 @@ class TestSpawning:
             return ''
 
         result = asyncio.run(identify())
-        print(result)
+        # print(result)
 
 
 if __name__ == "__main__":

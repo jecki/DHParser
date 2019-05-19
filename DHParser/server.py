@@ -54,7 +54,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
     cast
 
 from DHParser.syntaxtree import DHParser_JSONEncoder
-from DHParser.log import is_logging
+from DHParser.log import create_log, append_log
 from DHParser.toolkit import get_config_value, GLOBALS, re
 from DHParser.versionnumber import __version__
 
@@ -208,7 +208,10 @@ class Server:
         self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
         self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
 
-        self.log_file = (self.__class__.__name__ + '.log') if is_logging() else ''  # type: str
+        if get_config_value('log_server'):
+            self.log_file = create_log('%s_%s.log' % (self.__class__.__name__, hex(id(self))[2:])) # type: str
+        else:
+            self.log_file = ''
 
         self.loop = None  # just for python 3.5 compatibility...
 
@@ -268,6 +271,15 @@ class Server:
                 self.pp_executor = ProcessPoolExecutor()
                 await execute(self.pp_executor, method, params)
 
+        def respond(response: bytes):
+            nonlocal writer
+            if self.log_file:
+                append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n')
+            writer.write(response)
+
+        if self.log_file:
+            append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n')
+
         if data.startswith(b'GET'):
             # HTTP request
             m = re.match(RE_GREP_URL, data)
@@ -275,7 +287,7 @@ class Server:
             if m:
                 func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
                 if func_name.encode() == STOP_SERVER_REQUEST:
-                    writer.write(http_response(ONELINER_HTML.format(line=self.stop_response)))
+                    respond(http_response(ONELINER_HTML.format(line=self.stop_response)))
                     kill_switch = True
                 else:
                     func = self.rpc_table.get(func_name,
@@ -284,20 +296,20 @@ class Server:
                     await run(func.__name__, func, (argument,) if argument else ())
                     if rpc_error is None:
                         if isinstance(result, str):
-                            writer.write(http_response(result))
+                            respond(http_response(result))
                         else:
-                            writer.write(http_response(
+                            respond(http_response(
                                 json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
                     else:
-                        writer.write(http_response(rpc_error[1]))
+                        respond(http_response(rpc_error[1]))
 
         elif not re.match(RE_IS_JSONRPC, data):
             # plain data
             if oversized:
-                writer.write("Source code too large! Only %i MB allowed"
+                respond("Source code too large! Only %i MB allowed"
                              % (self.max_source_size // (1024 ** 2)))
             elif data.startswith(STOP_SERVER_REQUEST):
-                writer.write(self.stop_response.encode())
+                respond(self.stop_response.encode())
                 kill_switch = True
             else:
                 m = re.match(RE_FUNCTION_CALL, data)
@@ -316,11 +328,11 @@ class Server:
                 await run(func_name, func, argument)
                 if rpc_error is None:
                     if isinstance(result, str):
-                        writer.write(result.encode())
+                        respond(result.encode())
                     else:
-                        writer.write(json.dumps(result, cls=DHParser_JSONEncoder).encode())
+                        respond(json.dumps(result, cls=DHParser_JSONEncoder).encode())
                 else:
-                    writer.write(rpc_error[1].encode())
+                    respond(rpc_error[1].encode())
 
         else:
             # JSON RPC
@@ -367,9 +379,9 @@ class Server:
             if rpc_error is None:
                 if json_id is not None:
                     json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                    writer.write(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
+                    respond(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
             else:
-                writer.write(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
+                respond(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                               % (rpc_error[0], rpc_error[1], json_id)).encode())
         await writer.drain()
         if kill_switch:

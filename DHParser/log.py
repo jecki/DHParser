@@ -62,6 +62,7 @@ from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS
 __all__ = ('log_dir',
            'logging',
            'is_logging',
+           'create_log',
            'append_log',
            'clear_logs',
            'HistoryRecord',
@@ -121,6 +122,7 @@ def log_dir() -> Union[str, bool]:
     return dirname
 
 
+#TODO: Remove this context manager, not really useful...s
 @contextlib.contextmanager
 def logging(dirname="LOGS"):
     """Context manager. Log files within this context will be stored in
@@ -151,17 +153,34 @@ def is_logging() -> bool:
         return False
 
 
-def append_log(log_name: str, text: str) -> None:
-    """Appends text to the log-file with the name 'log_name' if logging is on.
+def create_log(log_name: str) -> str:
+    """
+    Creates a new log file in the log directory. If a file with
+    the same name already exists, it will be overwritten.
+    :param log_name: The file name of the log file to be created
+    :return: the file name of the log file.
+    """
+    ldir = log_dir()
+    if ldir:
+        with open(os.path.join(ldir, log_name), 'w') as f:
+            f.write('LOG-FILE: ' + log_name + '\n\n')
+    return log_name
+
+
+def append_log(log_name: str, *strings) -> None:
+    """
+    Appends one or more strings to the log-file with the name 'log_name'.
     """
     ldir = log_dir()
     if ldir:
         with open(os.path.join(ldir, log_name), 'a') as f:
-            f.write(text)
+            for text in strings:
+                f.write(text)
 
 
 def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
-    """Removes all logs from the log-directory and removes the
+    """
+    Removes all logs from the log-directory and removes the
     log-directory if it is empty.
     """
     log_dirname = log_dir()
