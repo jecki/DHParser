@@ -23,6 +23,7 @@ limitations under the License.
 import asyncio
 import json
 import os
+import platform
 import subprocess
 import sys
 import time
@@ -236,7 +237,9 @@ class TestSpawning:
         scriptname = os.path.join(self.tmpdir, 'spawn_server.py')
         with open(scriptname, 'w') as f:
             f.write(RUN_SERVER_SCRIPT)
-        subprocess.Popen(['python3', scriptname])
+        nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
+        interpreter = 'python3' if os.system('python3 -V' + nulldevice) == 0 else 'python'
+        subprocess.Popen([interpreter, scriptname])
 
         async def identify():
             countdown = 20
