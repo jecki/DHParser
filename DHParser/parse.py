@@ -382,13 +382,13 @@ class Parser:
                 # remaining = len(rest)
                 if grammar.moving_forward__:
                     record = HistoryRecord(grammar.call_stack__, node, text,
-                                           location, grammar.line_col__(text))
+                                           grammar.line_col__(text))
                     grammar.history__.append(record)
                 elif error:
                     # error_nid = id(node)  # type: int
                     # if error_nid in grammar.tree__.error_nodes:
                     record = HistoryRecord(grammar.call_stack__, node, text,
-                                           location, grammar.line_col__(text),
+                                           grammar.line_col__(text),
                                            [error])
                     grammar.history__.append(record)
                 grammar.moving_forward__ = False
@@ -933,21 +933,19 @@ class Grammar:
                 return (tag_name in self and isinstance(self[tag_name], Lookahead)
                         or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
 
-            for h in reversed(self.history__[:-2]):
+            for h in reversed(self.history__[:-1]):
                 for tn in h.call_stack:
-                    if is_lookahead(tn):
-                        if h.status == HistoryRecord.MATCH:
-                            print(h.call_stack, h.node.pos if h.node else -1, h.line_col)
+                    if is_lookahead(tn) and h.status == HistoryRecord.MATCH:
+                        print(h.call_stack, (h.node.pos - len(h.node)) if h.node else -1, h.line_col)
 
             last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
-                    and any(self.history__[i].status == HistoryRecord.MATCH
-                            and ((self.history__[i].node.pos + len(self.history__[i].node))
-                                 if self.history__[i].node else 0) >= len(self.document__)
-                            and any(is_lookahead(tn)
-                                    and self.history__[i].node.pos == len(self.document__)
-                                    for tn in self.history__[i].call_stack)
-                            for i in range(-2, -len(self.history__)-1, -1))
+                    and any(h.status == HistoryRecord.MATCH
+                            and ((h.node.pos)
+                                 if h.node else 0) >= len(self.document__)
+                            and any(is_lookahead(tn) and h.node.pos == len(self.document__)
+                                    for tn in h.call_stack)
+                            for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
         if self._dirty_flag__:
@@ -1012,7 +1010,7 @@ class Grammar:
                         if h.node and h.node.tag_name != EMPTY_NODE.tag_name:
                             break
                     else:
-                        h = HistoryRecord([], None, StringView(''), 0, (0, 0))
+                        h = HistoryRecord([], None, StringView(''), (0, 0))
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
