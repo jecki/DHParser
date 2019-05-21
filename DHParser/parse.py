@@ -929,13 +929,22 @@ class Grammar:
             test-case-artifact and no real failure.
             (See test/test_testing.TestLookahead !)
             """
+            def is_lookahead(tag_name: str) -> bool:
+                return (tag_name in self and isinstance(self[tag_name], Lookahead)
+                        or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
+
+            for h in reversed(self.history__[:-2]):
+                for tn in h.call_stack:
+                    if is_lookahead(tn):
+                        if h.status == HistoryRecord.MATCH:
+                            print(h.call_stack, h.node.pos if h.node else -1, h.line_col)
+
             last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
                     and any(self.history__[i].status == HistoryRecord.MATCH
                             and ((self.history__[i].node.pos + len(self.history__[i].node))
                                  if self.history__[i].node else 0) >= len(self.document__)
-                            and any((tn in self and isinstance(self[tn], Lookahead)
-                                     or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead))
+                            and any(is_lookahead(tn)
                                     and self.history__[i].node.pos == len(self.document__)
                                     for tn in self.history__[i].call_stack)
                             for i in range(-2, -len(self.history__)-1, -1))
