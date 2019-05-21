@@ -362,6 +362,7 @@ class Parser:
                     visited[location] = (None, rest)
             else:
                 # assert node._pos < 0 or node == EMPTY_NODE
+                # if node._pos != EMPTY_NODE:
                 node._pos = location
                 # assert node._pos >= 0 or node == EMPTY_NODE, \
                 #     str("%i < %i" % (grammar.document_length__, location))
@@ -933,8 +934,9 @@ class Grammar:
                     and any(self.history__[i].status == HistoryRecord.MATCH
                             and ((self.history__[i].node.pos + len(self.history__[i].node))
                                  if self.history__[i].node else 0) >= len(self.document__)
-                            and any(tn in self and isinstance(self[tn], Lookahead)
-                                    or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead)
+                            and any((tn in self and isinstance(self[tn], Lookahead)
+                                     or tn[0] == ':' and issubclass(eval(tn[1:]), Lookahead))
+                                    and self.history__[i].node.pos == len(self.document__)
                                     for tn in self.history__[i].call_stack)
                             for i in range(-2, -len(self.history__)-1, -1))
 
@@ -997,8 +999,11 @@ class Grammar:
                         error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
-                    h = HistoryRecord.most_advanced_match(self.history__) \
-                        if self.history__ else HistoryRecord([], None, StringView(''), (0, 0))
+                    for h in reversed(self.history__):
+                        if h.node and h.node.tag_name != EMPTY_NODE.tag_name:
+                            break
+                    else:
+                        h = HistoryRecord([], None, StringView(''), (0, 0))
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
@@ -1023,9 +1028,9 @@ class Grammar:
                     #     if record.node and record.node._pos < 0:
                     #         record.node.with_pos(0)
                     # print(self.call_stack__)
-                    record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest,
-                                           self.line_col__(rest))
-                    self.history__.append(record)
+                    # record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest,
+                    #                        self.line_col__(rest))
+                    # self.history__.append(record)
                     # stop history tracking when parser returned too early
                     self.history_tracking__ = False
         if stitches:

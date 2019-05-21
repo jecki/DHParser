@@ -478,6 +478,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
+                print(test_name, cst.errors_sorted)
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
