@@ -200,3 +200,19 @@ CONFIG_PRESET['log_server'] = False
 # Python multiprocessing module
 # Default value: True
 CONFIG_PRESET['test_parallelization'] = True
+
+# Employs heuristics to allow lookahead-based parsers to pass unit-test
+# in case a reported error may only be due to the fact that the test
+# string a) either did include a substring for a lookahead check, the
+# was then left over when parsing stopped (which would usually result
+# in a "parser stopped before end"-error) or b) did not include a 
+# substring expected by a lookahead check as this is not part of the
+# sequence that the tested parser should return in form of a concrete
+# syntax-tree. (This would otherwise result in a 'parser did not match'-
+# error.)
+# Beware that a) these heuristics can fail, so that certain 
+# test-failures may fail to be reported and b) the abstract-syntax-trees
+# resulting from parsers that contain lookahead checks may have a 
+# structure that would not occur outside the testing-environment. 
+# Default value: True
+CONFIG_PRESET['test_supress_lookahead_failures'] = True

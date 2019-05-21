@@ -350,6 +350,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         This is required for testing of parsers that put a lookahead
         operator at the end. See test_testing.TestLookahead.
         """
+        if not get_config_value('test_supress_lookahead_failures'):
+            return False
         raw_errors = syntax_tree.errors_sorted
         is_artifact = ({e.code for e in raw_errors} <=
                         {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
@@ -478,7 +480,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
-                print(test_name, cst.errors_sorted)
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
