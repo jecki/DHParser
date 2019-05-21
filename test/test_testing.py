@@ -313,8 +313,8 @@ class TestLookahead:
         gr = self.grammar_fac()
         # Case 1: Lookahead string is part of the test case; parser fails but for the lookahead
         result = gr(self.cases['category']['match'][1], 'category', True)
-        assert any(e.code in (Error.PARSER_LOOKAHEAD_MATCH_ONLY,
-                              Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD)
+        assert any(e.code in (Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
+                              Error.PARSER_LOOKAHEAD_MATCH_ONLY)
                    for e in result.errors)
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
         result = gr(self.cases['category']['match'][2], 'category', True)

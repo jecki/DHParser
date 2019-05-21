@@ -968,7 +968,7 @@ class Grammar:
                     self.tree__.new_error(
                         result, 'Parser "%s" only did not match empty document '
                                 'because of lookahead' % str(parser),
-                        Error.PARSER_LOOKAHEAD_MATCH_ONLY)
+                        Error.PARSER_LOOKAHEAD_FAILURE_ONLY)
                 else:
                     self.tree__.new_error(
                         result, 'Parser "%s" did not match empty document.' % str(parser),
@@ -991,7 +991,7 @@ class Grammar:
                     if lookahead_failure_only(parser):
                         error_msg = 'Parser "%s" only did not match because of lookahead! ' \
                                     % str(parser) + err_info
-                        error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
+                        error_code = Error.PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
                         error_msg = 'Parser "%s" did not match!' % str(parser) + err_info
                         error_code = Error.PARSER_DID_NOT_MATCH
@@ -1002,7 +1002,7 @@ class Grammar:
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
-                        error_code = Error.PARSER_STOPPED_EXCEPT_FOR_LOOKAHEAD
+                        error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
                         error_msg = "Parser stopped before end" \
