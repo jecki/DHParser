@@ -257,6 +257,12 @@ class HistoryRecord:
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
 
+    def __repr__(self):
+        return 'HistoryRecord(%s, %s, %s, %s, %s)' % \
+               (repr(self.call_stack), repr(self.node), repr(self.text),
+                repr(self.line_col), repr(self.errors))
+
+
     def as_tuple(self) -> 'Snapshot':
         """
         Returns history record formatted as a snapshot tuple.

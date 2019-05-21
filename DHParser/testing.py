@@ -351,11 +351,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         operator at the end. See test_testing.TestLookahead.
         """
         raw_errors = syntax_tree.errors_sorted
-        is_artifact = ((2 <= len(raw_errors) == 3  # case 1:  superfluous data for lookahead
-                        and {e.code for e in raw_errors} <=
+        is_artifact = ({e.code for e in raw_errors} <=
                         {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
                          # Error.PARSER_STOPPED_BEFORE_END,
-                         Error.PARSER_LOOKAHEAD_MATCH_ONLY})
+                         Error.PARSER_LOOKAHEAD_MATCH_ONLY}
                        or (len(raw_errors) == 1
                            and (raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
                                 #  case 2:  mandatory lookahead failure at end of text

@@ -131,6 +131,9 @@ class StringView:  # collections.abc.Sized
         self._fullstring = self._text[self._begin:self._end]
         return self._fullstring
 
+    def __repr__(self) -> str:
+        return repr(str(self))
+
     def __eq__(self, other) -> bool:
         # PERFORMANCE WARNING: This creates copies of the strings
         return len(other) == len(self) and str(self) == str(other)
