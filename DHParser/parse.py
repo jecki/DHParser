@@ -382,13 +382,13 @@ class Parser:
                 # remaining = len(rest)
                 if grammar.moving_forward__:
                     record = HistoryRecord(grammar.call_stack__, node, text,
-                                           grammar.line_col__(text))
+                                           location, grammar.line_col__(text))
                     grammar.history__.append(record)
                 elif error:
                     # error_nid = id(node)  # type: int
                     # if error_nid in grammar.tree__.error_nodes:
                     record = HistoryRecord(grammar.call_stack__, node, text,
-                                           grammar.line_col__(text),
+                                           location, grammar.line_col__(text),
                                            [error])
                     grammar.history__.append(record)
                 grammar.moving_forward__ = False
@@ -1012,7 +1012,7 @@ class Grammar:
                         if h.node and h.node.tag_name != EMPTY_NODE.tag_name:
                             break
                     else:
-                        h = HistoryRecord([], None, StringView(''), (0, 0))
+                        h = HistoryRecord([], None, StringView(''), 0, (0, 0))
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."

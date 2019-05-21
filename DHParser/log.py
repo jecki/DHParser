@@ -216,7 +216,7 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'text', 'line_col', 'errors')
+    __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors')
 
     MATCH = "MATCH"
     ERROR = "ERROR"
@@ -245,14 +245,14 @@ class HistoryRecord:
     def __init__(self, call_stack: List[str],
                  node: Optional[Node],
                  text: StringView,
-                 # pos: int,
+                 pos: int,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         self.call_stack = [tn for tn in call_stack if tn != ":Forward"]  # type: List[str]
         self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
-        # self.pos = pos                  # type: int
+        self.pos = pos                  # type: int
         self.line_col = line_col        # type: Tuple[int, int]
         self.errors = errors            # type: List[Error]
 
