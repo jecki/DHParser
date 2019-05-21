@@ -934,12 +934,10 @@ class Grammar:
             def is_lookahead(tag_name: str) -> bool:
                 return (tag_name in self and isinstance(self[tag_name], Lookahead)
                         or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
-
-            for h in reversed(self.history__[:-1]):
-                for tn, pos in h.call_stack:
-                    if is_lookahead(tn) and h.status == HistoryRecord.MATCH:
-                        print(h.call_stack, pos, h.line_col)
-
+            # for h in reversed(self.history__[:-1]):
+            #     for tn, pos in h.call_stack:
+            #         if is_lookahead(tn) and h.status == HistoryRecord.MATCH:
+            #             print(h.call_stack, pos, h.line_col)
             last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
                     and any(h.status == HistoryRecord.MATCH
