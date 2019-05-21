@@ -966,8 +966,8 @@ class Grammar:
                 result = Node(ZOMBIE_TAG, '').with_pos(0)
                 if lookahead_failure_only(parser):
                     self.tree__.new_error(
-                        result, 'Parser "%s" did not match empty document except for lookahead'
-                                % str(parser),
+                        result, 'Parser "%s" only did not match empty document '
+                                'because of lookahead' % str(parser),
                         Error.PARSER_LOOKAHEAD_MATCH_ONLY)
                 else:
                     self.tree__.new_error(
@@ -989,10 +989,11 @@ class Grammar:
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
-                        error_msg = 'Parser did not match except for lookahead! ' + err_info
+                        error_msg = 'Parser "%s" only did not match because of lookahead! ' \
+                                    % str(parser) + err_info
                         error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
                     else:
-                        error_msg = 'Parser did not match!' + err_info
+                        error_msg = 'Parser "%s" did not match!' % str(parser) + err_info
                         error_code = Error.PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
