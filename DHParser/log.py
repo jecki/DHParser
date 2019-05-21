@@ -248,7 +248,7 @@ class HistoryRecord:
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [tn for tn in call_stack if tn != ":Forward"]  # type: List[str]
+        self.call_stack = [(tn, pos) for tn, pos in call_stack if tn != ":Forward"]  # type: List[str]
         self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
@@ -313,7 +313,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join(self.call_stack)
+        return "->".join(tag_name for tag_name, _ in self.call_stack)
 
     @property
     def status(self) -> str:

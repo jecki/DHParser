@@ -297,9 +297,9 @@ class Parser:
 
             history_tracking__ = grammar.history_tracking__
             if history_tracking__:
-                grammar.call_stack__.append(self.repr if self.tag_name in
-                                                         (':RegExp', ':Token', ':DropToken')
-                                            else self.tag_name)
+                grammar.call_stack__.append(
+                    (self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
+                     else self.tag_name, location))
                 grammar.moving_forward__ = True
                 error = None
 
@@ -701,7 +701,9 @@ class Grammar:
                 location to which the parser backtracks. This is done by
                 calling method :func:`rollback_to__(location)`.
 
-        call_stack__:  A stack of the tag names of all parsers that have been called.
+        call_stack__:  A stack of the tag names and locations of all parsers
+                in the call chain to the currently processed parser during
+                parsing. The call stack can be thought of as a breadcrumb trail.
                 This is required for recording the parser history (for debugging)
                 and, eventually, i.e. one day in the future, for tracing through
                 the parsing process.
@@ -854,7 +856,7 @@ class Grammar:
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
-        self.call_stack__ = []                # type: List[str]
+        self.call_stack__ = []                # type: List[str, int]  # tag_name, location
         # snapshots of call stacks
         self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
@@ -934,17 +936,15 @@ class Grammar:
                         or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
 
             for h in reversed(self.history__[:-1]):
-                for tn in h.call_stack:
+                for tn, pos in h.call_stack:
                     if is_lookahead(tn) and h.status == HistoryRecord.MATCH:
-                        print(h.call_stack, (h.node.pos - len(h.node)) if h.node else -1, h.line_col)
+                        print(h.call_stack, pos, h.line_col)
 
             last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
                     and any(h.status == HistoryRecord.MATCH
-                            and ((h.node.pos)
-                                 if h.node else 0) >= len(self.document__)
-                            and any(is_lookahead(tn) and h.node.pos == len(self.document__)
-                                    for tn in h.call_stack)
+                            and any(is_lookahead(tn) and location >= len(self.document__)
+                                    for tn, location in h.call_stack)
                             for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
