@@ -35,6 +35,7 @@ compiler object.
 """
 
 import copy
+import os
 from typing import Any, Optional, Tuple, List, cast
 
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
@@ -43,7 +44,7 @@ from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, get_config_value
+from DHParser.toolkit import load_if_file, is_filename, get_config_value
 
 
 __all__ = ('CompilerError',
@@ -229,7 +230,7 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
         return os.path.basename(os.path.splitext(filename_or_text)[0])
     else:
         try:
-            name = function_or_class_or_instance.__qualname.__
+            name = function_or_class_or_instance.__qualname__
         except AttributeError:
             name = function_or_class_or_instance.__class__.__name__
         i = name.find('.')
