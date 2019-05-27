@@ -538,7 +538,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
-        Returns the first index of the child that fulfills the criteriuon
+        Returns the first index of the child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is
         restricted to the children with indices from the half-open interval
         [start:end[. If no such child exists a ValueError is raised.
@@ -1174,6 +1174,10 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 level = 1
                 k = 1
                 while level > 0:
+                    if s[k] in ("'", '"'):
+                        k = s.find(str(s[k]), k+1)
+                    if k < 0:
+                        raise IndexError()
                     if s[k] == '(':
                         level += 1
                     elif s[k] == ')':

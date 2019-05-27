@@ -332,7 +332,12 @@ class TestNodeFind:
 
 class TestSerialization:
     def test_sxpr_roundtrip(self):
-        pass
+        sxpr = ('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
+                '(Anker "interdico_2") (BelegLemma "inter.|titente") (L " ") (Zusatz "var. l.") '
+                '(TEXT ") Deo."))')
+        tree = parse_sxpr(sxpr)
+        assert flatten_sxpr(tree.as_sxpr()) == sxpr
+
 
     def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')
