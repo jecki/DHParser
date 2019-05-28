@@ -144,6 +144,7 @@ class Compiler:
         A finalization method that is called after compilation has finished and
         after all tasks from the finalizers stack have been executed
         """
+        pass
 
     def __call__(self, root: RootNode) -> Any:
         """
@@ -164,6 +165,7 @@ class Compiler:
         while self.finalizers:
             task, parameters = self.finalizers.pop()
             task(*parameters)
+        self.finalize()
         return result
 
     # Obsolete, because never used...
