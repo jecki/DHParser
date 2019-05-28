@@ -161,6 +161,8 @@ class TestNode:
         tree['d'].result = "x"
         assert not tree.equals(tree_copy)
         assert tree_copy.equals(parse_sxpr('(a (b c) (d (e f) (h i)))'))
+        print(tree.as_sxpr())
+        print(tree.attr)
         assert tree.equals(parse_sxpr('(a (b c) (d x))'))
 
         # this also checks for errors equality...
