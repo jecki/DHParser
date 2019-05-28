@@ -65,7 +65,7 @@ class Error:
     # error levels
 
     NO_ERROR = ErrorCode(0)
-    MESSAGE  = ErrorCode(1)
+    NOTICE   = ErrorCode(1)
     WARNING  = ErrorCode(100)
     ERROR    = ErrorCode(1000)
     FATAL    = ErrorCode(10000)
