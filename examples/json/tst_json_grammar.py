@@ -8,15 +8,15 @@ import sys
 
 LOGGING = False
 
-sys.path.extend(['.', '../..'])
-
 scriptpath = os.path.dirname(__file__)
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '..\..'))
+if dhparserdir not in sys.path:
+    sys.path.append(dhparserdir)
 
 try:
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
-    from DHParser.toolkit import set_config_value
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -32,7 +32,7 @@ def recompile_grammar(grammar_src, force):
                 notify=lambda: print('recompiling ' + grammar_src)):
             print('\nErrors while recompiling "%s":' % grammar_src +
                   '\n--------------------------------------\n\n')
-            with open('json_ebnf_ERRORS.txt') as f:
+            with open('json_ebnf_ERRORS.txt', encoding='utf-8') as f:
                 print(f.read())
             sys.exit(1)
 
@@ -42,7 +42,7 @@ def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
         error_report = testing.grammar_suite(
             os.path.join(scriptpath, 'grammar_tests'),
             get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report=True, verbose=True)
+            fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 
@@ -66,7 +66,6 @@ if __name__ == '__main__':
                           force=False)
         sys.path.append('.')
         from jsonCompiler import get_grammar, get_transformer
-        # set_config_value('test_parallelization', False)
         error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')

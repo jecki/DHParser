@@ -201,7 +201,6 @@ def get_compiler() -> jsonCompiler:
 #
 #######################################################################
 
-
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
