@@ -153,7 +153,10 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
                 loop = asyncio.new_event_loop()
         else:
             myloop = loop
-        result = loop.run_until_complete(coroutine)
+        try:
+            result = loop.run_until_complete(coroutine)
+        except ConnectionResetError:
+            result = None
         return result
 
 

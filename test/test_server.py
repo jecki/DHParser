@@ -42,13 +42,15 @@ from DHParser.toolkit import concurrent_ident, GLOBALS
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 
+TEST_PORT = 8889
+
 # def compiler_dummy(src: str, log_dir: str='') -> Tuple[str, str]:
 #     return src
 
 def stop_server():
     async def send_stop_server():
         try:
-            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(STOP_SERVER_REQUEST)
             _ = await reader.read(1024)
             writer.close()
@@ -77,14 +79,14 @@ class TestServer:
     def test_server_proces(self):
         """Basic Test of server module."""
         async def compile_remote(src):
-            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(src.encode())
             data = await reader.read(500)
             writer.close()
             assert data.decode() == "Test", data.decode()
         cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
-            cs.spawn_server('127.0.0.1', 8888)
+            cs.spawn_server('127.0.0.1', TEST_PORT)
             asyncio_run(compile_remote('Test'))
         finally:
             cs.terminate_server()
@@ -92,7 +94,7 @@ class TestServer:
     def test_indentify(self):
         """Test server's 'identify/'-command."""
         async def send_request(request):
-            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(request.encode() if isinstance(request, str) else request)
             data = await reader.read(500)
             writer.close()
@@ -100,7 +102,7 @@ class TestServer:
 
         cs = Server(self.compiler_dummy)
         try:
-            cs.spawn_server('127.0.0.1', 8888)
+            cs.spawn_server('127.0.0.1', TEST_PORT)
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
             assert result.startswith('DHParser'), result
         finally:
@@ -110,7 +112,7 @@ class TestServer:
         """Test different ways of sending a termination message to server:
         http-request, plain-text and json-rpc."""
         async def terminate_server(termination_request, expected_response):
-            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(termination_request)
             data = await reader.read(500)
             writer.close()
@@ -119,23 +121,23 @@ class TestServer:
 
         cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
-            cs.spawn_server('127.0.0.1', 8888)
+            cs.spawn_server('127.0.0.1', TEST_PORT)
             asyncio_run(terminate_server(STOP_SERVER_REQUEST,
-                                         b'DHParser server at 127.0.0.1:8888 stopped!'))
+                                         b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
 
-            cs.spawn_server('127.0.0.1', 8888)
+            cs.spawn_server('127.0.0.1', TEST_PORT)
             asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
-                                         b'DHParser server at 127.0.0.1:8888 stopped!'))
+                                         b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
 
-            cs.spawn_server('127.0.0.1', 8888)
+            cs.spawn_server('127.0.0.1', TEST_PORT)
             jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
                                   'id': 1})
             asyncio_run(terminate_server(jsonrpc.encode(),
-                                         b'DHParser server at 127.0.0.1:8888 stopped!'))
+                                         b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             cs.wait_for_termination()
             assert cs.stage.value == SERVER_OFFLINE
         finally:
@@ -152,7 +154,7 @@ class TestServer:
 
         async def call_remote(argument):
             sequence.append(argument)
-            reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(argument.encode())
             sequence.append((await reader.read(500)).decode())
             writer.close()
@@ -166,7 +168,7 @@ class TestServer:
                         cpu_bound=frozenset(['long_running']),
                         blocking=frozenset())
             try:
-                cs.spawn_server('127.0.0.1', 8888)
+                cs.spawn_server('127.0.0.1', TEST_PORT)
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -177,7 +179,7 @@ class TestServer:
                         blocking=frozenset(['long_running']))
             try:
                 sequence = []
-                cs.spawn_server('127.0.0.1', 8888)
+                cs.spawn_server('127.0.0.1', TEST_PORT)
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW]
             finally:
@@ -188,7 +190,7 @@ class TestServer:
                     blocking=frozenset())
         try:
             sequence = []
-            cs.spawn_server('127.0.0.1', 8888)
+            cs.spawn_server('127.0.0.1', TEST_PORT)
             asyncio_run(run_tasks())
             # if run asyncronously, order os results is arbitrary
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
@@ -215,8 +217,8 @@ def run_server(host, port):
     server.run_server(host, port)
 
 if __name__ == '__main__':
-    run_server('127.0.0.1', 8888)
-"""
+    run_server('127.0.0.1', {TEST_PORT})
+""".format(TEST_PORT=TEST_PORT)
 
 
 class TestSpawning:
@@ -248,7 +250,7 @@ class TestSpawning:
             reader, writer = None, None
             while countdown > 0:
                 try:
-                    reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+                    reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
                     # print(countdown)
                     countdown = 0
                     connected = True

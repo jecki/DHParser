@@ -29,6 +29,7 @@ scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
+DEFAULT_PORT = 8888
 
 config_filename_cache = ''
 
@@ -62,7 +63,7 @@ def retrieve_host_and_port():
     for host and port, in case the temporary config file does not exist.
     """
     host = '127.0.0.1'  # default host
-    port = 8888
+    port = DEFAULT_PORT
     cfg_filename = get_config_filename()
     try:
         with open(cfg_filename) as f:
