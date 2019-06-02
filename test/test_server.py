@@ -55,7 +55,7 @@ def stop_server():
         except ConnectionRefusedError:
             pass
 
-    asyncio.run(send_stop_server())
+    asyncio_run(send_stop_server())
 
 
 class TestServer:
@@ -263,7 +263,7 @@ class TestSpawning:
                 return data.decode()
             return ''
 
-        result = asyncio.run(identify())
+        result = asyncio_run(identify())
         # print(result)
 
 
