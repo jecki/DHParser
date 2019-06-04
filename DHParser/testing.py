@@ -43,7 +43,6 @@ from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.toolkit import GLOBALS, get_config_value, load_if_file, re
 
-
 __all__ = ('unit_from_config',
            'unit_from_json',
            'TEST_READERS',
