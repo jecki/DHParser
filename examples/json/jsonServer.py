@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-"""DSLServer.py - starts a server (if not already running) for the
-                    compilation of DSL
+"""jsonServer.py - starts a server (if not already running) for the
+                    compilation of json
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -29,7 +29,6 @@ scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
-DEFAULT_PORT = 8888
 
 config_filename_cache = ''
 
@@ -63,7 +62,7 @@ def retrieve_host_and_port():
     for host and port, in case the temporary config file does not exist.
     """
     host = '127.0.0.1'  # default host
-    port = DEFAULT_PORT
+    port = 8888
     cfg_filename = get_config_filename()
     try:
         with open(cfg_filename) as f:
@@ -97,11 +96,11 @@ def json_rpc(func, params=[], ID=None) -> str:
 
 def run_server(host, port):
     try:
-        from DSLCompiler import compile_src
+        from jsonCompiler import compile_src
     except ModuleNotFoundError:
-        from tst_DSL_grammar import recompile_grammar
-        recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
-        from DSLCompiler import compile_src
+        from tst_json_grammar import recompile_grammar
+        recompile_grammar(os.path.join(scriptpath, 'json.ebnf'), force=False)
+        from jsonCompiler import compile_src
     from DHParser.server import LanguageServer
     config_filename = get_config_filename()
     try:
@@ -111,8 +110,8 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    DSL_server = LanguageServer({'DSL_compiler': compile_src})
-    DSL_server.run_server(host, port)
+    json_server = LanguageServer({'json_compiler': compile_src})
+    json_server.run_server(host, port)
 
 
 async def send_request(request, host, port):
@@ -151,10 +150,10 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python DSLServer.py --startserver [host] [port]\n'
-          + '    python DSLServer.py --stopserver\n'
-          + '    python DSLServer.py --status\n'
-          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]')
+          + '    python jsonServer.py --startserver [host] [port]\n'
+          + '    python jsonServer.py --stopserver\n'
+          + '    python jsonServer.py --status\n'
+          + '    python jsonServer.py FILENAME.dsl [--host host] [--port port]')
     sys.exit(1)
 
 

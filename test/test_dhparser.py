@@ -72,6 +72,7 @@ class TestDHParserCommandLineTool:
             json = f.read()
         assert json.find('document') >= 0, json
         system(self.python + 'test_dhparser_data/neu/neuServer.py test_dhparser_data/neu/example.dsl ' + self.nulldevice)
+        system(self.python + 'test_dhparser_data/neu/neuServer.py test_dhparser_data/neu/example.dsl ' + self.nulldevice)
         system(self.python + 'test_dhparser_data/neu/neuServer.py --stopserver' + self.nulldevice)
         pass
 

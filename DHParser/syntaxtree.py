@@ -405,18 +405,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # (XML-)attributes ###
 
-    def has_attr(self) -> bool:
+    def has_attr(self, attr: str = '') -> bool:
         """
-        Returns `True`, if the node has any attributes, `False` otherwise.
+        Returns `True`, if the node has the attribute `attr` or,
+        in case `attr` is the empty string, any attributes at all;
+        `False` otherwise.
 
         This function does not create an attribute dictionary, therefore
         it should be preferred to querying node.attr when testing for the
         existence of any attributes.
         """
         try:
-            # if self._xml_attr is not None:
-            #     return True
-            return bool(self._xml_attr)
+            return attr in self._xml_attr if attr else bool(self._xml_attr)
         except AttributeError:
             pass
         return False
@@ -538,7 +538,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
-        Returns the first index of the child that fulfills the criteriuon
+        Returns the first index of the child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is
         restricted to the children with indices from the half-open interval
         [start:end[. If no such child exists a ValueError is raised.
@@ -788,7 +788,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node.pos >= 0:
                 txt.append(' _pos="%i"' % node.pos)
             if root and id(node) in root.error_nodes and not has_reserved_attrs:
-                txt.append(' err="%s"' % ''.join(str(err).replace('"', r'\"')
+                txt.append(' err="%s"' % ''.join(str(err).replace('"', "'")
                                                  for err in root.get_errors(node)))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
@@ -1067,7 +1067,8 @@ class RootNode(Node):
         """
         if not node:
             node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
-        assert node.pos == error.pos or isinstance(node, FrozenNode)
+        else:
+            assert node.pos == error.pos or isinstance(node, FrozenNode)
         self.error_nodes.setdefault(id(node), []).append(error)
         self.error_positions.setdefault(error.pos, set()).add(id(node))
         self.errors.append(error)
@@ -1174,6 +1175,10 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 level = 1
                 k = 1
                 while level > 0:
+                    if s[k] in ("'", '"'):
+                        k = s.find(str(s[k]), k+1)
+                    if k < 0:
+                        raise IndexError()
                     if s[k] == '(':
                         level += 1
                     elif s[k] == ')':

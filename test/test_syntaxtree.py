@@ -99,7 +99,7 @@ class TestParseJSON:
         # json
         json = n.as_json()
         tree = parse_json_syntaxtree(json)
-        print()
+        # print()
 
         # XML
         xml = n.as_xml()
@@ -161,6 +161,8 @@ class TestNode:
         tree['d'].result = "x"
         assert not tree.equals(tree_copy)
         assert tree_copy.equals(parse_sxpr('(a (b c) (d (e f) (h i)))'))
+        #print(tree.as_sxpr())
+        #print(tree.attr)
         assert tree.equals(parse_sxpr('(a (b c) (d x))'))
 
         # this also checks for errors equality...
@@ -332,7 +334,12 @@ class TestNodeFind:
 
 class TestSerialization:
     def test_sxpr_roundtrip(self):
-        pass
+        sxpr = ('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
+                '(Anker "interdico_2") (BelegLemma "inter.|titente") (L " ") (Zusatz "var. l.") '
+                '(TEXT ") Deo."))')
+        tree = parse_sxpr(sxpr)
+        assert flatten_sxpr(tree.as_sxpr()) == sxpr
+
 
     def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')

@@ -164,6 +164,7 @@ class StringView:  # collections.abc.Sized
             return StringView(self._text, self._begin + start, self._begin + stop)
         except AttributeError:
             return StringView(self._text, self._begin + index, self._begin + index + 1)
+            # return self._text[self._begin + index] # leads to type errors
 
     def get_text(self) -> str:
         """Returns the underlying string."""
