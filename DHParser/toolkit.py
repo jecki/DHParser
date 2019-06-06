@@ -478,4 +478,3 @@ try:
 except AttributeError:
     # somebody has already taken care of this !?
     pass
-
