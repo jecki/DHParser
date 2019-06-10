@@ -25,7 +25,7 @@ from DHParser import logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, Token, DropToken, DropWhitespace, \
-    traverse, remove_children_if, is_anonymous, GLOBALS, \
+    traverse, remove_children_if, is_anonymous, THREAD_LOCALS, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -175,12 +175,12 @@ class XMLGrammar(Grammar):
 def get_grammar() -> XMLGrammar:
     """Returns a thread/process-exclusive XMLGrammar-singleton."""
     try:
-        grammar = GLOBALS.XML_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.XML_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.XML_00000001_grammar_singleton = XMLGrammar()
+        THREAD_LOCALS.XML_00000001_grammar_singleton = XMLGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.XML_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.XML_00000001_grammar_singleton
+            THREAD_LOCALS.XML_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.XML_00000001_grammar_singleton
     return grammar
 
 

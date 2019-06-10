@@ -32,7 +32,7 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_nodes, remove_content, remove_brackets, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content, replace_content_by, error_on, recompile_grammar, GLOBALS
+    replace_content, replace_content_by, error_on, recompile_grammar, THREAD_LOCALS
 
 
 #######################################################################
@@ -95,12 +95,12 @@ class LyrikGrammar(Grammar):
 def get_grammar() -> LyrikGrammar:
     """Returns a thread/process-exclusive LyrikGrammar-singleton."""
     try:
-        grammar = GLOBALS.Lyrik_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.Lyrik_00000001_grammar_singleton = LyrikGrammar()
+        THREAD_LOCALS.Lyrik_00000001_grammar_singleton = LyrikGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.Lyrik_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.Lyrik_00000001_grammar_singleton
+            THREAD_LOCALS.Lyrik_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
     return grammar
 
 
@@ -147,10 +147,10 @@ def LyrikTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.Lyrik_1_transformer_singleton
+        transformer = THREAD_LOCALS.Lyrik_1_transformer_singleton
     except AttributeError:
-        GLOBALS.Lyrik_1_transformer_singleton = LyrikTransform()
-        transformer = GLOBALS.Lyrik_1_transformer_singleton
+        THREAD_LOCALS.Lyrik_1_transformer_singleton = LyrikTransform()
+        transformer = THREAD_LOCALS.Lyrik_1_transformer_singleton
     return transformer
 
 
@@ -245,10 +245,10 @@ class LyrikCompiler(Compiler):
 
 def get_compiler() -> LyrikCompiler:
     try:
-        compiler = GLOBALS.Lyrik_1_compiler_singleton
+        compiler = THREAD_LOCALS.Lyrik_1_compiler_singleton
     except AttributeError:
-        GLOBALS.Lyrik_1_compiler_singleton = LyrikCompiler()
-        compiler = GLOBALS.Lyrik_1_compiler_singleton
+        THREAD_LOCALS.Lyrik_1_compiler_singleton = LyrikCompiler()
+        compiler = THREAD_LOCALS.Lyrik_1_compiler_singleton
     return compiler
 
 

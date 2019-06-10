@@ -49,7 +49,7 @@ def run_grammar_tests(glob_pattern):
         error_report = testing.grammar_suite(
             grammar_tests_dir,
             get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report=True, verbose=True)
+            fn_patterns=[glob_pattern], verbose=True)
     return error_report
 
 

@@ -35,7 +35,7 @@ from DHParser import logging, is_filename, load_if_file, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
-    JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS
+    JSON_SERIALIZATION, CONFIG_PRESET, THREAD_LOCALS
 
 
 #######################################################################
@@ -92,12 +92,12 @@ class jsonGrammar(Grammar):
 def get_grammar() -> jsonGrammar:
     """Returns a thread/process-exclusive jsonGrammar-singleton."""
     try:
-        grammar = GLOBALS.json_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.json_00000001_grammar_singleton = jsonGrammar()
+        THREAD_LOCALS.json_00000001_grammar_singleton = jsonGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.json_00000001_grammar_singleton
+            THREAD_LOCALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     return grammar
 
 
@@ -139,10 +139,10 @@ def CreatejsonTransformer() -> TransformationFunc:
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     try:
-        transformer = GLOBALS.json_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.json_00000001_transformer_singleton = CreatejsonTransformer()
-        transformer = GLOBALS.json_00000001_transformer_singleton
+        THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     return transformer
 
 
@@ -188,10 +188,10 @@ class jsonCompiler(Compiler):
 def get_compiler() -> jsonCompiler:
     """Returns a thread/process-exclusive jsonCompiler-singleton."""
     try:
-        compiler = GLOBALS.json_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.json_00000001_compiler_singleton = jsonCompiler()
-        compiler = GLOBALS.json_00000001_compiler_singleton
+        THREAD_LOCALS.json_00000001_compiler_singleton = jsonCompiler()
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     return compiler
 
 

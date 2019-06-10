@@ -57,7 +57,7 @@ from typing import List, Tuple, Union, Optional
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, ZOMBIE_TAG
-from DHParser.toolkit import is_filename, escape_control_characters, GLOBALS
+from DHParser.toolkit import is_filename, escape_control_characters, THREAD_LOCALS
 
 __all__ = ('log_dir',
            'logging',
@@ -97,7 +97,7 @@ def log_dir() -> Union[str, bool]:
     """
     # the try-except clauses in the following are precautions for multithreading
     try:
-        dirname = GLOBALS.LOGGING  # raises a name error if LOGGING is not defined
+        dirname = THREAD_LOCALS.LOGGING  # raises a name error if LOGGING is not defined
         if not dirname:
             raise AttributeError  # raise a name error if LOGGING evaluates to False
     except AttributeError:
@@ -135,20 +135,20 @@ def logging(dirname="LOGS"):
     if dirname and not isinstance(dirname, str):
         dirname = "LOGS"  # be fail tolerant here...
     try:
-        save = GLOBALS.LOGGING
+        save = THREAD_LOCALS.LOGGING
     except AttributeError:
         save = ""
-    GLOBALS.LOGGING = dirname or ""
+    THREAD_LOCALS.LOGGING = dirname or ""
     # if dirname and not os.path.exists(dirname):
     #     os.mkdir(dirname)
     yield
-    GLOBALS.LOGGING = save
+    THREAD_LOCALS.LOGGING = save
 
 
 def is_logging() -> bool:
     """-> True, if logging is turned on."""
     try:
-        return bool(GLOBALS.LOGGING)
+        return bool(THREAD_LOCALS.LOGGING)
     except AttributeError:
         return False
 

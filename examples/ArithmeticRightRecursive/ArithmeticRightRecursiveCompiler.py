@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, THREAD_LOCALS
 
 
 #######################################################################
@@ -107,12 +107,12 @@ class ArithmeticRightRecursiveGrammar(Grammar):
 def get_grammar() -> ArithmeticRightRecursiveGrammar:
     """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
     try:
-        grammar = GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
+        THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.ArithmeticRightRecursive_00000001_grammar_singleton
+            THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
     return grammar
 
 
@@ -151,11 +151,11 @@ def ArithmeticRightRecursiveTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.ArithmeticRightRecursive_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.ArithmeticRightRecursive_00000001_transformer_singleton = \
+        THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton = \
             ArithmeticRightRecursiveTransform()
-        transformer = GLOBALS.ArithmeticRightRecursive_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton
     return transformer
 
 
@@ -193,10 +193,10 @@ class ArithmeticRightRecursiveCompiler(Compiler):
 
 def get_compiler() -> ArithmeticRightRecursiveCompiler:
     try:
-        compiler = GLOBALS.ArithmeticRightRecursive_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.ArithmeticRightRecursive_00000001_compiler_singleton = ArithmeticRightRecursiveCompiler()
-        compiler = GLOBALS.ArithmeticRightRecursive_00000001_compiler_singleton
+        THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton = ArithmeticRightRecursiveCompiler()
+        compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
     return compiler
 
 

@@ -31,10 +31,10 @@ import time
 sys.path.extend(['../', './'])
 
 from DHParser.server import Server, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE, asyncio_run
-from DHParser.toolkit import concurrent_ident, GLOBALS
+from DHParser.toolkit import concurrent_ident, THREAD_LOCALS
 
 # from DHParser.configuration import CONFIG_PRESET
-# GLOBALS.LOGGING = 'LOGS'
+# THREAD_LOCALS.LOGGING = 'LOGS'
 # if not os.path.exists('LOGS'):
 #     os.mkdir('LOGS')
 # CONFIG_PRESET['log_server'] = True

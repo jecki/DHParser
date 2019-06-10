@@ -71,7 +71,7 @@ __all__ = ('typing',
            'sane_parser_name',
            'DHPARSER_DIR',
            'DHPARSER_PARENTDIR',
-           'GLOBALS',
+           'THREAD_LOCALS',
            'get_config_value',
            'set_config_value')
 
@@ -85,7 +85,7 @@ __all__ = ('typing',
 
 DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
 DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
-GLOBALS = threading.local()
+THREAD_LOCALS = threading.local()
 
 
 def get_config_value(key: Hashable) -> Any:
@@ -95,15 +95,15 @@ def get_config_value(key: Hashable) -> Any:
     :return:     the value
     """
     try:
-        cfg = GLOBALS.config
+        cfg = THREAD_LOCALS.config
     except AttributeError:
-        GLOBALS.config = dict()
-        cfg = GLOBALS.config
+        THREAD_LOCALS.config = dict()
+        cfg = THREAD_LOCALS.config
     try:
         return cfg[key]
     except KeyError:
         value = CONFIG_PRESET[key]
-        GLOBALS.config[key] = value
+        THREAD_LOCALS.config[key] = value
         return value
 
 
@@ -117,10 +117,10 @@ def set_config_value(key: Hashable, value: Any):
     :param value:  the value
     """
     try:
-        _ = GLOBALS.config
+        _ = THREAD_LOCALS.config
     except AttributeError:
-        GLOBALS.config = dict()
-    GLOBALS.config[key] = value
+        THREAD_LOCALS.config = dict()
+    THREAD_LOCALS.config[key] = value
 
 
 # global_id_counter = multiprocessing.Value('Q', 0)

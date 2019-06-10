@@ -29,7 +29,7 @@ from DHParser import is_filename, load_if_file, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, collapse, replace_content, remove_nodes, remove_content, remove_brackets, change_tag_name, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    WHITESPACE_PTYPE, TOKEN_PTYPE, GLOBALS
+    WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS
 from DHParser.transform import TransformationFunc
 from DHParser.log import logging
 
@@ -86,12 +86,12 @@ class BibTeXGrammar(Grammar):
 def get_grammar() -> BibTeXGrammar:
     """Returns a thread/process-exclusive BibTeXGrammar-singleton."""
     try:
-        grammar = GLOBALS.BibTeX_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.BibTeX_00000001_grammar_singleton = BibTeXGrammar()
+        THREAD_LOCALS.BibTeX_00000001_grammar_singleton = BibTeXGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.BibTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.BibTeX_00000001_grammar_singleton
+            THREAD_LOCALS.BibTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
     return grammar
 
 

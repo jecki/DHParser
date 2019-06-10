@@ -38,7 +38,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespa
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, get_config_value, unrepr, compile_python_object, DHPARSER_PARENTDIR
+    THREAD_LOCALS, get_config_value, unrepr, compile_python_object, DHPARSER_PARENTDIR
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
@@ -97,7 +97,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
-    JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS 
+    JSON_SERIALIZATION, CONFIG_PRESET, THREAD_LOCALS 
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 
@@ -251,11 +251,11 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
 
 def get_ebnf_grammar() -> EBNFGrammar:
     try:
-        grammar = GLOBALS.ebnf_grammar_singleton
+        grammar = THREAD_LOCALS.ebnf_grammar_singleton
         return grammar
     except AttributeError:
-        GLOBALS.ebnf_grammar_singleton = EBNFGrammar()
-        return GLOBALS.ebnf_grammar_singleton
+        THREAD_LOCALS.ebnf_grammar_singleton = EBNFGrammar()
+        return THREAD_LOCALS.ebnf_grammar_singleton
 
 
 ########################################################################
@@ -302,10 +302,10 @@ def EBNFTransform() -> TransformationFunc:
 
 def get_ebnf_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.EBNF_transformer_singleton
+        transformer = THREAD_LOCALS.EBNF_transformer_singleton
     except AttributeError:
-        GLOBALS.EBNF_transformer_singleton = EBNFTransform()
-        transformer = GLOBALS.EBNF_transformer_singleton
+        THREAD_LOCALS.EBNF_transformer_singleton = EBNFTransform()
+        transformer = THREAD_LOCALS.EBNF_transformer_singleton
     return transformer
 
 
@@ -331,12 +331,12 @@ GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
     """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
     try:
-        grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
+        grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_grammar_singleton = {NAME}Grammar()
+        THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton = {NAME}Grammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
+            THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
     return grammar
 '''
 
@@ -350,10 +350,10 @@ def Create{NAME}Transformer() -> TransformationFunc:
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     try:
-        transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
+        transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_transformer_singleton = Create{NAME}Transformer()
-        transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
+        THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton = Create{NAME}Transformer()
+        transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
     return transformer
 '''
 
@@ -362,10 +362,10 @@ COMPILER_FACTORY = '''
 def get_compiler() -> {NAME}Compiler:
     """Returns a thread/process-exclusive {NAME}Compiler-singleton."""
     try:
-        compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
+        compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
-        compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
+        THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
+        compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
     return compiler
 '''
 
@@ -1327,13 +1327,13 @@ class EBNFCompiler(Compiler):
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     try:
-        compiler = GLOBALS.ebnf_compiler_singleton
+        compiler = THREAD_LOCALS.ebnf_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
         return compiler
     except AttributeError:
         compiler = EBNFCompiler(grammar_name, grammar_source)
         compiler.set_grammar_name(grammar_name, grammar_source)
-        GLOBALS.ebnf_compiler_singleton = compiler
+        THREAD_LOCALS.ebnf_compiler_singleton = compiler
         return compiler
 
 

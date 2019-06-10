@@ -41,7 +41,7 @@ from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import log_dir, logging, is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
-from DHParser.toolkit import GLOBALS, get_config_value, load_if_file, re
+from DHParser.toolkit import THREAD_LOCALS, get_config_value, load_if_file, re
 
 __all__ = ('unit_from_config',
            'unit_from_json',
@@ -232,7 +232,7 @@ def unit_from_file(filename):
 #                            tests.get('match*', dict()).items())
 
 
-def get_report(test_unit):
+def get_report(test_unit) -> str:
     """
     Returns a text-report of the results of a grammar unit test. The report
     lists the source of all tests as well as the error messages, if a test
@@ -351,7 +351,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         """
         if not get_config_value('test_supress_lookahead_failures'):
             return False
-        raw_errors = syntax_tree.errors_sorted
+        raw_errors = cast(RootNode, syntax_tree).errors_sorted
         is_artifact = ({e.code for e in raw_errors} <=
                         {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
                          # Error.PARSER_STOPPED_BEFORE_END,
@@ -539,6 +539,8 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
+    assert isinstance(report, str)
+
     if not isinstance(fn_patterns, collections.abc.Iterable):
         fn_patterns = [fn_patterns]
     all_errors = collections.OrderedDict()

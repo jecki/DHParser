@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, THREAD_LOCALS
 
 
 #######################################################################
@@ -123,12 +123,12 @@ class XMLSnippetGrammar(Grammar):
 def get_grammar() -> XMLSnippetGrammar:
     """Returns a thread/process-exclusive XMLSnippetGrammar-singleton."""
     try:
-        grammar = GLOBALS.XMLSnippet_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.XMLSnippet_00000001_grammar_singleton = XMLSnippetGrammar()
+        THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton = XMLSnippetGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.XMLSnippet_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.XMLSnippet_00000001_grammar_singleton
+            THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton
     return grammar
 
 
@@ -201,10 +201,10 @@ def XMLSnippetTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.XMLSnippet_1_transformer_singleton
+        transformer = THREAD_LOCALS.XMLSnippet_1_transformer_singleton
     except AttributeError:
-        GLOBALS.XMLSnippet_1_transformer_singleton = XMLSnippetTransform()
-        transformer = GLOBALS.XMLSnippet_1_transformer_singleton
+        THREAD_LOCALS.XMLSnippet_1_transformer_singleton = XMLSnippetTransform()
+        transformer = THREAD_LOCALS.XMLSnippet_1_transformer_singleton
     return transformer
 
 
@@ -377,10 +377,10 @@ class XMLSnippetCompiler(Compiler):
 
 def get_compiler() -> XMLSnippetCompiler:
     try:
-        compiler = GLOBALS.XMLSnippet_1_compiler_singleton
+        compiler = THREAD_LOCALS.XMLSnippet_1_compiler_singleton
     except AttributeError:
-        GLOBALS.XMLSnippet_1_compiler_singleton = XMLSnippetCompiler()
-        compiler = GLOBALS.XMLSnippet_1_compiler_singleton
+        THREAD_LOCALS.XMLSnippet_1_compiler_singleton = XMLSnippetCompiler()
+        compiler = THREAD_LOCALS.XMLSnippet_1_compiler_singleton
     return compiler
 
 

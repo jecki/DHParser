@@ -25,7 +25,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
     is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
-    is_insignificant_whitespace, TOKEN_PTYPE, GLOBALS
+    is_insignificant_whitespace, TOKEN_PTYPE, THREAD_LOCALS
 from DHParser.log import logging
 
 
@@ -116,12 +116,12 @@ class LyrikGrammar(Grammar):
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
-    global GLOBALS
+    global THREAD_LOCALS
     try:
-        grammar = GLOBALS.Lyrik_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_grammar_singleton
     except AttributeError:
-        GLOBALS.Lyrik_grammar_singleton = LyrikGrammar()
-        grammar = GLOBALS.Lyrik_grammar_singleton
+        THREAD_LOCALS.Lyrik_grammar_singleton = LyrikGrammar()
+        grammar = THREAD_LOCALS.Lyrik_grammar_singleton
     return grammar
 
 
@@ -180,12 +180,12 @@ def LyrikTransform() -> TransformationFunc:
 
 
 def get_transformer() -> TransformationFunc:
-    global GLOBALS
+    global THREAD_LOCALS
     try:
-        transform = GLOBALS.Lyrik_transformer_singleton
+        transform = THREAD_LOCALS.Lyrik_transformer_singleton
     except AttributeError:
-        GLOBALS.Lyrik_transformer_singleton = LyrikTransform()
-        transform = GLOBALS.Lyrik_transformer_singleton
+        THREAD_LOCALS.Lyrik_transformer_singleton = LyrikTransform()
+        transform = THREAD_LOCALS.Lyrik_transformer_singleton
     return transform
 
 
@@ -273,12 +273,12 @@ class LyrikCompiler(Compiler):
 
 
 def get_compiler() -> LyrikCompiler:
-    global GLOBALS
+    global THREAD_LOCALS
     try:
-        compiler = GLOBALS.Lyrik_compiler_singleton
+        compiler = THREAD_LOCALS.Lyrik_compiler_singleton
     except AttributeError:
-        GLOBALS.Lyrik_compiler_singleton = LyrikCompiler()
-        compiler = GLOBALS.Lyrik_compiler_singleton
+        THREAD_LOCALS.Lyrik_compiler_singleton = LyrikCompiler()
+        compiler = THREAD_LOCALS.Lyrik_compiler_singleton
     return compiler
 
 

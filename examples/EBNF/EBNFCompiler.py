@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, THREAD_LOCALS
 
 
 #######################################################################
@@ -91,12 +91,12 @@ class EBNFGrammar(Grammar):
 def get_grammar() -> EBNFGrammar:
     """Returns a thread/process-exclusive EBNFGrammar-singleton."""
     try:
-        grammar = GLOBALS.EBNF_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.EBNF_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.EBNF_00000001_grammar_singleton = EBNFGrammar()
+        THREAD_LOCALS.EBNF_00000001_grammar_singleton = EBNFGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.EBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.EBNF_00000001_grammar_singleton
+            THREAD_LOCALS.EBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.EBNF_00000001_grammar_singleton
     return grammar
 
 
@@ -143,10 +143,10 @@ def EBNFTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.EBNF_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.EBNF_00000001_transformer_singleton = EBNFTransform()
-        transformer = GLOBALS.EBNF_00000001_transformer_singleton
+        THREAD_LOCALS.EBNF_00000001_transformer_singleton = EBNFTransform()
+        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
     return transformer
 
 
@@ -226,10 +226,10 @@ class EBNFCompiler(Compiler):
 
 def get_compiler() -> EBNFCompiler:
     try:
-        compiler = GLOBALS.EBNF_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.EBNF_00000001_compiler_singleton = EBNFCompiler()
-        compiler = GLOBALS.EBNF_00000001_compiler_singleton
+        THREAD_LOCALS.EBNF_00000001_compiler_singleton = EBNFCompiler()
+        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
     return compiler
 
 

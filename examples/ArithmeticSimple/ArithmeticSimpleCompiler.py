@@ -33,7 +33,7 @@ from DHParser import logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, GLOBALS
+    error_on, recompile_grammar, left_associative, THREAD_LOCALS
 
 
 #######################################################################
@@ -85,12 +85,12 @@ class ArithmeticSimpleGrammar(Grammar):
 def get_grammar() -> ArithmeticSimpleGrammar:
     """Returns a thread/process-exclusive ArithmeticSimpleGrammar-singleton."""
     try:
-        grammar = GLOBALS.ArithmeticSimple_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.ArithmeticSimple_00000001_grammar_singleton = ArithmeticSimpleGrammar()
+        THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton = ArithmeticSimpleGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.ArithmeticSimple_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.ArithmeticSimple_00000001_grammar_singleton
+            THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
     return grammar
 
 
@@ -118,10 +118,10 @@ def ArithmeticSimpleTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.ArithmeticSimple_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.ArithmeticSimple_00000001_transformer_singleton = ArithmeticSimpleTransform()
-        transformer = GLOBALS.ArithmeticSimple_00000001_transformer_singleton
+        THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton = ArithmeticSimpleTransform()
+        transformer = THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton
     return transformer
 
 
@@ -159,10 +159,10 @@ class ArithmeticSimpleCompiler(Compiler):
 
 def get_compiler() -> ArithmeticSimpleCompiler:
     try:
-        compiler = GLOBALS.ArithmeticSimple_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.ArithmeticSimple_00000001_compiler_singleton = ArithmeticSimpleCompiler()
-        compiler = GLOBALS.ArithmeticSimple_00000001_compiler_singleton
+        THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton = ArithmeticSimpleCompiler()
+        compiler = THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton
     return compiler
 
 
