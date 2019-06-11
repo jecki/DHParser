@@ -97,7 +97,7 @@ from DHParser import logging, is_filename, load_if_file, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
-    JSON_SERIALIZATION, CONFIG_PRESET, THREAD_LOCALS 
+    JSON_SERIALIZATION, THREAD_LOCALS 
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 

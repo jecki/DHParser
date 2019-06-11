@@ -29,7 +29,7 @@ import DHParser.log
 from DHParser import testing
 
 
-configuration.CONFIG_PRESET['test_parallelization'] = True
+configuration.access_presets()['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):

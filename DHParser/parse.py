@@ -298,8 +298,8 @@ class Parser:
             history_tracking__ = grammar.history_tracking__
             if history_tracking__:
                 grammar.call_stack__.append(
-                    (self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
-                     else self.tag_name, location))
+                    ((self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
+                      else self.tag_name), location))
                 grammar.moving_forward__ = True
                 error = None
 
@@ -574,10 +574,11 @@ class Grammar:
        constructor of the Parser object explicitly, but it suffices to
        assign them to class variables, which results in better
        readability of the Python code.
+       See classmethod `Grammar._assign_parser_names__()`
 
     3. The parsers in the class do not necessarily need to be connected
-       to one single root parser, which is helpful for testing and
-       building up a parser successively of several components.
+       to one single root parser, which is helpful for testing and when
+       building up a parser gradually from several components.
 
     As a consequence, though, it is highly recommended that a Grammar
     class should not define any other variables or methods with names
@@ -606,10 +607,9 @@ class Grammar:
     'named' parser and its field `parser.pname` contains the variable
     name after instantiation of the Grammar class. All other parsers,
     i.e. parsers that are defined within a `named` parser, remain
-    "anonymous parsers" where `parser.pname` is the empty string, unless
-    a name has been passed explicitly upon instantiation.
+    "anonymous parsers" where `parser.pname` is the empty string.
     If one and the same parser is assigned to several class variables
-    such as, for example the parser `expression` in the example above,
+    such as, for example, the parser `expression` in the example above,
     the first name sticks.
 
     Grammar objects are callable. Calling a grammar object with a UTF-8
@@ -856,7 +856,7 @@ class Grammar:
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
-        self.call_stack__ = []                # type: List[str, int]  # tag_name, location
+        self.call_stack__ = []                # type: List[Tuple[str, int]]  # tag_name, location
         # snapshots of call stacks
         self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
@@ -927,7 +927,7 @@ class Grammar:
             Checks if failure to match document was only due to a succeeding
             lookahead parser, which is a common design pattern that can break test
             cases. (Testing for this case allows to modify the error message, so
-            that the testing framework can know that the failure is only a
+            that the testing framework knows that the failure is only a
             test-case-artifact and no real failure.
             (See test/test_testing.TestLookahead !)
             """

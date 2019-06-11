@@ -47,6 +47,11 @@ def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
 
 
 if __name__ == '__main__':
+    # from DHParser.configuration import access_presets, finalize_presets
+    # CONFIG_PRESETS = access_presets()
+    # CONFIG_PRESET['test_parallelization'] = True
+    # finalize_presets()
+
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
         LOGGING = True

@@ -16,15 +16,11 @@ scriptpath = os.path.dirname(__file__)
 try:
     from DHParser import dsl
     import DHParser.log
-    from DHParser import testing, create_test_templates, CONFIG_PRESET
+    from DHParser import testing, create_test_templates, access_presets, finalize_presets
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
     sys.exit(1)
-
-
-CONFIG_PRESET['ast_serialization'] = "S-expression"
-CONFIG_PRESET['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):
@@ -52,6 +48,11 @@ def run_grammar_tests(glob_pattern):
 
 
 if __name__ == '__main__':
+    CONFIG_PRESET = access_presets()
+    CONFIG_PRESET['ast_serialization'] = "S-expression"
+    CONFIG_PRESET['test_parallelization'] = True
+    finalize_presets()
+
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
         LOGGING = True

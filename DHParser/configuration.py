@@ -32,7 +32,8 @@ program and before any DHParser-function is invoked.
 
 from typing import Dict, Hashable, Any
 
-__all__ = ('CONFIG_PRESET',
+__all__ = ('access_presets',
+           'finalize_presets',
            'XML_SERIALIZATION',
            'SXPRESSION_SERIALIZATION',
            'COMPACT_SERIALIZATION',
@@ -40,7 +41,82 @@ __all__ = ('CONFIG_PRESET',
            'JSON_SERIALIZATION',
            'SERIALIZATIONS')
 
-CONFIG_PRESET = dict()  # type: Dict[Hashable, Any]
+
+########################################################################
+#
+# multiprocessing-safe preset-handling
+#
+########################################################################
+
+
+CONFIG_PRESET = dict()  # type: Dict[str, Any]
+CONFIG_PRESET['syncfile_path'] = ''
+
+
+def get_syncfile_path(pid: int) -> str:
+    import os
+    import tempfile
+    return os.path.join(tempfile.gettempdir(), 'DHParser_%i.cfg' % pid)
+
+
+def access_presets() -> Dict[str, Any]:
+    """
+    Returns a dictionary of presets for configuration values.
+    If any preset values are changed after calling `access_presets()`,
+    `finalize_presets()` should be called to make sure that processes
+    spawned after changing the preset values, will be able to read
+    the changed values.
+    See: https://docs.python.org/3/library/multiprocessing.html#the-spawn-and-forkserver-start-methods
+    """
+    import multiprocessing
+    global CONFIG_PRESET
+    if not CONFIG_PRESET['syncfile_path'] and multiprocessing.get_start_method() != 'fork':
+        import os
+        import pickle
+        syncfile_path = get_syncfile_path(os.getppid())  # assume this is a spawned process
+        if not os.path.exists(syncfile_path):
+            syncfile_path = get_syncfile_path(os.getpid())  # assume this is the root process
+        f = None
+        try:
+            f = open(syncfile_path, 'rb')
+            preset = pickle.load(f)
+            assert isinstance(preset, dict)
+            assert preset['syncfile_path'] == syncfile_path
+            CONFIG_PRESET = preset
+        except FileNotFoundError:
+            pass
+        finally:
+            if f is not None:
+                f.close()
+    return CONFIG_PRESET
+
+
+def remove_cfg_tempfile(filename: str):
+    import os
+    os.remove(filename)
+
+
+def finalize_presets():
+    """
+    Finalizes changes of the presets of the configuration values.
+    This method should always be called after changing preset values to
+    make sure the changes will be visible to processes spawned later.
+    """
+    import atexit
+    import multiprocessing
+    import os
+    import pickle
+    if multiprocessing.get_start_method() != 'fork':
+        syncfile_path = get_syncfile_path(os.getpid())
+        existing_syncfile = CONFIG_PRESET['syncfile_path']
+        assert ((not existing_syncfile or existing_syncfile == syncfile_path)
+                and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
+            "finalize_presets() can only be called from the main process!"
+        with open(syncfile_path, 'wb') as f:
+            if not existing_syncfile:
+                CONFIG_PRESET['syncfile_path'] = syncfile_path
+                atexit.register(remove_cfg_tempfile, syncfile_path)
+            pickle.dump(CONFIG_PRESET, f)
 
 
 ########################################################################

@@ -48,7 +48,7 @@ except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
 
-from DHParser.configuration import CONFIG_PRESET
+from DHParser.configuration import access_presets
 
 
 __all__ = ('typing',
@@ -94,6 +94,7 @@ def get_config_value(key: Hashable) -> Any:
     :param key:  the key (an immutable, usually a string)
     :return:     the value
     """
+    global THREAD_LOCALS
     try:
         cfg = THREAD_LOCALS.config
     except AttributeError:
@@ -102,6 +103,7 @@ def get_config_value(key: Hashable) -> Any:
     try:
         return cfg[key]
     except KeyError:
+        CONFIG_PRESET = access_presets()
         value = CONFIG_PRESET[key]
         THREAD_LOCALS.config[key] = value
         return value
@@ -116,6 +118,9 @@ def set_config_value(key: Hashable, value: Any):
     :param key:    the key (an immutable, usually a string)
     :param value:  the value
     """
+    global THREAD_LOCALS
+    if THREAD_LOCALS is None:
+        THREAD_LOCALS = threading.local()
     try:
         _ = THREAD_LOCALS.config
     except AttributeError:
