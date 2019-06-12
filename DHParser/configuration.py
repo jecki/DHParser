@@ -106,6 +106,7 @@ def finalize_presets():
     import multiprocessing
     import os
     import pickle
+    global CONFIG_PRESET
     if multiprocessing.get_start_method() != 'fork':
         syncfile_path = get_syncfile_path(os.getpid())
         existing_syncfile = CONFIG_PRESET['syncfile_path']
