@@ -1037,7 +1037,6 @@ class RootNode(Node):
         duplicate.tag_name = self.tag_name
         return duplicate
 
-
     def swallow(self, node: Node) -> 'RootNode':
         """
         Put `self` in the place of `node` by copying all its data.
