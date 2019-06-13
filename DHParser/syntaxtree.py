@@ -872,7 +872,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         switch = how.lower()
 
-        from DHParser import configuration
         if switch == 'ast':
             switch = get_config_value('ast_serialization').lower()
         elif switch == 'cst':
