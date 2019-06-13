@@ -54,10 +54,11 @@ import html
 import os
 from typing import List, Tuple, Union, Optional
 
+from DHParser.configuration import THREAD_LOCALS
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, ZOMBIE_TAG
-from DHParser.toolkit import is_filename, escape_control_characters, THREAD_LOCALS
+from DHParser.toolkit import is_filename, escape_control_characters
 
 __all__ = ('log_dir',
            'logging',

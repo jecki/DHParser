@@ -53,9 +53,10 @@ import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, Any, \
     cast
 
+from DHParser.configuration import get_config_value, THREAD_LOCALS
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log
-from DHParser.toolkit import get_config_value, THREAD_LOCALS, re
+from DHParser.toolkit import re
 from DHParser.versionnumber import __version__
 
 

@@ -28,7 +28,8 @@ scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 sys.path.extend(['../', './'])
 
-from DHParser.toolkit import compile_python_object, get_config_value, set_config_value, re
+from DHParser.configuration import get_config_value, set_config_value
+from DHParser.toolkit import compile_python_object, re
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
 from DHParser.error import has_errors, Error

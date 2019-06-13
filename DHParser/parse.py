@@ -34,14 +34,14 @@ from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
+from DHParser.configuration import get_config_value
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, get_config_value, \
-    re, cython
+from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython
 
 
 __all__ = ('Parser',

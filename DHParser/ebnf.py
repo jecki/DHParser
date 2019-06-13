@@ -31,6 +31,7 @@ import os
 from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any, cast
 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
+from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
@@ -38,7 +39,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespa
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    THREAD_LOCALS, get_config_value, unrepr, compile_python_object, DHPARSER_PARENTDIR
+    unrepr, compile_python_object, DHPARSER_PARENTDIR
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content

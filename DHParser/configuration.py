@@ -17,9 +17,8 @@
 
 """
 Module "configuration.py" defines the default configuration for DHParser.
-The configuration values can be changed while running via the
-DHParser.toolkit.get_config_value() and DHParser.toolkit.get_config_value()-
-functions.
+The configuration values can be read and changed while running via the
+get_config_value() and set_config_value()-functions.
 
 The presets can also be overwritten before(!) spawning any parsing processes by
 overwriting the values in the CONFIG_PRESET dictionary.
@@ -30,10 +29,14 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
+import threading
 from typing import Dict, Hashable, Any
 
 __all__ = ('access_presets',
            'finalize_presets',
+           'THREAD_LOCALS',
+           'get_config_value',
+           'set_config_value',
            'XML_SERIALIZATION',
            'SXPRESSION_SERIALIZATION',
            'COMPACT_SERIALIZATION',
@@ -44,13 +47,14 @@ __all__ = ('access_presets',
 
 ########################################################################
 #
-# multiprocessing-safe preset-handling
+# multiprocessing-safe preset- and configuration-handling
 #
 ########################################################################
 
 
 CONFIG_PRESET = dict()  # type: Dict[str, Any]
 CONFIG_PRESET['syncfile_path'] = ''
+THREAD_LOCALS = threading.local()
 
 
 def get_syncfile_path(pid: int) -> str:
@@ -118,6 +122,46 @@ def finalize_presets():
                 CONFIG_PRESET['syncfile_path'] = syncfile_path
                 atexit.register(remove_cfg_tempfile, syncfile_path)
             pickle.dump(CONFIG_PRESET, f)
+
+
+def get_config_value(key: Hashable) -> Any:
+    """
+    Retrieves a configuration value thread-safely.
+    :param key:  the key (an immutable, usually a string)
+    :return:     the value
+    """
+    global THREAD_LOCALS
+    try:
+        cfg = THREAD_LOCALS.config
+    except AttributeError:
+        THREAD_LOCALS.config = dict()
+        cfg = THREAD_LOCALS.config
+    try:
+        return cfg[key]
+    except KeyError:
+        CONFIG_PRESET = access_presets()
+        value = CONFIG_PRESET[key]
+        THREAD_LOCALS.config[key] = value
+        return value
+
+
+def set_config_value(key: Hashable, value: Any):
+    """
+    Changes a configuration value thread-safely. The configuration
+    value will be set only for the current thread. In order to
+    set configuration values for any new thread, add the key and value
+    to CONFIG_PRESET, before any thread accessing config values is started.
+    :param key:    the key (an immutable, usually a string)
+    :param value:  the value
+    """
+    global THREAD_LOCALS
+    if THREAD_LOCALS is None:
+        THREAD_LOCALS = threading.local()
+    try:
+        _ = THREAD_LOCALS.config
+    except AttributeError:
+        THREAD_LOCALS.config = dict()
+    THREAD_LOCALS.config[key] = value
 
 
 ########################################################################

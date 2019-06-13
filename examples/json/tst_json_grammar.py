@@ -9,7 +9,7 @@ import sys
 LOGGING = False
 
 scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, '..\..'))
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
 if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 

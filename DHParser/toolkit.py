@@ -48,8 +48,6 @@ except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
 
-from DHParser.configuration import access_presets
-
 
 __all__ = ('typing',
            'cython',
@@ -70,10 +68,7 @@ __all__ = ('typing',
            'smart_list',
            'sane_parser_name',
            'DHPARSER_DIR',
-           'DHPARSER_PARENTDIR',
-           'THREAD_LOCALS',
-           'get_config_value',
-           'set_config_value')
+           'DHPARSER_PARENTDIR')
 
 
 #######################################################################
@@ -85,47 +80,6 @@ __all__ = ('typing',
 
 DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
 DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
-THREAD_LOCALS = threading.local()
-
-
-def get_config_value(key: Hashable) -> Any:
-    """
-    Retrieves a configuration value thread-safely.
-    :param key:  the key (an immutable, usually a string)
-    :return:     the value
-    """
-    global THREAD_LOCALS
-    try:
-        cfg = THREAD_LOCALS.config
-    except AttributeError:
-        THREAD_LOCALS.config = dict()
-        cfg = THREAD_LOCALS.config
-    try:
-        return cfg[key]
-    except KeyError:
-        CONFIG_PRESET = access_presets()
-        value = CONFIG_PRESET[key]
-        THREAD_LOCALS.config[key] = value
-        return value
-
-
-def set_config_value(key: Hashable, value: Any):
-    """
-    Changes a configuration value thread-safely. The configuration
-    value will be set only for the current thread. In order to
-    set configuration values for any new thread, add the key and value
-    to CONFIG_PRESET, before any thread accessing config values is started.
-    :param key:    the key (an immutable, usually a string)
-    :param value:  the value
-    """
-    global THREAD_LOCALS
-    if THREAD_LOCALS is None:
-        THREAD_LOCALS = threading.local()
-    try:
-        _ = THREAD_LOCALS.config
-    except AttributeError:
-        THREAD_LOCALS.config = dict()
-    THREAD_LOCALS.config[key] = value
 
 
 # global_id_counter = multiprocessing.Value('Q', 0)

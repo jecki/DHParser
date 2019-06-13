@@ -31,10 +31,10 @@ from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, U
     Container, Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import get_config_value, re
+from DHParser.toolkit import re
 
 
 __all__ = ('WHITESPACE_PTYPE',

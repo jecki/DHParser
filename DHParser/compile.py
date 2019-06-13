@@ -38,13 +38,14 @@ import copy
 import os
 from typing import Any, Optional, Tuple, List, cast
 
+from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
 from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, get_config_value
+from DHParser.toolkit import load_if_file, is_filename
 
 
 __all__ = ('CompilerError',

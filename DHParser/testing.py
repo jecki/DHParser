@@ -37,11 +37,12 @@ import os
 import sys
 from typing import Dict, List, Union, cast
 
+from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import log_dir, logging, is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
-from DHParser.toolkit import THREAD_LOCALS, get_config_value, load_if_file, re
+from DHParser.toolkit import load_if_file, re
 
 __all__ = ('unit_from_config',
            'unit_from_json',

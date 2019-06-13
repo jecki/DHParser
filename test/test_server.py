@@ -30,8 +30,9 @@ import time
 
 sys.path.extend(['../', './'])
 
+from DHParser.configuration import THREAD_LOCALS
 from DHParser.server import Server, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE, asyncio_run
-from DHParser.toolkit import concurrent_ident, THREAD_LOCALS
+from DHParser.toolkit import concurrent_ident
 
 # from DHParser.configuration import CONFIG_PRESET
 # THREAD_LOCALS.LOGGING = 'LOGS'
