@@ -614,8 +614,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return self.select_if(create_match_function(criterion), include_root, reverse)
 
-    def pick(self, criterion: CriteriaType,
-             reverse: bool = False) -> Optional['Node']:
+    def pick(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that fulfills
         the given criterion which can be either a match-function or a tag-name or
