@@ -77,7 +77,7 @@ class TestServer:
         time.sleep(float(duration))
         return(duration)
 
-    def test_server_proces(self):
+    def test_server_process(self):
         """Basic Test of server module."""
         async def compile_remote(src):
             reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
