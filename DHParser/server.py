@@ -594,19 +594,30 @@ class Server:
 #######################################################################
 
 
-def json_rpc(f: Callable):
+def lsp_rpc(f: Callable):
+    """A decorator for LanguageServerProtocol-methods. This wrapper
+    filters out calls that are made befer initializing the server and
+    after shutdown and returns an error message instead.
+    This decorator should only be used on methods of
+    LanguageServerProtocol-objects as it expects the first parameter
+    to be a the `self`-reference of this object.
+    All LSP-methods should be decorated with this decorator except
+    initialize and exit
+    """
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
             self = args[0]
         except IndexError:
             self = kwargs['self']
+        assert isinstance(self, LanguageServerProtocol)
         if self.server_shutdown:
             return {'code': -32600, 'message': 'server already shut down'}
         elif not self._server_initialized:
             return {'code': -32002, 'message': 'initialize-request must be send first'}
         else:
             return f(*args, **kwargs)
+    assert f.__name__ not in ['rpc_initialize', 'rpc_exit']
     return wrapper
 
 
