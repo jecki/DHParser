@@ -46,8 +46,9 @@ For JSON see:
 import asyncio
 from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
 from concurrent.futures.process import BrokenProcessPool
+from functools import wraps, partial
 import json
-from multiprocessing import Process, Queue, Value, Array
+from multiprocessing import Process, Manager, Queue, Value, Array
 import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, Any, \
@@ -168,13 +169,19 @@ def GMT_timestamp() -> str:
 ALL_RPCs = frozenset('*')  # Magic value denoting all remove procedures
 
 
+def default_fallback(*args, **kwargs) -> str:
+    return 'No default RPC-function defined!'
+
+
 class Server:
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
                  blocking: Set[str] = frozenset()):
         if isinstance(rpc_functions, Dict):
             self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
-            self.default = tuple(self.rpc_table.keys())[0]   # type: str
+            if 'default' not in self.rpc_table:
+                self.rpc_table['default'] = default_fallback
+            self.default = 'default'
         elif isinstance(rpc_functions, List):
             self.rpc_table = {}
             func_list = cast(List, rpc_functions)
@@ -237,23 +244,31 @@ class Server:
 
         def http_response(html: str) -> bytes:
             gmt = GMT_timestamp()
-            encoded_html = html.encode()
+            if isinstance(html, str):
+                encoded_html = html.encode()
+            else:
+                encoded_html = "Illegal type %s for response %s. Only str allowed!" \
+                               % (str(type(html)), str(html))
             response = RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
             return response.encode() + encoded_html
 
         async def execute(executor: Executor, method: Callable, params: Union[Dict, Sequence]):
             nonlocal result, rpc_error
             has_kw_params = isinstance(params, Dict)
-            assert has_kw_params or isinstance(params, Sequence)
+            if not (has_kw_params or isinstance(params, Sequence)):
+                rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
+                            % (str(type(params)), str(params))
+                return
             loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
             try:
+                # print(executor, method, params)
                 if executor is None:
                     result = method(**params) if has_kw_params else method(*params)
                 elif has_kw_params:
-                    result = await loop.run_in_executor(executor, method, **params)
+                    result = await loop.run_in_executor(executor, partial(method, **params))
                 else:
-                    result = await loop.run_in_executor(executor, method, *params)
+                    result = await loop.run_in_executor(executor, partial(method, *params))
             except TypeError as e:
                 rpc_error = -32602, "Invalid Params: " + str(e)
             except NameError as e:
@@ -278,8 +293,14 @@ class Server:
                 self.pp_executor = ProcessPoolExecutor()
                 await execute(self.pp_executor, method, params)
 
-        def respond(response: bytes):
-            nonlocal writer
+        def respond(response: Union[str, bytes]):
+            nonlocal writer, json_id
+            if isinstance(response, str):
+                response = response.encode()
+            elif not isinstance(response, bytes):
+                response = ('Illegal response type %s of reponse object %s. '
+                            'Only bytes and str allowed!' \
+                            % (str(type(response)), str(response))).encode()
             if self.log_file:
                 append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n')
             writer.write(response)
@@ -305,8 +326,11 @@ class Server:
                         if isinstance(result, str):
                             respond(http_response(result))
                         else:
-                            respond(http_response(
-                                json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
+                            try:
+                                respond(http_response(
+                                    json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
+                            except TypeError as err:
+                                respond(http_response(str(err)))
                     else:
                         respond(http_response(rpc_error[1]))
 
@@ -316,7 +340,7 @@ class Server:
                 respond("Source code too large! Only %i MB allowed"
                              % (self.max_source_size // (1024 ** 2)))
             elif data.startswith(STOP_SERVER_REQUEST):
-                respond(self.stop_response.encode())
+                respond(self.stop_response)
                 kill_switch = True
             else:
                 m = re.match(RE_FUNCTION_CALL, data)
@@ -335,11 +359,14 @@ class Server:
                 await run(func_name, func, argument)
                 if rpc_error is None:
                     if isinstance(result, str):
-                        respond(result.encode())
+                        respond(result)
                     else:
-                        respond(json.dumps(result, cls=DHParser_JSONEncoder).encode())
+                        try:
+                            respond(json.dumps(result, cls=DHParser_JSONEncoder))
+                        except TypeError as err:
+                            respond(str(err))
                 else:
-                    respond(rpc_error[1].encode())
+                    respond(rpc_error[1])
 
         else:
             # JSON RPC
@@ -378,18 +405,27 @@ class Server:
                     await run(method_name, method, params)
 
             try:
-                error = cast(Dict[str, str], result['error'])
+                try:
+                    error = cast(Dict[str, str], result['error'])
+                except KeyError:
+                    error = cast(Dict[str, str], result)
                 rpc_error = error['code'], error['message']
             except TypeError:
                 pass  # result is not a dictionary, never mind
+            except KeyError:
+                pass  # no errors in result
 
             if rpc_error is None:
                 if json_id is not None:
-                    json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                    respond(json.dumps(json_result, cls=DHParser_JSONEncoder).encode())
-            else:
+                    try:
+                        json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+                        respond(json.dumps(json_result, cls=DHParser_JSONEncoder))
+                    except TypeError as err:
+                        rpc_error = -32070, str(err)
+
+            if rpc_error is not None:
                 respond(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
-                              % (rpc_error[0], rpc_error[1], json_id)).encode())
+                              % (rpc_error[0], rpc_error[1], json_id)))
         await writer.drain()
         if kill_switch:
             # TODO: terminate processes and threads! Is this needed??
@@ -558,56 +594,74 @@ class Server:
 #######################################################################
 
 
-class LanguageServer(Server):
-    """Template for the implementation of a language server.
-    See: https://microsoft.github.io/language-server-protocol/"""
+def json_rpc(f: Callable):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            self = args[0]
+        except IndexError:
+            self = kwargs['self']
+        if self.server_shutdown:
+            return {'code': -32600, 'message': 'server already shut down'}
+        elif not self._server_initialized:
+            return {'code': -32002, 'message': 'initialize-request must be send first'}
+        else:
+            return f(*args, **kwargs)
+    return wrapper
+
+
+class LanguageServerProtocol:
+    """Template for the implementation of the language server protocol.
+    See: https://microsoft.github.io/language-server-protocol/
+
+    Usage:
+        class MyLSP(LanguageServerProtocoll):
+            # Implement your LSP-methods, here
+
+        language_server = create_language_server(MyLSP())
+    """
 
     cpu_bound = ALL_RPCs    # type: Set[str]
     blocking = frozenset()  # type: Set[str]
 
-    def __init__(self, additional_rpcs: RPC_Table,
-                 cpu_bound: Set[str] = ALL_RPCs,
-                 blocking: Set[str] = frozenset()):
-        assert isinstance(additional_rpcs, Dict)
-        rpc_table = dict()  # type: RPC_Table
-        rpc_table.update(additional_rpcs)
+    def __init__(self, additional_rpcs: Dict[str, Callable] = {}):
+        self.rpc_table = dict()  # type: RPC_Table
         for attr in dir(self):
             if attr.startswith('rpc_'):
                 name = attr[4:].replace('_', '/')
                 func = getattr(self, attr)
-                rpc_table[name] = func
-        super().__init__(rpc_table, cpu_bound, blocking)
-        self._server_initialized = False
-        self._client_initialized = False
+                self.rpc_table[name] = func
+        self.rpc_table.update(additional_rpcs)
+        self.server_initialized = False
+        self.server_shutdown = False
+        self.client_initialized = False
 
-    def initialize(self,
-                   processId: Optional[int],
-                   rootPath: Optional[str],
-                   rootUri: Optional[str],
-                   initializeOptions: JSON_Type,
-                   capabilities: JSON_Type,
-                   trace: str,
-                   workspaceFolders: List[Dict[str, str]]):
-        # return {'capabilities': {}}
-        return {"jsonrpc": "2.0",
-                "error": {"code": -322002,
-                          "message": 'Language Server Error: "initialize" is not implemented!'},
-                "id": 0}
+        self.processId = 0
+        self.rootUri = ''
+        self.clientCapabilities = {}
+
+
+    def initialize(self, **kw):
+        self.processId = kw['processId']
+        self.rootUri = kw['rootUri']
+        self.clientCapabilities = kw['capabilities']
+        return {'capabilities': {}}
+
+
+    def rpc_default(self, arg):
+        return '"%s" is no valid JSON-RPC! See: https://www.jsonrpc.org/specification' % arg
 
     def rpc_initialize(self, **kwargs):
-        if self._server_initialized:
-            return {"jsonrpc": "2.0",
-                    "error": {"code": -322002,
-                    "message": "Server has already been initialized."},
-                    "id": 0}
+        if self.server_initialized:
+            return {"code": -32002, "message": "Server has already been initialized."}
         else:
             result = self.initialize(**kwargs)
             if 'error' not in result:
-                self._server_initialized = True
+                self.server_initialized = True
             return result
 
     def rpc_initialized(self):
-        if self._client_initialized:
+        if self.client_initialized:
             pass  # clients must not reply to notifations!
             # print('double notification!')
             # return {"jsonrpc": "2.0",
@@ -615,5 +669,12 @@ class LanguageServer(Server):
             #         "message": "Initialize Notification already received!"},
             #         "id": 0}
         else:
-            self._client_initialized = True
+            self_client_initialized = True
+
+
+
+
+def create_language_server(lsp: LanguageServerProtocol) -> Server:
+    """Creates a Language Server for the given Language Server Protocol-object."""
+    return Server(lsp.rpc_table, lsp.cpu_bound, lsp.blocking)
 

@@ -54,7 +54,7 @@ import html
 import os
 from typing import List, Tuple, Union, Optional
 
-from DHParser.configuration import THREAD_LOCALS
+from DHParser.configuration import access_presets, finalize_presets, THREAD_LOCALS
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, ZOMBIE_TAG
@@ -77,6 +77,43 @@ __all__ = ('log_dir',
 #
 #######################################################################
 
+def start_logging(dirname="LOGS"):
+    """Turns logging on an sets the log-directory to `dirname`.
+    The log-directory, if it does not already exist, will be created
+    lazily, i.e. only when logging actually starts."""
+    CFG = access_presets()
+    CFG['log_dir'] = os.path.abspath(dirname)
+    finalize_presets()
+
+
+#TODO: Remove this context manager, not really useful...
+@contextlib.contextmanager
+def logging(dirname="LOGS"):
+    """
+    DEPRECATED! Use `start_logging()` instead!
+
+    Context manager. Log files within this context will be stored in
+    directory ``dirname``. Logging is turned off if name is empty.
+
+    Args:
+        dirname: the name for the log directory or the empty string to
+            turn logging of
+    """
+    print('The `logging`-context-manager is DEPRECATED! Use `start_logging()` instead!')
+    CFG = access_presets()
+    if dirname and not isinstance(dirname, str):
+        dirname = "LOGS"  # be fail tolerant here...
+    try:
+        save = CFG['log_dir']
+    except AttributeError:
+        save = ''
+    CFG['log_dir'] = dirname
+    finalize_presets()
+    yield
+    CFG = access_presets()
+    CFG['log_dir'] = save
+    finalize_presets()
+
 
 def log_dir() -> Union[str, bool]:
     """Creates a directory for log files (if it does not exist) and
@@ -97,14 +134,10 @@ def log_dir() -> Union[str, bool]:
         not been switched on with the logging-contextmanager (see below), yet.
     """
     # the try-except clauses in the following are precautions for multithreading
-    try:
-        dirname = THREAD_LOCALS.LOGGING  # raises a name error if LOGGING is not defined
-        if not dirname:
-            raise AttributeError  # raise a name error if LOGGING evaluates to False
-    except AttributeError:
+    CFG = access_presets()
+    dirname = CFG['log_dir']  # raises a name error if LOGGING is not defined
+    if not dirname:
         return False
-        # raise AttributeError("No access to log directory before logging has been "
-        #                      "turned on within the same thread/process.")
     if os.path.exists(dirname) and not os.path.isdir(dirname):
         raise IOError('"' + dirname + '" cannot be used as log directory, '
                                       'because it is not a directory!')
@@ -123,35 +156,10 @@ def log_dir() -> Union[str, bool]:
     return dirname
 
 
-#TODO: Remove this context manager, not really useful...s
-@contextlib.contextmanager
-def logging(dirname="LOGS"):
-    """Context manager. Log files within this context will be stored in
-    directory ``dirname``. Logging is turned off if name is empty.
-
-    Args:
-        dirname: the name for the log directory or the empty string to
-            turn logging of
-    """
-    if dirname and not isinstance(dirname, str):
-        dirname = "LOGS"  # be fail tolerant here...
-    try:
-        save = THREAD_LOCALS.LOGGING
-    except AttributeError:
-        save = ""
-    THREAD_LOCALS.LOGGING = dirname or ""
-    # if dirname and not os.path.exists(dirname):
-    #     os.mkdir(dirname)
-    yield
-    THREAD_LOCALS.LOGGING = save
-
-
 def is_logging() -> bool:
     """-> True, if logging is turned on."""
-    try:
-        return bool(THREAD_LOCALS.LOGGING)
-    except AttributeError:
-        return False
+    CFG = access_presets()
+    return bool(CFG['log_dir'])
 
 
 def create_log(log_name: str) -> str:

@@ -101,7 +101,7 @@ def run_server(host, port):
         from tst_json_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'json.ebnf'), force=False)
         from jsonCompiler import compile_src
-    from DHParser.server import LanguageServer
+    from DHParser.server import LanguageServerProtocol, create_language_server
     config_filename = get_config_filename()
     try:
         with open(config_filename, 'w') as f:
@@ -110,8 +110,8 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    json_server = LanguageServer({'json_compiler': compile_src})
-    json_server.run_server(host, port)
+    DSL_server = create_language_server(LanguageServerProtocol({'DSL_compiler': compile_src}))
+    DSL_server.run_server(host, port)
 
 
 async def send_request(request, host, port):
@@ -165,6 +165,13 @@ def assert_if(cond: bool, message: str):
 
 
 if __name__ == "__main__":
+    sys.path.extend(['../', '../../'])
+    from DHParser import configuration
+    CFG = configuration.access_presets()
+    CFG['log_dir'] = os.path.abspath('LOG')
+    CFG['log_server'] = True
+    configuration.finalize_presets()
+
     host, port = '', -1
 
     # read and remove "--host ..." and "--port ..." parameters from sys.argv

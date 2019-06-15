@@ -30,8 +30,8 @@ import time
 
 sys.path.extend(['../', './'])
 
-from DHParser.configuration import THREAD_LOCALS
-from DHParser.server import Server, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE, asyncio_run
+from DHParser.server import Server, LanguageServerProtocol, create_language_server, asyncio_run, \
+    STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 from DHParser.toolkit import concurrent_ident
 
 # from DHParser.configuration import CONFIG_PRESET
@@ -268,6 +268,51 @@ class TestSpawning:
 
         result = asyncio_run(identify())
         # print(result)
+
+
+def send_request(request: str) -> str:
+    response = ''
+    async def send(request):
+        try:
+            nonlocal response
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
+            writer.write(request.encode())
+            response = (await reader.read(8192)).decode()
+            writer.close()
+        except ConnectionRefusedError:
+            pass
+
+    asyncio_run(send(request))
+    return response
+
+
+def json_rpc(method: str, params: dict) -> dict:
+    return json.dumps({'jsonrpc': '2.0', 'id':'0', 'method':method, 'params': params})
+
+
+
+class TestLanguageServer:
+    """Tests for the generic LanguageServer-class."""
+
+    def setup(self):
+        stop_server()
+        self.windows = sys.platform.lower().find('win') >= 0
+        self.server = create_language_server(LanguageServerProtocol())
+        self.server.spawn_server('127.0.0.1', TEST_PORT)
+
+    def teardown(self):
+        self.server.terminate_server()
+        stop_server()
+
+    def test_initialize(self):
+        response = send_request(json_rpc('initialize',
+                                         {'processId': 0,
+                                          'rootUri': 'file://~/tmp',
+                                          'capabilities': {}}))
+        res = json.loads(response)
+        assert 'result' in res and 'capabilities' in res['result']
+
+
 
 
 if __name__ == "__main__":

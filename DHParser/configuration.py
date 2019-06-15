@@ -29,7 +29,6 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
-import threading
 from typing import Dict, Hashable, Any
 
 __all__ = ('access_presets',
@@ -54,7 +53,7 @@ __all__ = ('access_presets',
 
 CONFIG_PRESET = dict()  # type: Dict[str, Any]
 CONFIG_PRESET['syncfile_path'] = ''
-THREAD_LOCALS = threading.local()
+THREAD_LOCALS = None
 
 
 def get_syncfile_path(pid: int) -> str:
@@ -131,6 +130,9 @@ def get_config_value(key: Hashable) -> Any:
     :return:     the value
     """
     global THREAD_LOCALS
+    if THREAD_LOCALS is None:
+        import threading
+        THREAD_LOCALS = threading.local()
     try:
         cfg = THREAD_LOCALS.config
     except AttributeError:
@@ -156,6 +158,7 @@ def set_config_value(key: Hashable, value: Any):
     """
     global THREAD_LOCALS
     if THREAD_LOCALS is None:
+        import threading
         THREAD_LOCALS = threading.local()
     try:
         _ = THREAD_LOCALS.config
@@ -305,6 +308,11 @@ CONFIG_PRESET['debug_compiler'] = False
 # logging support configuration
 #
 ########################################################################
+
+# Log-directory. An empty string means that logging is turned off,
+# no matter what value the other log-configuration parameters have.
+# Default value: '' (all logging is turned off)
+CONFIG_PRESET['log_dir'] = ''
 
 # Log server traffic (requests and responses)
 # Default value: False

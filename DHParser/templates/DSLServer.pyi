@@ -102,7 +102,7 @@ def run_server(host, port):
         from tst_DSL_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
         from DSLCompiler import compile_src
-    from DHParser.server import LanguageServer
+    from DHParser.server import LanguageServerProtocol, create_language_server
     config_filename = get_config_filename()
     try:
         with open(config_filename, 'w') as f:
@@ -111,7 +111,7 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    DSL_server = LanguageServer({'DSL_compiler': compile_src})
+    DSL_server = create_language_server(LanguageServerProtocol({'default': compile_src}))
     DSL_server.run_server(host, port)
 
 
