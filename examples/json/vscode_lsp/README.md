@@ -9,7 +9,7 @@ Client-module for Visual Studio Code to connect jsonServer.py as a language-serv
 ## Running the Sample
 
 - Run `npm install` in this folder. This installs all necessary npm modules in the client folder
-- Run `python ../jsonServer.py --startserver`
+- Run `python3 ../jsonServer.py --startserver`
 - Open VS Code on this folder.
 - Press Ctrl+Shift+B to compile the client and server.
 - Switch to the Debug viewlet.

@@ -318,6 +318,10 @@ CONFIG_PRESET['log_dir'] = ''
 # Default value: False
 CONFIG_PRESET['log_server'] = False
 
+# Echo server log messages on the terminal.
+# Default value: False
+CONFIG_PRESET['echo_server_log'] = False
+
 
 ########################################################################
 #

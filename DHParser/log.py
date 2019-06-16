@@ -167,24 +167,40 @@ def create_log(log_name: str) -> str:
     Creates a new log file in the log directory. If a file with
     the same name already exists, it will be overwritten.
     :param log_name: The file name of the log file to be created
-    :return: the file name of the log file.
+    :return: the file name of the log file or an empty string if the log-file
+        has not been created (e.g. because logging is still turned off and
+        no log-directory set).
     """
     ldir = log_dir()
     if ldir:
         with open(os.path.join(ldir, log_name), 'w') as f:
             f.write('LOG-FILE: ' + log_name + '\n\n')
-    return log_name
+        return log_name
+    return ''
 
 
-def append_log(log_name: str, *strings) -> None:
+def append_log(log_name: str, *strings, echo: bool=False) -> None:
     """
-    Appends one or more strings to the log-file with the name 'log_name'.
+    Appends one or more strings to the log-file with the name 'log_name', if
+    logging is turned on and the log_name is not the empty string.
+    :param log_name: The name of the log file. The file must already exist.
+        (See: ``create_log()`` above).
+    :param *strings: One or more strings that will be written to the log-file.
+        No delimiters will be added, i.e. all delimiters like blanks or
+        linefeeds need to be added explicitely to the list of strings, before
+        calling 'append_log()'.
+    :param echo: If True, the log message will be echoed on the terminal. This
+        will also happen if logging is turned off.
     """
     ldir = log_dir()
-    if ldir:
-        with open(os.path.join(ldir, log_name), 'a') as f:
+    if ldir and log_name:
+        log_path = os.path.join(ldir, log_name)
+        assert os.path.exists(log_path)
+        with open(log_path, 'a') as f:
             for text in strings:
                 f.write(text)
+    if echo:
+        print(''.join(strings))
 
 
 def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
