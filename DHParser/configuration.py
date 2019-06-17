@@ -84,7 +84,8 @@ def access_presets() -> Dict[str, Any]:
             f = open(syncfile_path, 'rb')
             preset = pickle.load(f)
             assert isinstance(preset, dict)
-            assert preset['syncfile_path'] == syncfile_path
+            assert preset['syncfile_path'] == syncfile_path, \
+                'Conflicting syncfile paths %s != %s' % (preset['syncfile_path'], syncfile_path)
             CONFIG_PRESET = preset
         except FileNotFoundError:
             pass
@@ -117,8 +118,8 @@ def finalize_presets():
                 and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
             "finalize_presets() can only be called from the main process!"
         with open(syncfile_path, 'wb') as f:
-            if not existing_syncfile:
-                CONFIG_PRESET['syncfile_path'] = syncfile_path
+            CONFIG_PRESET['syncfile_path'] = syncfile_path
+            if existing_syncfile != syncfile_path:
                 atexit.register(remove_cfg_tempfile, syncfile_path)
             pickle.dump(CONFIG_PRESET, f)
 

@@ -28,11 +28,12 @@ import stat
 
 import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
-from DHParser.log import logging
+from DHParser.log import suspend_logging, resume_logging
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
@@ -145,11 +146,12 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
         if is_python_code(grammar_src):
             parser_py, messages = grammar_src, []  # type: str, List[Error]
         else:
-            with logging(False):
-                result, messages, _ = compile_source(
-                    grammar_src, None,
-                    get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
-                parser_py = cast(str, result)
+            log_dir = suspend_logging()
+            result, messages, _ = compile_source(
+                grammar_src, None,
+                get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
+            parser_py = cast(str, result)
+            resume_logging(log_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), grammar_src)
         parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')()
@@ -291,10 +293,11 @@ def load_compiler_suite(compiler_suite: str) -> \
     else:
         # Assume source is an ebnf grammar.
         # Is there really any reasonable application case for this?
-        with logging(False):
-            compiler_py, messages, n = compile_source(source, None, get_ebnf_grammar(),
-                                                      get_ebnf_transformer(),
-                                                      get_ebnf_compiler(compiler_suite, source))
+        log_dir = suspend_logging()
+        compiler_py, messages, n = compile_source(source, None, get_ebnf_grammar(),
+                                                  get_ebnf_transformer(),
+                                                  get_ebnf_compiler(compiler_suite, source))
+        resume_logging(log_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor

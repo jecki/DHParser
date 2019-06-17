@@ -37,7 +37,7 @@ except ImportError:
     import re
 import sys
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable
+from typing import Any, Iterable, Sequence, Set, Union, Dict
 
 try:
     import cython
