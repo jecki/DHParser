@@ -41,9 +41,8 @@ if __name__ == "__main__":
 
     from BibTeXCompiler import get_grammar, get_transformer
 
-    with DHParser.log.logging(True):
-        error_report = testing.grammar_suite('grammar_tests', get_grammar,
-                                             get_transformer, report='REPORT', verbose=True)
+    error_report = testing.grammar_suite('grammar_tests', get_grammar,
+                                         get_transformer, report='REPORT', verbose=True)
     if error_report:
         print('\n')
         print(error_report)

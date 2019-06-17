@@ -26,7 +26,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
     is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
     is_insignificant_whitespace, TOKEN_PTYPE, THREAD_LOCALS
-from DHParser.log import logging
+from DHParser.log import start_logging
 
 
 #######################################################################
@@ -292,14 +292,14 @@ def get_compiler() -> LyrikCompiler:
 def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging("LOGS"):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_preprocessor(), 
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging("LOGS")
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 

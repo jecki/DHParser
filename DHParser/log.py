@@ -80,7 +80,7 @@ __all__ = ('start_logging',
 #
 #######################################################################
 
-def start_logging(dirname="LOGS"):
+def start_logging(dirname: str = "LOGS"):
     """Turns logging on an sets the log-directory to `dirname`.
     The log-directory, if it does not already exist, will be created
     lazily, i.e. only when logging actually starts."""

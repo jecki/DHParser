@@ -30,23 +30,23 @@ def recompile_grammar(grammar_src, force):
                        for entry in os.listdir(grammar_tests_dir)):
         print('No grammar-tests found, generating test templates.')
         create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(LOGGING):
-        # recompiles Grammar only if it has changed
-        name = os.path.splitext(os.path.basename(grammar_src))[0]
-        if not dsl.recompile_grammar(grammar_src, force=force):
-            print('\nErrors while recompiling "{}":'.format(grammar_src) +
-                  '\n--------------------------------------\n\n')
-            with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
-                print(f.read())
-            sys.exit(1)
+    DHParser.log.start_logging(LOGGING)
+    # recompiles Grammar only if it has changed
+    name = os.path.splitext(os.path.basename(grammar_src))[0]
+    if not dsl.recompile_grammar(grammar_src, force=force):
+        print('\nErrors while recompiling "{}":'.format(grammar_src) +
+              '\n--------------------------------------\n\n')
+        with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
+            print(f.read())
+        sys.exit(1)
 
 
 def run_grammar_tests(glob_pattern):
-    with DHParser.log.logging(LOGGING):
-        error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
-            get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report='REPORT', verbose=True)
+    DHParser.log.start_logging(LOGGING)
+    error_report = testing.grammar_suite(
+        os.path.join(scriptpath, 'grammar_tests'),
+        get_grammar, get_transformer,
+        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 

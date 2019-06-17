@@ -904,5 +904,4 @@ class TestMetaParser:
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    with logging(False):
-        runner("", globals())
+    runner("", globals())

@@ -18,7 +18,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, Grammar, Compiler, nil_preprocessor, \
+from DHParser import start_logging, is_filename, load_if_file, Grammar, Compiler, nil_preprocessor, \
     PreprocessorToken, Whitespace, DropWhitespace, DropToken, \
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -394,12 +394,12 @@ def get_compiler() -> XMLSnippetCompiler:
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        result = compile_source(source, get_preprocessor(),
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging(log_dir)
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 
