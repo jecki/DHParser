@@ -91,12 +91,14 @@ def start_logging(dirname: str = "LOGS"):
         set_config_value('log_dir', log_dir)
         finalize_presets()
 
+
 def suspend_logging() -> str:
     """Suspends logging in the current thread. Returns the log-dir
     for resuming logging later."""
     save = get_config_value('log_dir')
     set_config_value('log_dir', '')
     return save
+
 
 def resume_logging(log_dir: str=''):
     """Resumes logging in the current thread with the given log-dir."""
