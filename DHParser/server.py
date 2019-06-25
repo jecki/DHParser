@@ -128,9 +128,9 @@ def identify_server():
     return "DHParser " + __version__
 
 
-def json_rpc(func: Callable,
-             params: Union[List[JSON_Type], Dict[str, JSON_Type]]=(),
-             ID: Optional[int]=None) -> str:
+def as_json_rpc(func: Callable,
+                params: Union[List[JSON_Type], Dict[str, JSON_Type]]=(),
+                ID: Optional[int]=None) -> str:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 

@@ -286,7 +286,7 @@ def send_request(request: str) -> str:
     return response
 
 
-def json_rpc(method: str, params: dict) -> dict:
+def json_rpc(method: str, params: dict) -> str:
     return json.dumps({'jsonrpc': '2.0', 'id':'0', 'method':method, 'params': params})
 
 
