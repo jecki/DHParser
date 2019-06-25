@@ -43,9 +43,9 @@ Example::
 
     from DHParser import compile_source, logging
 
-    with logging("LOGS"):
-        result, errors, ast = compile_source(source, preprocessor, grammar,
-                                             transformer, compiler)
+    start_logging("LOGS")
+    result, errors, ast = compile_source(source, preprocessor, grammar,
+                                         transformer, compiler)
 """
 
 import collections
@@ -54,14 +54,17 @@ import html
 import os
 from typing import List, Tuple, Union, Optional
 
-from DHParser.configuration import access_presets, finalize_presets, THREAD_LOCALS
+from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
+    set_config_value
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, ZOMBIE_TAG
-from DHParser.toolkit import is_filename, escape_control_characters
+from DHParser.toolkit import escape_control_characters
 
-__all__ = ('log_dir',
-           'logging',
+__all__ = ('start_logging',
+           'suspend_logging',
+           'resume_logging',
+           'log_dir',
            'is_logging',
            'create_log',
            'append_log',
@@ -77,42 +80,61 @@ __all__ = ('log_dir',
 #
 #######################################################################
 
-def start_logging(dirname="LOGS"):
+def start_logging(dirname: str = "LOGS"):
     """Turns logging on an sets the log-directory to `dirname`.
     The log-directory, if it does not already exist, will be created
     lazily, i.e. only when logging actually starts."""
     CFG = access_presets()
-    CFG['log_dir'] = os.path.abspath(dirname)
-    finalize_presets()
+    log_dir = os.path.abspath(dirname) if dirname else ''
+    if log_dir != CFG['log_dir']:
+        CFG['log_dir'] = log_dir
+        set_config_value('log_dir', log_dir)
+        finalize_presets()
 
 
-#TODO: Remove this context manager, not really useful...
-@contextlib.contextmanager
-def logging(dirname="LOGS"):
-    """
-    DEPRECATED! Use `start_logging()` instead!
+def suspend_logging() -> str:
+    """Suspends logging in the current thread. Returns the log-dir
+    for resuming logging later."""
+    save = get_config_value('log_dir')
+    set_config_value('log_dir', '')
+    return save
 
-    Context manager. Log files within this context will be stored in
-    directory ``dirname``. Logging is turned off if name is empty.
 
-    Args:
-        dirname: the name for the log directory or the empty string to
-            turn logging of
-    """
-    print('The `logging`-context-manager is DEPRECATED! Use `start_logging()` instead!')
-    CFG = access_presets()
-    if dirname and not isinstance(dirname, str):
-        dirname = "LOGS"  # be fail tolerant here...
-    try:
-        save = CFG['log_dir']
-    except AttributeError:
-        save = ''
-    CFG['log_dir'] = dirname
-    finalize_presets()
-    yield
-    CFG = access_presets()
-    CFG['log_dir'] = save
-    finalize_presets()
+def resume_logging(log_dir: str=''):
+    """Resumes logging in the current thread with the given log-dir."""
+    if not 'log_dir':
+        CFG = access_presets()
+        log_dir = CFG['log_dir']
+    set_config_value('log_dir', log_dir)
+
+
+# #TODO: Remove this context manager, not really useful...
+# @contextlib.contextmanager
+# def logging(dirname="LOGS"):
+#     """
+#     DEPRECATED! Use `start_logging()` instead!
+#
+#     Context manager. Log files within this context will be stored in
+#     directory ``dirname``. Logging is turned off if name is empty.
+#
+#     Args:
+#         dirname: the name for the log directory or the empty string to
+#             turn logging of
+#     """
+#     print('The `logging`-context-manager is DEPRECATED! Use `start_logging()` instead!')
+#     CFG = access_presets()
+#     if dirname and not isinstance(dirname, str):
+#         dirname = "LOGS"  # be fail tolerant here...
+#     try:
+#         save = CFG['log_dir']
+#     except AttributeError:
+#         save = ''
+#     CFG['log_dir'] = dirname
+#     finalize_presets()
+#     yield
+#     CFG = access_presets()
+#     CFG['log_dir'] = save
+#     finalize_presets()
 
 
 def log_dir() -> Union[str, bool]:
@@ -134,8 +156,7 @@ def log_dir() -> Union[str, bool]:
         not been switched on with the logging-contextmanager (see below), yet.
     """
     # the try-except clauses in the following are precautions for multithreading
-    CFG = access_presets()
-    dirname = CFG['log_dir']  # raises a name error if LOGGING is not defined
+    dirname = get_config_value('log_dir')  # raises a name error if LOGGING is not defined
     if not dirname:
         return False
     if os.path.exists(dirname) and not os.path.isdir(dirname):
@@ -156,10 +177,13 @@ def log_dir() -> Union[str, bool]:
     return dirname
 
 
-def is_logging() -> bool:
+def is_logging(thread_local_query: bool=True) -> bool:
     """-> True, if logging is turned on."""
-    CFG = access_presets()
-    return bool(CFG['log_dir'])
+    if thread_local_query:
+        return bool(get_config_value('log_dir'))
+    else:
+        CFG = access_presets()
+        return bool(CFG['log_dir'])
 
 
 def create_log(log_name: str) -> str:
@@ -167,24 +191,40 @@ def create_log(log_name: str) -> str:
     Creates a new log file in the log directory. If a file with
     the same name already exists, it will be overwritten.
     :param log_name: The file name of the log file to be created
-    :return: the file name of the log file.
+    :return: the file name of the log file or an empty string if the log-file
+        has not been created (e.g. because logging is still turned off and
+        no log-directory set).
     """
     ldir = log_dir()
     if ldir:
         with open(os.path.join(ldir, log_name), 'w') as f:
             f.write('LOG-FILE: ' + log_name + '\n\n')
-    return log_name
+        return log_name
+    return ''
 
 
-def append_log(log_name: str, *strings) -> None:
+def append_log(log_name: str, *strings, echo: bool=False) -> None:
     """
-    Appends one or more strings to the log-file with the name 'log_name'.
+    Appends one or more strings to the log-file with the name 'log_name', if
+    logging is turned on and the log_name is not the empty string.
+    :param log_name: The name of the log file. The file must already exist.
+        (See: ``create_log()`` above).
+    :param *strings: One or more strings that will be written to the log-file.
+        No delimiters will be added, i.e. all delimiters like blanks or
+        linefeeds need to be added explicitely to the list of strings, before
+        calling 'append_log()'.
+    :param echo: If True, the log message will be echoed on the terminal. This
+        will also happen if logging is turned off.
     """
     ldir = log_dir()
-    if ldir:
-        with open(os.path.join(ldir, log_name), 'a') as f:
+    if ldir and log_name:
+        log_path = os.path.join(ldir, log_name)
+        assert os.path.exists(log_path)
+        with open(log_path, 'a') as f:
             for text in strings:
                 f.write(text)
+    if echo:
+        print(''.join(strings))
 
 
 def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
@@ -193,16 +233,17 @@ def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
     log-directory if it is empty.
     """
     log_dirname = log_dir()
-    files = os.listdir(log_dirname)
-    only_log_files = True
-    for file in files:
-        path = os.path.join(log_dirname, file)
-        if os.path.splitext(file)[1] in logfile_types or file == 'info.txt':
-            os.remove(path)
-        else:
-            only_log_files = False
-    if only_log_files:
-        os.rmdir(log_dirname)
+    if log_dirname and os.path.exists(log_dirname) and os.path.isdir(log_dirname):
+        files = os.listdir(log_dirname)
+        only_log_files = True
+        for file in files:
+            path = os.path.join(log_dirname, file)
+            if os.path.splitext(file)[1] in logfile_types or file == 'info.txt':
+                os.remove(path)
+            else:
+                only_log_files = False
+        if only_log_files:
+            os.rmdir(log_dirname)
 
 
 #######################################################################

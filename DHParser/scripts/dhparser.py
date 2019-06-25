@@ -20,6 +20,7 @@ permissions and limitations under the License.
 
 import os
 import sys
+from typing import cast
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
 i, k = scriptdir.find('DHParser-submodule'), len('DHParser-submodule')
@@ -36,9 +37,9 @@ templatedir = os.path.join(os.path.dirname(scriptdir.rstrip('/')), 'templates')
 from DHParser.compile import compile_source
 from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.log import logging
-from DHParser.toolkit import re, typing
-from typing import cast
+from DHParser.log import start_logging
+from DHParser.toolkit import re
+
 
 LOGGING = False
 
@@ -219,11 +220,12 @@ def main():
                 print('File %s not found! Aborting.' % file_path)
                 sys.exit(1)
         elif choice.strip() == '3':
-            with logging(LOGGING):
-                if not cpu_profile(selftest, 1):
-                    print("Selftest FAILED :-(\n")
-                    sys.exit(1)
-                print("Selftest SUCCEEDED :-)\n")
+            if LOGGING:
+                start_logging(LOGGING)
+            if not cpu_profile(selftest, 1):
+                print("Selftest FAILED :-(\n")
+                sys.exit(1)
+            print("Selftest SUCCEEDED :-)\n")
         elif choice.strip().lower() not in {'q', 'quit', 'exit'}:
             print('No valid choice. Goodbye!')
 

@@ -18,7 +18,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Synonym, AllOf, SomeOf, Unordered, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -720,14 +720,14 @@ def get_compiler() -> XMLCompiler:
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
-        result = compile_source(source, get_preprocessor(),
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging(log_dir)
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 

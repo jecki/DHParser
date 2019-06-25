@@ -6,7 +6,7 @@
 import os
 import sys
 
-LOGGING = True
+LOGGING = 'LOGS'
 
 sys.path.extend(['../../', '../', './'])
 
@@ -26,24 +26,23 @@ except ModuleNotFoundError:
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
     create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(False):
-        # recompiles Grammar only if it has changed
-        name = os.path.splitext(os.path.basename(grammar_src))[0]
-        if not dsl.recompile_grammar(grammar_src, force=force,
-                                     notify=lambda: print('recompiling ' + grammar_src)):
-            print('\nErrors while recompiling "{}":'.format(grammar_src) +
-                  '\n--------------------------------------\n\n')
-            with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
-                print(f.read())
-            sys.exit(1)
+    # recompiles Grammar only if it has changed
+    name = os.path.splitext(os.path.basename(grammar_src))[0]
+    if not dsl.recompile_grammar(grammar_src, force=force,
+                                 notify=lambda: print('recompiling ' + grammar_src)):
+        print('\nErrors while recompiling "{}":'.format(grammar_src) +
+              '\n--------------------------------------\n\n')
+        with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
+            print(f.read())
+        sys.exit(1)
 
 
 def run_grammar_tests(glob_pattern):
-    with DHParser.log.logging(LOGGING):
-        error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
-            get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report='REPORT', verbose=True)
+    DHParser.log.start_logging(LOGGING)
+    error_report = testing.grammar_suite(
+        os.path.join(scriptpath, 'grammar_tests'),
+        get_grammar, get_transformer,
+        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 

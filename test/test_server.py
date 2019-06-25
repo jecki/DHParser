@@ -57,6 +57,8 @@ def stop_server():
             writer.close()
         except ConnectionRefusedError:
             pass
+        except ConnectionResetError:
+            pass
 
     asyncio_run(send_stop_server())
 

@@ -44,6 +44,4 @@ from DHParser import parse_sxpr, Compiler
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    from DHParser.log import logging
-    with logging(False):
-        runner("", globals())
+    runner("", globals())

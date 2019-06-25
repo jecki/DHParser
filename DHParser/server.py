@@ -82,9 +82,9 @@ RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 
-RE_IS_JSONRPC = b'\s*{'  # b'\s*(?:{|\[|"|\d|true|false|null)'
-RE_GREP_URL = b'GET ([^ \n]+) HTTP'
-RE_FUNCTION_CALL = b'\s*(\w+)\(([^)]*)\)$'
+RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'  # b'\s*(?:{|\[|"|\d|true|false|null)'
+RE_GREP_URL = rb'GET ([^ \n]+) HTTP'
+RE_FUNCTION_CALL = rb'\s*(\w+)\(([^)]*)\)$'
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -166,7 +166,7 @@ def GMT_timestamp() -> str:
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
 
-ALL_RPCs = frozenset('*')  # Magic value denoting all remove procedures
+ALL_RPCs = frozenset('*')  # Magic value denoting all remote procedures
 
 
 def default_fallback(*args, **kwargs) -> str:
@@ -226,6 +226,7 @@ class Server:
             self.log_file = create_log('%s_%s.log' % (self.__class__.__name__, hex(id(self))[2:])) # type: str
         else:
             self.log_file = ''
+        self.echo_log = get_config_value('echo_server_log')
 
         self.loop = None  # just for python 3.5 compatibility...
 
@@ -301,12 +302,10 @@ class Server:
                 response = ('Illegal response type %s of reponse object %s. '
                             'Only bytes and str allowed!' \
                             % (str(type(response)), str(response))).encode()
-            if self.log_file:
-                append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n')
+            append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
             writer.write(response)
 
-        if self.log_file:
-            append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n')
+        append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
 
         if data.startswith(b'GET'):
             # HTTP request
@@ -334,7 +333,7 @@ class Server:
                     else:
                         respond(http_response(rpc_error[1]))
 
-        elif not re.match(RE_IS_JSONRPC, data):
+        elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
             # plain data
             if oversized:
                 respond("Source code too large! Only %i MB allowed"
@@ -369,7 +368,11 @@ class Server:
                     respond(rpc_error[1])
 
         else:
-            # JSON RPC
+            # TODO: add batch processing capability!
+            i = data.find(b'"jsonrpc"') - 1
+            while i > 0 and data[i] in (b'{', b'['):
+                i -= 1
+            data = data[i:]
             if oversized:
                 rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
                             % (self.max_source_size // (1024 ** 2))
@@ -594,19 +597,30 @@ class Server:
 #######################################################################
 
 
-def json_rpc(f: Callable):
+def lsp_rpc(f: Callable):
+    """A decorator for LanguageServerProtocol-methods. This wrapper
+    filters out calls that are made befer initializing the server and
+    after shutdown and returns an error message instead.
+    This decorator should only be used on methods of
+    LanguageServerProtocol-objects as it expects the first parameter
+    to be a the `self`-reference of this object.
+    All LSP-methods should be decorated with this decorator except
+    initialize and exit
+    """
     @wraps(f)
     def wrapper(*args, **kwargs):
         try:
             self = args[0]
         except IndexError:
             self = kwargs['self']
+        assert isinstance(self, LanguageServerProtocol)
         if self.server_shutdown:
             return {'code': -32600, 'message': 'server already shut down'}
         elif not self._server_initialized:
             return {'code': -32002, 'message': 'initialize-request must be send first'}
         else:
             return f(*args, **kwargs)
+    assert f.__name__ not in ['rpc_initialize', 'rpc_exit']
     return wrapper
 
 
@@ -670,8 +684,6 @@ class LanguageServerProtocol:
             #         "id": 0}
         else:
             self_client_initialized = True
-
-
 
 
 def create_language_server(lsp: LanguageServerProtocol) -> Server:

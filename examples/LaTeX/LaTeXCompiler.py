@@ -25,7 +25,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
     is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, THREAD_LOCALS
-from DHParser.log import logging
+from DHParser.log import start_logging
 
 
 #######################################################################
@@ -615,14 +615,14 @@ def get_compiler() -> LaTeXCompiler:
 def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging("LOGS"):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_preprocessor(), 
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging("LOGS")
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 

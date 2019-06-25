@@ -81,7 +81,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \\
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
