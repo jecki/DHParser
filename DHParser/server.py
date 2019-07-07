@@ -75,7 +75,10 @@ __all__ = ('RPC_Table',
            'IDENTIFY_REQUEST',
            'ALL_RPCs',
            'identify_server',
-           'Server')
+           'Server',
+           'lsp_rpc',
+           'LanguageServerProtocol',
+           'create_language_server')
 
 
 RPC_Table = Dict[str, Callable]
@@ -359,7 +362,7 @@ class Server:
                 if rpc_error is None:
                     if isinstance(result, str):
                         respond(result)
-                    else:
+                    elif result is not None:
                         try:
                             respond(json.dumps(result, cls=DHParser_JSONEncoder))
                         except TypeError as err:
@@ -616,11 +619,10 @@ def lsp_rpc(f: Callable):
         assert isinstance(self, LanguageServerProtocol)
         if self.server_shutdown:
             return {'code': -32600, 'message': 'server already shut down'}
-        elif not self._server_initialized:
+        elif not self.server_initialized and f.__name__ != 'rpc_initialize':
             return {'code': -32002, 'message': 'initialize-request must be send first'}
         else:
             return f(*args, **kwargs)
-    assert f.__name__ not in ['rpc_initialize', 'rpc_exit']
     return wrapper
 
 
@@ -638,29 +640,30 @@ class LanguageServerProtocol:
     cpu_bound = ALL_RPCs    # type: Set[str]
     blocking = frozenset()  # type: Set[str]
 
-    def __init__(self, additional_rpcs: Dict[str, Callable] = {}):
+    def __init__(self, capabilities: Dict[str, bool] = {}, additional_rpcs: Dict[str, Callable] = {}):
         self.rpc_table = dict()  # type: RPC_Table
         for attr in dir(self):
             if attr.startswith('rpc_'):
-                name = attr[4:].replace('_', '/')
+                name = attr[4:].replace('_', '/').replace('S/', '$/')
                 func = getattr(self, attr)
                 self.rpc_table[name] = func
         self.rpc_table.update(additional_rpcs)
-        self.server_initialized = False
-        self.server_shutdown = False
-        self.client_initialized = False
+        self.server_initialized = False  # type: bool
+        self.server_shutdown = False  # type: bool
+        self.client_initialized = False  # type: bool
 
-        self.processId = 0
-        self.rootUri = ''
-        self.clientCapabilities = {}
+        self.processId = 0  # type: int
+        self.rootUri = ''  # type: str
+        self.serverCapabilities = capabilities  # type: Dict[str, bool]
+        self.clientCapabilities = {}  # type: Dict[str, bool]
 
+        self.server_object = None  # type: Server
 
     def initialize(self, **kw):
         self.processId = kw['processId']
         self.rootUri = kw['rootUri']
         self.clientCapabilities = kw['capabilities']
-        return {'capabilities': {}}
-
+        return {'capabilities': self.serverCapabilities}
 
     def rpc_default(self, arg):
         return '"%s" is no valid JSON-RPC! See: https://www.jsonrpc.org/specification' % arg
@@ -683,10 +686,21 @@ class LanguageServerProtocol:
             #         "message": "Initialize Notification already received!"},
             #         "id": 0}
         else:
-            self_client_initialized = True
+            self.client_initialized = True
+        return None
+
+    @lsp_rpc
+    def rpc_shutdown(self, *args, **kwargs):
+        return None
+
+    def rpc_exit(self, *args, **kwargs):
+        self.server_object.terminate_server()
+        return None
 
 
 def create_language_server(lsp: LanguageServerProtocol) -> Server:
     """Creates a Language Server for the given Language Server Protocol-object."""
-    return Server(lsp.rpc_table, lsp.cpu_bound, lsp.blocking)
+    server = Server(lsp.rpc_table, lsp.cpu_bound, lsp.blocking)
+    lsp.server_object = server
+    return server
 

@@ -7,7 +7,6 @@
 #######################################################################
 
 
-import collections
 from functools import partial
 import os
 import sys
@@ -33,9 +32,9 @@ from DHParser import start_logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
-    JSON_SERIALIZATION, THREAD_LOCALS
+    error_on, recompile_grammar, left_associative, lean_left, LanguageServerProtocol, lsp_rpc, \
+    set_config_value, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, THREAD_LOCALS
 
 
 #######################################################################
@@ -201,6 +200,7 @@ def get_compiler() -> jsonCompiler:
 #
 #######################################################################
 
+
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
@@ -210,6 +210,48 @@ def compile_src(source, log_dir=''):
                                   get_grammar(),
                                   get_transformer(), compiler)
     return result_tuple
+
+
+class JSONLSP(LanguageServerProtocol):
+    @lsp_rpc
+    def rpc_textDocument_hover(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_textDocument_definition(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_textDocument_xdefinition(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_textDocument_references(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_textDocument_documentSymbol(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_workspace_xreferences(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_workspace_symbol(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_workspace_xpackages(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_workspace_xdependencies(self, **kwargs):
+        print(kwargs)
+
+    @lsp_rpc
+    def rpc_S_cancelRequest(self, **kwargs):
+        print(kwargs)
 
 
 if __name__ == "__main__":
