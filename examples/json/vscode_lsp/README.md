@@ -1,10 +1,10 @@
 # JSON LSP-integration for Visual Studio Code
 
-See https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+See <https://code.visualstudio.com/api/language-extensions/language-server-extension-guide>
 
 ## Functionality
 
-Client-module for Visual Studio Code to connect jsonServer.py as a language-server for jsopn
+Client-module for Visual Studio Code to connect jsonServer.py as a language-server for json
 
 ## Running the Sample
 
