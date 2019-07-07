@@ -307,7 +307,7 @@ class Server:
                 response = response.encode()
             elif not isinstance(response, bytes):
                 response = ('Illegal response type %s of reponse object %s. '
-                            'Only bytes and str allowed!' \
+                            'Only bytes and str allowed!'
                             % (str(type(response)), str(response))).encode()
             if self.use_jsonrpc_header:
                 response = JSONRPC_HEADER.format(length=len(response)).encode() + response
@@ -377,7 +377,7 @@ class Server:
                     respond(rpc_error[1])
 
         else:
-            # TODO: add batch processing capability!
+            # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
             i = data.find(b'"jsonrpc"') - 1
             # see: https://microsoft.github.io/language-server-protocol/specification#header-part
             # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
@@ -423,7 +423,7 @@ class Server:
                     error = cast(Dict[str, str], result['error'])
                 except KeyError:
                     error = cast(Dict[str, str], result)
-                rpc_error = error['code'], error['message']
+                rpc_error = int(error['code']), error['message']
             except TypeError:
                 pass  # result is not a dictionary, never mind
             except KeyError:
