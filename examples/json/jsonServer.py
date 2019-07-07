@@ -24,7 +24,6 @@ import asyncio
 import os
 import sys
 
-
 scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
@@ -165,13 +164,8 @@ def assert_if(cond: bool, message: str):
 
 
 if __name__ == "__main__":
-    sys.path.extend(['../', '../../'])
-    from DHParser import configuration
-    CFG = configuration.access_presets()
-    # CFG['log_dir'] = os.path.abspath('LOG')
-    # CFG['log_server'] = True
-    CFG['echo_server_log'] = True
-    configuration.finalize_presets()
+    print(os.getcwd())
+    sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
 
     host, port = '', -1
 
@@ -211,6 +205,12 @@ if __name__ == "__main__":
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":
+        from DHParser import configuration
+        CFG = configuration.access_presets()
+        CFG['log_dir'] = os.path.abspath('LOG')
+        CFG['log_server'] = True
+        CFG['echo_server_log'] = True
+        configuration.finalize_presets()
         if len(argv) == 2:
             argv.append(host)
         if len(argv) == 3:

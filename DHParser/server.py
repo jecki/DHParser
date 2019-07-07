@@ -96,7 +96,7 @@ SERVER_STARTING = 1
 SERVER_ONLINE = 2
 SERVER_TERMINATE = 3
 
-RESPONSE_HEADER = '''HTTP/1.1 200 OK
+HTTP_RESPONSE_HEADER = '''HTTP/1.1 200 OK
 Date: {date}
 Server: DHParser
 Accept-Ranges: none
@@ -104,9 +104,14 @@ Content-Length: {length}
 Connection: close
 Content-Type: text/html; charset=utf-8
 X-Pad: avoid browser bug
+
 '''
 
-ONELINER_HTML = """<!DOCTYPE html>
+JSONRPC_HEADER = '''Content-Length: {length}
+
+'''
+
+ONELINER_HTML = '''<!DOCTYPE html>
 <html lang="en" xml:lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -115,7 +120,8 @@ ONELINER_HTML = """<!DOCTYPE html>
 <h1>{line}</h1>
 </body>
 </html>
-"""
+
+'''
 
 UNKNOWN_FUNC_HTML = ONELINER_HTML.format(
     line="DHParser Error: Function {func} unknown or not registered!")
@@ -230,6 +236,7 @@ class Server:
         else:
             self.log_file = ''
         self.echo_log = get_config_value('echo_server_log')
+        self.use_jsonrpc_header = get_config_value('jsonrpc_header')
 
         self.loop = None  # just for python 3.5 compatibility...
 
@@ -253,7 +260,7 @@ class Server:
             else:
                 encoded_html = "Illegal type %s for response %s. Only str allowed!" \
                                % (str(type(html)), str(html))
-            response = RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
+            response = HTTP_RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
             return response.encode() + encoded_html
 
         async def execute(executor: Executor, method: Callable, params: Union[Dict, Sequence]):
@@ -303,8 +310,10 @@ class Server:
                 response = response.encode()
             elif not isinstance(response, bytes):
                 response = ('Illegal response type %s of reponse object %s. '
-                            'Only bytes and str allowed!' \
+                            'Only bytes and str allowed!'
                             % (str(type(response)), str(response))).encode()
+            if self.use_jsonrpc_header:
+                response = JSONRPC_HEADER.format(length=len(response)).encode() + response
             append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
             writer.write(response)
 
@@ -371,8 +380,10 @@ class Server:
                     respond(rpc_error[1])
 
         else:
-            # TODO: add batch processing capability!
+            # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
             i = data.find(b'"jsonrpc"') - 1
+            # see: https://microsoft.github.io/language-server-protocol/specification#header-part
+            # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
             while i > 0 and data[i] in (b'{', b'['):
                 i -= 1
             data = data[i:]
@@ -415,7 +426,7 @@ class Server:
                     error = cast(Dict[str, str], result['error'])
                 except KeyError:
                     error = cast(Dict[str, str], result)
-                rpc_error = error['code'], error['message']
+                rpc_error = int(error['code']), error['message']
             except TypeError:
                 pass  # result is not a dictionary, never mind
             except KeyError:
@@ -514,11 +525,15 @@ class Server:
         assert self.stage.value == SERVER_OFFLINE
         self.stage.value = SERVER_STARTING
         self._empty_message_queue()
+        if self.echo_log:
+            print("Server logging is on.")
         try:
             if sys.version_info >= (3, 7):
                 asyncio.run(self.serve(host, port))
             else:
                 self.serve_py35(host, port, loop)
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt")
         except CancelledError:
             pass
         self.pp_executor = None
@@ -602,7 +617,7 @@ class Server:
 
 def lsp_rpc(f: Callable):
     """A decorator for LanguageServerProtocol-methods. This wrapper
-    filters out calls that are made befer initializing the server and
+    filters out calls that are made before initializing the server and
     after shutdown and returns an error message instead.
     This decorator should only be used on methods of
     LanguageServerProtocol-objects as it expects the first parameter

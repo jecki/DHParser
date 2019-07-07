@@ -282,6 +282,11 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # Default value: 4 MB
 CONFIG_PRESET['max_rpc_size'] = 4 * 1024 * 1024
 
+# Add a header to JSON-RPC requests of responses.
+# see: https://microsoft.github.io/language-server-protocol/specification#header-part
+# Default value: True
+CONFIG_PRESET['jsonrpc_header'] = True
+
 # Defaut host name or IP-adress for the compiler server. Should usually
 # be localhost (127.0.0.1)
 # Default value: 127.0.0.1.
@@ -310,8 +315,9 @@ CONFIG_PRESET['debug_compiler'] = False
 #
 ########################################################################
 
-# Log-directory. An empty string means that logging is turned off,
-# no matter what value the other log-configuration parameters have.
+# Log-directory. An empty string means that writing of log files is
+# turned off, no matter what value the other log-configuration
+# parameters have. The only exception is "echo logging" to the terminal!
 # Default value: '' (all logging is turned off)
 CONFIG_PRESET['log_dir'] = ''
 
