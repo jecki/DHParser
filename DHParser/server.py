@@ -48,7 +48,7 @@ from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import wraps, partial
 import json
-from multiprocessing import Process, Manager, Queue, Value, Array
+from multiprocessing import Process, Queue, Value, Array
 import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, Any, \
@@ -130,6 +130,7 @@ USE_DEFAULT_HOST = ''
 USE_DEFAULT_PORT = -1
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"
+STOP_SERVER_REQUEST_STR = STOP_SERVER_REQUEST.decode()
 IDENTIFY_REQUEST = "identify()"
 
 
@@ -203,7 +204,7 @@ class Server:
             func = cast(Callable, rpc_functions)
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
-        assert STOP_SERVER_REQUEST.decode() not in self.rpc_table
+        assert STOP_SERVER_REQUEST_STR not in self.rpc_table
         if IDENTIFY_REQUEST.strip('()') not in self.rpc_table:
             self.rpc_table[IDENTIFY_REQUEST.strip('()')] = identify_server
 
@@ -312,7 +313,7 @@ class Server:
                 response = ('Illegal response type %s of reponse object %s. '
                             'Only bytes and str allowed!'
                             % (str(type(response)), str(response))).encode()
-            if self.use_jsonrpc_header:
+            if self.use_jsonrpc_header and response.startswith(b'{'):
                 response = JSONRPC_HEADER.format(length=len(response)).encode() + response
             append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
             writer.write(response)
@@ -386,7 +387,8 @@ class Server:
             # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
             while i > 0 and data[i] in (b'{', b'['):
                 i -= 1
-            data = data[i:]
+            if i > 0:
+                data = data[i:]
             if oversized:
                 rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
                             % (self.max_source_size // (1024 ** 2))
@@ -410,7 +412,7 @@ class Server:
                                         ' "%s" found.' % obj.get('jsonrpc', b'unknown')
                 elif 'method' not in obj:
                     rpc_error = -32600, 'Invalid Request: No method specified.'
-                elif obj['method'] == STOP_SERVER_REQUEST.decode():
+                elif obj['method'] == STOP_SERVER_REQUEST_STR:
                     result = self.stop_response
                     kill_switch = True
                 elif obj['method'] not in self.rpc_table:
@@ -420,6 +422,8 @@ class Server:
                     method = self.rpc_table[method_name]
                     params = obj['params'] if 'params' in obj else ()
                     await run(method_name, method, params)
+                    if method_name == 'exit':
+                        kill_switch = True
 
             try:
                 try:
@@ -672,8 +676,6 @@ class LanguageServerProtocol:
         self.serverCapabilities = capabilities  # type: Dict[str, bool]
         self.clientCapabilities = {}  # type: Dict[str, bool]
 
-        self.server_object = None  # type: Server
-
     def initialize(self, **kw):
         self.processId = kw['processId']
         self.rootUri = kw['rootUri']
@@ -708,14 +710,13 @@ class LanguageServerProtocol:
     def rpc_shutdown(self, *args, **kwargs):
         return None
 
+    @lsp_rpc
     def rpc_exit(self, *args, **kwargs):
-        self.server_object.terminate_server()
         return None
 
 
 def create_language_server(lsp: LanguageServerProtocol) -> Server:
     """Creates a Language Server for the given Language Server Protocol-object."""
     server = Server(lsp.rpc_table, lsp.cpu_bound, lsp.blocking)
-    lsp.server_object = server
     return server
 

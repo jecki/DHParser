@@ -111,7 +111,7 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    DSL_server = create_language_server(LanguageServerProtocol({'default': compile_src}))
+    DSL_server = create_language_server(LanguageServerProtocol(additional_rpcs={'default': compile_src}))
     DSL_server.run_server(host, port)
 
 

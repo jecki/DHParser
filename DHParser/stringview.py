@@ -1,7 +1,7 @@
 # stringview.py - a string class where slices are views not copies as
 #                    with the standard Python strings.
 #
-#    stringview.pxd - declarations for the cython Python to C compiler
+# stringview.pxd - declarations for the cython Python to C compiler
 #                    to speed up handling of StringViews.
 #
 # Copyright 2016  by Eckhart Arnold (arnold@badw.de)

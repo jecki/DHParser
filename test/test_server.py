@@ -311,7 +311,12 @@ class TestLanguageServer:
                                          {'processId': 0,
                                           'rootUri': 'file://~/tmp',
                                           'capabilities': {}}))
-        res = json.loads(response)
+        # print(response)
+        i = response.find('"jsonrpc"') - 1
+        while i > 0 and response[i] in ('{', '['):
+            i -= 1
+        res = json.loads(response[i:])
+        # print(response, res)
         assert 'result' in res and 'capabilities' in res['result']
 
 

@@ -212,17 +212,83 @@ def compile_src(source, log_dir=''):
     return result_tuple
 
 
-class JSONLSP(LanguageServerProtocol):
+class JsonLSP(LanguageServerProtocol):
+    def __init__(self):
+        super().__init__(capabilities={
+            "testDocumentSync": {
+                'openClode': False,
+                'change': 0,  # 0 = no sync, 1 = full sync, 2 = incremental sync
+                'willSave': True,
+                'willSaveWaitUntil': False,
+                'save': {
+                    "includeText": False
+                }
+            },
+            "hoverProvider": True,
+            # "completionProvier": {
+            #     'resolveProvider': False,
+            #     # 'triggerCharacters': ''
+            # },
+            # "signatureHelpProvider": {
+            #     # 'triggerCharacters': ''
+            # },
+            "definitionProvider": True,
+            "typeDefinitionProvider": False,
+            # "typeDefinitionProvider": {
+            #     # 'id': ''
+            #     'documentSelector': [
+            #         {
+            #             "language": '',
+            #             "scheme": '',
+            #             "pattern": ''
+            #         }
+            #     ]
+            # },
+            "implementationDefinitionProvider": False,
+            "referencesProvider": True,
+            "documentHighlightProvider": False,
+            "documentSymbolProvider": True,
+            "workspaceSymbolProvider": True,
+            "codeActionProvider": False,
+            # "codeActionProvider": {
+            #   'codeActionKinds': ['']
+            # },
+            # "codeLensProvider": {
+            #     'resolveProvider': False,
+            # },
+            "documentFormattingProvider": False,
+            "documentRangeFormattingProvider": False,
+            # "documentOnTypeFormattingProvider": {
+            #     'firstTriggerCharacter': '',
+            #     # 'moreTriggerCharacter': ''
+            # },
+            "renameProvider": False,
+            # "renameProvider": {
+            #     'prepareProvider': False
+            # },
+            # "documentLinkProvider": {
+            #     'resolveProvider': False
+            # },
+            "colorProvider": False,
+            "foldingRangeProvider": False,
+            "declarationProvider": False,
+            # "executeCommandProvider": {
+            #     'commands': ['']
+            # },
+            # "workspace": {
+            #     'workspaceFolders': {
+            #         'supported': False,
+            #         'changeNotifications': '' # string id or bool
+            #     }
+            # }
+        },  additional_rpcs={'default': compile_src})
+
     @lsp_rpc
     def rpc_textDocument_hover(self, **kwargs):
         print(kwargs)
 
     @lsp_rpc
     def rpc_textDocument_definition(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_textDocument_xdefinition(self, **kwargs):
         print(kwargs)
 
     @lsp_rpc
@@ -234,19 +300,7 @@ class JSONLSP(LanguageServerProtocol):
         print(kwargs)
 
     @lsp_rpc
-    def rpc_workspace_xreferences(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
     def rpc_workspace_symbol(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_workspace_xpackages(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_workspace_xdependencies(self, **kwargs):
         print(kwargs)
 
     @lsp_rpc

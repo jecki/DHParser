@@ -104,7 +104,7 @@ class TestLoggingAndLoading:
         assert not os.path.exists("TESTLOGS"), \
             "Log dir should be created lazily!"
         dirname = log_dir()
-        print(type(dirname), dirname)
+        # print(type(dirname), dirname)
         assert os.path.basename(dirname) == "TESTLOGS"
         assert is_logging(), "is_logging() should return True, if logging is on"
         save_log_dir = suspend_logging()

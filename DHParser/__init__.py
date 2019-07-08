@@ -28,6 +28,7 @@ from .error import *
 from .log import *
 from .parse import *
 from .preprocess import *
+from .server import *
 from .stringview import *
 from .syntaxtree import *
 from .testing import *
@@ -43,6 +44,7 @@ __all__ = (compile.__all__ +
            log.__all__ +
            parse.__all__ +
            preprocess.__all__ +
+           server.__all__ +
            stringview.__all__ +
            syntaxtree.__all__ +
            testing.__all__ +
