@@ -20,8 +20,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method('spawn')
+
 import asyncio
 import json
+import multiprocessing
 import os
 import platform
 import subprocess
@@ -30,7 +36,7 @@ import time
 
 sys.path.extend(['../', './'])
 
-from DHParser.server import Server, LanguageServerProtocol, create_language_server, asyncio_run, \
+from DHParser.server import Server, asyncio_run, gen_lsp_table, \
     STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 from DHParser.toolkit import concurrent_ident
 
@@ -70,7 +76,7 @@ class TestServer:
 
     def setup(self):
         stop_server()
-        self.windows = sys.platform.lower().find('win') >= 0
+        self.spawn = multiprocessing.get_start_method() == "spawn"
 
     def compiler_dummy(self, src: str) -> str:
         return src
@@ -150,7 +156,7 @@ class TestServer:
         """Test, whether delegation of (long-running) tasks to
         processes or threads works."""
         sequence = []
-        if self.windows:
+        if self.spawn:
             SLOW, FAST = '0.1', '0.01'
         else:
             SLOW, FAST = '0.01', '0.001'
@@ -272,14 +278,15 @@ class TestSpawning:
         # print(result)
 
 
-def send_request(request: str) -> str:
+def send_request(request: str, expect_response: bool = True) -> str:
     response = ''
     async def send(request):
         try:
             nonlocal response
             reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(request.encode())
-            response = (await reader.read(8192)).decode()
+            if expect_response:
+                response = (await reader.read(8192)).decode()
             writer.close()
         except ConnectionRefusedError:
             pass
@@ -292,6 +299,58 @@ def json_rpc(method: str, params: dict) -> str:
     return json.dumps({'jsonrpc': '2.0', 'id':'0', 'method':method, 'params': params})
 
 
+# initialized = multiprocessing.Value('b', 0)
+# processId = multiprocessing.Value('Q', 0)
+# rootUri = multiprocessing.Array('c', b' ' * 2048)
+# clientCapabilities = multiprocessing.Array('c', b' ' * 16384)
+# serverCapabilities = multiprocessing.Array('c', b' ' * 16384)
+# serverCapabilities.value = json.dumps('{}').encode()
+#
+#
+# def lsp_initialize(**kwargs):
+#     global initialized, processId, rootUri, clientCapabilities, serverCapabilities
+#     if initialized.value != 0 or processId.value != 0:
+#         return {"code": -32002, "message": "Server has already been initialized."}
+#     processId.value = kwargs['processId']
+#     rootUri.value = kwargs['rootUri'].encode()
+#     clientCapabilities.value = json.dumps(kwargs['capabilities']).encode()
+#     return {'capabilities': json.loads(serverCapabilities.value.decode())}
+#
+#
+# def lsp_initialized(**kwargs):
+#     global initialized
+#     print(processId.value)
+#     print(rootUri.value)
+#     print(clientCapabilities.value)
+#     initialized.value = -1
+#     return None
+
+
+class LSP:
+    def __init__(self):
+        manager = multiprocessing.Manager()
+        self.shared = manager.Namespace()
+        self.shared.initialized = False
+        self.shared.processId = 0
+        self.shared.rootUri = ''
+        self.shared.clientCapabilities = ''
+        self.shared.serverCapabilities = json.dumps('{}')
+
+    def lsp_initialize(self, **kwargs):
+        if self.shared.initialized or self.shared.processId != 0:
+            return {"code": -32002, "message": "Server has already been initialized."}
+        self.shared.processId = kwargs['processId']
+        self.shared.rootUri = kwargs['rootUri']
+        self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
+        return {'capabilities': json.loads(self.shared.serverCapabilities)}
+
+    def lsp_initialized(self, **kwargs):
+        print(self.shared.processId)
+        print(self.shared.rootUri)
+        print(self.shared.clientCapabilities)
+        self.shared.initialized = True
+        return None
+
 
 class TestLanguageServer:
     """Tests for the generic LanguageServer-class."""
@@ -299,7 +358,10 @@ class TestLanguageServer:
     def setup(self):
         stop_server()
         self.windows = sys.platform.lower().find('win') >= 0
-        self.server = create_language_server(LanguageServerProtocol())
+        self.lsp = LSP()
+        self.server = Server(rpc_functions=gen_lsp_table((self.lsp.lsp_initialize,
+                                                          self.lsp.lsp_initialized),
+                                                         prefix='lsp_'))
         self.server.spawn_server('127.0.0.1', TEST_PORT)
 
     def teardown(self):
@@ -308,16 +370,18 @@ class TestLanguageServer:
 
     def test_initialize(self):
         response = send_request(json_rpc('initialize',
-                                         {'processId': 0,
+                                         {'processId': 701,
                                           'rootUri': 'file://~/tmp',
                                           'capabilities': {}}))
-        # print(response)
         i = response.find('"jsonrpc"') - 1
         while i > 0 and response[i] in ('{', '['):
             i -= 1
         res = json.loads(response[i:])
-        # print(response, res)
-        assert 'result' in res and 'capabilities' in res['result']
+        assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+        response = send_request(json_rpc('initialized', {}), expect_response=False)
+        assert response == '', response
+
 
 
 
@@ -325,3 +389,4 @@ class TestLanguageServer:
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
+

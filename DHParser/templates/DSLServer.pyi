@@ -114,6 +114,13 @@ def run_server(host, port):
     DSL_server = create_language_server(LanguageServerProtocol(additional_rpcs={'default': compile_src}))
     DSL_server.run_server(host, port)
 
+    cfg_filename = get_config_filename()
+    try:
+        os.remove(cfg_filename)
+        print('removing temporary config file: ' + cfg_filename)
+    except FileNotFoundError:
+        pass
+
 
 async def send_request(request, host, port):
     reader, writer = await asyncio.open_connection(host, port)
@@ -213,12 +220,6 @@ if __name__ == "__main__":
     elif argv[1] in ("--stopserver", "--killserver"):
         try:
             result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
-            cfg_filename = get_config_filename()
-            try:
-                os.remove(cfg_filename)
-                print('removing temporary config file: ' + cfg_filename)
-            except FileNotFoundError:
-                pass
         except ConnectionRefusedError as e:
             print(e)
             sys.exit(1)

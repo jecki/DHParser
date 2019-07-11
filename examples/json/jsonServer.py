@@ -95,12 +95,12 @@ def json_rpc(func, params=[], ID=None) -> str:
 
 def run_server(host, port):
     try:
-        from jsonCompiler import JsonLSP
+        from jsonCompiler import compile_src
     except ModuleNotFoundError:
         from tst_json_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'json.ebnf'), force=False)
         from jsonCompiler import compile_src
-    from DHParser.server import create_language_server
+    from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
         with open(config_filename, 'w') as f:
@@ -109,8 +109,17 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    DSL_server = create_language_server(JsonLSP())
+    DSL_server =   self.server = Server(rpc_functions=gen_lsp_table((lsp_initialize,
+                                                          lsp_initialized),
+                                                         prefix='lsp_'))
     DSL_server.run_server(host, port)
+
+    cfg_filename = get_config_filename()
+    try:
+        os.remove(cfg_filename)
+        print('removing temporary config file: ' + cfg_filename)
+    except FileNotFoundError:
+        pass
 
 
 async def send_request(request, host, port):
@@ -220,12 +229,6 @@ if __name__ == "__main__":
     elif argv[1] in ("--stopserver", "--killserver"):
         try:
             result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
-            cfg_filename = get_config_filename()
-            try:
-                os.remove(cfg_filename)
-                print('removing temporary config file: ' + cfg_filename)
-            except FileNotFoundError:
-                pass
         except ConnectionRefusedError as e:
             print(e)
             sys.exit(1)
