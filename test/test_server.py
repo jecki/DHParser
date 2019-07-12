@@ -23,9 +23,11 @@ limitations under the License.
 if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
-    multiprocessing.set_start_method('spawn')
+    multiprocessing.set_start_method('spawn')  # 'spawn' (windows and linux)
+                                               # or 'fork' or 'forkserver' or 'spawn' (linux only)
 
 import asyncio
+import functools
 import json
 import multiprocessing
 import os
@@ -33,6 +35,7 @@ import platform
 import subprocess
 import sys
 import time
+from typing import Callable
 
 sys.path.extend(['../', './'])
 
@@ -326,11 +329,37 @@ def json_rpc(method: str, params: dict) -> str:
 #     return None
 
 
+def lsp_rpc(f: Callable):
+    """A decorator for LanguageServerProtocol-methods. This wrapper
+    filters out calls that are made before initializing the server and
+    after shutdown and returns an error message instead.
+    This decorator should only be used on methods of
+    LanguageServerProtocol-objects as it expects the first parameter
+    to be a the `self`-reference of this object.
+    All LSP-methods should be decorated with this decorator except
+    initialize and exit
+    """
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            self = args[0]
+        except IndexError:
+            self = kwargs['self']
+        if self.shared.shutdown:
+            return {'code': -32600, 'message': 'language server already shut down'}
+        elif not self.shared.initialized:
+            return {'code': -32002, 'message': 'language server not initialized'}
+        else:
+            return f(*args, **kwargs)
+    return wrapper
+
+
 class LSP:
     def __init__(self):
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()
         self.shared.initialized = False
+        self.shared.shutdown = False
         self.shared.processId = 0
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
@@ -345,10 +374,25 @@ class LSP:
         return {'capabilities': json.loads(self.shared.serverCapabilities)}
 
     def lsp_initialized(self, **kwargs):
-        print(self.shared.processId)
-        print(self.shared.rootUri)
-        print(self.shared.clientCapabilities)
+        assert self.shared.processId != 0
         self.shared.initialized = True
+        return None
+
+    @lsp_rpc
+    def lsp_custom(self, **kwargs):
+        return kwargs
+
+    @lsp_rpc
+    def lsp_check(self, **kwargs):
+        return {'processId': self.shared.processId}
+
+    @lsp_rpc
+    def lsp_shutdown(self):
+        self.shared.shutdown = True
+        return {}
+
+    def lsp_exit(self):
+        self.shared.shutdown = True
         return None
 
 
@@ -359,9 +403,10 @@ class TestLanguageServer:
         stop_server()
         self.windows = sys.platform.lower().find('win') >= 0
         self.lsp = LSP()
-        self.server = Server(rpc_functions=gen_lsp_table((self.lsp.lsp_initialize,
-                                                          self.lsp.lsp_initialized),
-                                                         prefix='lsp_'))
+        lsp_table = gen_lsp_table(self.lsp, prefix='lsp_')
+        self.server = Server(rpc_functions=lsp_table,
+                             cpu_bound={'check'},
+                             blocking={'custom'})
         self.server.spawn_server('127.0.0.1', TEST_PORT)
 
     def teardown(self):
@@ -379,11 +424,26 @@ class TestLanguageServer:
         res = json.loads(response[i:])
         assert 'result' in res and 'capabilities' in res['result'], str(res)
 
+        response = send_request(json_rpc('custom', {}))
+        assert response.find('error') >= 0
+
         response = send_request(json_rpc('initialized', {}), expect_response=False)
         assert response == '', response
 
+        response = send_request(json_rpc('custom', {'test': 1}))
+        assert response.find('test') >= 0
 
+        response = send_request(json_rpc('check', {}))
+        assert response.find('701') >= 0
 
+        response = send_request(json_rpc('shutdown', {}))
+        assert response.find('error') < 0
+
+        response = send_request(json_rpc('custom', {}))
+        assert response.find('error') >= 0
+
+        response = send_request(json_rpc('exit', {}))
+        assert response == '', response
 
 
 if __name__ == "__main__":

@@ -51,8 +51,8 @@ import json
 from multiprocessing import Process, Queue, Value, Array
 import sys
 import time
-from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, Any, \
-    cast
+from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
+    Iterator, Any, cast
 
 from DHParser.configuration import get_config_value, THREAD_LOCALS
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -625,92 +625,40 @@ class Server:
 #######################################################################
 
 
-def gen_lsp_table(lsp_funcs: Sequence[Callable], prefix: str='') -> RPC_Table:
-    """Creates an RPC from a list of functions that implement the
-    language server protocol. The dictionary keys are derived from
-    the function name by replacing an underscore _ with a slash /
-    and a single capital S with a $-sign.
-    if `prefix` is not the empty string all functions are assumed to
-    start with `prefix`. The prefix will be removed before converting
-    the functions' name to a dictionary key.
+def gen_lsp_table(lsp_funcs_or_instance: Union[Sequence[Callable], Iterator[Callable], Any],
+                  prefix: str = '') -> RPC_Table:
+    """Creates an RPC from a list of functions or from the methods
+    of a class that implement the language server protocol.
+    The dictionary keys are derived from the function name by replacing an
+    underscore _ with a slash / and a single capital S with a $-sign.
+    if `prefix` is not the empty string only functions or methods that start
+    with `prefix` will be added to the table. The prefix will be removed
+    before converting the functions' name to a dictionary key.
+
+    >>> class LSP:
+    ...     def lsp_initialize(self, **kw):
+    ...         pass
+    ...     def lsp_shutdown(self, **kw):
+    ...         pass
+    >>> lsp = LSP()
+    >>> gen_lsp_table(lsp, 'lsp_').keys()
+    dict_keys(['initialize', 'shutdown'])
     """
     rpc_table = {}
+    if not isinstance(lsp_funcs_or_instance, Sequence) \
+            and not isinstance(lsp_funcs_or_instance, Iterator):
+        # assume lsp_funcs_or_instance is the instance of a class
+        lsp_funcs = (getattr(lsp_funcs_or_instance, attr)
+                     for attr in dir(lsp_funcs_or_instance) if not attr.startswith('__'))
+    else:
+        lsp_funcs = lsp_funcs_or_instance
     for func in lsp_funcs:
-        name = func.__name__
-        if prefix:
-            assert name.startswith(prefix)
+        name = func.__name__ if hasattr(func, '__name__') else ''
+        if name and name.startswith(prefix):
             name = name[len(prefix):]
-        name = name.replace('_', '/').replace('S/', '$/')
+            name = name.replace('_', '/').replace('S/', '$/')
         rpc_table[name] = func
     return rpc_table
 
 
-# class LanguageServerProtocol:
-#     """Template for the implementation of the language server protocol.
-#     See: https://microsoft.github.io/language-server-protocol/
-#
-#     Usage:
-#         class MyLSP(LanguageServerProtocoll):
-#             # Implement your LSP-methods, here
-#
-#         language_server = create_language_server(MyLSP())
-#     """
-#
-#     cpu_bound = ALL_RPCs    # type: Set[str]
-#     blocking = frozenset()  # type: Set[str]
-#
-#     def __init__(self, capabilities: Dict[str, Any] = {}, additional_rpcs: Dict[str, Callable] = {}):
-#         self.rpc_table = dict()  # type: RPC_Table
-#         for attr in dir(self):
-#             if attr.startswith('rpc_'):
-#                 name = attr[4:].replace('_', '/').replace('S/', '$/')
-#                 func = getattr(self, attr)
-#                 self.rpc_table[name] = func
-#         self.rpc_table.update(additional_rpcs)
-#         self.server_initialized = False  # type: bool
-#         self.server_shutdown = False  # type: bool
-#         self.client_initialized = False  # type: bool
-#
-#         self.processId = 0  # type: int
-#         self.rootUri = ''  # type: str
-#         self.serverCapabilities = capabilities  # type: Dict[str, bool]
-#         self.clientCapabilities = {}  # type: Dict[str, bool]
-#
-#     def initialize(self, **kw):
-#         self.processId = kw['processId']
-#         self.rootUri = kw['rootUri']
-#         self.clientCapabilities = kw['capabilities']
-#         return {'capabilities': self.serverCapabilities}
-#
-#     def rpc_default(self, arg):
-#         return '"%s" is no valid JSON-RPC! See: https://www.jsonrpc.org/specification' % arg
-#
-#     def rpc_initialize(self, **kwargs):
-#         if self.server_initialized:
-#             return {"code": -32002, "message": "Server has already been initialized."}
-#         else:
-#             result = self.initialize(**kwargs)
-#             if 'error' not in result:
-#                 self.server_initialized = True
-#             return result
-#
-#     def rpc_initialized(self):
-#         if self.client_initialized:
-#             pass  # clients must not reply to notifations!
-#             # print('double notification!')
-#             # return {"jsonrpc": "2.0",
-#             #         "error": {"code": -322002,
-#             #         "message": "Initialize Notification already received!"},
-#             #         "id": 0}
-#         else:
-#             self.client_initialized = True
-#         return None
-#
-#     @lsp_rpc
-#     def rpc_shutdown(self, *args, **kwargs):
-#         return None
-#
-#     @lsp_rpc
-#     def rpc_exit(self, *args, **kwargs):
-#         return None
 
