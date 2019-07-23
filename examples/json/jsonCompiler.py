@@ -32,7 +32,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, LanguageServerProtocol, lsp_rpc, \
+    error_on, recompile_grammar, left_associative, lean_left, \
     set_config_value, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, THREAD_LOCALS
 
@@ -212,121 +212,121 @@ def compile_src(source, log_dir=''):
     return result_tuple
 
 
-class JsonLSP(LanguageServerProtocol):
-    def __init__(self):
-        super().__init__(capabilities={
-              "capabilities": {
-                "textDocumentSync": 1,
-                "completionProvider": {
-                  "resolveProvider": False,
-                  "triggerCharacters": [
-                    "/"
-                  ]
-                },
-                "hoverProvider": True,
-                "documentSymbolProvider": True,
-                "referencesProvider": True,
-                "definitionProvider": True,
-                "documentHighlightProvider": True,
-                "codeActionProvider": True,
-                "renameProvider": True,
-                "colorProvider": {},
-                "foldingRangeProvider": True
-              }
-            },  additional_rpcs={'default': compile_src})
-        return
-        # super().__init__(capabilities={
-        #     "testDocumentSync": {
-        #         'openClode': False,
-        #         'change': 0,  # 0 = no sync, 1 = full sync, 2 = incremental sync
-        #         'willSave': True,
-        #         'willSaveWaitUntil': False,
-        #         'save': {
-        #             "includeText": False
-        #         }
-        #     },
-        #     "hoverProvider": True,
-        #     # "completionProvier": {
-        #     #     'resolveProvider': False,
-        #     #     # 'triggerCharacters': ''
-        #     # },
-        #     # "signatureHelpProvider": {
-        #     #     # 'triggerCharacters': ''
-        #     # },
-        #     "definitionProvider": True,
-        #     "typeDefinitionProvider": False,
-        #     # "typeDefinitionProvider": {
-        #     #     # 'id': ''
-        #     #     'documentSelector': [
-        #     #         {
-        #     #             "language": '',
-        #     #             "scheme": '',
-        #     #             "pattern": ''
-        #     #         }
-        #     #     ]
-        #     # },
-        #     "implementationDefinitionProvider": False,
-        #     "referencesProvider": True,
-        #     "documentHighlightProvider": False,
-        #     "documentSymbolProvider": True,
-        #     "workspaceSymbolProvider": True,
-        #     "codeActionProvider": False,
-        #     # "codeActionProvider": {
-        #     #   'codeActionKinds': ['']
-        #     # },
-        #     # "codeLensProvider": {
-        #     #     'resolveProvider': False,
-        #     # },
-        #     "documentFormattingProvider": False,
-        #     "documentRangeFormattingProvider": False,
-        #     # "documentOnTypeFormattingProvider": {
-        #     #     'firstTriggerCharacter': '',
-        #     #     # 'moreTriggerCharacter': ''
-        #     # },
-        #     "renameProvider": False,
-        #     # "renameProvider": {
-        #     #     'prepareProvider': False
-        #     # },
-        #     # "documentLinkProvider": {
-        #     #     'resolveProvider': False
-        #     # },
-        #     "colorProvider": False,
-        #     "foldingRangeProvider": False,
-        #     "declarationProvider": False,
-        #     # "executeCommandProvider": {
-        #     #     'commands': ['']
-        #     # },
-        #     # "workspace": {
-        #     #     'workspaceFolders': {
-        #     #         'supported': False,
-        #     #         'changeNotifications': '' # string id or bool
-        #     #     }
-        #     # }
-        # },  additional_rpcs={'default': compile_src})
-
-    @lsp_rpc
-    def rpc_textDocument_hover(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_textDocument_definition(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_textDocument_references(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_textDocument_documentSymbol(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_workspace_symbol(self, **kwargs):
-        print(kwargs)
-
-    @lsp_rpc
-    def rpc_S_cancelRequest(self, **kwargs):
-        print(kwargs)
+# class JsonLSP(LanguageServerProtocol):
+#     def __init__(self):
+#         super().__init__(capabilities={
+#               "capabilities": {
+#                 "textDocumentSync": 1,
+#                 "completionProvider": {
+#                   "resolveProvider": False,
+#                   "triggerCharacters": [
+#                     "/"
+#                   ]
+#                 },
+#                 "hoverProvider": True,
+#                 "documentSymbolProvider": True,
+#                 "referencesProvider": True,
+#                 "definitionProvider": True,
+#                 "documentHighlightProvider": True,
+#                 "codeActionProvider": True,
+#                 "renameProvider": True,
+#                 "colorProvider": {},
+#                 "foldingRangeProvider": True
+#               }
+#             },  additional_rpcs={'default': compile_src})
+#         return
+#         # super().__init__(capabilities={
+#         #     "testDocumentSync": {
+#         #         'openClode': False,
+#         #         'change': 0,  # 0 = no sync, 1 = full sync, 2 = incremental sync
+#         #         'willSave': True,
+#         #         'willSaveWaitUntil': False,
+#         #         'save': {
+#         #             "includeText": False
+#         #         }
+#         #     },
+#         #     "hoverProvider": True,
+#         #     # "completionProvier": {
+#         #     #     'resolveProvider': False,
+#         #     #     # 'triggerCharacters': ''
+#         #     # },
+#         #     # "signatureHelpProvider": {
+#         #     #     # 'triggerCharacters': ''
+#         #     # },
+#         #     "definitionProvider": True,
+#         #     "typeDefinitionProvider": False,
+#         #     # "typeDefinitionProvider": {
+#         #     #     # 'id': ''
+#         #     #     'documentSelector': [
+#         #     #         {
+#         #     #             "language": '',
+#         #     #             "scheme": '',
+#         #     #             "pattern": ''
+#         #     #         }
+#         #     #     ]
+#         #     # },
+#         #     "implementationDefinitionProvider": False,
+#         #     "referencesProvider": True,
+#         #     "documentHighlightProvider": False,
+#         #     "documentSymbolProvider": True,
+#         #     "workspaceSymbolProvider": True,
+#         #     "codeActionProvider": False,
+#         #     # "codeActionProvider": {
+#         #     #   'codeActionKinds': ['']
+#         #     # },
+#         #     # "codeLensProvider": {
+#         #     #     'resolveProvider': False,
+#         #     # },
+#         #     "documentFormattingProvider": False,
+#         #     "documentRangeFormattingProvider": False,
+#         #     # "documentOnTypeFormattingProvider": {
+#         #     #     'firstTriggerCharacter': '',
+#         #     #     # 'moreTriggerCharacter': ''
+#         #     # },
+#         #     "renameProvider": False,
+#         #     # "renameProvider": {
+#         #     #     'prepareProvider': False
+#         #     # },
+#         #     # "documentLinkProvider": {
+#         #     #     'resolveProvider': False
+#         #     # },
+#         #     "colorProvider": False,
+#         #     "foldingRangeProvider": False,
+#         #     "declarationProvider": False,
+#         #     # "executeCommandProvider": {
+#         #     #     'commands': ['']
+#         #     # },
+#         #     # "workspace": {
+#         #     #     'workspaceFolders': {
+#         #     #         'supported': False,
+#         #     #         'changeNotifications': '' # string id or bool
+#         #     #     }
+#         #     # }
+#         # },  additional_rpcs={'default': compile_src})
+#
+#     @lsp_rpc
+#     def rpc_textDocument_hover(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_textDocument_definition(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_textDocument_references(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_textDocument_documentSymbol(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_workspace_symbol(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_S_cancelRequest(self, **kwargs):
+#         print(kwargs)
 
 
 if __name__ == "__main__":

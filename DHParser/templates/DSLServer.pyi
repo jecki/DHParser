@@ -168,7 +168,7 @@ def run_server(host, port):
         from tst_DSL_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
         from DSLCompiler import compile_src
-    from DHParser.server import Server, gen_lsp_table, ALL_RPCs
+    from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
         with open(config_filename, 'w') as f:
@@ -283,6 +283,12 @@ if __name__ == "__main__":
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":
+        # from DHParser import configuration
+        # CFG = configuration.access_presets()
+        # CFG['log_dir'] = os.path.abspath('LOG')
+        # CFG['log_server'] = True
+        # CFG['echo_server_log'] = True
+        # configuration.finalize_presets()
         if len(argv) == 2:
             argv.append(host)
         if len(argv) == 3:

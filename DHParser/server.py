@@ -46,7 +46,7 @@ For JSON see:
 import asyncio
 from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
 from concurrent.futures.process import BrokenProcessPool
-from functools import wraps, partial
+from functools import partial
 import json
 from multiprocessing import Process, Queue, Value, Array
 import sys
@@ -54,7 +54,7 @@ import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
     Iterator, Any, cast
 
-from DHParser.configuration import get_config_value, THREAD_LOCALS
+from DHParser.configuration import get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log
 from DHParser.toolkit import re
@@ -252,6 +252,7 @@ class Server:
 
         data = await reader.read(self.max_source_size + 1)
         oversized = len(data) > self.max_source_size
+        # print(data)
 
         def http_response(html: str) -> bytes:
             gmt = GMT_timestamp()
@@ -315,6 +316,7 @@ class Server:
             if self.use_jsonrpc_header and response.startswith(b'{'):
                 response = JSONRPC_HEADER.format(length=len(response)).encode() + response
             append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
+            # print(response)
             writer.write(response)
 
         append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
@@ -382,6 +384,7 @@ class Server:
                     respond(rpc_error[1])
 
         else:
+            # json
             # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
             i = data.find(b'"jsonrpc"') - 1
             # see: https://microsoft.github.io/language-server-protocol/specification#header-part
