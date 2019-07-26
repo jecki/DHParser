@@ -454,6 +454,7 @@ class Server:
 
         if result is not None:
             await writer.drain()
+        writer.close()
 
         if kill_switch:
             # TODO: terminate processes and threads! Is this needed??

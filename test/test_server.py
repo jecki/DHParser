@@ -64,6 +64,7 @@ def stop_server():
             writer.write(STOP_SERVER_REQUEST)
             _ = await reader.read(1024)
             writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
         except ConnectionRefusedError:
             pass
         except ConnectionResetError:
@@ -95,6 +96,7 @@ class TestServer:
             writer.write(src.encode())
             data = await reader.read(500)
             writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
             assert data.decode() == "Test", data.decode()
         cs = Server(self.compiler_dummy, cpu_bound=set())
         try:
@@ -110,6 +112,7 @@ class TestServer:
             writer.write(request.encode() if isinstance(request, str) else request)
             data = await reader.read(500)
             writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
             return data.decode()
 
         cs = Server(self.compiler_dummy)
@@ -128,6 +131,7 @@ class TestServer:
             writer.write(termination_request)
             data = await reader.read(500)
             writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
             # print(data)
             assert data.find(expected_response) >= 0, str(data)
 
@@ -170,6 +174,7 @@ class TestServer:
             writer.write(argument.encode())
             sequence.append((await reader.read(500)).decode())
             writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
 
         async def run_tasks():
             await asyncio.gather(call_remote(SLOW),
@@ -274,6 +279,7 @@ class TestSpawning:
                 writer.write(IDENTIFY_REQUEST.encode())
                 data = await reader.read(500)
                 writer.close()
+                if sys.version_info >= (3, 7):  await writer.wait_closed()
                 return data.decode()
             return ''
 
@@ -291,6 +297,7 @@ def send_request(request: str, expect_response: bool = True) -> str:
             if expect_response:
                 response = (await reader.read(8192)).decode()
             writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
         except ConnectionRefusedError:
             pass
 
