@@ -850,7 +850,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     Moves adjacent nodes that fulfill the given condition to the parent node.
     If the `merge`-flag is set, a moved node will be merged with its
     predecessor (or successor, respectively) in the parent node in case it
-    also fulfill the given `condition`.
+    also fulfills the given `condition`.
     """
     def merge_results(a: Node, b: Node, c: Node) -> bool:
         """

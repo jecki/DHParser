@@ -241,18 +241,18 @@ class Server:
     async def handle_request(self,
                              reader: asyncio.StreamReader,
                              writer: asyncio.StreamWriter):
-        rpc_error = None    # type: Optional[Tuple[int, str]]
-        json_id = None      # type: Optional[int]
-        obj = {}            # type: Dict
-        result = None       # type: JSON_Type
-        raw = None          # type: JSON_Type
-        kill_switch = False # type: bool
+        rpc_error = None     # type: Optional[Tuple[int, str]]
+        json_id = None       # type: Optional[int]
+        obj = {}             # type: Dict
+        result = None        # type: JSON_Type
+        raw = None           # type: JSON_Type
+        kill_switch = False  # type: bool
 
-        # print('BEGIN DHParser.server.handle_request()')
+        print('BEGIN DHParser.server.handle_request()')
 
         data = await reader.read(self.max_source_size + 1)
         oversized = len(data) > self.max_source_size
-        # print(data)
+        print(data)
 
         def http_response(html: str) -> bytes:
             gmt = GMT_timestamp()
@@ -454,16 +454,16 @@ class Server:
 
         if result is not None:
             await writer.drain()
-        writer.close()
 
         if kill_switch:
             # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
+            writer.close()
             self.server.close()
             if self.loop is not None:
                 self.loop.stop()
 
-        # print('END DHParser.server.handle_request()')
+        print('END DHParser.server.handle_request()')
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         if host == USE_DEFAULT_HOST:

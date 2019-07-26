@@ -452,6 +452,28 @@ class TestLanguageServer:
         response = send_request(json_rpc('exit', {}))
         assert response == '', response
 
+    def test_initializion_sequence(self):
+        async def initialization_seuquence():
+            reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
+            writer.write(json_rpc('initialize',
+                                  {'processId': 701,
+                                   'rootUri': 'file://~/tmp',
+                                   'capabilities': {}}).encode())
+            response = (await reader.read(8192)).decode()
+            i = response.find('"jsonrpc"') - 1
+            while i > 0 and response[i] in ('{', '['):
+                i -= 1
+            res = json.loads(response[i:])
+            assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+            writer.write(json_rpc('initialized', {}).encode())
+
+            writer.write(json_rpc('custom', {'test': 1}).encode())
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+        asyncio_run(initialization_seuquence())
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
