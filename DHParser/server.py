@@ -81,6 +81,7 @@ __all__ = ('RPC_Table',
 
 RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
+RPC_Error_Type = Optional[Tuple[int, str]]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 
 RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'  # b'\s*(?:{|\[|"|\d|true|false|null)'
@@ -180,6 +181,21 @@ def default_fallback(*args, **kwargs) -> str:
     return 'No default RPC-function defined!'
 
 
+def http_response(html: str) -> bytes:
+    """
+    Embeds an html-string in a http header and returns the http-package
+    as byte-string.
+    """
+    gmt = GMT_timestamp()
+    if isinstance(html, str):
+        encoded_html = html.encode()
+    else:
+        encoded_html = "Illegal type %s for response %s. Only str allowed!" \
+                       % (str(type(html)), str(html))
+    response = HTTP_RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
+    return response.encode() + encoded_html
+
+
 class Server:
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
@@ -236,234 +252,270 @@ class Server:
         self.echo_log = get_config_value('echo_server_log')
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')
 
+        self.kill_switch = False      # type: bool
+        self.exit_connection = False  # type: bool
         self.loop = None  # just for python 3.5 compatibility...
 
-    async def handle_request(self,
-                             reader: asyncio.StreamReader,
-                             writer: asyncio.StreamWriter):
-        rpc_error = None     # type: Optional[Tuple[int, str]]
-        json_id = None       # type: Optional[int]
-        obj = {}             # type: Dict
-        result = None        # type: JSON_Type
-        raw = None           # type: JSON_Type
-        kill_switch = False  # type: bool
-
-        print('BEGIN DHParser.server.handle_request()')
-
-        data = await reader.read(self.max_source_size + 1)
-        oversized = len(data) > self.max_source_size
-        print(data)
-
-        def http_response(html: str) -> bytes:
-            gmt = GMT_timestamp()
-            if isinstance(html, str):
-                encoded_html = html.encode()
+    async def execute(self, executor: Optional[Executor],
+                      method: Callable,
+                      params: Union[Dict, Sequence])\
+            -> Tuple[JSON_Type, RPC_Error_Type]:
+        """Executes a method with the given parameters in a given executor
+        (ThreadPoolExcecutor or ProcessPoolExecutor). `execute()`waits for the
+        completion and returns the JSON result and an RPC error tuple (see the
+        type definition above). The result may be None and the error may be
+        zero, i.e. no error. If `executor` is `None`the method will be called
+        directly instead of deferring it to an executor."""
+        result = None      # type: JSON_Type
+        rpc_error = None   # type: RPC_Error_Type
+        has_kw_params = isinstance(params, Dict)
+        if not (has_kw_params or isinstance(params, Sequence)):
+            rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
+                        % (str(type(params)), str(params))
+            return result, rpc_error
+        try:
+            # print(executor, method, params)
+            if executor is None:
+                result = method(**params) if has_kw_params else method(*params)
+            elif has_kw_params:
+                result = await self.loop.run_in_executor(executor, partial(method, **params))
             else:
-                encoded_html = "Illegal type %s for response %s. Only str allowed!" \
-                               % (str(type(html)), str(html))
-            response = HTTP_RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
-            return response.encode() + encoded_html
+                result = await self.loop.run_in_executor(executor, partial(method, *params))
+        except TypeError as e:
+            rpc_error = -32602, "Invalid Params: " + str(e)
+        except NameError as e:
+            rpc_error = -32601, "Method not found: " + str(e)
+        except BrokenProcessPool as e:
+            rpc_error = -32050, "Broken Executor: " + str(e)
+        except Exception as e:
+            rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
+        return result, rpc_error
 
-        async def execute(executor: Executor, method: Callable, params: Union[Dict, Sequence]):
-            nonlocal result, rpc_error
-            has_kw_params = isinstance(params, Dict)
-            if not (has_kw_params or isinstance(params, Sequence)):
-                rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
-                            % (str(type(params)), str(params))
-                return
-            loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-                else asyncio.get_event_loop()
-            try:
-                # print(executor, method, params)
-                if executor is None:
-                    result = method(**params) if has_kw_params else method(*params)
-                elif has_kw_params:
-                    result = await loop.run_in_executor(executor, partial(method, **params))
+    async def run(self, method_name: str, method: Callable, params: Union[Dict, Sequence])\
+            -> Tuple[JSON_Type, RPC_Error_Type]:
+        """Picks the right execution method (process, thread or direct execution) and
+        runs it in the respective executor. In case of a broken ProcessPoolExecutor it
+        restarts the ProcessPoolExecutor and tries to execute the method again."""
+        # run method either a) directly if it is short running or
+        # b) in a thread pool if it contains blocking io or
+        # c) in a process pool if it is cpu bound
+        # see: https://docs.python.org/3/library/asyncio-eventloop.html
+        #      #executing-code-in-thread-or-process-pools
+        executor = self.pp_executor if method_name in self.cpu_bound else \
+            self.tp_executor if method_name in self.blocking else None
+        result, rpc_error = await self.execute(executor, method, params)
+        if rpc_error is not None and rpc_error[0] == -32050:
+            # if process pool is broken, try again:
+            self.pp_executor.shutdown(wait=True)
+            self.pp_executor = ProcessPoolExecutor()
+            result, rpc_error = await self.execute(self.pp_executor, method, params)
+        return result, rpc_error
+
+    def respond(self, writer: asyncio.StreamWriter, response: Union[str, bytes]):
+        """Sends a response to the given writer. Depending on the configuration,
+        the response will be logged. If the response appears to be a json-rpc
+        response a JSONRPC_HEADER will be added depending on
+        `self.use_jsonrpc_header`.
+        """
+        if isinstance(response, str):
+            response = response.encode()
+        elif not isinstance(response, bytes):
+            response = ('Illegal response type %s of reponse object %s. '
+                        'Only bytes and str allowed!'
+                        % (str(type(response)), str(response))).encode()
+        if self.use_jsonrpc_header and response.startswith(b'{'):
+            response = JSONRPC_HEADER.format(length=len(response)).encode() + response
+        append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
+        # print(response)
+        writer.write(response)
+
+    async def handle_plaindata_request(self, writer: asyncio.StreamWriter, data: bytes):
+        """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
+        if len(data) > self.max_source_size:
+            self.respond(writer, "Data too large! Only %i MB allowed"
+                                 % (self.max_source_size // (1024 ** 2)))
+            await writer.drain()
+        elif data.startswith(STOP_SERVER_REQUEST):
+            self.respond(writer, self.stop_response)
+            await writer.drain()
+            self.kill_switch = True
+        else:
+            m = re.match(RE_FUNCTION_CALL, data)
+            if m:
+                func_name = m.group(1).decode()
+                argstr = m.group(2).decode()
+                if argstr:
+                    argument = tuple(maybe_int(s.strip('" \'')) for s in argstr.split(','))
                 else:
-                    result = await loop.run_in_executor(executor, partial(method, *params))
-            except TypeError as e:
-                rpc_error = -32602, "Invalid Params: " + str(e)
-            except NameError as e:
-                rpc_error = -32601, "Method not found: " + str(e)
-            except BrokenProcessPool as e:
-                rpc_error = -32050, "Broken Executor: " + str(e)
-            except Exception as e:
-                rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
+                    argument = ()
+            else:
+                func_name = self.default
+                argument = (data.decode(),)
+            err_func = lambda arg: 'Function %s no found!' % func_name
+            func = self.rpc_table.get(func_name, err_func)
+            result, rpc_error = await self.run(func_name, func, argument)
+            if rpc_error is None:
+                if isinstance(result, str):
+                    self.respond(writer, result)
+                elif result is not None:
+                    try:
+                        self.respond(writer, json.dumps(result, cls=DHParser_JSONEncoder))
+                    except TypeError as err:
+                        self.respond(writer, str(err))
+            else:
+                self.respond(writer, rpc_error[1])
+            if result is not None or rpc_error is not None:
+                await writer.drain()
 
-        async def run(method_name: str, method: Callable, params: Union[Dict, Sequence]):
-            # run method either a) directly if it is short running or
-            # b) in a thread pool if it contains blocking io or
-            # c) in a process pool if it is cpu bound
-            # see: https://docs.python.org/3/library/asyncio-eventloop.html
-            #      #executing-code-in-thread-or-process-pools
-            executor = self.pp_executor if method_name in self.cpu_bound else \
-                self.tp_executor if method_name in self.blocking else None
-            await execute(executor, method, params)
-            if rpc_error is not None and rpc_error[0] == -32050:
-                # if process pool is broken, try again:
-                self.pp_executor.shutdown(wait=True)
-                self.pp_executor = ProcessPoolExecutor()
-                await execute(self.pp_executor, method, params)
-
-        def respond(response: Union[str, bytes]):
-            nonlocal writer, json_id
-            if isinstance(response, str):
-                response = response.encode()
-            elif not isinstance(response, bytes):
-                response = ('Illegal response type %s of reponse object %s. '
-                            'Only bytes and str allowed!'
-                            % (str(type(response)), str(response))).encode()
-            if self.use_jsonrpc_header and response.startswith(b'{'):
-                response = JSONRPC_HEADER.format(length=len(response)).encode() + response
-            append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
-            # print(response)
-            writer.write(response)
-
-        append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
-
-        if data.startswith(b'GET'):
-            # HTTP request
+    async def handle_http_request(self, writer: asyncio.StreamWriter, data: bytes):
+        if len(data) > self.max_source_size:
+            self.respond(writer, http_response("Data too large! Only %i MB allowed"
+                                               % (self.max_source_size // (1024 ** 2))))
+            await writer.drain()
+        else:
+            result, rpc_error = None, None
             m = re.match(RE_GREP_URL, data)
             # m = RX_GREP_URL(data.decode())
             if m:
                 func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
                 if func_name.encode() == STOP_SERVER_REQUEST:
-                    respond(http_response(ONELINER_HTML.format(line=self.stop_response)))
-                    kill_switch = True
+                    self.respond(writer,
+                                 http_response(ONELINER_HTML.format(line=self.stop_response)))
+                    await writer.drain()
+                    self.kill_switch = True
                 else:
                     func = self.rpc_table.get(func_name,
                                               lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
                     # result = func(argument) if argument is not None else func()
-                    await run(func.__name__, func, (argument,) if argument else ())
+                    result, rpc_error = await self.run(func.__name__, func,
+                                                       (argument,) if argument else ())
                     if rpc_error is None:
                         if result is None:
                             result = ''
                         if isinstance(result, str):
-                            respond(http_response(result))
+                            self.respond(writer, http_response(result))
                         else:
                             try:
-                                respond(http_response(
+                                self.respond(writer, http_response(
                                     json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
                             except TypeError as err:
-                                respond(http_response(str(err)))
+                                self.respond(writer, http_response(str(err)))
                     else:
-                        respond(http_response(rpc_error[1]))
+                        self.respond(writer, http_response(rpc_error[1]))
+            if result is not None or rpc_error is not None:
+                await writer.drain()
 
-        elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
-            # plain data
-            if oversized:
-                respond("Source code too large! Only %i MB allowed"
-                             % (self.max_source_size // (1024 ** 2)))
-            elif data.startswith(STOP_SERVER_REQUEST):
-                respond(self.stop_response)
-                kill_switch = True
-            else:
-                m = re.match(RE_FUNCTION_CALL, data)
-                if m:
-                    func_name = m.group(1).decode()
-                    argstr = m.group(2).decode()
-                    if argstr:
-                        argument = tuple(maybe_int(s.strip('" \'')) for s in argstr.split(','))
-                    else:
-                        argument = ()
-                else:
-                    func_name = self.default
-                    argument = (data.decode(),)
-                err_func = lambda arg: 'Function %s no found!' % func_name
-                func = self.rpc_table.get(func_name, err_func)
-                await run(func_name, func, argument)
-                if rpc_error is None:
-                    if isinstance(result, str):
-                        respond(result)
-                    elif result is not None:
-                        try:
-                            respond(json.dumps(result, cls=DHParser_JSONEncoder))
-                        except TypeError as err:
-                            respond(str(err))
-                else:
-                    respond(rpc_error[1])
-
+    async def handle_jsonrpc_request(self, json_id: int,
+                                     writer: asyncio.StreamWriter, json_obj: Dict):
+        result, rpc_error = None, None
+        if json_obj.get('jsonrpc', '0.0') < '2.0':
+            rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
+                                ' "%s" found.' % json_obj.get('jsonrpc', b'unknown')
+        elif 'method' not in json_obj:
+            rpc_error = -32600, 'Invalid Request: No method specified.'
+        elif json_obj['method'] == STOP_SERVER_REQUEST_STR:
+            result = self.stop_response
+            self.kill_switch = True
+        elif json_obj['method'] not in self.rpc_table:
+            rpc_error = -32601, 'Method not found: ' + str(json_obj['method'])
         else:
-            # json
-            # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
-            i = data.find(b'"jsonrpc"') - 1
-            # see: https://microsoft.github.io/language-server-protocol/specification#header-part
-            # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
-            while i > 0 and data[i] in (b'{', b'['):
-                i -= 1
-            if i > 0:
-                data = data[i:]
-            if oversized:
-                rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
-                            % (self.max_source_size // (1024 ** 2))
+            method_name = json_obj['method']
+            method = self.rpc_table[method_name]
+            params = json_obj['params'] if 'params' in json_obj else ()
+            result, rpc_error = await self.run(method_name, method, params)
+            if method_name == 'exit':
+                self.kill_switch = True
 
-            if rpc_error is None:
-                try:
-                    raw = json.loads(data.decode())
-                except json.decoder.JSONDecodeError as e:
-                    rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
-
-            if rpc_error is None:
-                if isinstance(raw, Dict):
-                    obj = cast(Dict, raw)
-                    json_id = obj.get('id', None)
-                else:
-                    rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
-
-            if rpc_error is None:
-                if obj.get('jsonrpc', '0.0') < '2.0':
-                    rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
-                                        ' "%s" found.' % obj.get('jsonrpc', b'unknown')
-                elif 'method' not in obj:
-                    rpc_error = -32600, 'Invalid Request: No method specified.'
-                elif obj['method'] == STOP_SERVER_REQUEST_STR:
-                    result = self.stop_response
-                    kill_switch = True
-                elif obj['method'] not in self.rpc_table:
-                    rpc_error = -32601, 'Method not found: ' + str(obj['method'])
-                else:
-                    method_name = obj['method']
-                    method = self.rpc_table[method_name]
-                    params = obj['params'] if 'params' in obj else ()
-                    await run(method_name, method, params)
-                    if method_name == 'exit':
-                        kill_switch = True
-
+        try:
             try:
-                try:
-                    error = cast(Dict[str, str], result['error'])
-                except KeyError:
-                    error = cast(Dict[str, str], result)
-                rpc_error = int(error['code']), error['message']
-            except TypeError:
-                pass  # result is not a dictionary, never mind
+                error = cast(Dict[str, str], result['error'])
             except KeyError:
-                pass  # no errors in result
+                error = cast(Dict[str, str], result)
+            rpc_error = int(error['code']), error['message']
+        except TypeError:
+            pass  # result is not a dictionary, never mind
+        except KeyError:
+            pass  # no errors in result
 
-            if rpc_error is None:
-                if json_id is not None and result is not None:
-                    try:
-                        json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                        respond(json.dumps(json_result, cls=DHParser_JSONEncoder))
-                    except TypeError as err:
-                        rpc_error = -32070, str(err)
+        if rpc_error is None:
+            if json_id is not None and result is not None:
+                try:
+                    json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+                    self.respond(writer, json.dumps(json_result, cls=DHParser_JSONEncoder))
+                except TypeError as err:
+                    rpc_error = -32070, str(err)
 
-            if rpc_error is not None:
-                respond(('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
-                              % (rpc_error[0], rpc_error[1], json_id)))
+        if rpc_error is not None:
+            self.respond(writer, ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
+                                  % (rpc_error[0], rpc_error[1], json_id)))
 
-        if result is not None:
+        if result is not None or rpc_error is not None:
             await writer.drain()
 
-        if kill_switch:
+    async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        # print('BEGIN DHParser.server.connection()')
+        while not self.exit_connection and not self.kill_switch:
+            data = await reader.read(self.max_source_size + 1)   # type: bytes
+            append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
+            # print(data.decode())
+            if not data and reader.at_eof():
+                break
+
+            if data.startswith(b'GET'):
+                # HTTP request
+                await self.handle_http_request(writer, data)
+            elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
+                # plain data
+                await self.handle_plaindata_request(writer, data)
+            else:
+                # assume json
+                # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
+                json_id = 0
+                raw = None
+                json_obj = {}
+                rpc_error = None
+                i = data.find(b'"jsonrpc"') - 1
+                # see: https://microsoft.github.io/language-server-protocol/specification#header-part
+                # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
+                while i > 0 and data[i] in (b'{', b'['):
+                    i -= 1
+                if i > 0:
+                    data = data[i:]
+                if len(data) > self.max_source_size:
+                    rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
+                                % (self.max_source_size // (1024 ** 2))
+
+                if rpc_error is None:
+                    try:
+                        raw = json.loads(data.decode())
+                    except json.decoder.JSONDecodeError as e:
+                        rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
+
+                if rpc_error is None:
+                    if isinstance(raw, Dict):
+                        json_obj = cast(Dict, raw)
+                        json_id = json_obj.get('id', None)
+                    else:
+                        rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
+
+                if rpc_error is None:
+                    await self.handle_jsonrpc_request(json_id, writer, json_obj)
+                else:
+                    self.respond(writer,
+                        ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
+                         % (rpc_error[0], rpc_error[1], json_id)))
+                    await writer.drain()
+        self.exit_connection = False  # reset flag
+
+        if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
             writer.close()
             self.server.close()
-            if self.loop is not None:
+            if sys.version_info < (3, 6) and self.loop is not None:
                 self.loop.stop()
-
-        print('END DHParser.server.handle_request()')
+            self.kill_switch = False  # reset flag
+        # print('END DHParser.server.connection()')
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         if host == USE_DEFAULT_HOST:
@@ -480,8 +532,10 @@ class Server:
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.host.value = host.encode()
             self.port.value = port
+            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
             self.server = cast(asyncio.base_events.Server,
-                               await asyncio.start_server(self.handle_request, host, port))
+                               await asyncio.start_server(self.connection, host, port))
             async with self.server:
                 self.stage.value = SERVER_ONLINE
                 self.server_messages.put(SERVER_ONLINE)
@@ -514,7 +568,7 @@ class Server:
             self.server = cast(
                 asyncio.base_events.Server,
                 self.loop.run_until_complete(
-                    asyncio.start_server(self.handle_request, host, port, loop=self.loop)))
+                    asyncio.start_server(self.connection, host, port, loop=self.loop)))
             try:
                 self.stage.value = SERVER_ONLINE
                 self.server_messages.put(SERVER_ONLINE)
