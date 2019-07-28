@@ -441,6 +441,7 @@ class Server:
                                      reader: asyncio.StreamReader,
                                      writer: asyncio.StreamWriter,
                                      json_obj: Dict):
+        # TODO: handle cancellation calls!
         result, rpc_error = None, None
         if json_obj.get('jsonrpc', '0.0') < '2.0':
             rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
