@@ -54,7 +54,9 @@ class TestLoggingAndLoading:
             os.rmdir(pycachedir)
         os.rmdir(self.dirname)
         if os.path.exists("TESTLOGS"):
-            os.remove("TESTLOGS/info.txt")
+            for fname in os.listdir('TESTLOGS'):
+                os.remove(os.path.join('TESTLOGS', fname))
+            # os.remove("TESTLOGS/info.txt")
             os.rmdir("TESTLOGS")
 
     def test_load_if_file(self):

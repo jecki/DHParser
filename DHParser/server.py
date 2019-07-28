@@ -551,7 +551,7 @@ class Server:
                 if rpc_error is None:
                     task = asyncio.ensure_future(self.handle_jsonrpc_request(
                         json_id, reader, writer, json_obj))
-                    assert json_id not in self.active_tasks
+                    assert json_id not in self.active_tasks, str(json_id)
                     self.active_tasks[json_id] = task
                 else:
                     self.respond(writer,
