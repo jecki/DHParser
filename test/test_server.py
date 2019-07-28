@@ -119,7 +119,7 @@ class TestServer:
         try:
             cs.spawn_server('127.0.0.1', TEST_PORT)
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
-            assert result.startswith('DHParser'), result
+            assert isinstance(result, str) and result.startswith('DHParser'), result
         finally:
             cs.terminate_server()
 
@@ -408,7 +408,17 @@ class TestLanguageServer:
 
     def setup(self):
         stop_server()
-        self.windows = sys.platform.lower().find('win') >= 0
+        self.server = None
+
+
+    def teardown(self):
+        if self.server is not None:
+            self.server.terminate_server()
+            self.server = None
+        stop_server()
+
+    def start_server(self):
+        stop_server()
         self.lsp = LSP()
         lsp_table = gen_lsp_table(self.lsp, prefix='lsp_')
         self.server = Server(rpc_functions=lsp_table,
@@ -416,11 +426,8 @@ class TestLanguageServer:
                              blocking={'custom'})
         self.server.spawn_server('127.0.0.1', TEST_PORT)
 
-    def teardown(self):
-        self.server.terminate_server()
-        stop_server()
-
     def test_initialize(self):
+        self.start_server()
         response = send_request(json_rpc('initialize',
                                          {'processId': 701,
                                           'rootUri': 'file://~/tmp',
@@ -453,6 +460,7 @@ class TestLanguageServer:
         assert response == '', response
 
     def test_initializion_sequence(self):
+        self.start_server()
         async def initialization_seuquence():
             reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(json_rpc('initialize',

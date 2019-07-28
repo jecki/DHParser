@@ -34,6 +34,7 @@ from typing import Dict, Hashable, Any
 __all__ = ('access_presets',
            'finalize_presets',
            'THREAD_LOCALS',
+           'access_thread_locals',
            'get_config_value',
            'set_config_value',
            'XML_SERIALIZATION',
@@ -124,16 +125,25 @@ def finalize_presets():
             pickle.dump(CONFIG_PRESET, f)
 
 
+def access_thread_locals() -> Any:
+    """Intitializes (if not done yet) and returns the thread local variable
+    store. (Call this function before using THREAD_LOCALS.
+    Direct usage of THREAD_LOCALS is DEPRECATED!)
+    """
+    global THREAD_LOCALS
+    if THREAD_LOCALS is None:
+        import threading
+        THREAD_LOCALS = threading.local()
+    return THREAD_LOCALS
+
+
 def get_config_value(key: Hashable) -> Any:
     """
     Retrieves a configuration value thread-safely.
     :param key:  the key (an immutable, usually a string)
     :return:     the value
     """
-    global THREAD_LOCALS
-    if THREAD_LOCALS is None:
-        import threading
-        THREAD_LOCALS = threading.local()
+    THREAD_LOCALS = access_thread_locals()
     try:
         cfg = THREAD_LOCALS.config
     except AttributeError:

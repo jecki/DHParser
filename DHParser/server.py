@@ -54,7 +54,7 @@ import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
     Iterator, Any, cast
 
-from DHParser.configuration import get_config_value
+from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log
 from DHParser.toolkit import re
@@ -196,6 +196,20 @@ def http_response(html: str) -> bytes:
     return response.encode() + encoded_html
 
 
+def gen_task_id() -> int:
+    """Generate a unique task id. This is always a negative number to
+    distinguish the taks id's from the json-rpc ids."""
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        value = THREAD_LOCALS.DHParser_server_task_id
+        THREAD_LOCALS.DHParser_server_task_id = value - 1
+    except AttributeError:
+        THREAD_LOCALS.DHParser_server_task_id = -2
+        value = -1
+    assert value < 0
+    return value
+
+
 class Server:
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
@@ -252,6 +266,7 @@ class Server:
         self.echo_log = get_config_value('echo_server_log')
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')
 
+        self.active_tasks = {}        # type: Dict[int, asyncio.Future]
         self.kill_switch = False      # type: bool
         self.exit_connection = False  # type: bool
         self.loop = None  # just for python 3.5 compatibility...
@@ -291,7 +306,7 @@ class Server:
             rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
         return result, rpc_error
 
-    async def run(self, method_name: str, method: Callable, params: Union[Dict, Sequence])\
+    async def run(self, method_name: str, method: Callable, params: Union[Dict, Sequence]) \
             -> Tuple[JSON_Type, RPC_Error_Type]:
         """Picks the right execution method (process, thread or direct execution) and
         runs it in the respective executor. In case of a broken ProcessPoolExecutor it
@@ -301,6 +316,7 @@ class Server:
         # c) in a process pool if it is cpu bound
         # see: https://docs.python.org/3/library/asyncio-eventloop.html
         #      #executing-code-in-thread-or-process-pools
+        result, rpc_error = None, None
         executor = self.pp_executor if method_name in self.cpu_bound else \
             self.tp_executor if method_name in self.blocking else None
         result, rpc_error = await self.execute(executor, method, params)
@@ -326,10 +342,13 @@ class Server:
         if self.use_jsonrpc_header and response.startswith(b'{'):
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
         append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
-        # print(response)
+        # print('returned: ', response)
         writer.write(response)
 
-    async def handle_plaindata_request(self, writer: asyncio.StreamWriter, data: bytes):
+    async def handle_plaindata_request(self, task_id: int,
+                                       reader: asyncio.StreamReader,
+                                       writer: asyncio.StreamWriter,
+                                       data: bytes):
         """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
         if len(data) > self.max_source_size:
             self.respond(writer, "Data too large! Only %i MB allowed"
@@ -339,6 +358,7 @@ class Server:
             self.respond(writer, self.stop_response)
             await writer.drain()
             self.kill_switch = True
+            reader.feed_eof()
         else:
             m = re.match(RE_FUNCTION_CALL, data)
             if m:
@@ -366,8 +386,15 @@ class Server:
                 self.respond(writer, rpc_error[1])
             if result is not None or rpc_error is not None:
                 await writer.drain()
+        try:
+            del self.active_tasks[task_id]
+        except KeyError:
+            pass  # task might have been finished even before it has been registered
 
-    async def handle_http_request(self, writer: asyncio.StreamWriter, data: bytes):
+    async def handle_http_request(self, task_id: int,
+                                  reader: asyncio.StreamReader,
+                                  writer: asyncio.StreamWriter,
+                                  data: bytes):
         if len(data) > self.max_source_size:
             self.respond(writer, http_response("Data too large! Only %i MB allowed"
                                                % (self.max_source_size // (1024 ** 2))))
@@ -381,8 +408,9 @@ class Server:
                 if func_name.encode() == STOP_SERVER_REQUEST:
                     self.respond(writer,
                                  http_response(ONELINER_HTML.format(line=self.stop_response)))
-                    await writer.drain()
                     self.kill_switch = True
+                    await writer.drain()
+                    reader.feed_eof()
                 else:
                     func = self.rpc_table.get(func_name,
                                               lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
@@ -404,9 +432,15 @@ class Server:
                         self.respond(writer, http_response(rpc_error[1]))
             if result is not None or rpc_error is not None:
                 await writer.drain()
+        try:
+            del self.active_tasks[task_id]
+        except KeyError:
+            pass  # task might have been finished even before it has been registered
 
     async def handle_jsonrpc_request(self, json_id: int,
-                                     writer: asyncio.StreamWriter, json_obj: Dict):
+                                     reader: asyncio.StreamReader,
+                                     writer: asyncio.StreamWriter,
+                                     json_obj: Dict):
         result, rpc_error = None, None
         if json_obj.get('jsonrpc', '0.0') < '2.0':
             rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
@@ -416,6 +450,7 @@ class Server:
         elif json_obj['method'] == STOP_SERVER_REQUEST_STR:
             result = self.stop_response
             self.kill_switch = True
+            reader.feed_eof()
         elif json_obj['method'] not in self.rpc_table:
             rpc_error = -32601, 'Method not found: ' + str(json_obj['method'])
         else:
@@ -424,7 +459,8 @@ class Server:
             params = json_obj['params'] if 'params' in json_obj else ()
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
-                self.kill_switch = True
+                self.exit_connection = True
+                reader.feed_eof()
 
         try:
             try:
@@ -451,22 +487,35 @@ class Server:
 
         if result is not None or rpc_error is not None:
             await writer.drain()
+        try:
+            del self.active_tasks[json_id]
+        except KeyError:
+            pass  # task might have been finished even before it has been registered
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         # print('BEGIN DHParser.server.connection()')
         while not self.exit_connection and not self.kill_switch:
+            # print('waiting for data...', self.kill_switch)
             data = await reader.read(self.max_source_size + 1)   # type: bytes
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
-            # print(data.decode())
+            # print('received: ', data.decode())
             if not data and reader.at_eof():
                 break
 
             if data.startswith(b'GET'):
                 # HTTP request
-                await self.handle_http_request(writer, data)
+                task_id = gen_task_id()
+                task = asyncio.ensure_future(self.handle_http_request(
+                    task_id, reader, writer, data))
+                assert task_id not in self.active_tasks, str(task_id)
+                self.active_tasks[task_id] = task
             elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
-                await self.handle_plaindata_request(writer, data)
+                task_id = gen_task_id()
+                task = asyncio.ensure_future(self.handle_plaindata_request(
+                    task_id, reader, writer, data))
+                assert task_id not in self.active_tasks, str(task_id)
+                self.active_tasks[task_id] = task
             else:
                 # assume json
                 # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
@@ -499,18 +548,26 @@ class Server:
                         rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
 
                 if rpc_error is None:
-                    await self.handle_jsonrpc_request(json_id, writer, json_obj)
+                    task = asyncio.ensure_future(self.handle_jsonrpc_request(
+                        json_id, reader, writer, json_obj))
+                    assert json_id not in self.active_tasks
+                    self.active_tasks[json_id] = task
                 else:
                     self.respond(writer,
                         ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                          % (rpc_error[0], rpc_error[1], json_id)))
                     await writer.drain()
-        self.exit_connection = False  # reset flag
+
+        if self.exit_connection or self.kill_switch:
+            await writer.drain()
+            writer.close()
+            self.exit_connection = False  # reset flag
+
+        # print("ACTIVE TASKS: ", self.active_tasks)
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
-            writer.close()
             self.server.close()
             if sys.version_info < (3, 6) and self.loop is not None:
                 self.loop.stop()

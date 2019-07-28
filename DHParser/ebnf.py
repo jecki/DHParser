@@ -98,7 +98,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
-    JSON_SERIALIZATION, THREAD_LOCALS, access_presets, finalize_presets 
+    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets 
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 
@@ -331,6 +331,7 @@ def get_preprocessor() -> PreprocessorFunc:
 GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
     """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
     except AttributeError:
@@ -350,6 +351,7 @@ def Create{NAME}Transformer() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
         transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
     except AttributeError:
@@ -362,6 +364,7 @@ def get_transformer() -> TransformationFunc:
 COMPILER_FACTORY = '''
 def get_compiler() -> {NAME}Compiler:
     """Returns a thread/process-exclusive {NAME}Compiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
     except AttributeError:
