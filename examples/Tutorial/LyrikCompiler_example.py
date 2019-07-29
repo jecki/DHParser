@@ -25,7 +25,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
     is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
-    is_insignificant_whitespace, TOKEN_PTYPE, THREAD_LOCALS
+    is_insignificant_whitespace, TOKEN_PTYPE, access_thread_locals
 from DHParser.log import start_logging
 
 
@@ -116,7 +116,7 @@ class LyrikGrammar(Grammar):
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
-    global THREAD_LOCALS
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.Lyrik_grammar_singleton
     except AttributeError:
@@ -180,7 +180,7 @@ def LyrikTransform() -> TransformationFunc:
 
 
 def get_transformer() -> TransformationFunc:
-    global THREAD_LOCALS
+    THREAD_LOCALS = access_thread_locals()
     try:
         transform = THREAD_LOCALS.Lyrik_transformer_singleton
     except AttributeError:
@@ -273,7 +273,7 @@ class LyrikCompiler(Compiler):
 
 
 def get_compiler() -> LyrikCompiler:
-    global THREAD_LOCALS
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.Lyrik_compiler_singleton
     except AttributeError:

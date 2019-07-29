@@ -32,7 +32,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_nodes, remove_content, remove_brackets, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content, replace_content_by, error_on, recompile_grammar, THREAD_LOCALS
+    replace_content, replace_content_by, error_on, recompile_grammar, access_thread_locals
 
 
 #######################################################################
@@ -147,6 +147,7 @@ def LyrikTransform() -> TransformationFunc:
     return partial(traverse, processing_table=Lyrik_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
+    THREAD_LOCALS = access_thread_locals()
     try:
         transformer = THREAD_LOCALS.Lyrik_1_transformer_singleton
     except AttributeError:
@@ -245,6 +246,7 @@ class LyrikCompiler(Compiler):
 
 
 def get_compiler() -> LyrikCompiler:
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.Lyrik_1_compiler_singleton
     except AttributeError:
