@@ -44,6 +44,7 @@ class TestLoggingAndLoading:
             os.mkdir(self.dirname)
         with open(self.filename, 'w') as f:
             f.write(self.code2)
+        self.LOGDIR = "TESTLGOS" + str(os.getpid())
 
     def teardown(self):
         os.remove(self.filename)
@@ -53,11 +54,11 @@ class TestLoggingAndLoading:
                 os.remove(os.path.join(pycachedir, fname))
             os.rmdir(pycachedir)
         os.rmdir(self.dirname)
-        if os.path.exists("TESTLOGS"):
-            for fname in os.listdir('TESTLOGS'):
-                os.remove(os.path.join('TESTLOGS', fname))
-            # os.remove("TESTLOGS/info.txt")
-            os.rmdir("TESTLOGS")
+        if os.path.exists(self.LOGDIR):
+            # for fname in os.listdir(self.LOGDIR):
+            #     os.remove(os.path.join(self.LOGDIR, fname))
+            os.remove(os.path.join(self.LOGDIR, "info.txt"))
+            os.rmdir(self.LOGDIR)
 
     def test_load_if_file(self):
         # an error should be raised if file expected but not found
@@ -102,12 +103,12 @@ class TestLoggingAndLoading:
         #     pass
         res = log_dir()
         assert isinstance(res, bool) and not res
-        start_logging("TESTLOGS")
-        assert not os.path.exists("TESTLOGS"), \
+        start_logging(self.LOGDIR)
+        assert not os.path.exists(self.LOGDIR), \
             "Log dir should be created lazily!"
         dirname = log_dir()
         # print(type(dirname), dirname)
-        assert os.path.basename(dirname) == "TESTLOGS"
+        assert os.path.basename(dirname) == self.LOGDIR
         assert is_logging(), "is_logging() should return True, if logging is on"
         save_log_dir = suspend_logging()
         assert not is_logging(), \
@@ -116,11 +117,12 @@ class TestLoggingAndLoading:
         resume_logging(save_log_dir)
         assert is_logging(), "is_logging() should return True after logging off " \
                              "context has been left"
-        assert os.path.exists("TESTLOGS/info.txt"), "an 'info.txt' file should be " \
+        info_path = os.path.join(self.LOGDIR, 'info.txt')
+        assert os.path.exists(info_path), "an 'info.txt' file should be " \
             "created within a newly created log dir"
         # cleanup
-        os.remove("TESTLOGS/info.txt")
-        os.rmdir("TESTLOGS")
+        os.remove(info_path)
+        os.rmdir(self.LOGDIR)
 
     def logging_task(self):
         log_dir()
@@ -128,10 +130,10 @@ class TestLoggingAndLoading:
         save_log_dir = suspend_logging()
         assert not is_logging(), "Logging should be off outside logging context"
         resume_logging(save_log_dir)
-        return os.path.exists("TESTLOGS/info.txt")
+        return os.path.exists(os.path.join(self.LOGDIR, "info.txt"))
 
     def test_logging_multiprocessing(self):
-        start_logging("TESTLOGS")
+        start_logging(self.LOGDIR)
         with concurrent.futures.ProcessPoolExecutor() as ex:
             f1 = ex.submit(self.logging_task)
             f2 = ex.submit(self.logging_task)

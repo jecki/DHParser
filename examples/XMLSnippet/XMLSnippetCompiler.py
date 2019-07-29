@@ -33,7 +33,7 @@ from DHParser import start_logging, is_filename, load_if_file, Grammar, Compiler
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, THREAD_LOCALS
+    error_on, recompile_grammar, access_thread_locals
 
 
 #######################################################################
@@ -122,6 +122,7 @@ class XMLSnippetGrammar(Grammar):
     
 def get_grammar() -> XMLSnippetGrammar:
     """Returns a thread/process-exclusive XMLSnippetGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton
     except AttributeError:
@@ -201,6 +202,7 @@ def XMLSnippetTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
+        THREAD_LOCALS = access_thread_locals()
         transformer = THREAD_LOCALS.XMLSnippet_1_transformer_singleton
     except AttributeError:
         THREAD_LOCALS.XMLSnippet_1_transformer_singleton = XMLSnippetTransform()

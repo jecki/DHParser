@@ -94,6 +94,7 @@ class LyrikGrammar(Grammar):
     
 def get_grammar() -> LyrikGrammar:
     """Returns a thread/process-exclusive LyrikGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
     except AttributeError:

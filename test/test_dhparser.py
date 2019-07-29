@@ -51,6 +51,10 @@ class TestDHParserCommandLineTool:
         if os.path.exists('test_dhparser_data') and not os.listdir('test_dhparser_data'):
             os.rmdir('test_dhparser_data')
         os.chdir(self.cwd)
+        if os.path.exists('LOGS') and os.path.isdir('LOGS'):
+            for fname in os.listdir('LOGS'):
+                os.remove(os.path.join('LOGS', fname))
+            os.rmdir('LOGS')
 
     def test_dhparser(self):
         # test compiler creation and execution

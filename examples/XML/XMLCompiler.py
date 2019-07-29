@@ -25,7 +25,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, Token, DropToken, DropWhitespace, \
-    traverse, remove_children_if, is_anonymous, THREAD_LOCALS, \
+    traverse, remove_children_if, is_anonymous, access_thread_locals, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -174,6 +174,7 @@ class XMLGrammar(Grammar):
     
 def get_grammar() -> XMLGrammar:
     """Returns a thread/process-exclusive XMLGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.XML_00000001_grammar_singleton
     except AttributeError:

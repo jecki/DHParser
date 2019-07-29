@@ -24,7 +24,8 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
-    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, THREAD_LOCALS
+    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
+    access_thread_locals
 from DHParser.log import start_logging
 
 
@@ -155,6 +156,7 @@ class LaTeXGrammar(Grammar):
     
 def get_grammar() -> LaTeXGrammar:
     """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.LaTeX_00000001_grammar_singleton
     except AttributeError:

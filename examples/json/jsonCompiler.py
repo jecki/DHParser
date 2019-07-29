@@ -34,7 +34,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, \
     set_config_value, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, THREAD_LOCALS
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals
 
 
 #######################################################################
@@ -90,6 +90,7 @@ class jsonGrammar(Grammar):
     
 def get_grammar() -> jsonGrammar:
     """Returns a thread/process-exclusive jsonGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     except AttributeError:
@@ -138,6 +139,7 @@ def CreatejsonTransformer() -> TransformationFunc:
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     try:
+        THREAD_LOCALS = access_thread_locals()
         transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     except AttributeError:
         THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()

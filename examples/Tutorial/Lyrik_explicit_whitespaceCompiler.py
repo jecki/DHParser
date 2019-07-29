@@ -95,6 +95,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     
 def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
     """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
