@@ -304,9 +304,12 @@ def send_request(request: str, expect_response: bool = True) -> str:
     asyncio_run(send(request))
     return response
 
+jrpc_id = 0
 
 def json_rpc(method: str, params: dict) -> str:
-    return json.dumps({'jsonrpc': '2.0', 'id':'0', 'method':method, 'params': params})
+    global jrpc_id
+    jrpc_id += 1
+    return json.dumps({'jsonrpc': '2.0', 'id':jrpc_id, 'method':method, 'params': params})
 
 
 # initialized = multiprocessing.Value('b', 0)
