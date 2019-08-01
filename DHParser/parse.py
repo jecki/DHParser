@@ -262,7 +262,8 @@ class Parser:
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
-        done in the overridden method `_parse()`.
+        done in the overridden method `_parse()`. This wrapper-method can be thought of
+        as a "parser guard", because it guards the parsing process.
         """
         def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
             if error_node:
@@ -715,8 +716,7 @@ class Grammar:
         moving_forward__: This flag indicates that the parsing process is currently
                 moving forward . It is needed to reduce noise in history recording
                 and should not be considered as having a valid value if history
-                recording is turned off! (See :func:`add_parser_guard` and its local
-                function :func:`guarded_call`)
+                recording is turned off! (See :func:`Parser.__call__`)
 
         recursion_locations__:  Stores the locations where left recursion was
                 detected. Needed to provide minimal memoization for the left

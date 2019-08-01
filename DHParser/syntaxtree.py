@@ -217,7 +217,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
             self.children = NO_CHILDREN  # type: ChildrenType
         else:
-            self.result = result
+            self.__set_result(result)
         self.tag_name = tag_name        # type: str
 
     def __deepcopy__(self, memo):
@@ -316,16 +316,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return self._result
 
-    @result.setter
-    def result(self, result: ResultType):
-        # # made obsolete by static type checking with mypy
-        # assert ((isinstance(result, tuple) and all(isinstance(child, Node) for child in result))
-        #         or isinstance(result, Node)
-        #         or isinstance(result, str)
-        #         or isinstance(result, StringView)), "%s (%s)" % (str(result), str(type(result)))
-        # Possible optimization: Do not allow single nodes as argument:
-        # assert not isinstance(result, Node)
-        # self._content = None
+    def __set_result(self, result: ResultType):
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
@@ -336,6 +327,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 self.children = NO_CHILDREN
                 self._result = result  # cast(StrictResultType, result)
+
+    @result.setter
+    def result(self, result: ResultType):
+        self.__set_result(result)
+        # fix position values for children that are added after the parsing process
+        if self._pos >= 0 and self.children:
+            p = self._pos
+            for child in self.children:
+                if child._pos < 0:
+                    child.with_pos(p)
+                p = child._pos + len(child)
 
     def _content(self) -> List[str]:
         """
@@ -380,7 +382,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def with_pos(self, pos: int) -> 'Node':
         """
         Initialize position value. Usually, the parser guard
-        (`parsers.add_parser_guard()`) takes care of assigning the
+        (`parse.Parser.__call__`) takes care of assigning the
         position in the document to newly created nodes. However,
         when Nodes are created outside the reach of the parser
         guard, their document-position must be assigned manually.
@@ -393,6 +395,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         #                                           % (self._pos, pos, repr(self)))
         if pos != self._pos >= 0:
             raise AssertionError("Position value cannot be reassigned to a different value!")
+        assert pos >= 0, "Negative value %i not allowed!"
         if self._pos < 0:
             self._pos = pos
             # recursively adjust pos-values of all children

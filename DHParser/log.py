@@ -445,7 +445,6 @@ def log_ST(syntax_tree, log_file_name):
         with open(path, "w", encoding="utf-8") as f:
             f.write(syntax_tree.as_sxpr())
 
-
 LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
 LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
 
