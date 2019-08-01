@@ -14,6 +14,7 @@ cdef class Node:
 
     cpdef get(self,  index_or_tagname, surrogate)
     cpdef is_anonymous(self)
+    cpdef _set_result(self, result)
     cpdef _content(self)
     cpdef with_pos(self, pos)
     # cpdef has_attr(self, attr)

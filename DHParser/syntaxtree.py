@@ -217,7 +217,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
             self.children = NO_CHILDREN  # type: ChildrenType
         else:
-            self.__set_result(result)
+            self._set_result(result)
         self.tag_name = tag_name        # type: str
 
     def __deepcopy__(self, memo):
@@ -316,7 +316,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return self._result
 
-    def __set_result(self, result: ResultType):
+    def _set_result(self, result: ResultType):
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
@@ -330,7 +330,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @result.setter
     def result(self, result: ResultType):
-        self.__set_result(result)
+        self._set_result(result)
         # fix position values for children that are added after the parsing process
         if self._pos >= 0 and self.children:
             p = self._pos

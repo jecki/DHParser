@@ -144,6 +144,12 @@ class TestNode:
         assert content == 'ce'
         assert tree.content == 'recently changed'
 
+    def test_pos_value_of_later_added_nodes(self):
+        nd = Node('Test', '').with_pos(0)
+        assert nd.pos == 0
+        nd.result = (Node('A', 'aaa'), Node('B', 'bbb'))
+        assert nd.children[0].pos == 0 and nd.children[1].pos == 3
+
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
         tree.with_pos(0)
