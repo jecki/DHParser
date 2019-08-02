@@ -521,8 +521,17 @@ def reset_unit(test_unit):
                 del tests[key]
 
 
+# def debug_unit(*parameters):
+#     """debug unit test in multiprocessing environment."""
+#     print("DEBUG_UNIT")
+#     try:
+#         grammar_unit(*parameters)
+#     except Exception as e:
+#         print(e)
+
+
 def grammar_suite(directory, parser_factory, transformer_factory,
-                  fn_patterns=['*test*'],
+                  fn_patterns=('*test*',),
                   ignore_unknown_filetypes=False,
                   report='REPORT', verbose=True):
     """

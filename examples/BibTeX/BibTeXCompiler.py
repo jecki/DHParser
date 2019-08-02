@@ -15,7 +15,9 @@ try:
 except ImportError:
     import re
 
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \
