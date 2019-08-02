@@ -48,6 +48,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
 def jsonPreprocessor(text):
     return text, lambda i: i
 
+
 def get_preprocessor() -> PreprocessorFunc:
     return jsonPreprocessor
 
@@ -140,8 +141,8 @@ def CreatejsonTransformer() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        THREAD_LOCALS = access_thread_locals()
         transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     except AttributeError:
         THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()
@@ -190,6 +191,7 @@ class jsonCompiler(Compiler):
 
 def get_compiler() -> jsonCompiler:
     """Returns a thread/process-exclusive jsonCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     except AttributeError:

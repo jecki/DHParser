@@ -21,8 +21,11 @@ limitations under the License.
 
 import copy
 import json
+import os
 import sys
-sys.path.extend(['../', './'])
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG

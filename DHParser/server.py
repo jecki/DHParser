@@ -560,6 +560,7 @@ class Server:
                     await writer.drain()
 
         if self.exit_connection or self.kill_switch:
+            writer.write_eof()
             await writer.drain()
             writer.close()
             self.exit_connection = False  # reset flag
@@ -570,7 +571,7 @@ class Server:
             # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
             self.server.close()
-            if sys.version_info < (3, 6) and self.loop is not None:
+            if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
             self.kill_switch = False  # reset flag
         # print('END DHParser.server.connection()')
@@ -655,7 +656,7 @@ class Server:
             print("Server logging is on.")
         try:
             if sys.version_info >= (3, 7):
-                asyncio.run(self.serve(host, port))
+                asyncio_run(self.serve(host, port))
             else:
                 self.serve_py35(host, port, loop)
         except KeyboardInterrupt:
@@ -699,6 +700,8 @@ class Server:
             while self.stage.value != SERVER_OFFLINE \
                     and self.server_messages.get() != SERVER_OFFLINE:
                 pass
+            writer.write_eof()
+            await writer.drain()
             writer.close()
         except ConnectionRefusedError:
             pass

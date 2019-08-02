@@ -22,7 +22,7 @@ limitations under the License.
 import os
 import sys
 
-scriptpath = os.path.dirname(__file__)
+scriptpath = os.path.dirname(__file__) or '.'
 for path in (os.path.join('..', '..'), '.'):
     fullpath = os.path.abspath(os.path.join(scriptpath, path))
     if fullpath not in sys.path:

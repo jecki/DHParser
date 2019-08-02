@@ -26,9 +26,8 @@ import shutil
 import subprocess
 import sys
 
-sys.path.extend(['../', './'])
-
-scriptdir = os.path.dirname(os.path.realpath(__file__))
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 def system(s: str) -> int:
     # return os.system(s)
@@ -37,7 +36,7 @@ def system(s: str) -> int:
 class TestDHParserCommandLineTool:
     def setup(self):
         self.cwd = os.getcwd()
-        os.chdir(scriptdir)
+        os.chdir(scriptpath)
         if not os.path.exists('test_dhparser_data'):
             os.mkdir('test_dhparser_data')
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"

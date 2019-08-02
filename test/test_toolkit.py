@@ -25,7 +25,8 @@ import collections.abc
 import os
 import sys
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, \
     lstrip_docstring, issubtype, typing, concurrent_ident
@@ -44,7 +45,7 @@ class TestLoggingAndLoading:
             os.mkdir(self.dirname)
         with open(self.filename, 'w') as f:
             f.write(self.code2)
-        self.LOGDIR = "TESTLGOS" + str(os.getpid())
+        self.LOGDIR = os.path.abspath(os.path.join(scriptpath, "TESTLOGS" + str(os.getpid())))
 
     def teardown(self):
         os.remove(self.filename)
@@ -108,7 +109,7 @@ class TestLoggingAndLoading:
             "Log dir should be created lazily!"
         dirname = log_dir()
         # print(type(dirname), dirname)
-        assert os.path.basename(dirname) == self.LOGDIR
+        assert dirname == self.LOGDIR
         assert is_logging(), "is_logging() should return True, if logging is on"
         save_log_dir = suspend_logging()
         assert not is_logging(), \

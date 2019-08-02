@@ -24,9 +24,8 @@ import os
 import sys
 from multiprocessing import Pool
 
-scriptdir = os.path.dirname(os.path.realpath(__file__))
-
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
@@ -135,7 +134,7 @@ class TestEBNFParser:
 
     def setup(self):
         self.save_dir = os.getcwd()
-        os.chdir(scriptdir)
+        os.chdir(scriptpath)
         self.EBNF = get_ebnf_grammar()
 
     def teardown(self):

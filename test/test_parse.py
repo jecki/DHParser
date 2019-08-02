@@ -19,10 +19,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 from functools import partial
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object

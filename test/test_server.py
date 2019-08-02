@@ -37,7 +37,8 @@ import sys
 import time
 from typing import Callable
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import Server, asyncio_run, gen_lsp_table, \
     STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
@@ -63,6 +64,8 @@ def stop_server():
             reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(STOP_SERVER_REQUEST)
             _ = await reader.read(1024)
+            writer.write_eof()
+            await writer.drain()
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
         except ConnectionRefusedError:
@@ -111,6 +114,8 @@ class TestServer:
             reader, writer = await asyncio.open_connection('127.0.0.1', TEST_PORT)
             writer.write(request.encode() if isinstance(request, str) else request)
             data = await reader.read(500)
+            writer.write_eof()
+            await writer.drain()
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             return data.decode()
@@ -273,18 +278,20 @@ class TestSpawning:
                     connected = True
                 except ConnectionRefusedError:
                     time.sleep(delay)
-                    delay += 0.0
+                    # delay += 0.0
                     countdown -= 1
             if connected:
                 writer.write(IDENTIFY_REQUEST.encode())
                 data = await reader.read(500)
+                writer.write_eof()
+                await writer.drain()
                 writer.close()
                 if sys.version_info >= (3, 7):  await writer.wait_closed()
                 return data.decode()
             return ''
 
         result = asyncio_run(identify())
-        # print(result)
+        assert result.startswith('DHParser')
 
 
 def send_request(request: str, expect_response: bool = True) -> str:

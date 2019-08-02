@@ -24,7 +24,7 @@ import asyncio
 import os
 import sys
 
-scriptpath = os.path.dirname(__file__)
+scriptpath = os.path.dirname(__file__) or '.'
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"

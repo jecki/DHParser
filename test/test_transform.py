@@ -20,9 +20,11 @@ limitations under the License.
 """
 
 import collections.abc
+import os
 import sys
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACEHOLDER, \
     tree_sanity_check, TOKEN_PTYPE

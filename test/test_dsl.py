@@ -22,7 +22,9 @@ limitations under the License.
 
 import os
 import sys
-sys.path.extend(['../', './'])
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.parse import Grammar
 from DHParser import Compiler
