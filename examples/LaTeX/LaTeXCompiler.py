@@ -12,6 +12,10 @@ import os
 import sys
 from functools import partial
 
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
+
 try:
     import regex as re
 except ImportError:

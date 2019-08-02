@@ -8,10 +8,11 @@ import sys
 
 LOGGING = ''
 
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
-
 scriptpath = os.path.dirname(__file__)
-
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 try:
     from DHParser import dsl
@@ -53,7 +54,7 @@ def run_grammar_tests(glob_pattern):
 if __name__ == '__main__':
     CONFIG_PRESET = access_presets()
     CONFIG_PRESET['ast_serialization'] = "S-expression"
-    CONFIG_PRESET['test_parallelization'] = False
+    CONFIG_PRESET['test_parallelization'] = True
     finalize_presets()
 
     argv = sys.argv[:]

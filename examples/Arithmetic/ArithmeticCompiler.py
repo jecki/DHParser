@@ -12,7 +12,9 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
@@ -159,6 +161,7 @@ class ArithmeticCompiler(Compiler):
 
 
 def get_compiler() -> ArithmeticCompiler:
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
     except AttributeError:

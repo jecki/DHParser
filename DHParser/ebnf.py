@@ -75,7 +75,8 @@ from functools import partial
 import os
 import sys
 
-sys.path.append(r'{dhparser_parentdir}')
+if r'{dhparser_parentdir}' not in sys.path:
+    sys.path.append(r'{dhparser_parentdir}')
 
 try:
     import regex as re

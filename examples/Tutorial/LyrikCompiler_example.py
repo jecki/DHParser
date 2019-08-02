@@ -10,7 +10,10 @@
 from functools import partial
 import os
 import sys
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
+
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re

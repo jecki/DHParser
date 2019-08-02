@@ -9,9 +9,10 @@ import sys
 LOGGING = ''
 
 scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
-if dhparserdir not in sys.path:
-    sys.path.append(dhparserdir)
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 try:
     from DHParser import dsl

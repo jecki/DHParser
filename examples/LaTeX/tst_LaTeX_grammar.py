@@ -22,7 +22,12 @@ limitations under the License.
 import os
 import sys
 
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
+scriptpath = os.path.dirname(__file__)
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
+
 
 from DHParser import configuration
 from DHParser import dsl

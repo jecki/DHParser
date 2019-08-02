@@ -28,7 +28,8 @@ if i < 0:
     i, k = scriptdir.find('DHParser'), len('DHParser')
 if i >= 0:
     dhparserdir = scriptdir[:i + k]
-    sys.path.append(dhparserdir)
+    if dhparserdir not in sys.path:
+        sys.path.append(dhparserdir)
 else:
     dhparserdir = ''
 
