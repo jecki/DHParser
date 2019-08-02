@@ -15,7 +15,7 @@ try:
 except ImportError:
     import re
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, \

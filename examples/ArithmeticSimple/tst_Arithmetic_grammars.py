@@ -8,7 +8,7 @@ import sys
 
 LOGGING = ''
 
-sys.path.extend(['../../', '..', '.'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 scriptpath = os.path.dirname(__file__)
 

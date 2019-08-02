@@ -4,7 +4,7 @@ import sys
 
 LOGGING = True
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 from DHParser import grammar_provider
 

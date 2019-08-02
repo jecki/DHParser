@@ -25,7 +25,7 @@ import os
 import pstats
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 import DHParser.dsl
 import DHParser.log

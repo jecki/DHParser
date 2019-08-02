@@ -23,7 +23,7 @@ limitations under the License.
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 flag = os.path.exists('LyrikCompiler.py')
 
 from DHParser.dsl import recompile_grammar
@@ -41,6 +41,6 @@ if not flag:
     with open('LyrikCompiler.py', 'r') as f:
         script = f.read()
     i = script.find('import sys') + 10
-    script = script[:i] + "\nsys.path.extend(['../../', '../', './'])\n" + script [i:]
+    script = script[:i] + "\nsys.path.extend([os.path.join('..', '..'), '..', '.'])\n" + script [i:]
     with open('LyrikCompiler.py', 'w') as f:
         f.write(script)

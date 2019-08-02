@@ -21,7 +21,7 @@ limitations under the License.
 
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 from DHParser import configuration
 from DHParser import dsl

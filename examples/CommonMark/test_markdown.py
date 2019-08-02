@@ -23,7 +23,7 @@ import os
 import re
 import sys
 
-sys.path.append(os.path.abspath('../'))
+sys.path.append(os.path.abspath('..'))
 sys.path.append(os.path.abspath('../showcases'))
 
 

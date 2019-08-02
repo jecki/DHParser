@@ -19,24 +19,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 
-sys.path.extend(['../../', '../'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
-from DHParser import configuration
-import DHParser.dsl
-from DHParser import testing
+try:
+    from DHParser import configuration
+    import DHParser.dsl
+    from DHParser import testing
+except ModuleNotFoundError:
+    print('Could not import DHParser. Please adjust sys.path in file '
+          '"%s" manually' % __file__)
+    sys.exit(1)
 
-configuration.access_presets()['test_parallelization'] = True
 
 if __name__ == "__main__":
+    configuration.access_presets()['test_parallelization'] = True
+    configuration.finalize_presets()
     if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
         print('\nErrors while recompiling "BibTeX.ebnf":\n--------------------------------------\n\n')
         with open('BibTeX_ebnf_ERRORS.txt') as f:
             print(f.read())
         sys.exit(1)
 
-    sys.path.append('./')
+    sys.path.append('.')
     # must be appended after module creation, because otherwise an ImportError is raised under Windows
 
     from BibTeXCompiler import get_grammar, get_transformer

@@ -23,7 +23,7 @@ limitations under the License.
 import functools
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 from DHParser.log import start_logging
 from DHParser.dsl import recompile_grammar

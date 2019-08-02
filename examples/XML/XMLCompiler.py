@@ -12,7 +12,7 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['../', '../../'])
+sys.path.extend(['..', os.path.join('..', '..')])
 
 try:
     import regex as re
