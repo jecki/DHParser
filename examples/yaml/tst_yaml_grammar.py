@@ -6,7 +6,7 @@
 import os
 import sys
 
-LOGGING = False
+LOGGING = ''
 
 sys.path.append(r'../../')
 

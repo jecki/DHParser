@@ -32,7 +32,7 @@ import DHParser.log
 from DHParser.log import log_parsing_history
 
 
-LOGGING = False
+LOGGING = ''
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
