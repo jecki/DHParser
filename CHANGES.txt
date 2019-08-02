@@ -9,6 +9,8 @@ DHParser Version 0.9.0
   DHParser/scripts-directory
 - syntaxtree.py streamlined
   (breaking change: Node.select_by_tag() remove, use Node.select() instead
+- added DHParser/templates subdirectory and moved larger code templates
+  from dhparser.py script to the templates-subdirectory
 
 
 DHParser Version 0.8.9 (5.4.2019)
