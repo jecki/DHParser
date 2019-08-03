@@ -891,7 +891,7 @@ class TestMetaParser:
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
     def test_in_context(self):
-        minilang = """
+        minilang = r"""
             term       = factor  { (DIV|MUL) factor}
             factor     = NUMBER | VARIABLE
             MUL        = "*" | &factor

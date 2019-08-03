@@ -416,7 +416,7 @@ RX_WHITESPACE = re.compile(r'\s*$')
 
 
 def contains_only_whitespace(context: List[Node]) -> bool:
-    """Returns ``True`` for nodes that contain only whitespace regardless
+    r"""Returns ``True`` for nodes that contain only whitespace regardless
     of the tag_name, i.e. nodes the content of which matches the regular
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""

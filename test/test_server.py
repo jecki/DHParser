@@ -40,18 +40,8 @@ from typing import Callable
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.server import Server, asyncio_run, gen_lsp_table, \
+from DHParser.server import Server, spawn_server, asyncio_run, gen_lsp_table, \
     STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
-from DHParser.toolkit import concurrent_ident
-
-# from DHParser.configuration import CONFIG_PRESET
-# THREAD_LOCALS.LOGGING = 'LOGS'
-# if not os.path.exists('LOGS'):
-#     os.mkdir('LOGS')
-# CONFIG_PRESET['log_server'] = True
-
-scriptdir = os.path.dirname(os.path.realpath(__file__))
-
 
 TEST_PORT = 8889
 
@@ -220,50 +210,17 @@ class TestServer:
             cs.terminate_server()
 
 
-RUN_SERVER_SCRIPT = """
-import os
-import sys
-
-path = '.'
-while not 'DHParser' in os.listdir(path) and len(path) < 20:
-    path = os.path.join('..', path)
-sys.path.append(path)
-
-def dummy(s: str) -> str:
-    return s
-
-def run_server(host, port):
-    from DHParser.server import Server
-    # print('Starting server on %s:%i' % (host, port))
-    server = Server(dummy)
-    server.run_server(host, port)
-
-if __name__ == '__main__':
-    run_server('127.0.0.1', {TEST_PORT})
-""".format(TEST_PORT=TEST_PORT)
-
-
 class TestSpawning:
     """Tests spawning a server by starting a script via subprocess.Popen."""
 
     def setup(self):
-        self.tmpdir = 'tmp_' + concurrent_ident()
-        os.mkdir(self.tmpdir)
         stop_server()
 
     def teardown(self):
         stop_server()
-        for fname in os.listdir(self.tmpdir):
-            os.remove(os.path.join(self.tmpdir, fname))
-        os.rmdir(self.tmpdir)
 
     def test_spawn(self):
-        scriptname = os.path.join(self.tmpdir, 'spawn_server.py')
-        with open(scriptname, 'w') as f:
-            f.write(RUN_SERVER_SCRIPT)
-        nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
-        interpreter = 'python3' if os.system('python3 -V' + nulldevice) == 0 else 'python'
-        subprocess.Popen([interpreter, scriptname])
+        spawn_server('127.0.0.1', TEST_PORT)
 
         async def identify():
             countdown = 20
@@ -373,7 +330,7 @@ def lsp_rpc(f: Callable):
 
 class LSP:
     def __init__(self):
-        manager = multiprocessing.Manager()
+        manager = multiprocessing.Manager()  # saving this in an object-variable would make objects unpickleable due to weak references
         self.shared = manager.Namespace()
         self.shared.initialized = False
         self.shared.shutdown = False

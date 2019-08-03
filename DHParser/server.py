@@ -49,6 +49,9 @@ from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 import json
 from multiprocessing import Process, Queue, Value, Array
+import platform
+import os
+import subprocess
 import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
@@ -76,6 +79,7 @@ __all__ = ('RPC_Table',
            'ALL_RPCs',
            'identify_server',
            'Server',
+           'spawn_server',
            'gen_lsp_table')
 
 
@@ -664,7 +668,7 @@ class Server:
         except CancelledError:
             pass
         self.pp_executor = None
-        self.tt_exectuor = None
+        self.tp_executor = None
         asyncio_run(self.server.wait_closed())
         self.server_messages.put(SERVER_OFFLINE)
         self.stage.value = SERVER_OFFLINE
@@ -676,20 +680,21 @@ class Server:
                 raise AssertionError('could not start server!?')
             assert self.stage.value == SERVER_ONLINE
 
-    def spawn_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
-        """
-        Start DHParser-Server in a separate process and return.
-        """
-        if self.server_process:
-            assert not self.server_process.is_alive()
-            if sys.version_info >= (3, 7):
-                self.server_process.close()
-            self.server_process = None
-        self._empty_message_queue()
-        self.server_process = Process(
-            target=self.run_server, args=(host, port), name="DHParser-Server")
-        self.server_process.start()
-        self.wait_until_server_online()
+    # def spawn_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
+    #     """
+    #     Start DHParser-Server in a separate process and return.
+    #     Useful for writing test code.
+    #     """
+    #     if self.server_process:
+    #         assert not self.server_process.is_alive()
+    #         if sys.version_info >= (3, 7):
+    #             self.server_process.close()
+    #         self.server_process = None
+    #     self._empty_message_queue()
+    #     self.server_process = Process(
+    #         target=self.run_server, args=(host, port), name="DHParser-Server")
+    #     self.server_process.start()
+    #     self.wait_until_server_online()
 
     async def termination_request(self):
         try:
@@ -735,6 +740,50 @@ class Server:
             while self.server_messages.get() != SERVER_OFFLINE:
                 pass
         self.terminate_server()
+
+
+RUN_SERVER_SCRIPT_TEMPLATE = """
+import os
+import sys
+
+path = '.'
+sys.path.append(os.path.abspath(path))
+while not 'DHParser' in os.listdir(path) and len(path) < 20:
+    path = os.path.join('..', path)
+if len(path) < 20:
+    sys.path.append(os.path.abspath(path))
+
+{INITIALIZATION}
+
+def run_server(host, port):
+    from DHParser.server import Server
+    # print('Starting server on %s:%i' % (host, port))
+    server = Server({PARAMETERS})
+    server.run_server(host, port)
+
+if __name__ == '__main__':
+    run_server({HOST}, {PORT})
+"""
+
+
+def spawn_server(self,
+                 host: str = USE_DEFAULT_HOST,
+                 port: int = USE_DEFAULT_PORT,
+                 initialization: str = '',
+                 parameters: str = 'lambda s: s'):
+    """
+    Start DHParser-Server in a separate process and return.
+    Useful for writing test code.
+    """
+    if host == USE_DEFAULT_HOST:
+        host = get_config_value('server_default_host')
+    if port == USE_DEFAULT_PORT:
+        port = get_config_value('server_default_port')
+    null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
+    interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+    run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
+        HOST=host, PORT=port, INITIALIZATION=initialization, PARAMETERS=parameters)
+    subprocess.Popen([interpreter, '-c', run_server_script])
 
 
 #######################################################################
