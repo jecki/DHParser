@@ -41,8 +41,6 @@ For JSON see:
     https://json.org/
 """
 
-# TODO: Test with python 3.5
-
 import asyncio
 from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
 from concurrent.futures.process import BrokenProcessPool
@@ -60,7 +58,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log
-from DHParser.toolkit import re
+from DHParser.toolkit import re, re_find
 from DHParser.versionnumber import __version__
 
 
@@ -95,6 +93,8 @@ JSON_Type = Union[Dict, Sequence, str, int, None]
 RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'  # b'\s*(?:{|\[|"|\d|true|false|null)'
 RE_GREP_URL = rb'GET ([^ \n]+) HTTP'
 RE_FUNCTION_CALL = rb'\s*(\w+)\(([^)]*)\)$'
+RX_CONTENT_LENGTH = re.compile(rb'Content-Length:\s*(\d+)')
+RE_DATA_START = rb'\r?\n\r?\n'
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
@@ -292,7 +292,7 @@ class Server:
         assert not (self.blocking - self.rpc_table.keys())
 
         self.max_source_size = get_config_value('max_rpc_size')  #type: int
-        self.server_messages = Queue()  # type: Queue
+        # self.server_messages = Queue()  # type: Queue
         self.server_process = None  # type: Optional[Process]
 
         # shared variables
@@ -314,6 +314,7 @@ class Server:
         self.echo_log = get_config_value('echo_server_log')
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')
 
+        self.data_buffer = b''        # type: bytes
         self.active_tasks = {}        # type: Dict[int, asyncio.Future]
         self.kill_switch = False      # type: bool
         self.exit_connection = False  # type: bool
@@ -541,13 +542,27 @@ class Server:
         except KeyError:
             pass  # task might have been finished even before it has been registered
 
+
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        # print('BEGIN DHParser.server.connection()')
         while not self.exit_connection and not self.kill_switch:
-            # print('waiting for data...', self.kill_switch)
-            data = await reader.read(self.max_source_size + 1)   # type: bytes
+            if self.data_buffer:
+                data = self.data_buffer  # type: bytes
+                self.data_buffer = b''
+            else:
+                data = await reader.read(self.max_source_size + 1)   # type: bytes
+            i = data.find(b'Content-Length:', 0, 512)
+            m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+            if m:
+                l = int(m.group(1))
+                m2 = re_find(data, RE_DATA_START)
+                if m2:
+                    k = m2.end()
+                    assert len(data) >= k + l
+                    if k + l < len(data):
+                        self.data_buffer = data[k + l:]
+                        data = data[:k + l]
+
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
-            # print('received: ', data.decode())
             if not data and reader.at_eof():
                 break
 
@@ -572,11 +587,9 @@ class Server:
                 raw = None
                 json_obj = {}
                 rpc_error = None
-                i = data.find(b'"jsonrpc"') - 1
                 # see: https://microsoft.github.io/language-server-protocol/specification#header-part
                 # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
-                while i > 0 and data[i] in (b'{', b'['):
-                    i -= 1
+                i = data.find(b'{')
                 if i > 0:
                     data = data[i:]
                 if len(data) > self.max_source_size:
@@ -587,7 +600,7 @@ class Server:
                     try:
                         raw = json.loads(data.decode())
                     except json.decoder.JSONDecodeError as e:
-                        rpc_error = -32700, "JSONDecodeError: " + str(e) + str(data)
+                        rpc_error = -32700, "JSONDecodeError: " + (str(e) + str(data)).replace('"', "`")
 
                 if rpc_error is None:
                     if isinstance(raw, Dict):
@@ -609,20 +622,21 @@ class Server:
 
         if self.exit_connection or self.kill_switch:
             writer.write_eof()
+            self.data_buffer = b''
             await writer.drain()
             writer.close()
             self.exit_connection = False  # reset flag
 
-        # print("ACTIVE TASKS: ", self.active_tasks)
-
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed??
             self.stage.value = SERVER_TERMINATE
+            if sys.version_info >= (3, 7):
+                await writer.wait_closed()
             self.server.close()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
             self.kill_switch = False  # reset flag
-        # print('END DHParser.server.connection()')
+
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         host, port = substitute_default_host_and_port(host, port)
@@ -642,7 +656,7 @@ class Server:
                                await asyncio.start_server(self.connection, host, port))
             async with self.server:
                 self.stage.value = SERVER_ONLINE
-                self.server_messages.put(SERVER_ONLINE)
+                # self.server_messages.put(SERVER_ONLINE)
                 await self.server.serve_forever()
         finally:
             if self.tp_executor is not None:
@@ -675,7 +689,7 @@ class Server:
                     asyncio.start_server(self.connection, host, port, loop=self.loop)))
             try:
                 self.stage.value = SERVER_ONLINE
-                self.server_messages.put(SERVER_ONLINE)
+                # self.server_messages.put(SERVER_ONLINE)
                 self.loop.run_forever()
             finally:
                 if loop is None:
@@ -685,9 +699,9 @@ class Server:
                 self.server.close()
                 asyncio_run(self.server.wait_closed())
 
-    def _empty_message_queue(self):
-        while not self.server_messages.empty():
-            self.server_messages.get()
+    # def _empty_message_queue(self):
+    #     while not self.server_messages.empty():
+    #         self.server_messages.get()
 
     def run_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         """
@@ -696,7 +710,7 @@ class Server:
         """
         assert self.stage.value == SERVER_OFFLINE
         self.stage.value = SERVER_STARTING
-        self._empty_message_queue()
+        # self._empty_message_queue()
         if self.echo_log:
             print("Server logging is on.")
         try:
@@ -711,84 +725,16 @@ class Server:
         self.pp_executor = None
         self.tp_executor = None
         asyncio_run(self.server.wait_closed())
-        self.server_messages.put(SERVER_OFFLINE)
+        # self.server_messages.put(SERVER_OFFLINE)
         self.stage.value = SERVER_OFFLINE
-
-    def wait_until_server_online(self):
-        if self.stage.value != SERVER_ONLINE:
-            message = self.server_messages.get()
-            if message != SERVER_ONLINE:
-                raise AssertionError('could not start server!?')
-            assert self.stage.value == SERVER_ONLINE
-
-    def spawn_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
-        """
-        Start DHParser-Server in a separate process and return.
-        Useful for writing test code.
-        """
-        if self.server_process:
-            assert not self.server_process.is_alive()
-            if sys.version_info >= (3, 7):
-                self.server_process.close()
-            self.server_process = None
-        self._empty_message_queue()
-        self.server_process = Process(
-            target=self.run_server, args=(host, port), name="DHParser-Server")
-        self.server_process.start()
-        self.wait_until_server_online()
-
-    async def termination_request(self):
-        try:
-            host, port = self.host.value.decode(), self.port.value
-            reader, writer = await asyncio.open_connection(host, port)
-            writer.write(STOP_SERVER_REQUEST)
-            await reader.read(500)
-            while self.stage.value != SERVER_OFFLINE \
-                    and self.server_messages.get() != SERVER_OFFLINE:
-                pass
-            writer.write_eof()
-            await writer.drain()
-            writer.close()
-        except ConnectionRefusedError:
-            pass
-
-    def terminate_server(self):
-        """
-        Terminates the server process.
-        """
-        try:
-            if self.stage.value in (SERVER_STARTING, SERVER_ONLINE):
-                asyncio_run(self.termination_request())
-            if self.server_process and self.server_process.is_alive():
-                if self.stage.value in (SERVER_STARTING, SERVER_ONLINE):
-                    self.stage.value = SERVER_TERMINATE
-                    self.server_process.terminate()
-                self.server_process.join()
-                if sys.version_info >= (3, 7):
-                    self.server_process.close()
-                self.server_process = None
-                self.stage.value = SERVER_OFFLINE
-        except AssertionError as debugger_err:
-            print('If this message appears out of debugging mode, it is an error!')
-
-    def wait_for_termination(self):
-        """
-        Waits for the termination of the server-process. Termination of the
-        server-process can be triggered by sending a STOP_SERVER_REQUEST to the
-        server.
-        """
-        if self.stage.value in (SERVER_STARTING, SERVER_ONLINE, SERVER_TERMINATE):
-            while self.server_messages.get() != SERVER_OFFLINE:
-                pass
-        self.terminate_server()
 
 
 RUN_SERVER_SCRIPT_TEMPLATE = """
 import os
 import sys
 
+sys.path.append(os.path.abspath("{IMPORT_PATH}"))
 path = '.'
-sys.path.append(os.path.abspath(path))
 while not 'DHParser' in os.listdir(path) and len(path) < 20:
     path = os.path.join('..', path)
 if len(path) < 20:
@@ -811,7 +757,8 @@ if __name__ == '__main__':
 def spawn_server(host: str = USE_DEFAULT_HOST,
                  port: int = USE_DEFAULT_PORT,
                  initialization: str = '',
-                 parameters: str = 'lambda s: s'):
+                 parameters: str = 'lambda s: s',
+                 import_path: str = '.'):
     """
     Start DHParser-Server in a separate process and return.
     Useful for writing test code.
@@ -820,7 +767,8 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
     null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
     interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
-        HOST=host, PORT=port, INITIALIZATION=initialization, PARAMETERS=parameters)
+        HOST=host, PORT=port, INITIALIZATION=initialization,
+        PARAMETERS=parameters, IMPORT_PATH=import_path)
     subprocess.Popen([interpreter, '-c', run_server_script])
 
 

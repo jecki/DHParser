@@ -25,6 +25,7 @@ import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
 from DHParser.parse import Grammar
 from DHParser import Compiler
@@ -85,16 +86,16 @@ class TestCompilerGeneration:
         for name in (self.grammar_name, self.compiler_name, self.text_name, self.result_name):
             if os.path.exists(name):
                 os.remove(name)
-        if os.path.exists('LOGS'):
-            files = os.listdir('LOGS')
+        if os.path.exists(LOG_DIR):
+            files = os.listdir(LOG_DIR)
             flag = False
             for file in files:
                 if file.startswith('TestCompilerGenerationCompiler') or file == "info.txt":
-                    os.remove(os.path.join('LOGS', file))
+                    os.remove(os.path.join(LOG_DIR, file))
                 else:
                     flag = True
             if not flag:
-                os.rmdir('LOGS')
+                os.rmdir(LOG_DIR)
         pycachedir = os.path.join(self.tmp,'__pycache__')
         if os.path.exists(pycachedir):
             for fname in os.listdir(pycachedir):

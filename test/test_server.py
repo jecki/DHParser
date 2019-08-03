@@ -37,7 +37,7 @@ import sys
 import time
 from typing import Callable
 
-scriptpath = os.path.dirname(__file__) or '.'
+scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
@@ -73,6 +73,16 @@ def send_request(request: str, expect_response: bool = True) -> str:
     return response
 
 
+
+jrpc_id = 0
+
+def json_rpc(method: str, params: dict) -> str:
+    global jrpc_id
+    jrpc_id += 1
+    s = json.dumps({'jsonrpc': '2.0', 'id':jrpc_id, 'method':method, 'params': params})
+    return 'Content-Length: %i\n\n' % len(s) + s
+
+
 class TestServer:
     # def test_server(self):
     #     cs = Server(compiler_dummy)
@@ -98,7 +108,8 @@ class TestServer:
         try:
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()')
+                         'compiler_dummy, cpu_bound=set()',
+                         import_path=scriptpath)
             asyncio_run(compile_remote('Test'))
         finally:
             stop_server('127.0.0.1', TEST_PORT)
@@ -117,7 +128,8 @@ class TestServer:
         try:
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import compiler_dummy',
-                         'compiler_dummy')
+                         'compiler_dummy',
+                         import_path=scriptpath)
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
             assert isinstance(result, str) and result.startswith('DHParser'), result
         finally:
@@ -139,7 +151,7 @@ class TestServer:
             # plain text stop request
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()')
+                         'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
             asyncio_run(terminate_server(STOP_SERVER_REQUEST,
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
@@ -147,7 +159,7 @@ class TestServer:
             # http stop request
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()')
+                         'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
             asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
@@ -155,7 +167,7 @@ class TestServer:
             # json_rpc stop request
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()')
+                         'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
             jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
                                   'id': 1})
             asyncio_run(terminate_server(jsonrpc.encode(),
@@ -190,7 +202,7 @@ class TestServer:
                 spawn_server('127.0.0.1', TEST_PORT,
                              'from test_server import long_running',
                              "long_running, cpu_bound=frozenset(['long_running']), "
-                             "blocking=frozenset()")
+                             "blocking=frozenset()", import_path=scriptpath)
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -201,7 +213,7 @@ class TestServer:
                 spawn_server('127.0.0.1', TEST_PORT,
                              'from test_server import long_running',
                              "long_running, cpu_bound=frozenset(), "
-                             "blocking=frozenset(['long_running'])")
+                             "blocking=frozenset(['long_running'])", import_path=scriptpath)
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -211,7 +223,8 @@ class TestServer:
         try:
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import long_running',
-                         "long_running, cpu_bound=frozenset(), blocking=frozenset()")
+                         "long_running, cpu_bound=frozenset(), blocking=frozenset()",
+                         import_path=scriptpath)
             asyncio_run(run_tasks())
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
@@ -230,7 +243,7 @@ class TestSpawning:
         asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
     def test_spawn(self):
-        spawn_server('127.0.0.1', TEST_PORT)
+        spawn_server('127.0.0.1', TEST_PORT, import_path=scriptpath)
 
         async def identify():
             try:
@@ -246,41 +259,6 @@ class TestSpawning:
 
         result = asyncio_run(identify())
         assert result.startswith('DHParser')
-
-
-jrpc_id = 0
-
-def json_rpc(method: str, params: dict) -> str:
-    global jrpc_id
-    jrpc_id += 1
-    return json.dumps({'jsonrpc': '2.0', 'id':jrpc_id, 'method':method, 'params': params})
-
-
-# initialized = multiprocessing.Value('b', 0)
-# processId = multiprocessing.Value('Q', 0)
-# rootUri = multiprocessing.Array('c', b' ' * 2048)
-# clientCapabilities = multiprocessing.Array('c', b' ' * 16384)
-# serverCapabilities = multiprocessing.Array('c', b' ' * 16384)
-# serverCapabilities.value = json.dumps('{}').encode()
-#
-#
-# def lsp_initialize(**kwargs):
-#     global initialized, processId, rootUri, clientCapabilities, serverCapabilities
-#     if initialized.value != 0 or processId.value != 0:
-#         return {"code": -32002, "message": "Server has already been initialized."}
-#     processId.value = kwargs['processId']
-#     rootUri.value = kwargs['rootUri'].encode()
-#     clientCapabilities.value = json.dumps(kwargs['capabilities']).encode()
-#     return {'capabilities': json.loads(serverCapabilities.value.decode())}
-#
-#
-# def lsp_initialized(**kwargs):
-#     global initialized
-#     print(processId.value)
-#     print(rootUri.value)
-#     print(clientCapabilities.value)
-#     initialized.value = -1
-#     return None
 
 
 def lsp_rpc(f: Callable):
@@ -350,6 +328,15 @@ class LSP:
         return None
 
 
+DEBUG_BLOCK = """
+from DHParser import configuration
+CFG = configuration.access_presets()
+CFG['log_dir'] = os.path.abspath("LOGS")
+CFG['log_server'] = True
+CFG['echo_server_log'] = True
+configuration.finalize_presets()"""
+
+
 class TestLanguageServer:
     """Tests for the generic LanguageServer-class."""
 
@@ -366,9 +353,9 @@ class TestLanguageServer:
         spawn_server('127.0.0.1', TEST_PORT,
                      'from test_server import LSP, gen_lsp_table\n'
                      'lsp = LSP()\n'
-                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",
+                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",  # + DEBUG_BLOCK,
                      "lsp_table, cpu_bound=frozenset(), "
-                     "blocking=frozenset()")
+                     "blocking=frozenset()", import_path=scriptpath)
 
     def test_initialize(self):
         self.start_server()
@@ -408,7 +395,7 @@ class TestLanguageServer:
         async def initialization_seuquence():
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             writer.write(json_rpc('initialize',
-                                  {'processId': 701,
+                                  {'processId': 702,
                                    'rootUri': 'file://~/tmp',
                                    'capabilities': {}}).encode())
             response = (await reader.read(8192)).decode()

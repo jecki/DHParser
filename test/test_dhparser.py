@@ -28,6 +28,7 @@ import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
 def system(s: str) -> int:
     # return os.system(s)
@@ -50,10 +51,10 @@ class TestDHParserCommandLineTool:
         if os.path.exists('test_dhparser_data') and not os.listdir('test_dhparser_data'):
             os.rmdir('test_dhparser_data')
         os.chdir(self.cwd)
-        if os.path.exists('LOGS') and os.path.isdir('LOGS'):
-            for fname in os.listdir('LOGS'):
-                os.remove(os.path.join('LOGS', fname))
-            os.rmdir('LOGS')
+        if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
+            for fname in os.listdir(LOG_DIR):
+                os.remove(os.path.join(LOG_DIR, fname))
+            os.rmdir(LOG_DIR)
 
     def test_dhparser(self):
         # test compiler creation and execution

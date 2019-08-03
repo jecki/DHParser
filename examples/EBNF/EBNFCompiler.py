@@ -274,7 +274,7 @@ if __name__ == "__main__":
         # compile file
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
-            file_name, log_dir = sys.argv[2], 'LOGS'
+            file_name, log_dir = sys.argv[2], "LOGS"
         result, errors, ast = compile_src(file_name, log_dir)
         if errors:
             cwd = os.getcwd()

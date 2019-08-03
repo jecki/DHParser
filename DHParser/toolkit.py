@@ -52,6 +52,7 @@ except ImportError:
 __all__ = ('typing',
            'cython',
            'cython_optimized',
+           're_find',
            'escape_re',
            'escape_control_characters',
            'is_filename',
@@ -99,6 +100,33 @@ DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
 # miscellaneous (generic)
 #
 #######################################################################
+
+
+def re_find(s, r, pos=0, endpos=9223372036854775807):
+    """
+    Returns the match of the first occurrence of the regular expression
+    `r` in string (or byte-sequence) `s`. This is essentially a wrapper
+    for `re.finditer()` to avoid a try-catch StopIteration block.
+    If `r` cannot be found, `None` will be returned.
+    """
+    rx = None
+    if isinstance(r, str) or isinstance(r, bytes):
+        if (pos, endpos) != (0, 9223372036854775807):
+            rx = re.compile(r)
+        else:
+            try:
+                m = next(re.finditer(r, s))
+                return m
+            except StopIteration:
+                return None
+    else:
+        rx = r
+    if rx:
+        try:
+            m = next(rx.finditer(s, pos, endpos))
+            return m
+        except StopIteration:
+            return None
 
 
 def escape_re(strg: str) -> str:

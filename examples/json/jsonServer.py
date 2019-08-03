@@ -307,7 +307,7 @@ if __name__ == "__main__":
     elif argv[1] == "--startserver":
         from DHParser import configuration
         CFG = configuration.access_presets()
-        CFG['log_dir'] = os.path.abspath('LOG')
+        CFG['log_dir'] = os.path.abspath("LOGS")
         CFG['log_server'] = True
         CFG['echo_server_log'] = True
         configuration.finalize_presets()
