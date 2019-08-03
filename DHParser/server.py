@@ -632,7 +632,7 @@ class Server:
             self.stage.value = SERVER_TERMINATE
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
-            self.server.close()
+            self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
             self.kill_switch = False  # reset flag
