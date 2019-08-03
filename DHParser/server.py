@@ -78,8 +78,12 @@ __all__ = ('RPC_Table',
            'IDENTIFY_REQUEST',
            'ALL_RPCs',
            'identify_server',
+           'asyncio_run',
+           'asyncio_connect',
            'Server',
            'spawn_server',
+           'stop_server',
+           'has_server_stopped',
            'gen_lsp_table')
 
 
@@ -135,6 +139,16 @@ STOP_SERVER_REQUEST_STR = STOP_SERVER_REQUEST.decode()
 IDENTIFY_REQUEST = "identify()"
 
 
+def substitute_default_host_and_port(host, port):
+    """Substiutes the default value(s) from the configuration file if host
+     or port ist ``USE_DEFAULT_HOST`` or ``USE_DEFAULT_PORT``. """
+    if host == USE_DEFAULT_HOST:
+        host = get_config_value('server_default_host')
+    if port == USE_DEFAULT_PORT:
+        port = get_config_value('server_default_port')
+    return host, port
+
+
 def identify_server():
     """Returns an identification string for the server."""
     return "DHParser " + __version__
@@ -156,7 +170,7 @@ def maybe_int(s: str) -> Union[int, str]:
 
 
 def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
-    """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
+    """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
         return asyncio.run(coroutine)
     else:
@@ -172,6 +186,36 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
         except ConnectionResetError:
             result = None
         return result
+
+
+async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
+                    retry_timeout: float = 1.0):
+    """
+    Backwards compatible version of Python3.8's `asyncio.connect()`, with the
+    variant that it returns a reader, writer pair instead of just one stream.
+    From Python 3.8 onward, the returned reader and writer are one and the
+    same stream, however.
+    """
+    host, port = substitute_default_host_and_port(host, port)
+    delay = retry_timeout / 2**7  if retry_timeout > 0.0 else retry_timeout - 0.001
+    connected = False
+    reader, writer = None, None
+    while delay < retry_timeout:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            delay = retry_timeout
+            connected = True
+        except ConnectionRefusedError as error:
+            save_error = error
+            if delay > 0.0:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                delay = retry_timeout  # exit while loop
+    if connected:
+        return reader, writer
+    else:
+        raise save_error
 
 
 def GMT_timestamp() -> str:
@@ -581,10 +625,7 @@ class Server:
         # print('END DHParser.server.connection()')
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
-        if host == USE_DEFAULT_HOST:
-            host = get_config_value('server_default_host')
-        if port == USE_DEFAULT_PORT:
-            port = get_config_value('server_default_port')
+        host, port = substitute_default_host_and_port(host, port)
         assert port >= 0
         # with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
         try:
@@ -680,21 +721,21 @@ class Server:
                 raise AssertionError('could not start server!?')
             assert self.stage.value == SERVER_ONLINE
 
-    # def spawn_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
-    #     """
-    #     Start DHParser-Server in a separate process and return.
-    #     Useful for writing test code.
-    #     """
-    #     if self.server_process:
-    #         assert not self.server_process.is_alive()
-    #         if sys.version_info >= (3, 7):
-    #             self.server_process.close()
-    #         self.server_process = None
-    #     self._empty_message_queue()
-    #     self.server_process = Process(
-    #         target=self.run_server, args=(host, port), name="DHParser-Server")
-    #     self.server_process.start()
-    #     self.wait_until_server_online()
+    def spawn_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
+        """
+        Start DHParser-Server in a separate process and return.
+        Useful for writing test code.
+        """
+        if self.server_process:
+            assert not self.server_process.is_alive()
+            if sys.version_info >= (3, 7):
+                self.server_process.close()
+            self.server_process = None
+        self._empty_message_queue()
+        self.server_process = Process(
+            target=self.run_server, args=(host, port), name="DHParser-Server")
+        self.server_process.start()
+        self.wait_until_server_online()
 
     async def termination_request(self):
         try:
@@ -756,18 +797,18 @@ if len(path) < 20:
 {INITIALIZATION}
 
 def run_server(host, port):
-    from DHParser.server import Server
-    # print('Starting server on %s:%i' % (host, port))
+    from DHParser.server import asyncio_run, Server, stop_server, has_server_stopped
+    stop_server(host, port)
+    asyncio_run(has_server_stopped(host, port))
     server = Server({PARAMETERS})
     server.run_server(host, port)
 
 if __name__ == '__main__':
-    run_server({HOST}, {PORT})
+    run_server('{HOST}', {PORT})
 """
 
 
-def spawn_server(self,
-                 host: str = USE_DEFAULT_HOST,
+def spawn_server(host: str = USE_DEFAULT_HOST,
                  port: int = USE_DEFAULT_PORT,
                  initialization: str = '',
                  parameters: str = 'lambda s: s'):
@@ -775,16 +816,60 @@ def spawn_server(self,
     Start DHParser-Server in a separate process and return.
     Useful for writing test code.
     """
-    if host == USE_DEFAULT_HOST:
-        host = get_config_value('server_default_host')
-    if port == USE_DEFAULT_PORT:
-        port = get_config_value('server_default_port')
+    host, port = substitute_default_host_and_port(host, port)
     null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
     interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization, PARAMETERS=parameters)
     subprocess.Popen([interpreter, '-c', run_server_script])
 
+
+def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT) \
+        -> Optional[Exception]:
+    """Sends a STOP_SERVER_REQUEST to a running server. Returns any exceptions
+    that occurred."""
+    async def send_stop_server(host: str, port: int) -> Optional[Exception]:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(STOP_SERVER_REQUEST)
+            _ = await reader.read(1024)
+            writer.write_eof()
+            await writer.drain()
+            writer.close()
+            if sys.version_info >= (3, 7):
+                await writer.wait_closed()
+        except ConnectionRefusedError as error:
+            return error
+        except ConnectionResetError as error:
+            return error
+        return None
+
+    host, port = substitute_default_host_and_port(host, port)
+    return asyncio_run(send_stop_server(host, port))
+
+
+async def has_server_stopped(host: str = USE_DEFAULT_HOST,
+                             port: int = USE_DEFAULT_PORT,
+                             timeout: float = 1.0) -> bool:
+    """
+    Returns True, if no server is running or any server that is running
+    stops within the given timeout.
+    """
+    host, port = substitute_default_host_and_port(host, port)
+    delay = timeout / 2**7  if timeout > 0.0 else timeout - 0.001
+    try:
+        while delay < timeout:
+            _, writer = await asyncio_connect(host, port, retry_timeout=0.0)
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            if delay > 0.0:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                delay = timeout  # exit while loop
+        return False
+    except ConnectionRefusedError:
+        return True
 
 #######################################################################
 #
