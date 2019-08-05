@@ -99,7 +99,7 @@ RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE)
 RX_COMMENT = re.compile(r'\s*#.*\n')
 
 
-def unit_from_config(config_str):
+def unit_from_config(config_str, filename):
     """ Reads grammar unit tests contained in a file in config file (.ini)
     syntax.
 
@@ -157,12 +157,12 @@ def unit_from_config(config_str):
         section_match = RX_SECTION.match(cfg, pos)
 
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
-        raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 2))  # TODO: Add file name
+        raise SyntaxError('in file "%s" in line %i' % (filename, cfg[:pos].count('\n') + 2))
 
     return unit
 
 
-def unit_from_json(json_str):
+def unit_from_json(json_str, filename):
     """
     Reads grammar unit tests from a json string.
     """
@@ -170,7 +170,8 @@ def unit_from_json(json_str):
     for symbol in unit:
         for stage in unit[symbol]:
             if stage not in UNIT_STAGES:
-                raise ValueError('Test stage %s not in: %s' % (stage, str(UNIT_STAGES)))
+                raise ValueError('in file "%s". Test stage %s not in: %s'
+                                 % (filename, stage, str(UNIT_STAGES)))
     return unit
 
 
@@ -195,7 +196,7 @@ def unit_from_file(filename):
         reader = TEST_READERS[os.path.splitext(filename)[1].lower()]
         with open(filename, 'r', encoding='utf8') as f:
             data = f.read()
-        test_unit = reader(data)
+        test_unit = reader(data, filename)
     except KeyError:
         raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
 
