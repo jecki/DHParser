@@ -376,7 +376,7 @@ class Server:
             result, rpc_error = await self.execute(self.pp_executor, method, params)
         return result, rpc_error
 
-    def respond(self, writer: asyncio.StreamWriter, response: Union[str, bytes]):
+    async def respond(self, writer: asyncio.StreamWriter, response: Union[str, bytes]):
         """Sends a response to the given writer. Depending on the configuration,
         the response will be logged. If the response appears to be a json-rpc
         response a JSONRPC_HEADER will be added depending on
@@ -392,7 +392,11 @@ class Server:
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
         append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
         # print('returned: ', response)
-        writer.write(response)
+        if sys.version_info >= (3, 8):
+            await writer.write(response)
+        else:
+            writer.write(response)
+            await writer.drain()
 
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
@@ -400,12 +404,10 @@ class Server:
                                        data: bytes):
         """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
         if len(data) > self.max_source_size:
-            self.respond(writer, "Data too large! Only %i MB allowed"
-                                 % (self.max_source_size // (1024 ** 2)))
-            await writer.drain()
+            await self.respond(writer, "Data too large! Only %i MB allowed"
+                                       % (self.max_source_size // (1024 ** 2)))
         elif data.startswith(STOP_SERVER_REQUEST):
-            self.respond(writer, self.stop_response)
-            await writer.drain()
+            await self.respond(writer, self.stop_response)
             self.kill_switch = True
             reader.feed_eof()
         else:
@@ -425,16 +427,14 @@ class Server:
             result, rpc_error = await self.run(func_name, func, argument)
             if rpc_error is None:
                 if isinstance(result, str):
-                    self.respond(writer, result)
+                    await self.respond(writer, result)
                 elif result is not None:
                     try:
-                        self.respond(writer, json.dumps(result, cls=DHParser_JSONEncoder))
+                        await self.respond(writer, json.dumps(result, cls=DHParser_JSONEncoder))
                     except TypeError as err:
-                        self.respond(writer, str(err))
+                        await self.respond(writer, str(err))
             else:
-                self.respond(writer, rpc_error[1])
-            if result is not None or rpc_error is not None:
-                await writer.drain()
+                await self.respond(writer, rpc_error[1])
         try:
             del self.active_tasks[task_id]
         except KeyError:
@@ -445,9 +445,8 @@ class Server:
                                   writer: asyncio.StreamWriter,
                                   data: bytes):
         if len(data) > self.max_source_size:
-            self.respond(writer, http_response("Data too large! Only %i MB allowed"
-                                               % (self.max_source_size // (1024 ** 2))))
-            await writer.drain()
+            await self.respond(writer, http_response("Data too large! Only %i MB allowed"
+                                                     % (self.max_source_size // (1024 ** 2))))
         else:
             result, rpc_error = None, None
             m = re.match(RE_GREP_URL, data)
@@ -455,10 +454,9 @@ class Server:
             if m:
                 func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
                 if func_name.encode() == STOP_SERVER_REQUEST:
-                    self.respond(writer,
-                                 http_response(ONELINER_HTML.format(line=self.stop_response)))
+                    await self.respond(
+                        writer, http_response(ONELINER_HTML.format(line=self.stop_response)))
                     self.kill_switch = True
-                    await writer.drain()
                     reader.feed_eof()
                 else:
                     func = self.rpc_table.get(func_name,
@@ -470,17 +468,15 @@ class Server:
                         if result is None:
                             result = ''
                         if isinstance(result, str):
-                            self.respond(writer, http_response(result))
+                            await self.respond(writer, http_response(result))
                         else:
                             try:
-                                self.respond(writer, http_response(
+                                await self.respond(writer, http_response(
                                     json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
                             except TypeError as err:
-                                self.respond(writer, http_response(str(err)))
+                                await self.respond(writer, http_response(str(err)))
                     else:
-                        self.respond(writer, http_response(rpc_error[1]))
-            if result is not None or rpc_error is not None:
-                await writer.drain()
+                        await self.respond(writer, http_response(rpc_error[1]))
         try:
             del self.active_tasks[task_id]
         except KeyError:
@@ -527,13 +523,14 @@ class Server:
             if json_id is not None and result is not None:
                 try:
                     json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                    self.respond(writer, json.dumps(json_result, cls=DHParser_JSONEncoder))
+                    await self.respond(writer, json.dumps(json_result, cls=DHParser_JSONEncoder))
                 except TypeError as err:
                     rpc_error = -32070, str(err)
 
         if rpc_error is not None:
-            self.respond(writer, ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
-                                  % (rpc_error[0], rpc_error[1], json_id)))
+            await self.respond(
+                writer, ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
+                         % (rpc_error[0], rpc_error[1], json_id)))
 
         if result is not None or rpc_error is not None:
             await writer.drain()
@@ -615,15 +612,14 @@ class Server:
                     assert json_id not in self.active_tasks, str(json_id)
                     self.active_tasks[json_id] = task
                 else:
-                    self.respond(writer,
+                    await self.respond(writer,
                         ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                          % (rpc_error[0], rpc_error[1], json_id)))
-                    await writer.drain()
 
         if self.exit_connection or self.kill_switch:
             writer.write_eof()
-            self.data_buffer = b''
             await writer.drain()
+            self.data_buffer = b''
             writer.close()
             self.exit_connection = False  # reset flag
 
@@ -754,6 +750,9 @@ if __name__ == '__main__':
 """
 
 
+python_interpreter_name_cached = ''
+
+
 def spawn_server(host: str = USE_DEFAULT_HOST,
                  port: int = USE_DEFAULT_PORT,
                  initialization: str = '',
@@ -763,12 +762,17 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
     Start DHParser-Server in a separate process and return.
     Useful for writing test code.
     """
+    global python_interpreter_name_cached
     host, port = substitute_default_host_and_port(host, port)
     null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
-    interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+    if python_interpreter_name_cached:
+        interpreter = python_interpreter_name_cached
+    else:
+        interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+        python_interpreter_name_cached = interpreter
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization,
-        PARAMETERS=parameters, IMPORT_PATH=import_path)
+        PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
     subprocess.Popen([interpreter, '-c', run_server_script])
 
 
@@ -780,9 +784,9 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT) \
         try:
             reader, writer = await asyncio.open_connection(host, port)
             writer.write(STOP_SERVER_REQUEST)
+            await writer.drain()
             _ = await reader.read(1024)
             writer.write_eof()
-            await writer.drain()
             writer.close()
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()

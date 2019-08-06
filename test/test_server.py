@@ -20,6 +20,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+# TODO: Quite slow under MS Windows, either too much connecting and reconnecting or process spawning??
+
 if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
@@ -31,8 +33,6 @@ import functools
 import json
 import multiprocessing
 import os
-import platform
-import subprocess
 import sys
 import time
 from typing import Callable
@@ -258,7 +258,7 @@ class TestSpawning:
                 return ''
 
         result = asyncio_run(identify())
-        assert result.startswith('DHParser')
+        assert result.startswith('DHParser'), result
 
 
 def lsp_rpc(f: Callable):
