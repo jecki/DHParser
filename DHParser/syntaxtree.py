@@ -639,6 +639,30 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return None
 
+    def locate(self, location: int) -> Optional['Node']:
+        """
+        Returns the leaf-Node that covers the given `location`, where
+        location is the actual position within self.content (not the
+        source code position that the pos-attribute represents)
+        """
+        end = 0
+        for nd in self.select_if(lambda nd: not nd.children, include_root=True):
+            end = end + len(nd)
+            if location < end:
+                return nd
+        return None
+
+    def find_parent(self, node) -> Optional['Node']:
+        """
+        Finds and returns the parent of `node` within the tree represented
+        by `self`. If the tree does not contain `node`, the value `None`
+        is returned.
+        """
+        for nd in self.select_if(lambda nd: nd.children, include_root=True):
+            if node in nd.children:
+                return nd
+        return None
+
     # serialization ###
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
