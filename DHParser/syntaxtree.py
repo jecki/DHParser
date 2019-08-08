@@ -185,17 +185,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         pos (int):  the position of the node within the parsed text.
 
-            The value of ``pos`` is -1 meaning invalid by default.
-            Setting this value will set the positions of all child
-            nodes relative to this value.
+            The default value of ``pos`` is -1 meaning invalid by default.
+            Setting pos to a value >= 0 will trigger the assignment
+            of position values of all child nodes relative to this value.
 
-            To set the pos values of all nodes in a syntax tree, the
-            pos value of the root node should be set to 0 right
-            after parsing.
+            The pos field is WRITE ONCE, i.e. once assigned it cannot be
+            reassigned. The assignment of the pos values happens either
+            during the parsing process or, when later added to a tree,
+            the pos-values of which have already been initialized.
 
-            Other than that, this value should be considered READ ONLY.
-            At any rate, it should only be reassigned during the parsing
-            stage and never during or after the AST-transformation.
+            Thus, pos-values always retain their position in the source
+            text. If in any tree-processing stage after parsing, nodes
+            are added or deleted, the pos values will not represent
+            the position within in the string value of the tree.
+
+            Retaining the original source positions is crucial for
+            correctly locating errors which might only be detected at
+            later stages of the tree-transformation within the source text.
 
         attr (dict): An optional dictionary of XML-attr. This
             dictionary is created lazily upon first usage. The attr
