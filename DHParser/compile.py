@@ -373,7 +373,7 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Process, but catch any Python exceptions, in case
     any normal errors have occurred earlier in the processing pipeline.
-    Don't catch Python-exceptions if not errors have occurred earlier.
+    Don't catch Python-exceptions if no errors have occurred earlier.
 
     This behaviour is based on the assumption that given any non-fatal
     errors have occurred earlier, the tree passed through the pipeline

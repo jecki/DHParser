@@ -42,7 +42,7 @@ For JSON see:
 """
 
 import asyncio
-from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor, CancelledError
+from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 import json
@@ -195,7 +195,7 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
 
 
 async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-                    retry_timeout: float = 1.0):
+                    retry_timeout: float = 5.0):
     """
     Backwards compatible version of Python3.8's `asyncio.connect()`, with the
     variant that it returns a reader, writer pair instead of just one stream.
@@ -398,7 +398,7 @@ class Server:
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
         append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
         # print('returned: ', response)
-        if sys.version_info >= (3, 8):
+        if sys.version_info >= (3, 9):
             await writer.write(response)
         else:
             writer.write(response)
@@ -566,8 +566,7 @@ class Server:
                         data = data[:k + l]
 
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
-            # if data:
-            #     print(data)
+
             if not data and reader.at_eof():
                 break
 
@@ -632,7 +631,7 @@ class Server:
             self.exit_connection = False  # reset flag
 
         if self.kill_switch:
-            # TODO: terminate processes and threads! Is this needed??
+            # TODO: terminate processes and threads! Is this needed?
             self.stage.value = SERVER_TERMINATE
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
@@ -731,10 +730,9 @@ class Server:
                 self.serve_py35(host, port, loop)
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
-        except CancelledError:
-            pass
-        self.pp_executor = None
-        self.tp_executor = None
+        except asyncio.CancelledError:
+            if self.stage.value != SERVER_TERMINATE:
+                raise
         # self.server_messages.put(SERVER_OFFLINE)
         self.stage.value = SERVER_OFFLINE
 
@@ -754,9 +752,8 @@ if len(path) < 20:
 
 def run_server(host, port):
     from DHParser.server import asyncio_run, Server, stop_server, has_server_stopped
-    stop_server(host, port)
-    # asyncio_run(has_server_stopped(host, port))
-    server = Server({PARAMETERS})
+    stop_server(host, port, 1.0)
+    server = Server({PARAMETERS})   
     server.run_server(host, port)
 
 if __name__ == '__main__':
@@ -776,28 +773,36 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
     Start DHParser-Server in a separate process and return.
     Useful for writing test code.
     """
+    async def wait_for_connection(host, port):
+        reader, writer = await asyncio_connect(host, port)  # wait until server online
+        writer.close()
+        # if sys.version_info >= (3, 7):
+        #     await writer.wait_closed()
+
     global python_interpreter_name_cached
     host, port = substitute_default_host_and_port(host, port)
     null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
     if python_interpreter_name_cached:
         interpreter = python_interpreter_name_cached
     else:
-        # interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
-        interpreter = '/home/eckhart/.local/bin/python3.5'
+        interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+        # interpreter = '/home/eckhart/.local/bin/python3.8'
         # interpreter = "pypy3"
         python_interpreter_name_cached = interpreter
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
     subprocess.Popen([interpreter, '-c', run_server_script])
+    asyncio_run(wait_for_connection(host, port))
 
 
 async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                              port: int = USE_DEFAULT_PORT,
-                             timeout: float = 1.0) -> bool:
+                             timeout: float = 5.0) -> bool:
     """
     Returns True, if no server is running or any server that is running
-    has stopped within the given timeout.
+    has stopped within the given timeout. Returns False, if server has
+    not stopped and is still running.
     """
     host, port = substitute_default_host_and_port(host, port)
     delay = timeout / 2**7  if timeout > 0.0 else timeout - 0.001
@@ -813,7 +818,6 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                 delay = timeout  # exit while loop
         return False
     except ConnectionRefusedError:
-
         return True
 
 
@@ -832,7 +836,9 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
             if timeout > 0.0:
-                await has_server_stopped(host, port)
+                if not await has_server_stopped(host, port, timeout):
+                    raise AssertionError('Could not stop server on host %s port %i '
+                                         'within timeout %f !' % (host, port, timeout))
         except ConnectionRefusedError as error:
             return error
         except ConnectionResetError as error:
@@ -884,6 +890,3 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Sequence[Callable], Iterator[Call
             name = name.replace('_', '/').replace('S/', '$/')
         rpc_table[name] = func
     return rpc_table
-
-
-

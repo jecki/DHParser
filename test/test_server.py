@@ -58,16 +58,13 @@ def long_running(duration: str) -> str:
 def send_request(request: str, expect_response: bool = True) -> str:
     response = ''
     async def send(request):
-        try:
-            nonlocal response
-            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
-            writer.write(request.encode())
-            if expect_response:
-                response = (await reader.read(8192)).decode()
-            writer.close()
-            if sys.version_info >= (3, 7):  await writer.wait_closed()
-        except ConnectionRefusedError:
-            pass
+        nonlocal response
+        reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+        writer.write(request.encode())
+        if expect_response:
+            response = (await reader.read(8192)).decode()
+        writer.close()
+        if sys.version_info >= (3, 7):  await writer.wait_closed()
 
     asyncio_run(send(request))
     return response
@@ -114,7 +111,7 @@ class TestServer:
         finally:
             stop_server('127.0.0.1', TEST_PORT)
 
-    def test_indentify(self):
+    def test_identify(self):
         """Test server's 'identify/'-command."""
         async def send_request(request):
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
@@ -385,7 +382,7 @@ class TestLanguageServer:
         response = send_request(json_rpc('exit', {}))
         assert response == '', response
 
-    def test_initializion_sequence(self):
+    def test_initialization_sequence(self):
         self.start_server()
         async def initialization_sequence():
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
@@ -395,7 +392,7 @@ class TestLanguageServer:
                                    'capabilities': {}}).encode())
             response = (await reader.read(8192)).decode()
             i = response.find('{')
-            print(len(response), response)
+            # print(len(response), response)
             res = json.loads(response[i:])
             assert 'result' in res and 'capabilities' in res['result'], str(res)
 
@@ -404,10 +401,16 @@ class TestLanguageServer:
             writer.write(json_rpc('custom', {'test': 1}).encode())
             response = (await reader.read(8192)).decode()
             assert response.find('test') >= 0
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
 
         asyncio_run(initialization_sequence())
 
 
 if __name__ == "__main__":
+    if "--killserver" in sys.argv:
+        result = stop_server('127.0.0.1', TEST_PORT)
+        print('server stopped' if result is None else "server wasn't running")
+        sys.exit(0)
     from DHParser.testing import runner
     runner("", globals())

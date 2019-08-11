@@ -263,9 +263,9 @@ def assert_if(cond: bool, message: str):
 
 
 if __name__ == "__main__":
-    print(os.getcwd())
+    # print(os.getcwd())
     sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
-    print(sys.path)
+    # print(sys.path)
 
     host, port = '', -1
 

@@ -763,6 +763,14 @@ def runner(tests, namespace):
     "Test" and methods, the name of which starts with "test" contained
     in such classes or functions, the name of which starts with "test".
 
+    if `tests` is either the empty string or an empty sequence, runner
+    checks sys.argv for specified tests. In case sys.argv[0] (i.e. the
+    script's file name) starts with 'test' any argument in sys.argv[1:]
+    (i.e. the rest of the command line) that starts with 'test' or
+    'Test' is considered the name of a test function or test method
+    (of a test-class) that shall be run. Test-Methods are specified in
+    the form: class_name.method.name e.g. "TestServer.test_connection".
+
     Args:
         tests: String or list of strings with the names of tests to
             run. If empty, runner searches by itself all objects the
@@ -794,7 +802,9 @@ def runner(tests, namespace):
             tests = tests.split(' ')
         assert all(test.lower().startswith('test') for test in tests)
     else:
-        tests = [name for name in sys.argv[1:] if name.lower().startswith('test')]
+        tests = []
+        if sys.argv[0].lower().startswith('test'):
+            tests = [name for name in sys.argv[1:] if name.lower().startswith('test')]
         if not tests:
             tests = [name for name in namespace.keys() if name.lower().startswith('test')]
 
