@@ -76,6 +76,7 @@ def send_request(request: str, expect_response: bool = True) -> str:
 
 jrpc_id = 0
 
+
 def json_rpc(method: str, params: dict) -> str:
     global jrpc_id
     jrpc_id += 1
@@ -94,7 +95,6 @@ class TestServer:
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
-        asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
     def test_server_process(self):
         """Basic Test of server module."""
@@ -240,7 +240,6 @@ class TestSpawning:
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
-        asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
     def test_spawn(self):
         spawn_server('127.0.0.1', TEST_PORT, import_path=scriptpath)
@@ -345,11 +344,9 @@ class TestLanguageServer:
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
-        asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
     def start_server(self):
         stop_server('127.0.0.1', TEST_PORT)
-        asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
         spawn_server('127.0.0.1', TEST_PORT,
                      'from test_server import LSP, gen_lsp_table\n'
                      'lsp = LSP()\n'
@@ -363,9 +360,7 @@ class TestLanguageServer:
                                          {'processId': 701,
                                           'rootUri': 'file://~/tmp',
                                           'capabilities': {}}))
-        i = response.find('"jsonrpc"') - 1
-        while i > 0 and response[i] in ('{', '['):
-            i -= 1
+        i = response.find('{') - 1
         res = json.loads(response[i:])
         assert 'result' in res and 'capabilities' in res['result'], str(res)
 
@@ -392,16 +387,15 @@ class TestLanguageServer:
 
     def test_initializion_sequence(self):
         self.start_server()
-        async def initialization_seuquence():
+        async def initialization_sequence():
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             writer.write(json_rpc('initialize',
                                   {'processId': 702,
                                    'rootUri': 'file://~/tmp',
                                    'capabilities': {}}).encode())
             response = (await reader.read(8192)).decode()
-            i = response.find('"jsonrpc"') - 1
-            while i > 0 and response[i] in ('{', '['):
-                i -= 1
+            i = response.find('{')
+            print(len(response), response)
             res = json.loads(response[i:])
             assert 'result' in res and 'capabilities' in res['result'], str(res)
 
@@ -411,10 +405,9 @@ class TestLanguageServer:
             response = (await reader.read(8192)).decode()
             assert response.find('test') >= 0
 
-        asyncio_run(initialization_seuquence())
+        asyncio_run(initialization_sequence())
 
 
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
-

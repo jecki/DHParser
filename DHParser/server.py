@@ -177,15 +177,21 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
         if loop is None:
             try:
                 loop = asyncio.get_event_loop()
+                myloop = loop
             except RuntimeError:
-                loop = asyncio.new_event_loop()
+                myloop = asyncio.new_event_loop()
+                asyncio.set_event_loop(myloop)
         else:
             myloop = loop
         try:
-            result = loop.run_until_complete(coroutine)
-        except ConnectionResetError:
-            result = None
-        return result
+            return myloop.run_until_complete(coroutine)
+        finally:
+            if loop is None:
+                try:
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                finally:
+                    asyncio.set_event_loop(None)
+                    loop.close()
 
 
 async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
@@ -539,8 +545,8 @@ class Server:
         except KeyError:
             pass  # task might have been finished even before it has been registered
 
-
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        # print("connection")
         while not self.exit_connection and not self.kill_switch:
             if self.data_buffer:
                 data = self.data_buffer  # type: bytes
@@ -560,6 +566,8 @@ class Server:
                         data = data[:k + l]
 
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
+            # if data:
+            #     print(data)
             if not data and reader.at_eof():
                 break
 
@@ -655,6 +663,8 @@ class Server:
                 # self.server_messages.put(SERVER_ONLINE)
                 await self.server.serve_forever()
         finally:
+            if self.server is not None:
+                await self.server.wait_closed()
             if self.tp_executor is not None:
                 self.tp_executor.shutdown(wait=True)
                 self.tp_executor = None
@@ -688,12 +698,17 @@ class Server:
                 # self.server_messages.put(SERVER_ONLINE)
                 self.loop.run_forever()
             finally:
-                if loop is None:
-                    asyncio.set_event_loop(None)
-                    self.loop.run_until_complete(self.loop.shutdown_asyncgens())
-                    self.loop.close()
                 self.server.close()
-                asyncio_run(self.server.wait_closed())
+                try:
+                    self.loop.run_until_complete(self.server.wait_closed())
+                finally:
+                    if loop is None:
+                        try:
+                            self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+                        finally:
+                            asyncio.set_event_loop(None)
+                            self.loop.close()
+                            self.loop = None
 
     # def _empty_message_queue(self):
     #     while not self.server_messages.empty():
@@ -720,7 +735,6 @@ class Server:
             pass
         self.pp_executor = None
         self.tp_executor = None
-        asyncio_run(self.server.wait_closed())
         # self.server_messages.put(SERVER_OFFLINE)
         self.stage.value = SERVER_OFFLINE
 
@@ -729,7 +743,7 @@ RUN_SERVER_SCRIPT_TEMPLATE = """
 import os
 import sys
 
-sys.path.append(os.path.abspath("{IMPORT_PATH}"))
+sys.path.append(os.path.abspath('{IMPORT_PATH}'))
 path = '.'
 while not 'DHParser' in os.listdir(path) and len(path) < 20:
     path = os.path.join('..', path)
@@ -741,7 +755,7 @@ if len(path) < 20:
 def run_server(host, port):
     from DHParser.server import asyncio_run, Server, stop_server, has_server_stopped
     stop_server(host, port)
-    asyncio_run(has_server_stopped(host, port))
+    # asyncio_run(has_server_stopped(host, port))
     server = Server({PARAMETERS})
     server.run_server(host, port)
 
@@ -768,7 +782,9 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
     if python_interpreter_name_cached:
         interpreter = python_interpreter_name_cached
     else:
-        interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+        # interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+        interpreter = '/home/eckhart/.local/bin/python3.5'
+        # interpreter = "pypy3"
         python_interpreter_name_cached = interpreter
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization,
@@ -776,36 +792,12 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
     subprocess.Popen([interpreter, '-c', run_server_script])
 
 
-def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT) \
-        -> Optional[Exception]:
-    """Sends a STOP_SERVER_REQUEST to a running server. Returns any exceptions
-    that occurred."""
-    async def send_stop_server(host: str, port: int) -> Optional[Exception]:
-        try:
-            reader, writer = await asyncio.open_connection(host, port)
-            writer.write(STOP_SERVER_REQUEST)
-            await writer.drain()
-            _ = await reader.read(1024)
-            writer.write_eof()
-            writer.close()
-            if sys.version_info >= (3, 7):
-                await writer.wait_closed()
-        except ConnectionRefusedError as error:
-            return error
-        except ConnectionResetError as error:
-            return error
-        return None
-
-    host, port = substitute_default_host_and_port(host, port)
-    return asyncio_run(send_stop_server(host, port))
-
-
 async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                              port: int = USE_DEFAULT_PORT,
                              timeout: float = 1.0) -> bool:
     """
     Returns True, if no server is running or any server that is running
-    stops within the given timeout.
+    has stopped within the given timeout.
     """
     host, port = substitute_default_host_and_port(host, port)
     delay = timeout / 2**7  if timeout > 0.0 else timeout - 0.001
@@ -821,7 +813,35 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                 delay = timeout  # exit while loop
         return False
     except ConnectionRefusedError:
+
         return True
+
+
+def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
+                timeout: float = 1.0) -> Optional[Exception]:
+    """Sends a STOP_SERVER_REQUEST to a running server. Returns any exceptions
+    that occurred."""
+    async def send_stop_server(host: str, port: int) -> Optional[Exception]:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(STOP_SERVER_REQUEST)
+            await writer.drain()
+            _ = await reader.read(1024)
+            writer.write_eof()
+            writer.close()
+            if sys.version_info >= (3, 7):
+                await writer.wait_closed()
+            if timeout > 0.0:
+                await has_server_stopped(host, port)
+        except ConnectionRefusedError as error:
+            return error
+        except ConnectionResetError as error:
+            return error
+        return None
+
+    host, port = substitute_default_host_and_port(host, port)
+    return asyncio_run(send_stop_server(host, port))
+
 
 #######################################################################
 #

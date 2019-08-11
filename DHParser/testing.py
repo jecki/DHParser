@@ -713,29 +713,32 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
 #######################################################################
 
 
-def run_tests_in_class(test, namespace):
+def run_tests_in_class(cls_name, namespace, methods=()):
     """
-    Runs all tests in test-class `test` in the given namespace.
+    Runs tests in test-class `test` in the given namespace.
+
     """
-    def instantiate(cls_name, namespace):
-        exec("obj = " + cls_name + "()", namespace)
-        obj = namespace["obj"]
-        if "setup" in dir(obj):
-            obj.setup()
-        return obj
+    def instantiate(cls, nspace):
+        """Instantiates class name `cls` within name-space `nspace` and
+        returns the instance."""
+        exec("instance = " + cls + "()", nspace)
+        instance = nspace["instance"]
+        if "setup" in dir(instance):
+            instance.setup()
+        return instance
 
     obj = None
     try:
-        if test.find('.') >= 0:
-            cls_name, method_name = test.split('.')
+        if methods:
             obj = instantiate(cls_name, namespace)
-            print("Running " + cls_name + "." + method_name)
-            exec('obj.' + method_name + '()')
+            for name in methods:
+                print("Running " + cls_name + "." + name)
+                exec('obj.' + name + '()')
         else:
-            obj = instantiate(test, namespace)
+            obj = instantiate(cls_name, namespace)
             for name in dir(obj):
                 if name.lower().startswith("test"):
-                    print("Running " + test + "." + name)
+                    print("Running " + cls_name + "." + name)
                     exec('obj.' + name + '()')
     finally:
         if "teardown" in dir(obj):
@@ -783,7 +786,7 @@ def runner(tests, namespace):
             from DHParser.testing import runner
             runner("", globals())
     """
-    test_classes = []
+    test_classes = collections.OrderedDict()
     test_functions = []
 
     if tests:
@@ -791,17 +794,22 @@ def runner(tests, namespace):
             tests = tests.split(' ')
         assert all(test.lower().startswith('test') for test in tests)
     else:
-        tests = namespace.keys()
+        tests = [name for name in sys.argv[1:] if name.lower().startswith('test')]
+        if not tests:
+            tests = [name for name in namespace.keys() if name.lower().startswith('test')]
 
     for name in tests:
-        if name.lower().startswith('test'):
-            if inspect.isclass(namespace[name]):
-                test_classes.append(name)
-            elif inspect.isfunction(namespace[name]):
-                test_functions.append(name)
+        func_or_class, method = (name.split('.') + [''])[:2]
+        if inspect.isclass(namespace[func_or_class]):
+            if func_or_class not in test_classes:
+                test_classes[func_or_class] = []
+            if method:
+                test_classes[func_or_class].append(method)
+        elif inspect.isfunction(namespace[name]):
+            test_functions.append(name)
 
-    for test in test_classes:
-        run_tests_in_class(test, namespace)
+    for cls_name, methods in test_classes.items():
+        run_tests_in_class(cls_name, namespace, methods)
 
     for test in test_functions:
         run_test_function(test, namespace)
