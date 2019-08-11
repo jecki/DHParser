@@ -752,7 +752,7 @@ if len(path) < 20:
 
 def run_server(host, port):
     from DHParser.server import asyncio_run, Server, stop_server, has_server_stopped
-    stop_server(host, port, 1.0)
+    stop_server(host, port, 2.0)
     server = Server({PARAMETERS})   
     server.run_server(host, port)
 
