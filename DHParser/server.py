@@ -208,7 +208,11 @@ async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_
     reader, writer = None, None
     while delay < retry_timeout:
         try:
-            reader, writer = await asyncio.open_connection(host, port)
+            if sys.version_info >= (3, 8):
+                stream = await asyncio.connect(host, port)
+                reader, writer = stream, stream
+            else:
+                reader, writer = await asyncio.open_connection(host, port)
             delay = retry_timeout
             connected = True
         except ConnectionRefusedError as error:
@@ -299,7 +303,6 @@ class Server:
 
         self.max_source_size = get_config_value('max_rpc_size')  #type: int
         # self.server_messages = Queue()  # type: Queue
-        self.server_process = None  # type: Optional[Process]
 
         # shared variables
         self.stage = Value('b', SERVER_OFFLINE)  # type: Value
@@ -309,6 +312,7 @@ class Server:
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
         self.server = None        # type: Optional[asyncio.AbstractServer]
+        self.serving_task = None  # type: Optional[asyncio.Task]
         self.stop_response = ''   # type: str
         self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
         self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
@@ -635,11 +639,15 @@ class Server:
             self.stage.value = SERVER_TERMINATE
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
-            self.server.close()  # break self.server.serve_forever()
+                self.serving_task.cancel()
+            else:
+                self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
             self.kill_switch = False  # reset flag
 
+    async def connection_py38(self, stream: 'asyncio.Stream'):
+        await self.connection(stream, stream)
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         host, port = substitute_default_host_and_port(host, port)
@@ -655,14 +663,18 @@ class Server:
             self.port.value = port
             self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
-            self.server = cast(asyncio.base_events.Server,
-                               await asyncio.start_server(self.connection, host, port))
+            if sys.version_info >= (3, 8):
+                self.server = asyncio.StreamServer(self.connection_py38, host, port)
+            else:
+                self.server = cast(asyncio.base_events.Server,
+                                   await asyncio.start_server(self.connection, host, port))
             async with self.server:
                 self.stage.value = SERVER_ONLINE
                 # self.server_messages.put(SERVER_ONLINE)
-                await self.server.serve_forever()
+                self.serving_task = asyncio.create_task(self.server.serve_forever())
+                await self.serving_task
         finally:
-            if self.server is not None:
+            if self.server is not None and sys.version_info < (3, 8):
                 await self.server.wait_closed()
             if self.tp_executor is not None:
                 self.tp_executor.shutdown(wait=True)

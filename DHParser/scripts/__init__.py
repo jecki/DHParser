@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 """__init__.py - package definition module for DHParser/scrips
 
 Copyright 2019  by Eckhart Arnold (arnold@badw.de)

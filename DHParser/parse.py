@@ -560,7 +560,7 @@ class Grammar:
 
     Example for direct instantiation of a grammar::
 
-        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         >>> number_parser = Grammar(number)
         >>> number_parser("3.1416").content
         '3.1416'
@@ -766,7 +766,7 @@ class Grammar:
 
             class Grammar(Grammar):
                 ...
-                symbol = RE('(?!\\d)\\w+')
+                symbol = RE(r'(?!\\d)\\w+')
 
         After the call of this method symbol.pname == "symbol" holds.
         Parser names starting or ending with a double underscore like
@@ -1720,7 +1720,7 @@ class Series(NaryParser):
 
     Example::
 
-        >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
+        >>> variable_name = RegExp(r'(?!\d)\w') + RE(r'\w*')
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
@@ -1852,12 +1852,12 @@ class Alternative(NaryParser):
     are broken by selecting the first match.::
 
         # the order of the sub-expression matters!
-        >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+        >>> number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         >>> str(Grammar(number)("3.1416"))
         '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
 
         # the most selective expression should be put first:
-        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         >>> Grammar(number)("3.1416").content
         '3.1416'
 
