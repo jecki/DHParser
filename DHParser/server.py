@@ -564,6 +564,8 @@ class Server:
                 m2 = re_find(data, RE_DATA_START)
                 if m2:
                     k = m2.end()
+                    # Only covers the case where more data than the expected has been sent
+                    # TODO: Provide for the case that less data has been sent, too
                     assert len(data) >= k + l
                     if k + l < len(data):
                         self.data_buffer = data[k + l:]
