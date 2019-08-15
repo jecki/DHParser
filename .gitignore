@@ -49,3 +49,4 @@ OLDSTUFF
 *.pyd
 docs/*
 **/node_modules
+*.py.cfg

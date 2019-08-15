@@ -43,7 +43,9 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
     has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 
-TEST_PORT = 8889
+TEST_PORT = 8000 + os.getpid() % 1000
+# adding pid % 100 hopefully prevents interference, if `test_server.py` is run in
+# parallel with several different python versions, as done by `run.py`
 
 
 def compiler_dummy(src: str, log_dir: str='') -> str:
