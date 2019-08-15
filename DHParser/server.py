@@ -576,7 +576,6 @@ class Server:
                                 if k + content_length < len(data):
                                     self.data_buffer = data[k + content_length:]
                                     data = data[:k + content_length]
-                                    content_length = 0
                     else:
                         content_length = len(data)
 
