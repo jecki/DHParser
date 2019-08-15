@@ -342,6 +342,8 @@ class Server:
         directly instead of deferring it to an executor."""
         result = None      # type: JSON_Type
         rpc_error = None   # type: RPC_Error_Type
+        if params is None:
+            params = tuple()
         has_kw_params = isinstance(params, Dict)
         if not (has_kw_params or isinstance(params, Sequence)):
             rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
@@ -552,24 +554,31 @@ class Server:
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         # print("connection")
         while not self.exit_connection and not self.kill_switch:
-            if self.data_buffer:
-                data = self.data_buffer  # type: bytes
-                self.data_buffer = b''
-            else:
-                data = await reader.read(self.max_source_size + 1)   # type: bytes
-            i = data.find(b'Content-Length:', 0, 512)
-            m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
-            if m:
-                l = int(m.group(1))
-                m2 = re_find(data, RE_DATA_START)
-                if m2:
-                    k = m2.end()
-                    # Only covers the case where more data than the expected has been sent
-                    # TODO: Provide for the case that less data has been sent, too
-                    assert len(data) >= k + l
-                    if k + l < len(data):
-                        self.data_buffer = data[k + l:]
-                        data = data[:k + l]
+            data = b''  # type: bytes
+            content_length = 0  # type: int
+            while (content_length <= 0 or len(data) < content_length) and not reader.at_eof():
+                if self.data_buffer:
+                    data += self.data_buffer
+                    self.data_buffer = b''
+                else:
+                    data += await reader.read(self.max_source_size + 1)
+                if content_length <= 0:
+                    # This assumes that the 'Content-Length'-Part is transmitted in one
+                    # chunk and not in pieces, e.g. b'Cont', b'ent-Length: 52'!!!
+                    i = data.find(b'Content-Length:', 0, 512)
+                    m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+                    if m:
+                        content_length = int(m.group(1))
+                        m2 = re_find(data, RE_DATA_START)
+                        if m2:
+                            k = m2.end()
+                            if len(data) >= k + content_length:
+                                if k + content_length < len(data):
+                                    self.data_buffer = data[k + content_length:]
+                                    data = data[:k + content_length]
+                                    content_length = 0
+                    else:
+                        content_length = len(data)
 
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
 
@@ -634,6 +643,8 @@ class Server:
             await writer.drain()
             self.data_buffer = b''
             writer.close()
+            append_log(self.log_file, 'SERVER MESSAGE: Closing Connection.\n\n',
+                       echo=self.echo_log)
             self.exit_connection = False  # reset flag
 
         if self.kill_switch:
@@ -646,6 +657,8 @@ class Server:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
+            append_log(self.log_file, 'SERVER MESSAGE: Stopping Server.\n\n',
+                       echo=self.echo_log)
             self.kill_switch = False  # reset flag
 
     async def connection_py38(self, stream: 'asyncio.Stream'):
