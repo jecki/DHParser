@@ -341,9 +341,9 @@ class TestLanguageServer:
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
-        from DHParser import log
-        log.start_logging('LOGS')
-        set_config_value('log_server', True)
+        # from DHParser import log
+        # log.start_logging('LOGS')
+        # set_config_value('log_server', True)
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
