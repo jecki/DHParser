@@ -557,19 +557,59 @@ class Server:
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         # print("connection")
         while not self.exit_connection and not self.kill_switch:
+            # reset the data variable
             data = b''  # type: bytes
+            # reset the content length
             content_length = 0  # type: int
+            # reset the length of the header, represented by the variable `k`
             k = 0  # type: int
-            # k represents the length of the header
+
+            # The following loop buffers the data from the stream until a complete data
+            # set consisting of 1) a header containing a "Content-Length: ..." field,
+            # 2) a separator consisting of an empty line and 3) a data-package of exactly
+            # the size given in the "Context-Length"- Field has been received.
+            #
+            # There are four cases to cover:
+            #
+            # a) the data received does not contain a Content-Length-field. In this case
+            #    the data is considered plain data or json-rpc data wihout a header. The
+            #    data passed through as is without worrying about its size.
+            #
+            # b) the data has a header with a Content-Length-field and the size of the
+            #    data is exactly the size of the header (including the separator) plus
+            #    the value given in the Content-Length field (i.e. `k + content_length`).
+            #    In this case the data is passed through.
+            #
+            # c) the data has a header but the size is less than the header's size plus
+            #    the content-length mentioned in the header. In this case further data
+            #    is awaited from the stream until the aggregated data has at least the
+            #    size of header and content-length.
+            #
+            # d) the data has a header but the size is more than the header's size plus
+            #    the content-length value. In this case the excess data is buffered,
+            #    and only the data up to the size of the header plus the content-length
+            #    is passed through.
+            #
+            # Thus, at the end of the loop the `data`-variable always contains one
+            # complete package of data (and not more), including a header at
+            # the beginning, if there was any.
+            #
+            # see also: test/test_server.TestLanguageServer.test_varying_data_chunk_sizes
+
             while (content_length <= 0 or len(data) < content_length + k) and not reader.at_eof():
                 if self.data_buffer:
+                    # if there is any data in the buffer, retrieve this first,
+                    # before awaiting further data from the stream
                     data += self.data_buffer
                     self.data_buffer = b''
                 else:
                     data += await reader.read(self.max_source_size + 1)
                 if content_length <= 0:
-                    # This assumes that the 'Content-Length'-Part is transmitted in one
-                    # chunk and not in pieces, e.g. b'Cont', b'ent-Length: 52'!!!
+                    # If content-length has not been set, look for it in the
+                    # received data package. This assumes that if there is
+                    # a header at all, it is transmitted in one chunk and not
+                    # in pieces, e.g. b'Cont', b'ent-Length: 52'!
+                    # TODO: Check with the TDP-manual, whether this assumption can be relied on!
                     i = data.find(b'Content-Length:', 0, 512)
                     m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
                     if m:
@@ -578,13 +618,20 @@ class Server:
                         if m2:
                             k = m2.end()
                             if len(data) > k + content_length:
+                                # cut the data of at header size plus content-length
                                 self.data_buffer = data[k + content_length:]
                                 data = data[:k + content_length]
                     else:
+                        # no header or no context-length given
+                        # set `context_length` to the size of the data to break the loop
                         content_length = len(data)
                 elif content_length + k < len(data):
+                    # cut the data of at header size plus content-length
                     self.data_buffer = data[content_length + k:]
                     data = data[:content_length + k]
+                # continue the loop until at least content_length + k bytes of data
+                # have been received
+
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
 
             if not data and reader.at_eof():
