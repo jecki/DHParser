@@ -57,7 +57,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
-from DHParser.log import create_log, append_log
+from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find
 from DHParser.versionnumber import __version__
 
@@ -318,7 +318,10 @@ class Server:
         self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
 
         if get_config_value('log_server'):
-            self.log_file = create_log('%s_%s.log' % (self.__class__.__name__, hex(id(self))[2:])) # type: str
+            self.log_file = create_log('%s_%s.log' %
+                                       (self.__class__.__name__, hex(id(self))[2:])) # type: str
+            append_log(self.log_file, '\nPython Version: %s\nDHParser Version: %s\n\n'
+                       % (sys.version.replace('\n', ' '), __version__))
         else:
             self.log_file = ''
         self.echo_log = get_config_value('echo_server_log')
@@ -556,7 +559,9 @@ class Server:
         while not self.exit_connection and not self.kill_switch:
             data = b''  # type: bytes
             content_length = 0  # type: int
-            while (content_length <= 0 or len(data) < content_length) and not reader.at_eof():
+            k = 0  # type: int
+            # k represents the length of the header
+            while (content_length <= 0 or len(data) < content_length + k) and not reader.at_eof():
                 if self.data_buffer:
                     data += self.data_buffer
                     self.data_buffer = b''
@@ -572,13 +577,14 @@ class Server:
                         m2 = re_find(data, RE_DATA_START)
                         if m2:
                             k = m2.end()
-                            if len(data) >= k + content_length:
-                                if k + content_length < len(data):
-                                    self.data_buffer = data[k + content_length:]
-                                    data = data[:k + content_length]
+                            if len(data) > k + content_length:
+                                self.data_buffer = data[k + content_length:]
+                                data = data[:k + content_length]
                     else:
                         content_length = len(data)
-
+                elif content_length + k < len(data):
+                    self.data_buffer = data[content_length + k:]
+                    data = data[:content_length + k]
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
 
             if not data and reader.at_eof():
@@ -778,6 +784,7 @@ if len(path) < 20:
 
 def run_server(host, port):
     from DHParser.server import asyncio_run, Server, stop_server, has_server_stopped
+    {LOGGING}
     stop_server(host, port, 2.0)
     server = Server({PARAMETERS})   
     server.run_server(host, port)
@@ -786,6 +793,13 @@ if __name__ == '__main__':
     run_server('{HOST}', {PORT})
 """
 
+LOGGING_BLOCK = """from DHParser.log import start_logging
+    from DHParser.configuration import access_presets, finalize_presets
+    presets = access_presets()
+    presets['log_server'] = True
+    presets['echo_server_log'] = {ECHO}
+    finalize_presets()
+    start_logging('{LOGDIR}')"""
 
 python_interpreter_name_cached = ''
 
@@ -815,8 +829,12 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
         # interpreter = '/home/eckhart/.local/bin/python3.8'
         # interpreter = "pypy3"
         python_interpreter_name_cached = interpreter
+    logging = ''  # type: str
+    if is_logging() and get_config_value('log_server'):
+        logging = LOGGING_BLOCK.format(LOGDIR=get_config_value('log_dir'),
+                                       ECHO=get_config_value('echo_server_log'))
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
-        HOST=host, PORT=port, INITIALIZATION=initialization,
+        HOST=host, PORT=port, INITIALIZATION=initialization, LOGGING=logging,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
     subprocess.Popen([interpreter, '-c', run_server_script])
     asyncio_run(wait_for_connection(host, port))
@@ -836,7 +854,8 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
         while delay < timeout:
             _, writer = await asyncio_connect(host, port, retry_timeout=0.0)
             writer.close()
-            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            if sys.version_info >= (3, 7):
+                await writer.wait_closed()
             if delay > 0.0:
                 time.sleep(delay)
                 delay *= 2

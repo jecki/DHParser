@@ -40,6 +40,7 @@ from typing import Callable
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
+from DHParser.configuration import set_config_value
 from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
     has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 
@@ -340,6 +341,9 @@ class TestLanguageServer:
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
+        from DHParser import log
+        log.start_logging('LOGS')
+        set_config_value('log_server', True)
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
@@ -408,6 +412,47 @@ class TestLanguageServer:
 
         asyncio_run(initialization_sequence())
 
+    def test_varying_data_chunk_sizes(self):
+        self.start_server()
+        async def initialization_sequence():
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(json_rpc('initialize',
+                                  {'processId': 702,
+                                   'rootUri': 'file://~/tmp',
+                                   'capabilities': {}}).encode())
+            response = (await reader.read(8192)).decode()
+            i = response.find('{')
+            # print(len(response), response)
+            res = json.loads(response[i:])
+            assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+            # several commands in one chunk
+            writer.write(json_rpc('initialized', {}).encode() + json_rpc('custom', {'test': 1}).encode())
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+            data = json_rpc('custom', {'test': 2}).encode()
+            i = data.find(b'\n\n')
+            assert i > 0, str(data)
+            writer.write(data[:i + 2])
+            await asyncio.sleep(1)
+            writer.write(data[i + 2:])
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+            data = json_rpc('custom', {'test': 3}).encode()
+            i = data.find(b'\n\n')
+            assert i > 0, str(data)
+            writer.write(data[:i + 2])
+            await asyncio.sleep(0.1)
+            writer.write(data[i + 2:] + json_rpc('custom', {'test': 4}).encode())
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+
+        asyncio_run(initialization_sequence())
 
 if __name__ == "__main__":
     if "--killserver" in sys.argv:

@@ -30,7 +30,7 @@ def run_doctests(module):
 def run_unittests(command):
     args = command.split(' ')
     filename = args[1]
-    print('\nUNITTEST ' + filename)
+    print('\nUNITTEST ' + args[0] + ' ' + filename)
     subprocess.run(args)
 
 
