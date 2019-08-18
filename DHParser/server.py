@@ -327,7 +327,6 @@ class Server:
         self.echo_log = get_config_value('echo_server_log')
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')
 
-        self.data_buffer = b''        # type: bytes
         self.active_tasks = {}        # type: Dict[int, asyncio.Future]
         self.kill_switch = False      # type: bool
         self.exit_connection = False  # type: bool
@@ -556,6 +555,7 @@ class Server:
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         # print("connection")
+        buffer = b''  # type: bytes
         while not self.exit_connection and not self.kill_switch:
             # reset the data variable
             data = b''  # type: bytes
@@ -597,11 +597,11 @@ class Server:
             # see also: test/test_server.TestLanguageServer.test_varying_data_chunk_sizes
 
             while (content_length <= 0 or len(data) < content_length + k) and not reader.at_eof():
-                if self.data_buffer:
+                if buffer:
                     # if there is any data in the buffer, retrieve this first,
                     # before awaiting further data from the stream
-                    data += self.data_buffer
-                    self.data_buffer = b''
+                    data += buffer
+                    buffer = b''
                 else:
                     data += await reader.read(self.max_source_size + 1)
                 if content_length <= 0:
@@ -619,7 +619,7 @@ class Server:
                             k = m2.end()
                             if len(data) > k + content_length:
                                 # cut the data of at header size plus content-length
-                                self.data_buffer = data[k + content_length:]
+                                buffer = data[k + content_length:]
                                 data = data[:k + content_length]
                     else:
                         # no header or no context-length given
@@ -627,7 +627,7 @@ class Server:
                         content_length = len(data)
                 elif content_length + k < len(data):
                     # cut the data of at header size plus content-length
-                    self.data_buffer = data[content_length + k:]
+                    buffer = data[content_length + k:]
                     data = data[:content_length + k]
                 # continue the loop until at least content_length + k bytes of data
                 # have been received
@@ -693,7 +693,6 @@ class Server:
         if self.exit_connection or self.kill_switch:
             writer.write_eof()
             await writer.drain()
-            self.data_buffer = b''
             writer.close()
             append_log(self.log_file, 'SERVER MESSAGE: Closing Connection.\n\n',
                        echo=self.echo_log)
