@@ -192,6 +192,11 @@ class Parser:
     contained parser is repeated zero times.
 
     Attributes and Properties:
+        pname:    The parser name or the empty string in case the parser
+                remains anonymous.
+        tag_name:  The tag_name for the nodes that are created by
+                the parser. If the parser is named, this is the same as
+                `pname`, otherwise it is the name of the parser's type.
         visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
@@ -1696,7 +1701,13 @@ def mandatory_violation(grammar: Grammar,
                               location, Error.MALFORMED_ERROR_STRING)
                 grammar.tree__.add_error(err_node, error)
     else:
-        msg = '%s expected, »%s« found!' % (expected, found)
+        if grammar.history_tracking__:
+            for pname, _ in reversed(grammar.call_stack__):
+                if not pname.startswith(':'):
+                    break
+            msg = '%s expected by parser %s, »%s« found!' % (expected, pname, found)
+        else:
+            msg = '%s expected, »%s« found!' % (expected, found)
     error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
         if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)

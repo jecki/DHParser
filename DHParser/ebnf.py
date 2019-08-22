@@ -449,7 +449,7 @@ class EBNFDirectives:
         setattr(self, key, value)
 
     def keys(self):
-        return self.__dict__.keys()
+        return self.__slots__
 
 
 class EBNFCompilerError(CompilerError):

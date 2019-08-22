@@ -27,14 +27,13 @@ from multiprocessing import Pool
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import CompilationError, compileDSL, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
@@ -47,6 +46,17 @@ class TestDirectives:
         constant   =  digit { digit } [ //~ ]
         digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
         """
+
+    def test_EBNFDirectives_object(self):
+        directives = EBNFDirectives()
+        assert directives.keys()
+        directives.tokens.add('Test')
+        assert 'Test' in directives.tokens
+        try:
+            directives.nonsense = 'nonsense'
+            assert False, 'Attribute error expected for illegal directive "nonsense"'
+        except AttributeError:
+            pass
 
     def test_whitespace_linefeed(self):
         lang = "@ whitespace = linefeed\n" + self.mini_language
