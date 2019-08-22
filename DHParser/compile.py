@@ -155,7 +155,6 @@ class Compiler:
         (This very much depends on the kind and purpose of the
         implemented compiler.)
         """
-        assert root.tag_name != ZOMBIE_TAG
         if self._dirty_flag:
             self.reset()
         self._dirty_flag = True
@@ -384,6 +383,12 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     be difficult to provide for all possible kinds of badly structured
     trees resulting from errors, exceptions occurring on code processing
     potentially faulty trees will be dealt with gracefully.
+
+    Although process_tree returns the root-node of the processed tree,
+    tree processing should generally be assumed to change the tree
+    in place, even if a different root-node is returned than was passed
+    to the tree. If the input tree shall be prserved, it is necessary to
+    make a deep copy of the input tree, before calling process_tree.
     """
     assert isinstance(tp, TreeProcessor)
     if not is_fatal(tree.error_flag):
@@ -403,7 +408,7 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
             # the exceptions through
             tree = tp(tree)
         assert isinstance(tree, RootNode)
-        return tree
+    return tree
 
 
 # TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser
