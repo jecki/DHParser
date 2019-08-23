@@ -1099,7 +1099,9 @@ class RootNode(Node):
         if not node:
             node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
         else:
-            assert node.pos == error.pos or isinstance(node, FrozenNode)
+            assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
+                "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
+            # assert node.pos == error.pos or isinstance(node, FrozenNode)
         self.error_nodes.setdefault(id(node), []).append(error)
         self.error_positions.setdefault(error.pos, set()).add(id(node))
         self.errors.append(error)
