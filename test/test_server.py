@@ -409,7 +409,6 @@ class TestLanguageServer:
             response = (await reader.read(8192)).decode()
             assert response.find('test') >= 0
 
-            print('close')
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
 
