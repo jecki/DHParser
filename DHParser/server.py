@@ -299,8 +299,9 @@ class Server:
                 to their tasks to keep track of  any running task.
         finished_tasks: A dictionary that maps the connection's id (i.e. the id
                 of its stream writer) to a set of task id's (resp. jsonrpc id's)
-        exit_connections:  A set of connection id's (i.e. id's of stream writer
-                objects) that will be closed on the next occasion.
+        connections:  A set of connection id's (i.e. id's of stream writer
+                objects) that are currently active. If an id is removed from
+                this set, the connection will be closed as soon as possible.
         kill_switch:  If True the, the server will be shut down.
         loop:  The asyncio event loop within which the asyncio stream server is
                 run. This is only needed for Python 3.5 compatibility. If run
@@ -356,6 +357,9 @@ class Server:
         self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
         self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
 
+        self.echo_log = get_config_value('echo_server_log')  # type: bool
+        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
+
         if get_config_value('log_server'):
             self.log_file = create_log('%s_%s.log' %
                                        (self.__class__.__name__, hex(id(self))[2:])) # type: str
@@ -363,14 +367,15 @@ class Server:
                        % (sys.version.replace('\n', ' '), __version__))
         else:
             self.log_file = ''
-        self.echo_log = get_config_value('echo_server_log')  # type: bool
-        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
 
         self.active_tasks = dict()     # type: Dict[int, Dict[int, asyncio.Future]]
         self.finished_tasks = dict()   # type: Dict[int, Set[int]]
-        self.exit_connections = set()  # type: Set
+        self.connections = set()       # type: Set
         self.kill_switch = False       # type: bool
         self.loop = None  # just for python 3.5 compatibility...
+
+    def log(self, *args, **kwargs):
+        append_log(self.log_file, *args, **kwargs, echo=self.echo_log)
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
@@ -444,7 +449,7 @@ class Server:
                         % (str(type(response)), str(response))).encode()
         if self.use_jsonrpc_header and response.startswith(b'{'):
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
-        append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
+        self.log('RESPONSE: ', response.decode(), '\n\n')
         # print('returned: ', response)
         try:
             if sys.version_info >= (3, 9):
@@ -453,8 +458,8 @@ class Server:
                 writer.write(response)
                 await writer.drain()
         except ConnectionError as err:
-            append_log(self.log_file, 'Connection Error: ', str(err), '\n', echo=self.echo_log)
-            self.exit_connections.add(id(writer))
+            self.log('ERROR when wrting data: ', str(err), '\n')
+            self.connections.remove(id(writer))
 
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
@@ -557,7 +562,7 @@ class Server:
             params = json_obj['params'] if 'params' in json_obj else ()
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
-                self.exit_connections.add(id(writer))
+                self.connections.remove(id(writer))
                 reader.feed_eof()
 
         try:
@@ -589,12 +594,13 @@ class Server:
         self.finished_tasks[id(writer)].add(json_id)
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        # print("connection")
         id_writer = id(writer)  # type: int
+        self.connections.add(id_writer)
+        self.log('SERVER MESSAGE: New connection: ', str(id_writer), '\n')
         self.active_tasks[id_writer] = dict()   # type: Dict[id, asyncio.Task]
         self.finished_tasks[id_writer] = set()  # type: Set[int]
         buffer = b''  # type: bytes
-        while not (self.kill_switch or id_writer in self.exit_connections):
+        while not self.kill_switch and id_writer in self.connections:
             # reset the data variable
             data = b''  # type: bytes
             # reset the content length
@@ -635,7 +641,8 @@ class Server:
             # see also: test/test_server.TestLanguageServer.test_varying_data_chunk_sizes
 
             while (content_length <= 0 or len(data) < content_length + k) \
-                    and not (self.kill_switch or id_writer in self.exit_connections or reader.at_eof()):
+                    and not self.kill_switch and id_writer in self.connections \
+                    and not reader.at_eof():
                 if buffer:
                     # if there is any data in the buffer, retrieve this first,
                     # before awaiting further data from the stream
@@ -645,9 +652,8 @@ class Server:
                     try:
                         data += await reader.read(self.max_data_size + 1)
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
-                        append_log(self.log_file, 'Connection Error: ', str(err), '\n',
-                                   echo=self.echo_log)
-                        self.exit_connections.add(id_writer)
+                        self.log('ERROR while awaiting data: ', str(err), '\n')
+                        self.connections.remove(id_writer)
                         break
                 if content_length <= 0:
                     # If content-length has not been set, look for it in the
@@ -677,7 +683,7 @@ class Server:
                 # continue the loop until at least content_length + k bytes of data
                 # have been received
 
-            append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
+            self.log('RECEIVE: ' , data.decode(), '\n')
 
             # remove finished tasks from active_tasks list,
             # so that the task-objects can be garbage collected
@@ -685,10 +691,10 @@ class Server:
                 del self.active_tasks[id_writer][task_id]
             self.finished_tasks[id_writer] = set()
 
-            if id_writer in self.exit_connections:
+            if id_writer not in self.connections:
                 break
             elif not data and reader.at_eof():
-                self.exit_connections.add(id_writer)
+                self.connections.remove(id_writer)
                 break
 
             if data.startswith(b'GET'):
@@ -744,16 +750,15 @@ class Server:
                         ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                          % (rpc_error[0], rpc_error[1], json_id)))
 
-        if self.kill_switch or id_writer in self.exit_connections:
+        if self.kill_switch or id_writer not in self.connections:
             # TODO: terminate all active tasks depending on this particular connection
             try:
                 writer.write_eof()
                 await writer.drain()
                 writer.close()
-            except ConnectionError:
-                pass
-            append_log(self.log_file, 'SERVER MESSAGE: Closing Connection.\n\n',
-                       echo=self.echo_log)
+            except (ConnectionError, OSError) as err:
+                self.log('ERROR while shutdown: ', str(err), '\n')
+            self.log('SERVER MESSAGE: Closing Connection: %i.\n\n' % id_writer)
             open_tasks = {task for id, task in self.active_tasks[id_writer].items()
                           if id not in self.finished_tasks[id_writer]}
             if open_tasks:
@@ -762,11 +767,11 @@ class Server:
                     task.cancel()
             del self.active_tasks[id_writer]
             del self.finished_tasks[id_writer]
-            self.exit_connections.remove(id_writer)  # reset flag
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed?
             # TODO: terminate active tasks
+            self.connections = set()
             self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
@@ -775,8 +780,7 @@ class Server:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
-            append_log(self.log_file, 'SERVER MESSAGE: Stopping Server.\n\n',
-                       echo=self.echo_log)
+            self.log('SERVER MESSAGE: Stopping Server: %i.\n\n' % id_writer)
             self.kill_switch = False  # reset flag
 
     async def connection_py38(self, stream: 'asyncio.Stream'):

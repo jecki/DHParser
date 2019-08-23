@@ -342,9 +342,9 @@ class TestLanguageServer:
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
-        # from DHParser import log
-        # log.start_logging('LOGS')
-        # set_config_value('log_server', True)
+        from DHParser import log
+        log.start_logging('LOGS')
+        set_config_value('log_server', True)
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
@@ -354,7 +354,7 @@ class TestLanguageServer:
         spawn_server('127.0.0.1', TEST_PORT,
                      'from test_server import LSP, gen_lsp_table\n'
                      'lsp = LSP()\n'
-                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",  # + DEBUG_BLOCK,
+                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n" + DEBUG_BLOCK,
                      "lsp_table, cpu_bound=frozenset(), "
                      "blocking=frozenset()", import_path=scriptpath)
 
@@ -450,7 +450,7 @@ class TestLanguageServer:
             writer.write(data[i + 2:] + json_rpc('custom', {'test': 4}).encode())
             response = (await reader.read(8192)).decode()
             assert response.find('test') >= 0
-            # writer.write(b'')
+            writer.write(b'')
             writer.write_eof()
             await writer.drain()
             writer.close()
