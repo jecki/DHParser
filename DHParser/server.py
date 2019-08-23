@@ -406,6 +406,7 @@ class Server:
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
         append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
         # print('returned: ', response)
+        # TODO: check for closed connection!
         if sys.version_info >= (3, 9):
             await writer.write(response)
         else:
@@ -691,6 +692,7 @@ class Server:
                          % (rpc_error[0], rpc_error[1], json_id)))
 
         if self.exit_connection or self.kill_switch:
+            # TODO: terminate all active tasks depending on this particular connection
             writer.write_eof()
             await writer.drain()
             writer.close()
@@ -700,6 +702,7 @@ class Server:
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed?
+            # TODO: terminate active tasks
             self.stage.value = SERVER_TERMINATE
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()

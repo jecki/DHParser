@@ -28,7 +28,7 @@
 				"JSONLanguageServer.maxNumberOfProblems": {
 					"scope": "resource",
 					"type": "number",
-					"default": 100,
+					"default": 50,
 					"description": "Controls the maximum number of problems produced by the server."
 				},
 				"JSONLanguageServer.trace.server": {
