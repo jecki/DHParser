@@ -69,7 +69,7 @@ __all__ = ('RPC_Table',
            'SERVER_OFFLINE',
            'SERVER_STARTING',
            'SERVER_ONLINE',
-           'SERVER_TERMINATE',
+           'SERVER_TERMINATING',
            'USE_DEFAULT_HOST',
            'USE_DEFAULT_PORT',
            'STOP_SERVER_REQUEST',
@@ -101,7 +101,7 @@ SERVER_ERROR = "COMPILER-SERVER-ERROR"
 SERVER_OFFLINE = 0
 SERVER_STARTING = 1
 SERVER_ONLINE = 2
-SERVER_TERMINATE = 3
+SERVER_TERMINATING = 3
 
 HTTP_RESPONSE_HEADER = '''HTTP/1.1 200 OK
 Date: {date}
@@ -269,6 +269,45 @@ def gen_task_id() -> int:
 
 
 class Server:
+    """
+
+    Attributes:
+        cpu_bound:  Set of function names of functions that are cpu-bound and
+                will be run in separate processes
+        blocking:   Set of functions that contain blocking calls (e.g. IO-calls)
+                and will therefore be run in separate threads.
+        max_data_size:  Maximal size of a data chunk that can be read by the
+                server at a time.
+        stage:  The operation stage, the server is in. Can be on of the four values:
+                SERVER_OFFLINE, SERVER_STARTING, SERVER_ONLINE, SERVER_TERMINATING
+        host:   The host, the server runs on, e.g. "127.0.0.1"
+        port:   The port of the server, e.g. 8888
+        server: The asyncio.StreamServer if the server is online, or `None`.
+        serving_task:  The task in which the StreamServer is run.
+        stop_response:  The response string that is written to the stream as
+                answer to a stop request.
+        pp_executor:  A process-pool-executor for cpu-bound tasks
+        tp_executor:  A thread-pool-executor for blocking tasks
+        echo_log:   Read from the global configuration. If True, any log message
+                will also be echoed on the console.
+        use_jsonrpc_header:  Read from the global configuration. If True, jsonrpc
+                calls or responses will always be preceeded by a simple header of
+                the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
+                the byte-size of the rpc-package.
+        active_tasks: A dictionary that maps the connection's id (i.e. the id of
+                its stream writer) to a mapping of task id's (resp. jsonrpc id's)
+                to their tasks to keep track of  any running task.
+        finished_tasks: A dictionary that maps the connection's id (i.e. the id
+                of its stream writer) to a set of task id's (resp. jsonrpc id's)
+        exit_connections:  A set of connection id's (i.e. id's of stream writer
+                objects) that will be closed on the next occasion.
+        kill_switch:  If True the, the server will be shut down.
+        loop:  The asyncio event loop within which the asyncio stream server is
+                run. This is only needed for Python 3.5 compatibility. If run
+                with a python version from 3.6 onwards, higher level asyncio
+                functions will be used.
+
+    """
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
                  blocking: Set[str] = frozenset()):
@@ -301,7 +340,7 @@ class Server:
         assert not (self.cpu_bound - self.rpc_table.keys())
         assert not (self.blocking - self.rpc_table.keys())
 
-        self.max_source_size = get_config_value('max_rpc_size')  #type: int
+        self.max_data_size = get_config_value('max_rpc_size')  #type: int
         # self.server_messages = Queue()  # type: Queue
 
         # shared variables
@@ -324,12 +363,13 @@ class Server:
                        % (sys.version.replace('\n', ' '), __version__))
         else:
             self.log_file = ''
-        self.echo_log = get_config_value('echo_server_log')
-        self.use_jsonrpc_header = get_config_value('jsonrpc_header')
+        self.echo_log = get_config_value('echo_server_log')  # type: bool
+        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
 
-        self.active_tasks = {}        # type: Dict[int, asyncio.Future]
-        self.kill_switch = False      # type: bool
-        self.exit_connection = False  # type: bool
+        self.active_tasks = dict()     # type: Dict[int, Dict[int, asyncio.Future]]
+        self.finished_tasks = dict()   # type: Dict[int, Set[int]]
+        self.exit_connections = set()  # type: Set
+        self.kill_switch = False       # type: bool
         self.loop = None  # just for python 3.5 compatibility...
 
     async def execute(self, executor: Optional[Executor],
@@ -406,21 +446,24 @@ class Server:
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
         append_log(self.log_file, 'RESPONSE: ', response.decode(), '\n\n', echo=self.echo_log)
         # print('returned: ', response)
-        # TODO: check for closed connection!
-        if sys.version_info >= (3, 9):
-            await writer.write(response)
-        else:
-            writer.write(response)
-            await writer.drain()
+        try:
+            if sys.version_info >= (3, 9):
+                await writer.write(response)
+            else:
+                writer.write(response)
+                await writer.drain()
+        except ConnectionError as err:
+            append_log(self.log_file, 'Connection Error: ', str(err), '\n', echo=self.echo_log)
+            self.exit_connections.add(id(writer))
 
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
                                        writer: asyncio.StreamWriter,
                                        data: bytes):
         """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
-        if len(data) > self.max_source_size:
+        if len(data) > self.max_data_size:
             await self.respond(writer, "Data too large! Only %i MB allowed"
-                                       % (self.max_source_size // (1024 ** 2)))
+                               % (self.max_data_size // (1024 ** 2)))
         elif data.startswith(STOP_SERVER_REQUEST):
             await self.respond(writer, self.stop_response)
             self.kill_switch = True
@@ -450,18 +493,15 @@ class Server:
                         await self.respond(writer, str(err))
             else:
                 await self.respond(writer, rpc_error[1])
-        try:
-            del self.active_tasks[task_id]
-        except KeyError:
-            pass  # task might have been finished even before it has been registered
+        self.finished_tasks[id(writer)].add(task_id)
 
     async def handle_http_request(self, task_id: int,
                                   reader: asyncio.StreamReader,
                                   writer: asyncio.StreamWriter,
                                   data: bytes):
-        if len(data) > self.max_source_size:
+        if len(data) > self.max_data_size:
             await self.respond(writer, http_response("Data too large! Only %i MB allowed"
-                                                     % (self.max_source_size // (1024 ** 2))))
+                                                     % (self.max_data_size // (1024 ** 2))))
         else:
             result, rpc_error = None, None
             m = re.match(RE_GREP_URL, data)
@@ -492,10 +532,7 @@ class Server:
                                 await self.respond(writer, http_response(str(err)))
                     else:
                         await self.respond(writer, http_response(rpc_error[1]))
-        try:
-            del self.active_tasks[task_id]
-        except KeyError:
-            pass  # task might have been finished even before it has been registered
+        self.finished_tasks[id(writer)].add(task_id)
 
     async def handle_jsonrpc_request(self, json_id: int,
                                      reader: asyncio.StreamReader,
@@ -520,7 +557,7 @@ class Server:
             params = json_obj['params'] if 'params' in json_obj else ()
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
-                self.exit_connection = True
+                self.exit_connections.add(id(writer))
                 reader.feed_eof()
 
         try:
@@ -549,15 +586,15 @@ class Server:
 
         if result is not None or rpc_error is not None:
             await writer.drain()
-        try:
-            del self.active_tasks[json_id]
-        except KeyError:
-            pass  # task might have been finished even before it has been registered
+        self.finished_tasks[id(writer)].add(json_id)
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         # print("connection")
+        id_writer = id(writer)  # type: int
+        self.active_tasks[id_writer] = dict()   # type: Dict[id, asyncio.Task]
+        self.finished_tasks[id_writer] = set()  # type: Set[int]
         buffer = b''  # type: bytes
-        while not self.exit_connection and not self.kill_switch:
+        while not (self.kill_switch or id_writer in self.exit_connections):
             # reset the data variable
             data = b''  # type: bytes
             # reset the content length
@@ -597,14 +634,21 @@ class Server:
             #
             # see also: test/test_server.TestLanguageServer.test_varying_data_chunk_sizes
 
-            while (content_length <= 0 or len(data) < content_length + k) and not reader.at_eof():
+            while (content_length <= 0 or len(data) < content_length + k) \
+                    and not (self.kill_switch or id_writer in self.exit_connections or reader.at_eof()):
                 if buffer:
                     # if there is any data in the buffer, retrieve this first,
                     # before awaiting further data from the stream
                     data += buffer
                     buffer = b''
                 else:
-                    data += await reader.read(self.max_source_size + 1)
+                    try:
+                        data += await reader.read(self.max_data_size + 1)
+                    except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
+                        append_log(self.log_file, 'Connection Error: ', str(err), '\n',
+                                   echo=self.echo_log)
+                        self.exit_connections.add(id_writer)
+                        break
                 if content_length <= 0:
                     # If content-length has not been set, look for it in the
                     # received data package. This assumes that if there is
@@ -635,7 +679,16 @@ class Server:
 
             append_log(self.log_file, 'RECEIVE: ', data.decode(), '\n', echo=self.echo_log)
 
-            if not data and reader.at_eof():
+            # remove finished tasks from active_tasks list,
+            # so that the task-objects can be garbage collected
+            for task_id in self.finished_tasks[id_writer]:
+                del self.active_tasks[id_writer][task_id]
+            self.finished_tasks[id_writer] = set()
+
+            if id_writer in self.exit_connections:
+                break
+            elif not data and reader.at_eof():
+                self.exit_connections.add(id_writer)
                 break
 
             if data.startswith(b'GET'):
@@ -644,14 +697,14 @@ class Server:
                 task = asyncio.ensure_future(self.handle_http_request(
                     task_id, reader, writer, data))
                 assert task_id not in self.active_tasks, str(task_id)
-                self.active_tasks[task_id] = task
+                self.active_tasks[id_writer][task_id] = task
             elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
                 task_id = gen_task_id()
                 task = asyncio.ensure_future(self.handle_plaindata_request(
                     task_id, reader, writer, data))
                 assert task_id not in self.active_tasks, str(task_id)
-                self.active_tasks[task_id] = task
+                self.active_tasks[id_writer][task_id] = task
             else:
                 # assume json
                 # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
@@ -664,9 +717,9 @@ class Server:
                 i = data.find(b'{')
                 if i > 0:
                     data = data[i:]
-                if len(data) > self.max_source_size:
-                    rpc_error = -32600, "Invaild Request: Source code too large! Only %i MB allowed" \
-                                % (self.max_source_size // (1024 ** 2))
+                if len(data) > self.max_data_size:
+                    rpc_error = -32600, "Request is too large! Only %i MB allowed" \
+                                % (self.max_data_size // (1024 ** 2))
 
                 if rpc_error is None:
                     try:
@@ -685,25 +738,36 @@ class Server:
                     task = asyncio.ensure_future(self.handle_jsonrpc_request(
                         json_id, reader, writer, json_obj))
                     assert json_id not in self.active_tasks, str(json_id)
-                    self.active_tasks[json_id] = task
+                    self.active_tasks[id_writer][json_id] = task
                 else:
                     await self.respond(writer,
                         ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                          % (rpc_error[0], rpc_error[1], json_id)))
 
-        if self.exit_connection or self.kill_switch:
+        if self.kill_switch or id_writer in self.exit_connections:
             # TODO: terminate all active tasks depending on this particular connection
-            writer.write_eof()
-            await writer.drain()
-            writer.close()
+            try:
+                writer.write_eof()
+                await writer.drain()
+                writer.close()
+            except ConnectionError:
+                pass
             append_log(self.log_file, 'SERVER MESSAGE: Closing Connection.\n\n',
                        echo=self.echo_log)
-            self.exit_connection = False  # reset flag
+            open_tasks = {task for id, task in self.active_tasks[id_writer].items()
+                          if id not in self.finished_tasks[id_writer]}
+            if open_tasks:
+                done, pending = await asyncio.wait(open_tasks, timeout=3.0)
+                for task in pending:
+                    task.cancel()
+            del self.active_tasks[id_writer]
+            del self.finished_tasks[id_writer]
+            self.exit_connections.remove(id_writer)  # reset flag
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed?
             # TODO: terminate active tasks
-            self.stage.value = SERVER_TERMINATE
+            self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
                 self.serving_task.cancel()
@@ -812,7 +876,7 @@ class Server:
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
         except asyncio.CancelledError:
-            if self.stage.value != SERVER_TERMINATE:
+            if self.stage.value != SERVER_TERMINATING:
                 raise
         # self.server_messages.put(SERVER_OFFLINE)
         self.stage.value = SERVER_OFFLINE

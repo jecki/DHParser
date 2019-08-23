@@ -20,7 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# TODO: Quite slow under MS Windows, either too much connecting and reconnecting or process spawning??
+# TODO: Quite slow under MS Windows
 
 if __name__ == "__main__":
     import multiprocessing
@@ -126,6 +126,7 @@ class TestServer:
             return data.decode()
 
         try:
+            from timeit import timeit
             spawn_server('127.0.0.1', TEST_PORT,
                          'from test_server import compiler_dummy',
                          'compiler_dummy',
@@ -407,6 +408,8 @@ class TestLanguageServer:
             writer.write(json_rpc('custom', {'test': 1}).encode())
             response = (await reader.read(8192)).decode()
             assert response.find('test') >= 0
+
+            print('close')
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
 
@@ -448,7 +451,9 @@ class TestLanguageServer:
             writer.write(data[i + 2:] + json_rpc('custom', {'test': 4}).encode())
             response = (await reader.read(8192)).decode()
             assert response.find('test') >= 0
-
+            # writer.write(b'')
+            writer.write_eof()
+            await writer.drain()
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
 
