@@ -770,7 +770,7 @@ class Server:
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed?
-            # TODO: terminate active tasks
+            # TODO: terminate all connections
             self.connections = set()
             self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
