@@ -103,7 +103,8 @@ class TestLoggingAndLoading:
         # except AttributeError:
         #     pass
         res = log_dir()
-        assert isinstance(res, bool) and not res
+        if res:
+            suspend_logging()
         start_logging(self.LOGDIR)
         assert not os.path.exists(self.LOGDIR), \
             "Log dir should be created lazily!"

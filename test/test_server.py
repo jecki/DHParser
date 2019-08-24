@@ -348,6 +348,8 @@ class TestLanguageServer:
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
+        from DHParser import log
+        log.suspend_logging()
 
     def start_server(self):
         stop_server('127.0.0.1', TEST_PORT)

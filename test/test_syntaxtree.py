@@ -280,7 +280,7 @@ class TestRootNode:
     def test_error_reporting(self):
         number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         result = str(Grammar(number)("3.1416"))
-        assert result == '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> ', \
+        assert result.startswith('3 <<< Error on ".141" | Parser stopped before end! trying to recover'), \
             str(result)
 
 
