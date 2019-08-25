@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-"""test_syntaxtree.py - test of syntaxtree-module of DHParser 
-                             
+"""test_syntaxtree.py - test of syntaxtree-module of DHParser
+
 Author: Eckhart Arnold <arnold@badw.de>
 
 Copyright 2017 Bavarian Academy of Sciences and Humanities
@@ -84,16 +84,25 @@ class TestParseJSON:
 
     def test_json_obj_roundtrip(self):
         json_obj_tree = self.tree.to_json_obj()
-        # print(json.dumps(json_obj_tree, ensure_ascii=False, indent=2))
         tree_copy = Node.from_json_obj(json_obj_tree)
-        assert tree_copy.equals(self.tree), tree_copy.as_sxpr()
+        # print(json_obj_tree)
+        # print(json.dumps(json_obj_tree, ensure_ascii=False))
+        # print(json.loads(json.dumps(json_obj_tree, ensure_ascii=False)))        
+        assert tree_copy.equals(self.tree), '\n' + tree_copy.as_sxpr() + '\n' + self.tree.as_sxpr()
 
-    def test_json_rountrip(self):
+    def test_json_roundtrip(self):
         s = self.tree.as_json(indent=None, ensure_ascii=True)
         tree_copy = Node.from_json_obj(json.loads(s))
-        assert tree_copy.equals(self.tree)
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
         s = self.tree.as_json(indent=2, ensure_ascii=False)
         tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
+        s = self.tree.as_json(indent=None, ensure_ascii=False)
+        tree_copy = parse_json_syntaxtree(s)
+        # print(s)
+        # print(self.tree.as_sxpr())
+        # print(tree_copy.as_sxpr())
+        assert tree_copy.equals(self.tree)
 
     def test_attr_serialization_and_parsing(self):
         n = Node('employee', 'James Bond').with_pos(46)

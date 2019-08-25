@@ -270,19 +270,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __hash__(self):
         return hash(self.tag_name)
 
-    def equals(self, other: 'Node') -> bool:
+    def equals(self, other: 'Node', ignore_attr_order: bool=False) -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
         if their tag name is the same, if their results are equal and
-        if their attributes and attribute values are the same.
+        if their attributes and attribute values are the same and if either
+        `ignore_attr_order` is `True` or the attributes also appear in the
+        same order.
 
         Returns True, if the tree originating in node `self` is equal by
         value to the tree originating in node `other`.
         """
-        if self.tag_name == other.tag_name and self.compare_attr(other):
+        if self.tag_name == other.tag_name and self.compare_attr(other, ignore_attr_order):
             if self.children:
                 return (len(self.children) == len(other.children)
-                        and all(a.equals(b) for a, b in zip(self.children, other.children)))
+                        and all(a.equals(b, ignore_attr_order) 
+                                for a, b in zip(self.children, other.children)))
             else:
                 return self.result == other.result
         return False
@@ -476,13 +479,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.attr.get(attribute, default)
         return default
 
-    def compare_attr(self, other: 'Node') -> bool:
+    def compare_attr(self, other: 'Node', ignore_order: bool=False) -> bool:
         """
         Returns True, if `self` and `other` have the same attributes with the
-        same attribute values.
+        same attribute values. If `ignore_order` is False (default), the 
+        attributes must also appear in the same order.
         """
         if self.has_attr():
             if other.has_attr():
+                if ignore_order:
+                    return set(self.attr.items()) == set(other.attr.items())
                 return self.attr == other.attr
             return len(self.attr) == 0
             # self has empty dictionary and other has no attributes
@@ -865,7 +871,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if pos >= 0:
             jo.append(pos)
         if self.has_attr():
-            jo.append(dict(self.attr))
+            jo.append(self.attr)
         return jo
 
     @staticmethod
@@ -1404,7 +1410,7 @@ def parse_json_syntaxtree(json_str: str) -> Node:
     a syntax tree, but only json-text that represents a syntax tree, e.g.
     that has been produced by `Node.as_json()`!
     """
-    json_obj = json.loads(json_str)
+    json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: OrderedDict(pairs))
     return Node.from_json_obj(json_obj)
 
 
