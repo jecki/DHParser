@@ -30,7 +30,8 @@ from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACE
     tree_sanity_check, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_if, lstrip, rstrip, remove_content, remove_tokens, \
-    transformation_factory, has_parent, contains_only_whitespace, is_insignificant_whitespace
+    transformation_factory, has_parent, contains_only_whitespace, is_insignificant_whitespace, \
+    merge_adjacent, is_one_of
 from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -262,7 +263,7 @@ class TestWhitespaceTransformations:
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
 
-    def test_move_and_merge_adjacent(self):
+    def test_move_adjacent(self):
         sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "or") (:Whitespace " ")) '
@@ -273,6 +274,20 @@ class TestWhitespaceTransformations:
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
+
+    def test_merge_adjacent(self):
+        sentence = parse_sxpr('(SENTENCE (TEXT "Guten") (L " ") (TEXT "Tag") '
+                              ' (T "\n") (TEXT "Hallo") (L " ") (TEXT "Welt")'
+                              ' (T "\n") (L " "))')
+        transformations = {'SENTENCE': merge_adjacent(is_one_of('TEXT', 'L'), 'TEXT')}
+        traverse(sentence, transformations)
+        print(sentence.as_sxpr())
+        assert tree_sanity_check(sentence)
+        assert sentence['TEXT'].result == "Guten Tag"
+        assert sentence[2].result == "Hallo Welt"
+        assert sentence[-1].tag_name == 'L'
+        assert 'T' in sentence
+
 
 
 if __name__ == "__main__":

@@ -99,7 +99,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
-    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets 
+    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode 
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 

@@ -28,8 +28,9 @@ for CST -> AST transformations.
 
 
 import collections.abc
+from functools import partial, singledispatch, reduce
 import inspect
-from functools import partial, singledispatch
+import operator
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, PLACEHOLDER, RootNode, parse_sxpr, flatten_sxpr
@@ -820,7 +821,8 @@ def normalize_whitespace(context):
         node.result = re.sub(r'\s+', ' ', node.result)
 
 
-def merge_adjacent(context, condition: Callable):
+@transformation_factory(collections.abc.Callable)
+def merge_adjacent(context, condition: Callable, tag_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
@@ -832,15 +834,24 @@ def merge_adjacent(context, condition: Callable):
     i = 0
     L = len(children)
     while i < L:
+        debug = children[i].tag_name
         if condition([children[i]]):
             initial = () if children[i].children else ''
             k = i
-            while i < L and condition([children[k]]):
+            i += 1
+            while i < L and condition([children[i]]):
                 i += 1
             if i > k:
-                children[k].result = sum((children[n].result for n in range(k, i + 1)), initial)
-            new_result.append(children[k])
-        i += 1
+                adjacent = children[k:i]
+                head = adjacent[0]
+                tag_names = {nd.tag_name for nd in adjacent}
+                head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                if tag_name in tag_names:
+                    head.tag_name = tag_name
+            new_result.append(head)
+        else:
+            new_result.append(children[i])
+            i += 1
     node.result = tuple(new_result)
 
 
