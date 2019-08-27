@@ -288,6 +288,12 @@ class TestWhitespaceTransformations:
         assert sentence[-1].tag_name == 'L'
         assert 'T' in sentence
 
+        # leaf nodes should be left untouched
+        sentence = parse_sxpr('(SENTENCE "Hallo Welt")')
+        traverse(sentence, transformations)
+        assert sentence.content == "Hallo Welt", sentence.content
+
+
 
 
 if __name__ == "__main__":

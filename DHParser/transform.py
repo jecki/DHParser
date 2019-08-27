@@ -830,29 +830,29 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
     """
     node = context[-1]
     children = node.children
-    new_result = []
-    i = 0
-    L = len(children)
-    while i < L:
-        debug = children[i].tag_name
-        if condition([children[i]]):
-            initial = () if children[i].children else ''
-            k = i
-            i += 1
-            while i < L and condition([children[i]]):
+    if children:
+        new_result = []
+        i = 0
+        L = len(children)
+        while i < L:
+            if condition([children[i]]):
+                initial = () if children[i].children else ''
+                k = i
                 i += 1
-            if i > k:
-                adjacent = children[k:i]
-                head = adjacent[0]
-                tag_names = {nd.tag_name for nd in adjacent}
-                head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
-                if tag_name in tag_names:
-                    head.tag_name = tag_name
-            new_result.append(head)
-        else:
-            new_result.append(children[i])
-            i += 1
-    node.result = tuple(new_result)
+                while i < L and condition([children[i]]):
+                    i += 1
+                if i > k:
+                    adjacent = children[k:i]
+                    head = adjacent[0]
+                    tag_names = {nd.tag_name for nd in adjacent}
+                    head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    if tag_name in tag_names:
+                        head.tag_name = tag_name
+                new_result.append(head)
+            else:
+                new_result.append(children[i])
+                i += 1
+        node.result = tuple(new_result)
 
 
 @transformation_factory(collections.abc.Callable)
