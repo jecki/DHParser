@@ -328,6 +328,8 @@ class LSP:
         return None
 
 
+DEBUG = False
+
 DEBUG_BLOCK = """
 from DHParser import configuration
 CFG = configuration.access_presets()
@@ -342,21 +344,24 @@ class TestLanguageServer:
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
-        from DHParser import log
-        log.start_logging('LOGS')
-        set_config_value('log_server', True)
+        if DEBUG and not sys.platform.lower().startswith('win'):
+            from DHParser import log
+            log.start_logging('LOGS')
+            set_config_value('log_server', True)
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
-        from DHParser import log
-        log.suspend_logging()
+        if DEBUG and not sys.platform.lower().startswith('win'):
+            from DHParser import log
+            log.suspend_logging()
 
     def start_server(self):
         stop_server('127.0.0.1', TEST_PORT)
+        debug_block = DEBUG_BLOCK if DEBUG and not sys.platform.lower().startswith('win') else ''
         spawn_server('127.0.0.1', TEST_PORT,
                      'from test_server import LSP, gen_lsp_table\n'
                      'lsp = LSP()\n'
-                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n" + DEBUG_BLOCK,
+                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n" + debug_block,
                      "lsp_table, cpu_bound=frozenset(), "
                      "blocking=frozenset()", import_path=scriptpath)
 

@@ -953,7 +953,7 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization, LOGGING=logging,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
-    subprocess.Popen([interpreter, '-c', run_server_script])
+    subprocess.Popen([interpreter, '-c', run_server_script], encoding="utf-8")
     asyncio_run(wait_for_connection(host, port))
 
 
