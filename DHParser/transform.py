@@ -97,6 +97,7 @@ __all__ = ('TransformationDict',
            'remove_brackets',
            'remove_infix_operator',
            'remove_tokens',
+           'remove_if',
            'flatten',
            'forbid',
            'require',
@@ -1150,6 +1151,18 @@ def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):
 def remove_content(context: List[Node], regexp: str):
     """Removes children depending on their string value."""
     remove_children_if(context, partial(has_content, regexp=regexp))
+
+
+@transformation_factory(collections.abc.Callable)
+def remove_if(context: List[Node], condition: Callable):
+    """Removes node if condition is `True`"""
+    if condition(context):
+        try:
+            parent = context[-2]
+        except IndexError:
+            return
+        node = context[-1]
+        parent.result = tuple(nd for nd in parent.result if nd != node)
 
 
 ########################################################################

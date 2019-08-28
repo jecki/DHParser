@@ -50,6 +50,17 @@ class TestParseSxpression:
         except ValueError:
             pass
 
+    def test_parse_s_expression_w_attributes(self):
+        s = '(A `(attr "1") (B "X"))'
+        print(parse_sxpr(s).as_sxpr())
+        s = """(BedeutungsPosition `(unterbedeutungstiefe "0")
+                 (Bedeutung
+                   (Beleg
+                     (Quellenangabe (Quelle (Autor "LIUTPR.") (L " ") (Werk "leg.")) (L " ")
+                       (BelegStelle (Stellenangabe (Stelle "21")) (L " ")
+                         (BelegText (TEXT "...")))))))"""
+        print(parse_sxpr(s).as_sxpr())
+
 class TestParseXML:
     def test_roundtrip(self):
         tree = parse_sxpr('(a (b c) (d (e f) (h i)))')
