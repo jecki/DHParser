@@ -203,7 +203,7 @@ async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_
     same stream, however.
     """
     host, port = substitute_default_host_and_port(host, port)
-    delay = retry_timeout / 2**7  if retry_timeout > 0.0 else retry_timeout - 0.001
+    delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
     connected = False
     reader, writer = None, None
     while delay < retry_timeout:
@@ -219,7 +219,7 @@ async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_
             save_error = error
             if delay > 0.0:
                 time.sleep(delay)
-                delay *= 2
+                delay *= 1.5
             else:
                 delay = retry_timeout  # exit while loop
     if connected:
@@ -965,7 +965,7 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
     not stopped and is still running.
     """
     host, port = substitute_default_host_and_port(host, port)
-    delay = timeout / 2**7  if timeout > 0.0 else timeout - 0.001
+    delay = timeout / 1.5**12 if timeout > 0.0 else timeout - 0.001
     try:
         while delay < timeout:
             _, writer = await asyncio_connect(host, port, retry_timeout=0.0)
@@ -974,7 +974,7 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                 await writer.wait_closed()
             if delay > 0.0:
                 time.sleep(delay)
-                delay *= 2
+                delay *= 1.5
             else:
                 delay = timeout  # exit while loop
         return False
