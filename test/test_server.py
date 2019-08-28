@@ -328,40 +328,29 @@ class LSP:
         return None
 
 
-DEBUG = False
-
-DEBUG_BLOCK = """
-from DHParser import configuration
-CFG = configuration.access_presets()
-CFG['log_dir'] = os.path.abspath("LOGS")
-CFG['log_server'] = True
-CFG['echo_server_log'] = True
-configuration.finalize_presets()"""
-
-
 class TestLanguageServer:
     """Tests for the generic LanguageServer-class."""
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
-        if DEBUG and not sys.platform.lower().startswith('win'):
+        self.DEBUG = False
+        if self.DEBUG:
             from DHParser import log
             log.start_logging('LOGS')
             set_config_value('log_server', True)
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
-        if DEBUG and not sys.platform.lower().startswith('win'):
+        if self.DEBUG:
             from DHParser import log
             log.suspend_logging()
 
     def start_server(self):
         stop_server('127.0.0.1', TEST_PORT)
-        debug_block = DEBUG_BLOCK if DEBUG and not sys.platform.lower().startswith('win') else ''
         spawn_server('127.0.0.1', TEST_PORT,
                      'from test_server import LSP, gen_lsp_table\n'
                      'lsp = LSP()\n'
-                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n" + debug_block,
+                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",
                      "lsp_table, cpu_bound=frozenset(), "
                      "blocking=frozenset()", import_path=scriptpath)
 
