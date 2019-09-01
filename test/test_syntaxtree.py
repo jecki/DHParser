@@ -52,14 +52,17 @@ class TestParseSxpression:
 
     def test_parse_s_expression_w_attributes(self):
         s = '(A `(attr "1") (B "X"))'
-        print(parse_sxpr(s).as_sxpr())
+        assert flatten_sxpr(parse_sxpr(s).as_sxpr()) == '(A `(attr "1") (B "X"))'
         s = """(BedeutungsPosition `(unterbedeutungstiefe "0")
                  (Bedeutung
                    (Beleg
                      (Quellenangabe (Quelle (Autor "LIUTPR.") (L " ") (Werk "leg.")) (L " ")
                        (BelegStelle (Stellenangabe (Stelle "21")) (L " ")
                          (BelegText (TEXT "...")))))))"""
-        print(parse_sxpr(s).as_sxpr())
+        tree = parse_sxpr(s)
+        assert str(tree) == "LIUTPR. leg. 21 ..."
+        assert tree.attr['unterbedeutungstiefe'] == '0'
+
 
 class TestParseXML:
     def test_roundtrip(self):
