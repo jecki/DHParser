@@ -1245,36 +1245,36 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         sxpr = sxpr[end:].strip()
         attributes = OrderedDict()  # type: OrderedDict[str, str]
         pos = -1  # type: int
+        # parse attr
+        while sxpr[:2] == "`(":
+            i = sxpr.find('"')
+            k = sxpr.find(')')
+            if i < 0:
+                i = k + 1
+            if k < 0:
+                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
+            # read very special attribute pos
+            if sxpr[2:5] == "pos" and 0 < k < i:
+                pos = int(sxpr[5:k].strip(' \'"').split(' ')[0])
+            # ignore very special attribute err
+            elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
+                m = sxpr.find('(', 5)
+                while 0 <= m < k:
+                    m = sxpr.find('(', k)
+                    k = max(k, sxpr.find(')', max(m, 0)))
+            # read attr
+            else:
+                attr = str(sxpr[2:i].strip())
+                if not RX_ATTR_NAME.match(attr):
+                    raise ValueError('Illegal attribute name: ' + attr)
+                value = sxpr[i:k].strip()[1:-1]
+                attributes[attr] = value
+            sxpr = sxpr[k + 1:].strip()
         if sxpr[0] == '(':
             result = tuple(inner_parser(block) for block in next_block(sxpr))  # type: ResultType
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
-                # parse attr
-                while sxpr[:2] == "`(":
-                    i = sxpr.find('"')
-                    k = sxpr.find(')')
-                    if i < 0:
-                        i = k + 1
-                    if k < 0:
-                        raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
-                    # read very special attribute pos
-                    if sxpr[2:5] == "pos" and 0 < k < i:
-                        pos = int(sxpr[5:k].strip(' \'"').split(' ')[0])
-                    # ignore very special attribute err
-                    elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
-                        m = sxpr.find('(', 5)
-                        while 0 <= m < k:
-                            m = sxpr.find('(', k)
-                            k = max(k, sxpr.find(')', max(m, 0)))
-                    # read attr
-                    else:
-                        attr = str(sxpr[2:i].strip())
-                        if not RX_ATTR_NAME.match(attr):
-                            raise ValueError('Illegal attribute name: ' + attr)
-                        value = sxpr[i:k].strip()[1:-1]
-                        attributes[attr] = value
-                    sxpr = sxpr[k + 1:].strip()
                 # parse content
                 for qtmark in ['"""', "'''", '"', "'"]:
                     match = sxpr.match(re.compile(qtmark + r'.*?' + qtmark, re.DOTALL))

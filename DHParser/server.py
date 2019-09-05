@@ -195,7 +195,7 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
 
 
 async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-                    retry_timeout: float = 5.0):
+                    retry_timeout: float = 3.0):
     """
     Backwards compatible version of Python3.8's `asyncio.connect()`, with the
     variant that it returns a reader, writer pair instead of just one stream.
@@ -203,7 +203,7 @@ async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_
     same stream, however.
     """
     host, port = substitute_default_host_and_port(host, port)
-    delay = retry_timeout / 2**7  if retry_timeout > 0.0 else retry_timeout - 0.001
+    delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
     connected = False
     reader, writer = None, None
     while delay < retry_timeout:
@@ -219,7 +219,7 @@ async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_
             save_error = error
             if delay > 0.0:
                 time.sleep(delay)
-                delay *= 2
+                delay *= 1.5
             else:
                 delay = retry_timeout  # exit while loop
     if connected:
@@ -911,12 +911,10 @@ if __name__ == '__main__':
 """
 
 LOGGING_BLOCK = """from DHParser.log import start_logging
-    from DHParser.configuration import access_presets, finalize_presets
-    presets = access_presets()
-    presets['log_server'] = True
-    presets['echo_server_log'] = {ECHO}
-    finalize_presets()
-    start_logging('{LOGDIR}')"""
+    from DHParser.configuration import set_config_value
+    set_config_value('log_dir', os.path.abspath("LOGS"))
+    set_config_value('log_server', True)
+    set_config_value('echo_server_log', True)"""
 
 python_interpreter_name_cached = ''
 
@@ -948,25 +946,26 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
         python_interpreter_name_cached = interpreter
     logging = ''  # type: str
     if is_logging() and get_config_value('log_server'):
-        logging = LOGGING_BLOCK.format(LOGDIR=get_config_value('log_dir'),
+        logging = LOGGING_BLOCK.format(LOGDIR=get_config_value('log_dir').replace('\\', '\\\\'),
                                        ECHO=get_config_value('echo_server_log'))
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization, LOGGING=logging,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
-    subprocess.Popen([interpreter, '-c', run_server_script])
+    # print(run_server_script)
+    subprocess.Popen([interpreter, '-c', run_server_script], encoding="utf-8")
     asyncio_run(wait_for_connection(host, port))
 
 
 async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                              port: int = USE_DEFAULT_PORT,
-                             timeout: float = 5.0) -> bool:
+                             timeout: float = 3.0) -> bool:
     """
     Returns True, if no server is running or any server that is running
     has stopped within the given timeout. Returns False, if server has
     not stopped and is still running.
     """
     host, port = substitute_default_host_and_port(host, port)
-    delay = timeout / 2**7  if timeout > 0.0 else timeout - 0.001
+    delay = timeout / 1.5**12 if timeout > 0.0 else timeout - 0.001
     try:
         while delay < timeout:
             _, writer = await asyncio_connect(host, port, retry_timeout=0.0)
@@ -975,7 +974,7 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
                 await writer.wait_closed()
             if delay > 0.0:
                 time.sleep(delay)
-                delay *= 2
+                delay *= 1.5
             else:
                 delay = timeout  # exit while loop
         return False
@@ -984,7 +983,7 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
 
 
 def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-                timeout: float = 1.0) -> Optional[Exception]:
+                timeout: float = 3.0) -> Optional[Exception]:
     """Sends a STOP_SERVER_REQUEST to a running server. Returns any exceptions
     that occurred."""
     async def send_stop_server(host: str, port: int) -> Optional[Exception]:

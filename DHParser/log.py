@@ -197,7 +197,7 @@ def create_log(log_name: str) -> str:
     """
     ldir = log_dir()
     if ldir:
-        with open(os.path.join(ldir, log_name), 'w') as f:
+        with open(os.path.join(ldir, log_name), 'w', encoding='utf-8') as f:
             f.write('LOG-FILE: ' + log_name + '\n\n')
         return log_name
     return ''
@@ -220,7 +220,7 @@ def append_log(log_name: str, *strings, echo: bool=False) -> None:
     if ldir and log_name:
         log_path = os.path.join(ldir, log_name)
         assert os.path.exists(log_path)
-        with open(log_path, 'a') as f:
+        with open(log_path, 'a', encoding='utf-8') as f:
             for text in strings:
                 f.write(text)
     if echo:
