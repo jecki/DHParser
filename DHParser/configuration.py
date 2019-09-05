@@ -252,6 +252,9 @@ CONFIG_PRESET['default_serialization'] = SMART_SERIALIZATION
 # Default value: 120
 CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 
+# Defines the maximum number of LINES before the "smart" serialization
+# will switch from S-expression output to compact output
+CONFIG_PRESET['compact_sxpr_threshold'] = 25
 
 ########################################################################
 #

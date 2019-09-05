@@ -580,6 +580,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         Finds nodes in the tree for which `match_function` returns True.
         See see more general function `Node.select()` for a detailed description.
+
+        `select_if` is a generator that yields all nodes for which the
+        given `match_function` evaluates to True. The tree is
+        traversed pre-order.
         """
         if include_root and match_function(self):
             yield self
@@ -593,12 +597,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
         Finds nodes in the tree that fulfill a given criterion. This criterion
-        can either be general, if criterion is a Callable or a tag_name or
-        a set of tag_names.
-
-        `select_if` is a generator that yields all nodes for which the
-        given `match_function` evaluates to True. The tree is
-        traversed pre-order.
+        can either be a bool-valued callable a tag_name or a set of tag_names.
 
         See function `Node.select` for some examples.
 
@@ -928,6 +927,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.as_sxpr(compact=True)
         elif switch == SMART_SERIALIZATION.lower():
             threshold = get_config_value('flatten_sxpr_threshold')
+            vsize = 0
+            for nd in self.select_if(lambda _: True, include_root=True):
+                if nd.children:
+                    vsize += 1
+                if vsize > get_config_value('compact_sxpr_threshold'):
+                    return self.as_sxpr(compact=True)
             if threshold <= 0:
                 return self.as_sxpr(compact=True)
             sxpr = self.as_sxpr(flatten_threshold=threshold)
