@@ -31,12 +31,13 @@ import collections.abc
 from functools import partial, singledispatch, reduce
 import inspect
 import operator
+from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+    Tuple, List, Sequence, Union, Text
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, PLACEHOLDER, RootNode, parse_sxpr, flatten_sxpr
-from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
-from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Text, Generic
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re
+
 
 __all__ = ('TransformationDict',
            'TransformationProc',

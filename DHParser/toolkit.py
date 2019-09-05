@@ -279,6 +279,8 @@ def is_python_code(text_or_file: str) -> bool:
     if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
+        # TODO: parser module will be deprecated from Python 3.9 onwards
+        #       ast.parse(text_or_file, 'file.py', 'exec')?
         parser.suite(text_or_file)
         # compile(text_or_file, '<string>', 'exec')
         return True

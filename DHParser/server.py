@@ -46,7 +46,7 @@ from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 import json
-from multiprocessing import Process, Queue, Value, Array
+from multiprocessing import Value, Array
 import platform
 import os
 import subprocess
@@ -57,7 +57,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
-from DHParser.log import create_log, append_log, is_logging, log_dir
+from DHParser.log import create_log, append_log, is_logging
 from DHParser.toolkit import re, re_find
 from DHParser.versionnumber import __version__
 
