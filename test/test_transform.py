@@ -281,7 +281,7 @@ class TestWhitespaceTransformations:
                               ' (T "\n") (L " "))')
         transformations = {'SENTENCE': merge_adjacent(is_one_of('TEXT', 'L'), 'TEXT')}
         traverse(sentence, transformations)
-        print(sentence.as_sxpr())
+        # print(sentence.as_sxpr())
         assert tree_sanity_check(sentence)
         assert sentence['TEXT'].result == "Guten Tag"
         assert sentence[2].result == "Hallo Welt"
