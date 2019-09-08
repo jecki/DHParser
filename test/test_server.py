@@ -22,12 +22,6 @@ limitations under the License.
 
 # TODO: Quite slow under MS Windows
 
-if __name__ == "__main__":
-    import multiprocessing
-    multiprocessing.freeze_support()
-    multiprocessing.set_start_method('spawn')  # 'spawn' (windows and linux)
-                                               # or 'fork' or 'forkserver' or 'spawn' (linux only)
-
 import asyncio
 import functools
 import json
@@ -37,11 +31,16 @@ import sys
 import time
 from typing import Callable
 
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method('spawn')   # 'spawn' (windows and linux)
+                                                # or 'fork' or 'forkserver' (linux only)
+
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import set_config_value
-from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
+from DHParser.server import Server, detach_server, stop_server, asyncio_run, asyncio_connect, \
     has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 
 TEST_PORT = 8000 + os.getpid() % 1000
@@ -106,10 +105,10 @@ class TestServer:
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             assert data.decode() == "Test", data.decode()
         try:
-            spawn_server('127.0.0.1', TEST_PORT,
-                         'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()',
-                         import_path=scriptpath)
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()',
+                          import_path=scriptpath)
             asyncio_run(compile_remote('Test'))
         finally:
             stop_server('127.0.0.1', TEST_PORT)
@@ -127,10 +126,10 @@ class TestServer:
 
         try:
             from timeit import timeit
-            spawn_server('127.0.0.1', TEST_PORT,
-                         'from test_server import compiler_dummy',
-                         'compiler_dummy',
-                         import_path=scriptpath)
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy',
+                          import_path=scriptpath)
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
             assert isinstance(result, str) and result.startswith('DHParser'), result
         finally:
@@ -150,25 +149,25 @@ class TestServer:
 
         try:
             # plain text stop request
-            spawn_server('127.0.0.1', TEST_PORT,
-                         'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
             asyncio_run(terminate_server(STOP_SERVER_REQUEST,
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
             # http stop request
-            spawn_server('127.0.0.1', TEST_PORT,
-                         'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
             asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
             # json_rpc stop request
-            spawn_server('127.0.0.1', TEST_PORT,
-                         'from test_server import compiler_dummy',
-                         'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
             jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
                                   'id': 1})
             asyncio_run(terminate_server(jsonrpc.encode(),
@@ -200,10 +199,10 @@ class TestServer:
 
         if sys.version_info >= (3, 6):
             try:
-                spawn_server('127.0.0.1', TEST_PORT,
-                             'from test_server import long_running',
-                             "long_running, cpu_bound=frozenset(['long_running']), "
-                             "blocking=frozenset()", import_path=scriptpath)
+                detach_server('127.0.0.1', TEST_PORT,
+                              'from test_server import long_running',
+                              "long_running, cpu_bound=frozenset(['long_running']), "
+                              "blocking=frozenset()", import_path=scriptpath)
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -211,10 +210,10 @@ class TestServer:
                 sequence = []
 
             try:
-                spawn_server('127.0.0.1', TEST_PORT,
-                             'from test_server import long_running',
-                             "long_running, cpu_bound=frozenset(), "
-                             "blocking=frozenset(['long_running'])", import_path=scriptpath)
+                detach_server('127.0.0.1', TEST_PORT,
+                              'from test_server import long_running',
+                              "long_running, cpu_bound=frozenset(), "
+                              "blocking=frozenset(['long_running'])", import_path=scriptpath)
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -222,10 +221,10 @@ class TestServer:
                 sequence = []
 
         try:
-            spawn_server('127.0.0.1', TEST_PORT,
-                         'from test_server import long_running',
-                         "long_running, cpu_bound=frozenset(), blocking=frozenset()",
-                         import_path=scriptpath)
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import long_running',
+                          "long_running, cpu_bound=frozenset(), blocking=frozenset()",
+                          import_path=scriptpath)
             asyncio_run(run_tasks())
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
@@ -243,7 +242,7 @@ class TestSpawning:
         stop_server('127.0.0.1', TEST_PORT)
 
     def test_spawn(self):
-        spawn_server('127.0.0.1', TEST_PORT, import_path=scriptpath)
+        detach_server('127.0.0.1', TEST_PORT, import_path=scriptpath)
 
         async def identify():
             try:
@@ -347,12 +346,12 @@ class TestLanguageServer:
 
     def start_server(self):
         stop_server('127.0.0.1', TEST_PORT)
-        spawn_server('127.0.0.1', TEST_PORT,
-                     'from test_server import LSP, gen_lsp_table\n'
-                     'lsp = LSP()\n'
-                     "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",
-                     "lsp_table, cpu_bound=frozenset(), "
-                     "blocking=frozenset()", import_path=scriptpath)
+        detach_server('127.0.0.1', TEST_PORT,
+                      'from test_server import LSP, gen_lsp_table\n'
+                      'lsp = LSP()\n'
+                      "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",
+                      "lsp_table, cpu_bound=frozenset(), "
+                      "blocking=frozenset()", import_path=scriptpath)
 
     def test_initialize(self):
         self.start_server()

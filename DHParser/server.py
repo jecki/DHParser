@@ -46,7 +46,7 @@ from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 import json
-from multiprocessing import Value, Array
+from multiprocessing import Process, Value, Array
 import platform
 import os
 import subprocess
@@ -886,6 +886,35 @@ class Server:
         self.stage.value = SERVER_OFFLINE
 
 
+def run_server(host, port, rpc_functions: RPC_Type,
+               cpu_bound: Set[str] = ALL_RPCs,
+               blocking: Set[str] = frozenset()):
+    """Start a server and wait until server is closed."""
+    server = Server(rpc_functions, cpu_bound, blocking)
+    server.run_server(host, port)
+
+
+def dummy_server(s: str) -> str:
+    return s
+
+
+def spawn_server(host: str = USE_DEFAULT_HOST,
+                 port: int = USE_DEFAULT_PORT,
+                 parameters: Union[Tuple, Callable] = dummy_server) -> Process:
+    """
+    Start DHParser-Server in a separate process and return.
+    Useful for writing test code.
+    WARNING: Does not seem to work with multiprocessing.set_start_method('spawn')
+             under linux !?
+    """
+    if isinstance(parameters, tuple) or isinstance(parameters, list):
+        p = Process(target=run_server, args=(host, port, *parameters))
+    else:
+        p = Process(target=run_server, args=(host, port, parameters))
+    p.start()
+    return p
+
+
 RUN_SERVER_SCRIPT_TEMPLATE = """
 import os
 import sys
@@ -903,7 +932,7 @@ def run_server(host, port):
     from DHParser.server import asyncio_run, Server, stop_server, has_server_stopped
     {LOGGING}
     stop_server(host, port, 2.0)
-    server = Server({PARAMETERS})   
+    server = Server({PARAMETERS})
     server.run_server(host, port)
 
 if __name__ == '__main__':
@@ -919,14 +948,14 @@ LOGGING_BLOCK = """from DHParser.log import start_logging
 python_interpreter_name_cached = ''
 
 
-def spawn_server(host: str = USE_DEFAULT_HOST,
+def detach_server(host: str = USE_DEFAULT_HOST,
                  port: int = USE_DEFAULT_PORT,
                  initialization: str = '',
                  parameters: str = 'lambda s: s',
                  import_path: str = '.'):
     """
-    Start DHParser-Server in a separate process and return.
-    Useful for writing test code.
+    Start DHParser-Server in a separate process and return. The process remains
+    active even after the parent process is closed. Useful for writing test code.
     """
     async def wait_for_connection(host, port):
         reader, writer = await asyncio_connect(host, port)  # wait until server online
@@ -952,7 +981,10 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
         HOST=host, PORT=port, INITIALIZATION=initialization, LOGGING=logging,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
     # print(run_server_script)
-    subprocess.Popen([interpreter, '-c', run_server_script], encoding="utf-8")
+    if sys.version_info >= (3, 6):
+        subprocess.Popen([interpreter, '-c', run_server_script], encoding="utf-8")
+    else:
+        subprocess.Popen([interpreter, '-c', run_server_script])
     asyncio_run(wait_for_connection(host, port))
 
 

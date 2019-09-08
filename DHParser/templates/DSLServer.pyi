@@ -184,7 +184,8 @@ def run_server(host, port):
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=set(lsp_table.keys() - non_blocking),
                         blocking=frozenset())
-    DSL_server.run_server(host, port)
+
+    DSL_server.run_server(host, port)  # returns only after server has stopped
 
     cfg_filename = get_config_filename()
     try:
