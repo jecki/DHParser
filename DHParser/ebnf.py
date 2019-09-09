@@ -761,7 +761,7 @@ class EBNFCompiler(Compiler):
             task()
 
         # provide for capturing of symbols that are variables, i.e. the
-        # value of will be retrieved at some point during the parsing process
+        # value of which will be retrieved at some point during the parsing process
 
         if self.variables:
             for i in range(len(definitions)):

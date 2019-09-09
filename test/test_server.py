@@ -22,6 +22,7 @@ limitations under the License.
 
 # TODO: Quite slow under MS Windows
 
+
 import asyncio
 import functools
 import json
@@ -31,7 +32,9 @@ import sys
 import time
 from typing import Callable
 
-if __name__ == "__main__":
+
+if __name__ == "__main__" and sys.platform.lower().startswith('win'):
+    # import multiprocessing
     multiprocessing.freeze_support()
     multiprocessing.set_start_method('spawn')   # 'spawn' (windows and linux)
                                                 # or 'fork' or 'forkserver' (linux only)
@@ -40,7 +43,7 @@ scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import set_config_value
-from DHParser.server import Server, detach_server, stop_server, asyncio_run, asyncio_connect, \
+from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
     has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 
 TEST_PORT = 8000 + os.getpid() % 1000
@@ -104,14 +107,15 @@ class TestServer:
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             assert data.decode() == "Test", data.decode()
+        p = None
         try:
-            detach_server('127.0.0.1', TEST_PORT,
-                          'from test_server import compiler_dummy',
-                          'compiler_dummy, cpu_bound=set()',
-                          import_path=scriptpath)
+            p = spawn_server('127.0.0.1', TEST_PORT,
+                             (compiler_dummy, set()))
             asyncio_run(compile_remote('Test'))
         finally:
             stop_server('127.0.0.1', TEST_PORT)
+            if p is not None:
+                p.join()
 
     def test_identify(self):
         """Test server's 'identify/'-command."""
@@ -123,17 +127,16 @@ class TestServer:
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             return data.decode()
-
+        p = None
         try:
             from timeit import timeit
-            detach_server('127.0.0.1', TEST_PORT,
-                          'from test_server import compiler_dummy',
-                          'compiler_dummy',
-                          import_path=scriptpath)
+            p = spawn_server('127.0.0.1', TEST_PORT, compiler_dummy)
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
             assert isinstance(result, str) and result.startswith('DHParser'), result
         finally:
             stop_server('127.0.0.1', TEST_PORT)
+            if p is not None:
+                p.join()
 
     def test_terminate(self):
         """Test different ways of sending a termination message to server:
@@ -146,28 +149,22 @@ class TestServer:
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             # print(data)
             assert data.find(expected_response) >= 0, str(data)
-
+        p = None
         try:
             # plain text stop request
-            detach_server('127.0.0.1', TEST_PORT,
-                          'from test_server import compiler_dummy',
-                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            p = spawn_server('127.0.0.1', TEST_PORT, (compiler_dummy, set()))
             asyncio_run(terminate_server(STOP_SERVER_REQUEST,
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
             # http stop request
-            detach_server('127.0.0.1', TEST_PORT,
-                          'from test_server import compiler_dummy',
-                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            p = spawn_server('127.0.0.1', TEST_PORT, (compiler_dummy, set()))
             asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
             # json_rpc stop request
-            detach_server('127.0.0.1', TEST_PORT,
-                          'from test_server import compiler_dummy',
-                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            p = spawn_server('127.0.0.1', TEST_PORT, (compiler_dummy, set()))
             jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
                                   'id': 1})
             asyncio_run(terminate_server(jsonrpc.encode(),
@@ -175,6 +172,8 @@ class TestServer:
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
         finally:
             stop_server('127.0.0.1', TEST_PORT)
+            if p is not None:
+                p.join()
 
     def test_long_running_task(self):
         """Test, whether delegation of (long-running) tasks to
@@ -198,37 +197,38 @@ class TestServer:
                                  call_remote(FAST))
 
         if sys.version_info >= (3, 6):
+            p = None
             try:
-                detach_server('127.0.0.1', TEST_PORT,
-                              'from test_server import long_running',
-                              "long_running, cpu_bound=frozenset(['long_running']), "
-                              "blocking=frozenset()", import_path=scriptpath)
+                p = spawn_server('127.0.0.1', TEST_PORT,
+                                 (long_running, frozenset(['long_running']), frozenset()))
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
                 stop_server('127.0.0.1', TEST_PORT)
+                if p is not None:
+                    p.join()
                 sequence = []
-
+            p = None
             try:
-                detach_server('127.0.0.1', TEST_PORT,
-                              'from test_server import long_running',
-                              "long_running, cpu_bound=frozenset(), "
-                              "blocking=frozenset(['long_running'])", import_path=scriptpath)
+                p = spawn_server('127.0.0.1', TEST_PORT,
+                                 (long_running, frozenset(), frozenset(['long_running'])))
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
                 stop_server('127.0.0.1', TEST_PORT)
+                if p is not None:
+                    p.join()
                 sequence = []
-
+        p = None
         try:
-            detach_server('127.0.0.1', TEST_PORT,
-                          'from test_server import long_running',
-                          "long_running, cpu_bound=frozenset(), blocking=frozenset()",
-                          import_path=scriptpath)
+            p = spawn_server('127.0.0.1', TEST_PORT,
+                             (long_running, frozenset(), frozenset()))
             asyncio_run(run_tasks())
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
             stop_server('127.0.0.1', TEST_PORT)
+            if p is not None:
+                p.join()
             sequence = []
 
 
@@ -242,8 +242,7 @@ class TestSpawning:
         stop_server('127.0.0.1', TEST_PORT)
 
     def test_spawn(self):
-        detach_server('127.0.0.1', TEST_PORT, import_path=scriptpath)
-
+        spawn_server('127.0.0.1', TEST_PORT)
         async def identify():
             try:
                 reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
@@ -255,7 +254,6 @@ class TestSpawning:
                 return data.decode()
             except ConnectionRefusedError:
                 return ''
-
         result = asyncio_run(identify())
         assert result.startswith('DHParser'), result
 
@@ -332,6 +330,7 @@ class TestLanguageServer:
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
+        self.p = None
         self.DEBUG = False
         if self.DEBUG:
             from DHParser import log
@@ -340,18 +339,19 @@ class TestLanguageServer:
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)
+        if self.p is not None:
+            self.p.join()
         if self.DEBUG:
             from DHParser import log
             log.suspend_logging()
 
     def start_server(self):
         stop_server('127.0.0.1', TEST_PORT)
-        detach_server('127.0.0.1', TEST_PORT,
-                      'from test_server import LSP, gen_lsp_table\n'
-                      'lsp = LSP()\n'
-                      "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",
-                      "lsp_table, cpu_bound=frozenset(), "
-                      "blocking=frozenset()", import_path=scriptpath)
+        if self.p is not None:
+            self.p.join()
+        self.lsp = LSP()
+        lsp_table = gen_lsp_table(self.lsp, prefix='lsp_')
+        self.p = spawn_server('127.0.0.1', TEST_PORT, (lsp_table, frozenset(), frozenset()))
 
     def test_initialize(self):
         self.start_server()
