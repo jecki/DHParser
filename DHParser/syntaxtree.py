@@ -668,6 +668,125 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return nd
         return None
 
+
+    def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> Optional[List['Node']]:
+        """
+        Determines the chain of ancestors of a node that leads up to self. Other than
+        ther public method `reconstuct_context`, this method retruns the chain of ancestors
+        in reverse order [node, ... , self] and returns None in case `node` does not exist
+        in the tree rooted in self instead of raising a Value Error.
+        """
+        if node in self.children:
+            return [node, self]
+        else:
+            for nd in self.children:
+                ctx = nd._reconstruct_context_recursive(node)
+                if ctx:
+                    ctx.append(self)
+                    return ctx
+            return None
+
+
+    def reconstruct_context(self, node: 'Node') -> List['Node']:
+        """
+        Determines the chain of ancestors of a node that leads up to self.
+        :param node: the descendant node, the ancestry of which shall be determined.
+        :return: the list of nodes starting with self and leading to `node`
+        :raises: ValueError in case `node` does not occur in the tree rooted in `self`
+        """
+        ctx = self._reconstruct_context_recursive(node)
+        if ctx is None:
+            raise ValueError('Node "%s" does not occur in the tree %s '
+                             % (node.tag_name, flatten_sxpr(self.as_sxpr())))
+        ctx.reverse()
+        return ctx
+
+
+    # def find_nearest_common_ancestor(self, A: 'Node', B: 'Node') -> 'Node':
+    #     """
+    #     Finds the nearest common ancestor of the two nodes A and B.
+    #     :param A: a node in the tree
+    #     :param B: another node in the tree
+    #     :return: the nearest common ancestor
+    #     :raises: ValueError in case `A` and `B` are not both rooted in `self`
+    #     """
+    #     ctxA = self.reconstruct_context(A)
+    #     ctxB = self.reconstruct_context(B)
+    #     for a,b in zip(ctxA, ctxB):
+    #         if a != b:
+    #             break
+    #         common_ancestor = a
+    #     return common_ancestor
+
+
+    def milestone_segment(self, begin: 'Node', end: 'Node') -> 'Node':
+        """
+        EXPERIMENTAL!!!
+        Picks a segment from a tree beginning with start and ending with end.
+        :param begin: the opening milestone (will be included in the result)
+        :param end: the closing milestone (will be included in the result)
+        :return: a tree(-segment) encompassing all nodes from the opening
+            milestone upto and including the closing milestone.
+        """
+        def index(parent: 'Node', nd: 'Node'):
+            children = parent.children
+            for i in range(len(children)):
+                if nd == children[i]:
+                    return i
+
+        def left_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node']:
+            return (subst,) + result[index + 1:]
+
+        def right_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node']:
+            return result[:index] + (subst,)
+
+        def cut(ctx: List['Node'], cut_func: Callable) -> 'Node':
+            child = ctx[-1]
+            tainted = False
+            for i in range(len(ctx) - 1, 0, -1):
+                parent = ctx[i - 1]
+                k = index(parent, ctx[i])
+                segment = cut_func(parent.result, k, child)
+                if tainted or len(segment) != len(parent.result):
+                    parent_copy = Node(parent.tag_name, segment)
+                    if parent.has_attr():
+                        parent.copy.attr = parent.attr
+                    child = parent_copy
+                    tainted = True
+                else:
+                    child = parent
+            return child
+
+        if begin.pos > end.pos:
+            begin, end = end, begin
+        ctxA = self.reconstruct_context(begin)
+        ctxB = self.reconstruct_context(end)
+        for a,b in zip(ctxA, ctxB):
+            if a != b:
+                break
+            common_ancestor = a
+        left = cut(ctxA[ctxA.index(common_ancestor):], left_cut)
+        right = cut(ctxB[ctxB.index(common_ancestor):], right_cut)
+        left_children = left.children
+        right_children = right.children
+        if left_children == right_children:
+            return common_ancestor
+        i = 1
+        k = len(right_children)
+        try:
+            k = right_children.index(left_children[1]) - 1
+            i = 2
+            while left_children[i] == right_children[k + i]:
+                i += 1
+        except (IndexError, ValueError):
+            pass
+        # print(left_children[:i], right_children[-1:])
+        new_ca = Node(common_ancestor.tag_name, left_children[:i] + right_children[k + i:])
+        if common_ancestor.has_attr():
+            new_ca.attr = common_ancestor.attr
+        return new_ca
+
+
     # serialization ###
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,

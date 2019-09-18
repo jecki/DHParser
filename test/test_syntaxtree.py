@@ -435,6 +435,55 @@ class TestSerialization:
     #     print(tree.as_xml())
     #     print(tree.as_xml(inline_tags={'A'}))
 
+class TestSegementExtraction:
+    def test_get_context(self):
+        tree = parse_sxpr('(A (F (X "a") (Y "b")) (G "c"))')
+        nd_X = tree.pick('X')
+        ctx = tree.reconstruct_context(nd_X)
+        assert [nd.tag_name for nd in ctx] == ['A', 'F', 'X']
+        nd_F = tree.pick('F')
+        nd_Y = tree.pick('Y')
+        ctx = nd_F.reconstruct_context(nd_Y)
+        assert [nd.tag_name for nd in ctx] == ['F', 'Y']
+        ctx = tree.reconstruct_context(nd_F)
+        assert [nd.tag_name for nd in ctx] == ['A', 'F']
+        ctx = tree.reconstruct_context(nd_Y)
+        assert [nd.tag_name for nd in ctx] == ['A', 'F', 'Y']
+        nd_G = tree.pick('G')
+        ctx = tree.reconstruct_context(nd_G)
+        assert [nd.tag_name for nd in ctx] == ['A', 'G']
+        not_there = Node('not_there', '')
+        try:
+            tree.reconstruct_context(not_there)
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+
+    def test_milestone_segment(self):
+        tree = parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-") (right (X "x") (Y "y") (Z "z")))').with_pos(0)
+        left = tree.pick('left')
+        right = tree.pick('right')
+        middle = tree.pick('middle')
+        B = tree.pick('B')
+        Y = tree.pick('Y')
+        segment = tree.milestone_segment(B, Y)
+        assert segment.content == "bc-xy"
+        assert left != segment.pick('left')
+        assert right != segment.pick('right')
+        assert B == segment.pick('B')
+        assert Y == segment.pick('Y')
+        assert middle == segment.pick('middle')
+        A = tree.pick('A')
+        Z = tree.pick('Z')
+        segment = tree.milestone_segment(A, Z)
+        assert segment == tree
+        assert segment.content == "abc-xyz"
+        segment = tree.milestone_segment(A, middle)
+        assert segment.content == "abc-"
+        assert segment != tree
+        assert A == segment.pick('A')
+        assert middle == segment.pick('middle')
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
