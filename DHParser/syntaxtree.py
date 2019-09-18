@@ -497,7 +497,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # other has empty attribute dictionary and self as no attributes
         return True  # neither self nor other have any attributes
 
-    # tree traversal and node selection ###
+    # tree traversal and node selection #######################################
 
     def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', Iterator['Node']]:
         """
@@ -668,6 +668,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return nd
         return None
 
+    # milestone support ### EXPERIMENTAL!!! ###
 
     def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> Optional[List['Node']]:
         """
@@ -786,8 +787,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             new_ca.attr = common_ancestor.attr
         return new_ca
 
-
-    # serialization ###
+    # serialization ###########################################################
 
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False) -> str:
