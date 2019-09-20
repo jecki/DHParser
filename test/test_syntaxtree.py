@@ -458,6 +458,7 @@ class TestSegementExtraction:
             assert False, "ValueError expected!"
         except ValueError:
             pass
+        assert tree.reconstruct_context(tree) == [tree]
 
     def test_milestone_segment(self):
         tree = parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-") (right (X "x") (Y "y") (Z "z")))').with_pos(0)
@@ -479,10 +480,17 @@ class TestSegementExtraction:
         assert segment == tree
         assert segment.content == "abc-xyz"
         segment = tree.milestone_segment(A, middle)
+        assert segment.equals(parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-"))'))
         assert segment.content == "abc-"
         assert segment != tree
         assert A == segment.pick('A')
         assert middle == segment.pick('middle')
+        root = tree.milestone_segment(tree, tree)
+        assert root == tree
+        assert tree.milestone_segment(B, B) == B
+        C = tree.pick('C')
+        segment = tree.milestone_segment(B, C)
+        assert segment.equals(parse_sxpr('(left (B "b") (C "c"))'))
 
 
 if __name__ == "__main__":

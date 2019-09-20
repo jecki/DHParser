@@ -34,7 +34,7 @@ from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView
-from DHParser.toolkit import re
+from DHParser.toolkit import re, cython
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -673,19 +673,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> Optional[List['Node']]:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
-        ther public method `reconstuct_context`, this method retruns the chain of ancestors
+        the public method `reconstuct_context`, this method retruns the chain of ancestors
         in reverse order [node, ... , self] and returns None in case `node` does not exist
         in the tree rooted in self instead of raising a Value Error.
+        If `node` equals `self`, `None` will be returned.
         """
         if node in self.children:
             return [node, self]
-        else:
-            for nd in self.children:
-                ctx = nd._reconstruct_context_recursive(node)
-                if ctx:
-                    ctx.append(self)
-                    return ctx
-            return None
+        for nd in self.children:
+            ctx = nd._reconstruct_context_recursive(node)
+            if ctx:
+                ctx.append(self)
+                return ctx
+        return None
 
 
     def reconstruct_context(self, node: 'Node') -> List['Node']:
@@ -695,6 +695,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :return: the list of nodes starting with self and leading to `node`
         :raises: ValueError in case `node` does not occur in the tree rooted in `self`
         """
+        if node == self:
+            return [node]
         ctx = self._reconstruct_context_recursive(node)
         if ctx is None:
             raise ValueError('Node "%s" does not occur in the tree %s '
@@ -1324,6 +1326,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     sxpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()
     # mock_parsers = dict()  # type: Dict[StringView, MockParser]
 
+    @cython.locals(level=cython.int, k=cython.int)
     def next_block(s: StringView):
         """Generator that yields all characters until the next closing bracket
         that does not match an opening bracket matched earlier within the same
@@ -1354,6 +1357,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 else 'Malformed S-expression. Closing bracket(s) ")" missing.'
             raise AssertionError(errmsg)
 
+    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, end=cython.int)
     def inner_parser(sxpr: StringView) -> Node:
         if sxpr[0] != '(':
             raise ValueError('"(" expected, not ' + sxpr[:10])
@@ -1529,7 +1533,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
 
 def parse_json_syntaxtree(json_str: str) -> Node:
     """
-    Parses a JSON-representation of a syntaxtree. Other than parse_sxpr
+    Parses a JSON-representation of a syntax tree. Other than parse_sxpr
     and parse_xml, this function does not convert any json-text into
     a syntax tree, but only json-text that represents a syntax tree, e.g.
     that has been produced by `Node.as_json()`!

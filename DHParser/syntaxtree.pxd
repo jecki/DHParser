@@ -47,3 +47,7 @@ cdef class RootNode(Node):
     # cpdef new_error(self, node, message, code)
     # cpdef get_errors(self, node)
     cpdef customized_XML(self)
+
+
+# cpdef parse_sxpr(sxpr)
+# cpdef parse_xml(xml, ignore_pos)
