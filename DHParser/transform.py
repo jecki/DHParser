@@ -50,6 +50,7 @@ __all__ = ('TransformationDict',
            'always',
            'is_named',
            'update_attr',
+           'swap_attributes',
            'replace_by_single_child',
            'replace_by_children',
            'reduce_single_child',
@@ -61,6 +62,7 @@ __all__ = ('TransformationDict',
            'replace_content_by',
            'normalize_whitespace',
            'merge_adjacent',
+           'merge_results',
            'move_adjacent',
            'left_associative',
            'lean_left',
@@ -508,6 +510,14 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     return False
 
 
+@transformation_factory(collections.abc.Set)
+def has_descendant(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """
+    Checks whether the last node in the context has a descendant with one
+    of the given tag names.
+    """
+    raise NotImplementedError
+
 #######################################################################
 #
 # utility functions (private)
@@ -736,6 +746,7 @@ def collapse(context: List[Node]):
     string representation of the node. USE WITH CARE!
     """
     node = context[-1]
+    # TODO: update attributes
     node.result = node.content
 
 
@@ -743,7 +754,7 @@ def collapse(context: List[Node]):
 def collapse_if(context: List[Node], condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
-    fulfil the given `condition` into a single leaf node with parser
+    fulfill the given `condition` into a single leaf node with parser
     `target_tag`. Nodes that do not fulfil the condition will be preserved.
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
@@ -765,6 +776,7 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: str):
         nonlocal package
         if package:
             s = "".join(nd.content for nd in package)
+            # TODO: update attributes
             result.append(Node(target_tag, s))
             package = []
 
@@ -847,6 +859,7 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
                     adjacent = children[k:i]
                     head = adjacent[0]
                     tag_names = {nd.tag_name for nd in adjacent}
+                    # TODO: update attributes
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     if tag_name in tag_names:
                         head.tag_name = tag_name
@@ -857,6 +870,32 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
         node.result = tuple(new_result)
 
 
+def merge_results(a: Node, b: Node, c: Node) -> bool:
+    """
+    Merges the results of node `a` and `b` and writes them to the result
+    of `c` type-safely, if b and c are either both leaf-nodes (in which case
+    their result-strings are concatenated) or both non-leaf-nodes (in which
+    case the tuples of children are concatenated).
+    Returns `True` in case of a successful merge, `False` if only one node
+    was a leaf node and the merge could thus not be done.
+
+    Example:
+        >>> head, tail = Node('head', '123'), Node('tail', '456')
+        >>> merge_results(head, tail, head)  # merge head and tail (in that order) into head
+        True
+        >>> str(head)
+        '123456'
+    """
+    # TODO: update attributes
+    if a.children and b.children:
+        c.result = cast(Tuple[Node, ...], a.result) + cast(Tuple[Node, ...], b.result)
+        return True
+    elif not a.children and not b.children:
+        c.result = cast(str, a.result) + cast(str, b.result)
+        return True
+    return False
+
+
 @transformation_factory(collections.abc.Callable)
 def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     """
@@ -865,30 +904,6 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     predecessor (or successor, respectively) in the parent node in case it
     also fulfills the given `condition`.
     """
-    def merge_results(a: Node, b: Node, c: Node) -> bool:
-        """
-        Merges the results of node `a` and `b` and writes them to the result
-        of `c` type-safely, if b and c are either both leaf-nodes (in which case
-        their result-strings are concatenated) or both non-leaf-nodes (in which
-        case the tuples of children are concatenated).
-        Returns `True` in case of a successful merge, `False` if only one node
-        was a leaf node and the merge could thus not be done.
-
-        Example:
-            >>> head, tail = Node('head', '123'), Node('tail', '456')
-            >>> merge_results(head, tail, head)  # merge head and tail (in that order) into head
-            True
-            >>> str(head)
-            '123456'
-        """
-        if a.children and b.children:
-            c.result = cast(Tuple[Node, ...], a.result) + cast(Tuple[Node, ...], b.result)
-            return True
-        elif not a.children and not b.children:
-            c.result = cast(str, a.result) + cast(str, b.result)
-            return True
-        return False
-
     node = context[-1]
     if len(context) <= 1 or not node.children:
         return
