@@ -57,7 +57,7 @@ __all__ = ('TransformationDict',
            'replace_or_reduce',
            'change_tag_name',
            'collapse',
-           'collapse_if',
+           'collapse_children_if',
            'replace_content',
            'replace_content_by',
            'normalize_whitespace',
@@ -510,13 +510,13 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     return False
 
 
-@transformation_factory(collections.abc.Set)
-def has_descendant(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
-    """
-    Checks whether the last node in the context has a descendant with one
-    of the given tag names.
-    """
-    raise NotImplementedError
+# @transformation_factory(collections.abc.Set)
+# def has_descendant(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+#     """
+#     Checks whether the last node in the context has a descendant with one
+#     of the given tag names.
+#     """
+#     raise NotImplementedError
 
 #######################################################################
 #
@@ -744,6 +744,12 @@ def collapse(context: List[Node]):
     """
     Collapses all sub-nodes of a node by replacing them with the
     string representation of the node. USE WITH CARE!
+
+    >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
+    >>> tree = parse_sxpr(sxpr)
+    >>> collapse([tree])
+    >>> print(flatten_sxpr(tree.as_sxpr()))
+    (place "p.26b,18")
     """
     node = context[-1]
     # TODO: update attributes
@@ -751,7 +757,7 @@ def collapse(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Callable)
-def collapse_if(context: List[Node], condition: Callable, target_tag: str):
+def collapse_children_if(context: List[Node], condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfill the given `condition` into a single leaf node with parser
@@ -759,7 +765,7 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: str):
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
     >>> tree = parse_sxpr(sxpr)
-    >>> collapse_if([tree], not_one_of({'superscript', 'subscript'}), 'text')
+    >>> collapse_children_if([tree], not_one_of({'superscript', 'subscript'}), 'text')
     >>> print(flatten_sxpr(tree.as_sxpr()))
     (place (text "p.26") (superscript "b") (text ",18"))
 
@@ -783,7 +789,7 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: str):
     for child in node.children:
         if condition([child]):
             if child.children:
-                collapse_if([child], condition, target_tag)
+                collapse_children_if([child], condition, target_tag)
                 for c in child.children:
                     if condition([c]):
                         package.append(c)

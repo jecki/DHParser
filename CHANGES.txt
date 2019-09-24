@@ -86,7 +86,7 @@ DHParser Version 0.8.4 (6.1.2019)
 DHParser Version 0.8.3 (20.8.2018)
 ..................................
 
-- new transformation function collapse_if()
+- new transformation function collapse_children_if()
 - restored compatibility with Python 3.4
 - StepByStep Guide typos fixed
 - bug fixes
