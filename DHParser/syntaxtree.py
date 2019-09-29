@@ -160,11 +160,55 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     """
     Represents a node in the concrete or abstract syntax tree.
 
-    TODO: Add some documentation and doc-tests here...
+    There are three different kinds of nodes:
+
+    1. Branch nodes the have children, but no string content. Other
+       than in XML there are no mixed nodes that contain strings as
+       well other tags. This constraint simplifies tree-processing
+       considerably.
+
+       The conversion to and from XML works by enclosing strings
+       in a mixed-content tag with some, freely chosen tag name, and
+       dropping the tag name again when serializing to XML. Since
+       this is easily done, there is not serious restriction involved
+       when not allowing mixed-content nodes. See `Node.as_xml()`
+       (parameter `omit_tags`) as `parse_xml`.
+
+    2. Leaf nodes that do not have children but only string content.
+
+    3. The root node which contains further properties that are
+       global properties of the parsing tree, such as the error list
+       (which cannot be stored locally in the nodes, because nodes
+       might be dropped during tree-processsing, but error messages
+       should not be forgotten!). Because of that, the root node
+       requires a different class (`RootNode`) while leaf-nodes
+       as well as branch nodes are both instances of class Node.
+
+    A node always has a tag name (which can be empty, though) and
+    a result field, which stores the results of the parsing processs
+    and contains either a string or a tuple of child nodes.
+
+    All other properties are either optional or represent different
+    views on these two properties. Among these are the 'attr`-field
+    that contains a dictionary of xml-attributes, the `children`-filed
+    that contains a tuple of child-nodes or an empty tuple if the node
+    does not have child nodes, the content-field which contains the string
+    content of the node and the `pos`-field which contains the position
+    of the node's content in the source code, but may also be left
+    uninitialized.
+
+    Examples:
+    TODO: Add some exmpales here!
 
     Attributes and Properties:
         tag_name (str):  The name of the node, which is either its
-            parser's name or, if that is empty, the parser's class name
+            parser's name or, if that is empty, the parser's class name.
+
+            By convention the parser's class name when used as tag name
+            is prefixed with a colon ":". A node, the tag name of which
+            starts with a colon ":" or the tag name of which is the
+            empty string is considered as "anonymous". See
+            `Node.is_anonymous()`
 
         result (str or tuple):  The result of the parser which
             generated this node, which can be either a string or a
@@ -206,7 +250,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         attr (dict): An optional dictionary of XML-attr. This
             dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
-            S-Expression-output.
+            S-expression-output.
     """
 
     __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
@@ -1321,6 +1365,13 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     Example:
     >>> parse_sxpr("(a (b c))").as_sxpr(flatten_threshold=0)
     '(a\\n  (b\\n    "c"\\n  )\\n)'
+
+    `parse_sxpr()` does not initialize the node's `pos`-values. This can be
+    done with `Node.with_pos()`:
+
+    >>> tree = parse_sxpr('(A (B "x") (C "y"))').with_pos(0)
+    >>> tree['C'].pos
+    1
     """
 
     sxpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()
