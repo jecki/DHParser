@@ -20,7 +20,7 @@ if dhparser_path not in sys.path:
     sys.path.append(dhparser_path)
 
 from DHParser import is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, \
+    Grammar, Compiler, nil_preprocessor, access_thread_locals, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
@@ -59,18 +59,20 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "8839d079e31b568a31f0ea4cbb175aa8"
+    source_hash__ = "61400955f6b57b8ec517dd11b6563d47"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
-    COMMENT__ = r'//'
+    COMMENT__ = r'(?i)%[^\n]*\n'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('(?i).'))
-    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(Lookahead(RegExp('(?i)%')), wsp__)))
-    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(Lookahead(RegExp('(?i)%')), wsp__)))
-    NO_BLANK_STRING = Series(RegExp('(?i)[^ \\t\\n,%]+'), wsp__)
+    WS = Alternative(Series(Lookahead(RegExp('(?i)[ \\t]*%')), wsp__), RegExp('(?i)[ \\t]+'))
+    ESC = Series(Lookbehind(RegExp('(?i)\\\\')), RegExp('(?i)[%&_]'))
+    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%&_ \\t]+'), ESC, WS))
+    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%&_ \\t]+'), ESC, WS))
+    NO_BLANK_STRING = Series(OneOrMore(Alternative(RegExp('(?i)[^ \\t\\n,%&_]+'), ESC)), wsp__)
     WORD = Series(RegExp('(?i)\\w+'), wsp__)
     text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)))))
     plain_content = Synonym(COMMA_TERMINATED_STRING)
@@ -82,11 +84,12 @@ class BibTeXGrammar(Grammar):
     comment = Series(Series(Token("@Comment{"), wsp__), text, Series(Token("}"), wsp__), mandatory=2)
     pre_code = ZeroOrMore(Alternative(RegExp('(?i)[^"%]+'), RegExp('(?i)%.*\\n')))
     preamble = Series(Series(Token("@Preamble{"), wsp__), RegExp('(?i)"'), pre_code, RegExp('(?i)"'), wsp__, Series(Token("}"), wsp__), mandatory=5)
-    bibliography = ZeroOrMore(Alternative(preamble, comment, entry))
+    bibliography = Series(ZeroOrMore(Alternative(preamble, comment, entry)), wsp__, EOF)
     root__ = bibliography
     
 def get_grammar() -> BibTeXGrammar:
     """Returns a thread/process-exclusive BibTeXGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
         grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
     except AttributeError:

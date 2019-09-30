@@ -26,13 +26,12 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.syntaxtree import Node, parse_sxpr, flatten_sxpr, parse_xml, PLACEHOLDER, \
-    tree_sanity_check, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
+    tree_sanity_check
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, remove_tokens, \
     transformation_factory, has_parent, contains_only_whitespace, is_insignificant_whitespace, \
     merge_adjacent, is_one_of
-from DHParser.toolkit import typing
 from typing import AbstractSet, List, Sequence, Tuple
 
 
