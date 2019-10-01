@@ -262,17 +262,19 @@ class TestWhitespaceTransformations:
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
 
-    def test_move_adjacent(self):
+    def test_move_adjacent2(self):
         sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "or") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "not") (:Whitespace " ")) '
-                              '(WORD (:Whitespace " ") (LETTERS "to") (:Whitespace " "))'
+                              '(WORD (:Whitespace " ") (:Whitespace " ") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
         transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
+        assert all(i % 2 != 0 or (node.tag_name == "WORD" and ":Whitespace" not in node)
+                   for i, node in enumerate(sentence))
 
     def test_merge_adjacent(self):
         sentence = parse_sxpr('(SENTENCE (TEXT "Guten") (L " ") (TEXT "Tag") '

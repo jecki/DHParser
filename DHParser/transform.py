@@ -525,18 +525,19 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 #######################################################################
 
 
-def update_attr(node: Node, child: Node):
+def update_attr(dest: Node, src: Tuple[Node, ...]):
     """
-    Adds all attributes from `child` to `node`.This is needed, in order
+    Adds all attributes from `src` to `dest`.This is needed, in order
     to keep the attributes if the child node is going to be eliminated.
     """
-    if hasattr(child, '_xml_attr'):
-        for k, v in child.attr:
-            if k in node.attr and v != node.attr[k]:
-                raise ValueError('Conflicting attribute values %s and %s for key %s '
-                                 'when reducing %s to %s ! Tree transformation stopped.'
-                                 % (v, node.attr[k], k, str(child), str(node)))
-            node.attr[k] = v
+    for s in src:
+        if s != dest and hasattr(s, '_xml_attr'):
+            for k, v in s.attr:
+                if k in dest.attr and v != dest.attr[k]:
+                    raise ValueError('Conflicting attribute values %s and %s for key %s '
+                                     'when reducing %s to %s ! Tree transformation stopped.'
+                                     % (v, dest.attr[k], k, str(src), str(dest)))
+                dest.attr[k] = v
 
 
 def swap_attributes(node: Node, other: Node):
@@ -568,7 +569,7 @@ def _replace_by(node: Node, child: Node):
         # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node.result = child.result
-    update_attr(node, child)
+    update_attr(node, (child,))
 
 
 def _reduce_child(node: Node, child: Node):
@@ -576,7 +577,7 @@ def _reduce_child(node: Node, child: Node):
     Sets node's results to the child's result, keeping node's tag_name.
     """
     node.result = child.result
-    update_attr(child, node)
+    update_attr(child, (node,))
     if child.has_attr():
         node._xml_attr = child._xml_attr
 
@@ -878,28 +879,29 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
         node.result = tuple(new_result)
 
 
-def merge_results(a: Node, b: Node, c: Node) -> bool:
+def merge_results(dest: Node, src: Tuple[Node, ...]) -> bool:
     """
-    Merges the results of node `a` and `b` and writes them to the result
-    of `c` type-safely, if b and c are either both leaf-nodes (in which case
-    their result-strings are concatenated) or both non-leaf-nodes (in which
+    Merges the results of nodes `src` and writes them to the result
+    of `dest` type-safely, if all src nodes are leaf-nodes (in which case
+    their result-strings are concatenated) or none are leaf-nodes (in which
     case the tuples of children are concatenated).
-    Returns `True` in case of a successful merge, `False` if only one node
-    was a leaf node and the merge could thus not be done.
+    Returns `True` in case of a successful merge, `False` if some source nodes
+    were leaf-nodes and some weren't and the merge could thus not be done.
 
     Example:
         >>> head, tail = Node('head', '123'), Node('tail', '456')
-        >>> merge_results(head, tail, head)  # merge head and tail (in that order) into head
+        >>> merge_results(head, (head, tail))  # merge head and tail (in that order) into head
         True
         >>> str(head)
         '123456'
     """
-    # TODO: update attributes
-    if a.children and b.children:
-        c.result = cast(Tuple[Node, ...], a.result) + cast(Tuple[Node, ...], b.result)
+    if all(nd.children for nd in src):
+        dest.result = reduce(operator.add, (nd.children for nd in src[1:]), src[0].children)
+        update_attr(dest, src)
         return True
-    elif not a.children and not b.children:
-        c.result = cast(str, a.result) + cast(str, b.result)
+    elif all(not nd.children for nd in src):
+        dest.result = reduce(operator.add, (nd.content for nd in src[1:]), src[0].content)
+        update_attr(dest, src)
         return True
     return False
 
@@ -917,16 +919,18 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
         return
     parent = context[-2]
     children = node.children
-    if condition([children[0]]):
-        before = (children[0],)   # type: Tuple[Node, ...]
-        children = children[1:]
-    else:
-        before = ()
-    if children and condition([children[-1]]):
-        after = (children[-1],)   # type: Tuple[Node, ...]
-        children = children[:-1]
-    else:
-        after = tuple()
+
+    a, b = 0, len(children)
+    while a < b:
+        if condition([children[a]]):
+            a += 1
+        elif condition([children[b - 1]]):
+            b -= 1
+        else:
+            break
+    before = children[:a]
+    after = children[b:]
+    children = children[a:b]
 
     if before or after:
         node.result = children
@@ -936,17 +940,17 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
 
         # merge adjacent nodes that fulfil the condition
         if merge:
-            prevN = parent.children[i - 1] if i > 0 else None
-            nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
+            prevN = parent.children[i - 1] if i > 0 else ()
+            nextN = parent.children[i + 1] if i < len(parent.children) - 1 else ()
             if before and prevN and condition([prevN]):
                 # prevN.result = prevN.result + before[0].result
                 # before = ()
-                if merge_results(prevN, before[0], prevN):
+                if merge_results(prevN, (prevN,) + before):
                     before = ()
             if after and nextN and condition([nextN]):
                 # nextN.result = after[0].result + nextN.result
                 # after = ()
-                if merge_results(after[0], nextN, nextN):
+                if merge_results(nextN, after + (nextN,)):
                     after = ()
 
         parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
