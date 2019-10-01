@@ -209,6 +209,19 @@ class TestNode:
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
 
+    def test_select_context(self):
+        tree = parse_sxpr(self.unique_nodes_sexpr)
+        contexts = []
+        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+                                          include_root=True, reverse=False):
+            contexts.append(''.join(nd.tag_name for nd in ctx))
+        assert contexts == ['ad', 'af', 'afg']
+        contexts = []
+        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+                                          include_root=True, reverse=True):
+            contexts.append(''.join(nd.tag_name for nd in ctx))
+        assert contexts == ['af', 'afg', 'ad']
+
     def test_find(self):
         found = list(self.unique_tree.select_if(lambda nd: not nd.children and nd.result == "e"))
         assert len(found) == 1
@@ -372,7 +385,6 @@ class TestSerialization:
         tree = parse_sxpr(sxpr)
         assert flatten_sxpr(tree.as_sxpr()) == sxpr
 
-
     def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')
         tree.attr['attr'] = "value"
@@ -429,6 +441,15 @@ class TestSerialization:
             '<E>F</E>\n  </B>\n  <G>\n     H \n     Y \n  </G>\n</A>', xml
         xml = tree.as_xml(inline_tags={'A'})
         assert xml == '<A><B><C>D\nX</C><E>F</E></B><G> H \n Y </G></A>', xml
+
+    def test_xml_tag_omission(self):
+        tree = parse_sxpr('(XML (T "Hallo") (L " ") (T "Welt!"))')
+        all_tags = {'XML', 'T', 'L'}
+        assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == "Hallo Welt!"
+        # tags with attributes will never be ommitted
+        tree['T'].attr['class'] = "kursiv"
+        assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == \
+               '<T class="kursiv">Hallo</T> Welt!'
 
     # def test_xml2(self):
     #     tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')

@@ -619,8 +619,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 break
         raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
 
-    def select_if(self, match_function: Callable, include_root: bool = False, reverse: bool = False) \
-            -> Iterator['Node']:
+    def select_if(self, match_function: Callable,
+                  include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
         Finds nodes in the tree for which `match_function` returns True.
         See see more general function `Node.select()` for a detailed description.
@@ -684,7 +684,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         exists, it returns None.
         """
         try:
-            return next(self.select(criterion, False, reverse))
+            return next(self.select(criterion, include_root=False, reverse=reverse))
         except StopIteration:
             return None
 
@@ -712,7 +712,56 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return nd
         return None
 
-    # milestone support ### EXPERIMENTAL!!! ###
+    # context selection ###
+
+    def select_context_if(self, match_function: Callable,
+                          include_root: bool = False,
+                          reverse: bool = False) -> Iterator[List['Node']]:
+        """
+        Like `Node.select_if()` but yields the entire context (i.e. list of
+        descendants, the last one being the matching node) instead of just
+        the matching nodes.
+        """
+        if include_root and match_function(self):
+            yield [self]
+        child_iterator = reversed(self.children) if reverse else self.children
+        for child in child_iterator:
+            if match_function(child):
+                yield [self, child]
+            for context in child.select_context_if(match_function, False, reverse):
+                yield [self] + context
+
+    def select_context(self, criterion: CriteriaType,
+                       include_root: bool = False,
+                       reverse: bool = False) -> Iterator[List['Node']]:
+        """
+        Like `Node.select()` but yields the entire context (i.e. list of
+        descendants, the last one being the matching node) instead of just
+        the matching nodes.
+        """
+        return self.select_context_if(create_match_function(criterion), include_root, reverse)
+
+    def pick_context(self, criterion: CriteriaType, reverse: bool = False) -> Optional[List['Node']]:
+        """
+        Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
+        relative to `self` is returned.
+        """
+        try:
+            return next(self.select_context(criterion, include_root=False, reverse=reverse))
+        except StopIteration:
+            return None
+
+    def locate_context(self, location: int) -> Optional[List['Node']]:
+        """
+        Like `Node.locate()`,  only that the entire context (i.e. chain of descendants)
+        relative to `self` is returned.
+        """
+        end = 0
+        for ctx in self.select_context_if(lambda nd: not nd.children, include_root=True):
+            end = end + len(ctx[-1])
+            if location < end:
+                return ctx
+        return None
 
     def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> Optional[List['Node']]:
         """
@@ -731,7 +780,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return ctx
         return None
 
-
     def reconstruct_context(self, node: 'Node') -> List['Node']:
         """
         Determines the chain of ancestors of a node that leads up to self.
@@ -748,6 +796,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         ctx.reverse()
         return ctx
 
+
+    # milestone support ### EXPERIMENTAL!!! ###
 
     # def find_nearest_common_ancestor(self, A: 'Node', B: 'Node') -> 'Node':
     #     """
@@ -978,7 +1028,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            if node.tag_name in omit_tags:
+            if node.tag_name in omit_tags and not node.has_attr():
                 return ''
             txt = ['<', node.tag_name]
             has_reserved_attrs = node.has_attr() \
@@ -1002,7 +1052,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
-            if node.tag_name in omit_tags or node.tag_name in empty_tags:
+            if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
                 return ''
             return '\n</' + node.tag_name + '>'
 
@@ -1104,7 +1154,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)', r'', sxpr)
-                sxpr = re.sub(r'\)', r'', sxpr)
+                sxpr = re.sub(r'\)[ \t]*\n', r'\n', sxpr)
                 sxpr = re.sub(r'^\(', r'', sxpr)
             return sxpr
         else:
