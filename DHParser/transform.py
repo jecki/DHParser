@@ -938,23 +938,29 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
             if id(child) == id(node):
                 break
 
+        a = i - 1
+        b = i + 1
+
         # merge adjacent nodes that fulfil the condition
         if merge:
-            prevN = parent.children[i - 1] if i > 0 else ()
-            nextN = parent.children[i + 1] if i < len(parent.children) - 1 else ()
-            if before and prevN and condition([prevN]):
-                # prevN.result = prevN.result + before[0].result
-                # before = ()
-                if merge_results(prevN, (prevN,) + before):
+            while a >= 0 and condition([parent.children[a]]):
+                a -= 1
+            prevN = parent.children[a + 1:i]
+
+            N = len(parent.children)
+            while b < N and condition([parent.children[b]]):
+                b += 1
+            nextN = parent.children[i + 1:b]
+
+            if (before and prevN) or len(prevN) > 1:
+                if merge_results(prevN[0], prevN + before):
                     before = ()
-            if after and nextN and condition([nextN]):
-                # nextN.result = after[0].result + nextN.result
-                # after = ()
-                if merge_results(nextN, after + (nextN,)):
+            if (after and nextN) or len(nextN) > 1:
+                if merge_results(nextN[-1], after + nextN):
                     after = ()
 
-        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
-
+        parent.result = parent.children[:a + 1 + len(prevN)] + before + (node,) + after + parent.children[b - len(nextN):]
+        print(len(prevN), parent)
 
 def left_associative(context: List[Node]):
     """

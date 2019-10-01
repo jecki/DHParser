@@ -259,6 +259,7 @@ class TestWhitespaceTransformations:
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
         transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
         traverse(sentence, transformations)
+        print(sentence.as_sxpr())
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
 
