@@ -259,7 +259,6 @@ class TestWhitespaceTransformations:
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
         transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
         traverse(sentence, transformations)
-        print(sentence.as_sxpr())
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
 
@@ -267,12 +266,14 @@ class TestWhitespaceTransformations:
         sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "or") (:Whitespace " ")) '
-                              '(WORD (:Whitespace " ") (LETTERS "not") (:Whitespace " ")) '
-                              '(WORD (:Whitespace " ") (:Whitespace " ") (LETTERS "to") (:Whitespace " "))'
+                              '(WORD (:Whitespace " ") (LETTERS "not") (:Whitespace "a") (:Whitespace "b")) '
+                              '(:Whitespace "c")'
+                              '(WORD (:Whitespace "d") (:Whitespace "e") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
         transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
+        assert sentence.content.find('abcde') >= 0
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
         assert all(i % 2 != 0 or (node.tag_name == "WORD" and ":Whitespace" not in node)
                    for i, node in enumerate(sentence))

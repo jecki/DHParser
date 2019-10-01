@@ -952,15 +952,19 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
                 b += 1
             nextN = parent.children[i + 1:b]
 
-            if (before and prevN) or len(prevN) > 1:
-                if merge_results(prevN[0], prevN + before):
-                    before = ()
-            if (after and nextN) or len(nextN) > 1:
-                if merge_results(nextN[-1], after + nextN):
-                    after = ()
+            if len(before) + len(prevN) > 1:
+                target = before[-1] or prevN[0]
+                if merge_results(target, prevN + before):
+                    before = (target,)
+            before = before or prevN
 
-        parent.result = parent.children[:a + 1 + len(prevN)] + before + (node,) + after + parent.children[b - len(nextN):]
-        print(len(prevN), parent)
+            if len(after) + len(nextN) > 1:
+                target = after[0] or nextN[-1]
+                if merge_results(target, after + nextN):
+                    after = (target,)
+            after = after or nextN
+
+        parent.result = parent.children[:a + 1] + before + (node,) + after + parent.children[b:]
 
 def left_associative(context: List[Node]):
     """
