@@ -36,7 +36,7 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, PLACEHOLDER, RootNode, parse_sxpr, flatten_sxpr
-from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
 
 
 __all__ = ('TransformationDict',
@@ -907,6 +907,7 @@ def merge_results(dest: Node, src: Tuple[Node, ...]) -> bool:
 
 
 @transformation_factory(collections.abc.Callable)
+@cython.locals(a=cython.int, b=cython.int, i=cython.int)
 def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     """
     Moves adjacent nodes that fulfill the given condition to the parent node.
@@ -965,6 +966,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
             after = after or nextN
 
         parent.result = parent.children[:a + 1] + before + (node,) + after + parent.children[b:]
+
 
 def left_associative(context: List[Node]):
     """
