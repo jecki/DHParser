@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-"""jsonServer.py - starts a server (if not already running) for the
-                    compilation of json-files
+"""EBNFServer.py - starts a server (if not already running) for the
+                    compilation of EBNF
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -24,10 +24,14 @@ import asyncio
 import os
 import sys
 
-scriptpath = os.path.dirname(__file__) or '.'
+
+scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
+LOGGING_REQUEST = 'logging("")'
+
+DEFAULT_PORT = 8888
 
 config_filename_cache = ''
 
@@ -61,7 +65,7 @@ def retrieve_host_and_port():
     for host and port, in case the temporary config file does not exist.
     """
     host = '127.0.0.1'  # default host
-    port = 8888
+    port = DEFAULT_PORT
     cfg_filename = get_config_filename()
     try:
         with open(cfg_filename) as f:
@@ -88,7 +92,7 @@ def asyncio_run(coroutine):
             loop.close()
 
 
-def json_rpc(func, params=[], ID=None) -> str:
+def json_rpc(func, params={}, ID=None) -> str:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
@@ -119,9 +123,8 @@ def lsp_rpc(f):
     return wrapper
 
 
-class JSONLanguageServerProtocol:
+class EBNFLanguageServerProtocol:
     def __init__(self):
-        import json
         import multiprocessing
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()
@@ -130,26 +133,7 @@ class JSONLanguageServerProtocol:
         self.shared.processId = 0
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
-        self.shared.serverCapabilities = json.dumps({
-              "capabilities": {
-                "textDocumentSync": 1,
-                "completionProvider": {
-                  "resolveProvider": False,
-                  "triggerCharacters": [
-                    "/"
-                  ]
-                },
-                "hoverProvider": True,
-                "documentSymbolProvider": True,
-                "referencesProvider": True,
-                "definitionProvider": True,
-                "documentHighlightProvider": True,
-                "codeActionProvider": True,
-                "renameProvider": True,
-                "colorProvider": {},
-                "foldingRangeProvider": True
-              }
-            })
+        self.shared.serverCapabilities = '{}'
 
     def lsp_initialize(self, **kwargs):
         import json
@@ -179,13 +163,13 @@ class JSONLanguageServerProtocol:
         return None
 
 
-def run_server(host, port):
+def run_server(host, port, log_path=None):
     try:
-        from jsonCompiler import compile_src
+        from EBNFCompiler import compile_src
     except ModuleNotFoundError:
-        from tst_json_grammar import recompile_grammar
-        recompile_grammar(os.path.join(scriptpath, 'json.ebnf'), force=False)
-        from jsonCompiler import compile_src
+        from tst_EBNF_grammar import recompile_grammar
+        recompile_grammar(os.path.join(scriptpath, 'EBNF.ebnf'), force=False)
+        from EBNFCompiler import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
@@ -195,14 +179,16 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    json_lsp = JSONLanguageServerProtocol()
-    lsp_table = gen_lsp_table(json_lsp, prefix='lsp_')
+    EBNF_lsp = EBNFLanguageServerProtocol()
+    lsp_table = gen_lsp_table(EBNF_lsp, prefix='lsp_')
     lsp_table.update({'default': compile_src})
     non_blocking = frozenset(('initialize', 'initialized', 'shutdown', 'exit'))
-    json_server = Server(rpc_functions=lsp_table,
-                        cpu_bound=set(lsp_table.keys() - non_blocking),
-                        blocking=frozenset())
-    json_server.run_server(host, port)
+    EBNF_server = Server(rpc_functions=lsp_table,
+                         cpu_bound=set(lsp_table.keys() - non_blocking),
+                         blocking=frozenset())
+    if log_path is not None:
+        EBNF_server.start_logging(log_path)
+    EBNF_server.run_server(host, port)  # returns only after server has stopped
 
     cfg_filename = get_config_filename()
     try:
@@ -248,10 +234,11 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python jsonServer.py --startserver [host] [port]\n'
-          + '    python jsonServer.py --stopserver\n'
-          + '    python jsonServer.py --status\n'
-          + '    python jsonServer.py FILENAME.dsl [--host host] [--port port]')
+          + '    python EBNFServer.py --startserver [host] [port] [--logging [ON|LOG_PATH|OFF]]\n'
+          + '    python EBNFServer.py --stopserver\n'
+          + '    python EBNFServer.py --status\n'
+          + '    python EBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
+          + '    python EBNFServer.py FILENAME.dsl [--host host] [--port port]')
     sys.exit(1)
 
 
@@ -262,11 +249,16 @@ def assert_if(cond: bool, message: str):
         print_usage_and_exit()
 
 
-if __name__ == "__main__":
-    # print(os.getcwd())
-    sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
-    # print(sys.path)
+def parse_logging_args(argv):
+    try:
+        i = argv.index('--logging')
+        log_path = argv[i + 1] if i < len(argv) - 1 else ''
+        request = LOGGING_REQUEST.replace('""', repr(log_path))
+        return log_path, request
+    except ValueError:
+        return None, ''
 
+if __name__ == "__main__":
     host, port = '', -1
 
     # read and remove "--host ..." and "--port ..." parameters from sys.argv
@@ -305,17 +297,12 @@ if __name__ == "__main__":
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":
-        from DHParser import configuration
-        CFG = configuration.access_presets()
-        CFG['log_dir'] = os.path.abspath("LOGS")
-        CFG['log_server'] = True
-        CFG['echo_server_log'] = True
-        configuration.finalize_presets()
+        log_path, _ = parse_logging_args(argv)
         if len(argv) == 2:
             argv.append(host)
         if len(argv) == 3:
             argv.append(str(port))
-        sys.exit(run_server(argv[2], int(argv[3])))
+        sys.exit(run_server(argv[2], int(argv[3]), log_path))
 
     elif argv[1] in ("--stopserver", "--killserver"):
         try:
@@ -324,17 +311,28 @@ if __name__ == "__main__":
             print(e)
             sys.exit(1)
         print(result)
+
+    elif argv[1] == "--logging":
+        log_path, request = parse_logging_args(argv)
+        asyncio_run(send_request(request))
+
     elif argv[1].startswith('-'):
         print_usage_and_exit()
+
     elif argv[1]:
         if not argv[1].endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
             argv[1] = os.path.abspath(argv[1])
             # print(argv[1])
+        log_path, log_request = parse_logging_args(argv)
         try:
+            if log_request:
+                asyncio_run(send_request(log_request))
             result = asyncio_run(send_request(argv[1], host, port))
         except ConnectionRefusedError:
             start_server_daemon(host, port)               # start server first
+            if log_request:
+                asyncio_run(send_request(log_request))
             result = asyncio_run(send_request(argv[1], host, port))
         print(result)
     else:

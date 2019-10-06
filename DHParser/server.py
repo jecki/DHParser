@@ -74,8 +74,8 @@ __all__ = ('RPC_Table',
            'USE_DEFAULT_PORT',
            'STOP_SERVER_REQUEST',
            'IDENTIFY_REQUEST',
+           'LOGGING_REQUEST',
            'ALL_RPCs',
-           'identify_server',
            'asyncio_run',
            'asyncio_connect',
            'Server',
@@ -137,6 +137,8 @@ USE_DEFAULT_PORT = -1
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"
 STOP_SERVER_REQUEST_STR = STOP_SERVER_REQUEST.decode()
 IDENTIFY_REQUEST = "identify()"
+LOGGING_REQUEST = 'logging("")'
+
 
 
 def substitute_default_host_and_port(host, port):
@@ -147,11 +149,6 @@ def substitute_default_host_and_port(host, port):
     if port == USE_DEFAULT_PORT:
         port = get_config_value('server_default_port')
     return host, port
-
-
-def identify_server():
-    """Returns an identification string for the server."""
-    return "DHParser " + __version__
 
 
 def as_json_rpc(func: Callable,
@@ -330,8 +327,13 @@ class Server:
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
         assert STOP_SERVER_REQUEST_STR not in self.rpc_table
-        if IDENTIFY_REQUEST.strip('()') not in self.rpc_table:
-            self.rpc_table[IDENTIFY_REQUEST.strip('()')] = identify_server
+
+        identify_name = IDENTIFY_REQUEST[:IDENTIFY_REQUEST.find('(')]
+        if identify_name not in self.rpc_table:
+            self.rpc_table[identify_name] = self.rpc_identify_server
+        logging_name = LOGGING_REQUEST[:LOGGING_REQUEST.find('(')]
+        if logging_name in self.rpc_table:
+            self.rpc_table[logging_name] = self.rpc_logging
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -360,22 +362,53 @@ class Server:
         self.echo_log = get_config_value('echo_server_log')  # type: bool
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
 
+        self.log_file = ''              # type: str
         if get_config_value('log_server'):
-            self.log_file = create_log('%s_%s.log' %
-                                       (self.__class__.__name__, hex(id(self))[2:])) # type: str
-            append_log(self.log_file, '\nPython Version: %s\nDHParser Version: %s\n\n'
-                       % (sys.version.replace('\n', ' '), __version__))
-        else:
-            self.log_file = ''
+            self.start_logging()
 
-        self.active_tasks = dict()     # type: Dict[int, Dict[int, asyncio.Future]]
-        self.finished_tasks = dict()   # type: Dict[int, Set[int]]
-        self.connections = set()       # type: Set
-        self.kill_switch = False       # type: bool
+        self.active_tasks = dict()      # type: Dict[int, Dict[int, asyncio.Future]]
+        self.finished_tasks = dict()    # type: Dict[int, Set[int]]
+        self.connections = set()        # type: Set
+        self.kill_switch = False        # type: bool
         self.loop = None  # just for python 3.5 compatibility...
 
+    def identification_str(self) -> str:
+        """Returns an identification string for self which consists of
+        the class name and the object-id."""
+        return '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
+
+    def start_logging(self, filename: str=""):
+        if not filename:
+            filename = self.identification_str() + '.log'
+        self.log_file = create_log(filename)
+        append_log(self.log_file, '\nPython Version: %s\nDHParser Version: %s\n\n'
+                   % (sys.version.replace('\n', ' '), __version__))
+
+    def stop_logging(self):
+        append.log_file(self.log_file, 'Logging will be stopped now!')
+        self.log_file = ''
+
     def log(self, *args, **kwargs):
-        append_log(self.log_file, *args, **kwargs, echo=self.echo_log)
+        if self.log_file:
+            append_log(self.log_file, *args, **kwargs, echo=self.echo_log)
+
+    def rpc_identify_server(self):
+        """Returns an identification string for the server."""
+        return "DHParser " + __version__ + " " + self.identification_str()
+
+    def rpc_logging(self, *args) -> str:
+        """Starts logging with either a) the default filename, if args is
+         empty or the empty string b) the given log file name if `args[0]`
+         is a non-empty string c) stops logging if `args[0]` is `None`.
+         """
+        if len(args) > 0:
+            log_name = args[0]
+            if log_name is not None:
+                self.start_logging(log_name)
+            else:
+                self.stop_logging()
+        else:
+            self.start_logging()
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,

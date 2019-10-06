@@ -137,7 +137,7 @@ def resume_logging(log_dir: str=''):
 #     finalize_presets()
 
 
-def log_dir() -> Union[str, bool]:
+def log_dir(path: str="") -> Union[str, bool]:
     """Creates a directory for log files (if it does not exist) and
     returns its path.
 
@@ -151,12 +151,16 @@ def log_dir() -> Union[str, bool]:
     explicitly. (See `testing.grammar_suite()` for an example, how this can
     be done.
 
+    Parameters:
+        path:   The directory path. If empty, the configured value will be
+            used: `configuration.get_config_value('log_dir')`.
+
     Returns:
         name of the logging directory (str) or False (bool) if logging has
         not been switched on with the logging-contextmanager (see below), yet.
     """
     # the try-except clauses in the following are precautions for multithreading
-    dirname = get_config_value('log_dir')  # raises a name error if LOGGING is not defined
+    dirname = path if path else get_config_value('log_dir')
     if not dirname:
         return False
     if os.path.exists(dirname) and not os.path.isdir(dirname):
@@ -188,14 +192,19 @@ def is_logging(thread_local_query: bool=True) -> bool:
 
 def create_log(log_name: str) -> str:
     """
-    Creates a new log file in the log directory. If a file with
-    the same name already exists, it will be overwritten.
+    Creates a new log file. If log_name is not just a file name but a path with
+    at least one directoy (which can be './') the file is not created in the
+    configured log directory but at the given path. If a file with the same
+    name already exists, it will be overwritten.
+
     :param log_name: The file name of the log file to be created
     :return: the file name of the log file or an empty string if the log-file
         has not been created (e.g. because logging is still turned off and
         no log-directory set).
     """
-    ldir = log_dir()
+    ldir, log_name = os.path.split(log_name)
+    if not ldir:
+        ldir = log_dir()
     if ldir:
         with open(os.path.join(ldir, log_name), 'w', encoding='utf-8') as f:
             f.write('LOG-FILE: ' + log_name + '\n\n')
