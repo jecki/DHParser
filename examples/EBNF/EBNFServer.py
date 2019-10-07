@@ -187,7 +187,8 @@ def run_server(host, port, log_path=None):
                          cpu_bound=set(lsp_table.keys() - non_blocking),
                          blocking=frozenset())
     if log_path is not None:
-        EBNF_server.start_logging(log_path)
+        EBNF_server.echo_log = True
+        print(EBNF_server.start_logging(log_path))
     EBNF_server.run_server(host, port)  # returns only after server has stopped
 
     cfg_filename = get_config_filename()
@@ -252,8 +253,14 @@ def assert_if(cond: bool, message: str):
 def parse_logging_args(argv):
     try:
         i = argv.index('--logging')
-        log_path = argv[i + 1] if i < len(argv) - 1 else ''
-        request = LOGGING_REQUEST.replace('""', repr(log_path))
+        del argv[i]
+        if i < len(argv):
+            log_path = argv[i]
+            del argv[i]
+        else:
+            log_path = ''
+        args = repr(log_path), repr("ECHO_ON")
+        request = LOGGING_REQUEST.replace('""', ", ".join(args))
         return log_path, request
     except ValueError:
         return None, ''
@@ -314,7 +321,7 @@ if __name__ == "__main__":
 
     elif argv[1] == "--logging":
         log_path, request = parse_logging_args(argv)
-        asyncio_run(send_request(request))
+        print(asyncio_run(send_request(request)))
 
     elif argv[1].startswith('-'):
         print_usage_and_exit()
@@ -327,12 +334,12 @@ if __name__ == "__main__":
         log_path, log_request = parse_logging_args(argv)
         try:
             if log_request:
-                asyncio_run(send_request(log_request))
+                print(asyncio_run(send_request(log_request)))
             result = asyncio_run(send_request(argv[1], host, port))
         except ConnectionRefusedError:
             start_server_daemon(host, port)               # start server first
             if log_request:
-                asyncio_run(send_request(log_request))
+                print(asyncio_run(send_request(log_request)))
             result = asyncio_run(send_request(argv[1], host, port))
         print(result)
     else:

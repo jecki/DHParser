@@ -453,6 +453,7 @@ class TestLanguageServer:
 
         asyncio_run(initialization_sequence())
 
+
 if __name__ == "__main__":
     if "--killserver" in sys.argv:
         result = stop_server('127.0.0.1', TEST_PORT)

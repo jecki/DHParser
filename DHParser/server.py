@@ -57,7 +57,7 @@ from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequ
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
-from DHParser.log import create_log, append_log, is_logging
+from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find
 from DHParser.versionnumber import __version__
 
@@ -328,13 +328,6 @@ class Server:
             self.default = func.__name__
         assert STOP_SERVER_REQUEST_STR not in self.rpc_table
 
-        identify_name = IDENTIFY_REQUEST[:IDENTIFY_REQUEST.find('(')]
-        if identify_name not in self.rpc_table:
-            self.rpc_table[identify_name] = self.rpc_identify_server
-        logging_name = LOGGING_REQUEST[:LOGGING_REQUEST.find('(')]
-        if logging_name in self.rpc_table:
-            self.rpc_table[logging_name] = self.rpc_logging
-
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
         self.blocking = frozenset(self.rpc_table.keys()) if blocking == ALL_RPCs else blocking
@@ -342,6 +335,13 @@ class Server:
 
         assert not (self.cpu_bound - self.rpc_table.keys())
         assert not (self.blocking - self.rpc_table.keys())
+
+        identify_name = IDENTIFY_REQUEST[:IDENTIFY_REQUEST.find('(')]
+        if identify_name not in self.rpc_table:
+            self.rpc_table[identify_name] = self.rpc_identify_server
+        logging_name = LOGGING_REQUEST[:LOGGING_REQUEST.find('(')]
+        if logging_name in self.rpc_table:
+            self.rpc_table[logging_name] = self.rpc_logging
 
         self.max_data_size = get_config_value('max_rpc_size')  #type: int
         # self.server_messages = Queue()  # type: Queue
@@ -377,20 +377,27 @@ class Server:
         the class name and the object-id."""
         return '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
 
-    def start_logging(self, filename: str=""):
+    def start_logging(self, filename: str="") -> str:
         if not filename:
             filename = self.identification_str() + '.log'
+        if not log_dir():
+            filename = os.path.join('.', filename)
         self.log_file = create_log(filename)
-        append_log(self.log_file, '\nPython Version: %s\nDHParser Version: %s\n\n'
-                   % (sys.version.replace('\n', ' '), __version__))
+        if self.log_file:
+            self.log(self.log_file, '\nPython Version: %s\nDHParser Version: %s\n\n'
+                     % (sys.version.replace('\n', ' '), __version__))
+            return 'Started logging to file: "%s"' % self.log_file
+        return 'Unable to write log-file: "%s"' % filename
 
     def stop_logging(self):
-        append.log_file(self.log_file, 'Logging will be stopped now!')
+        self.log(self.log_file, 'Logging will be stopped now!')
+        ret = 'Stopped logging to file: "%s"' % self.log_file
         self.log_file = ''
+        return ret
 
-    def log(self, *args, **kwargs):
+    def log(self, *args):
         if self.log_file:
-            append_log(self.log_file, *args, **kwargs, echo=self.echo_log)
+            append_log(self.log_file, *args, echo=self.echo_log)
 
     def rpc_identify_server(self):
         """Returns an identification string for the server."""
@@ -403,12 +410,21 @@ class Server:
          """
         if len(args) > 0:
             log_name = args[0]
+            if len(args) > 1:
+                echo = args[1].upper()
+                if echo in ("ECHO", "ECHO_ON"):
+                    self.echo_log = True
+                elif echo in ("NO_ECHO", "NOECHO", "ECHO_OFF"):
+                    self.echo_log = False
+                else:
+                    return 'Second arg must be "ECHO_ON" or "ECHO_OFF", not: ' \
+                           + ','.join(args[1:])
             if log_name is not None:
-                self.start_logging(log_name)
+                return self.start_logging(log_name)
             else:
-                self.stop_logging()
+                return self.stop_logging()
         else:
-            self.start_logging()
+            return self.start_logging()
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
