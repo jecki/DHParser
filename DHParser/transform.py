@@ -954,13 +954,13 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
             nextN = parent.children[i + 1:b]
 
             if len(before) + len(prevN) > 1:
-                target = before[-1] or prevN[0]
+                target = before[-1] if before else prevN[0]
                 if merge_results(target, prevN + before):
                     before = (target,)
             before = before or prevN
 
             if len(after) + len(nextN) > 1:
-                target = after[0] or nextN[-1]
+                target = after[0] if after else nextN[-1]
                 if merge_results(target, after + nextN):
                     after = (target,)
             after = after or nextN

@@ -278,6 +278,12 @@ class TestWhitespaceTransformations:
         assert all(i % 2 != 0 or (node.tag_name == "WORD" and ":Whitespace" not in node)
                    for i, node in enumerate(sentence))
 
+    def test_move_adjacent2(self):
+        sentence = parse_sxpr('(SENTENCE  (:Whitespace " ") (:Whitespace " ")  '
+                              '(TEXT (PHRASE "Guten Tag") (:Whitespace " ")))')
+        transformations = {'TEXT': move_adjacent(is_insignificant_whitespace)}
+        traverse(sentence, transformations)
+
     def test_merge_adjacent(self):
         sentence = parse_sxpr('(SENTENCE (TEXT "Guten") (L " ") (TEXT "Tag") '
                               ' (T "\n") (TEXT "Hallo") (L " ") (TEXT "Welt")'
@@ -295,8 +301,6 @@ class TestWhitespaceTransformations:
         sentence = parse_sxpr('(SENTENCE "Hallo Welt")')
         traverse(sentence, transformations)
         assert sentence.content == "Hallo Welt", sentence.content
-
-
 
 
 if __name__ == "__main__":
