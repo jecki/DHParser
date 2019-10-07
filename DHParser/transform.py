@@ -763,8 +763,9 @@ def collapse(context: List[Node]):
 def collapse_children_if(context: List[Node], condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
-    fulfill the given `condition` into a single leaf node with parser
-    `target_tag`. Nodes that do not fulfil the condition will be preserved.
+    fulfill the given `condition` into a single leaf node. If the adjacent child
+    nodes have different tag_names, the `target_tag` is used as the tag name for
+    the resulting node. Nodes that do not fulfil the condition will be preserved.
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
     >>> tree = parse_sxpr(sxpr)
@@ -785,6 +786,8 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
         nonlocal package
         if package:
             s = "".join(nd.content for nd in package)
+            # pivot = package[0].tag_name
+            # target_tag = pivot if all(nd.tag_name == pivot for nd in package) else target_tag
             # TODO: update attributes
             result.append(Node(target_tag, s))
             package = []
