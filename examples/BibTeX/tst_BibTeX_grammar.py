@@ -19,31 +19,41 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 
-sys.path.extend(['../../', '../'])
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
-from DHParser import configuration
-import DHParser.dsl
-from DHParser import testing
+try:
+    from DHParser import configuration
+    import DHParser.dsl
+    from DHParser import testing
+except ModuleNotFoundError:
+    print('Could not import DHParser. Please adjust sys.path in file '
+          '"%s" manually' % __file__)
+    sys.exit(1)
 
-configuration.CONFIG_PRESET['test_parallelization'] = True
 
 if __name__ == "__main__":
+    configuration.access_presets()['test_parallelization'] = True
+    configuration.finalize_presets()
     if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
         print('\nErrors while recompiling "BibTeX.ebnf":\n--------------------------------------\n\n')
         with open('BibTeX_ebnf_ERRORS.txt') as f:
             print(f.read())
         sys.exit(1)
 
-    sys.path.append('./')
+    sys.path.append('.')
     # must be appended after module creation, because otherwise an ImportError is raised under Windows
 
     from BibTeXCompiler import get_grammar, get_transformer
 
-    with DHParser.log.logging(True):
-        error_report = testing.grammar_suite('grammar_tests', get_grammar,
-                                             get_transformer, report=True, verbose=True)
+    error_report = testing.grammar_suite('grammar_tests', get_grammar,
+                                         get_transformer, report='REPORT', verbose=True)
     if error_report:
         print('\n')
         print(error_report)

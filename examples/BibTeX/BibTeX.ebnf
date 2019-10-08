@@ -9,7 +9,7 @@
 
 @ whitespace  = /\s*/
 @ ignorecase  = True
-@ comment     = //
+@ comment     = /%[^\n]*\n/
 
 
 #######################################################################
@@ -18,7 +18,7 @@
 #
 #######################################################################
 
-bibliography = { preamble | comment | entry }
+bibliography = { preamble | comment | entry }  ~ EOF
 
 preamble      = "@Preamble{" /"/ pre_code /"/~ §"}"
 pre_code      = { /[^"%]+/ | /%.*\n/ }
@@ -42,8 +42,11 @@ text          = { CONTENT_STRING | "{" text "}" }
 #######################################################################
 
 WORD          = /\w+/~
-NO_BLANK_STRING         = /[^ \t\n,%]+/~
-COMMA_TERMINATED_STRING = { /[^,%]+/ | &/%/~ }
-CONTENT_STRING = { /[^{}%]+/ | &/%/~ }+
+NO_BLANK_STRING         = { /[^ \t\n,%&_]+/ | ESC }+ ~
+COMMA_TERMINATED_STRING = { /[^,%&_ \t]+/ | ESC | WS }
+CONTENT_STRING          = { /[^{}%&_ \t]+/ | ESC | WS }+
+
+ESC           = -&/\\/ /[%&_]/          # escaped characters
+WS            = &/[ \t]*%/~ | /[ \t]+/  # non-trailing whitespace
 
 EOF           =  !/./

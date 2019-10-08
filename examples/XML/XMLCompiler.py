@@ -12,20 +12,22 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['../', '../../'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Synonym, AllOf, SomeOf, Unordered, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, Token, DropToken, DropWhitespace, \
-    traverse, remove_children_if, is_anonymous, GLOBALS, \
+    traverse, remove_children_if, is_anonymous, access_thread_locals, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
@@ -174,13 +176,14 @@ class XMLGrammar(Grammar):
     
 def get_grammar() -> XMLGrammar:
     """Returns a thread/process-exclusive XMLGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.XML_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.XML_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.XML_00000001_grammar_singleton = XMLGrammar()
+        THREAD_LOCALS.XML_00000001_grammar_singleton = XMLGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.XML_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.XML_00000001_grammar_singleton
+            THREAD_LOCALS.XML_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.XML_00000001_grammar_singleton
     return grammar
 
 
@@ -720,14 +723,14 @@ def get_compiler() -> XMLCompiler:
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
-        result = compile_source(source, get_preprocessor(),
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging(log_dir)
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 

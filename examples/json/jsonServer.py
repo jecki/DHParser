@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """jsonServer.py - starts a server (if not already running) for the
-                    compilation of json
+                    compilation of json-files
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -24,8 +24,7 @@ import asyncio
 import os
 import sys
 
-
-scriptpath = os.path.dirname(__file__)
+scriptpath = os.path.dirname(__file__) or '.'
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
@@ -94,6 +93,92 @@ def json_rpc(func, params=[], ID=None) -> str:
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
+def lsp_rpc(f):
+    """A decorator for LanguageServerProtocol-methods. This wrapper
+    filters out calls that are made before initializing the server and
+    after shutdown and returns an error message instead.
+    This decorator should only be used on methods of
+    LanguageServerProtocol-objects as it expects the first parameter
+    to be a the `self`-reference of this object.
+    All LSP-methods should be decorated with this decorator except
+    initialize and exit
+    """
+    import functools
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            self = args[0]
+        except IndexError:
+            self = kwargs['self']
+        if self.shared.shutdown:
+            return {'code': -32600, 'message': 'language server already shut down'}
+        elif not self.shared.initialized:
+            return {'code': -32002, 'message': 'language server not initialized'}
+        else:
+            return f(*args, **kwargs)
+    return wrapper
+
+
+class JSONLanguageServerProtocol:
+    def __init__(self):
+        import json
+        import multiprocessing
+        manager = multiprocessing.Manager()
+        self.shared = manager.Namespace()
+        self.shared.initialized = False
+        self.shared.shutdown = False
+        self.shared.processId = 0
+        self.shared.rootUri = ''
+        self.shared.clientCapabilities = ''
+        self.shared.serverCapabilities = json.dumps({
+              "capabilities": {
+                "textDocumentSync": 1,
+                "completionProvider": {
+                  "resolveProvider": False,
+                  "triggerCharacters": [
+                    "/"
+                  ]
+                },
+                "hoverProvider": True,
+                "documentSymbolProvider": True,
+                "referencesProvider": True,
+                "definitionProvider": True,
+                "documentHighlightProvider": True,
+                "codeActionProvider": True,
+                "renameProvider": True,
+                "colorProvider": {},
+                "foldingRangeProvider": True
+              }
+            })
+
+    def lsp_initialize(self, **kwargs):
+        import json
+        if self.shared.initialized or self.shared.processId != 0:
+            return {"code": -32002, "message": "Server has already been initialized."}
+        self.shared.processId = kwargs['processId']
+        self.shared.rootUri = kwargs['rootUri']
+        self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
+        return {'capabilities': json.loads(self.shared.serverCapabilities)}
+
+    def lsp_initialized(self, **kwargs):
+        assert self.shared.processId != 0
+        self.shared.initialized = True
+        return None
+
+    @lsp_rpc
+    def lsp_custom(self, **kwargs):
+        return kwargs
+
+    @lsp_rpc
+    def lsp_shutdown(self):
+        self.shared.shutdown = True
+        return {}
+
+    def lsp_exit(self):
+        self.shared.shutdown = True
+        return None
+
+
 def run_server(host, port):
     try:
         from jsonCompiler import compile_src
@@ -101,7 +186,7 @@ def run_server(host, port):
         from tst_json_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'json.ebnf'), force=False)
         from jsonCompiler import compile_src
-    from DHParser.server import LanguageServer
+    from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
         with open(config_filename, 'w') as f:
@@ -110,8 +195,21 @@ def run_server(host, port):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    json_server = LanguageServer({'json_compiler': compile_src})
+    json_lsp = JSONLanguageServerProtocol()
+    lsp_table = gen_lsp_table(json_lsp, prefix='lsp_')
+    lsp_table.update({'default': compile_src})
+    non_blocking = frozenset(('initialize', 'initialized', 'shutdown', 'exit'))
+    json_server = Server(rpc_functions=lsp_table,
+                        cpu_bound=set(lsp_table.keys() - non_blocking),
+                        blocking=frozenset())
     json_server.run_server(host, port)
+
+    cfg_filename = get_config_filename()
+    try:
+        os.remove(cfg_filename)
+        print('removing temporary config file: ' + cfg_filename)
+    except FileNotFoundError:
+        pass
 
 
 async def send_request(request, host, port):
@@ -165,6 +263,10 @@ def assert_if(cond: bool, message: str):
 
 
 if __name__ == "__main__":
+    # print(os.getcwd())
+    sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
+    # print(sys.path)
+
     host, port = '', -1
 
     # read and remove "--host ..." and "--port ..." parameters from sys.argv
@@ -203,6 +305,12 @@ if __name__ == "__main__":
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":
+        from DHParser import configuration
+        CFG = configuration.access_presets()
+        CFG['log_dir'] = os.path.abspath("LOGS")
+        CFG['log_server'] = True
+        CFG['echo_server_log'] = True
+        configuration.finalize_presets()
         if len(argv) == 2:
             argv.append(host)
         if len(argv) == 3:
@@ -212,12 +320,6 @@ if __name__ == "__main__":
     elif argv[1] in ("--stopserver", "--killserver"):
         try:
             result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
-            cfg_filename = get_config_filename()
-            try:
-                os.remove(cfg_filename)
-                print('removing temporary config file: ' + cfg_filename)
-            except FileNotFoundError:
-                pass
         except ConnectionRefusedError as e:
             print(e)
             sys.exit(1)

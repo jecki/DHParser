@@ -17,6 +17,7 @@ if __name__ == "__main__":
         interpreter = 'python.exe '
 
     example_dirs = os.listdir(os.path.join(rootdir, 'examples'))
+
     run = 0
     failures = 0
 

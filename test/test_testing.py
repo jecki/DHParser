@@ -23,9 +23,8 @@ import os
 import sys
 from functools import partial
 
-scriptdir = os.path.dirname(os.path.realpath(__file__))
-
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_whitespace, remove_empty, \
@@ -92,7 +91,7 @@ M1*: """Trigger CST-output with an asterix!"""
 class TestTestfiles:
     def setup(self):
         self.save_dir = os.getcwd()
-        os.chdir(scriptdir)
+        os.chdir(scriptpath)
         with open('configfile_test_1.ini', 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_1)
         with open('configfile_test_2.ini', 'w', encoding="utf-8") as f:
@@ -204,7 +203,7 @@ class TestGrammarTest:
 
     def setup(self):
         self.save_dir = os.getcwd()
-        os.chdir(scriptdir)
+        os.chdir(scriptpath)
 
     def teardown(self):
         clean_report('REPORT_TestGrammarTest')
@@ -286,7 +285,7 @@ class TestLookahead:
 
     def setup(self):
         self.save_dir = os.getcwd()
-        os.chdir(scriptdir)
+        os.chdir(scriptpath)
         self.grammar_fac = grammar_provider(TestLookahead.EBNF)
         self.trans_fac = lambda : partial(traverse, processing_table={"*": [flatten, remove_empty]})
 

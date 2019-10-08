@@ -105,6 +105,8 @@ class Error:
         assert code >= 0
         self.message = message    # type: str
         self._pos = pos           # type: int
+        # TODO: Add some logic to avoid double assignment of the same error code?
+        #       Problem: Same code might allowedly be used by two different parsers/compilers
         self.code = code          # type: ErrorCode
         self.orig_pos = orig_pos  # type: int
         self.line = line          # type: int

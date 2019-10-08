@@ -12,13 +12,15 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -28,12 +30,12 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, THREAD_LOCALS
 
 
 #######################################################################
@@ -95,13 +97,14 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     
 def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
     """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
-        GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+            THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     return grammar
 
 
@@ -149,10 +152,10 @@ def Lyrik_explicit_whitespaceTransform() -> TransformationDict:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
+        transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
     except AttributeError:
-        GLOBALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = Lyrik_explicit_whitespaceTransform()
-        transformer = GLOBALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = Lyrik_explicit_whitespaceTransform()
+        transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
     return transformer
 
 
@@ -250,10 +253,10 @@ class Lyrik_explicit_whitespaceCompiler(Compiler):
 
 def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
     try:
-        compiler = GLOBALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
+        compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
     except AttributeError:
-        GLOBALS.Lyrik_explicit_whitespace_00000002_compiler_singleton = Lyrik_explicit_whitespaceCompiler()
-        compiler = GLOBALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton = Lyrik_explicit_whitespaceCompiler()
+        compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
     return compiler
 
 
@@ -267,12 +270,12 @@ def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        result_tuple = compile_source(source, get_preprocessor(),
-                                      get_grammar(),
-                                      get_transformer(), compiler)
+    start_logging(log_dir)
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    result_tuple = compile_source(source, get_preprocessor(),
+                                  get_grammar(),
+                                  get_transformer(), compiler)
     return result_tuple
 
 

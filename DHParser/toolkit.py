@@ -18,7 +18,7 @@
 
 """
 Module ``toolkit`` contains utility functions that are needed across
-several of the the other DHParser-Modules Helper funcions that are not
+several of the the other DHParser-Modules Helper functions that are not
 needed in more than one module are best placed within that module and
 not in the toolkit-module. An acceptable exception from this rule are
 functions that are very generic.
@@ -37,7 +37,7 @@ except ImportError:
     import re
 import sys
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, Hashable
+from typing import Any, Iterable, Sequence, Set, Union, Dict
 
 try:
     import cython
@@ -48,12 +48,11 @@ except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
 
-from DHParser.configuration import CONFIG_PRESET
-
 
 __all__ = ('typing',
            'cython',
            'cython_optimized',
+           're_find',
            'escape_re',
            'escape_control_characters',
            'is_filename',
@@ -70,10 +69,7 @@ __all__ = ('typing',
            'smart_list',
            'sane_parser_name',
            'DHPARSER_DIR',
-           'DHPARSER_PARENTDIR',
-           'GLOBALS',
-           'get_config_value',
-           'set_config_value')
+           'DHPARSER_PARENTDIR')
 
 
 #######################################################################
@@ -85,42 +81,6 @@ __all__ = ('typing',
 
 DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
 DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
-GLOBALS = threading.local()
-
-
-def get_config_value(key: Hashable) -> Any:
-    """
-    Retrieves a configuration value thread-safely.
-    :param key:  the key (an immutable, usually a string)
-    :return:     the value
-    """
-    try:
-        cfg = GLOBALS.config
-    except AttributeError:
-        GLOBALS.config = dict()
-        cfg = GLOBALS.config
-    try:
-        return cfg[key]
-    except KeyError:
-        value = CONFIG_PRESET[key]
-        GLOBALS.config[key] = value
-        return value
-
-
-def set_config_value(key: Hashable, value: Any):
-    """
-    Changes a configuration value thread-safely. The configuration
-    value will be set only for the current thread. In order to
-    set configuration values for any new thread, add the key and value
-    to CONFIG_PRESET, before any thread accessing config values is started.
-    :param key:    the key (an immutable, usually a string)
-    :param value:  the value
-    """
-    try:
-        _ = GLOBALS.config
-    except AttributeError:
-        GLOBALS.config = dict()
-    GLOBALS.config[key] = value
 
 
 # global_id_counter = multiprocessing.Value('Q', 0)
@@ -140,6 +100,33 @@ def set_config_value(key: Hashable, value: Any):
 # miscellaneous (generic)
 #
 #######################################################################
+
+
+def re_find(s, r, pos=0, endpos=9223372036854775807):
+    """
+    Returns the match of the first occurrence of the regular expression
+    `r` in string (or byte-sequence) `s`. This is essentially a wrapper
+    for `re.finditer()` to avoid a try-catch StopIteration block.
+    If `r` cannot be found, `None` will be returned.
+    """
+    rx = None
+    if isinstance(r, str) or isinstance(r, bytes):
+        if (pos, endpos) != (0, 9223372036854775807):
+            rx = re.compile(r)
+        else:
+            try:
+                m = next(re.finditer(r, s))
+                return m
+            except StopIteration:
+                return None
+    else:
+        rx = r
+    if rx:
+        try:
+            m = next(rx.finditer(s, pos, endpos))
+            return m
+        except StopIteration:
+            return None
 
 
 def escape_re(strg: str) -> str:
@@ -274,9 +261,9 @@ def load_if_file(text_or_file) -> str:
             return content
         except FileNotFoundError:
             if RX_FILEPATH.fullmatch(text_or_file):
-                raise FileNotFoundError('Not a valid filepath or URL: "' + text_or_file + '". \n'
-                                        '(Add an empty line to distinguish source data from '
-                                        'a file name.)')
+                raise FileNotFoundError('File not found or not a valid filepath or URL: "'
+                                        + text_or_file + '". \n(Add an empty line to '
+                                        'distinguish source data from a file name.)')
             else:
                 return text_or_file
     else:
@@ -292,6 +279,8 @@ def is_python_code(text_or_file: str) -> bool:
     if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
+        # TODO: parser module will be deprecated from Python 3.9 onwards
+        #       ast.parse(text_or_file, 'file.py', 'exec')?
         parser.suite(text_or_file)
         # compile(text_or_file, '<string>', 'exec')
         return True

@@ -26,9 +26,9 @@ import shutil
 import subprocess
 import sys
 
-sys.path.extend(['../', './'])
-
-scriptdir = os.path.dirname(os.path.realpath(__file__))
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
 def system(s: str) -> int:
     # return os.system(s)
@@ -37,7 +37,7 @@ def system(s: str) -> int:
 class TestDHParserCommandLineTool:
     def setup(self):
         self.cwd = os.getcwd()
-        os.chdir(scriptdir)
+        os.chdir(scriptpath)
         if not os.path.exists('test_dhparser_data'):
             os.mkdir('test_dhparser_data')
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
@@ -51,6 +51,10 @@ class TestDHParserCommandLineTool:
         if os.path.exists('test_dhparser_data') and not os.listdir('test_dhparser_data'):
             os.rmdir('test_dhparser_data')
         os.chdir(self.cwd)
+        if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
+            for fname in os.listdir(LOG_DIR):
+                os.remove(os.path.join(LOG_DIR, fname))
+            os.rmdir(LOG_DIR)
 
     def test_dhparser(self):
         # test compiler creation and execution

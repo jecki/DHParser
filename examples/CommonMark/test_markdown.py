@@ -23,8 +23,12 @@ import os
 import re
 import sys
 
-sys.path.append(os.path.abspath('../'))
-sys.path.append(os.path.abspath('../showcases'))
+
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):  # '../showcases' ?
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 
 class test_regexps:

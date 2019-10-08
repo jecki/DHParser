@@ -23,9 +23,9 @@ limitations under the License.
 import functools
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
-from DHParser.log import logging
+from DHParser.log import start_logging
 from DHParser.dsl import recompile_grammar
 
 
@@ -40,6 +40,6 @@ def profile(func):
     return ret
 
 
-with logging(False):
-    if not profile(functools.partial(recompile_grammar, ebnf_filename='.', force=True)):
-        sys.exit(1)
+
+if not profile(functools.partial(recompile_grammar, ebnf_filename='.', force=True)):
+    sys.exit(1)

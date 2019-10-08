@@ -28,14 +28,16 @@ for CST -> AST transformations.
 
 
 import collections.abc
+from functools import partial, singledispatch, reduce
 import inspect
-from functools import partial, singledispatch
+import operator
+from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+    Tuple, List, Sequence, Union, Text
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, PLACEHOLDER, RootNode, parse_sxpr, flatten_sxpr
-from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, typing
-from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Text, Generic
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
+
 
 __all__ = ('TransformationDict',
            'TransformationProc',
@@ -48,17 +50,19 @@ __all__ = ('TransformationDict',
            'always',
            'is_named',
            'update_attr',
+           'swap_attributes',
            'replace_by_single_child',
            'replace_by_children',
            'reduce_single_child',
            'replace_or_reduce',
            'change_tag_name',
            'collapse',
-           'collapse_if',
+           'collapse_children_if',
            'replace_content',
            'replace_content_by',
            'normalize_whitespace',
            'merge_adjacent',
+           'merge_results',
            'move_adjacent',
            'left_associative',
            'lean_left',
@@ -96,6 +100,7 @@ __all__ = ('TransformationDict',
            'remove_brackets',
            'remove_infix_operator',
            'remove_tokens',
+           'remove_if',
            'flatten',
            'forbid',
            'require',
@@ -416,7 +421,7 @@ RX_WHITESPACE = re.compile(r'\s*$')
 
 
 def contains_only_whitespace(context: List[Node]) -> bool:
-    """Returns ``True`` for nodes that contain only whitespace regardless
+    r"""Returns ``True`` for nodes that contain only whitespace regardless
     of the tag_name, i.e. nodes the content of which matches the regular
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""
@@ -505,6 +510,14 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     return False
 
 
+# @transformation_factory(collections.abc.Set)
+# def has_descendant(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+#     """
+#     Checks whether the last node in the context has a descendant with one
+#     of the given tag names.
+#     """
+#     raise NotImplementedError
+
 #######################################################################
 #
 # utility functions (private)
@@ -512,18 +525,19 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 #######################################################################
 
 
-def update_attr(node: Node, child: Node):
+def update_attr(dest: Node, src: Tuple[Node, ...]):
     """
-    Adds all attributes from `child` to `node`.This is needed, in order
+    Adds all attributes from `src` to `dest`.This is needed, in order
     to keep the attributes if the child node is going to be eliminated.
     """
-    if hasattr(child, '_xml_attr'):
-        for k, v in child.attr:
-            if k in node.attr and v != node.attr[k]:
-                raise ValueError('Conflicting attribute values %s and %s for key %s '
-                                 'when reducing %s to %s ! Tree transformation stopped.'
-                                 % (v, node.attr[k], k, str(child), str(node)))
-            node.attr[k] = v
+    for s in src:
+        if s != dest and hasattr(s, '_xml_attr'):
+            for k, v in s.attr:
+                if k in dest.attr and v != dest.attr[k]:
+                    raise ValueError('Conflicting attribute values %s and %s for key %s '
+                                     'when reducing %s to %s ! Tree transformation stopped.'
+                                     % (v, dest.attr[k], k, str(src), str(dest)))
+                dest.attr[k] = v
 
 
 def swap_attributes(node: Node, other: Node):
@@ -555,7 +569,7 @@ def _replace_by(node: Node, child: Node):
         # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node.result = child.result
-    update_attr(node, child)
+    update_attr(node, (child,))
 
 
 def _reduce_child(node: Node, child: Node):
@@ -563,7 +577,7 @@ def _reduce_child(node: Node, child: Node):
     Sets node's results to the child's result, keeping node's tag_name.
     """
     node.result = child.result
-    update_attr(child, node)
+    update_attr(child, (node,))
     if child.has_attr():
         node._xml_attr = child._xml_attr
 
@@ -632,11 +646,13 @@ def replace_by_children(context: List[Node]):
     """
     Eliminates the last node in the context by replacing it with its children.
     The attributes of this node will be dropped. In case the last node is
-    the root-note (i.e. len(context) == 1), it will not be eliminated.
+    the root-note (i.e. len(context) == 1), it will only be eliminated, if
+    there is but one child..
     """
     try:
         parent = context[-2]
     except IndexError:
+        replace_by_single_child(context)
         return
     node = context[-1]
     assert node.children
@@ -731,21 +747,29 @@ def collapse(context: List[Node]):
     """
     Collapses all sub-nodes of a node by replacing them with the
     string representation of the node. USE WITH CARE!
+
+    >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
+    >>> tree = parse_sxpr(sxpr)
+    >>> collapse([tree])
+    >>> print(flatten_sxpr(tree.as_sxpr()))
+    (place "p.26b,18")
     """
     node = context[-1]
+    # TODO: update attributes
     node.result = node.content
 
 
 @transformation_factory(collections.abc.Callable)
-def collapse_if(context: List[Node], condition: Callable, target_tag: str):
+def collapse_children_if(context: List[Node], condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
-    fulfil the given `condition` into a single leaf node with parser
-    `target_tag`. Nodes that do not fulfil the condition will be preserved.
+    fulfill the given `condition` into a single leaf node. If the adjacent child
+    nodes have different tag_names, the `target_tag` is used as the tag name for
+    the resulting node. Nodes that do not fulfil the condition will be preserved.
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
     >>> tree = parse_sxpr(sxpr)
-    >>> collapse_if([tree], not_one_of({'superscript', 'subscript'}), 'text')
+    >>> collapse_children_if([tree], not_one_of({'superscript', 'subscript'}), 'text')
     >>> print(flatten_sxpr(tree.as_sxpr()))
     (place (text "p.26") (superscript "b") (text ",18"))
 
@@ -762,13 +786,16 @@ def collapse_if(context: List[Node], condition: Callable, target_tag: str):
         nonlocal package
         if package:
             s = "".join(nd.content for nd in package)
+            # pivot = package[0].tag_name
+            # target_tag = pivot if all(nd.tag_name == pivot for nd in package) else target_tag
+            # TODO: update attributes
             result.append(Node(target_tag, s))
             package = []
 
     for child in node.children:
         if condition([child]):
             if child.children:
-                collapse_if([child], condition, target_tag)
+                collapse_children_if([child], condition, target_tag)
                 for c in child.children:
                     if condition([c]):
                         package.append(c)
@@ -820,7 +847,8 @@ def normalize_whitespace(context):
         node.result = re.sub(r'\s+', ' ', node.result)
 
 
-def merge_adjacent(context, condition: Callable):
+@transformation_factory(collections.abc.Callable)
+def merge_adjacent(context, condition: Callable, tag_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
@@ -828,69 +856,85 @@ def merge_adjacent(context, condition: Callable):
     """
     node = context[-1]
     children = node.children
-    new_result = []
-    i = 0
-    L = len(children)
-    while i < L:
-        if condition([children[i]]):
-            initial = () if children[i].children else ''
-            k = i
-            while i < L and condition([children[k]]):
+    if children:
+        new_result = []
+        i = 0
+        L = len(children)
+        while i < L:
+            if condition([children[i]]):
+                initial = () if children[i].children else ''
+                k = i
                 i += 1
-            if i > k:
-                children[k].result = sum((children[n].result for n in range(k, i + 1)), initial)
-            new_result.append(children[k])
-        i += 1
-    node.result = tuple(new_result)
+                while i < L and condition([children[i]]):
+                    i += 1
+                if i > k:
+                    adjacent = children[k:i]
+                    head = adjacent[0]
+                    tag_names = {nd.tag_name for nd in adjacent}
+                    # TODO: update attributes
+                    head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    if tag_name in tag_names:
+                        head.tag_name = tag_name
+                new_result.append(head)
+            else:
+                new_result.append(children[i])
+                i += 1
+        node.result = tuple(new_result)
+
+
+def merge_results(dest: Node, src: Tuple[Node, ...]) -> bool:
+    """
+    Merges the results of nodes `src` and writes them to the result
+    of `dest` type-safely, if all src nodes are leaf-nodes (in which case
+    their result-strings are concatenated) or none are leaf-nodes (in which
+    case the tuples of children are concatenated).
+    Returns `True` in case of a successful merge, `False` if some source nodes
+    were leaf-nodes and some weren't and the merge could thus not be done.
+
+    Example:
+        >>> head, tail = Node('head', '123'), Node('tail', '456')
+        >>> merge_results(head, (head, tail))  # merge head and tail (in that order) into head
+        True
+        >>> str(head)
+        '123456'
+    """
+    if all(nd.children for nd in src):
+        dest.result = reduce(operator.add, (nd.children for nd in src[1:]), src[0].children)
+        update_attr(dest, src)
+        return True
+    elif all(not nd.children for nd in src):
+        dest.result = reduce(operator.add, (nd.content for nd in src[1:]), src[0].content)
+        update_attr(dest, src)
+        return True
+    return False
 
 
 @transformation_factory(collections.abc.Callable)
+@cython.locals(a=cython.int, b=cython.int, i=cython.int)
 def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     """
     Moves adjacent nodes that fulfill the given condition to the parent node.
     If the `merge`-flag is set, a moved node will be merged with its
     predecessor (or successor, respectively) in the parent node in case it
-    also fulfill the given `condition`.
+    also fulfills the given `condition`.
     """
-    def merge_results(a: Node, b: Node, c: Node) -> bool:
-        """
-        Merges the results of node `a` and `b` and writes them to the result
-        of `c` type-safely, if b and c are either both leaf-nodes (in which case
-        their result-strings are concatenated) or both non-leaf-nodes (in which
-        case the tuples of children are concatenated).
-        Returns `True` in case of a successful merge, `False` if only one node
-        was a leaf node and the merge could thus not be done.
-
-        Example:
-            >>> head, tail = Node('head', '123'), Node('tail', '456')
-            >>> merge_results(head, tail, head)  # merge head and tail (in that order) into head
-            True
-            >>> str(head)
-            '123456'
-        """
-        if a.children and b.children:
-            c.result = cast(Tuple[Node, ...], a.result) + cast(Tuple[Node, ...], b.result)
-            return True
-        elif not a.children and not b.children:
-            c.result = cast(str, a.result) + cast(str, b.result)
-            return True
-        return False
-
     node = context[-1]
     if len(context) <= 1 or not node.children:
         return
     parent = context[-2]
     children = node.children
-    if condition([children[0]]):
-        before = (children[0],)   # type: Tuple[Node, ...]
-        children = children[1:]
-    else:
-        before = ()
-    if children and condition([children[-1]]):
-        after = (children[-1],)   # type: Tuple[Node, ...]
-        children = children[:-1]
-    else:
-        after = tuple()
+
+    a, b = 0, len(children)
+    while a < b:
+        if condition([children[a]]):
+            a += 1
+        elif condition([children[b - 1]]):
+            b -= 1
+        else:
+            break
+    before = children[:a]
+    after = children[b:]
+    children = children[a:b]
 
     if before or after:
         node.result = children
@@ -898,22 +942,33 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
             if id(child) == id(node):
                 break
 
+        a = i - 1
+        b = i + 1
+
         # merge adjacent nodes that fulfil the condition
         if merge:
-            prevN = parent.children[i - 1] if i > 0 else None
-            nextN = parent.children[i + 1] if i < len(parent.children) - 1 else None
-            if before and prevN and condition([prevN]):
-                # prevN.result = prevN.result + before[0].result
-                # before = ()
-                if merge_results(prevN, before[0], prevN):
-                    before = ()
-            if after and nextN and condition([nextN]):
-                # nextN.result = after[0].result + nextN.result
-                # after = ()
-                if merge_results(after[0], nextN, nextN):
-                    after = ()
+            while a >= 0 and condition([parent.children[a]]):
+                a -= 1
+            prevN = parent.children[a + 1:i]
 
-        parent.result = parent.children[:i] + before + (node,) + after + parent.children[i+1:]
+            N = len(parent.children)
+            while b < N and condition([parent.children[b]]):
+                b += 1
+            nextN = parent.children[i + 1:b]
+
+            if len(before) + len(prevN) > 1:
+                target = before[-1] if before else prevN[0]
+                if merge_results(target, prevN + before):
+                    before = (target,)
+            before = before or prevN
+
+            if len(after) + len(nextN) > 1:
+                target = after[0] if after else nextN[-1]
+                if merge_results(target, after + nextN):
+                    after = (target,)
+            after = after or nextN
+
+        parent.result = parent.children[:a + 1] + before + (node,) + after + parent.children[b:]
 
 
 def left_associative(context: List[Node]):
@@ -1139,6 +1194,18 @@ def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):
 def remove_content(context: List[Node], regexp: str):
     """Removes children depending on their string value."""
     remove_children_if(context, partial(has_content, regexp=regexp))
+
+
+@transformation_factory(collections.abc.Callable)
+def remove_if(context: List[Node], condition: Callable):
+    """Removes node if condition is `True`"""
+    if condition(context):
+        try:
+            parent = context[-2]
+        except IndexError:
+            return
+        node = context[-1]
+        parent.result = tuple(nd for nd in parent.result if nd != node)
 
 
 ########################################################################

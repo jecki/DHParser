@@ -7,18 +7,19 @@
 #######################################################################
 
 
-import collections
 from functools import partial
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -28,14 +29,14 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
-    JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS
+    error_on, recompile_grammar, left_associative, lean_left, \
+    set_config_value, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals
 
 
 #######################################################################
@@ -46,6 +47,7 @@ from DHParser import logging, is_filename, load_if_file, \
 
 def jsonPreprocessor(text):
     return text, lambda i: i
+
 
 def get_preprocessor() -> PreprocessorFunc:
     return jsonPreprocessor
@@ -91,13 +93,14 @@ class jsonGrammar(Grammar):
     
 def get_grammar() -> jsonGrammar:
     """Returns a thread/process-exclusive jsonGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.json_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.json_00000001_grammar_singleton = jsonGrammar()
+        THREAD_LOCALS.json_00000001_grammar_singleton = jsonGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.json_00000001_grammar_singleton
+            THREAD_LOCALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     return grammar
 
 
@@ -138,11 +141,12 @@ def CreatejsonTransformer() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = GLOBALS.json_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.json_00000001_transformer_singleton = CreatejsonTransformer()
-        transformer = GLOBALS.json_00000001_transformer_singleton
+        THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     return transformer
 
 
@@ -187,11 +191,12 @@ class jsonCompiler(Compiler):
 
 def get_compiler() -> jsonCompiler:
     """Returns a thread/process-exclusive jsonCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = GLOBALS.json_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.json_00000001_compiler_singleton = jsonCompiler()
-        compiler = GLOBALS.json_00000001_compiler_singleton
+        THREAD_LOCALS.json_00000001_compiler_singleton = jsonCompiler()
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     return compiler
 
 
@@ -201,15 +206,133 @@ def get_compiler() -> jsonCompiler:
 #
 #######################################################################
 
+
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        result_tuple = compile_source(source, get_preprocessor(),
-                                      get_grammar(),
-                                      get_transformer(), compiler)
+    start_logging(log_dir)
+    compiler = get_compiler()
+    result_tuple = compile_source(source, get_preprocessor(),
+                                  get_grammar(),
+                                  get_transformer(), compiler)
     return result_tuple
+
+
+# class JsonLSP(LanguageServerProtocol):
+#     def __init__(self):
+#         super().__init__(capabilities={
+#               "capabilities": {
+#                 "textDocumentSync": 1,
+#                 "completionProvider": {
+#                   "resolveProvider": False,
+#                   "triggerCharacters": [
+#                     "/"
+#                   ]
+#                 },
+#                 "hoverProvider": True,
+#                 "documentSymbolProvider": True,
+#                 "referencesProvider": True,
+#                 "definitionProvider": True,
+#                 "documentHighlightProvider": True,
+#                 "codeActionProvider": True,
+#                 "renameProvider": True,
+#                 "colorProvider": {},
+#                 "foldingRangeProvider": True
+#               }
+#             },  additional_rpcs={'default': compile_src})
+#         return
+#         # super().__init__(capabilities={
+#         #     "testDocumentSync": {
+#         #         'openClode': False,
+#         #         'change': 0,  # 0 = no sync, 1 = full sync, 2 = incremental sync
+#         #         'willSave': True,
+#         #         'willSaveWaitUntil': False,
+#         #         'save': {
+#         #             "includeText": False
+#         #         }
+#         #     },
+#         #     "hoverProvider": True,
+#         #     # "completionProvier": {
+#         #     #     'resolveProvider': False,
+#         #     #     # 'triggerCharacters': ''
+#         #     # },
+#         #     # "signatureHelpProvider": {
+#         #     #     # 'triggerCharacters': ''
+#         #     # },
+#         #     "definitionProvider": True,
+#         #     "typeDefinitionProvider": False,
+#         #     # "typeDefinitionProvider": {
+#         #     #     # 'id': ''
+#         #     #     'documentSelector': [
+#         #     #         {
+#         #     #             "language": '',
+#         #     #             "scheme": '',
+#         #     #             "pattern": ''
+#         #     #         }
+#         #     #     ]
+#         #     # },
+#         #     "implementationDefinitionProvider": False,
+#         #     "referencesProvider": True,
+#         #     "documentHighlightProvider": False,
+#         #     "documentSymbolProvider": True,
+#         #     "workspaceSymbolProvider": True,
+#         #     "codeActionProvider": False,
+#         #     # "codeActionProvider": {
+#         #     #   'codeActionKinds': ['']
+#         #     # },
+#         #     # "codeLensProvider": {
+#         #     #     'resolveProvider': False,
+#         #     # },
+#         #     "documentFormattingProvider": False,
+#         #     "documentRangeFormattingProvider": False,
+#         #     # "documentOnTypeFormattingProvider": {
+#         #     #     'firstTriggerCharacter': '',
+#         #     #     # 'moreTriggerCharacter': ''
+#         #     # },
+#         #     "renameProvider": False,
+#         #     # "renameProvider": {
+#         #     #     'prepareProvider': False
+#         #     # },
+#         #     # "documentLinkProvider": {
+#         #     #     'resolveProvider': False
+#         #     # },
+#         #     "colorProvider": False,
+#         #     "foldingRangeProvider": False,
+#         #     "declarationProvider": False,
+#         #     # "executeCommandProvider": {
+#         #     #     'commands': ['']
+#         #     # },
+#         #     # "workspace": {
+#         #     #     'workspaceFolders': {
+#         #     #         'supported': False,
+#         #     #         'changeNotifications': '' # string id or bool
+#         #     #     }
+#         #     # }
+#         # },  additional_rpcs={'default': compile_src})
+#
+#     @lsp_rpc
+#     def rpc_textDocument_hover(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_textDocument_definition(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_textDocument_references(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_textDocument_documentSymbol(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_workspace_symbol(self, **kwargs):
+#         print(kwargs)
+#
+#     @lsp_rpc
+#     def rpc_S_cancelRequest(self, **kwargs):
+#         print(kwargs)
 
 
 if __name__ == "__main__":

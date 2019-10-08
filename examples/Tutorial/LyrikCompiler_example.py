@@ -10,7 +10,10 @@
 from functools import partial
 import os
 import sys
-sys.path.extend(['../../', '../', './'])
+
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
@@ -25,8 +28,8 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
     flatten, is_empty, collapse, replace_content, remove_brackets, \
     is_one_of, rstrip, strip, remove_tokens, remove_nodes, peek, \
-    is_insignificant_whitespace, TOKEN_PTYPE, GLOBALS
-from DHParser.log import logging
+    is_insignificant_whitespace, TOKEN_PTYPE, access_thread_locals
+from DHParser.log import start_logging
 
 
 #######################################################################
@@ -116,12 +119,12 @@ class LyrikGrammar(Grammar):
     root__ = gedicht
     
 def get_grammar() -> LyrikGrammar:
-    global GLOBALS
+    THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = GLOBALS.Lyrik_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_grammar_singleton
     except AttributeError:
-        GLOBALS.Lyrik_grammar_singleton = LyrikGrammar()
-        grammar = GLOBALS.Lyrik_grammar_singleton
+        THREAD_LOCALS.Lyrik_grammar_singleton = LyrikGrammar()
+        grammar = THREAD_LOCALS.Lyrik_grammar_singleton
     return grammar
 
 
@@ -180,12 +183,12 @@ def LyrikTransform() -> TransformationFunc:
 
 
 def get_transformer() -> TransformationFunc:
-    global GLOBALS
+    THREAD_LOCALS = access_thread_locals()
     try:
-        transform = GLOBALS.Lyrik_transformer_singleton
+        transform = THREAD_LOCALS.Lyrik_transformer_singleton
     except AttributeError:
-        GLOBALS.Lyrik_transformer_singleton = LyrikTransform()
-        transform = GLOBALS.Lyrik_transformer_singleton
+        THREAD_LOCALS.Lyrik_transformer_singleton = LyrikTransform()
+        transform = THREAD_LOCALS.Lyrik_transformer_singleton
     return transform
 
 
@@ -273,12 +276,12 @@ class LyrikCompiler(Compiler):
 
 
 def get_compiler() -> LyrikCompiler:
-    global GLOBALS
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = GLOBALS.Lyrik_compiler_singleton
+        compiler = THREAD_LOCALS.Lyrik_compiler_singleton
     except AttributeError:
-        GLOBALS.Lyrik_compiler_singleton = LyrikCompiler()
-        compiler = GLOBALS.Lyrik_compiler_singleton
+        THREAD_LOCALS.Lyrik_compiler_singleton = LyrikCompiler()
+        compiler = THREAD_LOCALS.Lyrik_compiler_singleton
     return compiler
 
 
@@ -292,14 +295,14 @@ def get_compiler() -> LyrikCompiler:
 def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging("LOGS"):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_preprocessor(), 
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging("LOGS")
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 

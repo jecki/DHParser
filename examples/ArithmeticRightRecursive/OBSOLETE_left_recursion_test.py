@@ -4,9 +4,9 @@ import sys
 
 LOGGING = True
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
-from DHParser import grammar_provider, logging, CONFIG_PRESET
+from DHParser import grammar_provider
 
 
 CONFIG_PRESET['ast_serialization'] = "S-expression"
@@ -31,5 +31,4 @@ arithmetic_syntax = """
 if __name__ == "__main__":
     arithmetic = grammar_provider(arithmetic_syntax)()
     assert arithmetic
-    with logging():
-        syntax_tree = arithmetic("(a + b) * (a - b)")
+    syntax_tree = arithmetic("(a + b) * (a - b)")

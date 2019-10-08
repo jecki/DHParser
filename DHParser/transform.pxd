@@ -44,7 +44,7 @@ cpdef reduce_single_child(context: List[Node])
 # cpdef flatten(context: List[Node], condition: Callable = ?,
 #               recursive: bool = ?)
 cpdef collapse(context: List[Node])
-# cpdef collapse_if(context: List[Node], condition: Callable, 
+# cpdef collapse_children_if(context: List[Node], condition: Callable,
 #                   target_tag: ParserBase)
 # cpdef close_package()
 # cpdef replace_content(context: List[Node], func: Callable)

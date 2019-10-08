@@ -19,9 +19,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import parse_sxpr, Compiler
 
@@ -44,6 +46,4 @@ from DHParser import parse_sxpr, Compiler
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    from DHParser.log import logging
-    with logging(False):
-        runner("", globals())
+    runner("", globals())

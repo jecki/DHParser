@@ -25,11 +25,12 @@ import collections.abc
 import os
 import sys
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, \
     lstrip_docstring, issubtype, typing, concurrent_ident
-from DHParser.log import log_dir, logging, is_logging
+from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
 class TestLoggingAndLoading:
@@ -44,6 +45,7 @@ class TestLoggingAndLoading:
             os.mkdir(self.dirname)
         with open(self.filename, 'w') as f:
             f.write(self.code2)
+        self.LOGDIR = os.path.abspath(os.path.join(scriptpath, "TESTLOGS" + str(os.getpid())))
 
     def teardown(self):
         os.remove(self.filename)
@@ -53,9 +55,11 @@ class TestLoggingAndLoading:
                 os.remove(os.path.join(pycachedir, fname))
             os.rmdir(pycachedir)
         os.rmdir(self.dirname)
-        if os.path.exists("TESTLOGS"):
-            os.remove("TESTLOGS/info.txt")
-            os.rmdir("TESTLOGS")
+        if os.path.exists(self.LOGDIR):
+            # for fname in os.listdir(self.LOGDIR):
+            #     os.remove(os.path.join(self.LOGDIR, fname))
+            os.remove(os.path.join(self.LOGDIR, "info.txt"))
+            os.rmdir(self.LOGDIR)
 
     def test_load_if_file(self):
         # an error should be raised if file expected but not found
@@ -99,33 +103,39 @@ class TestLoggingAndLoading:
         # except AttributeError:
         #     pass
         res = log_dir()
-        assert isinstance(res, bool) and not res
-        with logging("TESTLOGS"):
-            assert not os.path.exists("TESTLOGS"), \
-                "Log dir should be created lazily!"
-            dirname = log_dir()
-            assert dirname == "TESTLOGS"
-            assert is_logging(), "is_logging() should return True, if logging is on"
-            with logging(False):
-                assert not is_logging(), \
-                    "is_logging() should return False, if innermost logging context " \
-                    "has logging turned off."
-            assert is_logging(), "is_logging() should return True after logging off " \
-                                 "context has been left"
-            assert os.path.exists("TESTLOGS/info.txt"), "an 'info.txt' file should be " \
-                "created within a newly created log dir"
+        if res:
+            suspend_logging()
+        start_logging(self.LOGDIR)
+        assert not os.path.exists(self.LOGDIR), \
+            "Log dir should be created lazily!"
+        dirname = log_dir()
+        # print(type(dirname), dirname)
+        assert dirname == self.LOGDIR
+        assert is_logging(), "is_logging() should return True, if logging is on"
+        save_log_dir = suspend_logging()
+        assert not is_logging(), \
+            "is_logging() should return False, if innermost logging context " \
+            "has logging turned off."
+        resume_logging(save_log_dir)
+        assert is_logging(), "is_logging() should return True after logging off " \
+                             "context has been left"
+        info_path = os.path.join(self.LOGDIR, 'info.txt')
+        assert os.path.exists(info_path), "an 'info.txt' file should be " \
+            "created within a newly created log dir"
         # cleanup
-        os.remove("TESTLOGS/info.txt")
-        os.rmdir("TESTLOGS")
+        os.remove(info_path)
+        os.rmdir(self.LOGDIR)
 
     def logging_task(self):
-        with logging("TESTLOGS"):
-            log_dir()
-            assert is_logging(), "Logging should be on inside logging context"
+        log_dir()
+        assert is_logging(), "Logging should be on inside logging context"
+        save_log_dir = suspend_logging()
         assert not is_logging(), "Logging should be off outside logging context"
-        return os.path.exists("TESTLOGS/info.txt")
+        resume_logging(save_log_dir)
+        return os.path.exists(os.path.join(self.LOGDIR, "info.txt"))
 
     def test_logging_multiprocessing(self):
+        start_logging(self.LOGDIR)
         with concurrent.futures.ProcessPoolExecutor() as ex:
             f1 = ex.submit(self.logging_task)
             f2 = ex.submit(self.logging_task)

@@ -6,25 +6,23 @@
 import os
 import sys
 
-LOGGING = False
+LOGGING = ''
 
-sys.path.extend(['../../', '..', '.'])
-
-scriptpath = os.path.dirname(__file__)
-
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 try:
     from DHParser import dsl
     import DHParser.log
-    from DHParser import testing, create_test_templates, CONFIG_PRESET
+    from DHParser import testing, create_test_templates, access_presets, finalize_presets
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
     sys.exit(1)
 
-
-CONFIG_PRESET['ast_serialization'] = "S-expression"
-CONFIG_PRESET['test_parallelization'] = True
 
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
@@ -33,27 +31,32 @@ def recompile_grammar(grammar_src, force):
                        for entry in os.listdir(grammar_tests_dir)):
         print('No grammar-tests found, generating test templates.')
         create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(LOGGING):
-        # recompiles Grammar only if it has changed
-        name = os.path.splitext(os.path.basename(grammar_src))[0]
-        if not dsl.recompile_grammar(grammar_src, force=force):
-            print('\nErrors while recompiling "{}":'.format(grammar_src) +
-                  '\n--------------------------------------\n\n')
-            with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
-                print(f.read())
-            sys.exit(1)
+    DHParser.log.start_logging(LOGGING)
+    # recompiles Grammar only if it has changed
+    name = os.path.splitext(os.path.basename(grammar_src))[0]
+    if not dsl.recompile_grammar(grammar_src, force=force):
+        print('\nErrors while recompiling "{}":'.format(grammar_src) +
+              '\n--------------------------------------\n\n')
+        with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
+            print(f.read())
+        sys.exit(1)
 
 
 def run_grammar_tests(glob_pattern):
-    with DHParser.log.logging(LOGGING):
-        error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
-            get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report=True, verbose=True)
+    DHParser.log.start_logging(LOGGING)
+    error_report = testing.grammar_suite(
+        os.path.join(scriptpath, 'grammar_tests'),
+        get_grammar, get_transformer,
+        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 
 if __name__ == '__main__':
+    CONFIG_PRESET = access_presets()
+    CONFIG_PRESET['ast_serialization'] = "S-expression"
+    CONFIG_PRESET['test_parallelization'] = True
+    finalize_presets()
+
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
         LOGGING = True

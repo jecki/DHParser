@@ -37,11 +37,12 @@ import os
 import sys
 from typing import Dict, List, Union, cast
 
+from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations
-from DHParser.log import log_dir, logging, is_logging, clear_logs, log_parsing_history
+from DHParser.log import log_dir, is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
-from DHParser.toolkit import GLOBALS, get_config_value, load_if_file, re
+from DHParser.toolkit import load_if_file, re
 
 __all__ = ('unit_from_config',
            'unit_from_json',
@@ -98,7 +99,7 @@ RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE)
 RX_COMMENT = re.compile(r'\s*#.*\n')
 
 
-def unit_from_config(config_str):
+def unit_from_config(config_str, filename):
     """ Reads grammar unit tests contained in a file in config file (.ini)
     syntax.
 
@@ -156,12 +157,12 @@ def unit_from_config(config_str):
         section_match = RX_SECTION.match(cfg, pos)
 
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
-        raise SyntaxError('in line %i' % (cfg[:pos].count('\n') + 2))  # TODO: Add file name
+        raise SyntaxError('in file "%s" in line %i' % (filename, cfg[:pos].count('\n') + 2))
 
     return unit
 
 
-def unit_from_json(json_str):
+def unit_from_json(json_str, filename):
     """
     Reads grammar unit tests from a json string.
     """
@@ -169,7 +170,8 @@ def unit_from_json(json_str):
     for symbol in unit:
         for stage in unit[symbol]:
             if stage not in UNIT_STAGES:
-                raise ValueError('Test stage %s not in: %s' % (stage, str(UNIT_STAGES)))
+                raise ValueError('in file "%s". Test stage %s not in: %s'
+                                 % (filename, stage, str(UNIT_STAGES)))
     return unit
 
 
@@ -194,7 +196,7 @@ def unit_from_file(filename):
         reader = TEST_READERS[os.path.splitext(filename)[1].lower()]
         with open(filename, 'r', encoding='utf8') as f:
             data = f.read()
-        test_unit = reader(data)
+        test_unit = reader(data, filename)
     except KeyError:
         raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
 
@@ -232,7 +234,7 @@ def unit_from_file(filename):
 #                            tests.get('match*', dict()).items())
 
 
-def get_report(test_unit):
+def get_report(test_unit) -> str:
     """
     Returns a text-report of the results of a grammar unit test. The report
     lists the source of all tests as well as the error messages, if a test
@@ -351,7 +353,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         """
         if not get_config_value('test_supress_lookahead_failures'):
             return False
-        raw_errors = syntax_tree.errors_sorted
+        raw_errors = cast(RootNode, syntax_tree).errors_sorted
         is_artifact = ({e.code for e in raw_errors} <=
                         {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
                          # Error.PARSER_STOPPED_BEFORE_END,
@@ -520,25 +522,25 @@ def reset_unit(test_unit):
                 del tests[key]
 
 
-def run_unit(logdir, *parameters):
-    """
-    Run `grammar_unit()` with logs written to `log_dir` or no logs if `log_dir`
-    evaluates to False. This helper functions is needed for running unit tests
-    in a multiprocessing environment, because log.log_dir(), log.logging() and
-    log.is_logging() are thread-local.
-    """
-    with logging(logdir):
-        return grammar_unit(*parameters)
+# def debug_unit(*parameters):
+#     """debug unit test in multiprocessing environment."""
+#     print("DEBUG_UNIT")
+#     try:
+#         grammar_unit(*parameters)
+#     except Exception as e:
+#         print(e)
 
 
 def grammar_suite(directory, parser_factory, transformer_factory,
-                  fn_patterns=['*test*'],
+                  fn_patterns=('*test*',),
                   ignore_unknown_filetypes=False,
                   report='REPORT', verbose=True):
     """
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
+    assert isinstance(report, str)
+
     if not isinstance(fn_patterns, collections.abc.Iterable):
         fn_patterns = [fn_patterns]
     all_errors = collections.OrderedDict()
@@ -556,7 +558,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 print(filename)
                 if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                     parameters = filename, parser_factory, transformer_factory, report, verbose
-                    results.append((filename, pool.submit(run_unit, log_dir(), *parameters)))
+                    results.append((filename, pool.submit(grammar_unit, *parameters)))
             for filename, err_future in results:
                 try:
                     errata = err_future.result()
@@ -711,29 +713,32 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
 #######################################################################
 
 
-def run_tests_in_class(test, namespace):
+def run_tests_in_class(cls_name, namespace, methods=()):
     """
-    Runs all tests in test-class `test` in the given namespace.
+    Runs tests in test-class `test` in the given namespace.
+
     """
-    def instantiate(cls_name, namespace):
-        exec("obj = " + cls_name + "()", namespace)
-        obj = namespace["obj"]
-        if "setup" in dir(obj):
-            obj.setup()
-        return obj
+    def instantiate(cls, nspace):
+        """Instantiates class name `cls` within name-space `nspace` and
+        returns the instance."""
+        exec("instance = " + cls + "()", nspace)
+        instance = nspace["instance"]
+        if "setup" in dir(instance):
+            instance.setup()
+        return instance
 
     obj = None
     try:
-        if test.find('.') >= 0:
-            cls_name, method_name = test.split('.')
+        if methods:
             obj = instantiate(cls_name, namespace)
-            print("Running " + cls_name + "." + method_name)
-            exec('obj.' + method_name + '()')
+            for name in methods:
+                print("Running " + cls_name + "." + name)
+                exec('obj.' + name + '()')
         else:
-            obj = instantiate(test, namespace)
+            obj = instantiate(cls_name, namespace)
             for name in dir(obj):
                 if name.lower().startswith("test"):
-                    print("Running " + test + "." + name)
+                    print("Running " + cls_name + "." + name)
                     exec('obj.' + name + '()')
     finally:
         if "teardown" in dir(obj):
@@ -758,6 +763,14 @@ def runner(tests, namespace):
     "Test" and methods, the name of which starts with "test" contained
     in such classes or functions, the name of which starts with "test".
 
+    if `tests` is either the empty string or an empty sequence, runner
+    checks sys.argv for specified tests. In case sys.argv[0] (i.e. the
+    script's file name) starts with 'test' any argument in sys.argv[1:]
+    (i.e. the rest of the command line) that starts with 'test' or
+    'Test' is considered the name of a test function or test method
+    (of a test-class) that shall be run. Test-Methods are specified in
+    the form: class_name.method.name e.g. "TestServer.test_connection".
+
     Args:
         tests: String or list of strings with the names of tests to
             run. If empty, runner searches by itself all objects the
@@ -781,7 +794,7 @@ def runner(tests, namespace):
             from DHParser.testing import runner
             runner("", globals())
     """
-    test_classes = []
+    test_classes = collections.OrderedDict()
     test_functions = []
 
     if tests:
@@ -789,17 +802,24 @@ def runner(tests, namespace):
             tests = tests.split(' ')
         assert all(test.lower().startswith('test') for test in tests)
     else:
-        tests = namespace.keys()
+        tests = []
+        if sys.argv[0].lower().startswith('test'):
+            tests = [name for name in sys.argv[1:] if name.lower().startswith('test')]
+        if not tests:
+            tests = [name for name in namespace.keys() if name.lower().startswith('test')]
 
     for name in tests:
-        if name.lower().startswith('test'):
-            if inspect.isclass(namespace[name]):
-                test_classes.append(name)
-            elif inspect.isfunction(namespace[name]):
-                test_functions.append(name)
+        func_or_class, method = (name.split('.') + [''])[:2]
+        if inspect.isclass(namespace[func_or_class]):
+            if func_or_class not in test_classes:
+                test_classes[func_or_class] = []
+            if method:
+                test_classes[func_or_class].append(method)
+        elif inspect.isfunction(namespace[name]):
+            test_functions.append(name)
 
-    for test in test_classes:
-        run_tests_in_class(test, namespace)
+    for cls_name, methods in test_classes.items():
+        run_tests_in_class(cls_name, namespace, methods)
 
     for test in test_functions:
         run_test_function(test, namespace)
@@ -813,17 +833,6 @@ def run_file(fname):
         runner('', eval(fname[:-3]).__dict__)
 
 
-def run_with_log(logdir, f):
-    """
-    Run `grammar_unit()` with logs written to `log_dir` or no logs if `log_dir`
-    evaluates to False. This helper functions is needed for running unit tests
-    in a multiprocessing environment, because log.log_dir(), log.logging() and
-    log.is_logging() are thread-local.
-    """
-    with logging(logdir):
-        run_file(f)
-
-
 def run_path(path):
     """Runs all unit tests in `path`"""
     if os.path.isdir(path):
@@ -834,7 +843,7 @@ def run_path(path):
         if get_config_value('test_parallelization'):
             with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
                 for f in files:
-                    result_futures.append(pool.submit(run_with_log, log_dir(), f))
+                    result_futures.append(pool.submit(run_file, f))
                     # run_file(f)  # for testing!
                 for r in result_futures:
                     try:

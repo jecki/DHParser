@@ -1,0 +1,462 @@
+#!/usr/bin/python3
+
+"""test_server.py - tests of the server module of DHParser
+
+
+Author: Eckhart Arnold <arnold@badw.de>
+
+Copyright 2019 Bavarian Academy of Sciences and Humanities
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+# TODO: Quite slow under MS Windows
+
+import asyncio
+import functools
+import json
+import multiprocessing
+import os
+import sys
+import time
+from typing import Callable
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method('spawn')   # 'spawn' (windows and linux)
+                                                # or 'fork' or 'forkserver' (linux only)
+
+scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+
+from DHParser.configuration import set_config_value
+from DHParser.server import Server, detach_server, stop_server, asyncio_run, asyncio_connect, \
+    has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
+
+TEST_PORT = 8000 + os.getpid() % 1000
+# adding pid % 100 hopefully prevents interference, if `test_server.py` is run in
+# parallel with several different python versions, as done by `run.py`
+
+
+def compiler_dummy(src: str, log_dir: str='') -> str:
+    return src
+
+
+def long_running(duration: str) -> str:
+    time.sleep(float(duration))
+    return(duration)
+
+
+def send_request(request: str, expect_response: bool = True) -> str:
+    response = ''
+    async def send(request):
+        nonlocal response
+        reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+        writer.write(request.encode())
+        if expect_response:
+            response = (await reader.read(8192)).decode()
+        writer.close()
+        if sys.version_info >= (3, 7):  await writer.wait_closed()
+
+    asyncio_run(send(request))
+    return response
+
+
+
+jrpc_id = 0
+
+
+def json_rpc(method: str, params: dict) -> str:
+    global jrpc_id
+    jrpc_id += 1
+    s = json.dumps({'jsonrpc': '2.0', 'id':jrpc_id, 'method':method, 'params': params})
+    return 'Content-Length: %i\n\n' % len(s) + s
+
+
+class TestServer:
+    # def test_server(self):
+    #     cs = Server(compiler_dummy)
+    #     cs.run_server()
+
+    def setup(self):
+        stop_server('127.0.0.1', TEST_PORT)
+        self.spawn = multiprocessing.get_start_method() == "spawn"
+
+    def teardown(self):
+        stop_server('127.0.0.1', TEST_PORT)
+
+    def test_server_process(self):
+        """Basic Test of server module."""
+        async def compile_remote(src):
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(src.encode())
+            data = await reader.read(500)
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            assert data.decode() == "Test", data.decode()
+        try:
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()',
+                          import_path=scriptpath)
+            asyncio_run(compile_remote('Test'))
+        finally:
+            stop_server('127.0.0.1', TEST_PORT)
+
+    def test_identify(self):
+        """Test server's 'identify/'-command."""
+        async def send_request(request):
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(request.encode() if isinstance(request, str) else request)
+            data = await reader.read(500)
+            await writer.drain()
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            return data.decode()
+
+        try:
+            from timeit import timeit
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy',
+                          import_path=scriptpath)
+            result = asyncio_run(send_request(IDENTIFY_REQUEST))
+            assert isinstance(result, str) and result.startswith('DHParser'), result
+        finally:
+            stop_server('127.0.0.1', TEST_PORT)
+
+    def test_terminate(self):
+        """Test different ways of sending a termination message to server:
+        http-request, plain-text and json-rpc."""
+        async def terminate_server(termination_request, expected_response):
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(termination_request)
+            data = await reader.read(500)
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            # print(data)
+            assert data.find(expected_response) >= 0, str(data)
+
+        try:
+            # plain text stop request
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            asyncio_run(terminate_server(STOP_SERVER_REQUEST,
+                                         b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
+            assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
+
+            # http stop request
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
+                                         b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
+            assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
+
+            # json_rpc stop request
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import compiler_dummy',
+                          'compiler_dummy, cpu_bound=set()', import_path=scriptpath)
+            jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
+                                  'id': 1})
+            asyncio_run(terminate_server(jsonrpc.encode(),
+                                         b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
+            assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
+        finally:
+            stop_server('127.0.0.1', TEST_PORT)
+
+    def test_long_running_task(self):
+        """Test, whether delegation of (long-running) tasks to
+        processes or threads works."""
+        sequence = []
+        if self.spawn:
+            SLOW, FAST = '0.1', '0.01'
+        else:
+            SLOW, FAST = '0.01', '0.001'
+
+        async def call_remote(argument):
+            sequence.append(argument)
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(argument.encode())
+            sequence.append((await reader.read(500)).decode())
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+
+        async def run_tasks():
+            await asyncio.gather(call_remote(SLOW),
+                                 call_remote(FAST))
+
+        if sys.version_info >= (3, 6):
+            try:
+                detach_server('127.0.0.1', TEST_PORT,
+                              'from test_server import long_running',
+                              "long_running, cpu_bound=frozenset(['long_running']), "
+                              "blocking=frozenset()", import_path=scriptpath)
+                asyncio_run(run_tasks())
+                assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
+            finally:
+                stop_server('127.0.0.1', TEST_PORT)
+                sequence = []
+
+            try:
+                detach_server('127.0.0.1', TEST_PORT,
+                              'from test_server import long_running',
+                              "long_running, cpu_bound=frozenset(), "
+                              "blocking=frozenset(['long_running'])", import_path=scriptpath)
+                asyncio_run(run_tasks())
+                assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
+            finally:
+                stop_server('127.0.0.1', TEST_PORT)
+                sequence = []
+
+        try:
+            detach_server('127.0.0.1', TEST_PORT,
+                          'from test_server import long_running',
+                          "long_running, cpu_bound=frozenset(), blocking=frozenset()",
+                          import_path=scriptpath)
+            asyncio_run(run_tasks())
+            assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
+        finally:
+            stop_server('127.0.0.1', TEST_PORT)
+            sequence = []
+
+
+class TestSpawning:
+    """Tests spawning a server by starting a script via subprocess.Popen."""
+
+    def setup(self):
+        stop_server('127.0.0.1', TEST_PORT)
+
+    def teardown(self):
+        stop_server('127.0.0.1', TEST_PORT)
+
+    def test_spawn(self):
+        detach_server('127.0.0.1', TEST_PORT, import_path=scriptpath)
+
+        async def identify():
+            try:
+                reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+                writer.write(IDENTIFY_REQUEST.encode())
+                data = await reader.read(500)
+                await writer.drain()
+                writer.close()
+                if sys.version_info >= (3, 7):  await writer.wait_closed()
+                return data.decode()
+            except ConnectionRefusedError:
+                return ''
+
+        result = asyncio_run(identify())
+        assert result.startswith('DHParser'), result
+
+
+def lsp_rpc(f: Callable):
+    """A decorator for LanguageServerProtocol-methods. This wrapper
+    filters out calls that are made before initializing the server and
+    after shutdown and returns an error message instead.
+    This decorator should only be used on methods of
+    LanguageServerProtocol-objects as it expects the first parameter
+    to be a the `self`-reference of this object.
+    All LSP-methods should be decorated with this decorator except
+    initialize and exit
+    """
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            self = args[0]
+        except IndexError:
+            self = kwargs['self']
+        if self.shared.shutdown:
+            return {'code': -32600, 'message': 'language server already shut down'}
+        elif not self.shared.initialized:
+            return {'code': -32002, 'message': 'language server not initialized'}
+        else:
+            return f(*args, **kwargs)
+    return wrapper
+
+
+class LSP:
+    def __init__(self):
+        manager = multiprocessing.Manager()  # saving this in an object-variable would make objects unpickleable due to weak references
+        self.shared = manager.Namespace()
+        self.shared.initialized = False
+        self.shared.shutdown = False
+        self.shared.processId = 0
+        self.shared.rootUri = ''
+        self.shared.clientCapabilities = ''
+        self.shared.serverCapabilities = json.dumps('{}')
+
+    def lsp_initialize(self, **kwargs):
+        if self.shared.initialized or self.shared.processId != 0:
+            return {"code": -32002, "message": "Server has already been initialized."}
+        self.shared.processId = kwargs['processId']
+        self.shared.rootUri = kwargs['rootUri']
+        self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
+        return {'capabilities': json.loads(self.shared.serverCapabilities)}
+
+    def lsp_initialized(self, **kwargs):
+        assert self.shared.processId != 0
+        self.shared.initialized = True
+        return None
+
+    @lsp_rpc
+    def lsp_custom(self, **kwargs):
+        return kwargs
+
+    @lsp_rpc
+    def lsp_check(self, **kwargs):
+        return {'processId': self.shared.processId}
+
+    @lsp_rpc
+    def lsp_shutdown(self):
+        self.shared.shutdown = True
+        return {}
+
+    def lsp_exit(self):
+        self.shared.shutdown = True
+        return None
+
+
+class TestLanguageServer:
+    """Tests for the generic LanguageServer-class."""
+
+    def setup(self):
+        stop_server('127.0.0.1', TEST_PORT)
+        self.DEBUG = False
+        if self.DEBUG:
+            from DHParser import log
+            log.start_logging('LOGS')
+            set_config_value('log_server', True)
+
+    def teardown(self):
+        stop_server('127.0.0.1', TEST_PORT)
+        if self.DEBUG:
+            from DHParser import log
+            log.suspend_logging()
+
+    def start_server(self):
+        stop_server('127.0.0.1', TEST_PORT)
+        detach_server('127.0.0.1', TEST_PORT,
+                      'from test_server import LSP, gen_lsp_table\n'
+                      'lsp = LSP()\n'
+                      "lsp_table = gen_lsp_table(LSP(), prefix='lsp_')\n",
+                      "lsp_table, cpu_bound=frozenset(), "
+                      "blocking=frozenset()", import_path=scriptpath)
+
+    def test_initialize(self):
+        self.start_server()
+        response = send_request(json_rpc('initialize',
+                                         {'processId': 701,
+                                          'rootUri': 'file://~/tmp',
+                                          'capabilities': {}}))
+        i = response.find('{') - 1
+        res = json.loads(response[i:])
+        assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+        response = send_request(json_rpc('custom', {}))
+        assert response.find('error') >= 0
+
+        response = send_request(json_rpc('initialized', {}), expect_response=False)
+        assert response == '', response
+
+        response = send_request(json_rpc('custom', {'test': 1}))
+        assert response.find('test') >= 0
+
+        response = send_request(json_rpc('check', {}))
+        assert response.find('701') >= 0
+
+        response = send_request(json_rpc('shutdown', {}))
+        assert response.find('error') < 0
+
+        response = send_request(json_rpc('custom', {}))
+        assert response.find('error') >= 0
+
+        response = send_request(json_rpc('exit', {}))
+        assert response == '', response
+
+    def test_initialization_sequence(self):
+        self.start_server()
+        async def initialization_sequence():
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(json_rpc('initialize',
+                                  {'processId': 702,
+                                   'rootUri': 'file://~/tmp',
+                                   'capabilities': {}}).encode())
+            response = (await reader.read(8192)).decode()
+            i = response.find('{')
+            # print(len(response), response)
+            res = json.loads(response[i:])
+            assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+            writer.write(json_rpc('initialized', {}).encode())
+
+            writer.write(json_rpc('custom', {'test': 1}).encode())
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+
+        asyncio_run(initialization_sequence())
+
+    def test_varying_data_chunk_sizes(self):
+        self.start_server()
+        async def initialization_sequence():
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            writer.write(json_rpc('initialize',
+                                  {'processId': 702,
+                                   'rootUri': 'file://~/tmp',
+                                   'capabilities': {}}).encode())
+            response = (await reader.read(8192)).decode()
+            i = response.find('{')
+            # print(len(response), response)
+            res = json.loads(response[i:])
+            assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+            # several commands in one chunk
+            writer.write(json_rpc('initialized', {}).encode() + json_rpc('custom', {'test': 1}).encode())
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+            data = json_rpc('custom', {'test': 2}).encode()
+            i = data.find(b'\n\n')
+            assert i > 0, str(data)
+            writer.write(data[:i + 2])
+            await asyncio.sleep(1)
+            writer.write(data[i + 2:])
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+
+            data = json_rpc('custom', {'test': 3}).encode()
+            i = data.find(b'\n\n')
+            assert i > 0, str(data)
+            writer.write(data[:i + 2])
+            await asyncio.sleep(0.1)
+            writer.write(data[i + 2:] + json_rpc('custom', {'test': 4}).encode())
+            response = (await reader.read(8192)).decode()
+            assert response.find('test') >= 0
+            writer.write(b'')
+            writer.write_eof()
+            await writer.drain()
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+
+        asyncio_run(initialization_sequence())
+
+if __name__ == "__main__":
+    if "--killserver" in sys.argv:
+        result = stop_server('127.0.0.1', TEST_PORT)
+        print('server stopped' if result is None else "server wasn't running")
+        sys.exit(0)
+    from DHParser.testing import runner
+    runner("", globals())

@@ -34,14 +34,14 @@ from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
 
+from DHParser.configuration import get_config_value
 from DHParser.error import Error, linebreaks, line_col
 from DHParser.log import is_logging, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, get_config_value, \
-    re, cython
+from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython
 
 
 __all__ = ('Parser',
@@ -192,6 +192,11 @@ class Parser:
     contained parser is repeated zero times.
 
     Attributes and Properties:
+        pname:    The parser name or the empty string in case the parser
+                remains anonymous.
+        tag_name:  The tag_name for the nodes that are created by
+                the parser. If the parser is named, this is the same as
+                `pname`, otherwise it is the name of the parser's type.
         visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
@@ -262,7 +267,8 @@ class Parser:
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
-        done in the overridden method `_parse()`.
+        done in the overridden method `_parse()`. This wrapper-method can be thought of
+        as a "parser guard", because it guards the parsing process.
         """
         def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
             if error_node:
@@ -298,8 +304,8 @@ class Parser:
             history_tracking__ = grammar.history_tracking__
             if history_tracking__:
                 grammar.call_stack__.append(
-                    (self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
-                     else self.tag_name, location))
+                    ((self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
+                      else self.tag_name), location))
                 grammar.moving_forward__ = True
                 error = None
 
@@ -559,7 +565,7 @@ class Grammar:
 
     Example for direct instantiation of a grammar::
 
-        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         >>> number_parser = Grammar(number)
         >>> number_parser("3.1416").content
         '3.1416'
@@ -574,10 +580,11 @@ class Grammar:
        constructor of the Parser object explicitly, but it suffices to
        assign them to class variables, which results in better
        readability of the Python code.
+       See classmethod `Grammar._assign_parser_names__()`
 
     3. The parsers in the class do not necessarily need to be connected
-       to one single root parser, which is helpful for testing and
-       building up a parser successively of several components.
+       to one single root parser, which is helpful for testing and when
+       building up a parser gradually from several components.
 
     As a consequence, though, it is highly recommended that a Grammar
     class should not define any other variables or methods with names
@@ -606,10 +613,9 @@ class Grammar:
     'named' parser and its field `parser.pname` contains the variable
     name after instantiation of the Grammar class. All other parsers,
     i.e. parsers that are defined within a `named` parser, remain
-    "anonymous parsers" where `parser.pname` is the empty string, unless
-    a name has been passed explicitly upon instantiation.
+    "anonymous parsers" where `parser.pname` is the empty string.
     If one and the same parser is assigned to several class variables
-    such as, for example the parser `expression` in the example above,
+    such as, for example, the parser `expression` in the example above,
     the first name sticks.
 
     Grammar objects are callable. Calling a grammar object with a UTF-8
@@ -715,8 +721,7 @@ class Grammar:
         moving_forward__: This flag indicates that the parsing process is currently
                 moving forward . It is needed to reduce noise in history recording
                 and should not be considered as having a valid value if history
-                recording is turned off! (See :func:`add_parser_guard` and its local
-                function :func:`guarded_call`)
+                recording is turned off! (See :func:`Parser.__call__`)
 
         recursion_locations__:  Stores the locations where left recursion was
                 detected. Needed to provide minimal memoization for the left
@@ -766,7 +771,7 @@ class Grammar:
 
             class Grammar(Grammar):
                 ...
-                symbol = RE('(?!\\d)\\w+')
+                symbol = RE(r'(?!\\d)\\w+')
 
         After the call of this method symbol.pname == "symbol" holds.
         Parser names starting or ending with a double underscore like
@@ -856,7 +861,7 @@ class Grammar:
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
-        self.call_stack__ = []                # type: List[str, int]  # tag_name, location
+        self.call_stack__ = []                # type: List[Tuple[str, int]]  # tag_name, location
         # snapshots of call stacks
         self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
@@ -927,7 +932,7 @@ class Grammar:
             Checks if failure to match document was only due to a succeeding
             lookahead parser, which is a common design pattern that can break test
             cases. (Testing for this case allows to modify the error message, so
-            that the testing framework can know that the failure is only a
+            that the testing framework knows that the failure is only a
             test-case-artifact and no real failure.
             (See test/test_testing.TestLookahead !)
             """
@@ -1696,7 +1701,13 @@ def mandatory_violation(grammar: Grammar,
                               location, Error.MALFORMED_ERROR_STRING)
                 grammar.tree__.add_error(err_node, error)
     else:
-        msg = '%s expected, »%s« found!' % (expected, found)
+        if grammar.history_tracking__:
+            for pname, _ in reversed(grammar.call_stack__):
+                if not pname.startswith(':'):
+                    break
+            msg = '%s expected by parser %s, »%s« found!' % (expected, pname, found)
+        else:
+            msg = '%s expected, »%s« found!' % (expected, found)
     error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
         if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)
@@ -1720,7 +1731,7 @@ class Series(NaryParser):
 
     Example::
 
-        >>> variable_name = RegExp('(?!\d)\w') + RE('\w*')
+        >>> variable_name = RegExp(r'(?!\d)\w') + RE(r'\w*')
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
@@ -1852,12 +1863,12 @@ class Alternative(NaryParser):
     are broken by selecting the first match.::
 
         # the order of the sub-expression matters!
-        >>> number = RE('\d+') | RE('\d+') + RE('\.') + RE('\d+')
+        >>> number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         >>> str(Grammar(number)("3.1416"))
         '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
 
         # the most selective expression should be put first:
-        >>> number = RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')
+        >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         >>> Grammar(number)("3.1416").content
         '3.1416'
 

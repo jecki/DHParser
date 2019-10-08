@@ -15,10 +15,12 @@ try:
 except ImportError:
     import re
 
-sys.path.extend(['../../', '../', './'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 from DHParser import is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, \
+    Grammar, Compiler, nil_preprocessor, access_thread_locals, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
@@ -29,9 +31,9 @@ from DHParser import is_filename, load_if_file, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, collapse, replace_content, remove_nodes, remove_content, remove_brackets, change_tag_name, \
     keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
-    WHITESPACE_PTYPE, TOKEN_PTYPE, GLOBALS
+    WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS
 from DHParser.transform import TransformationFunc
-from DHParser.log import logging
+from DHParser.log import start_logging
 
 
 #######################################################################
@@ -57,18 +59,20 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "8839d079e31b568a31f0ea4cbb175aa8"
+    source_hash__ = "61400955f6b57b8ec517dd11b6563d47"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
-    COMMENT__ = r'//'
+    COMMENT__ = r'(?i)%[^\n]*\n'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     EOF = NegativeLookahead(RegExp('(?i).'))
-    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%]+'), Series(Lookahead(RegExp('(?i)%')), wsp__)))
-    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%]+'), Series(Lookahead(RegExp('(?i)%')), wsp__)))
-    NO_BLANK_STRING = Series(RegExp('(?i)[^ \\t\\n,%]+'), wsp__)
+    WS = Alternative(Series(Lookahead(RegExp('(?i)[ \\t]*%')), wsp__), RegExp('(?i)[ \\t]+'))
+    ESC = Series(Lookbehind(RegExp('(?i)\\\\')), RegExp('(?i)[%&_]'))
+    CONTENT_STRING = OneOrMore(Alternative(RegExp('(?i)[^{}%&_ \\t]+'), ESC, WS))
+    COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%&_ \\t]+'), ESC, WS))
+    NO_BLANK_STRING = Series(OneOrMore(Alternative(RegExp('(?i)[^ \\t\\n,%&_]+'), ESC)), wsp__)
     WORD = Series(RegExp('(?i)\\w+'), wsp__)
     text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)))))
     plain_content = Synonym(COMMA_TERMINATED_STRING)
@@ -80,18 +84,19 @@ class BibTeXGrammar(Grammar):
     comment = Series(Series(Token("@Comment{"), wsp__), text, Series(Token("}"), wsp__), mandatory=2)
     pre_code = ZeroOrMore(Alternative(RegExp('(?i)[^"%]+'), RegExp('(?i)%.*\\n')))
     preamble = Series(Series(Token("@Preamble{"), wsp__), RegExp('(?i)"'), pre_code, RegExp('(?i)"'), wsp__, Series(Token("}"), wsp__), mandatory=5)
-    bibliography = ZeroOrMore(Alternative(preamble, comment, entry))
+    bibliography = Series(ZeroOrMore(Alternative(preamble, comment, entry)), wsp__, EOF)
     root__ = bibliography
     
 def get_grammar() -> BibTeXGrammar:
     """Returns a thread/process-exclusive BibTeXGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.BibTeX_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.BibTeX_00000001_grammar_singleton = BibTeXGrammar()
+        THREAD_LOCALS.BibTeX_00000001_grammar_singleton = BibTeXGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.BibTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.BibTeX_00000001_grammar_singleton
+            THREAD_LOCALS.BibTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
     return grammar
 
 
@@ -196,14 +201,14 @@ def get_compiler() -> BibTeXCompiler:
 def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging("LOGS"):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-            if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'    
-        result = compile_source(source, get_preprocessor(), 
-                                get_grammar(),
-                                get_transformer(), compiler)
+    start_logging("LOGS")
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
     return result
 
 

@@ -12,28 +12,32 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, GLOBALS
+    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
+    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode
 
 
 #######################################################################
@@ -90,13 +94,14 @@ class EBNFGrammar(Grammar):
     
 def get_grammar() -> EBNFGrammar:
     """Returns a thread/process-exclusive EBNFGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.EBNF_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.EBNF_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.EBNF_00000001_grammar_singleton = EBNFGrammar()
+        THREAD_LOCALS.EBNF_00000001_grammar_singleton = EBNFGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.EBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.EBNF_00000001_grammar_singleton
+            THREAD_LOCALS.EBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.EBNF_00000001_grammar_singleton
     return grammar
 
 
@@ -138,15 +143,20 @@ EBNF_AST_transformation_table = {
         replace_by_single_child
 }
 
-def EBNFTransform() -> TransformationFunc:
+
+def CreateEBNFTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = GLOBALS.EBNF_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.EBNF_00000001_transformer_singleton = EBNFTransform()
-        transformer = GLOBALS.EBNF_00000001_transformer_singleton
+        THREAD_LOCALS.EBNF_00000001_transformer_singleton = CreateEBNFTransformer()
+        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
     return transformer
 
 
@@ -166,6 +176,7 @@ class EBNFCompiler(Compiler):
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
+
     def on_syntax(self, node):
         return self.fallback_compiler(node)
 
@@ -225,11 +236,13 @@ class EBNFCompiler(Compiler):
 
 
 def get_compiler() -> EBNFCompiler:
+    """Returns a thread/process-exclusive EBNFCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = GLOBALS.EBNF_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.EBNF_00000001_compiler_singleton = EBNFCompiler()
-        compiler = GLOBALS.EBNF_00000001_compiler_singleton
+        THREAD_LOCALS.EBNF_00000001_compiler_singleton = EBNFCompiler()
+        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
     return compiler
 
 
@@ -239,16 +252,11 @@ def get_compiler() -> EBNFCompiler:
 #
 #######################################################################
 
-
-def compile_src(source, log_dir=''):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        cname = compiler.__class__.__name__
-        result_tuple = compile_source(source, get_preprocessor(),
-                                      get_grammar(),
-                                      get_transformer(), compiler)
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
     return result_tuple
 
 
@@ -271,7 +279,8 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, ast = compile_src(file_name, log_dir)
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-"""test_syntaxtree.py - test of syntaxtree-module of DHParser 
-                             
+"""test_syntaxtree.py - test of syntaxtree-module of DHParser
+
 Author: Eckhart Arnold <arnold@badw.de>
 
 Copyright 2017 Bavarian Academy of Sciences and Humanities
@@ -21,8 +21,11 @@ limitations under the License.
 
 import copy
 import json
+import os
 import sys
-sys.path.extend(['../', './'])
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG
@@ -46,6 +49,20 @@ class TestParseSxpression:
                           "if argument is not a tree!"
         except ValueError:
             pass
+
+    def test_parse_s_expression_w_attributes(self):
+        s = '(A `(attr "1") (B "X"))'
+        assert flatten_sxpr(parse_sxpr(s).as_sxpr()) == '(A `(attr "1") (B "X"))'
+        s = """(BedeutungsPosition `(unterbedeutungstiefe "0")
+                 (Bedeutung
+                   (Beleg
+                     (Quellenangabe (Quelle (Autor "LIUTPR.") (L " ") (Werk "leg.")) (L " ")
+                       (BelegStelle (Stellenangabe (Stelle "21")) (L " ")
+                         (BelegText (TEXT "...")))))))"""
+        tree = parse_sxpr(s)
+        assert str(tree) == "LIUTPR. leg. 21 ..."
+        assert tree.attr['unterbedeutungstiefe'] == '0'
+
 
 class TestParseXML:
     def test_roundtrip(self):
@@ -81,16 +98,25 @@ class TestParseJSON:
 
     def test_json_obj_roundtrip(self):
         json_obj_tree = self.tree.to_json_obj()
-        # print(json.dumps(json_obj_tree, ensure_ascii=False, indent=2))
         tree_copy = Node.from_json_obj(json_obj_tree)
-        assert tree_copy.equals(self.tree), tree_copy.as_sxpr()
+        # print(json_obj_tree)
+        # print(json.dumps(json_obj_tree, ensure_ascii=False))
+        # print(json.loads(json.dumps(json_obj_tree, ensure_ascii=False)))        
+        assert tree_copy.equals(self.tree), '\n' + tree_copy.as_sxpr() + '\n' + self.tree.as_sxpr()
 
-    def test_json_rountrip(self):
+    def test_json_roundtrip(self):
         s = self.tree.as_json(indent=None, ensure_ascii=True)
         tree_copy = Node.from_json_obj(json.loads(s))
-        assert tree_copy.equals(self.tree)
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
         s = self.tree.as_json(indent=2, ensure_ascii=False)
         tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
+        s = self.tree.as_json(indent=None, ensure_ascii=False)
+        tree_copy = parse_json_syntaxtree(s)
+        # print(s)
+        # print(self.tree.as_sxpr())
+        # print(tree_copy.as_sxpr())
+        assert tree_copy.equals(self.tree)
 
     def test_attr_serialization_and_parsing(self):
         n = Node('employee', 'James Bond').with_pos(46)
@@ -144,6 +170,12 @@ class TestNode:
         assert content == 'ce'
         assert tree.content == 'recently changed'
 
+    def test_pos_value_of_later_added_nodes(self):
+        nd = Node('Test', '').with_pos(0)
+        assert nd.pos == 0
+        nd.result = (Node('A', 'aaa'), Node('B', 'bbb'))
+        assert nd.children[0].pos == 0 and nd.children[1].pos == 3
+
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
         tree.with_pos(0)
@@ -176,6 +208,19 @@ class TestNode:
         tags = [node.tag_name
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
+
+    def test_select_context(self):
+        tree = parse_sxpr(self.unique_nodes_sexpr)
+        contexts = []
+        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+                                          include_root=True, reverse=False):
+            contexts.append(''.join(nd.tag_name for nd in ctx))
+        assert contexts == ['ad', 'af', 'afg']
+        contexts = []
+        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+                                          include_root=True, reverse=True):
+            contexts.append(''.join(nd.tag_name for nd in ctx))
+        assert contexts == ['af', 'afg', 'ad']
 
     def test_find(self):
         found = list(self.unique_tree.select_if(lambda nd: not nd.children and nd.result == "e"))
@@ -271,7 +316,7 @@ class TestRootNode:
     def test_error_reporting(self):
         number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         result = str(Grammar(number)("3.1416"))
-        assert result == '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> ', \
+        assert result.startswith('3 <<< Error on ".141" | Parser stopped before end! trying to recover'), \
             str(result)
 
 
@@ -340,7 +385,6 @@ class TestSerialization:
         tree = parse_sxpr(sxpr)
         assert flatten_sxpr(tree.as_sxpr()) == sxpr
 
-
     def test_sexpr_attributes(self):
         tree = parse_sxpr('(A "B")')
         tree.attr['attr'] = "value"
@@ -398,10 +442,76 @@ class TestSerialization:
         xml = tree.as_xml(inline_tags={'A'})
         assert xml == '<A><B><C>D\nX</C><E>F</E></B><G> H \n Y </G></A>', xml
 
+    def test_xml_tag_omission(self):
+        tree = parse_sxpr('(XML (T "Hallo") (L " ") (T "Welt!"))')
+        all_tags = {'XML', 'T', 'L'}
+        assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == "Hallo Welt!"
+        # tags with attributes will never be ommitted
+        tree['T'].attr['class'] = "kursiv"
+        assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == \
+               '<T class="kursiv">Hallo</T> Welt!'
+
     # def test_xml2(self):
     #     tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
     #     print(tree.as_xml())
     #     print(tree.as_xml(inline_tags={'A'}))
+
+class TestSegementExtraction:
+    def test_get_context(self):
+        tree = parse_sxpr('(A (F (X "a") (Y "b")) (G "c"))')
+        nd_X = tree.pick('X')
+        ctx = tree.reconstruct_context(nd_X)
+        assert [nd.tag_name for nd in ctx] == ['A', 'F', 'X']
+        nd_F = tree.pick('F')
+        nd_Y = tree.pick('Y')
+        ctx = nd_F.reconstruct_context(nd_Y)
+        assert [nd.tag_name for nd in ctx] == ['F', 'Y']
+        ctx = tree.reconstruct_context(nd_F)
+        assert [nd.tag_name for nd in ctx] == ['A', 'F']
+        ctx = tree.reconstruct_context(nd_Y)
+        assert [nd.tag_name for nd in ctx] == ['A', 'F', 'Y']
+        nd_G = tree.pick('G')
+        ctx = tree.reconstruct_context(nd_G)
+        assert [nd.tag_name for nd in ctx] == ['A', 'G']
+        not_there = Node('not_there', '')
+        try:
+            tree.reconstruct_context(not_there)
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+        assert tree.reconstruct_context(tree) == [tree]
+
+    def test_milestone_segment(self):
+        tree = parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-") (right (X "x") (Y "y") (Z "z")))').with_pos(0)
+        left = tree.pick('left')
+        right = tree.pick('right')
+        middle = tree.pick('middle')
+        B = tree.pick('B')
+        Y = tree.pick('Y')
+        segment = tree.milestone_segment(B, Y)
+        assert segment.content == "bc-xy"
+        assert left != segment.pick('left')
+        assert right != segment.pick('right')
+        assert B == segment.pick('B')
+        assert Y == segment.pick('Y')
+        assert middle == segment.pick('middle')
+        A = tree.pick('A')
+        Z = tree.pick('Z')
+        segment = tree.milestone_segment(A, Z)
+        assert segment == tree
+        assert segment.content == "abc-xyz"
+        segment = tree.milestone_segment(A, middle)
+        assert segment.equals(parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-"))'))
+        assert segment.content == "abc-"
+        assert segment != tree
+        assert A == segment.pick('A')
+        assert middle == segment.pick('middle')
+        root = tree.milestone_segment(tree, tree)
+        assert root == tree
+        assert tree.milestone_segment(B, B) == B
+        C = tree.pick('C')
+        segment = tree.milestone_segment(B, C)
+        assert segment.equals(parse_sxpr('(left (B "b") (C "c"))'))
 
 
 if __name__ == "__main__":

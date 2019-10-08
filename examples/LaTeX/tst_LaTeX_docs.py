@@ -25,14 +25,14 @@ import os
 import pstats
 import sys
 
-sys.path.extend(['../../', '../', './'])
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 import DHParser.dsl
 import DHParser.log
 from DHParser.log import log_parsing_history
 
 
-LOGGING = False
+LOGGING = ''
 
 if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
@@ -63,41 +63,41 @@ def tree_size(tree) -> int:
 
 
 def tst_func():
-    with DHParser.log.logging(LOGGING):
-        files = os.listdir('testdata')
-        files.sort()
-        for file in files:
-            if fnmatch.fnmatch(file, '*.tex') and file.lower().find('error') < 0:
-                with open(os.path.join('testdata', file), 'r', encoding='utf-8') as f:
-                    doc = f.read()
+    DHParser.log.start_logging(LOGGING)
+    files = os.listdir('testdata')
+    files.sort()
+    for file in files:
+        if fnmatch.fnmatch(file, '*.tex') and file.lower().find('error') < 0:
+            with open(os.path.join('testdata', file), 'r', encoding='utf-8') as f:
+                doc = f.read()
 
-                print('\n\nParsing document: "%s"' % file)
-                result = parser(doc)
-                print("Number of CST-nodes: " + str(tree_size(result)))
-                # print("Number of empty nodes: " + str(count_nodes(result,
-                #                                                 lambda n: not bool(n.result))))
-                if DHParser.log.is_logging():
-                    print('Saving CST')
-                    with open('LOGS/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
-                        f.write(result.as_sxpr(compact=True))
-                    print('Saving parsing history')
-                    log_parsing_history(parser, os.path.basename(file), html=True)
+            print('\n\nParsing document: "%s"' % file)
+            result = parser(doc)
+            print("Number of CST-nodes: " + str(tree_size(result)))
+            # print("Number of empty nodes: " + str(count_nodes(result,
+            #                                                 lambda n: not bool(n.result))))
+            if DHParser.log.is_logging():
+                print('Saving CST')
+                with open('LOGS/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
+                    f.write(result.as_sxpr(compact=True))
+                print('Saving parsing history')
+                log_parsing_history(parser, os.path.basename(file), html=True)
 
-                print('\nTransforming document: "%s"' % file)
-                fail_on_error(doc, result)
-                transformer(result)
-                fail_on_error(doc, result)
-                print("Number of AST-nodes: " + str(tree_size(result)))
-                if DHParser.log.is_logging():
-                    print('Saving AST')
-                    with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
-                        f.write(result.as_sxpr(compact=True))
-                    with open('LOGS/' + file[:-4] + '.tex', 'w', encoding='utf-8') as f:
-                        f.write(str(result))
+            print('\nTransforming document: "%s"' % file)
+            fail_on_error(doc, result)
+            transformer(result)
+            fail_on_error(doc, result)
+            print("Number of AST-nodes: " + str(tree_size(result)))
+            if DHParser.log.is_logging():
+                print('Saving AST')
+                with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
+                    f.write(result.as_sxpr(compact=True))
+                with open('LOGS/' + file[:-4] + '.tex', 'w', encoding='utf-8') as f:
+                    f.write(str(result))
 
-                print('\nCompiling document: "%s"' % file)
-                output = compiler(result)
-                # print(output)
+            print('\nCompiling document: "%s"' % file)
+            output = compiler(result)
+            # print(output)
 
 
 def cpu_profile(func):

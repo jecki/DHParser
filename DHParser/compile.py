@@ -38,13 +38,14 @@ import copy
 import os
 from typing import Any, Optional, Tuple, List, cast
 
+from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
 from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, get_config_value
+from DHParser.toolkit import load_if_file, is_filename
 
 
 __all__ = ('CompilerError',
@@ -154,7 +155,6 @@ class Compiler:
         (This very much depends on the kind and purpose of the
         implemented compiler.)
         """
-        assert root.tag_name != ZOMBIE_TAG
         if self._dirty_flag:
             self.reset()
         self._dirty_flag = True
@@ -372,7 +372,7 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Process, but catch any Python exceptions, in case
     any normal errors have occurred earlier in the processing pipeline.
-    Don't catch Python-exceptions if not errors have occurred earlier.
+    Don't catch Python-exceptions if no errors have occurred earlier.
 
     This behaviour is based on the assumption that given any non-fatal
     errors have occurred earlier, the tree passed through the pipeline
@@ -383,6 +383,12 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     be difficult to provide for all possible kinds of badly structured
     trees resulting from errors, exceptions occurring on code processing
     potentially faulty trees will be dealt with gracefully.
+
+    Although process_tree returns the root-node of the processed tree,
+    tree processing should generally be assumed to change the tree
+    in place, even if a different root-node is returned than was passed
+    to the tree. If the input tree shall be prserved, it is necessary to
+    make a deep copy of the input tree, before calling process_tree.
     """
     assert isinstance(tp, TreeProcessor)
     if not is_fatal(tree.error_flag):
@@ -402,7 +408,7 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
             # the exceptions through
             tree = tp(tree)
         assert isinstance(tree, RootNode)
-        return tree
+    return tree
 
 
 # TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser

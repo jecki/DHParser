@@ -19,13 +19,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import sys
 from functools import partial
 
-sys.path.extend(['../', './'])
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.toolkit import compile_python_object, get_config_value, set_config_value
-from DHParser.log import logging, is_logging, log_ST, log_parsing_history
+from DHParser.configuration import get_config_value, set_config_value
+from DHParser.toolkit import compile_python_object
+from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
@@ -92,8 +95,7 @@ class TestInfiLoopsAndRecursion:
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
         assert parser
-        with logging():
-            syntax_tree = parser(snippet)
+        syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         assert snippet == syntax_tree.content
 
@@ -322,9 +324,8 @@ class TestGrammar:
     def test_pos_values_initialized(self):
         # checks whether pos values in the parsing result and in the
         # history record have been initialized
-        with logging("LOGS"):
-            grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, r'\w+Grammar$')()
-            grammar("no_file_name*")
+        grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, r'\w+Grammar$')()
+        grammar("no_file_name*")
         for record in grammar.history__:
             assert not record.node or record.node.pos >= 0
 
@@ -890,7 +891,7 @@ class TestMetaParser:
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
     def test_in_context(self):
-        minilang = """
+        minilang = r"""
             term       = factor  { (DIV|MUL) factor}
             factor     = NUMBER | VARIABLE
             MUL        = "*" | &factor
@@ -905,5 +906,4 @@ class TestMetaParser:
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    with logging(False):
-        runner("", globals())
+    runner("", globals())

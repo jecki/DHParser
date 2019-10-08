@@ -12,13 +12,15 @@ from functools import partial
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \
+from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -28,12 +30,12 @@ from DHParser import logging, is_filename, load_if_file, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, GLOBALS
+    error_on, recompile_grammar, left_associative, access_thread_locals
 
 
 #######################################################################
@@ -84,13 +86,14 @@ class ArithmeticSimpleGrammar(Grammar):
     
 def get_grammar() -> ArithmeticSimpleGrammar:
     """Returns a thread/process-exclusive ArithmeticSimpleGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.ArithmeticSimple_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
     except AttributeError:
-        GLOBALS.ArithmeticSimple_00000001_grammar_singleton = ArithmeticSimpleGrammar()
+        THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton = ArithmeticSimpleGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.ArithmeticSimple_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.ArithmeticSimple_00000001_grammar_singleton
+            THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
     return grammar
 
 
@@ -118,10 +121,11 @@ def ArithmeticSimpleTransform() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.ArithmeticSimple_00000001_transformer_singleton
+        THREAD_LOCALS = access_thread_locals()
+        transformer = THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton
     except AttributeError:
-        GLOBALS.ArithmeticSimple_00000001_transformer_singleton = ArithmeticSimpleTransform()
-        transformer = GLOBALS.ArithmeticSimple_00000001_transformer_singleton
+        THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton = ArithmeticSimpleTransform()
+        transformer = THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton
     return transformer
 
 
@@ -159,10 +163,10 @@ class ArithmeticSimpleCompiler(Compiler):
 
 def get_compiler() -> ArithmeticSimpleCompiler:
     try:
-        compiler = GLOBALS.ArithmeticSimple_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton
     except AttributeError:
-        GLOBALS.ArithmeticSimple_00000001_compiler_singleton = ArithmeticSimpleCompiler()
-        compiler = GLOBALS.ArithmeticSimple_00000001_compiler_singleton
+        THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton = ArithmeticSimpleCompiler()
+        compiler = THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton
     return compiler
 
 
@@ -176,11 +180,11 @@ def get_compiler() -> ArithmeticSimpleCompiler:
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        result_tuple = compile_source(source, get_preprocessor(),
-                                      get_grammar(),
-                                      get_transformer(), compiler)
+    start_logging(log_dir)
+    compiler = get_compiler()
+    result_tuple = compile_source(source, get_preprocessor(),
+                                  get_grammar(),
+                                  get_transformer(), compiler)
     return result_tuple
 
 

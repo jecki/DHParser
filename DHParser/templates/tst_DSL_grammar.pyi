@@ -6,10 +6,12 @@
 import os
 import sys
 
-LOGGING = False
+LOGGING = ''
 
 scriptpath = os.path.dirname(__file__)
 dhparserdir = os.path.abspath(os.path.join(scriptpath, '{reldhparserdir}'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
 if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 
@@ -26,27 +28,32 @@ except ModuleNotFoundError:
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
     testing.create_test_templates(grammar_src, grammar_tests_dir)
-    with DHParser.log.logging(False):
-        # recompiles Grammar only if it has changed
-        if not dsl.recompile_grammar(grammar_src, force=force,
-                notify=lambda: print('recompiling ' + grammar_src)):
-            print('\nErrors while recompiling "%s":' % grammar_src +
-                  '\n--------------------------------------\n\n')
-            with open('{name}_ebnf_ERRORS.txt', encoding='utf-8') as f:
-                print(f.read())
-            sys.exit(1)
+    DHParser.log.start_logging('LOGS')
+    # recompiles Grammar only if it has changed
+    if not dsl.recompile_grammar(grammar_src, force=force,
+            notify=lambda: print('recompiling ' + grammar_src)):
+        print('\nErrors while recompiling "%s":' % grammar_src +
+              '\n--------------------------------------\n\n')
+        with open('{name}_ebnf_ERRORS.txt', encoding='utf-8') as f:
+            print(f.read())
+        sys.exit(1)
 
 
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
-    with DHParser.log.logging(LOGGING):
-        error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
-            get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report='REPORT', verbose=True)
+    DHParser.log.start_logging(LOGGING)
+    error_report = testing.grammar_suite(
+        os.path.join(scriptpath, 'grammar_tests'),
+        get_grammar, get_transformer,
+        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 
 if __name__ == '__main__':
+    # from DHParser.configuration import access_presets, finalize_presets
+    # CONFIG_PRESETS = access_presets()
+    # CONFIG_PRESET['test_parallelization'] = True
+    # finalize_presets()
+
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
         LOGGING = True

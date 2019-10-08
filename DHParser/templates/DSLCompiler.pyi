@@ -1,11 +1,8 @@
-def compile_src(source, log_dir=''):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    with logging(log_dir):
-        compiler = get_compiler()
-        result_tuple = compile_source(source, get_preprocessor(),
-                                      get_grammar(),
-                                      get_transformer(), compiler)
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
     return result_tuple
 
 
@@ -28,7 +25,8 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, _ = compile_src(file_name, log_dir)
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name

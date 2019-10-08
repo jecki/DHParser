@@ -31,6 +31,7 @@ import os
 from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any, cast
 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
+from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespace, \
     NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
@@ -38,7 +39,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespa
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    GLOBALS, get_config_value, unrepr, compile_python_object, DHPARSER_PARENTDIR
+    unrepr, compile_python_object, DHPARSER_PARENTDIR
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
@@ -74,30 +75,31 @@ from functools import partial
 import os
 import sys
 
-sys.path.append(r'{dhparser_parentdir}')
+if r'{dhparser_parentdir}' not in sys.path:
+    sys.path.append(r'{dhparser_parentdir}')
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import logging, is_filename, load_if_file, \\
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
-    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, \\
+    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
-    collapse, collapse_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \\
     keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
-    JSON_SERIALIZATION, CONFIG_PRESET, GLOBALS 
+    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 
@@ -251,11 +253,11 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
 
 def get_ebnf_grammar() -> EBNFGrammar:
     try:
-        grammar = GLOBALS.ebnf_grammar_singleton
+        grammar = THREAD_LOCALS.ebnf_grammar_singleton
         return grammar
     except AttributeError:
-        GLOBALS.ebnf_grammar_singleton = EBNFGrammar()
-        return GLOBALS.ebnf_grammar_singleton
+        THREAD_LOCALS.ebnf_grammar_singleton = EBNFGrammar()
+        return THREAD_LOCALS.ebnf_grammar_singleton
 
 
 ########################################################################
@@ -302,10 +304,10 @@ def EBNFTransform() -> TransformationFunc:
 
 def get_ebnf_transformer() -> TransformationFunc:
     try:
-        transformer = GLOBALS.EBNF_transformer_singleton
+        transformer = THREAD_LOCALS.EBNF_transformer_singleton
     except AttributeError:
-        GLOBALS.EBNF_transformer_singleton = EBNFTransform()
-        transformer = GLOBALS.EBNF_transformer_singleton
+        THREAD_LOCALS.EBNF_transformer_singleton = EBNFTransform()
+        transformer = THREAD_LOCALS.EBNF_transformer_singleton
     return transformer
 
 
@@ -330,13 +332,14 @@ def get_preprocessor() -> PreprocessorFunc:
 GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
     """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()    
     try:
-        grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
+        grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_grammar_singleton = {NAME}Grammar()
+        THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton = {NAME}Grammar()
         if hasattr(get_grammar, 'python_src__'):
-            GLOBALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = GLOBALS.{NAME}_{ID:08d}_grammar_singleton
+            THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
     return grammar
 '''
 
@@ -349,11 +352,12 @@ def Create{NAME}Transformer() -> TransformationFunc:
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
+        transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_transformer_singleton = Create{NAME}Transformer()
-        transformer = GLOBALS.{NAME}_{ID:08d}_transformer_singleton
+        THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton = Create{NAME}Transformer()
+        transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
     return transformer
 '''
 
@@ -361,11 +365,12 @@ def get_transformer() -> TransformationFunc:
 COMPILER_FACTORY = '''
 def get_compiler() -> {NAME}Compiler:
     """Returns a thread/process-exclusive {NAME}Compiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
+        compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
     except AttributeError:
-        GLOBALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
-        compiler = GLOBALS.{NAME}_{ID:08d}_compiler_singleton
+        THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
+        compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
     return compiler
 '''
 
@@ -444,7 +449,7 @@ class EBNFDirectives:
         setattr(self, key, value)
 
     def keys(self):
-        return self.__dict__.keys()
+        return self.__slots__
 
 
 class EBNFCompilerError(CompilerError):
@@ -698,9 +703,10 @@ class EBNFCompiler(Compiler):
     def _check_rx(self, node: Node, rx: str) -> str:
         """
         Checks whether the string `rx` represents a valid regular
-        expression. Makes sure that multiline regular expressions are
-        prepended by the multiline-flag. Returns the regular expression string.
+        expression. Makes sure that multi-line regular expressions are
+        prepended by the multi-line-flag. Returns the regular expression string.
         """
+        # TODO: Support atomic grouping: https://stackoverflow.com/questions/13577372/do-python-regular-expressions-have-an-equivalent-to-rubys-atomic-grouping
         flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
         if flags:
             rx = "(?%s)%s" % ("".join(flags), rx)
@@ -755,7 +761,7 @@ class EBNFCompiler(Compiler):
             task()
 
         # provide for capturing of symbols that are variables, i.e. the
-        # value of will be retrieved at some point during the parsing process
+        # value of which will be retrieved at some point during the parsing process
 
         if self.variables:
             for i in range(len(definitions)):
@@ -1327,13 +1333,13 @@ class EBNFCompiler(Compiler):
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     try:
-        compiler = GLOBALS.ebnf_compiler_singleton
+        compiler = THREAD_LOCALS.ebnf_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
         return compiler
     except AttributeError:
         compiler = EBNFCompiler(grammar_name, grammar_source)
         compiler.set_grammar_name(grammar_name, grammar_source)
-        GLOBALS.ebnf_compiler_singleton = compiler
+        THREAD_LOCALS.ebnf_compiler_singleton = compiler
         return compiler
 
 

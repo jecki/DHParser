@@ -1,7 +1,7 @@
 # stringview.py - a string class where slices are views not copies as
 #                    with the standard Python strings.
 #
-#    stringview.pxd - declarations for the cython Python to C compiler
+# stringview.pxd - declarations for the cython Python to C compiler
 #                    to speed up handling of StringViews.
 #
 # Copyright 2016  by Eckhart Arnold (arnold@badw.de)
@@ -27,9 +27,9 @@ However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 
-It is recommended to compile this modules with the Cython-compiler for
+It is recommended to compile this module with the Cython-compiler for
 speedup. The modules comes with a ``stringview.pxd`` that contains some type
-declarations to fully exploit the potential of the Cython-compiler.
+declarations to more fully exploit the benefits of the Cython-compiler.
 """
 
 from typing import Optional, Union, Iterable, Tuple

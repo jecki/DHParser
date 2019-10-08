@@ -6,9 +6,11 @@
 import os
 import sys
 
-sys.path.extend(['../../', '../', './'])
-
-scriptpath = os.path.dirname(__file__)
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 
 try:
@@ -22,22 +24,20 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    with DHParser.log.logging(False):
-        # recompiles Grammar only if it has changed
-        if not dsl.recompile_grammar(grammar_src, force=force):
-            print('\nErrors while recompiling "%s":' % grammar_src +
-                  '\n--------------------------------------\n\n')
-            with open('XML_ebnf_ERRORS.txt') as f:
-                print(f.read())
-            sys.exit(1)
+    # recompiles Grammar only if it has changed
+    if not dsl.recompile_grammar(grammar_src, force=force):
+        print('\nErrors while recompiling "%s":' % grammar_src +
+              '\n--------------------------------------\n\n')
+        with open('XML_ebnf_ERRORS.txt') as f:
+            print(f.read())
+        sys.exit(1)
 
 
 def run_grammar_tests(glob_pattern):
-    with DHParser.log.logging(False):
-        error_report = testing.grammar_suite(
-            os.path.join(scriptpath, 'grammar_tests'),
-            get_grammar, get_transformer,
-            fn_patterns=[glob_pattern], report=True, verbose=True)
+    error_report = testing.grammar_suite(
+        os.path.join(scriptpath, 'grammar_tests'),
+        get_grammar, get_transformer,
+        fn_patterns=[glob_pattern], verbose=True)
     return error_report
 
 

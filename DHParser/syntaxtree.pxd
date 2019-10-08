@@ -14,16 +14,17 @@ cdef class Node:
 
     cpdef get(self,  index_or_tagname, surrogate)
     cpdef is_anonymous(self)
+    cpdef __set_result(self, result)
     cpdef _content(self)
     cpdef with_pos(self, pos)
-    cpdef has_attr(self)
+    # cpdef has_attr(self, attr)
     # cpdef compare_attr(self, other)
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
     # cpdef as_sxpr(self, src, indentation, compact)
     # cpdef as_xml(self, src, indentation, inline_tags, omit_tags, empty_tags)
     # cpdef select_if(self, match_function, include_root, reverse)
     # cpdef select(self, tag_names, include_root)
-    cpdef pick(self, tag_names)
+    # cpdef pick(self, criterion, reverse)
     # cpdef tree_size(self)
     cpdef to_json_obj(self)
 
@@ -46,3 +47,7 @@ cdef class RootNode(Node):
     # cpdef new_error(self, node, message, code)
     # cpdef get_errors(self, node)
     cpdef customized_XML(self)
+
+
+# cpdef parse_sxpr(sxpr)
+# cpdef parse_xml(xml, ignore_pos)
