@@ -313,7 +313,8 @@ def compile_source(source: str,
             except Exception as e:
                 syntax_tree.new_error(syntax_tree,
                                       "AST-Transformation failed due to earlier parser errors. "
-                                      "Crash Message: " + str(e), Error.AST_TRANSFORM_CRASH)
+                                      "Crash Message: %s: %s" % (e.__class__.__name__, str(e)),
+                                      Error.AST_TRANSFORM_CRASH)
         else:
             transformer(syntax_tree)
 
@@ -335,7 +336,8 @@ def compile_source(source: str,
                     node = compiler.context[-1] if compiler.context else syntax_tree
                     syntax_tree.new_error(
                         node, "Compilation failed, most likely, due to errors earlier "
-                        "in the processing pipeline. Crash Message: " + str(e),
+                              "in the processing pipeline. Crash Message: %s: %s"
+                              % (e.__class__.__name__, str(e)),
                         Error.COMPILER_CRASH)
             else:
                 # assume Python crashes are programming mistakes, so let
@@ -401,7 +403,8 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
                 node = tp.context[-1] if tp.context else tree
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline. Crash Message: " + str(e),
+                          "in the processing pipeline. Crash Message: %s: %s"
+                          % (e.__class__.__name__, str(e)),
                     Error.TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let
