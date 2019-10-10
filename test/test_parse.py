@@ -722,7 +722,7 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
     def test_failing_resume_rule(self):
@@ -733,7 +733,6 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         # assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
 
     def test_severl_reentry_points(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -743,7 +742,7 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
     def test_several_reentry_points_second_point_matching(self):
@@ -754,7 +753,7 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
     def test_several_resume_rules_innermost_rule_matching(self):
@@ -767,7 +766,7 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
         # multiple failures
         content = 'ALPHA acb BETA bad GAMMA cab .'
@@ -775,8 +774,15 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # there should be only two error messages
         assert len(cst.errors_sorted) == 2
+
+    def test_skip_comment_on_reentry(self):
+        lang = r"""
+            @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
+            document = 
+        """
+        # TODO: program this!
 
 
 class TestConfiguredErrorMessages:

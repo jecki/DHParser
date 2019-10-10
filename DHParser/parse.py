@@ -134,7 +134,8 @@ def reentry_point(rest: StringView, rules: ResumeList) -> int:
     """
     upper_limit = len(rest) + 1
     i = upper_limit
-    #find closest match
+    # find closest match
+    # TODO: ignore commented out passages !!!!
     for rule in rules:
         if isinstance(rule, str):
             k = rest.find(rule)
@@ -283,11 +284,12 @@ class Parser:
         location = grammar.document_length__ - len(text)
 
         try:
+            # rollback variable changing operation if parser backtracks
+            # to a position before the variable changing operation occurred
             if grammar.last_rb__loc__ >= location:
                 grammar.rollback_to__(location)
 
-            # if location has already been visited by the current parser,
-            # return saved result
+            # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
                 # no history recording in case of memoized results
@@ -301,6 +303,7 @@ class Parser:
                     return None, text
                 self.recursion_counter[location] += 1
 
+            # write current step to call stack, if history tracking is configured
             history_tracking__ = grammar.history_tracking__
             if history_tracking__:
                 grammar.call_stack__.append(
@@ -309,11 +312,11 @@ class Parser:
                 grammar.moving_forward__ = True
                 error = None
 
+            # finally, the actual parser call!
             try:
-                # PARSER CALL: run _parse() method
                 node, rest = self._parse(text)
             except ParserError as pe:
-                # does this play well with variable setting? add rollback clause here? tests needed...
+                # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
                 rules = grammar.resume_rules__.get(self.pname, [])
                 rest = pe.rest[len(pe.node):]
@@ -334,7 +337,7 @@ class Parser:
                                     (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node, nd))
                 elif pe.first_throw:
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
-                elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:  # EXPERIMENTAL!!
+                elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:
                     node = pe.node
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
