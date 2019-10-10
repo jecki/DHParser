@@ -185,31 +185,22 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
         finally:
             if loop is None:
                 try:
-                    loop.run_until_complete(loop.shutdown_asyncgens())
+                    myloop.run_until_complete(loop.shutdown_asyncgens())
                 finally:
                     asyncio.set_event_loop(None)
-                    loop.close()
+                    myloop.close()
 
 
 async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-                    retry_timeout: float = 3.0):
-    """
-    Backwards compatible version of Python3.8's `asyncio.connect()`, with the
-    variant that it returns a reader, writer pair instead of just one stream.
-    From Python 3.8 onward, the returned reader and writer are one and the
-    same stream, however.
-    """
+                    retry_timeout: float = 3.0) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    """Opens a connection with timeout retry-timeout."""
     host, port = substitute_default_host_and_port(host, port)
     delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
     connected = False
     reader, writer = None, None
     while delay < retry_timeout:
         try:
-            if sys.version_info >= (3, 8):
-                stream = await asyncio.connect(host, port)
-                reader, writer = stream, stream
-            else:
-                reader, writer = await asyncio.open_connection(host, port)
+            reader, writer = await asyncio.open_connection(host, port)
             delay = retry_timeout
             connected = True
         except ConnectionRefusedError as error:

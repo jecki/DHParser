@@ -79,15 +79,23 @@ def retrieve_host_and_port():
 
 
 def asyncio_run(coroutine):
-    """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
+    """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
         return asyncio.run(coroutine)
     else:
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         try:
             return loop.run_until_complete(coroutine)
         finally:
-            loop.close()
+            try:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+            finally:
+                asyncio.set_event_loop(None)
+                loop.close()
 
 
 def json_rpc(func, params={}, ID=None) -> str:
@@ -200,6 +208,8 @@ async def send_request(request, host, port):
     writer.write(request.encode() if isinstance(request, str) else request)
     data = await reader.read(500)
     writer.close()
+    if sys.version_info >= (3, 7):
+        await writer.wait_closed()
     return data.decode()
 
 
