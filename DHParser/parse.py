@@ -136,7 +136,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
         was found.
     """
     upper_limit = len(rest) + 1
-    i = upper_limit
+    closest_match = upper_limit
     comments = None  # typ: Optional[Iterator]
 
     def next_comment() -> Tuple[int, int]:
@@ -150,41 +150,42 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
                 comments = None
         return -1, -2
 
-    def search_next(rx, start: int = 0) -> Tuple[int, int]:
-        nonlocal rest, i
+    def str_search(s, start: int = 0) -> Tuple[int, int]:
+        nonlocal rest
+        return rest.find(s), len(rule)
+
+    def rx_search(rx, start: int = 0) -> Tuple[int, int]:
+        nonlocal rest
         m = rest.search(rx, start)
         if m:
             start, end = m.span()
-            return min(rest.index(start), i), end - start
+            return rest.index(start), end - start
         return -1, 0
+
+    def entry_point(search_func, search_rule) -> int:
+        a, b = next_comment()
+        k, length = search_func(search_rule)
+        while a < b <= k:
+            a, b = next_comment()
+        while a <= k < b:
+            k, length = search_func(search_rule, k + length)
+            while a < b <= k:
+                a, b = next_comment()
+        return k if k >= 0 else upper_limit
 
     # find closest match
     for rule in rules:
         comments = rest.finditer(comment_regex)
-        a, b = next_comment()
         if isinstance(rule, str):
-            k = rest.find(rule)
-            while a < b <= k:
-                a, b = next_comment()
-            while a <= k < b:
-                k = rest.find(rule, k + len(rule))
-                while a < b <= k:
-                    a, b = next_comment()
-            i = min(k if k >= 0 else upper_limit, i)
-        else:
-            k, length = search_next(rule)
-            while a < b <= k:
-                a, b = next_comment()
-            while a <= k < b:
-                k, length = search_next(rule, k + length)
-                while a < b <= k:
-                    a, b = next_comment()
-            i = min(k if k >= 0 else upper_limit, i)
+            pos = entry_point(str_search, rule)
+        else:  # rule is a compiled regular expression
+            pos = entry_point(rx_search, rule)
+        closest_match = min(pos, closest_match)
 
     # in case no rule matched return -1
-    if i == upper_limit:
-        i = -1
-    return i
+    if closest_match == upper_limit:
+        closest_match = -1
+    return closest_match
 
 
 ApplyFunc = Callable[['Parser'], None]
@@ -1913,7 +1914,7 @@ class Alternative(NaryParser):
         # the order of the sub-expression matters!
         >>> number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         >>> str(Grammar(number)("3.1416"))
-        '3 <<< Error on ".141" | Parser stopped before end! trying to recover... >>> '
+        '3 <<< Error on ".1416" | Parser stopped before end! trying to recover... >>> '
 
         # the most selective expression should be put first:
         >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
