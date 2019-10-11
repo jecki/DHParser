@@ -780,9 +780,20 @@ class TestReentryAfterError:
     def test_skip_comment_on_reentry(self):
         lang = r"""
             @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
-            document = 
+            document = block_A block_B
+            @ block_A_resume = /x/
+            block_A = "a" §"b" "c"
+            block_B = "x" "y" "z"
         """
-        # TODO: program this!
+        grammar = grammar_provider(lang)()
+        tree = grammar('abc/*x*/xyz')
+        assert not tree.errors
+        tree = grammar('abdxyz')
+        mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
+        assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+        tree =  grammar('abd/*x*/xyz')
+        print(tree.as_sxpr())
+        assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
 
 
 class TestConfiguredErrorMessages:

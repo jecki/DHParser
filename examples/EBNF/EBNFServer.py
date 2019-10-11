@@ -245,11 +245,11 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python EBNFServer.py --startserver [host] [port] [--logging [ON|LOG_PATH|OFF]]\n'
+          + '    python EBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
           + '    python EBNFServer.py --stopserver\n'
           + '    python EBNFServer.py --status\n'
           + '    python EBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
-          + '    python EBNFServer.py FILENAME.dsl [--host host] [--port port]')
+          + '    python EBNFServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
     sys.exit(1)
 
 
@@ -274,6 +274,15 @@ def parse_logging_args(argv):
         return log_path, request
     except ValueError:
         return None, ''
+
+def parse_host_port(argv, default_host, default_port):
+    host, port = default_host, default_port
+    try:
+        i = argv.index('--host')
+        del argv[i]
+        host = argv[i]
+    except ValueError:
+        return host, port
 
 if __name__ == "__main__":
     host, port = '', -1

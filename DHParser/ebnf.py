@@ -1097,8 +1097,14 @@ class EBNFCompiler(Compiler):
             self.directives.resume[symbol] = self._gen_search_list(node.children[1:])
 
         else:
-            self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
-                                (key, ', '.join(list(self.directives.keys()))))
+            if any(key.startswith(directive) for directive in ('skip', 'error', 'resume')):
+                kl = key.split('_')
+                proper_usage = '_'.join(kl[1:] + kl[0:1])
+                self.tree.new_error(node, 'Directive "%s" must be used as postfix not prefix to '
+                                    'the symbolname. Please, write: "%s"' % (kl[0], proper_usage))
+            else:
+                self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
+                                    (key, ', '.join(list(self.directives.keys()))))
 
         try:
             if symbol not in self.symbols:
