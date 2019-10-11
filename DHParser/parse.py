@@ -32,7 +32,8 @@ for an example.
 
 from collections import defaultdict
 import copy
-from typing import Callable, cast, List, Tuple, Set, Dict, DefaultDict, Union, Optional, Any
+from typing import Callable, cast, List, Tuple, Set, Iterator, Dict, \
+    DefaultDict, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, linebreaks, line_col
@@ -119,31 +120,67 @@ class ParserError(Exception):
 ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
 
 
-def reentry_point(rest: StringView, rules: ResumeList) -> int:
+def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
+    Makes sure that this reentry-point does not lie inside a comment.
     Args:
         rest:  The rest of the parsed text or, in other words, the point where
                 a ParserError was thrown.
         rules: A list of strings or regular expressions. The rest of the text is
                 searched for each of these. The closest match is the point where
                 parsing will be resumed.
+        comment_regex: A regular expression object that matches comments.
     Returns:
         The integer index of the closest reentry point or -1 if no reentry-point
         was found.
     """
     upper_limit = len(rest) + 1
     i = upper_limit
+    comments = None  # typ: Optional[Iterator]
+
+    def next_comment() -> Tuple[int, int]:
+        nonlocal rest, comments
+        if comments:
+            try:
+                m = next(comments)
+                a, b = m.span()
+                return rest.index(a), rest.index(b)
+            except StopIteration:
+                comments = None
+        return -1, -2
+
+    def search_next(rx, start: int = 0) -> Tuple[int, int]:
+        nonlocal rest, i
+        m = rest.search(rx, start)
+        if m:
+            start, end = m.span()
+            return min(rest.index(start), i), end - start
+        return -1, 0
+
     # find closest match
-    # TODO: ignore commented out passages !!!!
     for rule in rules:
+        comments = rest.finditer(comment_regex)
+        a, b = next_comment()
         if isinstance(rule, str):
             k = rest.find(rule)
+            while a < b <= k:
+                a, b = next_comment()
+            while a <= k < b:
+                k = rest.find(rule, k + len(rule))
+                while a < b <= k:
+                    a, b = next_comment()
             i = min(k if k >= 0 else upper_limit, i)
         else:
-            m = rest.search(rule)
-            if m:
-                i = min(rest.index(m.start()), i)
+            k, length = search_next(rule)
+            while a < b <= k:
+                a, b = next_comment()
+            while a <= k < b:
+                k, length = search_next(rule, k + length)
+                while a < b <= k:
+                    a, b = next_comment()
+            i = min(k if k >= 0 else upper_limit, i)
+
     # in case no rule matched return -1
     if i == upper_limit:
         i = -1
@@ -320,7 +357,7 @@ class Parser:
                 gap = len(text) - len(pe.rest)
                 rules = grammar.resume_rules__.get(self.pname, [])
                 rest = pe.rest[len(pe.node):]
-                i = reentry_point(rest, rules)
+                i = reentry_point(rest, rules, grammar.comment_rx__)
                 if i >= 0 or self == grammar.start_parser__:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:
@@ -513,6 +550,8 @@ PARSER_PLACEHOLDER = Parser()
 #
 ########################################################################
 
+RX_NEVER_MATCH = re.compile(r'..(?<=^)')
+
 
 def mixin_comment(whitespace: str, comment: str) -> str:
     """
@@ -663,6 +702,9 @@ class Grammar:
     Instance Attributes:
         all_parsers__:  A set of all parsers connected to this grammar object
 
+        comment_rx__:  The compiled regular expression for comments. If no
+                comments have been defined, it defaults to RX_NEVER_MATCH
+
         start_parser__:  During parsing, the parser with which the parsing process
                 was started (see method `__call__`) or `None` if no parsing process
                 is running.
@@ -803,6 +845,8 @@ class Grammar:
 
     def __init__(self, root: Parser = None) -> None:
         self.all_parsers__ = set()             # type: Set[Parser]
+        self.comment_rx__ = re.compile(self.COMMENT__) \
+            if hasattr(self, 'COMMENT__') and self.COMMENT__ else RX_NEVER_MATCH
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
@@ -1790,7 +1834,8 @@ class Series(NaryParser):
                 if pos < self.mandatory:
                     return None, text
                 else:
-                    reloc = reentry_point(text_, self.skip) if self.skip else -1
+                    reloc = reentry_point(text_, self.skip, self.grammar.comment_rx__) \
+                        if self.skip else -1
                     error, node, text_ = mandatory_violation(
                         self.grammar, text_, isinstance(parser, Lookahead), parser.repr,
                         self.err_msgs, reloc)
@@ -2014,7 +2059,8 @@ class AllOf(NaryParser):
                 if self.num_parsers - len(parsers) < self.mandatory:
                     return None, text
                 else:
-                    reloc = reentry_point(text_, self.skip) if self.skip else -1
+                    reloc = reentry_point(text_, self.skip, self.grammar.comment_rx__) \
+                        if self.skip else -1
                     expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
                     lookahead = any([isinstance(p, Lookahead) for p in parsers])
                     error, err_node, text_ = mandatory_violation(
