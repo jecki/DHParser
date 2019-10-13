@@ -260,6 +260,7 @@ class Server:
     """
 
     Attributes:
+        server_name: A name for the server. Defaults to 'CLASSNAME_OBJECTID'
         cpu_bound:  Set of function names of functions that are cpu-bound and
                 will be run in separate processes
         blocking:   Set of functions that contain blocking calls (e.g. IO-calls)
@@ -299,7 +300,9 @@ class Server:
     """
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
-                 blocking: Set[str] = frozenset()):
+                 blocking: Set[str] = frozenset(),
+                 server_name: str = ''):
+        self.server_name = server_name or '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
         if isinstance(rpc_functions, Dict):
             self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
             if 'default' not in self.rpc_table:
@@ -331,7 +334,7 @@ class Server:
         if identify_name not in self.rpc_table:
             self.rpc_table[identify_name] = self.rpc_identify_server
         logging_name = LOGGING_REQUEST[:LOGGING_REQUEST.find('(')]
-        if logging_name in self.rpc_table:
+        if logging_name not in self.rpc_table:
             self.rpc_table[logging_name] = self.rpc_logging
 
         self.max_data_size = get_config_value('max_rpc_size')  #type: int
@@ -363,19 +366,14 @@ class Server:
         self.kill_switch = False        # type: bool
         self.loop = None  # just for python 3.5 compatibility...
 
-    def identification_str(self) -> str:
-        """Returns an identification string for self which consists of
-        the class name and the object-id."""
-        return '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
-
-    def start_logging(self, filename: str="") -> str:
+    def start_logging(self, filename: str = "") -> str:
         if not filename:
-            filename = self.identification_str() + '.log'
+            filename = self.server_name + '.log'
         if not log_dir():
             filename = os.path.join('.', filename)
         self.log_file = create_log(filename)
         if self.log_file:
-            self.log(self.log_file, '\nPython Version: %s\nDHParser Version: %s\n\n'
+            self.log('Python Version: %s\nDHParser Version: %s\n\n'
                      % (sys.version.replace('\n', ' '), __version__))
             return 'Started logging to file: "%s"' % self.log_file
         return 'Unable to write log-file: "%s"' % filename
@@ -392,7 +390,7 @@ class Server:
 
     def rpc_identify_server(self):
         """Returns an identification string for the server."""
-        return "DHParser " + __version__ + " " + self.identification_str()
+        return "DHParser " + __version__ + " " + self.server_name
 
     def rpc_logging(self, *args) -> str:
         """Starts logging with either a) the default filename, if args is
@@ -525,7 +523,8 @@ class Server:
             else:
                 func_name = self.default
                 argument = (data.decode(),)
-            err_func = lambda arg: 'Function %s no found!' % func_name
+            err_func = lambda *args, **kwargs: \
+                'No function named "%s" known to server %s !' % (func_name, self.server_name)
             func = self.rpc_table.get(func_name, err_func)
             result, rpc_error = await self.run(func_name, func, argument)
             if rpc_error is None:
@@ -744,6 +743,7 @@ class Server:
                     task_id, reader, writer, data))
                 assert task_id not in self.active_tasks, str(task_id)
                 self.active_tasks[id_writer][task_id] = task
+
             elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
                 task_id = gen_task_id()
@@ -751,6 +751,7 @@ class Server:
                     task_id, reader, writer, data))
                 assert task_id not in self.active_tasks, str(task_id)
                 self.active_tasks[id_writer][task_id] = task
+
             else:
                 # assume json
                 # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)

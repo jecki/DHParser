@@ -308,8 +308,13 @@ class LSP:
         return None
 
     @lsp_rpc
-    def lsp_custom(self, **kwargs):
-        return kwargs
+    def lsp_custom(self, *args, **kwargs):
+        if args and not kwargs:
+            return {'args': args}
+        elif kwargs and not args:
+            return kwargs
+        else:
+            return {'args': args, 'kwargs': kwargs }
 
     @lsp_rpc
     def lsp_check(self, **kwargs):
@@ -375,9 +380,25 @@ class TestLanguageServer:
         response = send_request(json_rpc('check', {}))
         assert response.find('701') >= 0
 
+        response = send_request(json_rpc('non_existant_function', {}))
+        assert response.find('-32601') >= 0  # method not found
+        response = send_request(json_rpc('non_existant_function', {'a': 1, 'b': 2, 'c': 3}))
+        assert response.find('-32601') >= 0  # method not found
+
+        # test plain-data call
+        response = send_request('custom(1)')
+        assert response.find('1') >= 0
+
+        # test plain-data false call
+        response = send_request('non_existant_function()')
+        assert response.find('No function named "non_extistant_function"')
+        response = send_request('non_existant_function(1)')
+        assert response.find('No function named "non_extistant_function"')
+
         response = send_request(json_rpc('shutdown', {}))
         assert response.find('error') < 0
 
+        # after shutdown, any function call except "exit()" should yield error
         response = send_request(json_rpc('custom', {}))
         assert response.find('error') >= 0
 

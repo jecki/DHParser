@@ -31,6 +31,7 @@ STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import 
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = 'logging("")'
 
+DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
 
 config_filename_cache = ''
@@ -64,7 +65,7 @@ def retrieve_host_and_port():
     Retrieve host and port from temporary config file or return default values
     for host and port, in case the temporary config file does not exist.
     """
-    host = '127.0.0.1'  # default host
+    host = DEFAULT_HOST
     port = DEFAULT_PORT
     cfg_filename = get_config_filename()
     try:
@@ -246,6 +247,7 @@ def start_server_daemon(host, port):
 def print_usage_and_exit():
     print('Usages:\n'
           + '    python EBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+          + '    python EBNFServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
           + '    python EBNFServer.py --stopserver\n'
           + '    python EBNFServer.py --status\n'
           + '    python EBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
@@ -271,18 +273,10 @@ def parse_logging_args(argv):
             log_path = ''
         args = repr(log_path), repr("ECHO_ON")
         request = LOGGING_REQUEST.replace('""', ", ".join(args))
+        print('Logging', log_path, request)
         return log_path, request
     except ValueError:
         return None, ''
-
-def parse_host_port(argv, default_host, default_port):
-    host, port = default_host, default_port
-    try:
-        i = argv.index('--host')
-        del argv[i]
-        host = argv[i]
-    except ValueError:
-        return host, port
 
 if __name__ == "__main__":
     host, port = '', -1
@@ -330,7 +324,17 @@ if __name__ == "__main__":
             argv.append(str(port))
         sys.exit(run_server(argv[2], int(argv[3]), log_path))
 
-    elif argv[1] in ("--stopserver", "--killserver"):
+    elif argv[1] == "--startdaemon":
+        log_path, log_request = parse_logging_args(argv)
+        if len(argv) == 2:
+            argv.append(host)
+        if len(argv) == 3:
+            argv.append(str(port))
+        start_server_daemon(host, port)
+        if log_request:
+            print(asyncio_run(send_request(log_request, host, port)))
+
+    elif argv[1] in ("--stopserver", "--killserver", "--stopdaemon", "--killdaemon"):
         try:
             result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
         except ConnectionRefusedError as e:
@@ -340,7 +344,7 @@ if __name__ == "__main__":
 
     elif argv[1] == "--logging":
         log_path, request = parse_logging_args(argv)
-        print(asyncio_run(send_request(request)))
+        print(asyncio_run(send_request(request, host, port)))
 
     elif argv[1].startswith('-'):
         print_usage_and_exit()
@@ -353,12 +357,12 @@ if __name__ == "__main__":
         log_path, log_request = parse_logging_args(argv)
         try:
             if log_request:
-                print(asyncio_run(send_request(log_request)))
+                print(asyncio_run(send_request(log_request, host, port)))
             result = asyncio_run(send_request(argv[1], host, port))
         except ConnectionRefusedError:
             start_server_daemon(host, port)               # start server first
             if log_request:
-                print(asyncio_run(send_request(log_request)))
+                print(asyncio_run(send_request(log_request, host, port)))
             result = asyncio_run(send_request(argv[1], host, port))
         print(result)
     else:

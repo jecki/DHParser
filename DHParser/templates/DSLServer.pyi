@@ -29,6 +29,8 @@ scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
+LOGGING_REQUEST = 'logging("")'
+
 DEFAULT_PORT = 8888
 
 config_filename_cache = ''
@@ -169,7 +171,7 @@ class DSLLanguageServerProtocol:
         return None
 
 
-def run_server(host, port):
+def run_server(host, port, log_path=None):
     try:
         from DSLCompiler import compile_src
     except ModuleNotFoundError:
@@ -192,7 +194,9 @@ def run_server(host, port):
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=set(lsp_table.keys() - non_blocking),
                         blocking=frozenset())
-
+    if log_path is not None:
+        DSL_server.echo_log = True
+        print(DSL_server.start_logging(log_path))
     DSL_server.run_server(host, port)  # returns only after server has stopped
 
     cfg_filename = get_config_filename()
@@ -241,10 +245,11 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python DSLServer.py --startserver [host] [port]\n'
+          + '    python DSLServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
           + '    python DSLServer.py --stopserver\n'
           + '    python DSLServer.py --status\n'
-          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]')
+          + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
+          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
     sys.exit(1)
 
 
@@ -254,6 +259,30 @@ def assert_if(cond: bool, message: str):
             print(message)
         print_usage_and_exit()
 
+
+def parse_logging_args(argv):
+    try:
+        i = argv.index('--logging')
+        del argv[i]
+        if i < len(argv):
+            log_path = argv[i]
+            del argv[i]
+        else:
+            log_path = ''
+        args = repr(log_path), repr("ECHO_ON")
+        request = LOGGING_REQUEST.replace('""', ", ".join(args))
+        return log_path, request
+    except ValueError:
+        return None, ''
+
+def parse_host_port(argv, default_host, default_port):
+    host, port = default_host, default_port
+    try:
+        i = argv.index('--host')
+        del argv[i]
+        host = argv[i]
+    except ValueError:
+        return host, port
 
 if __name__ == "__main__":
     host, port = '', -1
@@ -294,17 +323,12 @@ if __name__ == "__main__":
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":
-        # from DHParser import configuration
-        # CFG = configuration.access_presets()
-        # CFG['log_dir'] = os.path.abspath('LOG')
-        # CFG['log_server'] = True
-        # CFG['echo_server_log'] = True
-        # configuration.finalize_presets()
+        log_path, _ = parse_logging_args(argv)
         if len(argv) == 2:
             argv.append(host)
         if len(argv) == 3:
             argv.append(str(port))
-        sys.exit(run_server(argv[2], int(argv[3])))
+        sys.exit(run_server(argv[2], int(argv[3]), log_path))
 
     elif argv[1] in ("--stopserver", "--killserver"):
         try:
@@ -313,17 +337,28 @@ if __name__ == "__main__":
             print(e)
             sys.exit(1)
         print(result)
+
+    elif argv[1] == "--logging":
+        log_path, request = parse_logging_args(argv)
+        print(asyncio_run(send_request(request)))
+
     elif argv[1].startswith('-'):
         print_usage_and_exit()
+
     elif argv[1]:
         if not argv[1].endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
             argv[1] = os.path.abspath(argv[1])
             # print(argv[1])
+        log_path, log_request = parse_logging_args(argv)
         try:
+            if log_request:
+                print(asyncio_run(send_request(log_request)))
             result = asyncio_run(send_request(argv[1], host, port))
         except ConnectionRefusedError:
             start_server_daemon(host, port)               # start server first
+            if log_request:
+                print(asyncio_run(send_request(log_request)))
             result = asyncio_run(send_request(argv[1], host, port))
         print(result)
     else:
