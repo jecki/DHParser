@@ -34,6 +34,8 @@ LOGGING_REQUEST = 'logging("")'
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
 
+DATA_RECEIVE_LIMIT = 262144
+
 config_filename_cache = ''
 
 
@@ -211,7 +213,7 @@ def run_server(host, port, log_path=None):
 async def send_request(request, host, port):
     reader, writer = await asyncio.open_connection(host, port)
     writer.write(request.encode() if isinstance(request, str) else request)
-    data = await reader.read(500)
+    data = await reader.read(DATA_RECEIVE_LIMIT)
     writer.close()
     if sys.version_info >= (3, 7):
         await writer.wait_closed()
@@ -364,6 +366,9 @@ if __name__ == "__main__":
             if log_request:
                 print(asyncio_run(send_request(log_request, host, port)))
             result = asyncio_run(send_request(argv[1], host, port))
-        print(result)
+        if len(result) >= DATA_RECEIVE_LIMIT:
+            print(result, '...')
+        else:
+            print(result)
     else:
         print_usage_and_exit()
