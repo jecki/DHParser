@@ -271,8 +271,8 @@ class Server:
                 SERVER_OFFLINE, SERVER_STARTING, SERVER_ONLINE, SERVER_TERMINATING
         host:   The host, the server runs on, e.g. "127.0.0.1"
         port:   The port of the server, e.g. 8888
-        server: The asyncio.StreamServer if the server is online, or `None`.
-        serving_task:  The task in which the StreamServer is run.
+        server: The asyncio.Server if the server is online, or `None`.
+        serving_task:  The task in which the asyncio.Server is run.
         stop_response:  The response string that is written to the stream as
                 answer to a stop request.
         pp_executor:  A process-pool-executor for cpu-bound tasks
@@ -841,11 +841,8 @@ class Server:
             self.port.value = port
             self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
-            if sys.version_info >= (3, 8):
-                self.server = asyncio.StreamServer(self.connection_py38, host, port)
-            else:
-                self.server = cast(asyncio.base_events.Server,
-                                   await asyncio.start_server(self.connection, host, port))
+            self.server = cast(asyncio.AbstractServer,
+                               await asyncio.start_server(self.connection, host, port))
             async with self.server:
                 self.stage.value = SERVER_ONLINE
                 # self.server_messages.put(SERVER_ONLINE)
