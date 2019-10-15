@@ -163,11 +163,9 @@ def log_dir(path: str="") -> Union[str, bool]:
     dirname = path if path else get_config_value('log_dir')
     if not dirname:
         return False
-    if os.path.exists(dirname):
-        if not os.path.isdir(dirname):
-            raise IOError('"' + dirname + '" cannot be used as log directory, '
-                                          'because it is not a directory!')
-    else:
+    # `try ... except` rather `if os.path.exists(...)` to create directory
+    # to ensure thread-saftey.
+    try:
         os.mkdir(dirname)
         info_file_name = os.path.join(dirname, 'info.txt')
         if not os.path.exists(info_file_name):
@@ -176,6 +174,10 @@ def log_dir(path: str="") -> Union[str, bool]:
                         "parsing. ANY FILE IN THIS DIRECTORY CAN BE OVERWRITTEN! Therefore,\n"
                         "do not place any files here and do not bother editing files in this\n"
                         "directory as any changes will get lost.\n")
+    except FileExistsError:
+        if not os.path.isdir(dirname):
+            raise IOError('"' + dirname + '" cannot be used as log directory, '
+                                          'because it is not a directory!')
     set_config_value('log_dir', dirname)
     return dirname
 
