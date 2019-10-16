@@ -42,7 +42,8 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython
+from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
+    RX_NEVER_MATCH
 
 
 __all__ = ('Parser',
@@ -123,7 +124,7 @@ ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
 def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
-    Makes sure that this reentry-point does not lie inside a comment.
+    The algorithm makes sure that this reentry-point does not lie inside a comment.
     Args:
         rest:  The rest of the parsed text or, in other words, the point where
                 a ParserError was thrown.
@@ -152,7 +153,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
 
     def str_search(s, start: int = 0) -> Tuple[int, int]:
         nonlocal rest
-        return rest.find(s), len(rule)
+        return rest.find(s, start), len(rule)
 
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
         nonlocal rest
@@ -551,9 +552,6 @@ PARSER_PLACEHOLDER = Parser()
 #
 ########################################################################
 
-RX_NEVER_MATCH = re.compile(r'..(?<=^)')
-
-
 def mixin_comment(whitespace: str, comment: str) -> str:
     """
     Returns a regular expression that merges comment and whitespace
@@ -705,6 +703,8 @@ class Grammar:
 
         comment_rx__:  The compiled regular expression for comments. If no
                 comments have been defined, it defaults to RX_NEVER_MATCH
+                This instance-attribute will only be defined if a class-attribute
+                with the same name does not already exist!
 
         start_parser__:  During parsing, the parser with which the parsing process
                 was started (see method `__call__`) or `None` if no parsing process
@@ -846,8 +846,13 @@ class Grammar:
 
     def __init__(self, root: Parser = None) -> None:
         self.all_parsers__ = set()             # type: Set[Parser]
-        self.comment_rx__ = re.compile(self.COMMENT__) \
-            if hasattr(self, 'COMMENT__') and self.COMMENT__ else RX_NEVER_MATCH
+        # add compiled regular expression for comments, if it does not already exist
+        if not hasattr(self, 'comment_rx__'):
+            self.comment_rx__ = re.compile(self.COMMENT__) \
+                if hasattr(self, 'COMMENT__') and self.COMMENT__ else RX_NEVER_MATCH
+        else:
+            assert ((self.COMMENT__ and self.COMMENT__ == self.comment_rx__.pattern)
+                     or (not self.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool

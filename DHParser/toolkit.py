@@ -52,6 +52,8 @@ except ImportError:
 __all__ = ('typing',
            'cython',
            'cython_optimized',
+           'NEVER_MATCH_PATTERN',
+           'RX_NEVER_MATCH',
            're_find',
            'escape_re',
            'escape_control_characters',
@@ -100,6 +102,10 @@ DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
 # miscellaneous (generic)
 #
 #######################################################################
+
+
+NEVER_MATCH_PATTERN = r'..(?<=^)'
+RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
 
 
 def re_find(s, r, pos=0, endpos=9223372036854775807):

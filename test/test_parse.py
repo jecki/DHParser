@@ -785,24 +785,33 @@ class TestReentryAfterError:
             block_A = "a" §"b" "c"
             block_B = "x" "y" "z"
         """
-        grammar = grammar_provider(lang)()
-        tree = grammar('abc/*x*/xyz')
-        assert not tree.errors
-        tree = grammar('abDxyz')
-        mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
-        assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
-        tree = grammar('abD/*x*/xyz')
-        assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
-        tree = grammar('aD /*x*/ c /* a */ /*x*/xyz')
-        assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+        def mini_suite(grammar):
+            tree = grammar('abc/*x*/xyz')
+            assert not tree.errors
+            tree = grammar('abDxyz')
+            mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
+            assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+            tree = grammar('abD/*x*/xyz')
+            assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+            tree = grammar('aD /*x*/ c /* a */ /*x*/xyz')
+            assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
 
+        # test regex-defined resume rule
+        grammar = grammar_provider(lang)()
+        mini_suite(grammar)
+
+        # test string-defined resume rule
+        alt_lang = lang.replace('@ block_A_resume = /x/',
+                                '@ block_A_resume = "x"')
+        grammar = grammar_provider(alt_lang)()
+        mini_suite(grammar)
 
 class TestConfiguredErrorMessages:
     def test_configured_error_message(self):
         lang = """
             document = series | /.*/
             @series_error = "a badly configured error message {5}"
-            series = "X" | head §"C" "D"
+            series = /X/ | head §"C" "D"
             head = "A" "B"
             """
         parser = grammar_provider(lang)()

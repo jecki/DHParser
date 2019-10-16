@@ -39,7 +39,7 @@ from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespa
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    unrepr, compile_python_object, DHPARSER_PARENTDIR
+    unrepr, compile_python_object, DHPARSER_PARENTDIR, NEVER_MATCH_PATTERN
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
@@ -99,7 +99,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
-    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode
+    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode, \\
+    RX_NEVER_MATCH
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 
@@ -541,6 +542,7 @@ class EBNFCompiler(Compiler):
                 compiled texts.)
     """
     COMMENT_KEYWORD = "COMMENT__"
+    COMMENT_RX_KEYWORD = "comment_rx__"
     WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
@@ -548,8 +550,9 @@ class EBNFCompiler(Compiler):
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_SUFFIX = '_skip__'
     ERR_MSG_SUFFIX = '_err_msg__'
-    RESERVED_SYMBOLS = {WHITESPACE_KEYWORD, RAW_WS_KEYWORD, COMMENT_KEYWORD,
-                        RESUME_RULES_KEYWORD, ERR_MSG_SUFFIX}
+    RESERVED_SYMBOLS = {COMMENT_KEYWORD, COMMENT_RX_KEYWORD, WHITESPACE_KEYWORD, RAW_WS_KEYWORD,
+                        WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
+                        RESUME_RULES_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -780,6 +783,8 @@ class EBNFCompiler(Compiler):
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))
         definitions.append((self.RAW_WS_KEYWORD, "r'{}'".format(self.directives.whitespace)))
+        comment_rx = "re.compile(COMMENT__)" if self.directives.comment else "RX_NEVER_MATCH"
+        definitions.append((self.COMMENT_RX_KEYWORD, comment_rx))
         definitions.append((self.COMMENT_KEYWORD, "r'{}'".format(self.directives.comment)))
 
         # prepare and add resume-rules
