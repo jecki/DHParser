@@ -132,6 +132,10 @@ class TestLoggingAndLoading:
         save_log_dir = suspend_logging()
         assert not is_logging(), "Logging should be off outside logging context"
         resume_logging(save_log_dir)
+        # TODO: Some race condition occurs here, but which and why???
+        #       Maybe: Some other thread has created logdir but not yet info.txt
+        #       Solution: Just return True, cause log_dir() does not guarantee
+        #                 existence of 'info.txt', anyway...
         return os.path.exists(os.path.join(self.LOGDIR, "info.txt"))
 
     def test_logging_multiprocessing(self):
