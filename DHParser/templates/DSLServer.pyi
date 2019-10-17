@@ -202,12 +202,19 @@ def run_server(host, port, log_path=None):
         print(DSL_server.start_logging(log_path))
     DSL_server.run_server(host, port)  # returns only after server has stopped
 
-    cfg_filename = get_config_filename()
     try:
-        os.remove(cfg_filename)
-        print('removing temporary config file: ' + cfg_filename)
-    except FileNotFoundError:
-        pass
+        DSL_server.run_server(host, port)  # returns only after server has stopped
+    except OSError as e:
+        print(e)
+        print('Could not start server. Shutting down!')
+        sys.exit(1)
+    finally:
+        cfg_filename = get_config_filename()
+        try:
+            os.remove(cfg_filename)
+            print('removing temporary config file: ' + cfg_filename)
+        except FileNotFoundError:
+            pass
 
 
 async def send_request(request, host, port):
@@ -267,14 +274,26 @@ def assert_if(cond: bool, message: str):
 def parse_logging_args(argv):
     try:
         i = argv.index('--logging')
+        echo = repr('NO_ECHO')
         del argv[i]
         if i < len(argv):
-            log_path = argv[i]
+            arg = argv[i].upper()
+            if arg == 'ECHO' or arg.startswith('ECHO_') or arg.endswith('_ECHO'):
+                arg = arg.replace('ECHO', '').strip('_')
+                echo = repr('ECHO_ON')
+            if arg in ('OFF', 'STOP', 'NO', 'FALSE'):
+                log_path = repr(None)
+                echo = repr('NO_ECHO')
+            elif arg in ('ON', 'START', 'YES', 'TRUE'):
+                log_path = repr('')
+            else:
+                log_path = repr(argv[i])
             del argv[i]
         else:
-            log_path = ''
-        args = repr(log_path), repr("ECHO_ON")
+            log_path = repr('')
+        args = log_path, echo
         request = LOGGING_REQUEST.replace('""', ", ".join(args))
+        print('Logging to file %s with call %s' % (repr(log_path), request))
         return log_path, request
     except ValueError:
         return None, ''

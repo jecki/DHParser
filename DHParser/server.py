@@ -158,12 +158,25 @@ def as_json_rpc(func: Callable,
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def maybe_int(s: str) -> Union[int, str]:
-    """Convert string to int if possible, otherwise return string."""
+def convert_argstr(s: str) -> Union[None, bool, int, str,  List, Dict]:
+    """Convert string to suitable argument type"""
+    s = s.strip()
+    if s in ('None', 'null'):
+        return None
+    elif s in ('True', 'true'):
+        return True
+    elif s in ('False', 'false'):
+        return False
     try:
         return int(s)
     except ValueError:
-        return s
+        if s.startswith('"') or s.startswith("'"):
+            return s.strip('" \'')
+        else:
+            try:
+                return json.loads(s)
+            except json.JSONDecodeError:
+                return s
 
 
 def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
@@ -379,9 +392,12 @@ class Server:
         return 'Unable to write log-file: "%s"' % filename
 
     def stop_logging(self):
-        self.log(self.log_file, 'Logging will be stopped now!')
-        ret = 'Stopped logging to file: "%s"' % self.log_file
-        self.log_file = ''
+        if self.log_file:
+            self.log('Logging will be stopped now!')
+            ret = 'Stopped logging to file: "%s"' % self.log_file
+            self.log_file = ''
+        else:
+            ret = 'No logging'
         return ret
 
     def log(self, *args):
@@ -517,7 +533,7 @@ class Server:
                 func_name = m.group(1).decode()
                 argstr = m.group(2).decode()
                 if argstr:
-                    argument = tuple(maybe_int(s.strip('" \'')) for s in argstr.split(','))
+                    argument = tuple(convert_argstr(s) for s in argstr.split(','))
                 else:
                     argument = ()
             else:
