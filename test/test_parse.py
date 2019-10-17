@@ -36,7 +36,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
 from DHParser.dsl import grammar_provider, CompilationError
-from DHParser.syntaxtree import Node
+from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
 
 
@@ -466,6 +466,42 @@ class TestAllOfSomeOf:
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
         assert Grammar(prefixes)('A B B').error_flag
+
+
+class TestErrorRecovery:
+    def test_series_skip(self):
+        lang = """
+        document = series | /.*/
+        @series_skip = /[A-Z]/
+        series = "A" "B" §"C" "D"
+        """
+        parser = grammar_provider(lang)()
+        st = parser('AB_D')
+        assert len(st.errors) == 1  # no additional "stopped before end"-error!
+
+    def test_AllOf_skip(self):
+        lang = """
+        document = allof | /.*/
+        @allof_skip = /[A-Z]/
+        allof = < "A" §"B" "C" "D" >
+        """
+        parser = grammar_provider(lang)()
+        st = parser('CADB')
+        assert 'allof' in st and st['allof'].content == "CADB"
+        st = parser('_BCD')
+        assert st.equals(parse_sxpr('(document "_BCD")'))
+        st = parser('_ABC')
+        assert st.equals(parse_sxpr('(document "_ABC")'))
+        st = parser('A_CD')
+        assert st['allof'].content == "A_CD"
+        st = parser('AB_D')
+        assert st['allof'].content == "AB_D"
+        st = parser('A__D')
+        assert st['allof'].content == "A__D"
+        st = parser('CA_D')
+        assert st['allof'].content == "CA_D"
+        st = parser('BC_A')
+        assert st['allof'].content == "BC_A"
 
 
 class TestPopRetrieve:
