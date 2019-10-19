@@ -103,6 +103,7 @@ def create_project(path: str):
     create_file('%sServer.py' %name, SERVER_TEMPLATE.replace('DSL', name))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
+    os.chmod('%sServer.py' % name, 0o755)
     # The following is left to the user as an exercise
     # print('Creating file "%s".' % (name + 'Compiler.py'))
     # recompile_grammar(name + '.ebnf', force=True)

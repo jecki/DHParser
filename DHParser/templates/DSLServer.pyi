@@ -375,6 +375,7 @@ if __name__ == "__main__":
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
             argv[1] = os.path.abspath(argv[1])
             # print(argv[1])
+        # TODO: Check for changed grammar and stop server and recompile grammar if needed.
         log_path, log_request = parse_logging_args(argv)
         try:
             if log_request:

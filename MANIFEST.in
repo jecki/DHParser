@@ -7,6 +7,7 @@ recursive-exclude docs *
 recursive-exclude DHParser *.c
 recursive-exclude DHParser *.so
 recursive-exclude DHParser *.pyd
+recursive-exclude DHParser *.pyc
 
 include examples/EBNF/EBNF.ebnf
 include examples/Tutorial/Lyrik.ebnf
@@ -20,7 +21,7 @@ recursive-exclude examples/ArithmeticRightRecursive *
 recursive-exclude examples/BibTeX *
 recursive-exclude examples/XMLSnippet *
 
-recursive-include scripts *
+recursive-include DHParser/templates *
 
 recursive-exclude build *
 recursive-exclude devscripts *

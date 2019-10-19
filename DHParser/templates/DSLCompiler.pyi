@@ -9,13 +9,23 @@ def compile_src(source):
 if __name__ == "__main__":
     # recompile grammar if needed
     grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
     if os.path.exists(grammar_path):
-        if not recompile_grammar(grammar_path, force=False,
-                                  notify=lambda:print('recompiling ' + grammar_path)):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
     else:
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
