@@ -98,9 +98,11 @@ def create_project(path: str):
                 TEST_DOCUMENT_TEMPLATE)
     create_file(name + '.ebnf', EBNF_TEMPLATE.replace('GRAMMAR_NAME', name, 1))
     create_file('README.md', README_TEMPLATE.format(name=name))
+    reldhparserdir = os.path.relpath(dhparserdir, os.path.abspath('.'))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
-        name=name, reldhparserdir=os.path.relpath(dhparserdir, os.path.abspath('.'))))
-    create_file('%sServer.py' %name, SERVER_TEMPLATE.replace('DSL', name))
+        name=name, reldhparserdir=reldhparserdir))
+    create_file('%sServer.py' % name, SERVER_TEMPLATE.replace('DSL', name).replace(
+        'RELDHPARSERDIR', reldhparserdir))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     os.chmod('%sServer.py' % name, 0o755)

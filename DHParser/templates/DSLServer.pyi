@@ -175,12 +175,18 @@ class DSLLanguageServerProtocol:
 
 
 def run_server(host, port, log_path=None):
-    try:
-        from DSLCompiler import compile_src
-    except ModuleNotFoundError:
-        from tst_DSL_grammar import recompile_grammar
-        recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
-        from DSLCompiler import compile_src
+    grammar_src = os.path.join(scriptpath, 'poetry.ebnf')
+    sys.path.append('RELDHPARSERDIR')
+    from DHParser.dsl import recompile_grammar
+    if not recompile_grammar(grammar_src, force=False,
+                             notify=lambda: print('recompiling ' + grammar_src)):
+        print('\nErrors while recompiling "%s":' % grammar_src +
+              '\n--------------------------------------\n\n')
+        with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
+            print(f.read())
+        sys.exit(1)
+    recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
+    from DSLCompiler import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
@@ -200,7 +206,6 @@ def run_server(host, port, log_path=None):
     if log_path is not None:
         DSL_server.echo_log = True
         print(DSL_server.start_logging(log_path))
-    DSL_server.run_server(host, port)  # returns only after server has stopped
 
     try:
         DSL_server.run_server(host, port)  # returns only after server has stopped
