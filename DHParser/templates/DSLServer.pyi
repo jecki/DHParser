@@ -175,7 +175,7 @@ class DSLLanguageServerProtocol:
 
 
 def run_server(host, port, log_path=None):
-    grammar_src = os.path.join(scriptpath, 'poetry.ebnf')
+    grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
     sys.path.append('RELDHPARSERDIR')
     from DHParser.dsl import recompile_grammar
     if not recompile_grammar(grammar_src, force=False,
