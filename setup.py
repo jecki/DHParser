@@ -33,6 +33,7 @@ setup(
     author_email='arnold@badw.de',
     description='DHParser - Parser generator and DSL-construction-kit',
     long_description = read_me,
+    long_description_content_type="text/markdown",
     keywords='parser generator, domain specific languages, Digital Humanities, parser combinators, EBNF',
     classifiers = [
         'Development Status :: 4 - Beta',

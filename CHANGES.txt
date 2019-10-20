@@ -1,7 +1,7 @@
-DHParser Version 0.9.0
-......................
+DHParser Version 0.9.0 (20.10.2019)
+...................................
 
-- language server support
+- rudimentary language server support (still experimental!)
 - translation pipeline only stops on fatal errors. This makes previews
   even for partially erroneous code possible
 - better cython support
