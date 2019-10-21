@@ -80,8 +80,8 @@ function startLangServerTCP(addr: number) : Disposable {
 
 	console.log('starting lang server');
 	client = new LanguageClient(
-		'JSONLanguageServer',
-		`json tcp lang server (port ${addr})`,
+		'EBNFLanguageServer',
+		`ebnf tcp lang server (port ${addr})`,
 		serverOptions,
 		clientOptions);
 	let disposable = client.start();

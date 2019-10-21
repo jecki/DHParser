@@ -136,6 +136,7 @@ def lsp_rpc(f):
 
 class DSLLanguageServerProtocol:
     def __init__(self):
+        import json
         import multiprocessing
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()

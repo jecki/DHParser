@@ -136,7 +136,7 @@ def lsp_rpc(f):
 
 class EBNFLanguageServerProtocol:
     def __init__(self):
-        import multiprocessing
+        import json, multiprocessing
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()
         self.shared.initialized = False
@@ -144,7 +144,26 @@ class EBNFLanguageServerProtocol:
         self.shared.processId = 0
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
-        self.shared.serverCapabilities = '{}'
+        self.shared.serverCapabilities = json.dumps({
+              "capabilities": {
+                "textDocumentSync": 1,
+                "completionProvider": {
+                  "resolveProvider": False,
+                  "triggerCharacters": [
+                    "/"
+                  ]
+                },
+                "hoverProvider": True,
+                "documentSymbolProvider": True,
+                "referencesProvider": True,
+                "definitionProvider": True,
+                "documentHighlightProvider": True,
+                "codeActionProvider": True,
+                "renameProvider": True,
+                "colorProvider": {},
+                "foldingRangeProvider": True
+              }
+            })
 
     def lsp_initialize(self, **kwargs):
         import json

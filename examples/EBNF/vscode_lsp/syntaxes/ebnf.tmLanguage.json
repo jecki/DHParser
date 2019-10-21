@@ -1,0 +1,61 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "MLWQuelle",
+	"patterns": [
+		{
+			"include": "#keyword"
+		},
+		{
+			"include": "#string"
+		},
+		{
+			"include": "#comment"
+		},
+		{
+			"include": "#opera_majora_author_name"
+		}
+	],
+	"repository": {
+		"keyword": {
+			"patterns": [{
+				"name": "keyword.secondary.mlw",
+				"match": "\\b(LATEINISCH|DEUTSCH|LAT|DEU)\\b"
+			},
+			{
+				"name": "keyword.mlw",
+				"match": "\\b(LEMMA|SUB_LEMMA|GRAMMATIK|ETYMOLOGIE|SCHREIBWEISE|STRUKTUR|GEBRAUCH|METRIK|VERWECHSELBAR|BEDEUTUNG|UNTER_BEDEUTUNG|UNTER_UNTER_BEDEUTUNG|UNTER_UNTER_UNTER_BEDEUTUNG|U_BEDEUTUNG|UU_BEDEUTUNG|UUU_BEDEUTUNG|UUUU_BEDEUTUNG|UUUUU_BEDEUTUNG|UUUUUU_BEDEUTUNG|UUUUUUU_BEDEUTUNG|ANHÄNGER|BELEGE|VERWEISE|AUTORIN|AUTOR|STELLENVERZEICHNIS|SINE)\\b"
+			}]
+		},
+		"strins": {
+			"name": "string.quoted.double.mlw",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.mlw",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comment": {
+			"name": "comment.mlw",
+			"patterns": [{
+				"name": "comment.block.mlw",
+				"begin": "/\\*",
+				"end": "\\*/"
+			},
+			{
+				"name": "comment.line.mlw",
+				"match": "(//).*$\\n?"
+			}]
+		},
+		"opera_majora_author_name": {
+			"name": "opera_majora_author_name.mlw",
+			"patterns": [{
+				"name": "constant.numeric.mlw",
+				"match": ""
+			}]
+		}
+	},
+	"scopeName": "source.ebnf"
+}

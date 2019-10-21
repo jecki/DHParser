@@ -1,6 +1,6 @@
 {
-	"name": "json-language-server",
-	"description": "DHParser language server for the json-example",
+	"name": "EBNF-language-server",
+	"description": "DHParser language server for the EBNF-example",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
 	"version": "0.0.1",
@@ -17,21 +17,21 @@
 		"vscode": "^1.23.0"
 	},
 	"activationEvents": [
-		"onLanguage:jsonc"
+		"onLanguage:ebnf"
 	],
 	"main": "./client/out/extension",
 	"contributes": {
 		"configuration": {
 			"type": "object",
-			"title": "Example configuration",
+			"title": "EBNF configuration",
 			"properties": {
-				"JSONLanguageServer.maxNumberOfProblems": {
+				"EBNFLanguageServer.maxNumberOfProblems": {
 					"scope": "resource",
 					"type": "number",
 					"default": 50,
 					"description": "Controls the maximum number of problems produced by the server."
 				},
-				"JSONLanguageServer.trace.server": {
+				"EBNFLanguageServer.trace.server": {
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -43,7 +43,22 @@
 					"description": "Traces the communication between VS Code and the language server."
 				}
 			}
-		}
+		},
+        "languages": [{
+            "id": "ebnf",
+            "aliases": ["EBNF", "ebnf"],
+            "extensions": [".ebnf"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "ebnf",
+            "scopeName": "source.ebnf",
+            "path": "./syntaxes/ebnf.tmLanguage.json"
+        }],
+        "snippets": [{
+            "language": "ebnf",
+            "path": "./snippets/ebnf.snippets.json"
+        }]
 	},
 	"scripts": {
 		"vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
