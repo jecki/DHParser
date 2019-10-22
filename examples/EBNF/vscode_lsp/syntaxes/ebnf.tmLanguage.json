@@ -1,61 +1,89 @@
 {
+	"scopeName": "source.ebnf",
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "MLWQuelle",
+	"name": "DHParser-EBNF",
 	"patterns": [
-		{
-			"include": "#keyword"
-		},
-		{
-			"include": "#string"
-		},
-		{
-			"include": "#comment"
-		},
-		{
-			"include": "#opera_majora_author_name"
-		}
+		{ "include": "#directive" },
+		{ "include": "#string-double" },
+		{ "include": "#string-single"},
+		{ "include": "#regex" },
+		{ "include": "#comment" },
+		{ "include": "#section-marker" },
+		{ "include": "#paren-expression" },
+		{ "include": "#prefix-operator" },
+		{ "include": "#infix-operator" },
+		{ "include": "#whitespace-operator" }
 	],
 	"repository": {
-		"keyword": {
+		"directive": {
 			"patterns": [{
-				"name": "keyword.secondary.mlw",
-				"match": "\\b(LATEINISCH|DEUTSCH|LAT|DEU)\\b"
-			},
-			{
-				"name": "keyword.mlw",
-				"match": "\\b(LEMMA|SUB_LEMMA|GRAMMATIK|ETYMOLOGIE|SCHREIBWEISE|STRUKTUR|GEBRAUCH|METRIK|VERWECHSELBAR|BEDEUTUNG|UNTER_BEDEUTUNG|UNTER_UNTER_BEDEUTUNG|UNTER_UNTER_UNTER_BEDEUTUNG|U_BEDEUTUNG|UU_BEDEUTUNG|UUU_BEDEUTUNG|UUUU_BEDEUTUNG|UUUUU_BEDEUTUNG|UUUUUU_BEDEUTUNG|UUUUUUU_BEDEUTUNG|ANHÄNGER|BELEGE|VERWEISE|AUTORIN|AUTOR|STELLENVERZEICHNIS|SINE)\\b"
+				"name": "constant",
+				"match": "^[\\t ]*@[\\t ]*(?:whitespace|comment|literalws|tokens|drop|\\w*?_(?:error|skip|resume))"
 			}]
 		},
-		"strins": {
-			"name": "string.quoted.double.mlw",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": [
-				{
-					"name": "constant.character.escape.mlw",
+		"string-double": {
+			"name": "string.quoted",
+			"begin": "[\"']",
+			"end": "[\"']",
+			"patterns": [{
+					"name": "constant.character.escape",
 					"match": "\\\\."
-				}
-			]
+			}]
+		},
+		"regex": {
+			"name": "string.regexp",
+			"begin": "/",
+			"end": "/",
+			"patterns": [{
+					"name": "constant.character.escape",
+					"match": "\\\\."
+			}]
 		},
 		"comment": {
-			"name": "comment.mlw",
+			"name": "comment",
 			"patterns": [{
-				"name": "comment.block.mlw",
-				"begin": "/\\*",
-				"end": "\\*/"
-			},
-			{
-				"name": "comment.line.mlw",
-				"match": "(//).*$\\n?"
+				"name": "comment.line",
+				"match": "#(?!:).*$"
 			}]
 		},
-		"opera_majora_author_name": {
-			"name": "opera_majora_author_name.mlw",
+		"section-marker": {
+			"name": "section-marker",
 			"patterns": [{
-				"name": "constant.numeric.mlw",
-				"match": ""
+				"name": "comment.block.documentation",
+				"match": "#:.*$"
+			}]
+		},
+		"paren-expression": {
+			"name": "paren-expression",
+			"begin": "[\\(\\[\\{]",
+			"end": "[\\)\\]\\}]|\\}+",
+			"beginCaptures": {
+              "0": { "name": "punctuation.paren.open" }
+		    },
+            "endCaptures": {
+              "0": { "name": "punctuation.paren.close" }
+		    }
+		},
+		"prefix-operator": {
+			"name": "prefix-operator",
+			"patterns": [{
+				"name": "keyword.operator",
+				"match": "-!|-&|::|[§!&:]"
+			}]
+		},
+		"infix-operator": {
+			"name": "infix-operator",
+			"patterns": [{
+				"name": "keyword.control",
+				"match": "[|,]"
+			}]
+		},
+		"whitespace-operator": {
+			"name": "whitespace-operator",
+			"patterns": [{
+				"name": "keyword.other",
+				"match": "~"
 			}]
 		}
-	},
-	"scopeName": "source.ebnf"
+	}
 }

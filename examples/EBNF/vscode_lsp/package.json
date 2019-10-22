@@ -1,6 +1,6 @@
 {
 	"name": "EBNF-language-server",
-	"description": "DHParser language server for the EBNF-example",
+	"description": "Language Server for DHParser-EBNF",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
 	"version": "0.0.1",
