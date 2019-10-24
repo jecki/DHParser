@@ -1,5 +1,5 @@
 {
-	"name": "EBNF-language-server",
+	"name": "ebnf-language-server",
 	"description": "DHParser language server for the EBNF-example",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
@@ -10,7 +10,7 @@
 		"url": "https://gitlab.lrz.de/badw-it/DHParser"
 	},
 	"engines": {
-		"vscode": "^1.23.0"
+		"vscode": "^1.26.0"
 	},
 	"scripts": {
 		"update-vscode": "vscode-install",

@@ -1,5 +1,5 @@
 {
-	"name": "EBNF-language-server",
+	"name": "ebnf-language-server",
 	"description": "Language Server for DHParser-EBNF",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
@@ -14,7 +14,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.23.0"
+		"vscode": "^1.26.0"
 	},
 	"activationEvents": [
 		"onLanguage:ebnf"
