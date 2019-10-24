@@ -1,10 +1,10 @@
-# JSON LSP-integration for Visual Studio Code
+# EBNF LSP-integration for Visual Studio Code
 
 See <https://code.visualstudio.com/api/language-extensions/language-server-extension-guide>
 
 ## Functionality
 
-Client-module for Visual Studio Code to connect jsonServer.py as a language-server for json
+Client-module for Visual Studio Code to connect EBNFServer.py as a language-server for EBNF
 
 ## Running the Sample
 
@@ -16,5 +16,5 @@ Client-module for Visual Studio Code to connect jsonServer.py as a language-serv
 - Select `Launch Client` from the drop down.
 - Run the launch config.
 - If you want to debug the server as well use the launch configuration `Attach to Server`
-- In the [Extension Development Host] instance of VSCode, open a document in 'jsonc' language mode.
+- In the [Extension Development Host] instance of VSCode, open a document in 'ebnf' language mode.
 

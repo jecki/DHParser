@@ -280,16 +280,13 @@ def assert_if(cond: bool, message: str):
 def parse_logging_args(argv):
     try:
         i = argv.index('--logging')
-        echo = repr('NO_ECHO')
+        echo = repr('ECHO_ON') if argv[1].lower() == '--startserver' else repr('ECHO_OFF')
         del argv[i]
         if i < len(argv):
             arg = argv[i].upper()
-            if arg == 'ECHO' or arg.startswith('ECHO_') or arg.endswith('_ECHO'):
-                arg = arg.replace('ECHO', '').strip('_')
-                echo = repr('ECHO_ON')
             if arg in ('OFF', 'STOP', 'NO', 'FALSE'):
                 log_path = repr(None)
-                echo = repr('NO_ECHO')
+                echo = repr('ECHO_OFF')
             elif arg in ('ON', 'START', 'YES', 'TRUE'):
                 log_path = repr('')
             else:

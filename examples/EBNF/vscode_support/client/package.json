@@ -1,6 +1,6 @@
 {
-	"name": "json-language-server",
-	"description": "DHParser language server for the json-example",
+	"name": "EBNF-language-server",
+	"description": "DHParser language server for the EBNF-example",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
 	"version": "0.0.1",
