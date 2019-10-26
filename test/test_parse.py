@@ -355,6 +355,17 @@ class TestGrammar:
         CST = grammar('3+4')
         assert not CST.error_flag, CST.as_sxpr()
 
+    def test_incomplete_matching(self):
+        """Tests whether the flag `complete_match` works as expected when
+        calling a grammar object in order to parse a document."""
+        gr = grammar_provider('word = ~/\\w+/\n')()
+        st = gr('eins')
+        assert not st.errors
+        st = gr('eins zwei')
+        assert st.errors[0].code == Error.PARSER_STOPPED_BEFORE_END
+        st = gr('eins zwei', complete_match=False)
+        assert not st.errors
+
 
 class TestSeries:
     def test_non_mandatory(self):

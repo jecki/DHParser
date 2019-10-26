@@ -956,6 +956,7 @@ class Grammar:
     def __call__(self,
                  document: str,
                  start_parser: Union[str, Parser] = "root_parser__",
+                 *, complete_match: bool = True,
                  track_history: bool = False) -> RootNode:
         """
         Parses a document with with parser-combinators.
@@ -965,6 +966,8 @@ class Grammar:
             start_parser (str or Parser): The name of the parser with which
                 to start. This is useful for testing particular parsers
                 (i.e. particular parts of the EBNF-Grammar.)
+            complete_match (bool): If True, an error is generated, if
+                `start_parser` did not match the entire document.
             track_history (bool): If true, the parsing history will be
                 recorded in self.history__. If logging is turned on (i.e.
                 DHParser.log.is_logging() returns true), the parsing history
@@ -1043,7 +1046,7 @@ class Grammar:
         max_parser_dropouts = self.max_parser_dropouts__
         while rest and len(stitches) < max_parser_dropouts:
             result, rest = parser(rest)
-            if rest:
+            if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None:
@@ -1096,6 +1099,8 @@ class Grammar:
                     # self.history__.append(record)
                     # stop history tracking when parser returned too early
                     self.history_tracking__ = False
+            else:
+                rest = ''  # if complete_match is False, ignore the rest and leave while loop
         if stitches:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
