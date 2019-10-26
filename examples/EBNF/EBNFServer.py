@@ -148,20 +148,8 @@ class EBNFLanguageServerProtocol:
               "capabilities": {
                 "textDocumentSync": 1,
                 "completionProvider": {
-                  "resolveProvider": False,
-                  "triggerCharacters": [
-                    "/"
-                  ]
-                },
-                "hoverProvider": True,
-                "documentSymbolProvider": True,
-                "referencesProvider": True,
-                "definitionProvider": True,
-                "documentHighlightProvider": True,
-                "codeActionProvider": True,
-                "renameProvider": True,
-                "colorProvider": {},
-                "foldingRangeProvider": True
+                  "resolveProvider": True
+                }
               }
             })
 
