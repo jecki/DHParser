@@ -1442,14 +1442,14 @@ class DropWhitespace(Whitespace):
 
 class MetaParser(Parser):
     """Class Meta-Parser contains functions for the optimization of
-    retrun values of parsers that call other parsers (i.e descendants
+    return values of parsers that call other parsers (i.e descendants
     of classes UnaryParser and NaryParser).
 
     The optimization consists in flattening the tree by eliminating
     anonymous nodes. This is the same as what the function
     DHParser.transform.flatten() does, only at an earlier stage.
     The reasoning is that the earlier the tree is reduced, the less work
-    reamins to do at all the later processing stages.
+    remains to do at all the later processing stages.
     """
 
     def _return_value(self, node: Optional[Node]) -> Node:
