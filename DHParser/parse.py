@@ -682,9 +682,16 @@ class Grammar:
                 that act as rules to find the reentry point if a ParserError was
                 thrown during the execution of the parser with the respective name.
 
-        parser_initializiation__:  Before the parser class (!) has been initialized,
+        anonymize__: Either a regular expression or a set of strings that
+                identify names of parsers that shall be treated as anonymous parsers,
+                even though they are assigned to a class field (see
+                `:func:_assign_parser_names()`). The default is to treat all parsers
+                starting with an underscore as anonymous in addition to those
+                parsers that are not directly assigned to a class field.
+
+        parser_initializiation__:  Before the grammar class (!) has been initialized,
                  which happens upon the first time it is instantiated (see
-                 :func:_assign_parser_names()` for an explanation), this class
+                 `:func:_assign_parser_names()` for an explanation), this class
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
 
@@ -804,6 +811,7 @@ class Grammar:
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
+    anonymous__ = re.compile(r'_\w+')  # type: Union[RxPatternType, Set[str]]
     # some default values
     # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
