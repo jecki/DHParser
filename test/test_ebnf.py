@@ -594,7 +594,7 @@ class TestErrorCustomizationErrors:
 class TestCustomizedResumeParsing:
     def setup(self):
         lang = r"""
-            @ alpha_resume = /(?=BETA)/, /(?=GAMMA)/
+            @ alpha_resume = "BETA", "GAMMA"
             @ beta_resume = GAMMA_RE
             @ bac_resume = /(?=GA\w+)/
             document = alpha [beta] gamma "."
@@ -684,7 +684,7 @@ class TestAllOfResume:
         lang = """
             document = allof
             @ allof_error = '{} erwartet, {} gefunden :-('
-            @ allof_skip = /A/, /B/, /C/, /D/, /E/, /F/, /G/
+            @ allof_skip = "D", "E", "F", "G"
             allof = < "A" "B" § "C" "D" "E" "F" "G" >
         """
         self.gr = grammar_provider(lang)()
@@ -701,7 +701,7 @@ class TestAllOfResume:
     def test_allof_resume_later(self):
         lang = """
             document = flow "."
-            @ flow_resume = /(?=\.)/
+            @ flow_resume = "."
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
             allof = < "A" "B" § "C" "D" "E" "F" "G" >
@@ -724,12 +724,12 @@ class TestAllOfResume:
     def test_complex_resume_task(self):
         lang = """
             document = flow { flow } "."
-            @ flow_resume = /(?=[.])/
+            @ flow_resume = "."
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
-            @ allof_resume = /(?=E)/, /(?=A)/
+            @ allof_resume = "E", "A"
             allof = < "A" "B" § "C" "D" "E" "F" "G" >
-            @ series_resume = /(?=E)/, /(?=A)/
+            @ series_resume = "E", "A"
             series = "E" "X" §"Y" "Z"
         """
         gr = grammar_provider(lang)()
@@ -745,7 +745,6 @@ class TestAllOfResume:
         st = gr('FCB_GAED.')
         assert len(st.errors_sorted) == 2
         st = gr('EXY EXYZ.')
-        print(st.errors)
         assert len(st.errors_sorted) == 1
 
 

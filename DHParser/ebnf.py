@@ -740,7 +740,7 @@ class EBNFCompiler(Compiler):
             return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
         elif nd.tag_name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
-            return unrepr("re.compile(r'%s')" % escape_re(s))
+            return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
         return ''
 
 

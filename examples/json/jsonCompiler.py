@@ -68,7 +68,7 @@ class jsonGrammar(Grammar):
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     string_skip__ = [re.compile(r'(?=")')]
-    string_err_msg__ = [(re.compile(r''), 'Illegal character "{1}" in string.')]
+    string_err_msg__ = [(re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
     member_err_msg__ = [(re.compile(r'\w+'), 'Possible non-numerical and non-string values are `true`, `false` or `null` (always written with small letters and without quotation marks).'), (re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!'), (re.compile(r'\\'), 'Possible escaped values are /, \\, b, n, r, t, or u.'), (re.compile(r'\d'), '{1} does not represent a valid number or other value.')]
     resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=,|\})')]}
     COMMENT__ = r'(?:\/\/|#).*'
