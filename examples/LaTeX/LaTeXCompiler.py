@@ -62,7 +62,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "4e6ab6dede977be94d488bcc9990a5bb"
+    source_hash__ = "e01e15066b585d52cc71c0c60d2adff1"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

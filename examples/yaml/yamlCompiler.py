@@ -64,7 +64,7 @@ class yamlGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "32d03563d86b8ca074f0155c29076a36"
+    source_hash__ = "9660424d926b901b9654279f23e6c1f1"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

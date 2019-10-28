@@ -27,7 +27,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.toolkit import compile_python_object
+from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
@@ -483,7 +483,7 @@ class TestErrorRecovery:
     def test_series_skip(self):
         lang = """
         document = series | /.*/
-        @series_skip = /[A-Z]/
+        @series_skip = /(?=[A-Z])/
         series = "A" "B" §"C" "D"
         """
         parser = grammar_provider(lang)()
@@ -763,7 +763,7 @@ class TestReentryAfterError:
 
     def test_simple_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -774,7 +774,7 @@ class TestReentryAfterError:
 
     def test_failing_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['XXX']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=XXX)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -783,7 +783,7 @@ class TestReentryAfterError:
 
     def test_severl_reentry_points(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -794,7 +794,7 @@ class TestReentryAfterError:
 
     def test_several_reentry_points_second_point_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -805,9 +805,9 @@ class TestReentryAfterError:
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
-        gr.resume_rules__['beta'] = ['GAMMA']
-        gr.resume_rules__['bac'] = ['GAMMA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
+        gr.resume_rules__['beta'] = [re.compile(r'(?=GAMMA)')]
+        gr.resume_rules__['bac'] = [re.compile(r'(?=GAMMA)')]
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -828,7 +828,7 @@ class TestReentryAfterError:
         lang = r"""
             @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
             document = block_A block_B
-            @ block_A_resume = /x/
+            @ block_A_resume = /(?=x)/
             block_A = "a" §"b" "c"
             block_B = "x" "y" "z"
         """
@@ -845,13 +845,9 @@ class TestReentryAfterError:
 
         # test regex-defined resume rule
         grammar = grammar_provider(lang)()
+        print(grammar.resume_rules__)
         mini_suite(grammar)
 
-        # test string-defined resume rule
-        alt_lang = lang.replace('@ block_A_resume = /x/',
-                                '@ block_A_resume = "x"')
-        grammar = grammar_provider(alt_lang)()
-        mini_suite(grammar)
 
     def test_unambiguous_error_location(self):
         lang = r"""

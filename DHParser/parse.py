@@ -43,7 +43,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
-    RX_NEVER_MATCH
+    RX_NEVER_MATCH, RxPatternType
 
 
 __all__ = ('Parser',
@@ -118,19 +118,22 @@ class ParserError(Exception):
         return "%i: %s    %s" % (self.node.pos, str(self.rest[:25]), repr(self.node))
 
 
-ResumeList = List[Union[str, Any]]  # list of strings or regular expressiones
+ResumeList = List[RxPatternType]  # list of regular expressiones
 
 
 def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
+    The re-entry point is always the point after the end of the match of the regular
+    expression defining the re-entry point. (Use look ahead, if you wand to define
+    the re-entry point by what follows rather than by what text precedes the point.)
     Args:
         rest:  The rest of the parsed text or, in other words, the point where
-                a ParserError was thrown.
-        rules: A list of strings or regular expressions. The rest of the text is
-                searched for each of these. The closest match is the point where
-                parsing will be resumed.
+            a ParserError was thrown.
+        rules: A list of regular expressions. The rest of the text is searched for
+            each of these. The closest match is the point where parsing will be
+            resumed.
         comment_regex: A regular expression object that matches comments.
     Returns:
         The integer index of the closest reentry point or -1 if no reentry-point
@@ -151,9 +154,9 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
                 comments = None
         return -1, -2
 
-    def str_search(s, start: int = 0) -> Tuple[int, int]:
-        nonlocal rest
-        return rest.find(s, start), len(rule)
+    # def str_search(s, start: int = 0) -> Tuple[int, int]:
+    #     nonlocal rest
+    #     return rest.find(s, start), len(s)
 
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
         nonlocal rest
@@ -169,18 +172,17 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
         while a < b <= k:
             a, b = next_comment()
         while a <= k < b:
-            k, length = search_func(search_rule, k + length)
+            k, length = search_func(search_rule, k + max(length, 1))
             while a < b <= k:
                 a, b = next_comment()
-        return k if k >= 0 else upper_limit
+        return k + length if k >= 0 else upper_limit
 
     # find closest match
     for rule in rules:
         comments = rest.finditer(comment_regex)
-        if isinstance(rule, str):
-            pos = entry_point(str_search, rule)
-        else:  # rule is a compiled regular expression
-            pos = entry_point(rx_search, rule)
+        assert not isinstance(rule, str), \
+            'Strings not allowed as search rules, use a regular expression instead.'
+        pos = entry_point(rx_search, rule)
         closest_match = min(pos, closest_match)
 
     # in case no rule matched return -1
@@ -676,9 +678,9 @@ class Grammar:
                  of yet incomplete grammars class Grammar does not assume that this
                  is the case.
 
-        resume_rules__: A mapping of parser names to a list of regular expressions or search
-                strings that act as rules to find the the reentry point if a ParserError
-                was thrown during the execution of the parser with the respective name.
+        resume_rules__: A mapping of parser names to a list of regular expressions
+                that act as rules to find the reentry point if a ParserError was
+                thrown during the execution of the parser with the respective name.
 
         parser_initializiation__:  Before the parser class (!) has been initialized,
                  which happens upon the first time it is instantiated (see

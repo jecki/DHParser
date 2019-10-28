@@ -739,9 +739,10 @@ class EBNFCompiler(Compiler):
         if nd.tag_name == 'regexp':
             return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
         elif nd.tag_name == 'literal':
-            s = nd.content.strip()
-            return s.strip('"') if s[0] == '"' else s.strip("'")
+            s = nd.content[1:-1]  # remove quotation marks
+            return unrepr("re.compile(r'%s')" % escape_re(s))
         return ''
+
 
     def _gen_search_list(self, nodes: Sequence[Node]) -> List[Union[unrepr, str]]:
         search_list = []  # type: List[Union[unrepr, str]]
