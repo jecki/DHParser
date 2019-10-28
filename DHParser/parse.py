@@ -682,14 +682,14 @@ class Grammar:
                 that act as rules to find the reentry point if a ParserError was
                 thrown during the execution of the parser with the respective name.
 
-        anonymize__: Either a regular expression or a set of strings that
+        anonymous__: Either a regular expression or a set of strings that
                 identify names of parsers that shall be treated as anonymous parsers,
                 even though they are assigned to a class field (see
                 `:func:_assign_parser_names()`). The default is to treat all parsers
                 starting with an underscore as anonymous in addition to those
                 parsers that are not directly assigned to a class field.
 
-        parser_initializiation__:  Before the grammar class (!) has been initialized,
+        parser_initialization__:  Before the grammar class (!) has been initialized,
                  which happens upon the first time it is instantiated (see
                  `:func:_assign_parser_names()` for an explanation), this class
                  field contains a value other than "done". A value of "done" indicates
@@ -1749,7 +1749,7 @@ def mandatory_violation(grammar: Grammar,
             parsing after the error occurred.
 
     :return:   a tuple of an error object, a zombie node at the position
-            where the mandatory violation occured and to which the error
+            where the mandatory violation occurred and to which the error
             object is attached and a string view for continuing the
             parsing process
     """
@@ -1788,10 +1788,10 @@ class Series(NaryParser):
     the series.
 
     Attributes:
-        mandatory (int):  Number of the element statring at which the element
+        mandatory (int):  Number of the element starting at which the element
                 and all following elements are considered "mandatory". This
                 means that rather than returning a non-match an error message
-                is isssued. The default value is NO_MANDATORY, which means that
+                is issued. The default value is NO_MANDATORY, which means that
                 no elements are mandatory.
         errmsg (str):  An optional error message that overrides the default
                message for mandatory continuation errors. This can be used to
