@@ -853,6 +853,29 @@ class TestReentryAfterError:
         grammar = grammar_provider(alt_lang)()
         mini_suite(grammar)
 
+    def test_unambiguous_error_location(self):
+        lang = r"""
+            @ drop        = whitespace, token  # drop tokens and whitespace early
+           
+            @object_resume = /(?<=\})/
+           
+            json       = ~ value EOF
+            value      = object | string 
+            object     = "{" [member { "," §member }] "}"
+            member     = string §":" value
+            string     = `"` CHARACTERS `"` ~
+
+            CHARACTERS = { /[^"\\]+/ }                  
+            EOF      =  !/./        # no more characters ahead, end of file reached
+            """
+        test_case = """{
+                "missing member": "abcdef",
+            }"""
+        gr = grammar_provider(lang)()
+        cst = gr(test_case)
+        assert any(err.code == Error.MANDATORY_CONTINUATION for err in cst.errors)
+
+
 class TestConfiguredErrorMessages:
     def test_configured_error_message(self):
         lang = """

@@ -64,10 +64,13 @@ class jsonGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "ef3108350d5f28b0f32716ad3952316d"
+    source_hash__ = "fe49705afe85da112b73e44a1690fde2"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
+    string_skip__ = [re.compile(r'"')]
+    string_err_msg__ = [('', 'Illegal character "{1}" in string.')]
+    member_err_msg__ = [(re.compile(r'\w+'), 'Possible non-numerical and non-string values are `true`, `false` or `null` (always written with small letters and without quotation marks).'), (re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!'), (re.compile(r'\\'), 'Possible escaped values are /, \\, b, n, r, t, or u.'), (re.compile(r'\d'), '{1} does not represent a valid number or other value.')]
+    resume_rules__ = {'object': [re.compile(r'(?<=\})')], 'member': [re.compile(r',|\}')]}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -83,10 +86,10 @@ class jsonGrammar(Grammar):
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__)
+    string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
     array = Series(Series(DropToken("["), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(DropToken(","), dwsp__), value)))), Series(DropToken("]"), dwsp__))
-    member = Series(string, Series(DropToken(":"), dwsp__), element)
-    object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member)))), Series(DropToken("}"), dwsp__))
+    member = Series(string, Series(DropToken(":"), dwsp__), element, mandatory=1, err_msgs=member_err_msg__)
+    object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, mandatory=1)))), Series(DropToken("}"), dwsp__))
     value.set(Alternative(object, array, string, number, bool, null))
     element.set(Synonym(value))
     json = Series(dwsp__, element, EOF)

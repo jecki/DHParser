@@ -1075,7 +1075,7 @@ class EBNFCompiler(Compiler):
             error_msgs = self.directives.error.get(symbol, [])
             if symbol in self.rules:
                 self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
-                                    + 'must be defined before the symbol!')
+                                    + ' must be defined before the symbol!')
             if node.children[1 if len(node.children) == 2 else 2].tag_name != 'literal':
                 self.tree.new_error(
                     node, 'Directive "%s" requires message string or a a pair ' % key +
