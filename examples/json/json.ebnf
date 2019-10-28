@@ -19,23 +19,22 @@
 #
 #######################################################################
 
-@ object_resume = /(?<=\})/
+@ object_resume = /\}\s*/
 
 @ member_error  = /\w+/, 'Possible non-numerical and non-string values are `true`, `false` or `null` (always written with small letters and without quotation marks).'
 @ member_error  = /["\'`´]/, 'String values must be enclosed by double-quotation marks: "..."!'
 @ member_error  = /\\/, 'Possible escaped values are /, \\, b, n, r, t, or u.'
 @ member_error  = /\d/, '{1} does not represent a valid number or other value.'
-@ member_resume = /,|\}/
+@ member_resume = /(?=,|\})/
 
 @ string_error  = '', 'Illegal character "{1}" in string.'
-@ string_skip   = /"/
+@ string_skip   = /(?=")/
 
 json       = ~ element EOF
-element    = value
-value      = object | array | string | number | bool | null
+element    = object | array | string | number | bool | null
 object     = "{" [member { "," §member }] "}"
 member     = string §":" element
-array      = "[" [value { "," value }] "]"
+array      = "[" [element { "," element }] "]"
 string     = `"` §CHARACTERS `"` ~
 number     = INT FRAC EXP ~
 bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
