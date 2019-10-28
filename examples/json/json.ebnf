@@ -31,11 +31,10 @@
 @ string_skip   = /(?=")/
 
 json       = ~ element EOF
-element    = value
-value      = object | array | string | number | bool | null
+element    = object | array | string | number | bool | null
 object     = "{" [member { "," §member }] "}"
 member     = string §":" element
-array      = "[" [value { "," value }] "]"
+array      = "[" [element { "," element }] "]"
 string     = `"` §CHARACTERS `"` ~
 number     = INT FRAC EXP ~
 bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens

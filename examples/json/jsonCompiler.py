@@ -63,8 +63,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     element = Forward()
-    value = Forward()
-    source_hash__ = "ffc7450f5d46ff7934b8597317bc3393"
+    source_hash__ = "98f4e07c153dbfc9c2c13f2798e8122b"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     string_skip__ = [re.compile(r'(?=")')]
@@ -87,11 +86,10 @@ class jsonGrammar(Grammar):
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
     string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
-    array = Series(Series(DropToken("["), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(DropToken(","), dwsp__), value)))), Series(DropToken("]"), dwsp__))
+    array = Series(Series(DropToken("["), dwsp__), Option(Series(element, ZeroOrMore(Series(Series(DropToken(","), dwsp__), element)))), Series(DropToken("]"), dwsp__))
     member = Series(string, Series(DropToken(":"), dwsp__), element, mandatory=1, err_msgs=member_err_msg__)
     object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, mandatory=1)))), Series(DropToken("}"), dwsp__))
-    value.set(Alternative(object, array, string, number, bool, null))
-    element.set(Synonym(value))
+    element.set(Alternative(object, array, string, number, bool, null))
     json = Series(dwsp__, element, EOF)
     root__ = json
     
@@ -116,10 +114,9 @@ def get_grammar() -> jsonGrammar:
 
 json_AST_transformation_table = {
     # AST Transformations for the json-grammar
-    "<": flatten,
+    # "<": flatten,
     "json": [remove_nodes('EOF'), replace_by_single_child],
     "element": [replace_by_single_child],
-    "value": [replace_by_single_child],
     "object": [],
     "member": [],
     "array": [],
@@ -134,7 +131,7 @@ json_AST_transformation_table = {
     "FRAC": [],
     "EXP": [],
     "EOF": [],
-    "*": replace_by_single_child
+    # "*": replace_by_single_child
 }
 
 
@@ -220,123 +217,6 @@ def compile_src(source, log_dir=''):
                                   get_grammar(),
                                   get_transformer(), compiler)
     return result_tuple
-
-
-# class JsonLSP(LanguageServerProtocol):
-#     def __init__(self):
-#         super().__init__(capabilities={
-#               "capabilities": {
-#                 "textDocumentSync": 1,
-#                 "completionProvider": {
-#                   "resolveProvider": False,
-#                   "triggerCharacters": [
-#                     "/"
-#                   ]
-#                 },
-#                 "hoverProvider": True,
-#                 "documentSymbolProvider": True,
-#                 "referencesProvider": True,
-#                 "definitionProvider": True,
-#                 "documentHighlightProvider": True,
-#                 "codeActionProvider": True,
-#                 "renameProvider": True,
-#                 "colorProvider": {},
-#                 "foldingRangeProvider": True
-#               }
-#             },  additional_rpcs={'default': compile_src})
-#         return
-#         # super().__init__(capabilities={
-#         #     "testDocumentSync": {
-#         #         'openClode': False,
-#         #         'change': 0,  # 0 = no sync, 1 = full sync, 2 = incremental sync
-#         #         'willSave': True,
-#         #         'willSaveWaitUntil': False,
-#         #         'save': {
-#         #             "includeText": False
-#         #         }
-#         #     },
-#         #     "hoverProvider": True,
-#         #     # "completionProvier": {
-#         #     #     'resolveProvider': False,
-#         #     #     # 'triggerCharacters': ''
-#         #     # },
-#         #     # "signatureHelpProvider": {
-#         #     #     # 'triggerCharacters': ''
-#         #     # },
-#         #     "definitionProvider": True,
-#         #     "typeDefinitionProvider": False,
-#         #     # "typeDefinitionProvider": {
-#         #     #     # 'id': ''
-#         #     #     'documentSelector': [
-#         #     #         {
-#         #     #             "language": '',
-#         #     #             "scheme": '',
-#         #     #             "pattern": ''
-#         #     #         }
-#         #     #     ]
-#         #     # },
-#         #     "implementationDefinitionProvider": False,
-#         #     "referencesProvider": True,
-#         #     "documentHighlightProvider": False,
-#         #     "documentSymbolProvider": True,
-#         #     "workspaceSymbolProvider": True,
-#         #     "codeActionProvider": False,
-#         #     # "codeActionProvider": {
-#         #     #   'codeActionKinds': ['']
-#         #     # },
-#         #     # "codeLensProvider": {
-#         #     #     'resolveProvider': False,
-#         #     # },
-#         #     "documentFormattingProvider": False,
-#         #     "documentRangeFormattingProvider": False,
-#         #     # "documentOnTypeFormattingProvider": {
-#         #     #     'firstTriggerCharacter': '',
-#         #     #     # 'moreTriggerCharacter': ''
-#         #     # },
-#         #     "renameProvider": False,
-#         #     # "renameProvider": {
-#         #     #     'prepareProvider': False
-#         #     # },
-#         #     # "documentLinkProvider": {
-#         #     #     'resolveProvider': False
-#         #     # },
-#         #     "colorProvider": False,
-#         #     "foldingRangeProvider": False,
-#         #     "declarationProvider": False,
-#         #     # "executeCommandProvider": {
-#         #     #     'commands': ['']
-#         #     # },
-#         #     # "workspace": {
-#         #     #     'workspaceFolders': {
-#         #     #         'supported': False,
-#         #     #         'changeNotifications': '' # string id or bool
-#         #     #     }
-#         #     # }
-#         # },  additional_rpcs={'default': compile_src})
-#
-#     @lsp_rpc
-#     def rpc_textDocument_hover(self, **kwargs):
-#         print(kwargs)
-#
-#     @lsp_rpc
-#     def rpc_textDocument_definition(self, **kwargs):
-#         print(kwargs)
-#
-#     @lsp_rpc
-#     def rpc_textDocument_references(self, **kwargs):
-#         print(kwargs)
-#
-#     @lsp_rpc
-#     def rpc_textDocument_documentSymbol(self, **kwargs):
-#         print(kwargs)
-#
-#     @lsp_rpc
-#     def rpc_workspace_symbol(self, **kwargs):
-#         print(kwargs)
-#
-#     @lsp_rpc
-#     def rpc_S_cancelRequest(self, **kwargs):
-#         print(kwargs)
 
 
 if __name__ == "__main__":
