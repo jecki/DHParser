@@ -63,13 +63,13 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "493520a22313926444a89be048b8edd4"
+    source_hash__ = "4c3d881fe852092d63a85e078c075a7b"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     string_skip__ = [re.compile(r'(?=")')]
     string_err_msg__ = [(re.compile(r'\\'), 'Possible escaped values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u, but not {1}'), (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
-    member_err_msg__ = [(re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')]
-    resume_rules__ = {'object': [re.compile(r'\}\s*')], '_members': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\})')], 'member': [re.compile(r'(?=,|\})')]}
+    member_err_msg__ = [(re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')]
+    resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\})')]}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -92,8 +92,7 @@ class jsonGrammar(Grammar):
     string = Series(DropToken('"'), _CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
     array = Series(Series(DropToken("["), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(DropToken(","), dwsp__), _element)))), Series(DropToken("]"), dwsp__))
     member = Series(string, Series(DropToken(":"), dwsp__), _element, mandatory=1, err_msgs=member_err_msg__)
-    _members = Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, Lookahead(Alternative(Series(DropToken(","), dwsp__), Series(DropToken("}"), dwsp__))), mandatory=1)))
-    object = Series(Series(DropToken("{"), dwsp__), ZeroOrMore(_members), Series(DropToken("}"), dwsp__), mandatory=2)
+    object = Series(Series(DropToken("{"), dwsp__), member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, mandatory=1)), Series(DropToken("}"), dwsp__), mandatory=3)
     _element.set(Alternative(object, array, string, number, bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
