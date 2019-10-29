@@ -63,13 +63,13 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "f8b915f36ed3e2555e285af7e8483f11"
+    source_hash__ = "493520a22313926444a89be048b8edd4"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     string_skip__ = [re.compile(r'(?=")')]
     string_err_msg__ = [(re.compile(r'\\'), 'Possible escaped values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u, but not {1}'), (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
     member_err_msg__ = [(re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')]
-    resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=,|\})')], '_members': [re.compile(r'(?="[^"\n]+":)')]}
+    resume_rules__ = {'object': [re.compile(r'\}\s*')], '_members': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\})')], 'member': [re.compile(r'(?=,|\})')]}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'

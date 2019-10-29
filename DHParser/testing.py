@@ -488,6 +488,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 if is_logging():
                     log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
+                adjust_error_locations(cst.errors, test_code)
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors_sorted)
             if verbose:
