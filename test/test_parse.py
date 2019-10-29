@@ -930,6 +930,7 @@ class TestMetaParser:
         self.mp = MetaParser()
         self.mp.grammar = Grammar()  # override placeholder warning
         self.mp.pname = "named"
+        self.mp.anonymous = False
         self.mp.tag_name = self.mp.pname
 
     def test_return_value(self):
@@ -956,6 +957,7 @@ class TestMetaParser:
         nd = self.mp._return_value(EMPTY_NODE)
         assert nd.tag_name == 'named' and not nd.children, nd.as_sxpr()
         self.mp.pname = ''
+        self.mp.anonymous = True
         self.mp.tag_name = ':unnamed'
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'tagged', nd.as_sxpr()

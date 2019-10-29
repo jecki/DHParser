@@ -347,7 +347,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except KeyError:
             return surrogate
 
-    def is_anonymous(self) -> bool:
+    @property
+    def anonymous(self) -> bool:
         """Returns True, if the Node is an "anonymous" Node, i.e. a node that
         has not been created by a named parser.
 

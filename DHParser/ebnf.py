@@ -931,7 +931,7 @@ class EBNFCompiler(Compiler):
         definitions = []  # type: List[Tuple[str, str]]
 
         # drop the wrapping sequence node
-        if len(node.children) == 1 and node.children[0].is_anonymous():
+        if len(node.children) == 1 and node.children[0].anonymous:
             node = node.children[0]
 
         # compile definitions and directives and collect definitions

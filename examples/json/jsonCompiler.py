@@ -62,35 +62,40 @@ def get_preprocessor() -> PreprocessorFunc:
 class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
-    element = Forward()
-    source_hash__ = "98f4e07c153dbfc9c2c13f2798e8122b"
+    _element = Forward()
+    source_hash__ = "f8b915f36ed3e2555e285af7e8483f11"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     string_skip__ = [re.compile(r'(?=")')]
-    string_err_msg__ = [(re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
-    member_err_msg__ = [(re.compile(r'\w+'), 'Possible non-numerical and non-string values are `true`, `false` or `null` (always written with small letters and without quotation marks).'), (re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!'), (re.compile(r'\\'), 'Possible escaped values are /, \\, b, n, r, t, or u.'), (re.compile(r'\d'), '{1} does not represent a valid number or other value.')]
-    resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=,|\})')]}
+    string_err_msg__ = [(re.compile(r'\\'), 'Possible escaped values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u, but not {1}'), (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
+    member_err_msg__ = [(re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')]
+    resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=,|\})')], '_members': [re.compile(r'(?="[^"\n]+":)')]}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     dwsp__ = DropWhitespace(WSP_RE__)
-    EOF = NegativeLookahead(RegExp('.'))
+    _EOF = NegativeLookahead(RegExp('.'))
     EXP = Option(Series(Alternative(DropToken("E"), DropToken("e")), Option(Alternative(DropToken("+"), DropToken("-"))), RegExp('[0-9]+')))
-    FRAC = Option(Series(DropToken("."), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(DropToken("-")), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
-    HEX = RegExp('[0-9a-fA-F]')
-    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
-    CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
+    DOT = Token(".")
+    FRAC = Option(Series(DOT, RegExp('[0-9]+')))
+    NEG = Token("-")
+    INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
+    UNICODE = Series(Series(DropToken("\\u"), dwsp__), HEX, HEX)
+    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
+    PLAIN = RegExp('[^"\\\\]+')
+    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
-    array = Series(Series(DropToken("["), dwsp__), Option(Series(element, ZeroOrMore(Series(Series(DropToken(","), dwsp__), element)))), Series(DropToken("]"), dwsp__))
-    member = Series(string, Series(DropToken(":"), dwsp__), element, mandatory=1, err_msgs=member_err_msg__)
-    object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, mandatory=1)))), Series(DropToken("}"), dwsp__))
-    element.set(Alternative(object, array, string, number, bool, null))
-    json = Series(dwsp__, element, EOF)
+    string = Series(DropToken('"'), _CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
+    array = Series(Series(DropToken("["), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(DropToken(","), dwsp__), _element)))), Series(DropToken("]"), dwsp__))
+    member = Series(string, Series(DropToken(":"), dwsp__), _element, mandatory=1, err_msgs=member_err_msg__)
+    _members = Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, Lookahead(Alternative(Series(DropToken(","), dwsp__), Series(DropToken("}"), dwsp__))), mandatory=1)))
+    object = Series(Series(DropToken("{"), dwsp__), ZeroOrMore(_members), Series(DropToken("}"), dwsp__), mandatory=2)
+    _element.set(Alternative(object, array, string, number, bool, null))
+    json = Series(dwsp__, _element, _EOF)
     root__ = json
     
 def get_grammar() -> jsonGrammar:
@@ -114,24 +119,9 @@ def get_grammar() -> jsonGrammar:
 
 json_AST_transformation_table = {
     # AST Transformations for the json-grammar
-    # "<": flatten,
-    "json": [remove_nodes('EOF'), replace_by_single_child],
-    "element": [replace_by_single_child],
-    "object": [],
-    "member": [],
-    "array": [],
-    "string": [collapse],
+    "json": [replace_by_single_child],
     "number": [collapse],
-    "bool": [],
-    "null": [],
-    "CHARACTERS": [],
-    "ESCAPE": [],
-    "HEX": [],
-    "INT": [],
-    "FRAC": [],
-    "EXP": [],
-    "EOF": [],
-    # "*": replace_by_single_child
+    "string": [reduce_single_child],
 }
 
 

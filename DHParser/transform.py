@@ -403,12 +403,12 @@ def is_single_child(context: List[Node]) -> bool:
 
 def is_named(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
-    return not context[-1].is_anonymous()
+    return not context[-1].anonymous
 
 
 def is_anonymous(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is an anonymous parser."""
-    return context[-1].is_anonymous()
+    return context[-1].anonymous
 
 
 def is_insignificant_whitespace(context: List[Node]) -> bool:
@@ -563,7 +563,7 @@ def _replace_by(node: Node, child: Node):
     """
     Replaces node's contents by child's content including the tag name.
     """
-    if node.is_anonymous() or not child.is_anonymous():
+    if node.anonymous or not child.anonymous:
         node.tag_name = child.tag_name
         # name, ptype = (node.tag_name.split(':') + [''])[:2]
         # child.parser = MockParser(name, ptype)
