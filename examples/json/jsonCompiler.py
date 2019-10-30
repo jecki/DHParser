@@ -63,13 +63,10 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "4c3d881fe852092d63a85e078c075a7b"
+    source_hash__ = "0a609252bf6179c3e939bc132665e70a"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    string_skip__ = [re.compile(r'(?=")')]
-    string_err_msg__ = [(re.compile(r'\\'), 'Possible escaped values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u, but not {1}'), (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
-    member_err_msg__ = [(re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')]
-    resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\})')]}
+    resume_rules__ = {}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -89,9 +86,9 @@ class jsonGrammar(Grammar):
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(DropToken('"'), _CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
+    string = Series(DropToken('"'), _CHARACTERS, DropToken('"'), dwsp__, mandatory=1)
     array = Series(Series(DropToken("["), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(DropToken(","), dwsp__), _element)))), Series(DropToken("]"), dwsp__))
-    member = Series(string, Series(DropToken(":"), dwsp__), _element, mandatory=1, err_msgs=member_err_msg__)
+    member = Series(string, Series(DropToken(":"), dwsp__), _element, mandatory=1)
     object = Series(Series(DropToken("{"), dwsp__), member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, mandatory=1)), Series(DropToken("}"), dwsp__), mandatory=3)
     _element.set(Alternative(object, array, string, number, bool, null))
     json = Series(dwsp__, _element, _EOF)

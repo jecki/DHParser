@@ -205,7 +205,7 @@ CONFIG_PRESET['left_recursion_depth'] = 5
 # not be set too high, because automatic retry works poorly.
 # This value does not affect the @resume-directive.
 # Default value: 3
-CONFIG_PRESET['max_parser_dropouts'] = 3
+CONFIG_PRESET['max_parser_dropouts'] = 1
 
 
 ########################################################################

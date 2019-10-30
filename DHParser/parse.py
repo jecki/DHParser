@@ -1106,7 +1106,8 @@ class Grammar:
                                 + (" but stopping history recording at this point."
                                    if self.history_tracking__ else "..."))
                                 if len(stitches) < self.max_parser_dropouts__
-                                else " too often! Terminating parser.")
+                                else " too often!" if self.max_parser_dropouts__ > 1 else "!"
+                                     + " Terminating parser.")
                         error_code = Error.PARSER_STOPPED_BEFORE_END
                 stitches.append(Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
