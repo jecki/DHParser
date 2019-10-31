@@ -1091,12 +1091,16 @@ class Grammar:
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
-                        if h.node and h.node.tag_name != EMPTY_NODE.tag_name:
+                        if h.node and h.node.tag_name != EMPTY_NODE.tag_name \
+                                and any('Lookahead' in tag for tag, _ in h.call_stack):
                             break
                     else:
                         h = HistoryRecord([], None, StringView(''), (0, 0))
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
+                        for j in self.history__:
+                            print(j)
+                        print(h); print()
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!

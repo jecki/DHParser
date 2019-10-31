@@ -482,7 +482,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
-                              'expected failure!' % (test_name, parser_name))
+                              'expected failure!\n%s' % (test_name, parser_name, cst.serialize()))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
                 if is_logging():

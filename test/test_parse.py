@@ -45,6 +45,19 @@ class TestParserError:
         pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), None, True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
+    def test_false_lookahead_only_message(self):
+        """Error.PARSER_LOOKAHEAD_*_ONLY errors must not be reported if there
+        no lookahead parser in the history!"""
+        lang = """
+        word = letters { letters | `-` letters }
+        letters = /[A-Za-z]+/
+        """
+        gr = grammar_provider(lang)()
+        st = gr('hard-time', track_history=True)
+        assert not st.errors
+        st = gr('hard-', track_history=True)
+        assert st.errors and not any(e.code == 1045 for e in st.errors)
+
 
 class TestParserClass:
     def test_apply(self):
