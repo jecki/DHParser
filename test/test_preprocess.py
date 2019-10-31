@@ -160,9 +160,6 @@ class TestTokenParsing:
 
     def test_parse_tokenized(self):
         cst = self.grammar(self.tokenized)
-        # for e in cst.errors(self.tokenized):
-        #     print(e.visualize(self.tokenized) + str(e))
-        #     print()
         assert not cst.error_flag
 
     def test_source_mapping_1(self):
@@ -206,7 +203,6 @@ class TestTokenParsing:
         result, messages, syntaxtree = compile_source(orig_src, prepr, self.grammar,
                                                       lambda i: i, lambda i: i)
         for err in messages:
-            print(err)
             if self.code[err.orig_pos] == "#":
                 break
         else:

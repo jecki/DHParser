@@ -639,6 +639,21 @@ class TestCustomizedResumeParsing:
         # because of resuming, there should be only on error message
         assert len(cst.errors_sorted) == 1
 
+    def test_resume_with_customized_whitespace(self):
+        grammar_specification = r"""
+            @whitespace = /\s*/
+            @comment = /(?:\/\*(?:.|\n)*?\*\/)/  # c-style comments
+            document = ~ { word }
+            @ word_resume = /\s+(?=.)|$/
+            word     = !EOF §/\w+/ ~
+            EOF      = !/./
+        """
+        doc1 = """word no*word /* comment */ word"""
+        grammar = grammar_provider(grammar_specification)()
+        st = grammar(doc1)
+        # TODO: provide test case
+        # print(st.as_sxpr())
+
 
 class TestInSeriesResume:
     def setup(self):

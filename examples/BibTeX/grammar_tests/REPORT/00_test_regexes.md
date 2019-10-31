@@ -42,4 +42,4 @@ Fail-test "F1"
     % comment
 
 ### Messages:
-Error (1040): Parser stopped before end! trying to recover but stopping history recording at this point.
+1:1: Error (1040): Parser stopped before end! Terminating parser.

@@ -573,7 +573,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 for child in self.children:
                     if mf(child):
                         return child
-                raise KeyError(str(key))
+                raise IndexError('index out of range') if isinstance(key, int) \
+                    else KeyError(str(key))
         raise ValueError('Leaf-nodes have no children that can be indexed!')
 
     def __contains__(self, what: CriteriaType) -> bool:

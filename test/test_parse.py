@@ -858,7 +858,6 @@ class TestReentryAfterError:
 
         # test regex-defined resume rule
         grammar = grammar_provider(lang)()
-        print(grammar.resume_rules__)
         mini_suite(grammar)
 
 

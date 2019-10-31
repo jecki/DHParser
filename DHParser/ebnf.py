@@ -736,6 +736,7 @@ class EBNFCompiler(Compiler):
         string search or a regular expression from the nodes content. Returns
         an empty string in case the node is neither regexp nor literal.
         """
+        # self.directives.whitespace, self.directives.comment
         if nd.tag_name == 'regexp':
             return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
         elif nd.tag_name == 'literal':
