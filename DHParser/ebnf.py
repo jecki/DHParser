@@ -427,9 +427,18 @@ class EBNFDirectives:
                 for after a parsing error has error occurred. Other
                 than the skip field, this configures resuming after
                 the failing parser has returned.
+
+        drop:   A set that may contain the elements `DROP_TOKEN` and
+                `DROP_WSP'
+
+        super_ws(property): Cache for the "super whitespace" which
+                is a regular expression that merges whitespace and
+                comments. This property should only be accessed after
+                the `whitespace` and `comment` field have been filled
+                with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
-                 'resume', 'drop']
+                 'resume', 'drop', '_super_ws']
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
@@ -441,6 +450,7 @@ class EBNFDirectives:
         self.skip = dict()    # type: Dict[str, List[Union[unrepr, str]]]
         self.resume = dict()  # type: Dict[str, List[Union[unrepr, str]]]
         self.drop = set()     # type: Set[str]
+        self._super_ws = None # type: Optional[str]
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -448,6 +458,12 @@ class EBNFDirectives:
     def __setitem__(self, key, value):
         assert hasattr(self, key)
         setattr(self, key, value)
+
+    @property
+    def super_ws(self):
+        if self._super_ws is None:
+            self._super_ws = mixin_comment(self.whitespace, self.comment)
+        return self._super_ws
 
     def keys(self):
         return self.__slots__
@@ -736,9 +752,9 @@ class EBNFCompiler(Compiler):
         string search or a regular expression from the nodes content. Returns
         an empty string in case the node is neither regexp nor literal.
         """
-        # self.directives.whitespace, self.directives.comment
         if nd.tag_name == 'regexp':
-            return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
+            search_regex = self._extract_regex(nd).replace(r'\~', self.directives.super_ws)
+            return unrepr("re.compile(r'%s')" % search_regex)
         elif nd.tag_name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))

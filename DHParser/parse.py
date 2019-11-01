@@ -578,7 +578,7 @@ PARSER_PLACEHOLDER = Parser()
 def mixin_comment(whitespace: str, comment: str) -> str:
     """
     Returns a regular expression that merges comment and whitespace
-    regexps. Thus comments cann occur whereever whitespace is allowed
+    regexps. Thus comments can occur wherever whitespace is allowed
     and will be skipped just as implicit whitespace.
 
     Note, that because this works on the level of regular expressions,

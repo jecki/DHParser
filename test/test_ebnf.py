@@ -644,15 +644,16 @@ class TestCustomizedResumeParsing:
             @whitespace = /\s*/
             @comment = /(?:\/\*(?:.|\n)*?\*\/)/  # c-style comments
             document = ~ { word }
-            @ word_resume = /\s+(?=.)|$/
+            @ word_resume = /(?:(?:\s\~)|(?:\~(?<=\s)))(?=.)|$/
             word     = !EOF §/\w+/ ~
             EOF      = !/./
         """
         doc1 = """word no*word /* comment */ word"""
         grammar = grammar_provider(grammar_specification)()
         st = grammar(doc1)
+        # print(next(st.pick(reverse = True)))
         # TODO: provide test case
-        # print(st.as_sxpr())
+        print(st.as_sxpr())
 
 
 class TestInSeriesResume:
