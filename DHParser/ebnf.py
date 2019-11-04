@@ -33,9 +33,9 @@ from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespace, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
-    GrammarError
+from DHParser.parse import Grammar, mixin_comment, mixin_noempty, Forward, RegExp, \
+    DropWhitespace, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
+    Token, GrammarError
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -753,7 +753,10 @@ class EBNFCompiler(Compiler):
         an empty string in case the node is neither regexp nor literal.
         """
         if nd.tag_name == 'regexp':
-            search_regex = self._extract_regex(nd).replace(r'\~', self.directives.super_ws)
+            super_ws = self.directives.super_ws
+            noempty_ws = mixin_noempty(super_ws)
+            search_regex = self._extract_regex(nd)\
+                .replace(r'\~!', noempty_ws).replace(r'\~', super_ws)
             return unrepr("re.compile(r'%s')" % search_regex)
         elif nd.tag_name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks

@@ -645,7 +645,8 @@ class TestCustomizedResumeParsing:
             @comment = /(?:\/\*(?:.|\n)*?\*\/)/  # c-style comments
             document = ~ { word }
             # @ word_resume = /(?:(?:\s\~)|(?:\~(?<=\s)))(?=.)|$/
-            @word_resume = /(?=(.|\n))\~(?!\1)(?=.)|$/
+            # @word_resume = /(?=(.|\n))\~(?!\1)(?=.)|$/
+            @word_resume = /\~!(?=.)|$/
             # @ word_resume = /\~(?=.)|$/
             word     = !EOF §/\w+/ ~
             EOF      = !/./

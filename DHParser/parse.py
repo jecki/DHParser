@@ -61,6 +61,7 @@ __all__ = ('Parser',
            'Whitespace',
            'DropWhitespace',
            'mixin_comment',
+           'mixin_noempty',
            'MetaParser',
            'UnaryParser',
            'NaryParser',
@@ -591,8 +592,8 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     return whitespace
 
 
-def non_empty(whitespace: str) -> str:
-    """
+def mixin_noempty(whitespace: str) -> str:
+    r"""
     Returns a regular expression pattern that matches only if the regular
     expression pattern `whitespace` matches AND if the match is not empty.
 
@@ -607,7 +608,11 @@ def non_empty(whitespace: str) -> str:
     that ist / / or /   / or /\t/ won't work, but / */ or /\s*/ or /\s+/
     do work. There is no test for this. Fixed sizes regular expressions
     run through `non_empty_ws` will not match at any more if they are applied
-    to the beginning or the middle of a sequence of whitespaces!!!
+    to the beginning or the middle of a sequence of whitespaces!
+
+    In order to be safe, you whitespace regular expressions should follow
+    the rule: "Whitespace cannot be followed by whitespace" or "Either
+    grab it all or leave it all".
 
     :param whitespace: a regular expression pattern
     :return: new regular expression pattern that does not match the empty

@@ -46,9 +46,8 @@ class TestWhitespace:
     def test_whitespace_comment_mangling(self):
         pass
 
-    def test_non_emptify_version(self):
+    def test_non_empty_derivation(self):
         pass
-
 
 class TestParserError:
     def test_parser_error_str(self):
@@ -252,7 +251,7 @@ class TestRegex:
                   [+]    # followed by a plus sign
                   \w*    # possibly followed by more alpha chracters/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
@@ -268,7 +267,7 @@ class TestRegex:
                   [+]
                   \w* /
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
@@ -283,7 +282,7 @@ class TestRegex:
         @ ignorecase = True
         regex = /alpha/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -299,7 +298,7 @@ class TestRegex:
         @ ignorecase = False
         regex = /alpha/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -320,7 +319,7 @@ class TestRegex:
             test
             \end{document}
             """
-        result, messages, syntax_tree = compile_source(
+        result, messages, _ = compile_source(
             tokenlang, None, get_ebnf_grammar(), get_ebnf_transformer(),
             get_ebnf_compiler("TokenTest"))
         assert result
@@ -339,8 +338,8 @@ class TestGrammar:
         WORT         = /[^ \t]+/~
         LEERZEILE    = /\n[ \t]*(?=\n)/~
         """
-        self.pyparser, messages, syntax_tree = compile_source(grammar, None, get_ebnf_grammar(),
-                                                              get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
+        self.pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
+                                    get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
         assert self.pyparser
         assert not messages
 
@@ -397,11 +396,11 @@ class TestSeries:
         series = "A" "B" "C" "D"
         """
         parser = grammar_provider(lang)()
-        st = parser("ABCD");
+        st = parser("ABCD")
         assert not st.error_flag
-        st = parser("A_CD");
+        st = parser("A_CD")
         assert not st.error_flag
-        st = parser("AB_D");
+        st = parser("AB_D")
         assert not st.error_flag
 
     def test_mandatory(self):

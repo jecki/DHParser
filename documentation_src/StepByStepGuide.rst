@@ -614,17 +614,16 @@ that the output is rather verbose. Just looking at the beginning of the
 output, we find::
 
     <document>
-       <:ZeroOrMore>
-           <sentence>
-               <part>
-                   <WORD>
-                       <:RegExp>Life’s</:RegExp>
-                       <:Whitespace> </:Whitespace>
-                   </WORD>
-                   <WORD>
-                       <:RegExp>but</:RegExp>
-                       <:Whitespace> </:Whitespace>
-                   </WORD>
+       <sentence>
+           <part>
+               <WORD>
+                   <:RegExp>Life’s</:RegExp>
+                   <:Whitespace> </:Whitespace>
+               </WORD>
+               <WORD>
+                   <:RegExp>but</:RegExp>
+                   <:Whitespace> </:Whitespace>
+               </WORD>
     ...
 
 But why do we need to know all those details! Why would we need a
@@ -665,14 +664,13 @@ rich set of predefined operators. Should these not suffice, you
 can easily write your own. How does this look like? ::
 
     poetry_AST_transformation_table = {
-       "<": remove_empty,
-       "document": [],
-       "sentence": [],
-       "part": [],
-       "WORD": [],
-       "EOF": [],
-       ":Token": reduce_single_child,
-       "*": replace_by_single_child
+    "<": flatten,
+    "document": [],
+    "sentence": [],
+    "part": [],
+    "WORD": [],
+    "EOF": [],
+    "*": replace_by_single_child
     }
 
 You'll find this table in the script ``poetryCompiler.py``, which is also the
@@ -747,22 +745,19 @@ in the compiler-script should be changed as follows::
 Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
 
     <document>
-     <:ZeroOrMore>
-       <sentence>
-         <part>
-           <WORD>Life’s</WORD>
-           <WORD>but</WORD>
-           <WORD>a</WORD>
-           <WORD>walking</WORD>
-           <WORD>shadow</WORD>
-         </part>
-         <:Series>
-           <:Token>
-             <:PlainText>,</:PlainText>
-             <:Whitespace> </:Whitespace>
-           </:Token>
-           <part>
-             <WORD>a</WORD>
+      <sentence>
+        <part>
+          <WORD>Life’s</WORD>
+          <WORD>but</WORD>
+          <WORD>a</WORD>
+          <WORD>walking</WORD>
+          <WORD>shadow</WORD>
+        </part>
+        <:Token>,</:Token>
+        <:Whitespace> </:Whitespace>
+        <part>
+          <WORD>a</WORD>
+
     ...
 
 It starts to become more readable and concise, but there are sill some oddities.
