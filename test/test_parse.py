@@ -32,12 +32,22 @@ from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError, MetaParser, GrammarError, EMPTY_NODE
+    UnknownParserError, MetaParser, EMPTY_NODE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
-from DHParser.dsl import grammar_provider, CompilationError
+from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
+
+
+
+class TestWhitespace:
+    # TODO: add test cases here
+    def test_whitespace_comment_mangling(self):
+        pass
+
+    def test_non_emptify_version(self):
+        pass
 
 
 class TestParserError:

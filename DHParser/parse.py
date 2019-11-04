@@ -171,7 +171,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
         k, length = search_func(search_rule)
         while a < b <= k:
             a, b = next_comment()
-        while a <= k < b:
+        while a <= k + length < b:
             k, length = search_func(search_rule, k + max(length, 1))
             while a < b <= k:
                 a, b = next_comment()
@@ -577,7 +577,7 @@ PARSER_PLACEHOLDER = Parser()
 
 def mixin_comment(whitespace: str, comment: str) -> str:
     """
-    Returns a regular expression that merges comment and whitespace
+    Returns a regular expression pattern that merges comment and whitespace
     regexps. Thus comments can occur wherever whitespace is allowed
     and will be skipped just as implicit whitespace.
 
@@ -587,6 +587,33 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     """
     if comment:
         return '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
+    return whitespace
+
+
+def non_empty(whitespace: str) -> str:
+    """
+    Returns a regular expression pattern that matches only if the regular
+    expression pattern `whitespace` matches AND if the match is not empty.
+
+    If `whitespace` already matches the empty string '', then it will be
+    returned unaltered.
+
+    WARNING: `non_empty_ws` does not work regular expressions the matched
+    strings of which can be followed by a symbol that can also occur at
+    the start of the regular expression.
+
+    In particular, it does not work for fixed size regular expressions,
+    that ist / / or /   / or /\t/ won't work, but / */ or /\s*/ or /\s+/
+    do work. There is no test for this. Fixed sizes regular expressions
+    run through `non_empty_ws` will not match at any more if they are applied
+    to the beginning or the middle of a sequence of whitespaces!!!
+
+    :param whitespace: a regular expression pattern
+    :return: new regular expression pattern that does not match the empty
+        string '' any more.
+    """
+    if re.match(whitespace, ''):
+        return r'(?:(?=(.|\n))' + whitespace + r'(?!\1))'
     return whitespace
 
 
