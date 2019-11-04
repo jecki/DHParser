@@ -651,14 +651,19 @@ class TestCustomizedResumeParsing:
             EOF      = !/./
         """
         grammar = grammar_provider(grammar_specification)()
+        doc0 = """word no*word word"""
+        st = grammar(doc0)
+        assert st.children and st.children[-1].tag_name == 'word'
         doc1 = """word no*word /* comment */ word"""
         st = grammar(doc1)
         assert st.children and st.children[-1].tag_name == 'word'
-        # TODO: provide test case
         doc2 = """word no*word/* comment */word"""
         st = grammar(doc2)
         assert st.children and st.children[-1].tag_name == 'word'
-        # print(st.as_sxpr())
+        doc3 = """word no*word/* comment1 */
+                  /* comment2 */word"""
+        st = grammar(doc3)
+        assert st.children and st.children[-1].tag_name == 'word'
 
 
 class TestInSeriesResume:

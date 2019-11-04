@@ -171,8 +171,9 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
         k, length = search_func(search_rule)
         while a < b <= k:
             a, b = next_comment()
-        while a <= k + length < b:
-            k, length = search_func(search_rule, k + max(length, 1))
+        # find next as long as start or end point of resume regex are inside a comment
+        while (a < k < b) or (a < k + length < b):
+            k, length = search_func(search_rule, b)
             while a < b <= k:
                 a, b = next_comment()
         return k + length if k >= 0 else upper_limit
@@ -1985,7 +1986,7 @@ class Alternative(NaryParser):
         # the order of the sub-expression matters!
         >>> number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         >>> str(Grammar(number)("3.1416"))
-        '3 <<< Error on ".1416" | Parser stopped before end! trying to recover... >>> '
+        '3 <<< Error on ".1416" | Parser stopped before end! Terminating parser. >>> '
 
         # the most selective expression should be put first:
         >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
