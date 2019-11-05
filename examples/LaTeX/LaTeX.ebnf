@@ -77,7 +77,7 @@ verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                       "\\" ( hline | { cline } )
-tabular_cell        = { line_element //~ }
+tabular_cell        = { line_element S }
 tabular_config      = "{" /[lcr|]+/~ §"}"
 
 
@@ -85,7 +85,7 @@ tabular_config      = "{" /[lcr|]+/~ §"}"
 
 block_of_paragraphs = "{" [sequence] §"}"
 sequence            = [WSPC] { (paragraph | block_environment ) [PARSEP] }+
-paragraph           = { !blockcmd text_element //~ }+
+paragraph           = { !blockcmd text_element S }+
 text_element        = line_element | LINEFEED
 line_element        = text | block | inline_environment | command
 
@@ -94,7 +94,7 @@ line_element        = text | block | inline_environment | command
 
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
-generic_inline_env  = begin_inline_env //~ paragraph §end_inline_env
+generic_inline_env  = begin_inline_env ~ paragraph §end_inline_env
 begin_inline_env    = (-!LB begin_environment) | (begin_environment !LFF)
 end_inline_env      = end_environment
                       ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
@@ -110,7 +110,7 @@ command             = known_command | text_command | generic_command
 known_command       = citet | citep | footnote | includegraphics | caption
                     | multicolumn | hline | cline | documentclass | pdfinfo
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
-generic_command     = !no_command CMDNAME [[ //~ config ] //~ block ]
+generic_command     = !no_command CMDNAME [[ ~ config ] ~ block ]
 
 citet               = "\citet" [config] block
 citep               = ("\citep" | "\cite") [config] block
@@ -132,9 +132,9 @@ pdfinfo             = "\pdfinfo" block
 
 
 config     = "[" cfg_text §"]"
-cfg_text   = { ([//~] text) | CMDNAME | SPECIAL }
-block      = /{/ //~ { !blockcmd text_element //~ } §/}/
-text       = TEXTCHUNK { //~ TEXTCHUNK }
+cfg_text   = { (~ text) | CMDNAME | SPECIAL }
+block      = /{/ ~ { !blockcmd text_element S } §/}/
+text       = TEXTCHUNK { S TEXTCHUNK }
 
 no_command = "\begin{" | "\end" | BACKSLASH structural
 blockcmd   = BACKSLASH ( ( "begin{" | "end{" )
@@ -167,6 +167,7 @@ TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding white
                                             # linefeed and special characters
 LF         = NEW_LINE { COMMENT__ WHITESPACE__ }   # linefeed but not an empty line
 LFF        = NEW_LINE [ WSPC ]              # at least one linefeed
+S          = ~                              # significant whitespace
 PARSEP     = { WHITESPACE__ COMMENT__ } GAP [WSPC] # paragraph separator
 WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
 GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.

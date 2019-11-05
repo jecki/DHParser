@@ -290,7 +290,7 @@ LaTeX_AST_transformation_table = {
     "EOF": [],
     # "PARSEP": [replace_content_by('\n\n')],
     # "WSPC": [replace_content_by(' ')],
-    ":Whitespace": streamline_whitespace,
+    ":Whitespace, WSPC, S": streamline_whitespace,
     "*": replace_by_single_child
 }
 
