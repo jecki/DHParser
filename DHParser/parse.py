@@ -2498,6 +2498,9 @@ class Pop(Retrieve):
 ########################################################################
 
 
+# TODO: Add a generic Drop-Parser (see DropToken, DropWhitespace)
+
+
 class Synonym(UnaryParser):
     r"""
     Simply calls another parser and encapsulates the result in
@@ -2512,11 +2515,15 @@ class Synonym(UnaryParser):
     class, in which case it would be unclear whether the parser
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
+    def __init__(self, parser: Parser) -> None:
+        assert not (isinstance(parser, DropWhitespace) or isinstance(parser, DropToken))
+        super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
-        assert node != EMPTY_NODE  # TODO: add a test-case for this, and then correct the error!!!
         if node:
+            if node == EMPTY_NODE:
+                return Node(self.tag_name, ''), text
             return Node(self.tag_name, node), text
         return None, text
 

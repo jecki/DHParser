@@ -388,6 +388,21 @@ class TestGrammar:
         st = gr('eins zwei', complete_match=False)
         assert not st.errors
 
+    def test_synonym(self):
+        lang = """
+            doc  = { word | number }
+            word = /\w+/ S
+            number = [VZ] /\d+/ S 
+            S    = ~        # let S by a synonym for anonymous whitespace
+            VZ   = "-"
+        """
+        gr = grammar_provider(lang)()
+        st = gr('eins 1 zwei2drei 3')
+        # set_config_value('compiled_EBNF_log', 'grammar.log')
+        gr = grammar_provider("@drop = whitespace, token" + lang)()
+        st = gr('eins 1 zwei2drei 3')
+        st = gr('-3')
+
 
 class TestSeries:
     def test_non_mandatory(self):

@@ -797,9 +797,8 @@ class EBNFCompiler(Compiler):
         if DROP_WSPC in self.directives.drop:
             definitions.append((self.DROP_WHITESPACE_PARSER_KEYWORD,
                                 'DropWhitespace(%s)' % self.WHITESPACE_KEYWORD))
-        else:
-            definitions.append((self.WHITESPACE_PARSER_KEYWORD,
-                                'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
+        definitions.append((self.WHITESPACE_PARSER_KEYWORD,
+                            'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
         definitions.append((self.WHITESPACE_KEYWORD,
                             ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
                              + ", comment=" + self.COMMENT_KEYWORD + ")")))

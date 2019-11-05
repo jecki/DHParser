@@ -33,7 +33,7 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
-from DHParser.log import suspend_logging, resume_logging
+from DHParser.log import suspend_logging, resume_logging, is_logging, append_log
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
@@ -243,12 +243,12 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
 
 def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
     """
-    Compiles an EBNF grammar and returns a grammar-parser provider
+    Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
 
     Args:
         ebnf_src(str):  Either the file name of an EBNF grammar or
-            the EBNF grammar itself as a string.
+            the EBNF-grammar itself as a string.
         branding (str or bool):  Branding name for the compiler
             suite source code.
 
@@ -258,6 +258,12 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
     """
     grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding, ebnf_src))
+    log_name = get_config_value('compiled_EBNF_log')
+    if log_name:
+        if is_logging():
+            append_log(log_name, grammar_src)
+        else:
+            print(grammar_src)
     grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
     grammar_factory.python_src__ = grammar_src
     return grammar_factory

@@ -318,9 +318,13 @@ CONFIG_PRESET['server_default_port'] = 8888
 
 # Turn on (costly) debugging functionality for any of the respective
 # modules or subsystems.
-# Default value: always False
+# Default value: False
 CONFIG_PRESET['debug_compiler'] = False
 
+# Makes DHParser.dsl.grammar_provider() write generated Python code to
+# the log-file (if logging is on) or to the console (if logging is off)
+# Default value: False
+CONFIG_PRESET['compiled_EBNF_log'] = ''
 
 ########################################################################
 #
