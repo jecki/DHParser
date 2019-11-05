@@ -30,7 +30,6 @@ except ModuleNotFoundError:
 def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptpath, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
-    DHParser.log.start_logging('LOGS')
     # recompiles Grammar only if it has changed
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):

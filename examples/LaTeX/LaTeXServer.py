@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-"""DSLServer.py - starts a server (if not already running) for the
-                    compilation of DSL
+"""LaTeXServer.py - starts a server (if not already running) for the
+                    compilation of LaTeX
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -134,7 +134,7 @@ def lsp_rpc(f):
     return wrapper
 
 
-class DSLLanguageServerProtocol:
+class LaTeXLanguageServerProtocol:
     def __init__(self):
         import json
         import multiprocessing
@@ -178,7 +178,7 @@ class DSLLanguageServerProtocol:
 def run_server(host, port, log_path=None):
     global scriptpath
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
-    dhparserdir = os.path.abspath(os.path.join(scriptpath, 'RELDHPARSERDIR'))
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, '..\..'))
     if scriptpath not in sys.path:
         sys.path.append(scriptpath)
     if dhparserdir not in sys.path:
@@ -188,11 +188,11 @@ def run_server(host, port, log_path=None):
                              notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        with open('LaTeX_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
-    recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
-    from DSLCompiler import compile_src
+    recompile_grammar(os.path.join(scriptpath, 'LaTeX.ebnf'), force=False)
+    from LaTeXCompiler import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
@@ -202,19 +202,19 @@ def run_server(host, port, log_path=None):
         print('PermissionError: Could not write temporary config file: ' + config_filename)
 
     print('Starting server on %s:%i' % (host, port))
-    DSL_lsp = DSLLanguageServerProtocol()
-    lsp_table = gen_lsp_table(DSL_lsp, prefix='lsp_')
+    LaTeX_lsp = LaTeXLanguageServerProtocol()
+    lsp_table = gen_lsp_table(LaTeX_lsp, prefix='lsp_')
     lsp_table.update({'default': compile_src})
     non_blocking = frozenset(('initialize', 'initialized', 'shutdown', 'exit'))
-    DSL_server = Server(rpc_functions=lsp_table,
+    LaTeX_server = Server(rpc_functions=lsp_table,
                         cpu_bound=set(lsp_table.keys() - non_blocking),
                         blocking=frozenset())
     if log_path is not None:
-        DSL_server.echo_log = True
-        print(DSL_server.start_logging(log_path))
+        LaTeX_server.echo_log = True
+        print(LaTeX_server.start_logging(log_path))
 
     try:
-        DSL_server.run_server(host, port)  # returns only after server has stopped
+        LaTeX_server.run_server(host, port)  # returns only after server has stopped
     except OSError as e:
         print(e)
         print('Could not start server. Shutting down!')
@@ -266,12 +266,12 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python DSLServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-          + '    python DSLServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-          + '    python DSLServer.py --stopserver\n'
-          + '    python DSLServer.py --status\n'
-          + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
-          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+          + '    python LaTeXServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+          + '    python LaTeXServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+          + '    python LaTeXServer.py --stopserver\n'
+          + '    python LaTeXServer.py --status\n'
+          + '    python LaTeXServer.py --logging [ON|LOG_PATH|OFF]\n'
+          + '    python LaTeXServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
     sys.exit(1)
 
 
