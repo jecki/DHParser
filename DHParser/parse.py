@@ -2515,7 +2515,7 @@ class Synonym(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
-        assert node != EMPTY_NODE  # TODO: add a test-case for this!!!
+        assert node != EMPTY_NODE  # TODO: add a test-case for this, and then correct the error!!!
         if node:
             return Node(self.tag_name, node), text
         return None, text
