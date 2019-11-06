@@ -3,7 +3,7 @@
 # preamble
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*/
-@ drop       = token
+@ drop       = token, whitespace
 
 ########################################################################
 #
@@ -78,7 +78,7 @@ verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                       "\\" ( hline | { cline } )
-tabular_cell        = { line_element S }
+tabular_cell        = { line_element [S] }
 tabular_config      = "{" /[lcr|]+/~ §"}"
 
 
@@ -86,7 +86,7 @@ tabular_config      = "{" /[lcr|]+/~ §"}"
 
 block_of_paragraphs = "{" [sequence] §"}"
 sequence            = [WSPC] { (paragraph | block_environment ) [PARSEP] }+
-paragraph           = { !blockcmd text_element S }+
+paragraph           = { !blockcmd text_element [S] }+
 text_element        = line_element | LINEFEED
 line_element        = text | block | inline_environment | command
 
@@ -134,7 +134,7 @@ pdfinfo             = "\pdfinfo" block
 
 config     = "[" cfg_text §"]"
 cfg_text   = { (~ text) | CMDNAME | SPECIAL }
-block      = /{/ ~ { !blockcmd text_element S } §/}/
+block      = /{/ ~ { !blockcmd text_element [S] } §/}/
 text       = TEXTCHUNK { S TEXTCHUNK }
 
 no_command = "\begin{" | "\end" | BACKSLASH structural
@@ -168,7 +168,7 @@ TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding white
                                             # linefeed and special characters
 LF         = NEW_LINE { COMMENT__ WHITESPACE__ }   # linefeed but not an empty line
 LFF        = NEW_LINE [ WSPC ]              # at least one linefeed
-S          = ~                              # significant whitespace
+S          = &/[% \t\n]/ ~                  # significant whitespace
 PARSEP     = { WHITESPACE__ COMMENT__ } GAP [WSPC] # paragraph separator
 WSPC       = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
 GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
