@@ -805,7 +805,7 @@ class EBNFCompiler(Compiler):
 
         # add special fields for Grammar class
 
-        if DROP_WSPC in self.directives.drop:
+        if DROP_WSPC in self.directives.drop or DROP_TOKEN in self.directives.drop:
             definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
                                 'DropRegExp(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
@@ -1340,16 +1340,18 @@ class EBNFCompiler(Compiler):
         return 'Token('
 
 
-    def WSPC_PARSER(self):
-        if DROP_WSPC in self.directives.drop and (self.context[-2].tag_name != "definition"
-                                                  or self.context[-1].tag_name == 'literal'):
+    def WSPC_PARSER(self, force_drop=False):
+        if ((force_drop or DROP_WSPC in self.directives.drop)
+                and (self.context[-2].tag_name != "definition"
+                     or self.context[-1].tag_name == 'literal')):
             return 'dwsp__'
         return 'wsp__'
 
     def on_literal(self, node: Node) -> str:
         center = self.TOKEN_PARSER() + node.content.replace('\\', r'\\') + ')'
-        left = self.WSPC_PARSER() if 'left' in self.directives.literalws else ''
-        right = self.WSPC_PARSER() if 'right' in self.directives.literalws else ''
+        force = DROP_TOKEN in self.directives.drop
+        left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
+        right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
         if left or right:
             return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center

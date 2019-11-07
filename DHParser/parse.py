@@ -65,6 +65,7 @@ __all__ = ('Parser',
            'MetaParser',
            'UnaryParser',
            'NaryParser',
+           'Drop',
            'Synonym',
            'Option',
            'ZeroOrMore',
@@ -1371,19 +1372,6 @@ class Token(Parser):
         return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % self.text
 
 
-class DropToken(Token):
-    """
-    Parses play text string, but returns EMPTY_NODE rather than the parsed
-    string on a match. Violates the invariant: str(parse(text)) == text !
-    """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropToken must not be used for named parsers!"
-        if text.startswith(self.text):
-            return EMPTY_NODE, text[self.len:]
-            # return Node(self.tag_name, self.text, True), text[self.len:]
-        return None, text
-
-
 class RegExp(Parser):
     r"""
     Regular expression parser.
@@ -2494,12 +2482,60 @@ class Pop(Retrieve):
 
 ########################################################################
 #
-# Aliasing parser classes
+# Simplifying parser classes
 #
 ########################################################################
 
 
-# TODO: Add a generic Drop-Parser (see DropToken, DropWhitespace)
+class Drop(UnaryParser):
+    r"""
+    Drops any content that another parser yields and returns either
+    None if the other parser did not match or EMPTY_NODE, if it did.
+    This allows to simplify the syntax tree at a very early stage.
+    Violates the invariant: str(parse(text)) == text !
+    """
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        node, text = self.parser.parse(text)
+        if node:
+            return EMPTY_NODE, text
+        return None, text
+
+
+class DropToken(Token):
+    """
+    Parses play text string, but returns EMPTY_NODE rather than the parsed
+    string on a match. Violates the invariant: str(parse(text)) == text !
+    """
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        assert self.anonymous, "DropToken must not be used for named parsers!"
+        if text.startswith(self.text):
+            return EMPTY_NODE, text[self.len:]
+            # return Node(self.tag_name, self.text, True), text[self.len:]
+        return None, text
+
+
+class DropRegExp(Whitespace):
+    """
+    Parses a text with a regular expression but never returns the match.
+    Instead EMPTY_NODE is returned on a match.
+    Violates the invariant: str(parse(text)) == text !
+    """
+
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        assert self.anonymous, "DropWhitespace must not be used for named parsers!"
+        match = text.match(self.regexp)
+        if match:
+            # capture = match.group(0)
+            end = text.index(match.end())
+            return EMPTY_NODE, text[end:]
+        return None, text
+
+
+########################################################################
+#
+# Aliasing parser classes
+#
+########################################################################
 
 
 class Synonym(UnaryParser):
