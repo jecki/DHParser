@@ -785,11 +785,14 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     def close_package():
         nonlocal package
         if package:
+            tag_name = package[0].tag_name
+            if any(nd.tag_name != tag_name for nd in package):
+                tag_name = target_tag
             s = "".join(nd.content for nd in package)
             # pivot = package[0].tag_name
             # target_tag = pivot if all(nd.tag_name == pivot for nd in package) else target_tag
             # TODO: update attributes
-            result.append(Node(target_tag, s))
+            result.append(Node(tag_name, s))
             package = []
 
     for child in node.children:
