@@ -521,6 +521,10 @@ class EBNFCompiler(Compiler):
         definitions:  A dictionary of definitions. Other than `rules`
                 this maps the symbols to their compiled definienda.
 
+        required_keywords: A list of keywords (like `comment__` or
+                `whitespace__` that need to be defined at the beginning
+                of the grammar class because they are referred to later.
+
         deferred_tasks:  A list of callables that is filled during
                 compilatation, but that will be executed only after
                 compilation has finished. Typically, it contains
@@ -558,17 +562,23 @@ class EBNFCompiler(Compiler):
                 compiled texts.)
     """
     COMMENT_KEYWORD = "COMMENT__"
+    COMMENT_PARSER_KEYWORD = "comment__"
     COMMENT_RX_KEYWORD = "comment_rx__"
     WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
+    RAW_WS_PARSER_KEYWORD = "whitespace__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
     DROP_WHITESPACE_PARSER_KEYWORD = "dwsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_SUFFIX = '_skip__'
     ERR_MSG_SUFFIX = '_err_msg__'
-    RESERVED_SYMBOLS = {COMMENT_KEYWORD, COMMENT_RX_KEYWORD, WHITESPACE_KEYWORD, RAW_WS_KEYWORD,
-                        WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
-                        RESUME_RULES_KEYWORD}
+    RESERVED_SYMBOLS = { COMMENT_KEYWORD, COMMENT_RX_KEYWORD, COMMENT_PARSER_KEYWORD,
+                         WHITESPACE_KEYWORD, RAW_WS_KEYWORD, RAW_WS_PARSER_KEYWORD,
+                         WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
+                         RESUME_RULES_KEYWORD }
+    KEYWORD_SUBSTITUTION = {COMMENT_KEYWORD: COMMENT_PARSER_KEYWORD,
+                            RAW_WS_KEYWORD: RAW_WS_PARSER_KEYWORD,
+                            WHITESPACE_KEYWORD: WHITESPACE_PARSER_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -586,16 +596,17 @@ class EBNFCompiler(Compiler):
 
     def reset(self):
         super(EBNFCompiler, self).reset()
-        self._result = ''           # type: str
-        self.re_flags = set()       # type: Set[str]
-        self.rules = OrderedDict()  # type: OrderedDict[str, List[Node]]
-        self.current_symbols = []   # type: List[Node]
-        self.symbols = {}           # type: Dict[str, Node]
-        self.variables = set()      # type: Set[str]
-        self.recursive = set()      # type: Set[str]
-        self.definitions = {}       # type: Dict[str, str]
-        self.deferred_tasks = []    # type: List[Callable]
-        self.root_symbol = ""       # type: str
+        self._result = ''               # type: str
+        self.re_flags = set()           # type: Set[str]
+        self.rules = OrderedDict()      # type: OrderedDict[str, List[Node]]
+        self.current_symbols = []       # type: List[Node]
+        self.symbols = {}               # type: Dict[str, Node]
+        self.variables = set()          # type: Set[str]
+        self.recursive = set()          # type: Set[str]
+        self.definitions = {}           # type: Dict[str, str]
+        self.required_keywords = set()  # type: Set[str]
+        self.deferred_tasks = []        # type: List[Callable]
+        self.root_symbol = ""           # type: str
         self.directives = EBNFDirectives()   # type: EBNFDirectives
         self.defined_directives = set()      # type: Set[str]
         self.consumed_custom_errors = set()  # type: Set[str]
@@ -795,17 +806,26 @@ class EBNFCompiler(Compiler):
         # add special fields for Grammar class
 
         if DROP_WSPC in self.directives.drop:
-            definitions.append((self.DROP_WHITESPACE_PARSER_KEYWORD,
-                                'DropWhitespace(%s)' % self.WHITESPACE_KEYWORD))
-        definitions.append((self.WHITESPACE_PARSER_KEYWORD,
-                            'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
-        definitions.append((self.WHITESPACE_KEYWORD,
-                            ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
-                             + ", comment=" + self.COMMENT_KEYWORD + ")")))
-        definitions.append((self.RAW_WS_KEYWORD, "r'{}'".format(self.directives.whitespace)))
-        comment_rx = "re.compile(COMMENT__)" if self.directives.comment else "RX_NEVER_MATCH"
-        definitions.append((self.COMMENT_RX_KEYWORD, comment_rx))
-        definitions.append((self.COMMENT_KEYWORD, "r'{}'".format(self.directives.comment)))
+            definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
+                                'DropWhitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
+        definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
+                            'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
+        definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,
+                            ("mixin_comment(whitespace=" + EBNFCompiler.RAW_WS_KEYWORD
+                             + ", comment=" + EBNFCompiler.COMMENT_KEYWORD + ")")))
+        if EBNFCompiler.RAW_WS_PARSER_KEYWORD in self.required_keywords:
+            definitions.append((EBNFCompiler.RAW_WS_PARSER_KEYWORD,
+                                "Whitespace(%s)" % EBNFCompiler.RAW_WS_KEYWORD))
+        definitions.append((EBNFCompiler.RAW_WS_KEYWORD,
+                            "r'{}'".format(self.directives.whitespace)))
+        comment_rx = ("re.compile(%s)" % EBNFCompiler.COMMENT_KEYWORD) \
+            if self.directives.comment else "RX_NEVER_MATCH"
+        if EBNFCompiler.COMMENT_PARSER_KEYWORD in self.required_keywords:
+            definitions.append((EBNFCompiler.COMMENT_PARSER_KEYWORD,
+                                "RegExp(%s)" % EBNFCompiler.COMMENT_RX_KEYWORD))
+        definitions.append((EBNFCompiler.COMMENT_RX_KEYWORD, comment_rx))
+        definitions.append((EBNFCompiler.COMMENT_KEYWORD,
+                            "r'{}'".format(self.directives.comment)))
 
         # prepare and add resume-rules
 
@@ -1306,7 +1326,10 @@ class EBNFCompiler(Compiler):
             if symbol in self.rules:
                 self.recursive.add(symbol)
             if symbol in EBNFCompiler.RESERVED_SYMBOLS:
-                # (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
+                if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
+                    keyword = EBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
+                    self.required_keywords.add(keyword)
+                    return keyword
                 return "RegExp(%s)" % symbol
             return symbol
 
