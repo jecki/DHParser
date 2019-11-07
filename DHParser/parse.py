@@ -59,7 +59,7 @@ __all__ = ('Parser',
            'RE',
            'TKN',
            'Whitespace',
-           'DropWhitespace',
+           'DropRegExp',
            'mixin_comment',
            'mixin_noempty',
            'MetaParser',
@@ -1486,10 +1486,11 @@ class Whitespace(RegExp):
         return '~'
 
 
-class DropWhitespace(Whitespace):
+class DropRegExp(Whitespace):
     """
-    Parses whitespace but never returns it. Instead EMPTY_NODE is returned
-    on a match. Violates the invariant: str(parse(text)) == text !
+    Parses a text with a regular expression but never returns the match.
+    Instead EMPTY_NODE is returned on a match.
+    Violates the invariant: str(parse(text)) == text !
     """
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2516,16 +2517,20 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not (isinstance(parser, DropWhitespace) or isinstance(parser, DropToken))
+        assert not (isinstance(parser, DropRegExp) or isinstance(parser, DropToken))
         super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser(text)
+        node, text = self.parser._parse(text)  # circumvent Parser.__call__
         if node:
-            if node == EMPTY_NODE:
-                return Node(self.tag_name, ''), text
-            return Node(self.tag_name, node), text
-        return None, text
+            if self.anonymous:
+                if node.tag_name[0] != ':':  # implies != EMPTY_NODE
+                    node.tag_name = self.tag_name
+            else:
+                if node == EMPTY_NODE:
+                    return Node(self.tag_name, ''), text
+                node.tag_name = self.tag_name
+        return node, text
 
     def __repr__(self):
         return self.pname or self.parser.repr

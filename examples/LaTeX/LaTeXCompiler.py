@@ -21,7 +21,7 @@ try:
 except ImportError:
     import re
 from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
-    Synonym, Whitespace, DropWhitespace, Token, DropToken, \
+    Synonym, Whitespace, DropRegExp, Token, DropToken, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Series, Capture, Lookahead, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, TransformationDict, \
@@ -73,7 +73,7 @@ class LaTeXGrammar(Grammar):
     whitespace__ = Whitespace(WHITESPACE__)
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = DropWhitespace(WSP_RE__)
+    dwsp__ = DropRegExp(WSP_RE__)
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
     LB = RegExp('\\s*?\\n|$')

@@ -26,7 +26,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationFunc, TransformationDict, Token, DropToken, DropWhitespace, \
+    Node, TransformationFunc, TransformationDict, Token, DropToken, DropRegExp, \
     traverse, remove_children_if, is_anonymous, access_thread_locals, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
@@ -76,7 +76,8 @@ class XMLGrammar(Grammar):
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    dwsp__ = DropWhitespace(WSP_RE__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = DropRegExp(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     S = RegExp('\\s+')
     Char = RegExp('\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]')

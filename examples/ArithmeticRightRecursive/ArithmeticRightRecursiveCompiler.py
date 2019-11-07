@@ -21,7 +21,7 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropRegExp, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
@@ -73,7 +73,8 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    dwsp__ = DropWhitespace(WSP_RE__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = DropRegExp(WSP_RE__)
     VARIABLE = RegExp('[a-dj-z]')
     NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
     MINUS = RegExp('-')

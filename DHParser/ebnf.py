@@ -34,7 +34,7 @@ from DHParser.compile import CompilerError, Compiler, compile_source, visitor_na
 from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, mixin_noempty, Forward, RegExp, \
-    DropWhitespace, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
+    DropRegExp, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
     Token, GrammarError
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
@@ -83,7 +83,7 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropRegExp, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
@@ -189,7 +189,7 @@ class EBNFGrammar(Grammar):
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wsp__ = DropWhitespace(WSP_RE__)
+    wsp__ = DropRegExp(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), wsp__)
@@ -807,7 +807,7 @@ class EBNFCompiler(Compiler):
 
         if DROP_WSPC in self.directives.drop:
             definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
-                                'DropWhitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
+                                'DropRegExp(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,

@@ -73,121 +73,178 @@ Match-test "entry"
 
 ### AST
     entry
-      :RegExp "@"
+      :RegExp
+        "@"
       type
-        WORD "Online"
-      :Token "{"
+        "Online"
+      :Token
+        "{"
       key
-        NO_BLANK_STRING "wikipedia-duhem-quine"
-      :Token ","
+        "wikipedia-duhem-quine"
+      :Token
+        ","
       :Whitespace
         "  % A"
         "  "
       field
-        WORD
-          :RegExp "editor"
-          :Whitespace "       "
-      :Token "="
-      :Whitespace " "
+        :RegExp
+          "editor"
+        :Whitespace
+          "       "
+      :Token
+        "="
+      :Whitespace
+        " "
       content
-        :Token "{"
+        :Token
+          "{"
         text
-          CONTENT_STRING "Wikipedia"
-        :Token "}"
-      :Token ","
+          CONTENT_STRING
+            "Wikipedia"
+        :Token
+          "}"
+      :Token
+        ","
       :Whitespace
         ""
         "  "
       field
-        WORD
-          :RegExp "title"
-          :Whitespace "        "
-      :Token "="
-      :Whitespace " "
+        :RegExp
+          "title"
+        :Whitespace
+          "        "
+      :Token
+        "="
+      :Whitespace
+        " "
       content
-        :Token "{"
+        :Token
+          "{"
         text
           CONTENT_STRING
-            :RegExp "Duhem-Quine"
-            WS " "
-            :RegExp "thesis"
-        :Token "}"
-      :Token ","
+            :RegExp
+              "Duhem-Quine"
+            WS
+              " "
+            :RegExp
+              "thesis"
+        :Token
+          "}"
+      :Token
+        ","
       :Whitespace
         "  % B"
         "  "
       field
-        WORD
-          :RegExp "year"
-          :Whitespace "         "
-      :Token "="
-      :Whitespace " "
+        :RegExp
+          "year"
+        :Whitespace
+          "         "
+      :Token
+        "="
+      :Whitespace
+        " "
       content
-        :Token "{"
+        :Token
+          "{"
         text
-          CONTENT_STRING "2017"
-        :Token "}"
-      :Token ","
+          CONTENT_STRING
+            "2017"
+        :Token
+          "}"
+      :Token
+        ","
       :Whitespace
         ""
         "  "
       field
-        WORD
-          :RegExp "date"
-          :Whitespace "         "
-      :Token "="
-      :Whitespace " "
+        :RegExp
+          "date"
+        :Whitespace
+          "         "
+      :Token
+        "="
+      :Whitespace
+        " "
       content
-        :Token "{"
+        :Token
+          "{"
         text
           CONTENT_STRING
-            :RegExp "2017-08-19"
+            :RegExp
+              "2017-08-19"
             WS
               " % C"
               "   "
-        :Token "}"
-      :Token ","
+        :Token
+          "}"
+      :Token
+        ","
       :Whitespace
         ""
         "  "
       field
-        WORD
-          :RegExp "url"
-          :Whitespace "          "
-      :Token "="
-      :Whitespace " "
+        :RegExp
+          "url"
+        :Whitespace
+          "          "
+      :Token
+        "="
+      :Whitespace
+        " "
       content
-        :Token "{"
+        :Token
+          "{"
         text
           CONTENT_STRING
-            :RegExp "https://en.wikipedia.org/w/index.php?title=Duhem\"
-            ESC "%"
-            :RegExp "E2\"
-            ESC "%"
-            :RegExp "80\"
-            ESC "%"
-            :RegExp "93Quine\"
-            ESC "_"
-            :RegExp "thesis\"
-            ESC "&"
-            :RegExp "oldid=772834991"
-        :Token "}"
-      :Token ","
+            :RegExp
+              "https://en.wikipedia.org/w/index.php?title=Duhem\"
+            ESC
+              "%"
+            :RegExp
+              "E2\"
+            ESC
+              "%"
+            :RegExp
+              "80\"
+            ESC
+              "%"
+            :RegExp
+              "93Quine\"
+            ESC
+              "_"
+            :RegExp
+              "thesis\"
+            ESC
+              "&"
+            :RegExp
+              "oldid=772834991"
+        :Token
+          "}"
+      :Token
+        ","
       :Whitespace
         ""
         "  "
       field
-        WORD
-          :RegExp "organization"
-          :Whitespace " "
-      :Token "="
-      :Whitespace " "
+        :RegExp
+          "organization"
+        :Whitespace
+          " "
+      :Token
+        "="
+      :Whitespace
+        " "
       content
-        :Token "{"
+        :Token
+          "{"
         text
-          CONTENT_STRING "Wikipedia"
-        :Token "}"
+          CONTENT_STRING
+            "Wikipedia"
+        :Token
+          "}"
         :Whitespace
           ""
           ""
-      :Token "}"
+      :Token
+        "}"
