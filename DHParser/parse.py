@@ -404,7 +404,7 @@ class Parser:
                 elif pe.first_throw:
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:
-                    node = pe.node
+                    node = Node(self.tag_name, pe.node).with_pos(location)  # try to create tree as faithful as possible
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType

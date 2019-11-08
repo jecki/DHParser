@@ -424,9 +424,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
                 # tests.setdefault('__err__', {})[test_name] = errata[-1]
-                # write parsing-history log only in case of failure!
-                if is_logging():
-                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
@@ -464,6 +461,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             if len(errata) > errflag:
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+                # write parsing-history log only in case of failure!
+                if is_logging():
+                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
 
         if verbose and 'fail' in tests:
             write('  Fail-Tests for parser "' + parser_name + '"')
