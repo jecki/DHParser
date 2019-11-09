@@ -251,6 +251,11 @@ class Parser:
                 reasons this is implemented as an object variable rather
                 than a property. This property must always be equal to
                 `self.tag_name[0] == ":"`.
+        drop_content: A property (for performance reasons implemented as
+                simple field) that, if set, induces the parser not to return
+                the parsed content or sub-tree if it has matched but the
+                dummy `EMPTY_NODE`. In effect the parsed content will be
+                dropped from the concrete syntax tree already.
         tag_name: The tag_name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 `pname`, otherwise it is the name of the parser's type.
@@ -277,6 +282,7 @@ class Parser:
         # assert isinstance(name, str), str(name)
         self.pname = ''               # type: str
         self.anonymous = True         # type: bool
+        self.drop_content = False     # type: bool
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         try:
@@ -1474,23 +1480,6 @@ class Whitespace(RegExp):
         return '~'
 
 
-class DropRegExp(Whitespace):
-    """
-    Parses a text with a regular expression but never returns the match.
-    Instead EMPTY_NODE is returned on a match.
-    Violates the invariant: str(parse(text)) == text !
-    """
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropWhitespace must not be used for named parsers!"
-        match = text.match(self.regexp)
-        if match:
-            # capture = match.group(0)
-            end = text.index(match.end())
-            return EMPTY_NODE, text[end:]
-        return None, text
-
-
 ########################################################################
 #
 # Meta parser classes, i.e. parsers that contain other parsers
@@ -2341,6 +2330,8 @@ class Capture(UnaryParser):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
+    # TODO: __init__() should check that no parser the sub-tree has drop-status!!!
+
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
 
@@ -2495,7 +2486,7 @@ class Drop(UnaryParser):
     Violates the invariant: str(parse(text)) == text !
     """
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser.parse(text)
+        node, text = self.parser(text)
         if node:
             return EMPTY_NODE, text
         return None, text
