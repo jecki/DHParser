@@ -1474,23 +1474,6 @@ class Whitespace(RegExp):
         return '~'
 
 
-class DropRegExp(Whitespace):
-    """
-    Parses a text with a regular expression but never returns the match.
-    Instead EMPTY_NODE is returned on a match.
-    Violates the invariant: str(parse(text)) == text !
-    """
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropWhitespace must not be used for named parsers!"
-        match = text.match(self.regexp)
-        if match:
-            # capture = match.group(0)
-            end = text.index(match.end())
-            return EMPTY_NODE, text[end:]
-        return None, text
-
-
 ########################################################################
 #
 # Meta parser classes, i.e. parsers that contain other parsers
@@ -2495,7 +2478,7 @@ class Drop(UnaryParser):
     Violates the invariant: str(parse(text)) == text !
     """
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser.parse(text)
+        node, text = self.parser(text)
         if node:
             return EMPTY_NODE, text
         return None, text
@@ -2553,7 +2536,7 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not (isinstance(parser, DropRegExp) or isinstance(parser, DropToken))
+        assert not (isinstance(parser, DropRegExp) or isinstance(parser, DropToken) or isinstance(parser, Drop))
         super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
