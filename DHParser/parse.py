@@ -255,7 +255,9 @@ class Parser:
                 simple field) that, if set, induces the parser not to return
                 the parsed content or sub-tree if it has matched but the
                 dummy `EMPTY_NODE`. In effect the parsed content will be
-                dropped from the concrete syntax tree already.
+                dropped from the concrete syntax tree already. Only
+                anonymous (or pseudo-anonymous) parsers are allowed to
+                drop content.
         tag_name: The tag_name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 `pname`, otherwise it is the name of the parser's type.
@@ -908,11 +910,12 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     anonymous = True if cls.anonymous__.match(entry) else False
+                    assert anonymous or not parser.drop_content
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
                             cast(Forward, parser).parser.pname = entry
                             cast(Forward, parser).parser.anonymous = anonymous
-                    else:   # if not parser.pname:
+                    else:
                         parser.pname = entry
                         parser.anonymous = anonymous
             cls.parser_initialization__[0] = "done"
@@ -1341,6 +1344,8 @@ class PreprocessorToken(Parser):
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[end:]
             if text[1:len(self.pname) + 1] == self.pname:
+                if self.drop_content:
+                    return EMPTY_NODE, text[end + 1:]
                 return Node(self.tag_name, text[len(self.pname) + 2:end]), text[end + 1:]
         return None, text
 
@@ -1369,9 +1374,11 @@ class Token(Parser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
-            if self.text or not self.anonymous:
+            if self.drop_content:
+                return EMPTY_NODE, text[self.len:]
+            elif self.text or not self.anonymous:
                 return Node(self.tag_name, self.text, True), text[self.len:]
-            return EMPTY_NODE, text[0:]
+            return EMPTY_NODE, text
         return None, text
 
     def __repr__(self):
@@ -1418,9 +1425,10 @@ class RegExp(Parser):
             capture = match.group(0)
             if capture or not self.anonymous:
                 end = text.index(match.end())
+                if self.drop_content:
+                    return EMPTY_NODE, text[end:]
                 return Node(self.tag_name, capture, True), text[end:]
-            assert text.index(match.end()) == 0
-            return EMPTY_NODE, text[0:]
+            return EMPTY_NODE, text
         return None, text
 
     def __repr__(self):
@@ -1464,18 +1472,6 @@ class Whitespace(RegExp):
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        match = text.match(self.regexp)
-        if match:
-            capture = match.group(0)
-            if capture or not self.anonymous:
-                end = text.index(match.end())
-                return Node(self.tag_name, capture, True), text[end:]
-            else:
-                # avoid creation of a node object for empty nodes
-                return EMPTY_NODE, text
-        return None, text
-
     def __repr__(self):
         return '~'
 
@@ -1515,6 +1511,8 @@ class MetaParser(Parser):
         if self._grammar.flatten_tree__:
             if node:
                 if self.anonymous:
+                    if self.drop_content:
+                        return EMPTY_NODE
                     return node
                 if node.tag_name[0] == ':':  # faster than node.is_anonymous()
                     return Node(self.tag_name, node._result)
@@ -1522,6 +1520,8 @@ class MetaParser(Parser):
             elif self.anonymous:
                 return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
             return Node(self.tag_name, ())
+        if self.drop_content:
+            return EMPTY_NODE
         return Node(self.tag_name, node or ())  # unoptimized code
 
     @cython.locals(N=cython.int)
@@ -1533,6 +1533,8 @@ class MetaParser(Parser):
         `grammar.flatten_tree__` is True.
         """
         assert isinstance(results, tuple)
+        if self.drop_content:
+            return EMPTY_NODE
         N = len(results)
         if N > 1:
             if self._grammar.flatten_tree__:
@@ -2299,7 +2301,11 @@ class Lookbehind(FlowParser):
             does_match = backwards_text[:len(self.text)] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
-        return (Node(self.tag_name, ''), text) if self.sign(does_match) else (None, text)
+        if self.sign(does_match):
+            if self.drop_content:
+                return EMPTY_NODE, text
+            return Node(self.tag_name, ''), text
+        return None, text
 
     def __repr__(self):
         return '-&' + self.parser.repr
@@ -2330,7 +2336,10 @@ class Capture(UnaryParser):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
-    # TODO: __init__() should check that no parser the sub-tree has drop-status!!!
+    def __init__(self, parser: Parser) -> None:
+        assert not parser.drop_content, \
+            "Cannot capture content of returned by parser, the content of which will be dropped!"
+        super(Capture, self).__init__(parser)
 
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
@@ -2339,6 +2348,8 @@ class Capture(UnaryParser):
         node, text_ = self.parser(text)
         if node:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
+            assert not self.parser.drop_content, \
+                "Cannot capture content of returned by parser, the content of which will be dropped!"
             self.grammar.variables__[self.pname].append(node.content)
             location = self.grammar.document_length__ - len(text)
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
@@ -2427,6 +2438,8 @@ class Retrieve(Parser):
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text
         if text.startswith(value):
+            if self.drop_content:
+                return EMPTY_NODE, text[len(value):]
             return Node(self.tag_name, value), text[len(value):]
         else:
             return None, text
@@ -2550,6 +2563,8 @@ class Synonym(UnaryParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization
         if node:
+            if self.drop_content:
+                return EMPTY_NODE, text
             if self.anonymous:
                 if node.tag_name[0] != ':':  # implies != EMPTY_NODE
                     node.tag_name = self.tag_name
@@ -2643,6 +2658,7 @@ class Forward(Parser):
         shall be delegated.
         """
         self.parser = parser
+        self.drop_content = parser.drop_content
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         if super(Forward, self)._apply(func, flip):
