@@ -1365,7 +1365,7 @@ class Token(Parser):
         if text.startswith(self.text):
             if self.text or not self.anonymous:
                 return Node(self.tag_name, self.text, True), text[self.len:]
-            return EMPTY_NODE, text[0:]
+            return EMPTY_NODE, text[self.len:]
         return None, text
 
     def __repr__(self):
