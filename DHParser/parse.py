@@ -577,6 +577,13 @@ class Parser:
             self._apply(func, positive_flip)
 
 
+def Drop(parser: Parser) -> Parser:
+    """Returns the parser with the `parser.drop_content`-property set to `True`."""
+    if isinstance(parser, Forward):
+        cast(Forward, parser).parser.drop_content = True
+    parser.drop_content = True
+
+
 PARSER_PLACEHOLDER = Parser()
 
 
@@ -2491,22 +2498,22 @@ class Pop(Retrieve):
 ########################################################################
 
 
-class Drop(UnaryParser):
-    r"""
-    Drops any content that another parser yields and returns either
-    None if the other parser did not match or EMPTY_NODE, if it did.
-    This allows to simplify the syntax tree at a very early stage.
-    Violates the invariant: str(parse(text)) == text !
-    """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser(text)
-        if node:
-            return EMPTY_NODE, text
-        return None, text
+# class Drop(UnaryParser):
+#     r"""
+#     Drops any content that another parser yields and returns either
+#     None if the other parser did not match or EMPTY_NODE, if it did.
+#     This allows to simplify the syntax tree at a very early stage.
+#     Violates the invariant: str(parse(text)) == text !
+#     """
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#         node, text = self.parser(text)
+#         if node:
+#             return EMPTY_NODE, text
+#         return None, text
 
 
 class DropToken(Token):
-    """
+    """ OBSOLETE
     Parses play text string, but returns EMPTY_NODE rather than the parsed
     string on a match. Violates the invariant: str(parse(text)) == text !
     """
@@ -2519,7 +2526,7 @@ class DropToken(Token):
 
 
 class DropRegExp(Whitespace):
-    """
+    """ OBSOLETE
     Parses a text with a regular expression but never returns the match.
     Instead EMPTY_NODE is returned on a match.
     Violates the invariant: str(parse(text)) == text !
