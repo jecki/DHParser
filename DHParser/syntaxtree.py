@@ -1120,9 +1120,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def serialize(self: 'Node', how: str = 'default') -> str:
         """
         Serializes the tree starting with `node` either as S-expression, XML, JSON,
-        or in compact form. Possible values for `how` are 'S-expression',
-        'XML', 'JSON', 'compact' accordingly, or 'AST', 'CST', 'default' in which case
-        the value of respective configuration variable determines the
+        or in compact form. Possible values for `how` are 'S-expression', 'XML',
+        'JSON', 'compact' and 'smart' accordingly, or 'AST', 'CST', 'default' in
+        which case the value of respective configuration variable determines the
         serialization format. (See module `configuration.py`.)
         """
         switch = how.lower()
@@ -1156,7 +1156,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)', r'', sxpr)
-                sxpr = re.sub(r'\)[ \t]*\n', r'\n', sxpr)
+                sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
                 sxpr = re.sub(r'^\(', r'', sxpr)
             return sxpr
         else:
