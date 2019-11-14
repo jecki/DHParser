@@ -1156,7 +1156,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)', r'', sxpr)
-                sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
+                # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
+                s = sxpr.split('\n')
+                for i in range(len(s)):
+                    if '`' in s[i]:
+                        s[i] = s[i].replace('))', ')')
+                    else:
+                        s[i] = s[i].replace(')', '')
+                sxpr = '\n'.join(s)
                 sxpr = re.sub(r'^\(', r'', sxpr)
             return sxpr
         else:
@@ -1553,8 +1560,11 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         beginning after the end of the attr.
         """
         attributes = OrderedDict()  # type: OrderedDict[str, str]
+        eot = s.find('>')
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*?)"\s*')):
+            if s.index(match.start()) >= eot:
+                break
             d = match.groupdict()
             attributes[d['attr']] = d['value']
             restart = s.index(match.end())
@@ -1613,7 +1623,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
                     s, child = parse_full_content(s)
                     res.append(child)
             s, closing_tagname = parse_closing_tag(s)
-            assert tagname == closing_tagname
+            assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
         if len(res) == 1 and res[0].tag_name == TOKEN_PTYPE:
             result = res[0].result
         else:
@@ -1630,7 +1640,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
     match_header = xml.search(re.compile(r'<(?!\?)'))
     start = xml.index(match_header.start()) if match_header else 0
     _, tree = parse_full_content(xml[start:])
-    assert _.match(RX_WHITESPACE_TAIL)
+    assert _.match(RX_WHITESPACE_TAIL), _
     return tree
 
 

@@ -49,7 +49,7 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(glob_pattern):
-    error_report = testing.grammar_suite('grammar_tests', get_grammar, get_transformer,
+    error_report = testing.grammar_suite('test_grammar', get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 

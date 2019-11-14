@@ -26,7 +26,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
-    Node, TransformationFunc, TransformationDict, Token, DropToken, DropRegExp, \
+    RootNode, Node, TransformationFunc, TransformationDict, Token, DropToken, DropRegExp, \
     traverse, remove_children_if, is_anonymous, access_thread_locals, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
@@ -738,6 +738,14 @@ def compile_src(source, log_dir=''):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
+        argv = sys.argv[:]
+        xml = False
+        if '-xml' in argv:
+            argv.remove('-xml')
+            xml = True
+        if '-x' in argv:
+            argv.remove('-x')
+            xml = True
         try:
             grammar_file_name = os.path.basename(__file__).replace('Compiler.py', '.ebnf')
             if grammar_changed(XMLGrammar, grammar_file_name):
@@ -746,9 +754,10 @@ if __name__ == "__main__":
         except FileNotFoundError:
             print('Could not check for changed grammar, because grammar file "%s" was not found!'
                   % grammar_file_name)    
-        file_name, log_dir = sys.argv[1], ''
-        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
-            file_name, log_dir = sys.argv[2], 'LOGS'
+        file_name, log_dir = argv[1], ''
+        if file_name in ['-d', '--debug'] and len(argv) > 2:
+            file_name, log_dir = argv[2], 'LOGS'
+            del argv[2]
         result, errors, ast = compile_src(file_name, log_dir)
         if errors:
             cwd = os.getcwd()
@@ -757,7 +766,14 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_sxpr(compact=True))
-            print(result.customized_XML() if isinstance(result, Node) else result)
+            if xml:
+                output = result.customized_XML() if isinstance(result, RootNode) else result
+            else:
+                output = result.serialize()
+            if len(argv) > 2:
+                with open(argv[2], 'w', encoding='utf-8') as f:
+                    f.write(output)
+            else:
+                print(output)
     else:
         print("Usage: XMLCompiler.py [FILENAME]")
