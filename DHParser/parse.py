@@ -202,6 +202,7 @@ def copy_parser_attrs(src: 'Parser', duplicate: 'Parser'):
     """Duplicates all parser attributes from source to dest."""
     duplicate.pname = src.pname
     duplicate.anonymous = src.anonymous
+    duplicate.drop_content = src.drop_content
     duplicate.tag_name = src.tag_name
 
 
@@ -579,9 +580,11 @@ class Parser:
 
 def Drop(parser: Parser) -> Parser:
     """Returns the parser with the `parser.drop_content`-property set to `True`."""
+    assert parser.anonymous, "Parser must be anonymous to be allowed to drop ist content."
     if isinstance(parser, Forward):
         cast(Forward, parser).parser.drop_content = True
     parser.drop_content = True
+    return parser
 
 
 PARSER_PLACEHOLDER = Parser()
@@ -1440,6 +1443,14 @@ class RegExp(Parser):
 
     def __repr__(self):
         return escape_control_characters('/%s/' % self.regexp.pattern)
+
+
+def DropToken(text: str) -> Token:
+    return Drop(Token(text))
+
+
+def DropRegExp(regexp) -> RegExp:
+    return Drop(RegExp(regexp))
 
 
 def withWS(parser_factory, wsL='', wsR=r'\s*'):
@@ -2512,34 +2523,44 @@ class Pop(Retrieve):
 #         return None, text
 
 
-class DropToken(Token):
-    """ OBSOLETE
-    Parses play text string, but returns EMPTY_NODE rather than the parsed
-    string on a match. Violates the invariant: str(parse(text)) == text !
-    """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropToken must not be used for named parsers!"
-        if text.startswith(self.text):
-            return EMPTY_NODE, text[self.len:]
-            # return Node(self.tag_name, self.text, True), text[self.len:]
-        return None, text
+# class DropToken(Token):
+#     """ OBSOLETE
+#     Parses play text string, but returns EMPTY_NODE rather than the parsed
+#     string on a match. Violates the invariant: str(parse(text)) == text !
+#     """
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#         assert self.anonymous, "DropToken must not be used for named parsers!"
+#         if text.startswith(self.text):
+#             return EMPTY_NODE, text[self.len:]
+#             # return Node(self.tag_name, self.text, True), text[self.len:]
+#         return None, text
+#
+#
+# class DropRegExp(Whitespace):
+#     """ OBSOLETE
+#     Parses a text with a regular expression but never returns the match.
+#     Instead EMPTY_NODE is returned on a match.
+#     Violates the invariant: str(parse(text)) == text !
+#     """
+#
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#         assert self.anonymous, "DropWhitespace must not be used for named parsers!"
+#         match = text.match(self.regexp)
+#         if match:
+#             # capture = match.group(0)
+#             end = text.index(match.end())
+#             return EMPTY_NODE, text[end:]
+#         return None, text
 
 
-class DropRegExp(Whitespace):
-    """ OBSOLETE
-    Parses a text with a regular expression but never returns the match.
-    Instead EMPTY_NODE is returned on a match.
-    Violates the invariant: str(parse(text)) == text !
-    """
+def DropToken(text: str) -> Token:
+    return Drop(Token(text))
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropWhitespace must not be used for named parsers!"
-        match = text.match(self.regexp)
-        if match:
-            # capture = match.group(0)
-            end = text.index(match.end())
-            return EMPTY_NODE, text[end:]
-        return None, text
+
+def DropRegExp(regexp) -> RegExp:
+    return Drop(RegExp(regexp))
+
+
 
 
 ########################################################################
@@ -2564,11 +2585,11 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not (isinstance(parser, DropRegExp) or isinstance(parser, DropToken))
+        assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization
+        node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization (dangerous?)
         if node:
             if self.drop_content:
                 return EMPTY_NODE, text
