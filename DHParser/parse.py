@@ -2553,16 +2553,6 @@ class Pop(Retrieve):
 #         return None, text
 
 
-def DropToken(text: str) -> Token:
-    return Drop(Token(text))
-
-
-def DropRegExp(regexp) -> RegExp:
-    return Drop(RegExp(regexp))
-
-
-
-
 ########################################################################
 #
 # Aliasing parser classes
