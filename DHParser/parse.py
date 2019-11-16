@@ -924,7 +924,7 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     anonymous = True if cls.anonymous__.match(entry) else False
-                    assert anonymous or not parser.drop_content
+                    assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
                             cast(Forward, parser).parser.pname = entry
