@@ -123,6 +123,7 @@ class ParserError(Exception):
 ResumeList = List[RxPatternType]  # list of regular expressiones
 
 
+@cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
 def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
@@ -145,6 +146,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     closest_match = upper_limit
     comments = None  # typ: Optional[Iterator]
 
+    @cython.locals(a=cython.int, b=cython.int)
     def next_comment() -> Tuple[int, int]:
         nonlocal rest, comments
         if comments:
@@ -160,6 +162,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     #     nonlocal rest
     #     return rest.find(s, start), len(s)
 
+    @cython.locals(start=cython.int, end=cython.int)
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
         nonlocal rest
         m = rest.search(rx, start)
@@ -168,6 +171,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
             return rest.index(start), end - start
         return -1, 0
 
+    @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
     def entry_point(search_func, search_rule) -> int:
         a, b = next_comment()
         k, length = search_func(search_rule)
@@ -886,8 +890,8 @@ class Grammar:
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
     anonymous__ = re.compile(r'_')  # type: RxPatternType
     # some default values
-    # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
-    # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
+    COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
+    WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
     static_analysis_pending__ = [True]  # type: List[bool]
 
 
@@ -934,12 +938,15 @@ class Grammar:
     def __init__(self, root: Parser = None) -> None:
         self.all_parsers__ = set()             # type: Set[Parser]
         # add compiled regular expression for comments, if it does not already exist
-        if not hasattr(self, 'comment_rx__'):
-            self.comment_rx__ = re.compile(self.COMMENT__) \
-                if hasattr(self, 'COMMENT__') and self.COMMENT__ else RX_NEVER_MATCH
+        if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
+            if hasattr(self.__class__, 'COMMENT__') and self.__class__.COMMENT__:
+                self.comment_rx__ = re.compile(self.__class__.COMMENT__)
+            else:
+                self.comment_rx__ = RX_NEVER_MATCH
         else:
-            assert ((self.COMMENT__ and self.COMMENT__ == self.comment_rx__.pattern)
-                     or (not self.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
+            assert ((self.__class__.COMMENT__ and
+                     self.__class__.COMMENT__ == self.comment_rx__.pattern)
+                    or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
@@ -1777,6 +1784,7 @@ MessagesType = List[Tuple[Union[str, Any], str]]
 NO_MANDATORY = 1000
 
 
+@cython.locals(i=cython.int, location=cython.int)
 def mandatory_violation(grammar: Grammar,
                         text_: StringView,
                         failed_on_lookahead: bool,

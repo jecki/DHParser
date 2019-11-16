@@ -27,6 +27,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG
 from DHParser.transform import traverse, reduce_single_child, \
@@ -420,6 +421,16 @@ class TestSerialization:
         compact = tree.as_sxpr(compact=True)
         assert compact == 'A\n  B\n    C\n      "D"\n      "X"\n    E "F"' \
             '\n  G\n    " H "\n    " Y "', compact
+        tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
+        C = tree['B']['C']
+        C.attr['attr'] = 'val'
+        threshold = get_config_value('flatten_sxpr_threshold')
+        set_config_value('flatten_sxpr_threshold', 20)
+        compact = tree.serialize('smart')
+        assert compact == 'A\n  B\n    C `(attr "val")\n      "D"\n    E\n      "F"\n  G\n    "H"'
+        tree = parse_xml('<note><priority level="high" /><remark></remark></note>')
+        assert tree.serialize() == 'note\n  priority `(level "high")\n  remark'
+        set_config_value('flatten_sxpr_threshold', threshold)
 
     def test_xml_inlining(self):
         tree = parse_sxpr('(A (B "C") (D "E"))')
@@ -455,6 +466,7 @@ class TestSerialization:
         tree['T'].attr['class'] = "kursiv"
         assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == \
                '<T class="kursiv">Hallo</T> Welt!'
+
 
     # def test_xml2(self):
     #     tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')

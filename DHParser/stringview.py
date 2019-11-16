@@ -43,7 +43,7 @@ except ImportError:
     import DHParser.shadow_cython as cython
 
 
-__all__ = ('StringView', 'EMPTY_STRING_VIEW', 'cython_optimized')
+__all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
 def first_char(text, begin: int, end: int, chars) -> int:

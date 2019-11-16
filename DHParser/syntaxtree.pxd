@@ -8,25 +8,39 @@ cdef class Node:
     cdef public int _pos
     cdef public object _result
     cdef public tuple children
-    cdef public int _len
     cdef public str tag_name
     cdef object _xml_attr
 
-    cpdef get(self,  index_or_tagname, surrogate)
-    cpdef is_anonymous(self)
+    # cpdef equals(self, other, ignore_attr_order)
+    # cpdef get(self,  index_or_tagname, surrogate)
+    # cpdef anonymous(self)
+    # cpdef result(self)
     cpdef __set_result(self, result)
     cpdef _content(self)
+    # cpdef pos(self)
     cpdef with_pos(self, pos)
     # cpdef has_attr(self, attr)
+    # cpdef attr(self)
+    # cpdef get_attr(self, attribute, default)
     # cpdef compare_attr(self, other)
-    # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
-    # cpdef as_sxpr(self, src, indentation, compact)
-    # cpdef as_xml(self, src, indentation, inline_tags, omit_tags, empty_tags)
+    # cpdef index(self, what, start, stop)
     # cpdef select_if(self, match_function, include_root, reverse)
     # cpdef select(self, tag_names, include_root)
     # cpdef pick(self, criterion, reverse)
-    # cpdef tree_size(self)
+    # cpdef locate(self, location)
+    # cpdef find_parend(self, node)
+    # cpdef select_context_if(self, match_function, include_root, reverse)
+    # cpdef select_context(self, tag_names, include_root)
+    # cpdef pick_content(self, criterion, reverse)
+    # cpdef locate_content(self, location)
+    # cpdef _reconstruct_context_recursive(self, node)
+    # cpdef reconstruct_context(self, node)
+    # cpdef milestone_segment(self, begin, end)
+    # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
+    # cpdef as_sxpr(self, src, indentation, compact)
+    # cpdef as_xml(self, src, indentation, inline_tags, omit_tags, empty_tags)
     cpdef to_json_obj(self)
+    # cpdef serialize(self, how)
 
 
 cdef class FrozenNode(Node):

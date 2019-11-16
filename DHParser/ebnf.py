@@ -589,7 +589,7 @@ class EBNFCompiler(Compiler):
 
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
-        self.grammar_id = 0
+        self.grammar_id = 0  # type: int
         super(EBNFCompiler, self).__init__()  # calls the reset()-method
         self.set_grammar_name(grammar_name, grammar_source)
 
@@ -1092,7 +1092,7 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "literalws" allows only `left`, `right`, '
                                     '`both` or `none`, not `%s`' % ", ".join(values))
             wsp = {'left', 'right'} if 'both' in values \
-                else {} if 'none' in values else values
+                else set() if 'none' in values else values
             self.directives.literalws = wsp
 
         elif key in {'tokens', 'preprocessor_tokens'}:

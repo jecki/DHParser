@@ -677,7 +677,7 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
                 the grammar's symbols under that section or an EBNF-grammar
                 or file name of an EBNF-grammar from which the symbols shall
                 be extracted.
-        path: the path to the grammar-test directory (usually 'grammar_tests').
+        path: the path to the grammar-test directory (usually 'test_grammar').
                 If the last element of the path does not exist, the directory
                 will be created.
         fmt: the test-file-format. At the moment only '.ini' is supported

@@ -35,8 +35,9 @@ compiler object.
 """
 
 import copy
+import functools
 import os
-from typing import Any, Optional, Tuple, List, cast
+from typing import Any, Optional, Tuple, List, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
@@ -123,7 +124,6 @@ class Compiler:
 
     def reset(self):
         # self.source = ''
-        self.finlizers = []  # type: List[Callable, Tuple]
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
@@ -239,11 +239,15 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
         return name[:i] + '_out' if i >= 0 else name
 
 
+GrammarCallable = Union[Grammar, Callable[[str], Node], functools.partial]
+CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
+
+
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
-                   parser: Grammar,  # str -> Node (concrete syntax tree (CST))
+                   parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
-                   compiler: Compiler,  # Node (AST), Source -> Any
+                   compiler: CompilerCallable,  # Node (AST), Source -> Any
                    preserve_ast: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles a source in four stages:
