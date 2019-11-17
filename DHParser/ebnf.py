@@ -574,15 +574,20 @@ class EBNFCompiler(Compiler):
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
+    DROP_COMMENT_PARSER_KEYWORD = "dcomment__"
     COMMENT_RX_KEYWORD = "comment_rx__"
     WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
     RAW_WS_PARSER_KEYWORD = "whitespace__"
+    DROP_RAW_WS_PARSER_KEYWORD = "dwhitespace__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
     DROP_WHITESPACE_PARSER_KEYWORD = "dwsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_SUFFIX = '_skip__'
     ERR_MSG_SUFFIX = '_err_msg__'
+    COMMENT_OR_WHITESPACE = { COMMENT_PARSER_KEYWORD, DROP_COMMENT_PARSER_KEYWORD,
+                              RAW_WS_PARSER_KEYWORD, DROP_RAW_WS_PARSER_KEYWORD,
+                              WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD }
     RESERVED_SYMBOLS = { COMMENT_KEYWORD, COMMENT_RX_KEYWORD, COMMENT_PARSER_KEYWORD,
                          WHITESPACE_KEYWORD, RAW_WS_KEYWORD, RAW_WS_PARSER_KEYWORD,
                          WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
@@ -1191,6 +1196,12 @@ class EBNFCompiler(Compiler):
         name for the particular non-terminal.
         """
         arguments = [self.compile(r) for r in node.children] + custom_args
+        # remove drop clause for non dropping definitions of forms like "/\w+/~"
+        if (parser_class == "Series" and node.tag_name not in self.directives.drop
+            and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
+            and all(arg.startswith('Drop(RegExp(') or arg in EBNFCompiler.COMMENT_OR_WHITESPACE
+                    for arg in arguments)):
+                arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
         return parser_class + '(' + ', '.join(arguments) + ')'
 
 
@@ -1367,7 +1378,7 @@ class EBNFCompiler(Compiler):
         return 'Token(' + token + ')'
 
     def REGEXP_PARSER(self, regexp):
-        if DROP_REGEXP in self.directives.drop and sel.context[-2].tag_name != "definition":
+        if DROP_REGEXP in self.directives.drop and self.context[-2].tag_name != "definition":
             return 'Drop(RegExp(' + regexp + '))'
         return 'RegExp(' + regexp + ')'
 
