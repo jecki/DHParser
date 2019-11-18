@@ -64,7 +64,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "a7929c507e1b8319071d18dc9eaccdf7"
-    anonymous__ = re.compile('_')
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

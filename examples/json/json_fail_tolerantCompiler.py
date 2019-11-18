@@ -64,7 +64,7 @@ class json_fail_tolerantGrammar(Grammar):
     """
     _element = Forward()
     source_hash__ = "6410f8962393b80b827883f8593d859c"
-    anonymous__ = re.compile('_')
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     string_skip__ = [re.compile(r'(?=")')]

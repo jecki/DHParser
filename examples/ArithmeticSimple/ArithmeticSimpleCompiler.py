@@ -62,7 +62,7 @@ class ArithmeticSimpleGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "057a467fa65d6c91e5658319e2c9469f"
-    anonymous__ = re.compile('_')
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

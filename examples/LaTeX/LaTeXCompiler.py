@@ -27,8 +27,8 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     flatten, is_empty, collapse, replace_content, remove_brackets, strip, \
-    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
-    access_thread_locals, recompile_grammar
+    is_one_of, replace_content_by, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
+    access_thread_locals, recompile_grammar, peek
 from DHParser.log import start_logging
 
 
@@ -54,15 +54,15 @@ def get_preprocessor() -> PreprocessorFunc:
 class LaTeXGrammar(Grammar):
     r"""Parser for a LaTeX source file.
     """
-    _block_environment = Forward()
-    _text_element = Forward()
     begin_generic_block = Forward()
+    block_environment = Forward()
     block_of_paragraphs = Forward()
     end_generic_block = Forward()
     paragraph = Forward()
     tabular_config = Forward()
-    source_hash__ = "eb4d89532f94890e2488876d7ccfcc53"
-    anonymous__ = re.compile('_')
+    text_element = Forward()
+    source_hash__ = "31de40dc10efd720f8578d0ab7073e63"
+    anonymous__ = re.compile('_WSPC$|_GAP$|_PARSEP$|_LB$|block_environment$|known_environment$|text_element$|inline_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -76,7 +76,7 @@ class LaTeXGrammar(Grammar):
     dwsp__ = Drop(RegExp(WSP_RE__))
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
-    LB = RegExp('\\s*?\\n|$')
+    _LB = RegExp('\\s*?\\n|$')
     NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
     _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
     _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
@@ -97,7 +97,7 @@ class LaTeXGrammar(Grammar):
     blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Token("begin{")), dwsp__), Series(Drop(Token("end{")), dwsp__)), Alternative(Series(Drop(Token("enumerate")), dwsp__), Series(Drop(Token("itemize")), dwsp__), Series(Drop(Token("figure")), dwsp__), Series(Drop(Token("quote")), dwsp__), Series(Drop(Token("quotation")), dwsp__), Series(Drop(Token("tabular")), dwsp__)), Series(Drop(Token("}")), dwsp__)), structural, begin_generic_block, end_generic_block))
     no_command = Alternative(Series(Drop(Token("\\begin{")), dwsp__), Series(Drop(Token("\\end")), dwsp__), Series(BACKSLASH, structural))
     text = Series(TEXTCHUNK, ZeroOrMore(Series(S, TEXTCHUNK)))
-    block = Series(Drop(RegExp('{')), dwsp__, ZeroOrMore(Series(NegativeLookahead(blockcmd), _text_element, Option(S))), Drop(RegExp('}')), mandatory=3)
+    block = Series(Drop(RegExp('{')), dwsp__, ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))), Drop(RegExp('}')), mandatory=3)
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Token("[")), dwsp__), cfg_text, Series(Drop(Token("]")), dwsp__), mandatory=2)
     pdfinfo = Series(Series(Drop(Token("\\pdfinfo")), dwsp__), block)
@@ -112,24 +112,24 @@ class LaTeXGrammar(Grammar):
     citet = Series(Series(Drop(Token("\\citet")), dwsp__), Option(config), block)
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), dwsp__, block)))
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
-    _known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo)
-    _command = Alternative(_known_command, text_command, generic_command)
+    known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo)
+    command = Alternative(known_command, text_command, generic_command)
     inline_math = Series(Drop(RegExp('\\$')), Drop(RegExp('[^$]*')), Drop(RegExp('\\$')), mandatory=2)
     end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
     begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
-    _end_inline_env = Synonym(end_environment)
-    _begin_inline_env = Alternative(Series(NegativeLookbehind(LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
-    generic_inline_env = Series(_begin_inline_env, dwsp__, paragraph, _end_inline_env, mandatory=3)
-    _known_inline_env = Synonym(inline_math)
-    _inline_environment = Alternative(_known_inline_env, generic_inline_env)
-    _line_element = Alternative(text, block, _inline_environment, _command)
-    _text_element.set(Alternative(_line_element, LINEFEED))
-    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), _text_element, Option(S))))
-    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, _block_environment), Option(_PARSEP))))
+    end_inline_env = Synonym(end_environment)
+    begin_inline_env = Alternative(Series(NegativeLookbehind(_LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
+    generic_inline_env = Series(begin_inline_env, dwsp__, paragraph, end_inline_env, mandatory=3)
+    known_inline_env = Synonym(inline_math)
+    inline_environment = Alternative(known_inline_env, generic_inline_env)
+    line_element = Alternative(text, block, inline_environment, command)
+    text_element.set(Alternative(line_element, LINEFEED))
+    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))))
+    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
     block_of_paragraphs.set(Series(Series(Drop(Token("{")), dwsp__), Option(sequence), Series(Drop(Token("}")), dwsp__), mandatory=2))
     TBCFG_VALUE = Series(RegExp('[lcr|]+'), dwsp__)
     tabular_config.set(Series(Series(Drop(Token("{")), dwsp__), TBCFG_VALUE, Series(Drop(Token("}")), dwsp__), mandatory=2))
-    tabular_cell = ZeroOrMore(Series(_line_element, Option(S)))
+    tabular_cell = ZeroOrMore(Series(line_element, Option(S)))
     tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Token("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Series(Drop(Token("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)))
     tabular = Series(Series(Drop(Token("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(Drop(Token("\\end{tabular}")), dwsp__), mandatory=3)
     verbatim = Series(Series(Drop(Token("\\begin{verbatim}")), dwsp__), sequence, Series(Drop(Token("\\end{verbatim}")), dwsp__), mandatory=2)
@@ -138,11 +138,11 @@ class LaTeXGrammar(Grammar):
     item = Series(Series(Drop(Token("\\item")), dwsp__), sequence)
     enumerate = Series(Series(Drop(Token("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(item), Series(Drop(Token("\\end{enumerate}")), dwsp__), mandatory=3)
     itemize = Series(Series(Drop(Token("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(item), Series(Drop(Token("\\end{itemize}")), dwsp__), mandatory=3)
-    end_generic_block.set(Series(Lookbehind(LB), end_environment, LFF))
-    begin_generic_block.set(Series(Lookbehind(LB), begin_environment, LFF))
+    end_generic_block.set(Series(Lookbehind(_LB), end_environment, LFF))
+    begin_generic_block.set(Series(Lookbehind(_LB), begin_environment, LFF))
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
-    _known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
-    _block_environment.set(Alternative(_known_environment, generic_block))
+    known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
+    block_environment.set(Alternative(known_environment, generic_block))
     heading = Synonym(block)
     Index = Series(Option(_WSPC), Series(Drop(Token("\\printindex")), dwsp__))
     Bibliography = Series(Option(_WSPC), Series(Drop(Token("\\bibliography")), dwsp__), heading)
@@ -160,7 +160,7 @@ class LaTeXGrammar(Grammar):
     Chapters = OneOrMore(Series(Option(_WSPC), Chapter))
     frontpages = Synonym(sequence)
     document = Series(Option(_WSPC), Series(Drop(Token("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Token("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=9)
-    preamble = OneOrMore(Series(Option(_WSPC), _command))
+    preamble = OneOrMore(Series(Option(_WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc
     
@@ -234,7 +234,6 @@ LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
     "<": [flatten, flatten_structure, remove_empty],
     "latexdoc": [],
-    "preamble": [traverse_locally({'<': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],
     "pdfinfo": [],
     "frontpages": reduce_single_child,
@@ -277,7 +276,7 @@ LaTeX_AST_transformation_table = {
     "includegraphics": [],
     "caption": [],
     "config": [remove_brackets, reduce_single_child],
-    "block": [remove_brackets, flatten, replace_by_single_child],
+    "block": [remove_brackets, flatten],
     "text": collapse,
     "no_command, blockcmd": [],
     "structural": [],
@@ -288,13 +287,11 @@ LaTeX_AST_transformation_table = {
     "BRACKETS": [],
     "TEXTCHUNK": [],
     "LF": [],
-    "PARSEP": replace_content(lambda node: '\n\n'),
     "GAP": [],
     "LB": [],
     "BACKSLASH": [],
     "EOF": [],
-    # "PARSEP": [replace_content_by('\n\n')],
-    # "WSPC": [replace_content_by(' ')],
+    "PARSEP": [replace_content_by('\n\n')],
     ":Whitespace, WSPC, S": streamline_whitespace,
     "*": replace_by_single_child
 }
@@ -526,8 +523,8 @@ class LaTeXCompiler(Compiler):
                         self.tree.new_error(node, 'Only one document language supported. '
                                             'Using %s, ignoring %s.'
                                             % (self.metadata['language'], it), Error.WARNING)
-        if node['text'] in self.KNOWN_DOCUMENT_CLASSES:
-            self.metadata['documentclass'] = node['text']
+        if node['block'].content in self.KNOWN_DOCUMENT_CLASSES:
+            self.metadata['documentclass'] = node['block'].content
         return node
 
     def on_pdfinfo(self, node):

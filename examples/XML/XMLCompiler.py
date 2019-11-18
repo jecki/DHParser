@@ -69,7 +69,7 @@ class XMLGrammar(Grammar):
     ignoreSectContents = Forward()
     markupdecl = Forward()
     source_hash__ = "4cd0cef2b3f3559b014e4d34e5d8b1f6"
-    anonymous__ = re.compile('_')
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

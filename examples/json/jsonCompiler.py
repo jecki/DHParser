@@ -64,7 +64,7 @@ class jsonGrammar(Grammar):
     """
     _element = Forward()
     source_hash__ = "31833295329c0325d087229c3d932092"
-    anonymous__ = re.compile('_')
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}

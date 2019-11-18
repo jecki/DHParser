@@ -94,7 +94,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \\
-    keep_children, is_one_of, not_one_of, has_content, apply_if, \\
+    keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
@@ -1105,6 +1105,22 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, "Implicit whitespace should always "
                                         "match the empty string, /%s/ does not." % value)
             self.directives[key] = value
+
+        elif key == 'anonymous':
+            if node.children[1].tag_name == "regexp":
+                check_argnum()
+                re_pattern = node.children[1].content
+                if re.match(re_pattern, ''):
+                    self.tree.new_error(
+                        node, "The regular expression r'%s' matches any symbol, "
+                        "which is not allowed!" % re_pattern)
+                else:
+                    self.anonymous_regexp = re.compile(node.children[1].content)
+            else:
+                args = node.children[1:]
+                assert all(child.tag_name == "symbol" for child in args)
+                alist = [child.content for child in args]
+                self.anonymous_regexp = re.compile('$|'.join(alist) + '$')
 
         elif key == 'drop':
             if len(node.children) <= 1:

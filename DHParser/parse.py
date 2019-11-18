@@ -888,7 +888,7 @@ class Grammar:
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
-    anonymous__ = re.compile(r'_')  # type: RxPatternType
+    anonymous__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
