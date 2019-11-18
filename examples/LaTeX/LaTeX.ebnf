@@ -12,7 +12,7 @@
 ########################################################################
 
 latexdoc       = preamble document
-preamble       = { [_WSPC] command }+
+preamble       = { [_WSPC] _command }+
 
 document       = [_WSPC] "\begin{document}"
                  frontpages
@@ -60,8 +60,8 @@ heading        = block
 
 #### block environments ####
 
-block_environment   = known_environment | generic_block
-known_environment   = itemize | enumerate | figure | tabular | quotation
+_block_environment  = _known_environment | generic_block
+_known_environment  = itemize | enumerate | figure | tabular | quotation
                     | verbatim
 generic_block       = begin_generic_block sequence §end_generic_block
 begin_generic_block = -&LB begin_environment LFF
@@ -78,26 +78,26 @@ verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                       "\\" ( hline | { cline } )
-tabular_cell        = { line_element [S] }
+tabular_cell        = { _line_element [S] }
 tabular_config      = "{" TBCFG_VALUE §"}"
 TBCFG_VALUE         = /[lcr|]+/~
 
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
-sequence            = [_WSPC] { (paragraph | block_environment ) [_PARSEP] }+
-paragraph           = { !blockcmd text_element [S] }+
-text_element        = line_element | LINEFEED
-line_element        = text | block | inline_environment | command
+sequence            = [_WSPC] { (paragraph | _block_environment ) [_PARSEP] }+
+paragraph           = { !blockcmd _text_element [S] }+
+_text_element       = _line_element | LINEFEED
+_line_element       = text | block | _inline_environment | _command
 
 
 #### inline enivronments ####
 
-inline_environment  = known_inline_env | generic_inline_env
-known_inline_env    = inline_math
-generic_inline_env  = begin_inline_env ~ paragraph §end_inline_env
-begin_inline_env    = (-!LB begin_environment) | (begin_environment !LFF)
-end_inline_env      = end_environment
+_inline_environment = _known_inline_env | generic_inline_env
+_known_inline_env   = inline_math
+generic_inline_env  = _begin_inline_env ~ paragraph §_end_inline_env
+_begin_inline_env   = (-!LB begin_environment) | (begin_environment !LFF)
+_end_inline_env     = end_environment
                       ## (-!LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
 begin_environment   = /\\begin{/ §NAME /}/
 end_environment     = /\\end{/ §::NAME /}/
@@ -105,10 +105,10 @@ end_environment     = /\\end{/ §::NAME /}/
 inline_math         = /\$/ /[^$]*/ §/\$/
 
 
-#### commands ####
+#### _commands ####
 
-command             = known_command | text_command | generic_command
-known_command       = citet | citep | footnote | includegraphics | caption
+_command            = _known_command | text_command | generic_command
+_known_command      = citet | citep | footnote | includegraphics | caption
                     | multicolumn | hline | cline | documentclass | pdfinfo
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ ~ config ] ~ block ]
@@ -134,7 +134,7 @@ pdfinfo             = "\pdfinfo" block
 
 config     = "[" cfg_text §"]"
 cfg_text   = { (~ text) | CMDNAME | SPECIAL }
-block      = /{/ ~ { !blockcmd text_element [S] } §/}/
+block      = /{/ ~ { !blockcmd _text_element [S] } §/}/
 text       = TEXTCHUNK { S TEXTCHUNK }
 
 no_command = "\begin{" | "\end" | BACKSLASH structural

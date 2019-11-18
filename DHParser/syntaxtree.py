@@ -40,6 +40,7 @@ from DHParser.toolkit import re, cython
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
            'REGEXP_PTYPE',
+           'LEAF_PTYPES',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
            'ResultType',
@@ -68,6 +69,7 @@ __all__ = ('WHITESPACE_PTYPE',
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
 REGEXP_PTYPE = ':RegExp'
+LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
 
 ZOMBIE_TAG = "ZOMBIE__"
 

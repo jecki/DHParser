@@ -2591,10 +2591,11 @@ class Synonym(UnaryParser):
         if node:
             if self.drop_content:
                 return EMPTY_NODE, text
-            if self.anonymous:
-                if node.tag_name[0] != ':':  # implies != EMPTY_NODE
-                    node.tag_name = self.tag_name
-            else:
+            # if self.anonymous:
+            #     if node.tag_name[0] != ':':  # implies != EMPTY_NODE
+            #         node.tag_name = self.tag_name
+            # else:
+            if not self.anonymous:
                 if node == EMPTY_NODE:
                     return Node(self.tag_name, ''), text
                 node.tag_name = self.tag_name

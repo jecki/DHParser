@@ -35,7 +35,7 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
     Tuple, List, Sequence, Union, Text
 
 from DHParser.error import Error, ErrorCode
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE, PLACEHOLDER, \
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
 
@@ -1101,21 +1101,22 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 
 def remove_brackets(context: List[Node]):
     """Removes any leading or traling sequence of whitespaces, tokens or regexps."""
-    disposables = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
     children = context[-1].children
-    i = 0
-    while (i < len(children)
-           and (children[i].tag_name in disposables
-                or (children[i].tag_name == ':Series'
-                    and all(c.tag_name in disposables for c in children[i].children)))):
-        i += 1
-    k = len(children)
-    while (k > 0
-           and (children[k - 1].tag_name in disposables
-                or (children[k - 1].tag_name == ':Series'
-                    and all(c.tag_name in disposables for c in children[k - 1].children)))):
-        k -= 1
-    context[-1].result = children[i:k]
+    if children:
+        disposables = LEAF_PTYPES
+        i = 0
+        while (i < len(children)
+               and (children[i].tag_name in disposables
+                    or (children[i].tag_name == ':Series'
+                        and all(c.tag_name in disposables for c in children[i].children)))):
+            i += 1
+        k = len(children)
+        while (k > 0
+               and (children[k - 1].tag_name in disposables
+                    or (children[k - 1].tag_name == ':Series'
+                        and all(c.tag_name in disposables for c in children[k - 1].children)))):
+            k -= 1
+        context[-1].result = children[i:k]
 
 
 @transformation_factory(collections.abc.Set)
