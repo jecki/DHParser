@@ -30,7 +30,7 @@ import sys
 sys.path.append(os.path.abspath('..'))
 sys.path.append(os.path.abspath('../showcases'))
 
-from ParserCombinators import *
+from DHParser import *
 
 
 
@@ -178,11 +178,11 @@ RE_PBREAK = re.compile(r'\s*(?:^|\n)(?:[ \t]*\n)+')
 RE_LINEBREAK = re.compile(r'(?:\t ?\n)|(?: [ \t]+)\n(?![ \t]*\n)')
 
 
-grammar_src = load_if_file('../grammars/Markdown.ebnf')
-markdown_text = load_if_file('../testdata/test_md1.md')
+grammar_src = load_if_file('Markdown.ebnf')
+markdown_text = load_if_file('testdata/test_md1.md')
 
-parser_py, errors, AST = full_compilation(grammar_src, EBNFGrammar(),
-                                          EBNFTransTable, EBNFCompiler())
+parser_py, errors, AST = compile_source(grammar_src, nil_preprocessor, get_ebnf_grammar(),
+                                        get_ebnf_transformer(), get_ebnf_compiler())
 print(errors)
 print(parser_py)
 assert parser_py is not None
@@ -204,7 +204,7 @@ MDTransTable = {
 markdown_text = markdown_scanner(markdown_text)
 print(markdown_text)
 syntax_tree = parser(markdown_text)
-ASTTransform(syntax_tree, MDTransTable)
+traverse(syntax_tree, MDTransTable)
 
 print(syntax_tree.as_sxpr())
-print(error_messages(markdown_text, syntax_tree.errors_sorted))
+print(syntax_tree.errors_sorted)

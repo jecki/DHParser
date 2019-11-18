@@ -31,7 +31,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
+    keep_children, is_one_of, not_one_of, has_content, apply_if,\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
@@ -63,6 +63,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     r"""Parser for a Lyrik_explicit_whitespace source file.
     """
     source_hash__ = "082c362ff149f702e7b1b76032b5febb"
+    anonymous__ = re.compile('_')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -71,7 +72,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = DropRegExp(WSP_RE__)
+    dwsp__ = Drop(RegExp(WSP_RE__))
     L = Series(RegExp('[ \\t]+'), dwsp__)
     ENDE = NegativeLookahead(RegExp('.'))
     JAHRESZAHL = RegExp('\\d\\d\\d\\d')
@@ -87,15 +88,15 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     titel = OneOrMore(Series(NZ, Option(L), zeile, OneOrMore(LEERZEILE)))
     serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     ziel = Series(ZEICHENFOLGE, dwsp__)
-    verknüpfung = Series(Series(DropToken("<"), dwsp__), ziel, Series(DropToken(">"), dwsp__))
+    verknüpfung = Series(Series(Drop(Token("<")), dwsp__), ziel, Series(Drop(Token(">")), dwsp__))
     namenfolge = OneOrMore(Series(NAME, Option(L)))
     wortfolge = OneOrMore(Series(WORT, Option(L)))
     jahr = Series(JAHRESZAHL, dwsp__)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(DropToken("."), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Series(Drop(Token(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(DropToken("."), dwsp__), mandatory=1)
+    bibliographisches = Series(autor, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(Drop(Token(".")), dwsp__), mandatory=1)
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     

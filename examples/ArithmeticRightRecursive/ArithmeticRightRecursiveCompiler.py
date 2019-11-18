@@ -21,8 +21,8 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropRegExp, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
@@ -32,7 +32,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, lean_left, \
     collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
+    keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, access_thread_locals
@@ -66,6 +66,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     tail = Forward()
     term = Forward()
     source_hash__ = "3d81c718b586fbd4490776d2cd4e3e53"
+    anonymous__ = re.compile('_')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -74,37 +75,37 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = DropRegExp(WSP_RE__)
+    dwsp__ = Drop(RegExp(WSP_RE__))
     VARIABLE = RegExp('[a-dj-z]')
     NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
     MINUS = RegExp('-')
     PLUS = RegExp('\\+')
     i = Token("i")
     e = Token("e")
-    pi = Alternative(DropToken("pi"), DropToken("π"))
+    pi = Alternative(Drop(Token("pi")), Drop(Token("π")))
     special = Alternative(pi, e)
     number = Synonym(NUMBER)
-    log = Series(Series(DropToken('log('), dwsp__), expression, DropToken(")"), mandatory=1)
-    tan = Series(Series(DropToken('tan('), dwsp__), expression, DropToken(")"), mandatory=1)
-    cos = Series(Series(DropToken('cos('), dwsp__), expression, DropToken(")"), mandatory=1)
-    sin = Series(Series(DropToken('sin('), dwsp__), expression, DropToken(")"), mandatory=1)
+    log = Series(Series(Drop(Token('log(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
+    tan = Series(Series(Drop(Token('tan(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
+    cos = Series(Series(Drop(Token('cos(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
+    sin = Series(Series(Drop(Token('sin(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
     function = Alternative(sin, cos, tan, log)
-    group = Series(DropToken("("), expression, DropToken(")"), mandatory=1)
+    group = Series(Drop(Token("(")), expression, Drop(Token(")")), mandatory=1)
     tail_value = Alternative(special, function, VARIABLE, group)
-    tail_pow = Series(tail_value, Option(i), DropToken("^"), element)
+    tail_pow = Series(tail_value, Option(i), Drop(Token("^")), element)
     tail_elem = Alternative(tail_pow, tail_value)
     value = Series(Alternative(number, tail_value), Option(i))
-    pow = Series(value, DropToken("^"), Option(sign), element)
+    pow = Series(value, Drop(Token("^")), Option(sign), element)
     element.set(Alternative(pow, value))
     sign.set(Alternative(PLUS, MINUS))
     seq = Series(tail_elem, tail)
     tail.set(Series(Alternative(seq, tail_elem), Option(i)))
     factor = Series(Option(sign), Alternative(Series(Option(element), tail), element), dwsp__)
-    div = Series(factor, Series(DropToken("/"), dwsp__), term)
-    mul = Series(factor, Series(DropToken("*"), dwsp__), term)
+    div = Series(factor, Series(Drop(Token("/")), dwsp__), term)
+    mul = Series(factor, Series(Drop(Token("*")), dwsp__), term)
     term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(DropToken("-"), dwsp__), expression)
-    add = Series(term, Series(DropToken("+"), dwsp__), expression)
+    sub = Series(term, Series(Drop(Token("-")), dwsp__), expression)
+    add = Series(term, Series(Drop(Token("+")), dwsp__), expression)
     expression.set(Alternative(add, sub, term))
     root__ = expression
     
