@@ -26,7 +26,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
-    flatten, is_empty, collapse, replace_content, remove_brackets, \
+    flatten, is_empty, collapse, replace_content, remove_brackets, strip, \
     is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
     access_thread_locals, recompile_grammar
 from DHParser.log import start_logging
@@ -79,8 +79,8 @@ class LaTeXGrammar(Grammar):
     LB = RegExp('\\s*?\\n|$')
     NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
     _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
-    _WSPC = Drop(OneOrMore(Alternative(comment__, Drop(RegExp('\\s+')))))
-    _PARSEP = Drop(Series(ZeroOrMore(Series(whitespace__, comment__)), _GAP, Option(_WSPC)))
+    _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
+    _PARSEP = Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC))))
     S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), wsp__)
     LFF = Series(NEW_LINE, Option(_WSPC))
     LF = Series(NEW_LINE, ZeroOrMore(Series(comment__, whitespace__)))
@@ -259,7 +259,7 @@ LaTeX_AST_transformation_table = {
     "multicolumn": [remove_tokens('{', '}')],
     "hline": [remove_whitespace, reduce_single_child],
     "sequence": [flatten],
-    "paragraph": [flatten],
+    "paragraph": [flatten, strip(is_one_of({'S'}))],
     "text_element": replace_by_single_child,
     "line_element": replace_by_single_child,
     "inline_environment": replace_by_single_child,

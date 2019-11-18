@@ -537,6 +537,11 @@ class EBNFCompiler(Compiler):
 
         root_symbol: The name of the root symbol.
 
+        drop_flag: This flag is set temporarily when compiling the definition
+                of a parser that shall drop its content. If this flag is
+                set all contained parser will also drop their content as an
+                optimization.
+
         directives:  A record of all directives and their default values.
 
         defined_directives:  A set of all directives that have already been
@@ -627,6 +632,7 @@ class EBNFCompiler(Compiler):
         self.required_keywords = set()  # type: Set[str]
         self.deferred_tasks = []        # type: List[Callable]
         self.root_symbol = ""           # type: str
+        self.drop_flag = False          # type: bool
         self.directives = EBNFDirectives()   # type: EBNFDirectives
         self.defined_directives = set()      # type: Set[str]
         self.consumed_custom_errors = set()  # type: Set[str]
@@ -1046,6 +1052,7 @@ class EBNFCompiler(Compiler):
         try:
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
+            self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
             if rule in self.variables:
                 defn = 'Capture(%s)' % defn
@@ -1053,8 +1060,8 @@ class EBNFCompiler(Compiler):
             elif defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
-            if rule in self.directives['drop'] and rule not in DROP_VALUES:
-                defn = 'Drop(%s)' % defn  # TODO: Recursively drop all contained parsers for optimization
+            # if self.drop_flag:
+            #     defn = 'Drop(%s)' % defn  # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb
             trace = str(extract_tb(error.__traceback__)[-1])
@@ -1062,6 +1069,8 @@ class EBNFCompiler(Compiler):
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
+        finally:
+            self.drop_flag = False
         return rule, defn
 
 
@@ -1203,10 +1212,13 @@ class EBNFCompiler(Compiler):
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
         if (parser_class == "Series" and node.tag_name not in self.directives.drop
             and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
-            and all(arg.startswith('Drop(RegExp(') or arg in EBNFCompiler.COMMENT_OR_WHITESPACE
-                    for arg in arguments)):
+            and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Token(')
+                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
                 arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
-        return parser_class + '(' + ', '.join(arguments) + ')'
+        if self.drop_flag:
+            return 'Drop(' + parser_class + '(' + ', '.join(arguments) + '))'
+        else:
+            return parser_class + '(' + ', '.join(arguments) + ')'
 
 
     def on_expression(self, node) -> str:
@@ -1348,8 +1360,8 @@ class EBNFCompiler(Compiler):
         elif nd.tag_name == "expression":
             if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
                 self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
-            args = ', '.join(self.compile(child) for child in nd.children)
-            return "SomeOf(" + args + ")"
+            # args = ', '.join(self.compile(child) for child in nd.children)
+            return self.non_terminal(node, 'SomeOf')  # "SomeOf(" + args + ")"
         else:
             self.tree.new_error(node, "Unordered sequence or alternative "
                                       "requires at least two elements.")
