@@ -3,7 +3,7 @@
 # preamble
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*/
-@ drop       = token, whitespace, regexp
+@ drop       = token, whitespace, regexp, _WSPC, _GAP, _PARSEP
 
 ########################################################################
 #
@@ -12,13 +12,13 @@
 ########################################################################
 
 latexdoc       = preamble document
-preamble       = { [WSPC] command }+
+preamble       = { [_WSPC] command }+
 
-document       = [WSPC] "\begin{document}"
+document       = [_WSPC] "\begin{document}"
                  frontpages
                  (Chapters | Sections)
-                 [Bibliography] [Index] [WSPC]
-                 "\end{document}" [WSPC] §EOF
+                 [Bibliography] [Index] [_WSPC]
+                 "\end{document}" [_WSPC] §EOF
 frontpages     = sequence
 
 
@@ -28,26 +28,26 @@ frontpages     = sequence
 #
 #######################################################################
 
-Chapters       = { [WSPC] Chapter }+
+Chapters       = { [_WSPC] Chapter }+
 Chapter        = "\chapter" heading { sequence | Sections }
 
-Sections       = { [WSPC] Section }+
+Sections       = { [_WSPC] Section }+
 Section        = "\section" heading { sequence | SubSections }
 
-SubSections    = { [WSPC] SubSection }+
+SubSections    = { [_WSPC] SubSection }+
 SubSection     = "\subsection" heading { sequence | SubSubSections }
 
-SubSubSections = { [WSPC] SubSubSection }+
+SubSubSections = { [_WSPC] SubSubSection }+
 SubSubSection  = "\subsubsection" heading { sequence | Paragraphs }
 
-Paragraphs     = { [WSPC] Paragraph  }+
+Paragraphs     = { [_WSPC] Paragraph  }+
 Paragraph      = "\paragraph" heading { sequence | SubParagraphs }
 
-SubParagraphs  = { [WSPC] SubParagraph }+
+SubParagraphs  = { [_WSPC] SubParagraph }+
 SubParagraph   = "\subparagraph" heading [ sequence ]
 
-Bibliography   = [WSPC] "\bibliography" heading
-Index          = [WSPC] "\printindex"
+Bibliography   = [_WSPC] "\bibliography" heading
+Index          = [_WSPC] "\printindex"
 
 heading        = block
 
@@ -67,8 +67,8 @@ generic_block       = begin_generic_block sequence §end_generic_block
 begin_generic_block = -&LB begin_environment LFF
 end_generic_block   = -&LB  end_environment LFF
 
-itemize             = "\begin{itemize}" [WSPC] { item } §"\end{itemize}"
-enumerate           = "\begin{enumerate}" [WSPC] {item } §"\end{enumerate}"
+itemize             = "\begin{itemize}" [_WSPC] { item } §"\end{itemize}"
+enumerate           = "\begin{enumerate}" [_WSPC] {item } §"\end{enumerate}"
 item                = "\item" sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
@@ -79,13 +79,13 @@ tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{t
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                       "\\" ( hline | { cline } )
 tabular_cell        = { line_element [S] }
-tabular_config      = "{" /[lcr|]+/~ §"}"
-
+tabular_config      = "{" TBCFG_VALUE §"}"
+TBCFG_VALUE         = /[lcr|]+/~
 
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
-sequence            = [WSPC] { (paragraph | block_environment ) [PARSEP] }+
+sequence            = [_WSPC] { (paragraph | block_environment ) [_PARSEP] }+
 paragraph           = { !blockcmd text_element [S] }+
 text_element        = line_element | LINEFEED
 line_element        = text | block | inline_environment | command
@@ -167,11 +167,11 @@ INTEGER    = /\d+/~
 TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 LF         = NEW_LINE { COMMENT__ WHITESPACE__ }   # linefeed but not an empty line
-LFF        = NEW_LINE [ WSPC ]              # at least one linefeed
-S          = &/[% \t\n]/ ~                  # significant whitespace
-PARSEP    = { WHITESPACE__ COMMENT__ } GAP [WSPC] # paragraph separator
-WSPC      = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
-GAP        = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
+LFF        = NEW_LINE [ _WSPC ]             # at least one linefeed
+S          = &/[% \t\n]/ WSP_RE__           # significant whitespace
+_PARSEP    = { WHITESPACE__ COMMENT__ } _GAP [_WSPC] # paragraph separator
+_WSPC      = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
+_GAP        = /[ \t]*(?:\n[ \t]*)+\n/~      # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
 NEW_LINE   = /[ \t]*/ [COMMENT__] /\n/
 LB         = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator

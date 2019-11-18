@@ -585,16 +585,20 @@ class EBNFCompiler(Compiler):
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_SUFFIX = '_skip__'
     ERR_MSG_SUFFIX = '_err_msg__'
-    COMMENT_OR_WHITESPACE = { COMMENT_PARSER_KEYWORD, DROP_COMMENT_PARSER_KEYWORD,
-                              RAW_WS_PARSER_KEYWORD, DROP_RAW_WS_PARSER_KEYWORD,
-                              WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD }
-    RESERVED_SYMBOLS = { COMMENT_KEYWORD, COMMENT_RX_KEYWORD, COMMENT_PARSER_KEYWORD,
-                         WHITESPACE_KEYWORD, RAW_WS_KEYWORD, RAW_WS_PARSER_KEYWORD,
-                         WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
-                         RESUME_RULES_KEYWORD }
+    COMMENT_OR_WHITESPACE = {COMMENT_PARSER_KEYWORD, DROP_COMMENT_PARSER_KEYWORD,
+                             RAW_WS_PARSER_KEYWORD, DROP_RAW_WS_PARSER_KEYWORD,
+                             WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD}
+    RESERVED_SYMBOLS = {COMMENT_KEYWORD, COMMENT_RX_KEYWORD, COMMENT_PARSER_KEYWORD,
+                        WHITESPACE_KEYWORD, RAW_WS_KEYWORD, RAW_WS_PARSER_KEYWORD,
+                        WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
+                        RESUME_RULES_KEYWORD}
     KEYWORD_SUBSTITUTION = {COMMENT_KEYWORD: COMMENT_PARSER_KEYWORD,
+                            COMMENT_PARSER_KEYWORD: COMMENT_PARSER_KEYWORD,
                             RAW_WS_KEYWORD: RAW_WS_PARSER_KEYWORD,
-                            WHITESPACE_KEYWORD: WHITESPACE_PARSER_KEYWORD}
+                            RAW_WS_PARSER_KEYWORD: RAW_WS_PARSER_KEYWORD,
+                            WHITESPACE_KEYWORD: WHITESPACE_PARSER_KEYWORD,
+                            WHITESPACE_PARSER_KEYWORD: WHITESPACE_PARSER_KEYWORD,
+                            DROP_WHITESPACE_PARSER_KEYWORD: DROP_WHITESPACE_PARSER_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -1363,12 +1367,12 @@ class EBNFCompiler(Compiler):
                 self.symbols[symbol] = node
             if symbol in self.rules:
                 self.recursive.add(symbol)
-            if symbol in EBNFCompiler.RESERVED_SYMBOLS:
-                if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
-                    keyword = EBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
-                    self.required_keywords.add(keyword)
-                    return keyword
-                return "RegExp(%s)" % symbol
+            if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
+                keyword = EBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
+                self.required_keywords.add(keyword)
+                return keyword
+            elif symbol.endswith('__'):
+                self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
             return symbol
 
 
