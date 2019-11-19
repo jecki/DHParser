@@ -3,8 +3,11 @@ DHParser Version 0.9.1
 
 - added support for tag-less parsers: i.e. parser that are assigned to a
   symbol with leading underscore will be treated as anonymous parsers
+- extended support for dropping of content during parsing-stage, now any
+  tag-less parser's content can be dropped, not only that of the Token
+  and Whitespace-parsers
 - resuming after an error does not jump in to commentaries, any more (bugfix!)
-- optimizations
+- some speed optimizations
 
 
 DHParser Version 0.9.0 (20.10.2019)
