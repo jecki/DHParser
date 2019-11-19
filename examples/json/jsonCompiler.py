@@ -20,8 +20,8 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, \
@@ -31,7 +31,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
+    keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, \
@@ -62,35 +62,38 @@ def get_preprocessor() -> PreprocessorFunc:
 class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
-    element = Forward()
-    source_hash__ = "98f4e07c153dbfc9c2c13f2798e8122b"
+    _element = Forward()
+    source_hash__ = "31833295329c0325d087229c3d932092"
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    string_skip__ = [re.compile(r'(?=")')]
-    string_err_msg__ = [(re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
-    member_err_msg__ = [(re.compile(r'\w+'), 'Possible non-numerical and non-string values are `true`, `false` or `null` (always written with small letters and without quotation marks).'), (re.compile(r'["\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!'), (re.compile(r'\\'), 'Possible escaped values are /, \\, b, n, r, t, or u.'), (re.compile(r'\d'), '{1} does not represent a valid number or other value.')]
-    resume_rules__ = {'object': [re.compile(r'\}\s*')], 'member': [re.compile(r'(?=,|\})')]}
+    resume_rules__ = {}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    dwsp__ = DropWhitespace(WSP_RE__)
-    EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(DropToken("E"), DropToken("e")), Option(Alternative(DropToken("+"), DropToken("-"))), RegExp('[0-9]+')))
-    FRAC = Option(Series(DropToken("."), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(DropToken("-")), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
-    HEX = RegExp('[0-9a-fA-F]')
-    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
-    CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(RegExp(WSP_RE__))
+    _EOF = NegativeLookahead(RegExp('.'))
+    EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
+    DOT = Token(".")
+    FRAC = Option(Series(DOT, RegExp('[0-9]+')))
+    NEG = Token("-")
+    INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
+    UNICODE = Series(Series(Drop(Token("\\u")), dwsp__), HEX, HEX)
+    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
+    PLAIN = RegExp('[^"\\\\]+')
+    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
-    array = Series(Series(DropToken("["), dwsp__), Option(Series(element, ZeroOrMore(Series(Series(DropToken(","), dwsp__), element)))), Series(DropToken("]"), dwsp__))
-    member = Series(string, Series(DropToken(":"), dwsp__), element, mandatory=1, err_msgs=member_err_msg__)
-    object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member, mandatory=1)))), Series(DropToken("}"), dwsp__))
-    element.set(Alternative(object, array, string, number, bool, null))
-    json = Series(dwsp__, element, EOF)
+    string = Series(Drop(Token('"')), _CHARACTERS, Drop(Token('"')), dwsp__, mandatory=1)
+    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), _element)))), Series(Drop(Token("]")), dwsp__))
+    member = Series(string, Series(Drop(Token(":")), dwsp__), _element, mandatory=1)
+    object = Series(Series(Drop(Token("{")), dwsp__), member, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), member, mandatory=1)), Series(Drop(Token("}")), dwsp__), mandatory=3)
+    _element.set(Alternative(object, array, string, number, bool, null))
+    json = Series(dwsp__, _element, _EOF)
     root__ = json
     
 def get_grammar() -> jsonGrammar:
@@ -114,24 +117,9 @@ def get_grammar() -> jsonGrammar:
 
 json_AST_transformation_table = {
     # AST Transformations for the json-grammar
-    # "<": flatten,
-    "json": [remove_nodes('EOF'), replace_by_single_child],
-    "element": [replace_by_single_child],
-    "object": [],
-    "member": [],
-    "array": [],
-    "string": [collapse],
+    "json": [replace_by_single_child],
     "number": [collapse],
-    "bool": [],
-    "null": [],
-    "CHARACTERS": [],
-    "ESCAPE": [],
-    "HEX": [],
-    "INT": [],
-    "FRAC": [],
-    "EXP": [],
-    "EOF": [],
-    # "*": replace_by_single_child
+    "string": [reduce_single_child],
 }
 
 

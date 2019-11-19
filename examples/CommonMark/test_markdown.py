@@ -34,7 +34,7 @@ for path in (os.path.join('..', '..'), '.'):  # '../showcases' ?
 class test_regexps:
     def setup(self):
         self.rx = dict()
-        with open("../grammars/Markdown.enbf") as f:
+        with open("Markdown.enbf") as f:
             for stmt in f:
                 m = re.match(r'\s*@?\s*(?P<symbol>\w+)\s*=\s*~?/(?P<regex>.*(?<![^\\]/))/', stmt)
                 if m:

@@ -312,7 +312,7 @@ class HistoryRecord:
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [(tn, pos) for tn, pos in call_stack if tn != ":Forward"]  # type: List[str]
+        self.call_stack = [(tn, pos) for tn, pos in call_stack if tn != ":Forward"]  # type: List[Tuple[str, int]]
         self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]

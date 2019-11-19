@@ -19,26 +19,16 @@
 #
 #######################################################################
 
-@ object_resume = /\}\s*/
-
-@ member_error  = /\w+/, 'Possible non-numerical and non-string values are `true`, `false` or `null` (always written with small letters and without quotation marks).'
-@ member_error  = /["\'`´]/, 'String values must be enclosed by double-quotation marks: "..."!'
-@ member_error  = /\\/, 'Possible escaped values are /, \\, b, n, r, t, or u.'
-@ member_error  = /\d/, '{1} does not represent a valid number or other value.'
-@ member_resume = /(?=,|\})/
-
-@ string_error  = '', 'Illegal character "{1}" in string.'
-@ string_skip   = /(?=")/
-
-json       = ~ element EOF
-element    = object | array | string | number | bool | null
-object     = "{" [member { "," §member }] "}"
-member     = string §":" element
-array      = "[" [element { "," element }] "]"
-string     = `"` §CHARACTERS `"` ~
+json       = ~ _element _EOF
+_element   = object | array | string | number | bool | null
+object     = "{" member { "," §member } §"}"
+member     = string §":" _element
+array      = "[" [_element { "," _element }] "]"
+string     = `"` §_CHARACTERS `"` ~
 number     = INT FRAC EXP ~
 bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
 null       = "null"
+
 
 #######################################################################
 #
@@ -46,13 +36,16 @@ null       = "null"
 #
 #######################################################################
 
-CHARACTERS = { /[^"\\]+/ | ESCAPE }
-ESCAPE     = /\\[\/bnrt\\]/ | /\\u/ HEX HEX HEX HEX
-HEX        = /[0-9a-fA-F]/
+_CHARACTERS = { PLAIN | ESCAPE }
+PLAIN       = /[^"\\]+/
+ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+UNICODE     = "\u" HEX HEX
+HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
-INT        = [`-`] /[0-9]/ | /[1-9][0-9]+/
-FRAC       = [ `.` /[0-9]+/ ]
-EXP        = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
+INT         = [NEG] /[0-9]/ | /[1-9][0-9]+/
+NEG         = `-`
+FRAC        = [ DOT /[0-9]+/ ]
+DOT         = `.`
+EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
 
-EOF      =  !/./        # no more characters ahead, end of file reached
-
+_EOF        =  !/./        # no more characters ahead, end of file reached

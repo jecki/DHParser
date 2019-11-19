@@ -27,6 +27,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from functools import partial
 
+from DHParser.configuration import set_config_value
 from DHParser.dsl import grammar_provider
 from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
@@ -133,6 +134,7 @@ class TestTokenParsing:
             line        = ~/[^\x1b\x1c\x1d\n]*\n/
             indentBlock = BEGIN_INDENT block END_INDENT
             """
+        set_config_value('max_parser_dropouts', 3)
         self.grammar = grammar_provider(self.ebnf)()
         self.code = lstrip_docstring("""
             def func(x, y):
@@ -158,9 +160,6 @@ class TestTokenParsing:
 
     def test_parse_tokenized(self):
         cst = self.grammar(self.tokenized)
-        # for e in cst.errors(self.tokenized):
-        #     print(e.visualize(self.tokenized) + str(e))
-        #     print()
         assert not cst.error_flag
 
     def test_source_mapping_1(self):
@@ -200,6 +199,7 @@ class TestTokenParsing:
     def test_error_position(self):
         orig_src = self.code.replace('#', '\x1b')
         prepr = chain_preprocessors(self.preprocess_comments, self.preprocess_indentation)
+        self.grammar.max_parser_dropouts__ = 3
         result, messages, syntaxtree = compile_source(orig_src, prepr, self.grammar,
                                                       lambda i: i, lambda i: i)
         for err in messages:

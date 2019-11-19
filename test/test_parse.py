@@ -32,18 +32,40 @@ from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError, MetaParser, GrammarError, EMPTY_NODE
+    UnknownParserError, MetaParser, EMPTY_NODE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
-from DHParser.dsl import grammar_provider, CompilationError
+from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
 
+
+
+class TestWhitespace:
+    # TODO: add test cases here
+    def test_whitespace_comment_mangling(self):
+        pass
+
+    def test_non_empty_derivation(self):
+        pass
 
 class TestParserError:
     def test_parser_error_str(self):
         pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), None, True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
+
+    def test_false_lookahead_only_message(self):
+        """Error.PARSER_LOOKAHEAD_*_ONLY errors must not be reported if there
+        no lookahead parser in the history!"""
+        lang = """
+        word = letters { letters | `-` letters }
+        letters = /[A-Za-z]+/
+        """
+        gr = grammar_provider(lang)()
+        st = gr('hard-time', track_history=True)
+        assert not st.errors
+        st = gr('hard-', track_history=True)
+        assert st.errors and not any(e.code == 1045 for e in st.errors)
 
 
 class TestParserClass:
@@ -229,7 +251,7 @@ class TestRegex:
                   [+]    # followed by a plus sign
                   \w*    # possibly followed by more alpha chracters/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
@@ -245,7 +267,7 @@ class TestRegex:
                   [+]
                   \w* /
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
@@ -260,7 +282,7 @@ class TestRegex:
         @ ignorecase = True
         regex = /alpha/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -276,7 +298,7 @@ class TestRegex:
         @ ignorecase = False
         regex = /alpha/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -297,7 +319,7 @@ class TestRegex:
             test
             \end{document}
             """
-        result, messages, syntax_tree = compile_source(
+        result, messages, _ = compile_source(
             tokenlang, None, get_ebnf_grammar(), get_ebnf_transformer(),
             get_ebnf_compiler("TokenTest"))
         assert result
@@ -316,8 +338,8 @@ class TestGrammar:
         WORT         = /[^ \t]+/~
         LEERZEILE    = /\n[ \t]*(?=\n)/~
         """
-        self.pyparser, messages, syntax_tree = compile_source(grammar, None, get_ebnf_grammar(),
-                                                              get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
+        self.pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
+                                    get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
         assert self.pyparser
         assert not messages
 
@@ -366,6 +388,21 @@ class TestGrammar:
         st = gr('eins zwei', complete_match=False)
         assert not st.errors
 
+    def test_synonym(self):
+        lang = r"""
+            doc  = { word | number }
+            word = /\w+/ S
+            number = [VZ] /\d+/ S 
+            S    = ~        # let S by a synonym for anonymous whitespace
+            VZ   = "-"
+        """
+        gr = grammar_provider(lang)()
+        st = gr('eins 1 zwei2drei 3')
+        # set_config_value('compiled_EBNF_log', 'grammar.log')
+        gr = grammar_provider("@drop = whitespace, token" + lang)()
+        st = gr('eins 1 zwei2drei 3')
+        st = gr('-3')
+
 
 class TestSeries:
     def test_non_mandatory(self):
@@ -374,11 +411,11 @@ class TestSeries:
         series = "A" "B" "C" "D"
         """
         parser = grammar_provider(lang)()
-        st = parser("ABCD");
+        st = parser("ABCD")
         assert not st.error_flag
-        st = parser("A_CD");
+        st = parser("A_CD")
         assert not st.error_flag
-        st = parser("AB_D");
+        st = parser("AB_D")
         assert not st.error_flag
 
     def test_mandatory(self):
@@ -845,7 +882,6 @@ class TestReentryAfterError:
 
         # test regex-defined resume rule
         grammar = grammar_provider(lang)()
-        print(grammar.resume_rules__)
         mini_suite(grammar)
 
 
@@ -930,6 +966,7 @@ class TestMetaParser:
         self.mp = MetaParser()
         self.mp.grammar = Grammar()  # override placeholder warning
         self.mp.pname = "named"
+        self.mp.anonymous = False
         self.mp.tag_name = self.mp.pname
 
     def test_return_value(self):
@@ -956,6 +993,7 @@ class TestMetaParser:
         nd = self.mp._return_value(EMPTY_NODE)
         assert nd.tag_name == 'named' and not nd.children, nd.as_sxpr()
         self.mp.pname = ''
+        self.mp.anonymous = True
         self.mp.tag_name = ':unnamed'
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'tagged', nd.as_sxpr()

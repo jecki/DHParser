@@ -8,6 +8,8 @@ import sys
 
 LOGGING = ''
 
+TEST_DIRNAME = 'test_grammar'
+
 scriptpath = os.path.dirname(__file__)
 dhparserdir = os.path.abspath(os.path.join(scriptpath, '{reldhparserdir}'))
 if scriptpath not in sys.path:
@@ -26,9 +28,8 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
+    grammar_tests_dir = os.path.join(scriptpath, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
-    DHParser.log.start_logging('LOGS')
     # recompiles Grammar only if it has changed
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
@@ -42,7 +43,7 @@ def recompile_grammar(grammar_src, force):
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
     DHParser.log.start_logging(LOGGING)
     error_report = testing.grammar_suite(
-        os.path.join(scriptpath, 'grammar_tests'),
+        os.path.join(scriptpath, TEST_DIRNAME),
         get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report

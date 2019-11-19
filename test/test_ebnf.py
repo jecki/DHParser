@@ -391,7 +391,7 @@ class TestSynonymDetection:
         grammar = grammar_provider(ebnf)()
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['b'].pname == 'b', grammar['b'].pname
-        assert grammar('b').as_sxpr().count('b') == 2
+        assert grammar('b').as_sxpr() == '(a "b")'
 
 
 class TestFlowControlOperators:
@@ -638,6 +638,33 @@ class TestCustomizedResumeParsing:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only on error message
         assert len(cst.errors_sorted) == 1
+
+    def test_resume_with_customized_whitespace(self):
+        grammar_specification = r"""
+            @whitespace = /\s*/
+            @comment = /(?:\/\*(?:.|\n)*?\*\/)/  # c-style comments
+            document = ~ { word }
+            # @ word_resume = /(?:(?:\s\~)|(?:\~(?<=\s)))(?=.)|$/
+            # @word_resume = /(?=(.|\n))\~(?!\1)(?=.)|$/
+            @word_resume = /\~!(?=.)|$/
+            # @ word_resume = /\~(?=.)|$/
+            word     = !EOF §/\w+/ ~
+            EOF      = !/./
+        """
+        grammar = grammar_provider(grammar_specification)()
+        doc0 = """word no*word word"""
+        st = grammar(doc0)
+        assert st.children and st.children[-1].tag_name == 'word'
+        doc1 = """word no*word /* comment */ word"""
+        st = grammar(doc1)
+        assert st.children and st.children[-1].tag_name == 'word'
+        doc2 = """word no*word/* comment */word"""
+        st = grammar(doc2)
+        assert st.children and st.children[-1].tag_name == 'word'
+        doc3 = """word no*word/* comment1 */
+                  /* comment2 */word"""
+        st = grammar(doc3)
+        assert st.children and st.children[-1].tag_name == 'word'
 
 
 class TestInSeriesResume:

@@ -33,9 +33,9 @@ from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, Forward, RegExp, DropWhitespace, \
-    NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, Token, \
-    GrammarError
+from DHParser.parse import Grammar, mixin_comment, mixin_noempty, Forward, RegExp, \
+    DropRegExp, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
+    Token, GrammarError
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -83,8 +83,8 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \\
@@ -94,7 +94,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \\
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \\
+    keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
@@ -189,7 +189,7 @@ class EBNFGrammar(Grammar):
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wsp__ = DropWhitespace(WSP_RE__)
+    wsp__ = DropRegExp(WSP_RE__)
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), wsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), wsp__)
@@ -382,7 +382,8 @@ WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
 
 DROP_TOKEN  = 'token'
 DROP_WSPC   = 'whitespace'
-DROP_VALUES = {DROP_TOKEN, DROP_WSPC}
+DROP_REGEXP = 'regexp'
+DROP_VALUES = {DROP_TOKEN, DROP_WSPC, DROP_REGEXP}
 
 # Representation of Python code or, rather, something that will be output as Python code
 ReprType = Union[str, unrepr]
@@ -427,9 +428,21 @@ class EBNFDirectives:
                 for after a parsing error has error occurred. Other
                 than the skip field, this configures resuming after
                 the failing parser has returned.
+
+        drop:   A set that may contain the elements `DROP_TOKEN` and
+                `DROP_WSP', 'DROP_REGEXP' or any name of a symbol
+                of an anonymous parser (e.g. '_linefeed') the results
+                of which will be dropped during the parsing process,
+                already.
+
+        super_ws(property): Cache for the "super whitespace" which
+                is a regular expression that merges whitespace and
+                comments. This property should only be accessed after
+                the `whitespace` and `comment` field have been filled
+                with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
-                 'resume', 'drop']
+                 'resume', 'drop', '_super_ws']
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
@@ -441,6 +454,7 @@ class EBNFDirectives:
         self.skip = dict()    # type: Dict[str, List[Union[unrepr, str]]]
         self.resume = dict()  # type: Dict[str, List[Union[unrepr, str]]]
         self.drop = set()     # type: Set[str]
+        self._super_ws = None # type: Optional[str]
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -448,6 +462,12 @@ class EBNFDirectives:
     def __setitem__(self, key, value):
         assert hasattr(self, key)
         setattr(self, key, value)
+
+    @property
+    def super_ws(self):
+        if self._super_ws is None:
+            self._super_ws = mixin_comment(self.whitespace, self.comment)
+        return self._super_ws
 
     def keys(self):
         return self.__slots__
@@ -505,6 +525,10 @@ class EBNFCompiler(Compiler):
         definitions:  A dictionary of definitions. Other than `rules`
                 this maps the symbols to their compiled definienda.
 
+        required_keywords: A list of keywords (like `comment__` or
+                `whitespace__` that need to be defined at the beginning
+                of the grammar class because they are referred to later.
+
         deferred_tasks:  A list of callables that is filled during
                 compilatation, but that will be executed only after
                 compilation has finished. Typically, it contains
@@ -512,6 +536,11 @@ class EBNFCompiler(Compiler):
                 is only available upon completion of compilation.
 
         root_symbol: The name of the root symbol.
+
+        drop_flag: This flag is set temporarily when compiling the definition
+                of a parser that shall drop its content. If this flag is
+                set all contained parser will also drop their content as an
+                optimization.
 
         directives:  A record of all directives and their default values.
 
@@ -533,6 +562,13 @@ class EBNFCompiler(Compiler):
         re_flags:  A set of regular expression flags to be added to all
                 regular expressions found in the current parsing process
 
+        anonymous_regexp: A regular expression to identify symbols that stand
+                for parsers that shall yield anonymous nodes. The pattern of
+                the regular expression is configured in configuration.py but
+                can also be set by a directive. The default value is a regular
+                expression that catches names with a leading underscore.
+                See also `parser.Grammar.anonymous__`
+
         grammar_name:  The name of the grammar to be compiled
 
         grammar_source:  The source code of the grammar to be compiled.
@@ -542,17 +578,32 @@ class EBNFCompiler(Compiler):
                 compiled texts.)
     """
     COMMENT_KEYWORD = "COMMENT__"
+    COMMENT_PARSER_KEYWORD = "comment__"
+    DROP_COMMENT_PARSER_KEYWORD = "dcomment__"
     COMMENT_RX_KEYWORD = "comment_rx__"
     WHITESPACE_KEYWORD = "WSP_RE__"
     RAW_WS_KEYWORD = "WHITESPACE__"
+    RAW_WS_PARSER_KEYWORD = "whitespace__"
+    DROP_RAW_WS_PARSER_KEYWORD = "dwhitespace__"
     WHITESPACE_PARSER_KEYWORD = "wsp__"
     DROP_WHITESPACE_PARSER_KEYWORD = "dwsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_SUFFIX = '_skip__'
     ERR_MSG_SUFFIX = '_err_msg__'
-    RESERVED_SYMBOLS = {COMMENT_KEYWORD, COMMENT_RX_KEYWORD, WHITESPACE_KEYWORD, RAW_WS_KEYWORD,
+    COMMENT_OR_WHITESPACE = {COMMENT_PARSER_KEYWORD, DROP_COMMENT_PARSER_KEYWORD,
+                             RAW_WS_PARSER_KEYWORD, DROP_RAW_WS_PARSER_KEYWORD,
+                             WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD}
+    RESERVED_SYMBOLS = {COMMENT_KEYWORD, COMMENT_RX_KEYWORD, COMMENT_PARSER_KEYWORD,
+                        WHITESPACE_KEYWORD, RAW_WS_KEYWORD, RAW_WS_PARSER_KEYWORD,
                         WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD,
                         RESUME_RULES_KEYWORD}
+    KEYWORD_SUBSTITUTION = {COMMENT_KEYWORD: COMMENT_PARSER_KEYWORD,
+                            COMMENT_PARSER_KEYWORD: COMMENT_PARSER_KEYWORD,
+                            RAW_WS_KEYWORD: RAW_WS_PARSER_KEYWORD,
+                            RAW_WS_PARSER_KEYWORD: RAW_WS_PARSER_KEYWORD,
+                            WHITESPACE_KEYWORD: WHITESPACE_PARSER_KEYWORD,
+                            WHITESPACE_PARSER_KEYWORD: WHITESPACE_PARSER_KEYWORD,
+                            DROP_WHITESPACE_PARSER_KEYWORD: DROP_WHITESPACE_PARSER_KEYWORD}
     AST_ERROR = "Badly structured syntax tree. " \
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
@@ -563,27 +614,30 @@ class EBNFCompiler(Compiler):
 
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
-        self.grammar_id = 0
+        self.grammar_id = 0  # type: int
         super(EBNFCompiler, self).__init__()  # calls the reset()-method
         self.set_grammar_name(grammar_name, grammar_source)
 
 
     def reset(self):
         super(EBNFCompiler, self).reset()
-        self._result = ''           # type: str
-        self.re_flags = set()       # type: Set[str]
-        self.rules = OrderedDict()  # type: OrderedDict[str, List[Node]]
-        self.current_symbols = []   # type: List[Node]
-        self.symbols = {}           # type: Dict[str, Node]
-        self.variables = set()      # type: Set[str]
-        self.recursive = set()      # type: Set[str]
-        self.definitions = {}       # type: Dict[str, str]
-        self.deferred_tasks = []    # type: List[Callable]
-        self.root_symbol = ""       # type: str
+        self._result = ''               # type: str
+        self.re_flags = set()           # type: Set[str]
+        self.rules = OrderedDict()      # type: OrderedDict[str, List[Node]]
+        self.current_symbols = []       # type: List[Node]
+        self.symbols = {}               # type: Dict[str, Node]
+        self.variables = set()          # type: Set[str]
+        self.recursive = set()          # type: Set[str]
+        self.definitions = {}           # type: Dict[str, str]
+        self.required_keywords = set()  # type: Set[str]
+        self.deferred_tasks = []        # type: List[Callable]
+        self.root_symbol = ""           # type: str
+        self.drop_flag = False          # type: bool
         self.directives = EBNFDirectives()   # type: EBNFDirectives
         self.defined_directives = set()      # type: Set[str]
         self.consumed_custom_errors = set()  # type: Set[str]
         self.consumed_skip_rules = set()     # type: Set[str]
+        self.anonymous_regexp = re.compile(get_config_value('default_anonymous_regexp'))
         self.grammar_id += 1
 
 
@@ -737,7 +791,11 @@ class EBNFCompiler(Compiler):
         an empty string in case the node is neither regexp nor literal.
         """
         if nd.tag_name == 'regexp':
-            return unrepr("re.compile(r'%s')" % self._extract_regex(nd))
+            super_ws = self.directives.super_ws
+            noempty_ws = mixin_noempty(super_ws)
+            search_regex = self._extract_regex(nd)\
+                .replace(r'\~!', noempty_ws).replace(r'\~', super_ws)
+            return unrepr("re.compile(r'%s')" % search_regex)
         elif nd.tag_name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
@@ -774,19 +832,27 @@ class EBNFCompiler(Compiler):
 
         # add special fields for Grammar class
 
-        if DROP_WSPC in self.directives.drop:
-            definitions.append((self.DROP_WHITESPACE_PARSER_KEYWORD,
-                                'DropWhitespace(%s)' % self.WHITESPACE_KEYWORD))
-        else:
-            definitions.append((self.WHITESPACE_PARSER_KEYWORD,
-                                'Whitespace(%s)' % self.WHITESPACE_KEYWORD))
-        definitions.append((self.WHITESPACE_KEYWORD,
-                            ("mixin_comment(whitespace=" + self.RAW_WS_KEYWORD
-                             + ", comment=" + self.COMMENT_KEYWORD + ")")))
-        definitions.append((self.RAW_WS_KEYWORD, "r'{}'".format(self.directives.whitespace)))
-        comment_rx = "re.compile(COMMENT__)" if self.directives.comment else "RX_NEVER_MATCH"
-        definitions.append((self.COMMENT_RX_KEYWORD, comment_rx))
-        definitions.append((self.COMMENT_KEYWORD, "r'{}'".format(self.directives.comment)))
+        if DROP_WSPC in self.directives.drop or DROP_TOKEN in self.directives.drop:
+            definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
+                                'Drop(RegExp(%s))' % EBNFCompiler.WHITESPACE_KEYWORD))
+        definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
+                            'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
+        definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,
+                            ("mixin_comment(whitespace=" + EBNFCompiler.RAW_WS_KEYWORD
+                             + ", comment=" + EBNFCompiler.COMMENT_KEYWORD + ")")))
+        if EBNFCompiler.RAW_WS_PARSER_KEYWORD in self.required_keywords:
+            definitions.append((EBNFCompiler.RAW_WS_PARSER_KEYWORD,
+                                "Whitespace(%s)" % EBNFCompiler.RAW_WS_KEYWORD))
+        definitions.append((EBNFCompiler.RAW_WS_KEYWORD,
+                            "r'{}'".format(self.directives.whitespace)))
+        comment_rx = ("re.compile(%s)" % EBNFCompiler.COMMENT_KEYWORD) \
+            if self.directives.comment else "RX_NEVER_MATCH"
+        if EBNFCompiler.COMMENT_PARSER_KEYWORD in self.required_keywords:
+            definitions.append((EBNFCompiler.COMMENT_PARSER_KEYWORD,
+                                "RegExp(%s)" % EBNFCompiler.COMMENT_RX_KEYWORD))
+        definitions.append((EBNFCompiler.COMMENT_RX_KEYWORD, comment_rx))
+        definitions.append((EBNFCompiler.COMMENT_KEYWORD,
+                            "r'{}'".format(self.directives.comment)))
 
         # prepare and add resume-rules
 
@@ -866,6 +932,8 @@ class EBNFCompiler(Compiler):
                         + ('. Grammar:' if self.grammar_source and show_source else '.')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
         definitions.append(('static_analysis_pending__', '[True]'))
+        definitions.append(('anonymous__',
+                            're.compile(' + repr(self.anonymous_regexp.pattern) + ')'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -931,7 +999,7 @@ class EBNFCompiler(Compiler):
         definitions = []  # type: List[Tuple[str, str]]
 
         # drop the wrapping sequence node
-        if len(node.children) == 1 and node.children[0].is_anonymous():
+        if len(node.children) == 1 and node.children[0].anonymous:
             node = node.children[0]
 
         # compile definitions and directives and collect definitions
@@ -984,6 +1052,7 @@ class EBNFCompiler(Compiler):
         try:
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
+            self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
             if rule in self.variables:
                 defn = 'Capture(%s)' % defn
@@ -991,6 +1060,8 @@ class EBNFCompiler(Compiler):
             elif defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
+            # if self.drop_flag:
+            #     defn = 'Drop(%s)' % defn  # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb
             trace = str(extract_tb(error.__traceback__)[-1])
@@ -998,6 +1069,8 @@ class EBNFCompiler(Compiler):
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
+        finally:
+            self.drop_flag = False
         return rule, defn
 
 
@@ -1033,13 +1106,36 @@ class EBNFCompiler(Compiler):
                                         "match the empty string, /%s/ does not." % value)
             self.directives[key] = value
 
+        elif key == 'anonymous':
+            if node.children[1].tag_name == "regexp":
+                check_argnum()
+                re_pattern = node.children[1].content
+                if re.match(re_pattern, ''):
+                    self.tree.new_error(
+                        node, "The regular expression r'%s' matches any symbol, "
+                        "which is not allowed!" % re_pattern)
+                else:
+                    self.anonymous_regexp = re.compile(node.children[1].content)
+            else:
+                args = node.children[1:]
+                assert all(child.tag_name == "symbol" for child in args)
+                alist = [child.content for child in args]
+                self.anonymous_regexp = re.compile('$|'.join(alist) + '$')
+
         elif key == 'drop':
-            check_argnum(2)
+            if len(node.children) <= 1:
+                self.tree.new_error(node, 'Directive "@ drop" requires as least one argument!')
             for child in node.children[1:]:
                 content = child.content
-                node_type = content.lower()
-                assert node_type in DROP_VALUES, content
-                self.directives[key].add(node_type)
+                if self.anonymous_regexp.match(content):
+                    self.directives[key].add(content)
+                elif content.lower() in DROP_VALUES:
+                    self.directives[key].add(content.lower())
+                else:
+                    self.tree.new_error(
+                        node, 'Illegal value "%s" for Directive "@ drop"! Should be one of %s '
+                        'or a string matching %s' % (content, str(DROP_VALUES),
+                                                     self.anonymous_regexp.pattern))
 
         elif key == 'ignorecase':
             check_argnum()
@@ -1053,7 +1149,7 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "literalws" allows only `left`, `right`, '
                                     '`both` or `none`, not `%s`' % ", ".join(values))
             wsp = {'left', 'right'} if 'both' in values \
-                else {} if 'none' in values else values
+                else set() if 'none' in values else values
             self.directives.literalws = wsp
 
         elif key in {'tokens', 'preprocessor_tokens'}:
@@ -1129,7 +1225,16 @@ class EBNFCompiler(Compiler):
         name for the particular non-terminal.
         """
         arguments = [self.compile(r) for r in node.children] + custom_args
-        return parser_class + '(' + ', '.join(arguments) + ')'
+        # remove drop clause for non dropping definitions of forms like "/\w+/~"
+        if (parser_class == "Series" and node.tag_name not in self.directives.drop
+            and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
+            and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Token(')
+                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
+                arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
+        if self.drop_flag:
+            return 'Drop(' + parser_class + '(' + ', '.join(arguments) + '))'
+        else:
+            return parser_class + '(' + ', '.join(arguments) + ')'
 
 
     def on_expression(self, node) -> str:
@@ -1197,9 +1302,13 @@ class EBNFCompiler(Compiler):
             if arg.tag_name != 'symbol':
                 self.tree.new_error(node, ('Retrieve Operator "%s" requires a symbol, '
                                     'and not a %s.') % (prefix, arg.tag_name))
-                return str(arg.result)
-            if str(arg) in self.directives.filter:
-                custom_args = ['rfilter=%s' % self.directives.filter[str(arg)]]
+                return arg.content
+            elif self.anonymous_regexp.match(arg.content):
+                self.tree.new_error(node, ('Retrie does not work with anonymous parsers like %s')
+                                    % (prefix, arg.content))
+                return arg.content
+            if arg.content in self.directives.filter:
+                custom_args = ['rfilter=%s' % self.directives.filter[arg.content]]
             self.variables.add(str(arg))  # cast(str, arg.result)
 
         elif len(node.children) > 2:
@@ -1267,8 +1376,8 @@ class EBNFCompiler(Compiler):
         elif nd.tag_name == "expression":
             if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
                 self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
-            args = ', '.join(self.compile(child) for child in nd.children)
-            return "SomeOf(" + args + ")"
+            # args = ', '.join(self.compile(child) for child in nd.children)
+            return self.non_terminal(node, 'SomeOf')  # "SomeOf(" + args + ")"
         else:
             self.tree.new_error(node, "Unordered sequence or alternative "
                                       "requires at least two elements.")
@@ -1286,28 +1395,38 @@ class EBNFCompiler(Compiler):
                 self.symbols[symbol] = node
             if symbol in self.rules:
                 self.recursive.add(symbol)
-            if symbol in EBNFCompiler.RESERVED_SYMBOLS:
-                # (EBNFCompiler.WHITESPACE_KEYWORD, EBNFCompiler.COMMENT_KEYWORD):
-                return "RegExp(%s)" % symbol
+            if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
+                keyword = EBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
+                self.required_keywords.add(keyword)
+                return keyword
+            elif symbol.endswith('__'):
+                self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
             return symbol
 
 
-    def TOKEN_PARSER(self):
+    def TOKEN_PARSER(self, token):
         if DROP_TOKEN in self.directives.drop and self.context[-2].tag_name != "definition":
-            return 'DropToken('
-        return 'Token('
+            return 'Drop(Token(' + token + '))'
+        return 'Token(' + token + ')'
+
+    def REGEXP_PARSER(self, regexp):
+        if DROP_REGEXP in self.directives.drop and self.context[-2].tag_name != "definition":
+            return 'Drop(RegExp(' + regexp + '))'
+        return 'RegExp(' + regexp + ')'
 
 
-    def WSPC_PARSER(self):
-        if DROP_WSPC in self.directives.drop and (self.context[-2].tag_name != "definition"
-                                                  or self.context[-1].tag_name == 'literal'):
+    def WSPC_PARSER(self, force_drop=False):
+        if ((force_drop or DROP_WSPC in self.directives.drop)
+                and (self.context[-2].tag_name != "definition"
+                     or self.context[-1].tag_name == 'literal')):
             return 'dwsp__'
         return 'wsp__'
 
     def on_literal(self, node: Node) -> str:
-        center = self.TOKEN_PARSER() + node.content.replace('\\', r'\\') + ')'
-        left = self.WSPC_PARSER() if 'left' in self.directives.literalws else ''
-        right = self.WSPC_PARSER() if 'right' in self.directives.literalws else ''
+        center = self.TOKEN_PARSER(node.content.replace('\\', r'\\'))
+        force = DROP_TOKEN in self.directives.drop
+        left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
+        right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
         if left or right:
             return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
@@ -1320,14 +1439,13 @@ class EBNFCompiler(Compiler):
             tk = rpl + tk[1:-1] + rpl
         else:
             tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
-        return self.TOKEN_PARSER() + tk + ')'
+        return self.TOKEN_PARSER(tk)
 
 
     def on_regexp(self, node: Node) -> str:
         rx = node.content
         name = []   # type: List[str]
         assert rx[0] == '/' and rx[-1] == '/'
-        parser = 'RegExp('
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
@@ -1337,7 +1455,7 @@ class EBNFCompiler(Compiler):
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             return '"' + errmsg + '"'
-        return parser + ', '.join([arg] + name) + ')'
+        return self.REGEXP_PARSER(', '.join([arg] + name))
 
 
     def on_whitespace(self, node: Node) -> str:

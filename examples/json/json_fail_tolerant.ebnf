@@ -1,0 +1,97 @@
+# fail tolerant json-grammar  see: https://json.org/
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
+@ literalws   = right           # literals have implicit whitespace on the right hand side
+@ comment     = /(?:\/\/|#).*/  # comments range from a '#' odr '//' sign to the end of the line
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+@ drop        = whitespace, token  # drop tokens and whitespace early
+
+
+#######################################################################
+#
+#  Error-Recovery
+#
+#######################################################################
+
+
+@ object_resume = /(?:[^{}]|(?:\{.*\}))*\}\s*/  # jump to the position after the end of the object,
+                                                # skipping any nested objects on the way
+
+@ array_resume  = /(?:[^\[\]]|(?:\[.*\]))*\]\s*/  # jump to the position after the end of the array,
+                                                  # skipping any nested arrays on the way
+
+#  resume the calling parser (object) at the next key-string or at the closing braces of the object
+@ member_error  = /[\'`´]/, 'String values must be enclosed by double-quotation marks: "..."!'
+@ member_resume = /(?=(?:"[^"\n]+"\s*:)|\}|,)/
+
+@ string_error  = /\\/, 'Illegal escape sequence "{1}" Allowed values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u.'
+@ string_error  = '', 'Illegal character "{1}" in string.'
+@ string_skip   = /(?=")/
+
+
+#######################################################################
+#
+#:  FT_JSON elements
+#
+#######################################################################
+
+
+
+json       = ~ _element _EOF
+_element   = object | array | string | number | bool | null
+object     = "{" member { _OBJECT_SEPARATOR §member } §"}"
+member     = string §":" _element
+array      = "[" [_element { _ARRAY_SEPARATOR §_element }] "]"
+string     = `"` §_CHARACTERS `"` ~
+number     = INT FRAC EXP ~
+bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
+null       = "null"
+
+
+#######################################################################
+#
+#:  FT_JSON primitives
+#
+#######################################################################
+
+_CHARACTERS = { PLAIN | ESCAPE }
+PLAIN       = /[^"\\]+/
+ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+UNICODE     = "\u" HEX HEX
+HEX         = /[0-9a-fA-F][0-9a-fA-F]/
+
+INT         = [NEG] /[0-9]/ | /[1-9][0-9]+/
+NEG         = `-`
+FRAC        = [ DOT /[0-9]+/ ]
+DOT         = `.`
+EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
+
+_EOF        =  !/./        # no more characters ahead, end of file reached
+
+
+#######################################################################
+#
+#:  FT_JSON parsing primitives
+#
+#######################################################################
+
+@ _OBJECT_SEPARATOR_error = /(?!,)/, 'Missing separator ","'
+@ _OBJECT_SEPARATOR_resume = ""
+
+# leave sequence, if '}' ahead, otherwise raise error on missing comma,
+# but pass a comma if it exists
+_OBJECT_SEPARATOR = !`}` §&`,` [","]
+
+
+@ _ARRAY_SEPARATOR_error = /(?!,)/, 'Missing separator ","'
+@ _ARRAY_SEPARATOR_resume = ""
+
+# leave sequence, if ']' ahead, otherwise raise error on missing comma,
+# but pass a comma if it exists
+_ARRAY_SEPARATOR = !`]` §&`,` [","]

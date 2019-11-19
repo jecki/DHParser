@@ -424,9 +424,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
                 # tests.setdefault('__err__', {})[test_name] = errata[-1]
-                # write parsing-history log only in case of failure!
-                if is_logging():
-                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 transform(ast)
@@ -464,6 +461,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             if len(errata) > errflag:
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+                # write parsing-history log only in case of failure!
+                if is_logging():
+                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
 
         if verbose and 'fail' in tests:
             write('  Fail-Tests for parser "' + parser_name + '"')
@@ -482,12 +482,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
-                              'expected failure!' % (test_name, parser_name))
+                              'expected failure!\n%s' % (test_name, parser_name, cst.serialize()))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
                 if is_logging():
                     log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
+                adjust_error_locations(cst.errors, test_code)
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors_sorted)
             if verbose:
@@ -676,7 +677,7 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
                 the grammar's symbols under that section or an EBNF-grammar
                 or file name of an EBNF-grammar from which the symbols shall
                 be extracted.
-        path: the path to the grammar-test directory (usually 'grammar_tests').
+        path: the path to the grammar-test directory (usually 'test_grammar').
                 If the last element of the path does not exist, the directory
                 will be created.
         fmt: the test-file-format. At the moment only '.ini' is supported

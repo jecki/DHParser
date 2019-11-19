@@ -205,7 +205,7 @@ CONFIG_PRESET['left_recursion_depth'] = 5
 # not be set too high, because automatic retry works poorly.
 # This value does not affect the @resume-directive.
 # Default value: 3
-CONFIG_PRESET['max_parser_dropouts'] = 3
+CONFIG_PRESET['max_parser_dropouts'] = 1
 
 
 ########################################################################
@@ -282,6 +282,14 @@ CONFIG_PRESET['static_analysis'] = "none"
 # Default value: False
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 
+# Default value for the regular expression by which identifiers for
+# parsers that yield anonymous nodes are distinguished from identifiers
+# for parsers that yield named nodes. For example, the regular expression
+# r'_' catches names with a leading underscore. The default value is a
+# regular expression that matches no string whatsoever.
+# Default value: r'..(?<=^)'  # never match.
+CONFIG_PRESET['default_anonymous_regexp'] = r'..(?<=^)'
+
 
 ########################################################################
 #
@@ -318,9 +326,13 @@ CONFIG_PRESET['server_default_port'] = 8888
 
 # Turn on (costly) debugging functionality for any of the respective
 # modules or subsystems.
-# Default value: always False
+# Default value: False
 CONFIG_PRESET['debug_compiler'] = False
 
+# Makes DHParser.dsl.grammar_provider() write generated Python code to
+# the log-file (if logging is on) or to the console (if logging is off)
+# Default value: False
+CONFIG_PRESET['compiled_EBNF_log'] = ''
 
 ########################################################################
 #
