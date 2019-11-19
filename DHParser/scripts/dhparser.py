@@ -93,7 +93,7 @@ def create_project(path: str):
     os.chdir(path)
     if os.path.exists(TEST_DIRNAME):
         if not os.path.isdir(TEST_DIRNAME):
-            print('Cannot overwrite existing file "grammar_tests"')
+            print('Cannot overwrite existing file "%s"' % TEST_DIRNAME)
             sys.exit(1)
     else:
         os.mkdir(TEST_DIRNAME)

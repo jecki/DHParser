@@ -21,8 +21,8 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropRegExp, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, \
@@ -32,7 +32,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
+    keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
@@ -65,6 +65,7 @@ class yamlGrammar(Grammar):
     element = Forward()
     value = Forward()
     source_hash__ = "9660424d926b901b9654279f23e6c1f1"
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -73,21 +74,21 @@ class yamlGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = DropRegExp(WSP_RE__)
+    dwsp__ = Drop(RegExp(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(DropToken("E"), DropToken("e")), Option(Alternative(DropToken("+"), DropToken("-"))), RegExp('[0-9]+')))
-    FRAC = Option(Series(DropToken("."), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(DropToken("-")), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
+    FRAC = Option(Series(Drop(Token(".")), RegExp('[0-9]+')))
+    INT = Alternative(Series(Option(Drop(Token("-"))), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
     HEX = RegExp('[0-9a-fA-F]')
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
     CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(DropToken('"'), CHARACTERS, DropToken('"'), dwsp__)
-    array = Series(Series(DropToken("["), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(DropToken(","), dwsp__), value)))), Series(DropToken("]"), dwsp__))
-    member = Series(string, Series(DropToken(":"), dwsp__), element)
-    object = Series(Series(DropToken("{"), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(DropToken(","), dwsp__), member)))), Series(DropToken("}"), dwsp__))
+    string = Series(Drop(Token('"')), CHARACTERS, Drop(Token('"')), dwsp__)
+    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), value)))), Series(Drop(Token("]")), dwsp__))
+    member = Series(string, Series(Drop(Token(":")), dwsp__), element)
+    object = Series(Series(Drop(Token("{")), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), member)))), Series(Drop(Token("}")), dwsp__))
     value.set(Alternative(object, array, string, number, bool, null))
     element.set(Synonym(value))
     json = Series(dwsp__, element, EOF)

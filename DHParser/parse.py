@@ -123,6 +123,7 @@ class ParserError(Exception):
 ResumeList = List[RxPatternType]  # list of regular expressiones
 
 
+@cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
 def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
@@ -145,6 +146,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     closest_match = upper_limit
     comments = None  # typ: Optional[Iterator]
 
+    @cython.locals(a=cython.int, b=cython.int)
     def next_comment() -> Tuple[int, int]:
         nonlocal rest, comments
         if comments:
@@ -160,6 +162,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
     #     nonlocal rest
     #     return rest.find(s, start), len(s)
 
+    @cython.locals(start=cython.int, end=cython.int)
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
         nonlocal rest
         m = rest.search(rx, start)
@@ -168,6 +171,7 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
             return rest.index(start), end - start
         return -1, 0
 
+    @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
     def entry_point(search_func, search_rule) -> int:
         a, b = next_comment()
         k, length = search_func(search_rule)
@@ -202,6 +206,7 @@ def copy_parser_attrs(src: 'Parser', duplicate: 'Parser'):
     """Duplicates all parser attributes from source to dest."""
     duplicate.pname = src.pname
     duplicate.anonymous = src.anonymous
+    duplicate.drop_content = src.drop_content
     duplicate.tag_name = src.tag_name
 
 
@@ -251,6 +256,13 @@ class Parser:
                 reasons this is implemented as an object variable rather
                 than a property. This property must always be equal to
                 `self.tag_name[0] == ":"`.
+        drop_content: A property (for performance reasons implemented as
+                simple field) that, if set, induces the parser not to return
+                the parsed content or sub-tree if it has matched but the
+                dummy `EMPTY_NODE`. In effect the parsed content will be
+                dropped from the concrete syntax tree already. Only
+                anonymous (or pseudo-anonymous) parsers are allowed to
+                drop content.
         tag_name: The tag_name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 `pname`, otherwise it is the name of the parser's type.
@@ -277,6 +289,7 @@ class Parser:
         # assert isinstance(name, str), str(name)
         self.pname = ''               # type: str
         self.anonymous = True         # type: bool
+        self.drop_content = False     # type: bool
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         try:
@@ -337,7 +350,7 @@ class Parser:
                 error_node_id = 0
 
         grammar = self._grammar
-        location = grammar.document_length__ - len(text)
+        location = grammar.document_length__ - text.__len__()  # faster then len(text)?
 
         try:
             # rollback variable changing operation if parser backtracks
@@ -567,6 +580,15 @@ class Parser:
             self._apply(func, negative_flip)
         else:
             self._apply(func, positive_flip)
+
+
+def Drop(parser: Parser) -> Parser:
+    """Returns the parser with the `parser.drop_content`-property set to `True`."""
+    assert parser.anonymous, "Parser must be anonymous to be allowed to drop ist content."
+    if isinstance(parser, Forward):
+        cast(Forward, parser).parser.drop_content = True
+    parser.drop_content = True
+    return parser
 
 
 PARSER_PLACEHOLDER = Parser()
@@ -866,10 +888,10 @@ class Grammar:
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()  # type: Dict[str, ResumeList]
-    anonymous__ = re.compile(r'_')  # type: RxPatternType
+    anonymous__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
-    # COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
-    # WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
+    COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
+    WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
     static_analysis_pending__ = [True]  # type: List[bool]
 
 
@@ -902,11 +924,12 @@ class Grammar:
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
                     anonymous = True if cls.anonymous__.match(entry) else False
+                    assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
                             cast(Forward, parser).parser.pname = entry
                             cast(Forward, parser).parser.anonymous = anonymous
-                    else:   # if not parser.pname:
+                    else:
                         parser.pname = entry
                         parser.anonymous = anonymous
             cls.parser_initialization__[0] = "done"
@@ -915,12 +938,15 @@ class Grammar:
     def __init__(self, root: Parser = None) -> None:
         self.all_parsers__ = set()             # type: Set[Parser]
         # add compiled regular expression for comments, if it does not already exist
-        if not hasattr(self, 'comment_rx__'):
-            self.comment_rx__ = re.compile(self.COMMENT__) \
-                if hasattr(self, 'COMMENT__') and self.COMMENT__ else RX_NEVER_MATCH
+        if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
+            if hasattr(self.__class__, 'COMMENT__') and self.__class__.COMMENT__:
+                self.comment_rx__ = re.compile(self.__class__.COMMENT__)
+            else:
+                self.comment_rx__ = RX_NEVER_MATCH
         else:
-            assert ((self.COMMENT__ and self.COMMENT__ == self.comment_rx__.pattern)
-                     or (not self.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
+            assert ((self.__class__.COMMENT__ and
+                     self.__class__.COMMENT__ == self.comment_rx__.pattern)
+                    or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
@@ -1219,7 +1245,7 @@ class Grammar:
             #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
-            else (len(self.document__) + 1)
+            else (self.document__.__len__() + 1)
 
 
     def line_col__(self, text):
@@ -1335,6 +1361,8 @@ class PreprocessorToken(Parser):
                     '(Most likely due to a preprocessor bug!)')
                 return node, text[end:]
             if text[1:len(self.pname) + 1] == self.pname:
+                if self.drop_content:
+                    return EMPTY_NODE, text[end + 1:]
                 return Node(self.tag_name, text[len(self.pname) + 2:end]), text[end + 1:]
         return None, text
 
@@ -1363,9 +1391,11 @@ class Token(Parser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if text.startswith(self.text):
-            if self.text or not self.anonymous:
+            if self.drop_content:
+                return EMPTY_NODE, text[self.len:]
+            elif self.text or not self.anonymous:
                 return Node(self.tag_name, self.text, True), text[self.len:]
-            return EMPTY_NODE, text[self.len:]
+            return EMPTY_NODE, text
         return None, text
 
     def __repr__(self):
@@ -1412,13 +1442,22 @@ class RegExp(Parser):
             capture = match.group(0)
             if capture or not self.anonymous:
                 end = text.index(match.end())
+                if self.drop_content:
+                    return EMPTY_NODE, text[end:]
                 return Node(self.tag_name, capture, True), text[end:]
-            assert text.index(match.end()) == 0
-            return EMPTY_NODE, text[0:]
+            return EMPTY_NODE, text
         return None, text
 
     def __repr__(self):
         return escape_control_characters('/%s/' % self.regexp.pattern)
+
+
+def DropToken(text: str) -> Token:
+    return Drop(Token(text))
+
+
+def DropRegExp(regexp) -> RegExp:
+    return Drop(RegExp(regexp))
 
 
 def withWS(parser_factory, wsL='', wsR=r'\s*'):
@@ -1457,18 +1496,6 @@ class Whitespace(RegExp):
     """An variant of RegExp that signifies through its class name that it
     is a RegExp-parser for whitespace."""
     assert WHITESPACE_PTYPE == ":Whitespace"
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        match = text.match(self.regexp)
-        if match:
-            capture = match.group(0)
-            if capture or not self.anonymous:
-                end = text.index(match.end())
-                return Node(self.tag_name, capture, True), text[end:]
-            else:
-                # avoid creation of a node object for empty nodes
-                return EMPTY_NODE, text
-        return None, text
 
     def __repr__(self):
         return '~'
@@ -1509,6 +1536,8 @@ class MetaParser(Parser):
         if self._grammar.flatten_tree__:
             if node:
                 if self.anonymous:
+                    if self.drop_content:
+                        return EMPTY_NODE
                     return node
                 if node.tag_name[0] == ':':  # faster than node.is_anonymous()
                     return Node(self.tag_name, node._result)
@@ -1516,6 +1545,8 @@ class MetaParser(Parser):
             elif self.anonymous:
                 return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
             return Node(self.tag_name, ())
+        if self.drop_content:
+            return EMPTY_NODE
         return Node(self.tag_name, node or ())  # unoptimized code
 
     @cython.locals(N=cython.int)
@@ -1527,6 +1558,8 @@ class MetaParser(Parser):
         `grammar.flatten_tree__` is True.
         """
         assert isinstance(results, tuple)
+        if self.drop_content:
+            return EMPTY_NODE
         N = len(results)
         if N > 1:
             if self._grammar.flatten_tree__:
@@ -1676,15 +1709,17 @@ class ZeroOrMore(Option):
     @cython.locals(n=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
-        n = len(text) + 1  # type: int
-        while len(text) < n:  # text and len(text) < n:
-            n = len(text)
+        len = text.__len__()
+        n = len + 1  # type: int
+        while len < n:  # text and len(text) < n:
+            n = len
             node, text = self.parser(text)
+            len = text.__len__()
             if not node:
                 break
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
-            if len(text) == n:
+            if len == n:
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         return nd, text
@@ -1726,16 +1761,18 @@ class OneOrMore(UnaryParser):
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         match_flag = False
-        n = len(text) + 1  # type: int
-        while len(text_) < n:  # text_ and len(text_) < n:
-            n = len(text_)
+        len = text.__len__()
+        n = len + 1  # type: int
+        while len < n:  # text_ and len(text_) < n:
+            n = len
             node, text_ = self.parser(text_)
+            len = text_.__len__()
             if not node:
                 break
             match_flag = True
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
-            if len(text_) == n:
+            if len == n:
                 break  # avoid infinite loop
         if not match_flag:
             return None, text
@@ -1751,6 +1788,7 @@ MessagesType = List[Tuple[Union[str, Any], str]]
 NO_MANDATORY = 1000
 
 
+@cython.locals(i=cython.int, location=cython.int)
 def mandatory_violation(grammar: Grammar,
                         text_: StringView,
                         failed_on_lookahead: bool,
@@ -2288,12 +2326,16 @@ class Lookbehind(FlowParser):
         super(Lookbehind, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        backwards_text = self.grammar.reversed__[len(text):]
+        backwards_text = self.grammar.reversed__[text.__len__():]
         if self.regexp is None:  # assert self.text is not None
-            does_match = backwards_text[:len(self.text)] == self.text
+            does_match = backwards_text[:text.__len__()] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
-        return (Node(self.tag_name, ''), text) if self.sign(does_match) else (None, text)
+        if self.sign(does_match):
+            if self.drop_content:
+                return EMPTY_NODE, text
+            return Node(self.tag_name, ''), text
+        return None, text
 
     def __repr__(self):
         return '-&' + self.parser.repr
@@ -2324,6 +2366,11 @@ class Capture(UnaryParser):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
+    def __init__(self, parser: Parser) -> None:
+        assert not parser.drop_content, \
+            "Cannot capture content of returned by parser, the content of which will be dropped!"
+        super(Capture, self).__init__(parser)
+
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
 
@@ -2331,8 +2378,10 @@ class Capture(UnaryParser):
         node, text_ = self.parser(text)
         if node:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
+            assert not self.parser.drop_content, \
+                "Cannot capture content of returned by parser, the content of which will be dropped!"
             self.grammar.variables__[self.pname].append(node.content)
-            location = self.grammar.document_length__ - len(text)
+            location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
@@ -2414,11 +2463,13 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.pname]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - len(text))
+            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text
         if text.startswith(value):
+            if self.drop_content:
+                return EMPTY_NODE, text[len(value):]
             return Node(self.tag_name, value), text[len(value):]
         else:
             return None, text
@@ -2455,7 +2506,7 @@ class Pop(Retrieve):
         node, txt = self.retrieve_and_match(text)
         if node and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol.pname].pop())
-            location = self.grammar.document_length__ - len(text)
+            location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 
@@ -2470,48 +2521,48 @@ class Pop(Retrieve):
 ########################################################################
 
 
-class Drop(UnaryParser):
-    r"""
-    Drops any content that another parser yields and returns either
-    None if the other parser did not match or EMPTY_NODE, if it did.
-    This allows to simplify the syntax tree at a very early stage.
-    Violates the invariant: str(parse(text)) == text !
-    """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser(text)
-        if node:
-            return EMPTY_NODE, text
-        return None, text
+# class Drop(UnaryParser):
+#     r"""
+#     Drops any content that another parser yields and returns either
+#     None if the other parser did not match or EMPTY_NODE, if it did.
+#     This allows to simplify the syntax tree at a very early stage.
+#     Violates the invariant: str(parse(text)) == text !
+#     """
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#         node, text = self.parser(text)
+#         if node:
+#             return EMPTY_NODE, text
+#         return None, text
 
 
-class DropToken(Token):
-    """
-    Parses play text string, but returns EMPTY_NODE rather than the parsed
-    string on a match. Violates the invariant: str(parse(text)) == text !
-    """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropToken must not be used for named parsers!"
-        if text.startswith(self.text):
-            return EMPTY_NODE, text[self.len:]
-            # return Node(self.tag_name, self.text, True), text[self.len:]
-        return None, text
-
-
-class DropRegExp(Whitespace):
-    """
-    Parses a text with a regular expression but never returns the match.
-    Instead EMPTY_NODE is returned on a match.
-    Violates the invariant: str(parse(text)) == text !
-    """
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        assert self.anonymous, "DropWhitespace must not be used for named parsers!"
-        match = text.match(self.regexp)
-        if match:
-            # capture = match.group(0)
-            end = text.index(match.end())
-            return EMPTY_NODE, text[end:]
-        return None, text
+# class DropToken(Token):
+#     """ OBSOLETE
+#     Parses play text string, but returns EMPTY_NODE rather than the parsed
+#     string on a match. Violates the invariant: str(parse(text)) == text !
+#     """
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#         assert self.anonymous, "DropToken must not be used for named parsers!"
+#         if text.startswith(self.text):
+#             return EMPTY_NODE, text[self.len:]
+#             # return Node(self.tag_name, self.text, True), text[self.len:]
+#         return None, text
+#
+#
+# class DropRegExp(Whitespace):
+#     """ OBSOLETE
+#     Parses a text with a regular expression but never returns the match.
+#     Instead EMPTY_NODE is returned on a match.
+#     Violates the invariant: str(parse(text)) == text !
+#     """
+#
+#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+#         assert self.anonymous, "DropWhitespace must not be used for named parsers!"
+#         match = text.match(self.regexp)
+#         if match:
+#             # capture = match.group(0)
+#             end = text.index(match.end())
+#             return EMPTY_NODE, text[end:]
+#         return None, text
 
 
 ########################################################################
@@ -2536,16 +2587,19 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not (isinstance(parser, DropRegExp) or isinstance(parser, DropToken) or isinstance(parser, Drop))
+        assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization
+        node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization (dangerous?)
         if node:
-            if self.anonymous:
-                if node.tag_name[0] != ':':  # implies != EMPTY_NODE
-                    node.tag_name = self.tag_name
-            else:
+            if self.drop_content:
+                return EMPTY_NODE, text
+            # if self.anonymous:
+            #     if node.tag_name[0] != ':':  # implies != EMPTY_NODE
+            #         node.tag_name = self.tag_name
+            # else:
+            if not self.anonymous:
                 if node == EMPTY_NODE:
                     return Node(self.tag_name, ''), text
                 node.tag_name = self.tag_name
@@ -2635,6 +2689,7 @@ class Forward(Parser):
         shall be delegated.
         """
         self.parser = parser
+        self.drop_content = parser.drop_content
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         if super(Forward, self)._apply(func, flip):

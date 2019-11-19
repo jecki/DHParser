@@ -39,6 +39,8 @@ from DHParser.toolkit import re, cython
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
+           'REGEXP_PTYPE',
+           'LEAF_PTYPES',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
            'ResultType',
@@ -66,6 +68,8 @@ __all__ = ('WHITESPACE_PTYPE',
 
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
+REGEXP_PTYPE = ':RegExp'
+LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
 
 ZOMBIE_TAG = "ZOMBIE__"
 
@@ -208,7 +212,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             is prefixed with a colon ":". A node, the tag name of which
             starts with a colon ":" or the tag name of which is the
             empty string is considered as "anonymous". See
-            `Node.is_anonymous()`
+            `Node.anonymous()`-property
 
         result (str or tuple):  The result of the parser which
             generated this node, which can be either a string or a
@@ -261,13 +265,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         that generated the node and the parser's result.
         """
         self._pos = -1                  # type: int
-        # Assignment to self.result initializes the attr _result, children and _len
+        # Assignment to self.result initializes the attr _result and children
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
             self.children = NO_CHILDREN  # type: ChildrenType
         else:
-            self.__set_result(result)
+            self._set_result(result)
         self.tag_name = tag_name        # type: str
 
     def __deepcopy__(self, memo):
@@ -301,7 +305,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return "Node(%s, %s)" % (self.tag_name, rarg)
 
     def __len__(self):
-        return (sum(len(child) for child in self.children)
+        return (sum(child.__len__() for child in self.children)
                 if self.children else len(self._result))
 
     def __bool__(self):
@@ -370,7 +374,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return self._result
 
-    def __set_result(self, result: ResultType):
+    def _set_result(self, result: ResultType):
+        """
+        Sets the result of a node without assigning the position.
+        An assignment to the `result`-property is to be preferred,
+        and `_set_result()` should only be used for optimization
+        when it is really necessary!
+        :param result:  the new result of the note
+        """
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
@@ -382,16 +393,28 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = NO_CHILDREN
                 self._result = result  # cast(StrictResultType, result)
 
+    def _init_child_pos(self):
+        """Initialize position values of children with potentially
+        unassigned positions, i.e. child.pos < 0."""
+        children = self.children
+        if children:
+            offset = self._pos
+            prev = children[0]
+            if prev._pos < 0:
+                prev.with_pos(offset)
+            for child in children[1:]:
+                if child._pos < 0:
+                    offset = offset + prev.__len__()
+                    child.with_pos(offset)
+                else:
+                    offset = child._pos
+
     @result.setter
     def result(self, result: ResultType):
-        self.__set_result(result)
+        self._set_result(result)
         # fix position values for children that are added after the parsing process
-        if self._pos >= 0 and self.children:
-            p = self._pos
-            for child in self.children:
-                if child._pos < 0:
-                    child.with_pos(p)
-                p = child._pos + len(child)
+        if self._pos >= 0:
+            self._init_child_pos()
 
     def _content(self) -> List[str]:
         """
@@ -453,11 +476,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._pos < 0:
             self._pos = pos
             # recursively adjust pos-values of all children
-            offset = self.pos
-            for child in self.children:
-                if child._pos < 0:
-                    child.with_pos(offset)
-                offset = child.pos + len(child)
+            self._init_child_pos()
         return self
 
     # (XML-)attributes ###
@@ -597,6 +616,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return False
         raise ValueError('Leaf-node cannot contain other nodes')
 
+    @cython.locals(start=cython.int, stop=cython.int, i = cython.int)
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
         Returns the first index of the child that fulfills the criterion
@@ -690,6 +710,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return None
 
+    @cython.locals(location=cython.int, end=cython.int)
     def locate(self, location: int) -> Optional['Node']:
         """
         Returns the leaf-Node that covers the given `location`, where
@@ -753,6 +774,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return None
 
+    @cython.locals(location=cython.int, end=cython.int)
     def locate_context(self, location: int) -> Optional[List['Node']]:
         """
         Like `Node.locate()`,  only that the entire context (i.e. chain of descendants)
@@ -1038,9 +1060,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if node.has_attr():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not has_reserved_attrs:
-                txt.append(' line="%i" col="%i"' % line_col(line_breaks, node.pos))
-            if src == '' and not (node.has_attr() and '_pos' in node.attr) and node.pos >= 0:
-                txt.append(' _pos="%i"' % node.pos)
+                txt.append(' line="%i" col="%i"' % line_col(line_breaks, node._pos))
+            if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
+                txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not has_reserved_attrs:
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', "'")
                                                  for err in root.get_errors(node)))
@@ -1117,6 +1139,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # serialization meta-method ###
 
+    @cython.locals(vsize=cython.int, i=cython.int, threshold=cython.int)
     def serialize(self: 'Node', how: str = 'default') -> str:
         """
         Serializes the tree starting with `node` either as S-expression, XML, JSON,

@@ -282,6 +282,14 @@ CONFIG_PRESET['static_analysis'] = "none"
 # Default value: False
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 
+# Default value for the regular expression by which identifiers for
+# parsers that yield anonymous nodes are distinguished from identifiers
+# for parsers that yield named nodes. For example, the regular expression
+# r'_' catches names with a leading underscore. The default value is a
+# regular expression that matches no string whatsoever.
+# Default value: r'..(?<=^)'  # never match.
+CONFIG_PRESET['default_anonymous_regexp'] = r'..(?<=^)'
+
 
 ########################################################################
 #

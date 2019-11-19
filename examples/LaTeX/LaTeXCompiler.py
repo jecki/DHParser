@@ -21,15 +21,14 @@ try:
 except ImportError:
     import re
 from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
-    Synonym, Whitespace, DropRegExp, Token, DropToken, \
+    Synonym, Whitespace, Drop, Token, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Series, Capture, Lookahead, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    PreprocessorFunc, TransformationDict, \
-    Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
+    PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
-    flatten, is_empty, collapse, replace_content, replace_content_by, remove_brackets, \
-    is_one_of, traverse_locally, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
-    access_thread_locals, recompile_grammar
+    flatten, is_empty, collapse, replace_content, remove_brackets, strip, \
+    is_one_of, replace_content_by, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
+    access_thread_locals, recompile_grammar, peek
 from DHParser.log import start_logging
 
 
@@ -62,7 +61,8 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "67454fc5c734cbd67e460b85957b4006"
+    source_hash__ = "31de40dc10efd720f8578d0ab7073e63"
+    anonymous__ = re.compile('_WSPC$|_GAP$|_PARSEP$|_LB$|block_environment$|known_environment$|text_element$|inline_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -73,16 +73,16 @@ class LaTeXGrammar(Grammar):
     whitespace__ = Whitespace(WHITESPACE__)
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = DropRegExp(WSP_RE__)
+    dwsp__ = Drop(RegExp(WSP_RE__))
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
-    LB = RegExp('\\s*?\\n|$')
-    NEW_LINE = Series(RegExp('[ \\t]*'), Option(comment__), RegExp('\\n'))
-    GAP = Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__)
-    WSPC = OneOrMore(Alternative(comment__, RegExp('\\s+')))
-    PARSEP = Series(ZeroOrMore(Series(whitespace__, comment__)), GAP, Option(WSPC))
-    S = Series(Lookahead(RegExp('[% \\t\\n]')), dwsp__)
-    LFF = Series(NEW_LINE, Option(WSPC))
+    _LB = RegExp('\\s*?\\n|$')
+    NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
+    _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
+    _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
+    _PARSEP = Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC))))
+    S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), wsp__)
+    LFF = Series(NEW_LINE, Option(_WSPC))
     LF = Series(NEW_LINE, ZeroOrMore(Series(comment__, whitespace__)))
     TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     INTEGER = Series(RegExp('\\d+'), dwsp__)
@@ -93,73 +93,74 @@ class LaTeXGrammar(Grammar):
     ESCAPED = RegExp('\\\\[%$&_/{}]')
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\(?:(?!_)\\w)+'), dwsp__)
-    structural = Alternative(Series(DropToken("subsection"), dwsp__), Series(DropToken("section"), dwsp__), Series(DropToken("chapter"), dwsp__), Series(DropToken("subsubsection"), dwsp__), Series(DropToken("paragraph"), dwsp__), Series(DropToken("subparagraph"), dwsp__), Series(DropToken("item"), dwsp__))
-    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(DropToken("begin{"), dwsp__), Series(DropToken("end{"), dwsp__)), Alternative(Series(DropToken("enumerate"), dwsp__), Series(DropToken("itemize"), dwsp__), Series(DropToken("figure"), dwsp__), Series(DropToken("quote"), dwsp__), Series(DropToken("quotation"), dwsp__), Series(DropToken("tabular"), dwsp__)), Series(DropToken("}"), dwsp__)), structural, begin_generic_block, end_generic_block))
-    no_command = Alternative(Series(DropToken("\\begin{"), dwsp__), Series(DropToken("\\end"), dwsp__), Series(BACKSLASH, structural))
+    structural = Alternative(Series(Drop(Token("subsection")), dwsp__), Series(Drop(Token("section")), dwsp__), Series(Drop(Token("chapter")), dwsp__), Series(Drop(Token("subsubsection")), dwsp__), Series(Drop(Token("paragraph")), dwsp__), Series(Drop(Token("subparagraph")), dwsp__), Series(Drop(Token("item")), dwsp__))
+    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Token("begin{")), dwsp__), Series(Drop(Token("end{")), dwsp__)), Alternative(Series(Drop(Token("enumerate")), dwsp__), Series(Drop(Token("itemize")), dwsp__), Series(Drop(Token("figure")), dwsp__), Series(Drop(Token("quote")), dwsp__), Series(Drop(Token("quotation")), dwsp__), Series(Drop(Token("tabular")), dwsp__)), Series(Drop(Token("}")), dwsp__)), structural, begin_generic_block, end_generic_block))
+    no_command = Alternative(Series(Drop(Token("\\begin{")), dwsp__), Series(Drop(Token("\\end")), dwsp__), Series(BACKSLASH, structural))
     text = Series(TEXTCHUNK, ZeroOrMore(Series(S, TEXTCHUNK)))
-    block = Series(RegExp('{'), dwsp__, ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))), RegExp('}'), mandatory=3)
+    block = Series(Drop(RegExp('{')), dwsp__, ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))), Drop(RegExp('}')), mandatory=3)
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
-    config = Series(Series(DropToken("["), dwsp__), cfg_text, Series(DropToken("]"), dwsp__), mandatory=2)
-    pdfinfo = Series(Series(DropToken("\\pdfinfo"), dwsp__), block)
-    documentclass = Series(Series(DropToken("\\documentclass"), dwsp__), Option(config), block)
-    cline = Series(Series(DropToken("\\cline{"), dwsp__), INTEGER, Series(DropToken("-"), dwsp__), INTEGER, Series(DropToken("}"), dwsp__))
+    config = Series(Series(Drop(Token("[")), dwsp__), cfg_text, Series(Drop(Token("]")), dwsp__), mandatory=2)
+    pdfinfo = Series(Series(Drop(Token("\\pdfinfo")), dwsp__), block)
+    documentclass = Series(Series(Drop(Token("\\documentclass")), dwsp__), Option(config), block)
+    cline = Series(Series(Drop(Token("\\cline{")), dwsp__), INTEGER, Series(Drop(Token("-")), dwsp__), INTEGER, Series(Drop(Token("}")), dwsp__))
     hline = Series(Token("\\hline"), dwsp__)
-    multicolumn = Series(Series(DropToken("\\multicolumn"), dwsp__), Series(DropToken("{"), dwsp__), INTEGER, Series(DropToken("}"), dwsp__), tabular_config, block_of_paragraphs)
-    caption = Series(Series(DropToken("\\caption"), dwsp__), block)
-    includegraphics = Series(Series(DropToken("\\includegraphics"), dwsp__), Option(config), block)
-    footnote = Series(Series(DropToken("\\footnote"), dwsp__), block_of_paragraphs)
-    citep = Series(Alternative(Series(DropToken("\\citep"), dwsp__), Series(DropToken("\\cite"), dwsp__)), Option(config), block)
-    citet = Series(Series(DropToken("\\citet"), dwsp__), Option(config), block)
+    multicolumn = Series(Series(Drop(Token("\\multicolumn")), dwsp__), Series(Drop(Token("{")), dwsp__), INTEGER, Series(Drop(Token("}")), dwsp__), tabular_config, block_of_paragraphs)
+    caption = Series(Series(Drop(Token("\\caption")), dwsp__), block)
+    includegraphics = Series(Series(Drop(Token("\\includegraphics")), dwsp__), Option(config), block)
+    footnote = Series(Series(Drop(Token("\\footnote")), dwsp__), block_of_paragraphs)
+    citep = Series(Alternative(Series(Drop(Token("\\citep")), dwsp__), Series(Drop(Token("\\cite")), dwsp__)), Option(config), block)
+    citet = Series(Series(Drop(Token("\\citet")), dwsp__), Option(config), block)
     generic_command = Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), dwsp__, block)))
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo)
     command = Alternative(known_command, text_command, generic_command)
-    inline_math = Series(RegExp('\\$'), RegExp('[^$]*'), RegExp('\\$'), mandatory=2)
-    end_environment = Series(RegExp('\\\\end{'), Pop(NAME), RegExp('}'), mandatory=1)
-    begin_environment = Series(RegExp('\\\\begin{'), NAME, RegExp('}'), mandatory=1)
+    inline_math = Series(Drop(RegExp('\\$')), Drop(RegExp('[^$]*')), Drop(RegExp('\\$')), mandatory=2)
+    end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
+    begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
     end_inline_env = Synonym(end_environment)
-    begin_inline_env = Alternative(Series(NegativeLookbehind(LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
+    begin_inline_env = Alternative(Series(NegativeLookbehind(_LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
     generic_inline_env = Series(begin_inline_env, dwsp__, paragraph, end_inline_env, mandatory=3)
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     line_element = Alternative(text, block, inline_environment, command)
     text_element.set(Alternative(line_element, LINEFEED))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))))
-    sequence = Series(Option(WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(PARSEP))))
-    block_of_paragraphs.set(Series(Series(DropToken("{"), dwsp__), Option(sequence), Series(DropToken("}"), dwsp__), mandatory=2))
-    tabular_config.set(Series(Series(DropToken("{"), dwsp__), RegExp('[lcr|]+'), dwsp__, Series(DropToken("}"), dwsp__), mandatory=3))
+    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
+    block_of_paragraphs.set(Series(Series(Drop(Token("{")), dwsp__), Option(sequence), Series(Drop(Token("}")), dwsp__), mandatory=2))
+    TBCFG_VALUE = Series(RegExp('[lcr|]+'), dwsp__)
+    tabular_config.set(Series(Series(Drop(Token("{")), dwsp__), TBCFG_VALUE, Series(Drop(Token("}")), dwsp__), mandatory=2))
     tabular_cell = ZeroOrMore(Series(line_element, Option(S)))
-    tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(DropToken("&"), dwsp__), Alternative(multicolumn, tabular_cell))), Series(DropToken("\\\\"), dwsp__), Alternative(hline, ZeroOrMore(cline)))
-    tabular = Series(Series(DropToken("\\begin{tabular}"), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(DropToken("\\end{tabular}"), dwsp__), mandatory=3)
-    verbatim = Series(Series(DropToken("\\begin{verbatim}"), dwsp__), sequence, Series(DropToken("\\end{verbatim}"), dwsp__), mandatory=2)
-    quotation = Alternative(Series(Series(DropToken("\\begin{quotation}"), dwsp__), sequence, Series(DropToken("\\end{quotation}"), dwsp__), mandatory=2), Series(Series(DropToken("\\begin{quote}"), dwsp__), sequence, Series(DropToken("\\end{quote}"), dwsp__), mandatory=2))
-    figure = Series(Series(DropToken("\\begin{figure}"), dwsp__), sequence, Series(DropToken("\\end{figure}"), dwsp__), mandatory=2)
-    item = Series(Series(DropToken("\\item"), dwsp__), sequence)
-    enumerate = Series(Series(DropToken("\\begin{enumerate}"), dwsp__), Option(WSPC), ZeroOrMore(item), Series(DropToken("\\end{enumerate}"), dwsp__), mandatory=3)
-    itemize = Series(Series(DropToken("\\begin{itemize}"), dwsp__), Option(WSPC), ZeroOrMore(item), Series(DropToken("\\end{itemize}"), dwsp__), mandatory=3)
-    end_generic_block.set(Series(Lookbehind(LB), end_environment, LFF))
-    begin_generic_block.set(Series(Lookbehind(LB), begin_environment, LFF))
+    tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Token("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Series(Drop(Token("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)))
+    tabular = Series(Series(Drop(Token("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(Drop(Token("\\end{tabular}")), dwsp__), mandatory=3)
+    verbatim = Series(Series(Drop(Token("\\begin{verbatim}")), dwsp__), sequence, Series(Drop(Token("\\end{verbatim}")), dwsp__), mandatory=2)
+    quotation = Alternative(Series(Series(Drop(Token("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Token("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Token("\\begin{quote}")), dwsp__), sequence, Series(Drop(Token("\\end{quote}")), dwsp__), mandatory=2))
+    figure = Series(Series(Drop(Token("\\begin{figure}")), dwsp__), sequence, Series(Drop(Token("\\end{figure}")), dwsp__), mandatory=2)
+    item = Series(Series(Drop(Token("\\item")), dwsp__), sequence)
+    enumerate = Series(Series(Drop(Token("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(item), Series(Drop(Token("\\end{enumerate}")), dwsp__), mandatory=3)
+    itemize = Series(Series(Drop(Token("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(item), Series(Drop(Token("\\end{itemize}")), dwsp__), mandatory=3)
+    end_generic_block.set(Series(Lookbehind(_LB), end_environment, LFF))
+    begin_generic_block.set(Series(Lookbehind(_LB), begin_environment, LFF))
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     block_environment.set(Alternative(known_environment, generic_block))
     heading = Synonym(block)
-    Index = Series(Option(WSPC), Series(DropToken("\\printindex"), dwsp__))
-    Bibliography = Series(Option(WSPC), Series(DropToken("\\bibliography"), dwsp__), heading)
-    SubParagraph = Series(Series(DropToken("\\subparagraph"), dwsp__), heading, Option(sequence))
-    SubParagraphs = OneOrMore(Series(Option(WSPC), SubParagraph))
-    Paragraph = Series(Series(DropToken("\\paragraph"), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
-    Paragraphs = OneOrMore(Series(Option(WSPC), Paragraph))
-    SubSubSection = Series(Series(DropToken("\\subsubsection"), dwsp__), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
-    SubSubSections = OneOrMore(Series(Option(WSPC), SubSubSection))
-    SubSection = Series(Series(DropToken("\\subsection"), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
-    SubSections = OneOrMore(Series(Option(WSPC), SubSection))
-    Section = Series(Series(DropToken("\\section"), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSections)))
-    Sections = OneOrMore(Series(Option(WSPC), Section))
-    Chapter = Series(Series(DropToken("\\chapter"), dwsp__), heading, ZeroOrMore(Alternative(sequence, Sections)))
-    Chapters = OneOrMore(Series(Option(WSPC), Chapter))
+    Index = Series(Option(_WSPC), Series(Drop(Token("\\printindex")), dwsp__))
+    Bibliography = Series(Option(_WSPC), Series(Drop(Token("\\bibliography")), dwsp__), heading)
+    SubParagraph = Series(Series(Drop(Token("\\subparagraph")), dwsp__), heading, Option(sequence))
+    SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
+    Paragraph = Series(Series(Drop(Token("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
+    SubSubSection = Series(Series(Drop(Token("\\subsubsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSections = OneOrMore(Series(Option(_WSPC), SubSubSection))
+    SubSection = Series(Series(Drop(Token("\\subsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSections = OneOrMore(Series(Option(_WSPC), SubSection))
+    Section = Series(Series(Drop(Token("\\section")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSections)))
+    Sections = OneOrMore(Series(Option(_WSPC), Section))
+    Chapter = Series(Series(Drop(Token("\\chapter")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Sections)))
+    Chapters = OneOrMore(Series(Option(_WSPC), Chapter))
     frontpages = Synonym(sequence)
-    document = Series(Option(WSPC), Series(DropToken("\\begin{document}"), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(WSPC), Series(DropToken("\\end{document}"), dwsp__), Option(WSPC), EOF, mandatory=9)
-    preamble = OneOrMore(Series(Option(WSPC), command))
+    document = Series(Option(_WSPC), Series(Drop(Token("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Token("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=9)
+    preamble = OneOrMore(Series(Option(_WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc
     
@@ -233,7 +234,6 @@ LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
     "<": [flatten, flatten_structure, remove_empty],
     "latexdoc": [],
-    "preamble": [traverse_locally({'<': remove_whitespace, 'block': replace_by_single_child})],
     "document": [flatten_structure],
     "pdfinfo": [],
     "frontpages": reduce_single_child,
@@ -258,7 +258,7 @@ LaTeX_AST_transformation_table = {
     "multicolumn": [remove_tokens('{', '}')],
     "hline": [remove_whitespace, reduce_single_child],
     "sequence": [flatten],
-    "paragraph": [flatten],
+    "paragraph": [flatten, strip(is_one_of({'S'}))],
     "text_element": replace_by_single_child,
     "line_element": replace_by_single_child,
     "inline_environment": replace_by_single_child,
@@ -276,7 +276,7 @@ LaTeX_AST_transformation_table = {
     "includegraphics": [],
     "caption": [],
     "config": [remove_brackets, reduce_single_child],
-    "block": [remove_brackets, flatten, replace_by_single_child],
+    "block": [remove_brackets, flatten],
     "text": collapse,
     "no_command, blockcmd": [],
     "structural": [],
@@ -287,13 +287,11 @@ LaTeX_AST_transformation_table = {
     "BRACKETS": [],
     "TEXTCHUNK": [],
     "LF": [],
-    "PARSEP": replace_content(lambda node: '\n\n'),
     "GAP": [],
     "LB": [],
     "BACKSLASH": [],
     "EOF": [],
-    # "PARSEP": [replace_content_by('\n\n')],
-    # "WSPC": [replace_content_by(' ')],
+    "PARSEP": [replace_content_by('\n\n')],
     ":Whitespace, WSPC, S": streamline_whitespace,
     "*": replace_by_single_child
 }
@@ -337,6 +335,13 @@ class LaTeXCompiler(Compiler):
     def __init__(self):
         super(LaTeXCompiler, self).__init__()
         self.metadata = defaultdict(empty_defaultdict)
+
+    def __call__(self, root):
+        result = super().__call__(root)
+        self.tree.inline_tags = {}
+        self.tree.empty_tags = {}
+        self.tree.omit_tags = {'S'}
+        return result
 
     # def on_latexdoc(self, node):
     #     self.compile(node['preamble'])
@@ -519,14 +524,14 @@ class LaTeXCompiler(Compiler):
         if 'config' in node:
             for it in {part.strip() for part in node['config'].content.split(',')}:
                 if it in self.KNOWN_LANGUAGES:
-                    if 'language' in node.attr:
+                    if 'language' in self.metadata:
                         self.metadata['language'] = it
                     else:
                         self.tree.new_error(node, 'Only one document language supported. '
                                             'Using %s, ignoring %s.'
                                             % (self.metadata['language'], it), Error.WARNING)
-        if node['text'] in self.KNOWN_DOCUMENT_CLASSES:
-            self.metadata['documentclass'] = node['text']
+        if node['block'].content in self.KNOWN_DOCUMENT_CLASSES:
+            self.metadata['documentclass'] = node['block'].content
         return node
 
     def on_pdfinfo(self, node):
@@ -677,6 +682,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.customized_XML() if isinstance(result, Node) else result)
     else:
         print("Usage: LaTeXCompiler.py [FILENAME]")

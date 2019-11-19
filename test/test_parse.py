@@ -389,7 +389,7 @@ class TestGrammar:
         assert not st.errors
 
     def test_synonym(self):
-        lang = """
+        lang = r"""
             doc  = { word | number }
             word = /\w+/ S
             number = [VZ] /\d+/ S 
