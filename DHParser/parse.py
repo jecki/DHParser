@@ -124,7 +124,10 @@ ResumeList = List[RxPatternType]  # list of regular expressiones
 
 
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
-def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
+def reentry_point(rest: StringView,
+                  rules: ResumeList,
+                  comment_regex,
+                  search_window_size: int = -1) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
@@ -138,6 +141,8 @@ def reentry_point(rest: StringView, rules: ResumeList, comment_regex) -> int:
             each of these. The closest match is the point where parsing will be
             resumed.
         comment_regex: A regular expression object that matches comments.
+        search_window: The maximum size of the search window for finding the
+            reentry-point. A value smaller or equal zero means that
     Returns:
         The integer index of the closest reentry point or -1 if no reentry-point
         was found.
