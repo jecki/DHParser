@@ -531,6 +531,22 @@ class TestSegementExtraction:
         assert segment.equals(parse_sxpr('(left (B "b") (C "c"))'))
 
 
+class TestPositionAssignment:
+    def test_position_assignment(self):
+        tree = parse_sxpr('(A (B (C "D") (E "FF")) (G "HHH"))')
+        # assignment of position values
+        tree.with_pos(0)
+        assert (tree.pos, tree['B'].pos, tree['B']['C'].pos,
+                tree['B']['E'].pos, tree['G'].pos) == (0, 0, 0, 1, 3)
+        # assignment of unassigned position values
+        tree['G'].result = parse_sxpr('(_ (N "OOOO") (P "Q"))').children
+        assert (tree['G']['N'].pos, tree['G']['P'].pos) == (3, 7)
+        # no reassignment of position values
+        # (because pos-values should always reflect source position)
+        tree['G'].result = parse_sxpr('(_ (N "OOOO") (P "Q"))').with_pos(1).children
+        assert (tree['G']['N'].pos, tree['G']['P'].pos) == (1, 5)
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

@@ -336,6 +336,13 @@ class LaTeXCompiler(Compiler):
         super(LaTeXCompiler, self).__init__()
         self.metadata = defaultdict(empty_defaultdict)
 
+    def __call__(self, root):
+        result = super().__call__(root)
+        self.tree.inline_tags = {}
+        self.tree.empty_tags = {}
+        self.tree.omit_tags = {'S'}
+        return result
+
     # def on_latexdoc(self, node):
     #     self.compile(node['preamble'])
     #     self.compile(node['document'])
@@ -517,7 +524,7 @@ class LaTeXCompiler(Compiler):
         if 'config' in node:
             for it in {part.strip() for part in node['config'].content.split(',')}:
                 if it in self.KNOWN_LANGUAGES:
-                    if 'language' in node.attr:
+                    if 'language' in self.metadata:
                         self.metadata['language'] = it
                     else:
                         self.tree.new_error(node, 'Only one document language supported. '
@@ -675,6 +682,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.customized_XML() if isinstance(result, Node) else result)
     else:
         print("Usage: LaTeXCompiler.py [FILENAME]")

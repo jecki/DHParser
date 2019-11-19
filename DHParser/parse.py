@@ -350,7 +350,7 @@ class Parser:
                 error_node_id = 0
 
         grammar = self._grammar
-        location = grammar.document_length__ - len(text)
+        location = grammar.document_length__ - text.__len__()  # faster then len(text)?
 
         try:
             # rollback variable changing operation if parser backtracks
@@ -1245,7 +1245,7 @@ class Grammar:
             #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
-            else (len(self.document__) + 1)
+            else (self.document__.__len__() + 1)
 
 
     def line_col__(self, text):
@@ -1709,15 +1709,17 @@ class ZeroOrMore(Option):
     @cython.locals(n=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
-        n = len(text) + 1  # type: int
-        while len(text) < n:  # text and len(text) < n:
-            n = len(text)
+        len = text.__len__()
+        n = len + 1  # type: int
+        while len < n:  # text and len(text) < n:
+            n = len
             node, text = self.parser(text)
+            len = text.__len__()
             if not node:
                 break
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
-            if len(text) == n:
+            if len == n:
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         return nd, text
@@ -1759,16 +1761,18 @@ class OneOrMore(UnaryParser):
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         match_flag = False
-        n = len(text) + 1  # type: int
-        while len(text_) < n:  # text_ and len(text_) < n:
-            n = len(text_)
+        len = text.__len__()
+        n = len + 1  # type: int
+        while len < n:  # text_ and len(text_) < n:
+            n = len
             node, text_ = self.parser(text_)
+            len = text_.__len__()
             if not node:
                 break
             match_flag = True
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
-            if len(text_) == n:
+            if len == n:
                 break  # avoid infinite loop
         if not match_flag:
             return None, text
@@ -2322,9 +2326,9 @@ class Lookbehind(FlowParser):
         super(Lookbehind, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        backwards_text = self.grammar.reversed__[len(text):]
+        backwards_text = self.grammar.reversed__[text.__len__():]
         if self.regexp is None:  # assert self.text is not None
-            does_match = backwards_text[:len(self.text)] == self.text
+            does_match = backwards_text[:text.__len__()] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
         if self.sign(does_match):
@@ -2377,7 +2381,7 @@ class Capture(UnaryParser):
             assert not self.parser.drop_content, \
                 "Cannot capture content of returned by parser, the content of which will be dropped!"
             self.grammar.variables__[self.pname].append(node.content)
-            location = self.grammar.document_length__ - len(text)
+            location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
@@ -2459,7 +2463,7 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.pname]
             value = self.filter(stack)
         except (KeyError, IndexError):
-            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - len(text))
+            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text
@@ -2502,7 +2506,7 @@ class Pop(Retrieve):
         node, txt = self.retrieve_and_match(text)
         if node and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol.pname].pop())
-            location = self.grammar.document_length__ - len(text)
+            location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 

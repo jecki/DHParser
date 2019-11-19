@@ -554,7 +554,7 @@ def _replace_by(node: Node, child: Node):
         # name, ptype = (node.tag_name.split(':') + [''])[:2]
         # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
-    node.result = child.result
+    node._set_result(child.result)
     update_attr(node, (child,))
 
 
@@ -562,7 +562,7 @@ def _reduce_child(node: Node, child: Node):
     """
     Sets node's results to the child's result, keeping node's tag_name.
     """
-    node.result = child.result
+    node._set_result(child.result)
     update_attr(child, (node,))
     if child.has_attr():
         node._xml_attr = child._xml_attr
@@ -610,7 +610,7 @@ def replace_by_children(context: List[Node]):
     assert node.children
     result = parent.result
     i = result.index(node)
-    parent.result = result[:i] + node.children + result[i + 1:]
+    parent._set_result(result[:i] + node.children + result[i + 1:])
 
 
 def reduce_single_child(context: List[Node]):
@@ -692,7 +692,7 @@ def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: 
             else:
                 new_result.append(child)
         context.pop()
-        node.result = tuple(new_result)
+        node._set_result(tuple(new_result))
 
 
 def collapse(context: List[Node]):
@@ -834,7 +834,7 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
             else:
                 new_result.append(children[i])
                 i += 1
-        node.result = tuple(new_result)
+        node._set_result(tuple(new_result))
 
 
 def merge_results(dest: Node, src: Tuple[Node, ...]) -> bool:
@@ -892,7 +892,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     children = children[a:b]
 
     if before or after:
-        node.result = children
+        node._set_result(children)
         for i, child in enumerate(parent.children):
             if id(child) == id(node):
                 break
@@ -923,7 +923,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
                     after = (target,)
             after = after or nextN
 
-        parent.result = parent.children[:a + 1] + before + (node,) + after + parent.children[b:]
+        parent._set_result(parent.children[:a + 1] + before + (node,) + after + parent.children[b:])
 
 
 def left_associative(context: List[Node]):
@@ -996,7 +996,7 @@ def lstrip(context: List[Node], condition: Callable = contains_only_whitespace):
         while i < L and condition(context + [node.children[i]]):
             i += 1
         if i > 0:
-            node.result = node.children[i:]
+            node._set_result(node.children[i:])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1011,7 +1011,7 @@ def rstrip(context: List[Node], condition: Callable = contains_only_whitespace):
         while i > 0 and condition(context + [node.children[i - 1]]):
             i -= 1
         if i < L:
-            node.result = node.children[:i]
+            node._set_result(node.children[:i])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1026,7 +1026,7 @@ def keep_children(context: List[Node], section: slice = slice(None)):
     """Keeps only child-nodes which fall into a slice of the result field."""
     node = context[-1]
     if node.children:
-        node.result = node.children[section]
+        node._set_result(node.children[section])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1034,7 +1034,7 @@ def keep_children_if(context: List[Node], condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
-        node.result = tuple(c for c in node.children if condition(context + [c]))
+        node._set_result(tuple(c for c in node.children if condition(context + [c])))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1062,7 +1062,7 @@ def remove_children_if(context: List[Node], condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
-        node.result = tuple(c for c in node.children if not condition(context + [c]))
+        node._set_result(tuple(c for c in node.children if not condition(context + [c])))
     pass
 
 
@@ -1116,7 +1116,7 @@ def remove_brackets(context: List[Node]):
                     or (children[k - 1].tag_name == ':Series'
                         and all(c.tag_name in disposables for c in children[k - 1].children)))):
             k -= 1
-        context[-1].result = children[i:k]
+        context[-1]._set_result(children[i:k])
 
 
 @transformation_factory(collections.abc.Set)
@@ -1148,7 +1148,7 @@ def remove_if(context: List[Node], condition: Callable):
         except IndexError:
             return
         node = context[-1]
-        parent.result = tuple(nd for nd in parent.result if nd != node)
+        parent._set_result(tuple(nd for nd in parent.result if nd != node))
 
 
 ########################################################################

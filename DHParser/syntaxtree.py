@@ -271,7 +271,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
             self.children = NO_CHILDREN  # type: ChildrenType
         else:
-            self.__set_result(result)
+            self._set_result(result)
         self.tag_name = tag_name        # type: str
 
     def __deepcopy__(self, memo):
@@ -305,7 +305,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return "Node(%s, %s)" % (self.tag_name, rarg)
 
     def __len__(self):
-        return (sum(len(child) for child in self.children)
+        return (sum(child.__len__() for child in self.children)
                 if self.children else len(self._result))
 
     def __bool__(self):
@@ -374,7 +374,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return self._result
 
-    def __set_result(self, result: ResultType):
+    def _set_result(self, result: ResultType):
+        """
+        Sets the result of a node without assigning the position.
+        An assignment to the `result`-property is to be preferred,
+        and `_set_result()` should only be used for optimization
+        when it is really necessary!
+        :param result:  the new result of the note
+        """
         if isinstance(result, Node):
             self.children = (result,)
             self._result = self.children
@@ -386,16 +393,28 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = NO_CHILDREN
                 self._result = result  # cast(StrictResultType, result)
 
+    def _init_child_pos(self):
+        """Initialize position values of children with potentially
+        unassigned positions, i.e. child.pos < 0."""
+        children = self.children
+        if children:
+            offset = self._pos
+            prev = children[0]
+            if prev._pos < 0:
+                prev.with_pos(offset)
+            for child in children[1:]:
+                if child._pos < 0:
+                    offset = offset + prev.__len__()
+                    child.with_pos(offset)
+                else:
+                    offset = child._pos
+
     @result.setter
     def result(self, result: ResultType):
-        self.__set_result(result)
+        self._set_result(result)
         # fix position values for children that are added after the parsing process
-        if self._pos >= 0 and self.children:
-            p = self._pos
-            for child in self.children:
-                if child._pos < 0:
-                    child.with_pos(p)
-                p = child._pos + len(child)
+        if self._pos >= 0:
+            self._init_child_pos()
 
     def _content(self) -> List[str]:
         """
@@ -457,11 +476,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._pos < 0:
             self._pos = pos
             # recursively adjust pos-values of all children
-            offset = self.pos
-            for child in self.children:
-                if child._pos < 0:
-                    child.with_pos(offset)
-                offset = child.pos + len(child)
+            self._init_child_pos()
         return self
 
     # (XML-)attributes ###
