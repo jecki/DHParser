@@ -284,8 +284,10 @@ class StringView:  # collections.abc.Sized
         match.end(), match.span() etc. are mapped to the underlying text,
         not the StringView-object!!!
         """
-        start = self._begin if start is None else self._begin + start
-        end = self._end if end is None else self._begin + end
+        start = self._begin if start is None \
+            else max(self._begin, min(self._begin + start, self._end))
+        end = self._end if end is None \
+            else max(self._begin, min(self._begin + end, self._end))
         return regex.search(self._text, start, end)
 
     def finditer(self, regex):
