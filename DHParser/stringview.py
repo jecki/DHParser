@@ -43,7 +43,7 @@ except ImportError:
     import DHParser.shadow_cython as cython
 
 
-__all__ = ('StringView', 'EMPTY_STRING_VIEW', 'cython_optimized')
+__all__ = ('StringView', 'EMPTY_STRING_VIEW')
 
 
 def first_char(text, begin: int, end: int, chars) -> int:
@@ -200,10 +200,11 @@ class StringView:  # collections.abc.Sized
             else:
                 return self._fullstring.find(sub, start, end)
         elif start is None and end is None:
-            return self._text.find(sub, self._begin, self._end) - self._begin
+            return max(self._text.find(sub, self._begin, self._end) - self._begin, -1)
         else:
             _start, _end = real_indices(start, end, self._len)
-            return self._text.find(sub, self._begin + _start, self._begin + _end) - self._begin
+            return max(self._text.find(sub, self._begin + _start, self._begin + _end)
+                       - self._begin, -1)
 
     @cython.locals(_start=cython.int, _end=cython.int)
     def rfind(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
@@ -218,10 +219,11 @@ class StringView:  # collections.abc.Sized
             else:
                 return self._fullstring.rfind(sub, start, end)
         if start is None and end is None:
-            return self._text.rfind(sub, self._begin, self._end) - self._begin
+            return max(self._text.rfind(sub, self._begin, self._end) - self._begin, -1)
         else:
             _start, _end = real_indices(start, end, self._len)
-            return self._text.rfind(sub, self._begin + _start, self._begin + _end) - self._begin
+            return max(self._text.rfind(sub, self._begin + _start, self._begin + _end)
+                       - self._begin, -1)
 
     def startswith(self,
                    prefix: str,
@@ -276,13 +278,17 @@ class StringView:  # collections.abc.Sized
         """
         return tuple(index - self._begin for index in absolute_indices)
 
-    def search(self, regex):
+    def search(self, regex, start: Optional[int] = None, end: Optional[int] = None):
         """Executes regex.search on the StringView object and returns the
         result, which is either a match-object or None. Keep in mind that
         match.end(), match.span() etc. are mapped to the underlying text,
         not the StringView-object!!!
         """
-        return regex.search(self._text, pos=self._begin, endpos=self._end)
+        start = self._begin if start is None \
+            else max(self._begin, min(self._begin + start, self._end))
+        end = self._end if end is None \
+            else max(self._begin, min(self._begin + end, self._end))
+        return regex.search(self._text, start, end)
 
     def finditer(self, regex):
         """Executes regex.finditer on the StringView object and returns the

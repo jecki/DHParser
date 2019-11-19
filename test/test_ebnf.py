@@ -391,7 +391,7 @@ class TestSynonymDetection:
         grammar = grammar_provider(ebnf)()
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['b'].pname == 'b', grammar['b'].pname
-        assert grammar('b').as_sxpr().count('b') == 2
+        assert grammar('b').as_sxpr() == '(a "b")'
 
 
 class TestFlowControlOperators:
@@ -594,9 +594,9 @@ class TestErrorCustomizationErrors:
 class TestCustomizedResumeParsing:
     def setup(self):
         lang = r"""
-            @ alpha_resume = 'BETA', GAMMA_STR
+            @ alpha_resume = "BETA", "GAMMA"
             @ beta_resume = GAMMA_RE
-            @ bac_resume = /GA\w+/
+            @ bac_resume = /(?=GA\w+)/
             document = alpha [beta] gamma "."
             alpha = "ALPHA" abc
                 abc = §"a" "b" "c"
@@ -606,8 +606,7 @@ class TestCustomizedResumeParsing:
               gamma = "GAMMA" §(cab | cba)
                 cab = "c" "a" §"b"
                 cba = "c" "b" §"a"
-            GAMMA_RE = /GA\w+/
-            GAMMA_STR = "GAMMA"
+            GAMMA_RE = /(?=GA\w+)/
             """
         self.gr = grammar_provider(lang)()
 
@@ -640,12 +639,39 @@ class TestCustomizedResumeParsing:
         # because of resuming, there should be only on error message
         assert len(cst.errors_sorted) == 1
 
+    def test_resume_with_customized_whitespace(self):
+        grammar_specification = r"""
+            @whitespace = /\s*/
+            @comment = /(?:\/\*(?:.|\n)*?\*\/)/  # c-style comments
+            document = ~ { word }
+            # @ word_resume = /(?:(?:\s\~)|(?:\~(?<=\s)))(?=.)|$/
+            # @word_resume = /(?=(.|\n))\~(?!\1)(?=.)|$/
+            @word_resume = /\~!(?=.)|$/
+            # @ word_resume = /\~(?=.)|$/
+            word     = !EOF §/\w+/ ~
+            EOF      = !/./
+        """
+        grammar = grammar_provider(grammar_specification)()
+        doc0 = """word no*word word"""
+        st = grammar(doc0)
+        assert st.children and st.children[-1].tag_name == 'word'
+        doc1 = """word no*word /* comment */ word"""
+        st = grammar(doc1)
+        assert st.children and st.children[-1].tag_name == 'word'
+        doc2 = """word no*word/* comment */word"""
+        st = grammar(doc2)
+        assert st.children and st.children[-1].tag_name == 'word'
+        doc3 = """word no*word/* comment1 */
+                  /* comment2 */word"""
+        st = grammar(doc3)
+        assert st.children and st.children[-1].tag_name == 'word'
+
 
 class TestInSeriesResume:
     def setup(self):
         lang = """
             document = series
-            @series_skip = /B/, /C/, /D/, /E/, /F/, /G/
+            @series_skip = /(?=[BCDEFG])/
             series = "A" §"B" "C" "D" "E" "F" "G"
             """
         self.gr = grammar_provider(lang)()
@@ -685,7 +711,7 @@ class TestAllOfResume:
         lang = """
             document = allof
             @ allof_error = '{} erwartet, {} gefunden :-('
-            @ allof_skip = /A/, /B/, /C/, /D/, /E/, /F/, /G/
+            @ allof_skip = "D", "E", "F", "G"
             allof = < "A" "B" § "C" "D" "E" "F" "G" >
         """
         self.gr = grammar_provider(lang)()
@@ -702,7 +728,7 @@ class TestAllOfResume:
     def test_allof_resume_later(self):
         lang = """
             document = flow "."
-            @ flow_resume = '.'
+            @ flow_resume = "."
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
             allof = < "A" "B" § "C" "D" "E" "F" "G" >
@@ -725,12 +751,12 @@ class TestAllOfResume:
     def test_complex_resume_task(self):
         lang = """
             document = flow { flow } "."
-            @ flow_resume = '.'
+            @ flow_resume = "."
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
-            @ allof_resume = 'E', 'A'
+            @ allof_resume = "E", "A"
             allof = < "A" "B" § "C" "D" "E" "F" "G" >
-            @ series_resume = 'E', 'A'
+            @ series_resume = "E", "A"
             series = "E" "X" §"Y" "Z"
         """
         gr = grammar_provider(lang)()

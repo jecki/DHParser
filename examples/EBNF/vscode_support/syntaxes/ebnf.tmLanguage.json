@@ -1,0 +1,89 @@
+{
+	"scopeName": "source.ebnf",
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "DHParser-EBNF",
+	"patterns": [
+		{ "include": "#directive" },
+		{ "include": "#string-double" },
+		{ "include": "#string-single"},
+		{ "include": "#regex" },
+		{ "include": "#comment" },
+		{ "include": "#section-marker" },
+		{ "include": "#paren-expression" },
+		{ "include": "#prefix-operator" },
+		{ "include": "#infix-operator" },
+		{ "include": "#whitespace-operator" }
+	],
+	"repository": {
+		"directive": {
+			"patterns": [{
+				"name": "constant",
+				"match": "^[\\t ]*@[\\t ]*(?:whitespace|comment|literalws|tokens|drop|\\w*?_(?:error|skip|resume))"
+			}]
+		},
+		"string-double": {
+			"name": "string.quoted",
+			"begin": "[\"']",
+			"end": "[\"']",
+			"patterns": [{
+					"name": "constant.character.escape",
+					"match": "\\\\."
+			}]
+		},
+		"regex": {
+			"name": "string.regexp",
+			"begin": "/",
+			"end": "/",
+			"patterns": [{
+					"name": "constant.character.escape",
+					"match": "\\\\."
+			}]
+		},
+		"comment": {
+			"name": "comment",
+			"patterns": [{
+				"name": "comment.line",
+				"match": "#(?!:).*$"
+			}]
+		},
+		"section-marker": {
+			"name": "section-marker",
+			"patterns": [{
+				"name": "comment.block.documentation",
+				"match": "#:.*$"
+			}]
+		},
+		"paren-expression": {
+			"name": "paren-expression",
+			"begin": "[\\(\\[\\{]",
+			"end": "[\\)\\]\\}]|\\}+",
+			"beginCaptures": {
+              "0": { "name": "punctuation.paren.open" }
+		    },
+            "endCaptures": {
+              "0": { "name": "punctuation.paren.close" }
+		    }
+		},
+		"prefix-operator": {
+			"name": "prefix-operator",
+			"patterns": [{
+				"name": "keyword.operator",
+				"match": "-!|-&|::|[§!&:]"
+			}]
+		},
+		"infix-operator": {
+			"name": "infix-operator",
+			"patterns": [{
+				"name": "keyword.control",
+				"match": "[|,]"
+			}]
+		},
+		"whitespace-operator": {
+			"name": "whitespace-operator",
+			"patterns": [{
+				"name": "keyword.other",
+				"match": "~"
+			}]
+		}
+	}
+}

@@ -10,7 +10,7 @@
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /(?:\/\/|#).*/  # comments range from a '#' odr '//' sign to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
-@ drop        = whitespace, token  # drop tokens and whitespace
+@ drop        = whitespace, token  # drop tokens and whitespace early
 
 
 #######################################################################
@@ -19,16 +19,16 @@
 #
 #######################################################################
 
-json       = ~ element EOF
-element    = value
-value      = object | array | string | number | bool | null
-object     = "{" [member { "," member }] "}"
-member     = string ":" element
-array      = "[" [value { "," value }] "]"
-string     = `"` CHARACTERS `"` ~
+json       = ~ _element _EOF
+_element   = object | array | string | number | bool | null
+object     = "{" member { "," §member } §"}"
+member     = string §":" _element
+array      = "[" [_element { "," _element }] "]"
+string     = `"` §_CHARACTERS `"` ~
 number     = INT FRAC EXP ~
 bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
 null       = "null"
+
 
 #######################################################################
 #
@@ -36,13 +36,16 @@ null       = "null"
 #
 #######################################################################
 
-CHARACTERS = { /[^"\\]+/ | ESCAPE }
-ESCAPE     = /\\[\/bnrt\\]/ | /\\u/ HEX HEX HEX HEX
-HEX        = /[0-9a-fA-F]/
+_CHARACTERS = { PLAIN | ESCAPE }
+PLAIN       = /[^"\\]+/
+ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+UNICODE     = "\u" HEX HEX
+HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
-INT        = [`-`] /[0-9]/ | /[1-9][0-9]+/
-FRAC       = [ `.` /[0-9]+/ ]
-EXP        = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
+INT         = [NEG] /[0-9]/ | /[1-9][0-9]+/
+NEG         = `-`
+FRAC        = [ DOT /[0-9]+/ ]
+DOT         = `.`
+EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
 
-EOF      =  !/./        # no more characters ahead, end of file reached
-
+_EOF        =  !/./        # no more characters ahead, end of file reached

@@ -25,7 +25,7 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
+    grammar_tests_dir = os.path.join(scriptpath, 'test_grammar')
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
     if not dsl.recompile_grammar(grammar_src, force=force,
@@ -40,7 +40,7 @@ def recompile_grammar(grammar_src, force):
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
     DHParser.log.start_logging(LOGGING)
     error_report = testing.grammar_suite(
-        os.path.join(scriptpath, 'grammar_tests'),
+        os.path.join(scriptpath, 'test_grammar'),
         get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
@@ -49,7 +49,7 @@ def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
 if __name__ == '__main__':
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
-        LOGGING = True
+        LOGGING = 'LOGS'
         del argv[1]
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):

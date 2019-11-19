@@ -311,12 +311,12 @@ class TestLookahead:
     def test_unit_lookahead(self):
         gr = self.grammar_fac()
         # Case 1: Lookahead string is part of the test case; parser fails but for the lookahead
-        result = gr(self.cases['category']['match'][1], 'category', True)
+        result = gr(self.cases['category']['match'][1], 'category', track_history=True)
         assert any(e.code in (Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
                               Error.PARSER_LOOKAHEAD_MATCH_ONLY)
-                   for e in result.errors)
+                   for e in result.errors), str(result.errors)
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
-        result = gr(self.cases['category']['match'][2], 'category', True)
+        result = gr(self.cases['category']['match'][2], 'category', track_history=True)
         assert any(e.code == Error.MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
         errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac,
                               'REPORT_TestLookahead')

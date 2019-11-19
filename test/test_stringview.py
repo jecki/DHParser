@@ -106,10 +106,17 @@ class TestStringView:
         s = " 0123456789 "
         sv = StringView(s, 1, -1)
         assert sv.find('5') == 5
-        assert sv.find(' ') < 0
-        assert sv.find('0', 1)  < 0
-        assert sv.find('9', 0, 8) < 0
+        assert sv.find(' ') == -1
+        assert sv.find('0', 1) == -1
+        assert sv.find('9', 0, 8) == -1
         assert sv.find('45', 1, 8) == 4
+
+    def test_rfind(self):
+        s = " 123321 "
+        sv = StringView(s, 1, -1)
+        assert sv.rfind('3') == 3
+        assert sv.find('3') == 2
+        assert sv.rfind('a') == -1
 
     def test_startswith(self):
         s = " 0123456789 "

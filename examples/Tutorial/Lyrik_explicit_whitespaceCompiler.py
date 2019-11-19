@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 #######################################################################
 #
@@ -12,30 +12,32 @@ from functools import partial
 import os
 import sys
 
-dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if dhparser_path not in sys.path:
-    sys.path.append(dhparser_path)
+if r'/home/eckhart/Entwicklung/DHParser' not in sys.path:
+    sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, DropWhitespace, \
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, remove_first, remove_last, \
+    keep_children, is_one_of, not_one_of, has_content, apply_if,\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, THREAD_LOCALS
+    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
+    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode, \
+    RX_NEVER_MATCH
 
 
 #######################################################################
@@ -60,14 +62,17 @@ def get_preprocessor() -> PreprocessorFunc:
 class Lyrik_explicit_whitespaceGrammar(Grammar):
     r"""Parser for a Lyrik_explicit_whitespace source file.
     """
-    source_hash__ = "10fbc58b65d0fd5a178572b3776456f0"
+    source_hash__ = "082c362ff149f702e7b1b76032b5febb"
+    anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    dwsp__ = DropWhitespace(WSP_RE__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(RegExp(WSP_RE__))
     L = Series(RegExp('[ \\t]+'), dwsp__)
     ENDE = NegativeLookahead(RegExp('.'))
     JAHRESZAHL = RegExp('\\d\\d\\d\\d')
@@ -83,15 +88,15 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     titel = OneOrMore(Series(NZ, Option(L), zeile, OneOrMore(LEERZEILE)))
     serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
     ziel = Series(ZEICHENFOLGE, dwsp__)
-    verknüpfung = Series(Series(DropToken("<"), dwsp__), ziel, Series(DropToken(">"), dwsp__))
+    verknüpfung = Series(Series(Drop(Token("<")), dwsp__), ziel, Series(Drop(Token(">")), dwsp__))
     namenfolge = OneOrMore(Series(NAME, Option(L)))
     wortfolge = OneOrMore(Series(WORT, Option(L)))
     jahr = Series(JAHRESZAHL, dwsp__)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(DropToken("."), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Series(Drop(Token(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(DropToken(","), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(DropToken("."), dwsp__), mandatory=1)
+    bibliographisches = Series(autor, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(Drop(Token(".")), dwsp__), mandatory=1)
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
@@ -116,7 +121,7 @@ def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
 
 Lyrik_explicit_whitespace_AST_transformation_table = {
     # AST Transformations for the Lyrik_explicit_whitespace-grammar
-    "<": remove_empty,
+    "<": flatten,
     "gedicht": [],
     "bibliographisches": [],
     "autor": [],
@@ -142,19 +147,22 @@ Lyrik_explicit_whitespace_AST_transformation_table = {
     "JAHRESZAHL": [],
     "ENDE": [],
     "L": [],
-    ":Token": reduce_single_child,
     "*": replace_by_single_child
 }
 
 
-def Lyrik_explicit_whitespaceTransform() -> TransformationDict:
+def CreateLyrik_explicit_whitespaceTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
     return partial(traverse, processing_table=Lyrik_explicit_whitespace_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
         transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = Lyrik_explicit_whitespaceTransform()
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = CreateLyrik_explicit_whitespaceTransformer()
         transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
     return transformer
 
@@ -175,6 +183,7 @@ class Lyrik_explicit_whitespaceCompiler(Compiler):
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
+
     def on_gedicht(self, node):
         return self.fallback_compiler(node)
 
@@ -252,6 +261,8 @@ class Lyrik_explicit_whitespaceCompiler(Compiler):
 
 
 def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
+    """Returns a thread/process-exclusive Lyrik_explicit_whitespaceCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
     except AttributeError:
@@ -266,29 +277,34 @@ def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
 #
 #######################################################################
 
-
-def compile_src(source, log_dir=''):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    start_logging(log_dir)
-    compiler = get_compiler()
-    cname = compiler.__class__.__name__
-    result_tuple = compile_source(source, get_preprocessor(),
-                                  get_grammar(),
-                                  get_transformer(), compiler)
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
     return result_tuple
 
 
 if __name__ == "__main__":
     # recompile grammar if needed
     grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
     if os.path.exists(grammar_path):
-        if not recompile_grammar(grammar_path, force=False,
-                                  notify=lambda:print('recompiling ' + grammar_path)):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
     else:
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
@@ -298,7 +314,8 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, ast = compile_src(file_name, log_dir)
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name

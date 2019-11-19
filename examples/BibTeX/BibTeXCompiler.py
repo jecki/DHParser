@@ -30,7 +30,7 @@ from DHParser import is_filename, load_if_file, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     is_empty, collapse, replace_content, remove_nodes, remove_content, remove_brackets, change_tag_name, \
-    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last, \
+    keep_children, is_one_of, has_content, apply_if, \
     WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS
 from DHParser.transform import TransformationFunc
 from DHParser.log import start_logging
@@ -59,11 +59,12 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "61400955f6b57b8ec517dd11b6563d47"
+    source_hash__ = "197c4727de18b0cb980ff33a8e33f5ca"
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
     COMMENT__ = r'(?i)%[^\n]*\n'
+    comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)

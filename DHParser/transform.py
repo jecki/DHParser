@@ -35,7 +35,8 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
     Tuple, List, Sequence, Union, Text
 
 from DHParser.error import Error, ErrorCode
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, PLACEHOLDER, RootNode, parse_sxpr, flatten_sxpr
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
+    RootNode, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
 
 
@@ -72,7 +73,7 @@ __all__ = ('TransformationDict',
            'is_anonymous',
            'is_insignificant_whitespace',
            'contains_only_whitespace',
-           'is_any_kind_of_whitespace',
+           # 'is_any_kind_of_whitespace',
            'is_empty',
            'is_token',
            'is_one_of',
@@ -91,8 +92,8 @@ __all__ = ('TransformationDict',
            'remove_children_if',
            'remove_nodes',
            'remove_content',
-           'remove_first',
-           'remove_last',
+           # 'remove_first',
+           # 'remove_last',
            'remove_whitespace',
            'remove_empty',
            'remove_anonymous_empty',
@@ -392,7 +393,7 @@ def apply_unless(context: List[Node], transformation: Callable, condition: Calla
 
 
 def always(context: List[Node]) -> bool:
-    """Always returns True, no matter that the state of the context."""
+    """Always returns True, no matter what the state of the context is."""
     return True
 
 
@@ -403,12 +404,12 @@ def is_single_child(context: List[Node]) -> bool:
 
 def is_named(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
-    return not context[-1].is_anonymous()
+    return not context[-1].anonymous
 
 
 def is_anonymous(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is an anonymous parser."""
-    return context[-1].is_anonymous()
+    return context[-1].anonymous
 
 
 def is_insignificant_whitespace(context: List[Node]) -> bool:
@@ -428,24 +429,17 @@ def contains_only_whitespace(context: List[Node]) -> bool:
     return bool(RX_WHITESPACE.match(context[-1].content))
 
 
-def is_any_kind_of_whitespace(context: List[Node]) -> bool:
-    """Returns ``True`` for nodes that either contain only whitespace or
-    are insignificant whitespace nodes, i.e. nodes with the ``tag_name``
-    ``PTYPE_WHITESPACE``, including those that contain comment-text."""
-    node = context[-1]
-    return node.tag_name == WHITESPACE_PTYPE or RX_WHITESPACE.match(node.content)
+# def is_any_kind_of_whitespace(context: List[Node]) -> bool:
+#     """Returns ``True`` for nodes that either contain only whitespace or
+#     are insignificant whitespace nodes, i.e. nodes with the ``tag_name``
+#     ``PTYPE_WHITESPACE``, including those that contain comment-text."""
+#     node = context[-1]
+#     return node.tag_name == WHITESPACE_PTYPE or RX_WHITESPACE.match(node.content)
 
 
 def is_empty(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's content is empty."""
     return not context[-1].result
-
-
-# DEPRECATED, because name is too ambiguous
-# def is_expendable(context: List[Node]) -> bool:
-#     """Returns ``True`` if the current node either is a node containing
-#     whitespace or an empty node."""
-#     return is_empty(context) or is_insignificant_whitespace(context)
 
 
 @transformation_factory(collections.abc.Set)
@@ -502,21 +496,13 @@ def has_content(context: List[Node], regexp: str) -> bool:
 def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
-     in the context before the last node in the context.
-     """
+    in the context before the last node in the context.
+    """
     for i in range(2, len(context) + 1):
         if context[-i].tag_name in tag_name_set:
             return True
     return False
 
-
-# @transformation_factory(collections.abc.Set)
-# def has_descendant(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
-#     """
-#     Checks whether the last node in the context has a descendant with one
-#     of the given tag names.
-#     """
-#     raise NotImplementedError
 
 #######################################################################
 #
@@ -563,12 +549,12 @@ def _replace_by(node: Node, child: Node):
     """
     Replaces node's contents by child's content including the tag name.
     """
-    if node.is_anonymous() or not child.is_anonymous():
+    if node.anonymous or not child.anonymous:
         node.tag_name = child.tag_name
         # name, ptype = (node.tag_name.split(':') + [''])[:2]
         # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
-    node.result = child.result
+    node._set_result(child.result)
     update_attr(node, (child,))
 
 
@@ -576,7 +562,7 @@ def _reduce_child(node: Node, child: Node):
     """
     Sets node's results to the child's result, keeping node's tag_name.
     """
-    node.result = child.result
+    node._set_result(child.result)
     update_attr(child, (node,))
     if child.has_attr():
         node._xml_attr = child._xml_attr
@@ -593,40 +579,6 @@ def _reduce_child(node: Node, child: Node):
 #   themselves)
 #
 #######################################################################
-
-# DEPRECATED
-# def flatten_anonymous_nodes(context: List[Node]):
-#     """
-#     Flattens non-recursively all anonymous non-leaf children by adding
-#     their result to the result of the parent node. Empty anonymous children
-#     will be dropped altogether. If the parent node (i.e. `context[-1]) is
-#     anonymous itself and has only one child node, it will be replaced by
-#     its single child node.
-#     """
-#     node = context[-1]
-#     if node.children:
-#         new_result = []  # type: List[Node]
-#         for child in node.children:
-#             if child.is_anonymous():
-#                 if child.children:
-#                     new_result.extend(child.children)
-#                     update_attr(node, child)
-#                 elif child.result:
-#                     new_result.append(child)
-#             else:
-#                 new_result.append(child)
-#         if len(new_result) == 1:
-#             child = new_result[0]
-#             if node.is_anonymous():
-#                 node.tag_name = child.tag_name
-#                 node.result = child.result
-#                 update_attr(node, child)
-#                 return
-#             elif child.is_anonymous():
-#                 node.result = child.result
-#                 update_attr(node, child)
-#                 return
-#         node.result = tuple(new_result)
 
 
 def replace_by_single_child(context: List[Node]):
@@ -658,7 +610,7 @@ def replace_by_children(context: List[Node]):
     assert node.children
     result = parent.result
     i = result.index(node)
-    parent.result = result[:i] + node.children + result[i + 1:]
+    parent._set_result(result[:i] + node.children + result[i + 1:])
 
 
 def reduce_single_child(context: List[Node]):
@@ -740,7 +692,7 @@ def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: 
             else:
                 new_result.append(child)
         context.pop()
-        node.result = tuple(new_result)
+        node._set_result(tuple(new_result))
 
 
 def collapse(context: List[Node]):
@@ -785,11 +737,14 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     def close_package():
         nonlocal package
         if package:
+            tag_name = package[0].tag_name
+            if any(nd.tag_name != tag_name for nd in package):
+                tag_name = target_tag
             s = "".join(nd.content for nd in package)
             # pivot = package[0].tag_name
             # target_tag = pivot if all(nd.tag_name == pivot for nd in package) else target_tag
             # TODO: update attributes
-            result.append(Node(target_tag, s))
+            result.append(Node(tag_name, s))
             package = []
 
     for child in node.children:
@@ -879,7 +834,7 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
             else:
                 new_result.append(children[i])
                 i += 1
-        node.result = tuple(new_result)
+        node._set_result(tuple(new_result))
 
 
 def merge_results(dest: Node, src: Tuple[Node, ...]) -> bool:
@@ -937,7 +892,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     children = children[a:b]
 
     if before or after:
-        node.result = children
+        node._set_result(children)
         for i, child in enumerate(parent.children):
             if id(child) == id(node):
                 break
@@ -968,7 +923,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
                     after = (target,)
             after = after or nextN
 
-        parent.result = parent.children[:a + 1] + before + (node,) + after + parent.children[b:]
+        parent._set_result(parent.children[:a + 1] + before + (node,) + after + parent.children[b:])
 
 
 def left_associative(context: List[Node]):
@@ -1019,32 +974,6 @@ def lean_left(context: List[Node], operators: AbstractSet[str]):
         lean_left([right], operators)
 
 
-# @transformation_factory(collections.abc.Set)
-# def left_associative_tree(context: List[Node], operators: AbstracSet[str]):
-#     """
-#     Rearranges a right associative tree into a left associative tree.
-#     ``operators`` is a list of tag names of nodes that shall be rearranged.
-#     Other nodes will be lelft untouched.
-#     """
-#     node = context[-1]
-#     assert node.tag_name in operators
-#     right = node.children[1]
-#     while right.tag_name in operators:
-#         node.result = (node.children[0], right.children[0])
-#         right.result = (node, right.children[1])
-#         node = right
-#         right = node.children[1]
-#     parent = context[-2]
-#     result = list(parent.result)
-#     for i in range(len(result)):
-#         if result[i] == contexnt[-1]:
-#             result[i] = node
-#             parent.result = tuple(result)
-#             break
-#     else:
-#         assert False, "???"
-
-
 #######################################################################
 #
 # destructive transformations:
@@ -1067,7 +996,7 @@ def lstrip(context: List[Node], condition: Callable = contains_only_whitespace):
         while i < L and condition(context + [node.children[i]]):
             i += 1
         if i > 0:
-            node.result = node.children[i:]
+            node._set_result(node.children[i:])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1082,7 +1011,7 @@ def rstrip(context: List[Node], condition: Callable = contains_only_whitespace):
         while i > 0 and condition(context + [node.children[i - 1]]):
             i -= 1
         if i < L:
-            node.result = node.children[:i]
+            node._set_result(node.children[:i])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1097,7 +1026,7 @@ def keep_children(context: List[Node], section: slice = slice(None)):
     """Keeps only child-nodes which fall into a slice of the result field."""
     node = context[-1]
     if node.children:
-        node.result = node.children[section]
+        node._set_result(node.children[section])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1105,7 +1034,7 @@ def keep_children_if(context: List[Node], condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
-        node.result = tuple(c for c in node.children if condition(context + [c]))
+        node._set_result(tuple(c for c in node.children if condition(context + [c])))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1133,7 +1062,7 @@ def remove_children_if(context: List[Node], condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
-        node.result = tuple(c for c in node.children if not condition(context + [c]))
+        node._set_result(tuple(c for c in node.children if not condition(context + [c])))
     pass
 
 
@@ -1145,35 +1074,49 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 # remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
 
 
-def remove_first(context: List[Node]):
-    """Removes the first non-whitespace child."""
-    node = context[-1]
-    if node.children:
-        for i, child in enumerate(node.children):
-            if child.tag_name != WHITESPACE_PTYPE:
-                break
-        else:
-            return
-        node.result = node.children[:i] + node.children[i + 1:]
-
-
-def remove_last(context: List[Node]):
-    """Removes the last non-whitespace child."""
-    node = context[-1]
-    if node.children:
-        for i, child in enumerate(reversed(node.children)):
-            if child.tag_name != WHITESPACE_PTYPE:
-                break
-        else:
-            return
-        i = len(node.children) - i - 1
-        node.result = node.children[:i] + node.children[i + 1:]
+# def remove_first(context: List[Node]):
+#     """Removes the first non-whitespace child."""
+#     node = context[-1]
+#     if node.children:
+#         for i, child in enumerate(node.children):
+#             if child.tag_name != WHITESPACE_PTYPE:
+#                 break
+#         else:
+#             return
+#         node.result = node.children[:i] + node.children[i + 1:]
+#
+#
+# def remove_last(context: List[Node]):
+#     """Removes the last non-whitespace child."""
+#     node = context[-1]
+#     if node.children:
+#         for i, child in enumerate(reversed(node.children)):
+#             if child.tag_name != WHITESPACE_PTYPE:
+#                 break
+#         else:
+#             return
+#         i = len(node.children) - i - 1
+#         node.result = node.children[:i] + node.children[i + 1:]
 
 
 def remove_brackets(context: List[Node]):
-    """Removes the first and the last non-whitespace child."""
-    remove_first(context)
-    remove_last(context)
+    """Removes any leading or traling sequence of whitespaces, tokens or regexps."""
+    children = context[-1].children
+    if children:
+        disposables = LEAF_PTYPES
+        i = 0
+        while (i < len(children)
+               and (children[i].tag_name in disposables
+                    or (children[i].tag_name == ':Series'
+                        and all(c.tag_name in disposables for c in children[i].children)))):
+            i += 1
+        k = len(children)
+        while (k > 0
+               and (children[k - 1].tag_name in disposables
+                    or (children[k - 1].tag_name == ':Series'
+                        and all(c.tag_name in disposables for c in children[k - 1].children)))):
+            k -= 1
+        context[-1]._set_result(children[i:k])
 
 
 @transformation_factory(collections.abc.Set)
@@ -1205,7 +1148,7 @@ def remove_if(context: List[Node], condition: Callable):
         except IndexError:
             return
         node = context[-1]
-        parent.result = tuple(nd for nd in parent.result if nd != node)
+        parent._set_result(tuple(nd for nd in parent.result if nd != node))
 
 
 ########################################################################

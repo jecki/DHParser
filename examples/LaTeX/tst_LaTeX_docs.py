@@ -68,7 +68,8 @@ def tst_func():
     files.sort()
     for file in files:
         if fnmatch.fnmatch(file, '*.tex') and file.lower().find('error') < 0:
-            with open(os.path.join('testdata', file), 'r', encoding='utf-8') as f:
+            filepath = os.path.join('testdata', file)
+            with open(filepath, 'r', encoding='utf-8') as f:
                 doc = f.read()
 
             print('\n\nParsing document: "%s"' % file)
@@ -97,7 +98,8 @@ def tst_func():
 
             print('\nCompiling document: "%s"' % file)
             output = compiler(result)
-            # print(output)
+            with open(os.path.splitext(filepath)[0] + '.xml', 'w', encoding='utf-8') as f:
+                f.write(output.customized_XML())
 
 
 def cpu_profile(func):
@@ -122,5 +124,7 @@ def mem_profile(func):
 
 if __name__ == "__main__":
     cpu_profile(tst_func)
-
+    from DHParser import syntaxtree
+#    for k, v in syntaxtree.CALLERS.items():
+#        print(k, v)
 

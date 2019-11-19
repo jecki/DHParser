@@ -43,6 +43,7 @@ from DHParser.toolkit import re
 
 
 LOGGING = False
+TEST_DIRNAME = 'test_grammar'
 
 
 def read_template(template_name: str) -> str:
@@ -82,27 +83,35 @@ def create_project(path: str):
         sys.exit(1)
     print('Creating new DHParser-project "%s".' % name)
     if not os.path.exists(path):
-        os.mkdir(path)
+        try:
+            os.mkdir(path)
+        except FileNotFoundError as e:
+            print('Path "%s" does not exist. Cannot create directory "%s", there.'
+                  % os.path.split(path))
+            sys.exit(1)
     curr_dir = os.getcwd()
     os.chdir(path)
-    if os.path.exists('grammar_tests'):
-        if not os.path.isdir('grammar_tests'):
-            print('Cannot overwrite existing file "grammar_tests"')
+    if os.path.exists(TEST_DIRNAME):
+        if not os.path.isdir(TEST_DIRNAME):
+            print('Cannot overwrite existing file "%s"' % TEST_DIRNAME)
             sys.exit(1)
     else:
-        os.mkdir('grammar_tests')
+        os.mkdir(TEST_DIRNAME)
 
-    create_file(os.path.join('grammar_tests', '01_test_Regular_Expressions.ini'),
+    create_file(os.path.join(TEST_DIRNAME, '01_test_Regular_Expressions.ini'),
                 TEST_WORD_TEMPLATE)
-    create_file(os.path.join('grammar_tests', '02_test_Structure_and_Components.ini'),
+    create_file(os.path.join(TEST_DIRNAME, '02_test_Structure_and_Components.ini'),
                 TEST_DOCUMENT_TEMPLATE)
     create_file(name + '.ebnf', EBNF_TEMPLATE.replace('GRAMMAR_NAME', name, 1))
     create_file('README.md', README_TEMPLATE.format(name=name))
+    reldhparserdir = os.path.relpath(dhparserdir, os.path.abspath('.'))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
-        name=name, reldhparserdir=os.path.relpath(dhparserdir, os.path.abspath('.'))))
-    create_file('%sServer.py' %name, SERVER_TEMPLATE.replace('DSL', name))
+        name=name, reldhparserdir=reldhparserdir))
+    create_file('%sServer.py' % name, SERVER_TEMPLATE.replace('DSL', name).replace(
+        'RELDHPARSERDIR', reldhparserdir))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
+    os.chmod('%sServer.py' % name, 0o755)
     # The following is left to the user as an exercise
     # print('Creating file "%s".' % (name + 'Compiler.py'))
     # recompile_grammar(name + '.ebnf', force=True)

@@ -163,21 +163,22 @@ def log_dir(path: str="") -> Union[str, bool]:
     dirname = path if path else get_config_value('log_dir')
     if not dirname:
         return False
-    if os.path.exists(dirname) and not os.path.isdir(dirname):
-        raise IOError('"' + dirname + '" cannot be used as log directory, '
-                                      'because it is not a directory!')
-    else:
-        try:
-            os.mkdir(dirname)
-        except FileExistsError:
-            pass
-    info_file_name = os.path.join(dirname, 'info.txt')
-    if not os.path.exists(info_file_name):
-        with open(info_file_name, 'w', encoding="utf-8") as f:
-            f.write("This directory has been created by DHParser to store log files from\n"
-                    "parsing. ANY FILE IN THIS DIRECTORY CAN BE OVERWRITTEN! Therefore,\n"
-                    "do not place any files here and do not bother editing files in this\n"
-                    "directory as any changes will get lost.\n")
+    # `try ... except` rather `if os.path.exists(...)` to create directory
+    # to ensure thread-saftey.
+    try:
+        os.mkdir(dirname)
+        info_file_name = os.path.join(dirname, 'info.txt')
+        if not os.path.exists(info_file_name):
+            with open(info_file_name, 'w', encoding="utf-8") as f:
+                f.write("This directory has been created by DHParser to store log files from\n"
+                        "parsing. ANY FILE IN THIS DIRECTORY CAN BE OVERWRITTEN! Therefore,\n"
+                        "do not place any files here and do not bother editing files in this\n"
+                        "directory as any changes will get lost.\n")
+    except FileExistsError:
+        if not os.path.isdir(dirname):
+            raise IOError('"' + dirname + '" cannot be used as log directory, '
+                                          'because it is not a directory!')
+    set_config_value('log_dir', dirname)
     return dirname
 
 
@@ -202,11 +203,11 @@ def create_log(log_name: str) -> str:
         has not been created (e.g. because logging is still turned off and
         no log-directory set).
     """
-    ldir, log_name = os.path.split(log_name)
+    ldir, file_name = os.path.split(log_name)
     if not ldir:
         ldir = log_dir()
     if ldir:
-        with open(os.path.join(ldir, log_name), 'w', encoding='utf-8') as f:
+        with open(os.path.join(ldir, file_name), 'w', encoding='utf-8') as f:
             f.write('LOG-FILE: ' + log_name + '\n\n')
         return log_name
     return ''
@@ -215,7 +216,9 @@ def create_log(log_name: str) -> str:
 def append_log(log_name: str, *strings, echo: bool=False) -> None:
     """
     Appends one or more strings to the log-file with the name 'log_name', if
-    logging is turned on and the log_name is not the empty string.
+    logging is turned on and log_name is not the empty string,
+    or log_name contains path information.
+
     :param log_name: The name of the log file. The file must already exist.
         (See: ``create_log()`` above).
     :param *strings: One or more strings that will be written to the log-file.
@@ -225,7 +228,9 @@ def append_log(log_name: str, *strings, echo: bool=False) -> None:
     :param echo: If True, the log message will be echoed on the terminal. This
         will also happen if logging is turned off.
     """
-    ldir = log_dir()
+    ldir, file_name = os.path.split(log_name)
+    if not ldir:
+        ldir = log_dir()
     if ldir and log_name:
         log_path = os.path.join(ldir, log_name)
         assert os.path.exists(log_path)
@@ -307,7 +312,7 @@ class HistoryRecord:
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [(tn, pos) for tn, pos in call_stack if tn != ":Forward"]  # type: List[str]
+        self.call_stack = [(tn, pos) for tn, pos in call_stack if tn != ":Forward"]  # type: List[Tuple[str, int]]
         self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]

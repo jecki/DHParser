@@ -14,7 +14,7 @@ with open('README.md', encoding='utf-8') as f:
 setup(
     name='DHParser',
     version=__version__,
-    packages=['DHParser'],
+    packages=['DHParser', 'DHParser.scripts'],
     ext_modules=cythonize(['DHParser/stringview.py',
                            'DHParser/toolkit.py',
                            'DHParser/preprocess.py',
@@ -33,6 +33,7 @@ setup(
     author_email='arnold@badw.de',
     description='DHParser - Parser generator and DSL-construction-kit',
     long_description = read_me,
+    long_description_content_type="text/markdown",
     keywords='parser generator, domain specific languages, Digital Humanities, parser combinators, EBNF',
     classifiers = [
         'Development Status :: 4 - Beta',

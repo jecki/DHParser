@@ -27,23 +27,45 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.toolkit import compile_python_object
+from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError, MetaParser, GrammarError, EMPTY_NODE
+    UnknownParserError, MetaParser, EMPTY_NODE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
-from DHParser.dsl import grammar_provider, CompilationError
-from DHParser.syntaxtree import Node
+from DHParser.dsl import grammar_provider
+from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
 
+
+
+class TestWhitespace:
+    # TODO: add test cases here
+    def test_whitespace_comment_mangling(self):
+        pass
+
+    def test_non_empty_derivation(self):
+        pass
 
 class TestParserError:
     def test_parser_error_str(self):
         pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), None, True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
+
+    def test_false_lookahead_only_message(self):
+        """Error.PARSER_LOOKAHEAD_*_ONLY errors must not be reported if there
+        no lookahead parser in the history!"""
+        lang = """
+        word = letters { letters | `-` letters }
+        letters = /[A-Za-z]+/
+        """
+        gr = grammar_provider(lang)()
+        st = gr('hard-time', track_history=True)
+        assert not st.errors
+        st = gr('hard-', track_history=True)
+        assert st.errors and not any(e.code == 1045 for e in st.errors)
 
 
 class TestParserClass:
@@ -229,7 +251,7 @@ class TestRegex:
                   [+]    # followed by a plus sign
                   \w*    # possibly followed by more alpha chracters/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
@@ -245,7 +267,7 @@ class TestRegex:
                   [+]
                   \w* /
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
@@ -260,7 +282,7 @@ class TestRegex:
         @ ignorecase = True
         regex = /alpha/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -276,7 +298,7 @@ class TestRegex:
         @ ignorecase = False
         regex = /alpha/
         """
-        result, messages, syntax_tree = compile_source(mlregex, None, get_ebnf_grammar(),
+        result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
@@ -297,7 +319,7 @@ class TestRegex:
             test
             \end{document}
             """
-        result, messages, syntax_tree = compile_source(
+        result, messages, _ = compile_source(
             tokenlang, None, get_ebnf_grammar(), get_ebnf_transformer(),
             get_ebnf_compiler("TokenTest"))
         assert result
@@ -316,8 +338,8 @@ class TestGrammar:
         WORT         = /[^ \t]+/~
         LEERZEILE    = /\n[ \t]*(?=\n)/~
         """
-        self.pyparser, messages, syntax_tree = compile_source(grammar, None, get_ebnf_grammar(),
-                                                              get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
+        self.pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
+                                    get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
         assert self.pyparser
         assert not messages
 
@@ -355,6 +377,32 @@ class TestGrammar:
         CST = grammar('3+4')
         assert not CST.error_flag, CST.as_sxpr()
 
+    def test_incomplete_matching(self):
+        """Tests whether the flag `complete_match` works as expected when
+        calling a grammar object in order to parse a document."""
+        gr = grammar_provider('word = ~/\\w+/\n')()
+        st = gr('eins')
+        assert not st.errors
+        st = gr('eins zwei')
+        assert st.errors[0].code == Error.PARSER_STOPPED_BEFORE_END
+        st = gr('eins zwei', complete_match=False)
+        assert not st.errors
+
+    def test_synonym(self):
+        lang = r"""
+            doc  = { word | number }
+            word = /\w+/ S
+            number = [VZ] /\d+/ S 
+            S    = ~        # let S by a synonym for anonymous whitespace
+            VZ   = "-"
+        """
+        gr = grammar_provider(lang)()
+        st = gr('eins 1 zwei2drei 3')
+        # set_config_value('compiled_EBNF_log', 'grammar.log')
+        gr = grammar_provider("@drop = whitespace, token" + lang)()
+        st = gr('eins 1 zwei2drei 3')
+        st = gr('-3')
+
 
 class TestSeries:
     def test_non_mandatory(self):
@@ -363,11 +411,11 @@ class TestSeries:
         series = "A" "B" "C" "D"
         """
         parser = grammar_provider(lang)()
-        st = parser("ABCD");
+        st = parser("ABCD")
         assert not st.error_flag
-        st = parser("A_CD");
+        st = parser("A_CD")
         assert not st.error_flag
-        st = parser("AB_D");
+        st = parser("AB_D")
         assert not st.error_flag
 
     def test_mandatory(self):
@@ -466,6 +514,42 @@ class TestAllOfSomeOf:
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
         assert Grammar(prefixes)('A B B').error_flag
+
+
+class TestErrorRecovery:
+    def test_series_skip(self):
+        lang = """
+        document = series | /.*/
+        @series_skip = /(?=[A-Z])/
+        series = "A" "B" §"C" "D"
+        """
+        parser = grammar_provider(lang)()
+        st = parser('AB_D')
+        assert len(st.errors) == 1  # no additional "stopped before end"-error!
+
+    def test_AllOf_skip(self):
+        lang = """
+        document = allof | /.*/
+        @allof_skip = /[A-Z]/
+        allof = < "A" §"B" "C" "D" >
+        """
+        parser = grammar_provider(lang)()
+        st = parser('CADB')
+        assert 'allof' in st and st['allof'].content == "CADB"
+        st = parser('_BCD')
+        assert st.equals(parse_sxpr('(document "_BCD")'))
+        st = parser('_ABC')
+        assert st.equals(parse_sxpr('(document "_ABC")'))
+        st = parser('A_CD')
+        assert st['allof'].content == "A_CD"
+        st = parser('AB_D')
+        assert st['allof'].content == "AB_D"
+        st = parser('A__D')
+        assert st['allof'].content == "A__D"
+        st = parser('CA_D')
+        assert st['allof'].content == "CA_D"
+        st = parser('BC_A')
+        assert st['allof'].content == "BC_A"
 
 
 class TestPopRetrieve:
@@ -716,58 +800,57 @@ class TestReentryAfterError:
 
     def test_simple_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
     def test_failing_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['XXX']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=XXX)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
         assert cst.content == content
         # assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
 
     def test_severl_reentry_points(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
     def test_several_reentry_points_second_point_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
-        gr.resume_rules__['alpha'] = ['BETA', 'GAMMA']
-        gr.resume_rules__['beta'] = ['GAMMA']
-        gr.resume_rules__['bac'] = ['GAMMA']
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
+        gr.resume_rules__['beta'] = [re.compile(r'(?=GAMMA)')]
+        gr.resume_rules__['bac'] = [re.compile(r'(?=GAMMA)')]
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
         # multiple failures
         content = 'ALPHA acb BETA bad GAMMA cab .'
@@ -775,8 +858,54 @@ class TestReentryAfterError:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # there should be only two error messages
         assert len(cst.errors_sorted) == 2
+
+    def test_skip_comment_on_resume(self):
+        lang = r"""
+            @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
+            document = block_A block_B
+            @ block_A_resume = /(?=x)/
+            block_A = "a" §"b" "c"
+            block_B = "x" "y" "z"
+        """
+        def mini_suite(grammar):
+            tree = grammar('abc/*x*/xyz')
+            assert not tree.errors
+            tree = grammar('abDxyz')
+            mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
+            assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+            tree = grammar('abD/*x*/xyz')
+            assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+            tree = grammar('aD /*x*/ c /* a */ /*x*/xyz')
+            assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
+
+        # test regex-defined resume rule
+        grammar = grammar_provider(lang)()
+        mini_suite(grammar)
+
+
+    def test_unambiguous_error_location(self):
+        lang = r"""
+            @ drop        = whitespace, token  # drop tokens and whitespace early
+           
+            @object_resume = /(?<=\})/
+           
+            json       = ~ value EOF
+            value      = object | string 
+            object     = "{" [member { "," §member }] "}"
+            member     = string §":" value
+            string     = `"` CHARACTERS `"` ~
+
+            CHARACTERS = { /[^"\\]+/ }                  
+            EOF      =  !/./        # no more characters ahead, end of file reached
+            """
+        test_case = """{
+                "missing member": "abcdef",
+            }"""
+        gr = grammar_provider(lang)()
+        cst = gr(test_case)
+        assert any(err.code == Error.MANDATORY_CONTINUATION for err in cst.errors)
 
 
 class TestConfiguredErrorMessages:
@@ -784,7 +913,7 @@ class TestConfiguredErrorMessages:
         lang = """
             document = series | /.*/
             @series_error = "a badly configured error message {5}"
-            series = "X" | head §"C" "D"
+            series = /X/ | head §"C" "D"
             head = "A" "B"
             """
         parser = grammar_provider(lang)()
@@ -837,6 +966,7 @@ class TestMetaParser:
         self.mp = MetaParser()
         self.mp.grammar = Grammar()  # override placeholder warning
         self.mp.pname = "named"
+        self.mp.anonymous = False
         self.mp.tag_name = self.mp.pname
 
     def test_return_value(self):
@@ -863,6 +993,7 @@ class TestMetaParser:
         nd = self.mp._return_value(EMPTY_NODE)
         assert nd.tag_name == 'named' and not nd.children, nd.as_sxpr()
         self.mp.pname = ''
+        self.mp.anonymous = True
         self.mp.tag_name = ':unnamed'
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'tagged', nd.as_sxpr()

@@ -26,7 +26,7 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, 'grammar_tests')
+    grammar_tests_dir = os.path.join(scriptpath, 'test_grammar')
     create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
     name = os.path.splitext(os.path.basename(grammar_src))[0]
@@ -42,7 +42,7 @@ def recompile_grammar(grammar_src, force):
 def run_grammar_tests(glob_pattern):
     DHParser.log.start_logging(LOGGING)
     error_report = testing.grammar_suite(
-        os.path.join(scriptpath, 'grammar_tests'),
+        os.path.join(scriptpath, 'test_grammar'),
         get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report

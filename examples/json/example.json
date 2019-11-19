@@ -6,8 +6,9 @@
       "three": ["3"]
     },
   "array": ["one", 2, 3],
-  "string": "string example",
+  "string": " string example ",
   "true": true,
   "false": false,
   "null": null
 }
+

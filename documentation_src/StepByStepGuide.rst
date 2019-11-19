@@ -73,18 +73,20 @@ Starting a new DHParser project
 In order to setup a new DHParser project, you run the ``dhparser.py``-script
 with the name of the new project. For the sake of the example, let's type::
 
-    $ python dhparser.py experimental/poetry
+    $ python DHParser/scripts/dhparser.py experimental/poetry
     $ cd experimental/poetry
 
 This creates a new DHParser-project with the name "poetry" in directory with
 the same name within the subdirectory "experimental". This new directory
 contains the following files::
 
-    README.md           - a stub for a readme-file explaiing the project
+    README.md           - a stub for a readme-file explaining the project
     poetry.ebnf         - a trivial demo grammar for the new project
     example.dsl         - an example file written in this grammar
     tst_poetry_grammar.py - a python script ("test-script") that re-compiles
                             the grammar (if necessary) and runs the unit tests
+    poetryServer.py     - a script that starts the poetry parser as a server
+                          which can save startup time among other benefits
     grammar_tests/01_test_Regular_Expressions.ini      - a demo unit test
     grammar_tests/02_test_Structure_and_Components.ini - another unit test
 
@@ -109,20 +111,18 @@ any source file of your DSL, like "example.dsl". Let's try::
 The output is a block of pseudo-XML, looking like this::
 
     <document>
-     <:ZeroOrMore>
-       <WORD>
-         <:RegExp>Life</:RegExp>
-         <:Whitespace> </:Whitespace>
-       </WORD>
-       <WORD>
-         <:RegExp>is</:RegExp>
-         <:Whitespace> </:Whitespace>
-       </WORD>
+      <WORD>
+        <:RegExp>Life</:RegExp>
+        <:Whitespace> </:Whitespace>
+      </WORD>
+      <WORD>
+        <:RegExp>is</:RegExp>
+        <:Whitespace> </:Whitespace>
+      </WORD>
     ...
 
-Now, this does not look too helpful yet, partly, because it is cluttered with
-all sorts of seemingly superfluous pseudo-XML-tags like "<:ZeroOrMore>".
-However, you might notice that it contains the original sequence of words
+Now, this does not look too helpful yet. However, you might notice
+that it contains the original sequence of words
 "Life is but a walking shadow" in a structured form, where each word is
 (among other things) surrounded by <WORD>-tags. In fact, the output of the
 compiler script is a pseudo-XML-representation of the *concrete syntax tree*
@@ -227,7 +227,8 @@ with a text editor and add a full stop::
 Now, try to compile "examples.dsl" with the compile-script::
 
     $ python poetryCompiler.py example.dsl
-    example.dsl:1:29: Error: EOF expected; ".\n " found!
+    example.dsl:1:29: Error (1010): EOF expected; ".\n " found!
+    example.dsl:1:30: Error (1040): Parser stopped before end! trying to recover...
 
 Since the grammar, obviously, did not allow full stops so far, the parser
 returns an error message. The error message is pretty self-explanatory in this
@@ -248,6 +249,7 @@ as whitespace-handling or whether the parser is going to be case-sensitive.
 Now, there are exactly three rules that make up this grammar::
 
     document = ~ { WORD } §EOF
+
     WORD     =  /\w+/~
     EOF      =  !/./
 
@@ -612,17 +614,16 @@ that the output is rather verbose. Just looking at the beginning of the
 output, we find::
 
     <document>
-       <:ZeroOrMore>
-           <sentence>
-               <part>
-                   <WORD>
-                       <:RegExp>Life’s</:RegExp>
-                       <:Whitespace> </:Whitespace>
-                   </WORD>
-                   <WORD>
-                       <:RegExp>but</:RegExp>
-                       <:Whitespace> </:Whitespace>
-                   </WORD>
+       <sentence>
+           <part>
+               <WORD>
+                   <:RegExp>Life’s</:RegExp>
+                   <:Whitespace> </:Whitespace>
+               </WORD>
+               <WORD>
+                   <:RegExp>but</:RegExp>
+                   <:Whitespace> </:Whitespace>
+               </WORD>
     ...
 
 But why do we need to know all those details! Why would we need a
@@ -663,14 +664,13 @@ rich set of predefined operators. Should these not suffice, you
 can easily write your own. How does this look like? ::
 
     poetry_AST_transformation_table = {
-       "<": remove_empty,
-       "document": [],
-       "sentence": [],
-       "part": [],
-       "WORD": [],
-       "EOF": [],
-       ":Token": reduce_single_child,
-       "*": replace_by_single_child
+    "<": flatten,
+    "document": [],
+    "sentence": [],
+    "part": [],
+    "WORD": [],
+    "EOF": [],
+    "*": replace_by_single_child
     }
 
 You'll find this table in the script ``poetryCompiler.py``, which is also the
@@ -745,22 +745,19 @@ in the compiler-script should be changed as follows::
 Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
 
     <document>
-     <:ZeroOrMore>
-       <sentence>
-         <part>
-           <WORD>Life’s</WORD>
-           <WORD>but</WORD>
-           <WORD>a</WORD>
-           <WORD>walking</WORD>
-           <WORD>shadow</WORD>
-         </part>
-         <:Series>
-           <:Token>
-             <:PlainText>,</:PlainText>
-             <:Whitespace> </:Whitespace>
-           </:Token>
-           <part>
-             <WORD>a</WORD>
+      <sentence>
+        <part>
+          <WORD>Life’s</WORD>
+          <WORD>but</WORD>
+          <WORD>a</WORD>
+          <WORD>walking</WORD>
+          <WORD>shadow</WORD>
+        </part>
+        <:Token>,</:Token>
+        <:Whitespace> </:Whitespace>
+        <part>
+          <WORD>a</WORD>
+
     ...
 
 It starts to become more readable and concise, but there are sill some oddities.

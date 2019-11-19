@@ -29,7 +29,12 @@ scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
+LOGGING_REQUEST = 'logging("")'
+
+DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
+
+DATA_RECEIVE_LIMIT = 262144
 
 config_filename_cache = ''
 
@@ -62,7 +67,7 @@ def retrieve_host_and_port():
     Retrieve host and port from temporary config file or return default values
     for host and port, in case the temporary config file does not exist.
     """
-    host = '127.0.0.1'  # default host
+    host = DEFAULT_HOST
     port = DEFAULT_PORT
     cfg_filename = get_config_filename()
     try:
@@ -79,15 +84,23 @@ def retrieve_host_and_port():
 
 
 def asyncio_run(coroutine):
-    """Backward compatible version of Pyhon 3.7's `asyncio.run()`"""
+    """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
         return asyncio.run(coroutine)
     else:
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         try:
             return loop.run_until_complete(coroutine)
         finally:
-            loop.close()
+            try:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+            finally:
+                asyncio.set_event_loop(None)
+                loop.close()
 
 
 def json_rpc(func, params={}, ID=None) -> str:
@@ -123,6 +136,7 @@ def lsp_rpc(f):
 
 class DSLLanguageServerProtocol:
     def __init__(self):
+        import json
         import multiprocessing
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()
@@ -161,13 +175,24 @@ class DSLLanguageServerProtocol:
         return None
 
 
-def run_server(host, port):
-    try:
-        from DSLCompiler import compile_src
-    except ModuleNotFoundError:
-        from tst_DSL_grammar import recompile_grammar
-        recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
-        from DSLCompiler import compile_src
+def run_server(host, port, log_path=None):
+    global scriptpath
+    grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, 'RELDHPARSERDIR'))
+    if scriptpath not in sys.path:
+        sys.path.append(scriptpath)
+    if dhparserdir not in sys.path:
+        sys.path.append(dhparserdir)
+    from DHParser.dsl import recompile_grammar
+    if not recompile_grammar(grammar_src, force=False,
+                             notify=lambda: print('recompiling ' + grammar_src)):
+        print('\nErrors while recompiling "%s":' % grammar_src +
+              '\n--------------------------------------\n\n')
+        with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
+            print(f.read())
+        sys.exit(1)
+    recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
+    from DSLCompiler import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:
@@ -184,22 +209,32 @@ def run_server(host, port):
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=set(lsp_table.keys() - non_blocking),
                         blocking=frozenset())
+    if log_path is not None:
+        DSL_server.echo_log = True
+        print(DSL_server.start_logging(log_path))
 
-    DSL_server.run_server(host, port)  # returns only after server has stopped
-
-    cfg_filename = get_config_filename()
     try:
-        os.remove(cfg_filename)
-        print('removing temporary config file: ' + cfg_filename)
-    except FileNotFoundError:
-        pass
+        DSL_server.run_server(host, port)  # returns only after server has stopped
+    except OSError as e:
+        print(e)
+        print('Could not start server. Shutting down!')
+        sys.exit(1)
+    finally:
+        cfg_filename = get_config_filename()
+        try:
+            os.remove(cfg_filename)
+            print('removing temporary config file: ' + cfg_filename)
+        except FileNotFoundError:
+            pass
 
 
 async def send_request(request, host, port):
     reader, writer = await asyncio.open_connection(host, port)
     writer.write(request.encode() if isinstance(request, str) else request)
-    data = await reader.read(500)
+    data = await reader.read(DATA_RECEIVE_LIMIT)
     writer.close()
+    if sys.version_info >= (3, 7):
+        await writer.wait_closed()
     return data.decode()
 
 
@@ -231,10 +266,12 @@ def start_server_daemon(host, port):
 
 def print_usage_and_exit():
     print('Usages:\n'
-          + '    python DSLServer.py --startserver [host] [port]\n'
+          + '    python DSLServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+          + '    python DSLServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
           + '    python DSLServer.py --stopserver\n'
           + '    python DSLServer.py --status\n'
-          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]')
+          + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
+          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
     sys.exit(1)
 
 
@@ -243,6 +280,31 @@ def assert_if(cond: bool, message: str):
         if message:
             print(message)
         print_usage_and_exit()
+
+
+def parse_logging_args(argv):
+    try:
+        i = argv.index('--logging')
+        echo = repr('ECHO_ON') if argv[1].lower() == '--startserver' else repr('ECHO_OFF')
+        del argv[i]
+        if i < len(argv):
+            arg = argv[i].upper()
+            if arg in ('OFF', 'STOP', 'NO', 'FALSE'):
+                log_path = repr(None)
+                echo = repr('ECHO_OFF')
+            elif arg in ('ON', 'START', 'YES', 'TRUE'):
+                log_path = repr('')
+            else:
+                log_path = repr(argv[i])
+            del argv[i]
+        else:
+            log_path = repr('')
+        args = log_path, echo
+        request = LOGGING_REQUEST.replace('""', ", ".join(args))
+        print('Logging to file %s with call %s' % (repr(log_path), request))
+        return log_path, request
+    except ValueError:
+        return None, ''
 
 
 if __name__ == "__main__":
@@ -284,37 +346,57 @@ if __name__ == "__main__":
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":
-        # from DHParser import configuration
-        # CFG = configuration.access_presets()
-        # CFG['log_dir'] = os.path.abspath('LOG')
-        # CFG['log_server'] = True
-        # CFG['echo_server_log'] = True
-        # configuration.finalize_presets()
+        log_path, _ = parse_logging_args(argv)
         if len(argv) == 2:
             argv.append(host)
         if len(argv) == 3:
             argv.append(str(port))
-        sys.exit(run_server(argv[2], int(argv[3])))
+        sys.exit(run_server(argv[2], int(argv[3]), log_path))
 
-    elif argv[1] in ("--stopserver", "--killserver"):
+    elif argv[1] == "--startdaemon":
+        log_path, log_request = parse_logging_args(argv)
+        if len(argv) == 2:
+            argv.append(host)
+        if len(argv) == 3:
+            argv.append(str(port))
+        start_server_daemon(host, port)
+        if log_request:
+            print(asyncio_run(send_request(log_request, host, port)))
+
+    elif argv[1] in ("--stopserver", "--killserver", "--stopdaemon", "--killdaemon"):
         try:
             result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
         except ConnectionRefusedError as e:
             print(e)
             sys.exit(1)
         print(result)
+
+    elif argv[1] == "--logging":
+        log_path, request = parse_logging_args(argv)
+        print(asyncio_run(send_request(request, host, port)))
+
     elif argv[1].startswith('-'):
         print_usage_and_exit()
+
     elif argv[1]:
         if not argv[1].endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
             argv[1] = os.path.abspath(argv[1])
             # print(argv[1])
+        # TODO: Check for changed grammar and stop server and recompile grammar if needed.
+        log_path, log_request = parse_logging_args(argv)
         try:
+            if log_request:
+                print(asyncio_run(send_request(log_request, host, port)))
             result = asyncio_run(send_request(argv[1], host, port))
         except ConnectionRefusedError:
             start_server_daemon(host, port)               # start server first
+            if log_request:
+                print(asyncio_run(send_request(log_request, host, port)))
             result = asyncio_run(send_request(argv[1], host, port))
-        print(result)
+        if len(result) >= DATA_RECEIVE_LIMIT:
+            print(result, '...')
+        else:
+            print(result)
     else:
         print_usage_and_exit()

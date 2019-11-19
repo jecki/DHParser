@@ -35,8 +35,9 @@ compiler object.
 """
 
 import copy
+import functools
 import os
-from typing import Any, Optional, Tuple, List, cast
+from typing import Any, Optional, Tuple, List, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
@@ -123,7 +124,6 @@ class Compiler:
 
     def reset(self):
         # self.source = ''
-        self.finlizers = []  # type: List[Callable, Tuple]
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
@@ -239,11 +239,15 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
         return name[:i] + '_out' if i >= 0 else name
 
 
+GrammarCallable = Union[Grammar, Callable[[str], Node], functools.partial]
+CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
+
+
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
-                   parser: Grammar,  # str -> Node (concrete syntax tree (CST))
+                   parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
-                   compiler: Compiler,  # Node (AST), Source -> Any
+                   compiler: CompilerCallable,  # Node (AST), Source -> Any
                    preserve_ast: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles a source in four stages:
@@ -313,7 +317,8 @@ def compile_source(source: str,
             except Exception as e:
                 syntax_tree.new_error(syntax_tree,
                                       "AST-Transformation failed due to earlier parser errors. "
-                                      "Crash Message: " + str(e), Error.AST_TRANSFORM_CRASH)
+                                      "Crash Message: %s: %s" % (e.__class__.__name__, str(e)),
+                                      Error.AST_TRANSFORM_CRASH)
         else:
             transformer(syntax_tree)
 
@@ -335,7 +340,8 @@ def compile_source(source: str,
                     node = compiler.context[-1] if compiler.context else syntax_tree
                     syntax_tree.new_error(
                         node, "Compilation failed, most likely, due to errors earlier "
-                        "in the processing pipeline. Crash Message: " + str(e),
+                              "in the processing pipeline. Crash Message: %s: %s"
+                              % (e.__class__.__name__, str(e)),
                         Error.COMPILER_CRASH)
             else:
                 # assume Python crashes are programming mistakes, so let
@@ -401,7 +407,8 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
                 node = tp.context[-1] if tp.context else tree
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline. Crash Message: " + str(e),
+                          "in the processing pipeline. Crash Message: %s: %s"
+                          % (e.__class__.__name__, str(e)),
                     Error.TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let
