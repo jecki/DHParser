@@ -35,7 +35,7 @@ def recompile_grammar(grammar_src, force):
 
 def run_grammar_tests(glob_pattern):
     error_report = testing.grammar_suite(
-        os.path.join(scriptpath, 'grammar_tests'),
+        os.path.join(scriptpath, 'test_grammar'),
         get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report

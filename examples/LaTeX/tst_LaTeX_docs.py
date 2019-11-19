@@ -99,7 +99,7 @@ def tst_func():
             print('\nCompiling document: "%s"' % file)
             output = compiler(result)
             with open(os.path.splitext(filepath)[0] + '.xml', 'w', encoding='utf-8') as f:
-                f.write(output.as_xml())
+                f.write(output.customized_XML())
 
 
 def cpu_profile(func):
@@ -124,5 +124,7 @@ def mem_profile(func):
 
 if __name__ == "__main__":
     cpu_profile(tst_func)
-
+    from DHParser import syntaxtree
+#    for k, v in syntaxtree.CALLERS.items():
+#        print(k, v)
 

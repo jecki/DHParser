@@ -3,8 +3,12 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
+# cpdef copy_parser_attrs(src, duplicate)
+
 cdef class Parser:
     cdef public str pname
+    cdef public bint anonymous
+    cdef public bint drop_content
     cdef public str tag_name
     cdef _grammar
     cdef object visited
@@ -13,19 +17,28 @@ cdef class Parser:
 
     cpdef _parse(self, text)
     cpdef reset(self)
+    # def __call__(self, text)
+    # def __add__(self, other)
+    # def __or__(self, other)
+    cpdef _parse(self, text)
     cpdef _apply(self, func, flip)
-    # cpdef push_rollback__(self, int location, func)
-    # cpdef rollback_to__(self, int location)
-    # cpdef line_col__(self, text)
+    cpdef apply(self, func)
+
+# cpdef mixin_comment(whitespace, str)
+
+# cpdef mixin_noempty(whitespace)
 
 cdef class Grammar:
     cdef dict __dict__
     cdef public set all_parsers__
+    cdef public object comment_rx__
     cdef public object start_parser__
     cdef bint _dirty_flag__
     cdef public bint history_tracking__
     cdef public bint memoization__
-    cdef public bint left_recursion_handling__
+    cdef public bint flatten_tree__
+    cdef public int left_recursion_depth__
+    cdef public int max_parser_dropouts__
 #    cdef public object root_parser__  # do not uncomment this!!!
     cdef public object tree__
     cdef public object document__
@@ -42,9 +55,6 @@ cdef class Grammar:
     cdef public int last_recursion_location__
 
 cdef class PreprocessorToken(Parser):
-    pass
-
-cdef class ZombieParser(Parser):
     pass
 
 cdef class Token(Parser):

@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     from BibTeXCompiler import get_grammar, get_transformer
 
-    error_report = testing.grammar_suite('grammar_tests', get_grammar,
+    error_report = testing.grammar_suite('test_grammar', get_grammar,
                                          get_transformer, report='REPORT', verbose=True)
     if error_report:
         print('\n')
