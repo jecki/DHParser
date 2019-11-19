@@ -1178,13 +1178,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             sxpr = self.as_sxpr(flatten_threshold=threshold)
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
-                sxpr = re.sub(r'\n\s*\)', r'', sxpr)
+                sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
                 # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
                 s = sxpr.split('\n')
                 for i in range(len(s)):
                     if '`' in s[i]:
                         s[i] = s[i].replace('))', ')')
-                    else:
+                    elif s[i][-1:] != '"':
                         s[i] = s[i].replace(')', '')
                 sxpr = '\n'.join(s)
                 sxpr = re.sub(r'^\(', r'', sxpr)
