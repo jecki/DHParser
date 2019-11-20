@@ -962,13 +962,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         res = self.content
         if not inline and not head:
             # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
-            res = res.strip()
+            res = res.strip()  # WARNING: This changes the data in subtle ways
         if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
             # except for XML, add a gap between opening statement and content
             gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
             return head.rstrip() + gap + data_fn(res) + tail.lstrip()
         else:
-            return head + '\n'.join([usetab + data_fn(s) for s in res.split('\n')]) + tail
+            lines = res.split('\n')
+            # WARNING: The following code changes the data in subtle ways
+            # if not inline and head:
+            #     if lines and not lines[-1]:
+            #         lines.pop()
+            return head + '\n'.join([usetab + data_fn(s) for s in lines]) + tail
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,

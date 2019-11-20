@@ -139,7 +139,7 @@ pdfinfo             = "\pdfinfo" block
 config     = "[" cfg_text §"]"
 cfg_text   = { (~ text) | CMDNAME | SPECIAL }
 block      = /{/ ~ { !blockcmd text_element [S] } §/}/
-text       = LINE { S LINE }  # TEXTCHUNK { S TEXTCHUNK }
+text       = TEXT { S TEXT }  # LETTERS { S LETTERS }
 
 no_command = "\begin{" | "\end" | BACKSLASH structural
 blockcmd   = BACKSLASH ( ( "begin{" | "end{" )
@@ -168,15 +168,16 @@ LINEFEED   = /[\\][\\]/
 NAME       = /\w+/~
 INTEGER    = /\d+/~
 
+TEXT       = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/
 LINE       = /[^\\%$&\{\}\[\]\n]+/          # a line of text
-TEXTCHUNK  = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
+LETTERS    = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 LF         = NEW_LINE { COMMENT__ WHITESPACE__ }   # linefeed but not an empty line
 LFF        = NEW_LINE [ _WSPC ]             # at least one linefeed
 S          = &/[% \t\n]/ WSP_RE__           # significant whitespace
 _PARSEP    = { WHITESPACE__ COMMENT__ } _GAP [_WSPC] # paragraph separator
 _WSPC      = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
-_GAP       = /[ \t]*(?:\n[ \t]*)+\n/~      # at least one empty line, i.e.
+_GAP       = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
 NEW_LINE   = /[ \t]*/ [COMMENT__] /\n/
 _LB        = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
