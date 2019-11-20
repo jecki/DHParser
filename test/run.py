@@ -28,6 +28,7 @@ def run_doctests(module):
 
 
 def run_unittests(command):
+    # print('>>>>>>>> ', command)
     args = command.split(' ')
     filename = args[1]
     print('\nUNITTEST ' + args[0] + ' ' + filename)
