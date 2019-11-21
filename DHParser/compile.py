@@ -248,7 +248,7 @@ def compile_source(source: str,
                    parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: CompilerCallable,  # Node (AST), Source -> Any
-                   preserve_ast: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
+                   preserve_AST: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles a source in four stages:
     1. Pre-Processing (if needed)
@@ -271,7 +271,7 @@ def compile_source(source: str,
             transforms it (in place) into an abstract syntax tree.
         compiler (function): A compiler function or compiler class
             instance
-        preserve_ast (bool): Preserves the AST-tree.
+        preserve_AST (bool): Preserves the AST-tree.
 
     Returns (tuple):
         The result of the compilation as a 3-tuple
@@ -326,7 +326,7 @@ def compile_source(source: str,
             log_ST(syntax_tree, log_file_name + '.ast')
 
         if not is_fatal(syntax_tree.error_flag):
-            if preserve_ast:
+            if preserve_AST:
                 ast = copy.deepcopy(syntax_tree)
 
             # Compilation

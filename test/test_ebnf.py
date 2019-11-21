@@ -590,6 +590,18 @@ class TestErrorCustomizationErrors:
         result, messages, ast = compile_ebnf(lang)
         assert messages[0].code == Error.REDEFINED_DIRECTIVE
 
+    def test_erreneous_skip_definitions(self):
+        lang = """
+            document = series selies
+            @selies_error = '', "Error in the series" 
+            series = "A" §"B" "C" "D" "E" "F" "G"
+            """
+        result, messages, ast = compile_ebnf(lang)
+        assert len(messages) == 2
+        lang = lang.replace('series selies', 'series')
+        result, messages, ast = compile_ebnf(lang)
+        assert len(messages) == 1
+
 
 class TestCustomizedResumeParsing:
     def setup(self):

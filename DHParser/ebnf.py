@@ -39,7 +39,7 @@ from DHParser.parse import Grammar, mixin_comment, mixin_noempty, Forward, RegEx
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
-    unrepr, compile_python_object, DHPARSER_PARENTDIR, NEVER_MATCH_PATTERN
+    unrepr, compile_python_object, DHPARSER_PARENTDIR, RX_NEVER_MATCH
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
@@ -972,7 +972,7 @@ class EBNFCompiler(Compiler):
 
         defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
         for symbol in self.symbols:
-            if symbol not in defined_symbols and symbol not in self.directives.error:
+            if symbol not in defined_symbols:
                 self.tree.new_error(self.symbols[symbol],
                                     "Missing definition for symbol '%s'" % symbol)
                 # root_node.error_flag = True
@@ -1121,17 +1121,20 @@ class EBNFCompiler(Compiler):
         elif key == 'anonymous':
             if node.children[1].tag_name == "regexp":
                 check_argnum()
-                re_pattern = node.children[1].content
+                re_pattern = node.children[1].content[1:-1]
                 if re.match(re_pattern, ''):
                     self.tree.new_error(
                         node, "The regular expression r'%s' matches any symbol, "
                         "which is not allowed!" % re_pattern)
                 else:
-                    self.anonymous_regexp = re.compile(node.children[1].content)
+                    self.anonymous_regexp = re.compile(re_pattern)
             else:
                 args = node.children[1:]
                 assert all(child.tag_name == "symbol" for child in args)
                 alist = [child.content for child in args]
+                for asym in alist:
+                    if asym not in self.symbols:
+                        self.symbols[asym] = node
                 self.anonymous_regexp = re.compile('$|'.join(alist) + '$')
 
         elif key == 'drop':
@@ -1144,10 +1147,14 @@ class EBNFCompiler(Compiler):
                 elif content.lower() in DROP_VALUES:
                     self.directives[key].add(content.lower())
                 else:
-                    self.tree.new_error(
-                        node, 'Illegal value "%s" for Directive "@ drop"! Should be one of %s '
-                        'or a string matching %s' % (content, str(DROP_VALUES),
-                                                     self.anonymous_regexp.pattern))
+                    if self.anonymous_regexp == RX_NEVER_MATCH:
+                        self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
+                                            ' Should be one of %s.' % (content, str(DROP_VALUES)))
+                    else:
+                        self.tree.new_error(
+                            node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
+                            '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
+                                                                self.anonymous_regexp.pattern))
 
         elif key == 'ignorecase':
             check_argnum()
@@ -1219,14 +1226,14 @@ class EBNFCompiler(Compiler):
             else:
                 self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
                                     (key, ', '.join(list(self.directives.keys()))))
-
-        try:
-            if symbol not in self.symbols:
-                # remember first use of symbol, so that dangling references or
-                # redundant definitions or usages of symbols can be detected later
-                self.symbols[symbol] = node
-        except NameError:
-            pass  # no symbol was referred to in directive
+        #
+        # try:
+        #     if symbol not in self.symbols:
+        #         # remember first use of symbol, so that dangling references or
+        #         # redundant definitions or usages of symbols can be detected later
+        #         self.symbols[symbol] = node
+        # except NameError:
+        #     pass  # no symbol was referred to in directive
 
         return ""
 
@@ -1492,7 +1499,7 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
 #
 ########################################################################
 
-def compile_ebnf(ebnf_source: str, branding: str = 'DSL') \
+def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool=False) \
         -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns
@@ -1504,5 +1511,6 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL') \
                           get_ebnf_preprocessor(),
                           get_ebnf_grammar(),
                           get_ebnf_transformer(),
-                          get_ebnf_compiler(branding, ebnf_source))
+                          get_ebnf_compiler(branding, ebnf_source),
+                          preserve_AST = preserve_AST)
 
