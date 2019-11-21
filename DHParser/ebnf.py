@@ -892,11 +892,20 @@ class EBNFCompiler(Compiler):
 
         for symbol in self.directives.error.keys():
             if symbol not in self.consumed_custom_errors:
-                def_node = self.rules[symbol][0]
-                self.tree.new_error(
-                    def_node, 'Customized error message for symbol "{}" will never be used, '
-                    'because the mandatory marker "§" appears nowhere in its definiendum!'
-                    .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                try:
+                    def_node = self.rules[symbol][0]
+                    self.tree.new_error(
+                        def_node, 'Customized error message for symbol "{}" will never be used, '
+                        'because the mandatory marker "§" appears nowhere in its definiendum!'
+                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                except KeyError:
+                    def match_function(nd: Node) -> bool:
+                        return nd.children and nd.children[0].content.startswith(symbol + '_')
+                    dir_node = self.tree.pick(match_function)
+                    directive = dir_node.children[0].content
+                    self.tree.new_error(
+                        dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
+                        .format(directive, directive.split('_')[0]))
 
         # prepare and add skip-rules
 
@@ -912,13 +921,16 @@ class EBNFCompiler(Compiler):
                 skip_rules.append(search)
             definitions.append((symbol + self.SKIP_RULES_SUFFIX, repr(skip_rules)))
 
-        for symbol in self.directives.error.keys():
+        for symbol in self.directives.skip.keys():
             if symbol not in self.consumed_skip_rules:
-                def_node = self.rules[symbol][0]
-                self.tree.new_error(
-                    def_node, '"Skip-rules" for symbol "{}" will never be used, '
-                    'because the mandatory marker "§" appears nowhere in its definiendum!'
-                    .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                try:
+                    def_node = self.rules[symbol][0]
+                    self.tree.new_error(
+                        def_node, '"Skip-rules" for symbol "{}" will never be used, '
+                        'because the mandatory marker "§" appears nowhere in its definiendum!'
+                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                except KeyError:
+                    pass  # error has already been notified earlier!
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -960,7 +972,7 @@ class EBNFCompiler(Compiler):
 
         defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
         for symbol in self.symbols:
-            if symbol not in defined_symbols:
+            if symbol not in defined_symbols and symbol not in self.directives.error:
                 self.tree.new_error(self.symbols[symbol],
                                     "Missing definition for symbol '%s'" % symbol)
                 # root_node.error_flag = True
