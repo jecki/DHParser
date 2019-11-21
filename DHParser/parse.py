@@ -355,7 +355,7 @@ class Parser:
                 error_node_id = 0
 
         grammar = self._grammar
-        location = grammar.document_length__ - text.__len__()  # faster then len(text)?
+        location = grammar.document_length__ - text._len  # faster then len(text)?
 
         try:
             # rollback variable changing operation if parser backtracks

@@ -909,8 +909,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # serialization ###########################################################
 
+    @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
-                   density=0, inline=False, inline_fn=lambda node: False) -> str:
+                   density=0, inline=False, inline_fn=lambda node: False,
+                   allow_ommissions=False) -> str:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -960,20 +962,26 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return head + usetab + (sep + usetab).join(content) + tail
 
         res = self.content
-        if not inline and not head:
+        if not inline and not head and allow_ommissions:
             # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
             res = res.strip()  # WARNING: This changes the data in subtle ways
-        if density & 1 and res.find('\n') < 0:  # and head[0] == "<":
+        if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
             gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
             return head.rstrip() + gap + data_fn(res) + tail.lstrip()
         else:
-            lines = res.split('\n')
-            # WARNING: The following code changes the data in subtle ways
-            # if not inline and head:
-            #     if lines and not lines[-1]:
-            #         lines.pop()
-            return head + '\n'.join([usetab + data_fn(s) for s in lines]) + tail
+            lines = [data_fn(s) for s in res.split('\n')]
+            N = len(lines)
+            i, k = 0, N - 1
+            if not inline and allow_ommissions:
+                # Strip preceding and succeding whitespace.
+                # WARNING: This changes the data in subtle ways
+                while i < N and not lines[i]:
+                    i += 1
+                while k >= 0 and not lines[k]:
+                    k -= 1
+            lines = [usetab + l for l in lines[i:k + 1]]
+            return head + '\n'.join(lines) + tail
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
@@ -1102,7 +1110,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         line_breaks = linebreaks(src) if src else []
         return self._tree_repr(' ' * indentation, opening, closing, sanitizer,
-                               density=1, inline_fn=inlining)
+                               density=1, inline_fn=inlining, allow_ommissions=bool(omit_tags))
 
     # JSON serialization ###
 
