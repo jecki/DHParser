@@ -139,7 +139,9 @@ pdfinfo             = "\pdfinfo" block
 config     = "[" cfg_text §"]"
 cfg_text   = { (~ text) | CMDNAME | SPECIAL }
 block      = /{/ ~ { !blockcmd text_element [S] } §/}/
-text       = TEXT { S TEXT }  # LETTERS { S LETTERS }
+# text       = LETTERS { S LETTERS }
+# text       = LINE { S LINE }
+text       = TEXT { S TEXT }
 
 no_command = "\begin{" | "\end" | BACKSLASH structural
 blockcmd   = BACKSLASH ( ( "begin{" | "end{" )

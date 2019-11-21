@@ -1304,8 +1304,9 @@ class EBNFCompiler(Compiler):
                                     'and not a %s.') % (prefix, arg.tag_name))
                 return arg.content
             elif self.anonymous_regexp.match(arg.content):
-                self.tree.new_error(node, ('Retrie does not work with anonymous parsers like %s')
-                                    % (prefix, arg.content))
+                self.tree.new_error(
+                    node, ('Retrive operator "%s" does not work with anonymous parsers like %s')
+                    % (prefix, arg.content))
                 return arg.content
             if arg.content in self.directives.filter:
                 custom_args = ['rfilter=%s' % self.directives.filter[arg.content]]

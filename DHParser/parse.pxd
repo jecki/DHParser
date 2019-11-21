@@ -17,7 +17,7 @@ cdef class Parser:
 
     cpdef _parse(self, text)
     cpdef reset(self)
-    # def __call__(self, text)
+    # def __call__(self, StringView text)
     # def __add__(self, other)
     # def __or__(self, other)
     cpdef _parse(self, text)
