@@ -61,8 +61,8 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "31de40dc10efd720f8578d0ab7073e63"
-    anonymous__ = re.compile('_WSPC$|_GAP$|_PARSEP$|_LB$|block_environment$|known_environment$|text_element$|inline_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
+    source_hash__ = "0bb1db2c52e06989cb6d1b87a5476d14"
+    anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|inline_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
@@ -81,10 +81,12 @@ class LaTeXGrammar(Grammar):
     _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
     _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
     _PARSEP = Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC))))
-    S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), wsp__)
+    S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), NegativeLookahead(_GAP), wsp__)
     LFF = Series(NEW_LINE, Option(_WSPC))
     LF = Series(NEW_LINE, ZeroOrMore(Series(comment__, whitespace__)))
-    TEXTCHUNK = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
+    LETTERS = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
+    LINE = RegExp('[^\\\\%$&\\{\\}\\[\\]\\n]+')
+    TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n]+(?:\\n(?![ \\t]*\\n))?)+')
     INTEGER = Series(RegExp('\\d+'), dwsp__)
     NAME = Capture(Series(RegExp('\\w+'), dwsp__))
     LINEFEED = RegExp('[\\\\][\\\\]')
@@ -96,7 +98,7 @@ class LaTeXGrammar(Grammar):
     structural = Alternative(Series(Drop(Token("subsection")), dwsp__), Series(Drop(Token("section")), dwsp__), Series(Drop(Token("chapter")), dwsp__), Series(Drop(Token("subsubsection")), dwsp__), Series(Drop(Token("paragraph")), dwsp__), Series(Drop(Token("subparagraph")), dwsp__), Series(Drop(Token("item")), dwsp__))
     blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Token("begin{")), dwsp__), Series(Drop(Token("end{")), dwsp__)), Alternative(Series(Drop(Token("enumerate")), dwsp__), Series(Drop(Token("itemize")), dwsp__), Series(Drop(Token("figure")), dwsp__), Series(Drop(Token("quote")), dwsp__), Series(Drop(Token("quotation")), dwsp__), Series(Drop(Token("tabular")), dwsp__)), Series(Drop(Token("}")), dwsp__)), structural, begin_generic_block, end_generic_block))
     no_command = Alternative(Series(Drop(Token("\\begin{")), dwsp__), Series(Drop(Token("\\end")), dwsp__), Series(BACKSLASH, structural))
-    text = Series(TEXTCHUNK, ZeroOrMore(Series(S, TEXTCHUNK)))
+    text = Series(TEXT, ZeroOrMore(Series(S, TEXT)))
     block = Series(Drop(RegExp('{')), dwsp__, ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))), Drop(RegExp('}')), mandatory=3)
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Token("[")), dwsp__), cfg_text, Series(Drop(Token("]")), dwsp__), mandatory=2)
@@ -338,9 +340,9 @@ class LaTeXCompiler(Compiler):
 
     def __call__(self, root):
         result = super().__call__(root)
-        self.tree.inline_tags = {}
+        self.tree.inline_tags = {}  # {'paragraph'}
         self.tree.empty_tags = {}
-        self.tree.omit_tags = {'S'}
+        self.tree.omit_tags = {'S', 'PARSEP'}
         return result
 
     # def on_latexdoc(self, node):

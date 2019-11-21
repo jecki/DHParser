@@ -79,8 +79,9 @@ def tst_func():
             #                                                 lambda n: not bool(n.result))))
             if DHParser.log.is_logging():
                 print('Saving CST')
-                with open('LOGS/' + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
-                    f.write(result.as_sxpr(compact=True))
+                logs = DHParser.log.log_dir().rstrip('/') + '/'
+                with open(logs + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
+                    f.write(result.as_sxpr(compact=False))
                 print('Saving parsing history')
                 log_parsing_history(parser, os.path.basename(file), html=True)
 
@@ -90,11 +91,12 @@ def tst_func():
             fail_on_error(doc, result)
             print("Number of AST-nodes: " + str(tree_size(result)))
             if DHParser.log.is_logging():
+                logs = DHParser.log.log_dir().rstrip('/') + '/'
                 print('Saving AST')
-                with open('LOGS/' + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
+                with open(logs + file[:-4] + '.ast', 'w', encoding='utf-8') as f:
                     f.write(result.as_sxpr(compact=True))
-                with open('LOGS/' + file[:-4] + '.tex', 'w', encoding='utf-8') as f:
-                    f.write(str(result))
+                # with open(logs + file[:-4] + '.tex', 'w', encoding='utf-8') as f:
+                #     f.write(str(result))
 
             print('\nCompiling document: "%s"' % file)
             output = compiler(result)

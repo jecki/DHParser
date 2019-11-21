@@ -127,7 +127,7 @@ ResumeList = List[RxPatternType]  # list of regular expressiones
 def reentry_point(rest: StringView,
                   rules: ResumeList,
                   comment_regex,
-                  search_window_size: int = -1) -> int:
+                  search_window: int = -1) -> int:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
@@ -165,15 +165,15 @@ def reentry_point(rest: StringView,
 
     # def str_search(s, start: int = 0) -> Tuple[int, int]:
     #     nonlocal rest
-    #     return rest.find(s, start), len(s)
+    #     return rest.find(s, start, start + search_window), len(s)
 
     @cython.locals(start=cython.int, end=cython.int)
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
         nonlocal rest
-        m = rest.search(rx, start)
+        m = rest.search(rx, start, start + search_window)
         if m:
-            start, end = m.span()
-            return rest.index(start), end - start
+            begin, end = m.span()
+            return rest.index(begin), end - begin
         return -1, 0
 
     @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
@@ -394,7 +394,8 @@ class Parser:
                 gap = len(text) - len(pe.rest)
                 rules = grammar.resume_rules__.get(self.pname, [])
                 rest = pe.rest[len(pe.node):]
-                i = reentry_point(rest, rules, grammar.comment_rx__)
+                i = reentry_point(rest, rules, grammar.comment_rx__,
+                                  grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
                     assert pe.node.children or (not pe.node.result)
                     # apply reentry-rule or catch error at root-parser
@@ -887,6 +888,10 @@ class Grammar:
         max_parser_dropouts__: Maximum allowed number of retries after errors
                 where the parser would exit before the complete document has
                 been parsed. See config.py
+
+        reentry_search_window__: The number of following characters that the
+                parser considers when searching a reentry point when a syntax error
+                has been encountered.
     """
     python_src__ = ''  # type: str
     root__ = PARSER_PLACEHOLDER  # type: Parser
@@ -956,9 +961,10 @@ class Grammar:
         self._dirty_flag__ = False             # type: bool
         self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
-        self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')    # type: bool
-        self.left_recursion_depth__ = get_config_value('left_recursion_depth')  # type: int
-        self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')    # type: int
+        self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')      # type: bool
+        self.left_recursion_depth__ = get_config_value('left_recursion_depth')    # type: int
+        self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
+        self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
         self._reset__()
 
         # prepare parsers in the class, first
@@ -1927,10 +1933,11 @@ class Series(NaryParser):
                 if pos < self.mandatory:
                     return None, text
                 else:
-                    reloc = reentry_point(text_, self.skip, self.grammar.comment_rx__) \
-                        if self.skip else -1
+                    grammar = self.grammar
+                    reloc = reentry_point(text_, self.skip, grammar.comment_rx__,
+                                          grammar.reentry_search_window__) if self.skip else -1
                     error, node, text_ = mandatory_violation(
-                        self.grammar, text_, isinstance(parser, Lookahead), parser.repr,
+                        grammar, text_, isinstance(parser, Lookahead), parser.repr,
                         self.err_msgs, reloc)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
@@ -2151,12 +2158,13 @@ class AllOf(NaryParser):
                 if self.num_parsers - len(parsers) < self.mandatory:
                     return None, text
                 else:
-                    reloc = reentry_point(text_, self.skip, self.grammar.comment_rx__) \
-                        if self.skip else -1
+                    grammar = self.grammar
+                    reloc = reentry_point(text_, self.skip, grammar.comment_rx__,
+                                          grammar.reentry_search_window__) if self.skip else -1
                     expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
                     lookahead = any([isinstance(p, Lookahead) for p in parsers])
                     error, err_node, text_ = mandatory_violation(
-                        self.grammar, text_, lookahead, expected, self.err_msgs, reloc)
+                        grammar, text_, lookahead, expected, self.err_msgs, reloc)
                     results += (err_node,)
                     if reloc < 0:
                         parsers = []
@@ -2701,3 +2709,5 @@ class Forward(Parser):
             self.parser._apply(func, flip)
             return True
         return False
+
+

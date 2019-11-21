@@ -207,6 +207,15 @@ CONFIG_PRESET['left_recursion_depth'] = 5
 # Default value: 3
 CONFIG_PRESET['max_parser_dropouts'] = 1
 
+# The "search window" for finding a reentry-point after a sytax error was
+# encountered during parsing. The value of `reentry_search_window` is the
+# maximum number of characters lying ahead of the point of failure, where
+# a suitable reentry point will be searched.
+# A value smaller or equal than zero means that the complete remaining
+# text will be searched.
+# Default value: 10000
+CONFIG_PRESET['reentry_search_window'] = 10000
+
 
 ########################################################################
 #
@@ -255,6 +264,7 @@ CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 # Defines the maximum number of LINES before the "smart" serialization
 # will switch from S-expression output to compact output
 CONFIG_PRESET['compact_sxpr_threshold'] = 25
+
 
 ########################################################################
 #
@@ -333,6 +343,7 @@ CONFIG_PRESET['debug_compiler'] = False
 # the log-file (if logging is on) or to the console (if logging is off)
 # Default value: False
 CONFIG_PRESET['compiled_EBNF_log'] = ''
+
 
 ########################################################################
 #
