@@ -61,7 +61,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "0bb1db2c52e06989cb6d1b87a5476d14"
+    source_hash__ = "e3f453cc7a08e4faefd2b76302e34a65"
     anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|inline_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
@@ -340,8 +340,8 @@ class LaTeXCompiler(Compiler):
 
     def __call__(self, root):
         result = super().__call__(root)
-        self.tree.inline_tags = {}  # {'paragraph'}
-        self.tree.empty_tags = {}
+        self.tree.inline_tags = set()  # {'paragraph'}
+        self.tree.empty_tags = set()
         self.tree.omit_tags = {'S', 'PARSEP'}
         return result
 

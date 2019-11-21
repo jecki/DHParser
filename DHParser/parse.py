@@ -355,7 +355,7 @@ class Parser:
                 error_node_id = 0
 
         grammar = self._grammar
-        location = grammar.document_length__ - text.__len__()  # faster then len(text)?
+        location = grammar.document_length__ - text._len  # faster then len(text)?
 
         try:
             # rollback variable changing operation if parser backtracks
@@ -1545,7 +1545,7 @@ class MetaParser(Parser):
         """
         assert node is None or isinstance(node, Node)
         if self._grammar.flatten_tree__:
-            if node:
+            if node is not None:
                 if self.anonymous:
                     if self.drop_content:
                         return EMPTY_NODE
@@ -1726,7 +1726,7 @@ class ZeroOrMore(Option):
             n = len
             node, text = self.parser(text)
             len = text.__len__()
-            if not node:
+            if node is None:
                 break
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
@@ -1778,7 +1778,7 @@ class OneOrMore(UnaryParser):
             n = len
             node, text_ = self.parser(text_)
             len = text_.__len__()
-            if not node:
+            if node is None:
                 break
             match_flag = True
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
@@ -1929,7 +1929,7 @@ class Series(NaryParser):
         error = None  # type: Optional[Error]
         for pos, parser in enumerate(self.parsers):
             node, text_ = parser(text_)
-            if not node:
+            if node is None:
                 if pos < self.mandatory:
                     return None, text
                 else:
@@ -1942,7 +1942,7 @@ class Series(NaryParser):
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
-                        if nd:
+                        if nd is not None:
                             results += (node,)
                             node = nd
                     else:
@@ -2035,7 +2035,7 @@ class Alternative(NaryParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         for parser in self.parsers:
             node, text_ = parser(text)
-            if node:
+            if node is not None:
                 return self._return_value(node), text_
                 # return self._return_value(node if node._result or parser.pname else None), text_
                 # return Node(self.tag_name,
@@ -2148,7 +2148,7 @@ class AllOf(NaryParser):
         while parsers:
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
-                if node:
+                if node is not None:
                     if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                         results += (node,)
                         text_ = text__
@@ -2217,7 +2217,7 @@ class SomeOf(NaryParser):
         while parsers:
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
-                if node:
+                if node is not None:
                     if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                         results += (node,)
                         text_ = text__
@@ -2389,7 +2389,7 @@ class Capture(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
-        if node:
+        if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
                 "Cannot capture content of returned by parser, the content of which will be dropped!"
@@ -2517,7 +2517,7 @@ class Pop(Retrieve):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = self.retrieve_and_match(text)
-        if node and not id(node) in self.grammar.tree__.error_nodes:
+        if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol.pname].pop())
             location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
@@ -2605,7 +2605,7 @@ class Synonym(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization (dangerous?)
-        if node:
+        if node is not None:
             if self.drop_content:
                 return EMPTY_NODE, text
             # if self.anonymous:

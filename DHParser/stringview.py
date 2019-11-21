@@ -43,10 +43,13 @@ except ImportError:
     import DHParser.shadow_cython as cython
 
 
-__all__ = ('StringView', 'EMPTY_STRING_VIEW')
+__all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW')
 
 
-def first_char(text, begin: int, end: int, chars) -> int:
+@cython.cfunc
+@cython.returns(cython.int)
+@cython.locals(begin=cython.int, end=cython.int)
+def first_char(text: str, begin: int, end: int, chars: str) -> int:
     """Returns the index of the first non-whitespace character in string
      `text` within the bounds [begin, end].
     """
@@ -55,7 +58,10 @@ def first_char(text, begin: int, end: int, chars) -> int:
     return begin
 
 
-def last_char(text, begin: int, end: int, chars) -> int:
+@cython.cfunc
+@cython.returns(cython.int)
+@cython.locals(begin=cython.int, end=cython.int)
+def last_char(text: str, begin: int, end: int, chars: str) -> int:
     """Returns the index of the first non-whitespace character in string
     `text` within the bounds [begin, end].
     """
@@ -64,6 +70,9 @@ def last_char(text, begin: int, end: int, chars) -> int:
     return end
 
 
+@cython.cfunc
+@cython.returns(cython.int)
+@cython.locals(index=cython.int, length=cython.int)
 def pack_index(index: int, length: int) -> int:
     """Transforms `index` into a positive index counting from the beginning
     of the string, capping it at the boundaries [0, len].
@@ -83,9 +92,10 @@ def pack_index(index: int, length: int) -> int:
     return 0 if index < 0 else length if index > length else index
 
 
+@cython.locals(cbegin=cython.int, cend=cython.int, length=cython.int)
 def real_indices(begin: Optional[int],
                  end: Optional[int],
-                 length) -> Tuple[int, int]:
+                 length: int) -> Tuple[int, int]:
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
@@ -108,7 +118,9 @@ class StringView:  # collections.abc.Sized
         # assert isinstance(text, str)
         self._text = text  # type: str
         self._begin, self._end = real_indices(begin, end, len(text))
-        self._len = max(self._end - self._begin, 0)  # type: int
+        self._len = self._end - self._begin  # type: int
+        if self._len < 0:
+            self._len = 0
         self._fullstring = ''  # type: str
         # if (self._begin == 0 and self._len == len(self._text)):
         #     self._fullstring = self._text  # type: str
@@ -116,7 +128,7 @@ class StringView:  # collections.abc.Sized
         #     self._fullstring = ''
 
     def __bool__(self) -> bool:
-        return self._end > self._begin  # and bool(self.text)
+        return self._len != 0  # self._end > self._begin  # and bool(self.text)
 
     def __len__(self) -> int:
         return self._len
