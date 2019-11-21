@@ -402,7 +402,7 @@ class Parser:
                         i = 1
                     try:
                         zombie = pe.node[ZOMBIE_TAG]
-                    except KeyError:
+                    except (KeyError, ValueError):
                         zombie = None
                     if zombie and not zombie.result:
                         zombie.result = rest[:i]
