@@ -61,8 +61,8 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "e3f453cc7a08e4faefd2b76302e34a65"
-    anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|inline_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
+    source_hash__ = "dd99769e9d1b161d3aade90986907d8c"
+    anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     resume_rules__ = {}
