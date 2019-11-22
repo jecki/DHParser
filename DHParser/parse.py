@@ -440,8 +440,9 @@ class Parser:
                     else:
                         node = Node(
                             self.tag_name,
-                            (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail)
-                    self._add_resume_notice(rest, node.with_pos(location))
+                            (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
+                            .with_pos(location)
+                    self._add_resume_notice(rest, node)
                 elif pe.first_throw:
                     if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
