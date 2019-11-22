@@ -526,6 +526,10 @@ class TestErrorRecovery:
         parser = grammar_provider(lang)()
         st = parser('AB_D')
         assert len(st.errors) == 1  # no additional "stopped before end"-error!
+        parser.resume_notices__ = True
+        st = parser('AB_D')
+        assert len(st.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in st.errors)
+
 
     def test_AllOf_skip(self):
         lang = """
@@ -839,6 +843,9 @@ class TestReentryAfterError:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
+        gr.resume_notices__ = True
+        cst = gr(content, track_history=True)
+        assert len(cst.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in cst.errors)
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -970,8 +977,8 @@ class TestMetaParser:
         self.mp.tag_name = self.mp.pname
 
     def test_return_value(self):
-        save = get_config_value('flatten_tree_while_parsing')
-        set_config_value('flatten_tree_while_parsing', True)
+        save = get_config_value('flatten_tree')
+        set_config_value('flatten_tree', True)
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'named', nd.as_sxpr()
         assert len(nd.children) == 1
@@ -1013,7 +1020,7 @@ class TestMetaParser:
         assert not nd.content
         assert self.mp._return_value(None) == EMPTY_NODE
         assert self.mp._return_value(EMPTY_NODE) == EMPTY_NODE
-        set_config_value('flatten_tree_while_parsing', save)
+        set_config_value('flatten_tree', save)
 
     def test_return_values(self):
         self.mp.pname = "named"

@@ -338,22 +338,26 @@ class Parser:
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
 
-    def _resume_notice(self, rest: StringView, err_node: Node):
+    def _add_resume_notice(self, rest: StringView, err_node: Node) -> None:
+        """Adds a resume notice to the error node with information about
+        the reentry point and the parser."""
+        if not self._grammar.resume_notices__:
+            return
         call_stack = self._grammar.call_stack__
-        if call_stack:
+        if len(call_stack) >= 2:
             i, N = -2, -len(call_stack)
             while i >= N and call_stack[i][0][0:1] in (':', '/', '"', "'", "`"):
                 i -= 1
-            if i >= N:
-                parent_info = "{}->{}".format(call_stack[-1][0], call_stack[i][0])
+            if i >= N and i != -2:
+                parent_info = "{}->{}".format(call_stack[i][0], call_stack[-2][0])
             else:
-                parent_info = call_stack[-1][0]
+                parent_info = call_stack[-2][0]
         else:
             parent_info = "?"
         notice = Error('Resuming from parser {} with parser {} at point: »{}«'
                        .format(self.pname or self.ptype, parent_info, rest[:10]),
                        self._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
-        self._grammar.tree.__.add_error(err_node, notice)
+        self._grammar.tree__.add_error(err_node, notice)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -437,13 +441,16 @@ class Parser:
                         node = Node(
                             self.tag_name,
                             (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail)
+                    self._add_resume_notice(rest, node.with_pos(location))
                 elif pe.first_throw:
+                    if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:
                     node = Node(self.tag_name, pe.node).with_pos(location)  # try to create tree as faithful as possible
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
+                    if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
                 error = pe.error  # needed for history tracking
@@ -819,9 +826,6 @@ class Grammar:
                 was started (see method `__call__`) or `None` if no parsing process
                 is running.
 
-        history_tracking__:  A flag indicating that the parsing history shall
-                be tracked
-
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
                 when it is called again.
@@ -892,23 +896,35 @@ class Grammar:
                 In some situations it may drastically increase parsing time, so
                 it is safer to leave it on. (Default: on)
 
+        # Configuration parameters. These values of theses parameters are copied
+                from the global configuration in the constructor of the Grammar
+                object. (see mpodule `configuration.py`)
+
         flatten_tree__:  If True (default), anonymous nodes will be flattened
                 during parsing already. This greatly reduces the concrete syntax
                 tree and simplifies and speeds up abstract syntax tree generation.
-                The initial value will be read from the config variable
-                'flatten_tree_while_parsing' upon class instantiation.
+                Default is on.
 
         left_recursion_depth__: the maximum allowed depth for left-recursion.
                 A depth of zero means that no left recursion handling will
-                take place. See 'left_recursion_depth' in config.py.
+                take place. Default is 5.
 
         max_parser_dropouts__: Maximum allowed number of retries after errors
                 where the parser would exit before the complete document has
-                been parsed. See config.py
+                been parsed. Default is 1, as usually the retry-attemts lead
+                to a proliferation of senseless error messages.
 
         reentry_search_window__: The number of following characters that the
                 parser considers when searching a reentry point when a syntax error
-                has been encountered.
+                has been encountered. Default is 10.000 characters.
+
+        history_tracking__:  A flag indicating that the parsing history shall
+                be tracked. Default is off.
+
+        resume_notices__: When resuming after an error a notice message is added
+               in addition to the error message to report where, and, if history
+               tracking is turned on, with which parser the parsing process
+               will be resumed. Default is off.
     """
     python_src__ = ''  # type: str
     root__ = PARSER_PLACEHOLDER  # type: Parser
@@ -977,11 +993,12 @@ class Grammar:
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.memoization__ = True              # type: bool
-        self.history_tracking__ = get_config_value('history_tracking')            # type: bool
-        self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')      # type: bool
+        self.flatten_tree__ = get_config_value('flatten_tree')                    # type: bool
         self.left_recursion_depth__ = get_config_value('left_recursion_depth')    # type: int
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
+        self.history_tracking__ = get_config_value('history_tracking')            # type: bool
+        self.resume_notices__ = get_config_value('resume_notices')                # type: bool
         self._reset__()
 
         # prepare parsers in the class, first
@@ -1661,6 +1678,18 @@ class NaryParser(MetaParser):
         copy_parser_attrs(self, duplicate)
         return duplicate
 
+    def _add_skip_notice(self, _text: StringView, err_node: Node) -> None:
+        """Adds a skip-notice to the parse tree's error-list for a parser
+        that support skipping parts of the text, when an error occurred
+        (Series, AllOf)."""
+        if not self._grammar.resume_notices__:
+            return
+        notice = Error('Skipping within parser {} to point »{}«'
+                       .format(self.pname or self.pytpe, _text[:10]),
+                       self._grammar.document_length__ - len(_text),
+                       Error.RESUME_NOTICE)
+        self._grammar.tree__.add_error(err_node, notice)
+
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         if super(NaryParser, self)._apply(func, flip):
             for parser in self.parsers:
@@ -1958,10 +1987,12 @@ class Series(NaryParser):
                         self.err_msgs, reloc)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
+                        rest = text_
                         nd, text_ = parser(text_)  # try current parser again
                         if nd is not None:
                             results += (node,)
                             node = nd
+                        self._add_skip_notice(rest, node)
                     else:
                         results += (node,)
                         break

@@ -197,7 +197,7 @@ def set_config_value(key: Hashable, value: Any):
 # purposes, in which case a concrete syntax tree that more diligently
 # reflects the parser structure may be helpful.
 # Default value: True
-CONFIG_PRESET['flatten_tree_while_parsing'] = True
+CONFIG_PRESET['flatten_tree'] = True
 
 # Maximum depth of parser's left recursion
 # This limit should not be set to high, because the left recursion
@@ -227,6 +227,11 @@ CONFIG_PRESET['reentry_search_window'] = 10000
 # it should only be turned on for debugging.
 # Default value: False
 CONFIG_PRESET['history_tracking'] = False
+
+# Turns on resume notices that add information about where the parsing
+# process resumes after an error has been encountered
+# Default value: False
+CONFIG_PRESET['resume_notices'] = False
 
 
 ########################################################################
