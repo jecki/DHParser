@@ -341,7 +341,7 @@ class Parser:
     def _add_resume_notice(self, rest: StringView, err_node: Node) -> None:
         """Adds a resume notice to the error node with information about
         the reentry point and the parser."""
-        if not self._grammar.resume_notices__:
+        if not self._grammar.resume_notices__ or self == self._grammar.start_parser__:
             return
         call_stack = self._grammar.call_stack__
         if len(call_stack) >= 2:
@@ -354,8 +354,8 @@ class Parser:
                 parent_info = call_stack[-2][0]
         else:
             parent_info = "?"
-        notice = Error('Resuming from parser {} with parser {} at point: »{}«'
-                       .format(self.pname or self.ptype, parent_info, rest[:10]),
+        notice = Error('Resuming from parser {} with parser {} at point: {}'
+                       .format(self.pname or self.ptype, parent_info, repr(rest[:10])),
                        self._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
         self._grammar.tree__.add_error(err_node, notice)
 
@@ -420,8 +420,8 @@ class Parser:
                 if i >= 0 or self == grammar.start_parser__:
                     assert pe.node.children or (not pe.node.result)
                     # apply reentry-rule or catch error at root-parser
-                    if i < 0:
-                        i = 1
+                    # if i < 0:
+                    #     i = 1
                     try:
                         zombie = pe.node[ZOMBIE_TAG]
                     except (KeyError, ValueError):
@@ -1685,8 +1685,8 @@ class NaryParser(MetaParser):
         (Series, AllOf)."""
         if not self._grammar.resume_notices__:
             return
-        notice = Error('Skipping within parser {} to point »{}«'
-                       .format(self.pname or self.pytpe, _text[:10]),
+        notice = Error('Skipping within parser {} to point {}'
+                       .format(self.pname or self.pytpe, repr(_text[:10])),
                        self._grammar.document_length__ - len(_text),
                        Error.RESUME_NOTICE)
         self._grammar.tree__.add_error(err_node, notice)

@@ -123,6 +123,8 @@ def finalize_presets():
             if existing_syncfile != syncfile_path:
                 atexit.register(remove_cfg_tempfile, syncfile_path)
             pickle.dump(CONFIG_PRESET, f)
+    if THREAD_LOCALS is not None:
+        THREAD_LOCALS.config = {}  # reset THREAD_LOCALS
 
 
 def access_thread_locals() -> Any:
