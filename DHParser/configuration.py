@@ -184,6 +184,13 @@ def set_config_value(key: Hashable, value: Any):
 #
 ########################################################################
 
+# The parser configuration is read when a Grammar-object is instantiated.
+# Changes to the configuration value that take place after the
+# instantiation of the Grammar-object will not be reflected in the
+# Grammar-object. After instantiation, the fields of the Grammar-object
+# that reflect the configuration parameters must be manipulated directly
+# to change the configuration of a Grammar-object.
+
 # Flattens anonymous nodes, by removing the node and adding its children
 # to the parent node in place of the removed node. This is a very useful
 # optimization that should be turned on except for learning or teaching
@@ -207,7 +214,7 @@ CONFIG_PRESET['left_recursion_depth'] = 5
 # Default value: 3
 CONFIG_PRESET['max_parser_dropouts'] = 1
 
-# The "search window" for finding a reentry-point after a sytax error was
+# The "search window" for finding a reentry-point after a syntax error was
 # encountered during parsing. The value of `reentry_search_window` is the
 # maximum number of characters lying ahead of the point of failure, where
 # a suitable reentry point will be searched.
@@ -215,6 +222,11 @@ CONFIG_PRESET['max_parser_dropouts'] = 1
 # text will be searched.
 # Default value: 10000
 CONFIG_PRESET['reentry_search_window'] = 10000
+
+# Turns on tracking of the parsing history. As this slows down parsing,
+# it should only be turned on for debugging.
+# Default value: False
+CONFIG_PRESET['history_tracking'] = False
 
 
 ########################################################################

@@ -338,6 +338,23 @@ class Parser:
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
 
+    def _resume_notice(self, rest: StringView, err_node: Node):
+        call_stack = self._grammar.call_stack__
+        if call_stack:
+            i, N = -2, -len(call_stack)
+            while i >= N and call_stack[i][0][0:1] in (':', '/', '"', "'", "`"):
+                i -= 1
+            if i >= N:
+                parent_info = "{}->{}".format(call_stack[-1][0], call_stack[i][0])
+            else:
+                parent_info = call_stack[-1][0]
+        else:
+            parent_info = "?"
+        notice = Error('Resuming from parser {} with parser {} at point: »{}«'
+                       .format(self.pname or self.ptype, parent_info, rest[:10]),
+                       self._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
+        self._grammar.tree.__.add_error(err_node, notice)
+
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given text. This is a wrapper method that adds
@@ -959,8 +976,8 @@ class Grammar:
                     or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
-        self.history_tracking__ = False        # type: bool
         self.memoization__ = True              # type: bool
+        self.history_tracking__ = get_config_value('history_tracking')            # type: bool
         self.flatten_tree__ = get_config_value('flatten_tree_while_parsing')      # type: bool
         self.left_recursion_depth__ = get_config_value('left_recursion_depth')    # type: int
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
@@ -1074,10 +1091,9 @@ class Grammar:
             complete_match (bool): If True, an error is generated, if
                 `start_parser` did not match the entire document.
             track_history (bool): If true, the parsing history will be
-                recorded in self.history__. If logging is turned on (i.e.
-                DHParser.log.is_logging() returns true), the parsing history
-                will always be recorded, even if `False` is passed to
-                the `track_history` parameter.
+                recorded in self. history__. If self.history_tracking__ is
+                True, the parsing history will always be recorded,
+                even if `False` is passed to the `track_history` parameter.
         Returns:
             Node: The root node to the parse tree.
         """
@@ -1118,9 +1134,9 @@ class Grammar:
                 parser.reset()
         else:
             self._dirty_flag__ = True
-        self.history_tracking__ = track_history or is_logging()
-        # safe tracking state, because history_tracking__ might be set to false, later,
-        # but original tracking state is needed for additional error information.
+        save_history_tracking = self.history_tracking__
+        self.history_tracking__ = track_history or self.history_tracking__
+        # track history contains and retains the current tracking state
         track_history = self.history_tracking__
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
@@ -1229,6 +1245,7 @@ class Grammar:
         if result:
             self.tree__.swallow(result)
         self.start_parser__ = None
+        self.history_tracking__ = save_history_tracking
         return self.tree__
 
 

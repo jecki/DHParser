@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""test_server.py - tests of the server module of DHParser
+"""notest_server.py - tests of the server module of DHParser
 
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -20,7 +20,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# TODO: Quite slow under MS Windows
+# Quite slow under MS Windows, threrefore renamed to notest_server.py
+# so that it not regularly called when running pytest/nosetest on
+# the test directory.
 
 
 import asyncio

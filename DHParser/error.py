@@ -71,6 +71,10 @@ class Error:
     FATAL    = ErrorCode(10000)
     HIGHEST  = FATAL
 
+    # notice codes
+
+    RESUME_NOTICE                           = ErrorCode(50)
+
     # warning codes
 
     REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
