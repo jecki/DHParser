@@ -1007,8 +1007,9 @@ class Grammar:
 
         # then deep-copy the parser tree from class to instance;
         # parsers not connected to the root object will be copied later
-        # on demand (see Grammar.__getitem__()). Usually, the need to
-        # do so only arises during testing.
+        # on demand (see Grammar.__getitem__()).
+        # (Usually, all parsers should be connected to the root object. But
+        # during testing and development this does not need to be the case.)
         self.root_parser__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
         self.root_parser__.apply(self._add_parser__)
         assert 'root_parser__' in self.__dict__
@@ -1153,7 +1154,7 @@ class Grammar:
         else:
             self._dirty_flag__ = True
         save_history_tracking = self.history_tracking__
-        self.history_tracking__ = track_history or self.history_tracking__
+        self.history_tracking__ = track_history or self.history_tracking__ or self.resume_notices__
         # track history contains and retains the current tracking state
         track_history = self.history_tracking__
         self.document__ = StringView(document)
