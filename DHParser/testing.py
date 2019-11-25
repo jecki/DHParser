@@ -377,6 +377,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 break
         return is_artifact
 
+    history_tracking = get_config_value('history_tracking')
+    track_history = history_tracking
+
     for parser_name, tests in test_unit.items():
         if not get_config_value('test_parallelization'):
             print('  ' + parser_name)
@@ -410,7 +413,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             errflag = len(errata)
             try:
-                cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
+                track_history = history_tracking or has_lookahead(parser_name)
+                cst = parser(test_code, parser_name, track_history=track_history)
             except UnknownParserError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
@@ -462,7 +466,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if len(errata) > errflag:
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
-                if is_logging():
+                if is_logging() and track_history:
                     log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
 
         if verbose and 'fail' in tests:
@@ -474,7 +478,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             errflag = len(errata)
             # cst = parser(test_code, parser_name)
             try:
-                cst = parser(test_code, parser_name, track_history=has_lookahead(parser_name))
+                track_history = history_tracking or has_lookahead(parser_name)
+                cst = parser(test_code, parser_name, track_history=track_history)
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_TAG, "").with_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
@@ -485,7 +490,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                               'expected failure!\n%s' % (test_name, parser_name, cst.serialize()))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
-                if is_logging():
+                if is_logging() and track_history:
                     log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
                 adjust_error_locations(cst.errors, test_code)

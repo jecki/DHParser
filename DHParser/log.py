@@ -447,25 +447,31 @@ class HistoryRecord:
 #######################################################################
 
 
-def log_ST(syntax_tree, log_file_name):
+def log_ST(syntax_tree, log_file_name) -> bool:
     """
     Writes an S-expression-representation of the `syntax_tree` to a file,
-    if logging is turned on.
+    if logging is turned on. Returns True, if logging was turned on and
+    log could be written. Returns False, if logging was turned off.
+    Raises a FileSystem error if writing the log failed for some reason.
     """
     if is_logging():
         path = os.path.join(log_dir(), log_file_name)
         # if os.path.exists(path):
         #     print('WARNING: Log-file "%s" already exists and will be overwritten!' % path)
         with open(path, "w", encoding="utf-8") as f:
-            f.write(syntax_tree.as_sxpr())
+            f.write(syntax_tree.serialize())
+        return True
+    return False
 
 LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
 LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
 
 
-def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> None:
+def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> bool:
     """
-    Writes a log of the parsing history of the most recently parsed document.
+    Writes a log of the parsing history of the most recently parsed document, if
+    logging is turned on. Returns True, if that was the case and writing the
+    history was successful.
 
     Parameters:
         grammar (Grammar):  The Grammar object from which the parsing history
@@ -501,7 +507,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
             log.append('\n'.join(['</table>\n<table>', HistoryRecord.COLGROUP]))
 
     if not is_logging():
-        raise AssertionError("Cannot log history when logging is turned off!")
+        return False
 
     if not log_file_name:
         name = grammar.__class__.__name__
@@ -529,3 +535,4 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     if len(full_history) > LOG_TAIL_THRESHOLD + 10:
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
+    return True

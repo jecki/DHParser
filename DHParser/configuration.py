@@ -287,12 +287,25 @@ CONFIG_PRESET['compact_sxpr_threshold'] = 25
 
 ########################################################################
 #
+# general compiler configuration
+#
+########################################################################
+
+# Defines which syntax tree should be logged during compilation:
+# The concrete syntax tree, the abstract syntax tree or both.
+# Possible values are {'ast'}, {'cst'} or {'ast', 'cst'}
+# Default value: empty set
+CONFIG_PRESET['log_syntax_trees'] = set()
+
+
+########################################################################
+#
 # ebnf compiler configuration
 #
 ########################################################################
 
 # Carries out static analysis on the the parser tree before parsing starts
-# to ensure its correctness. Possible values are:
+# to ensure its correctness. EXPERIMENTAL! Possible values are:
 # 'early' - static analysis is carried out by DHParser.ebnf.EBNFCompiler,
 #           already. Any errors it revealed will be located in the EBNF
 #           source code. This naturally only works for parser that are
@@ -302,8 +315,8 @@ CONFIG_PRESET['compact_sxpr_threshold'] = 25
 #           handwritten in Python using the parser classes from module
 #           `parse`. It slightly slows down instantiation of Grammar
 #           classes, though.
-# 'none' -  no static analysis at all (not recommended).
-# Default value: "early"
+# 'none' -  no static analysis at all.
+# Default value: "none"
 CONFIG_PRESET['static_analysis'] = "none"
 
 # DHParser.ebnfy.EBNFCompiler class adds the the EBNF-grammar to the
