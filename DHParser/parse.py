@@ -37,7 +37,7 @@ from typing import Callable, cast, List, Tuple, Set, Container, Dict, \
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, linebreaks, line_col
-from DHParser.log import is_logging, HistoryRecord
+from DHParser.log import HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
@@ -836,8 +836,8 @@ class Grammar:
 
         document_length__:  the length of the document.
 
-        document_lbreaks__:  list of linebreaks within the document, starting
-                with -1 and ending with EOF. This helps generating line
+        document_lbreaks__ (property):  list of linebreaks within the document,
+                starting with -1 and ending with EOF. This helps generating line
                 and column number for history recording and will only be
                 initialized if :attr:`history_tracking__` is true.
 
@@ -1049,7 +1049,7 @@ class Grammar:
         self.document__ = EMPTY_STRING_VIEW   # type: StringView
         self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
         self.document_length__ = 0            # type: int
-        self.document_lbreaks__ = []          # type: List[int]
+        self._document_lbreaks__ = []          # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
@@ -1159,7 +1159,7 @@ class Grammar:
         track_history = self.history_tracking__
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
-        self.document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
+        self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = -1  # rollback location
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
@@ -1278,6 +1278,11 @@ class Grammar:
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
 
+    @property
+    def document_lbreaks__(self) -> List[int]:
+        if not self._document_lbreaks__:
+            self._document_lbreaks__ = linebreaks(self.document__)
+        return self._document_lbreaks__
 
     def rollback_to__(self, location):
         """
