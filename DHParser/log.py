@@ -108,35 +108,6 @@ def resume_logging(log_dir: str=''):
     set_config_value('log_dir', log_dir)
 
 
-# #TODO: Remove this context manager, not really useful...
-# @contextlib.contextmanager
-# def logging(dirname="LOGS"):
-#     """
-#     DEPRECATED! Use `start_logging()` instead!
-#
-#     Context manager. Log files within this context will be stored in
-#     directory ``dirname``. Logging is turned off if name is empty.
-#
-#     Args:
-#         dirname: the name for the log directory or the empty string to
-#             turn logging of
-#     """
-#     print('The `logging`-context-manager is DEPRECATED! Use `start_logging()` instead!')
-#     CFG = access_presets()
-#     if dirname and not isinstance(dirname, str):
-#         dirname = "LOGS"  # be fail tolerant here...
-#     try:
-#         save = CFG['log_dir']
-#     except AttributeError:
-#         save = ''
-#     CFG['log_dir'] = dirname
-#     finalize_presets()
-#     yield
-#     CFG = access_presets()
-#     CFG['log_dir'] = save
-#     finalize_presets()
-
-
 def log_dir(path: str="") -> Union[str, bool]:
     """Creates a directory for log files (if it does not exist) and
     returns its path.
@@ -377,7 +348,17 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return "->".join(tag_name for tag_name, _ in self.call_stack)
+        short_stack = []
+        anonymous_tail = True
+        for tag_name, _ in reversed(self.call_stack):
+            if tag_name.startswith(':'):
+                if anonymous_tail:
+                    short_stack.append(tag_name)
+            else:
+                short_stack.append(tag_name)
+                anonymous_tail = False
+        return "->".join(reversed(short_stack))
+        # return "->".join(tag_name for tag_name, _ in self.call_stack)
 
     @property
     def status(self) -> str:
@@ -536,3 +517,5 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
     return True
+
+

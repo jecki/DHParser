@@ -563,6 +563,12 @@ class Parser:
         except NameError:  # Cython: No access to GRAMMA_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
+    def sub_parsers(self) -> List['Parser']:
+        """Returns the list of sub-parsers if there are any.
+        Overridden by Unary, Nary and Forward.
+        """
+        return []
+
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
@@ -580,6 +586,8 @@ class Parser:
             return False
         else:
             func(self)
+            for parser in self.sub_parsers():
+                parser._apply(func, flip)
             return True
 
     def apply(self, func: ApplyFunc):
@@ -1655,11 +1663,8 @@ class UnaryParser(MetaParser):
         copy_parser_attrs(self, duplicate)
         return duplicate
 
-    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super(UnaryParser, self)._apply(func, flip):
-            self.parser._apply(func, flip)
-            return True
-        return False
+    def sub_parsers(self) -> List['Parser']:
+        return [self.parser]
 
 
 class NaryParser(MetaParser):
@@ -1697,12 +1702,8 @@ class NaryParser(MetaParser):
                        Error.RESUME_NOTICE)
         self._grammar.tree__.add_error(err_node, notice)
 
-    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super(NaryParser, self)._apply(func, flip):
-            for parser in self.parsers:
-                parser._apply(func, flip)
-            return True
-        return False
+    def sub_parsers(self) -> List['Parser']:
+        return self.parsers
 
 
 class Option(UnaryParser):
@@ -2759,10 +2760,5 @@ class Forward(Parser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
-        if super(Forward, self)._apply(func, flip):
-            self.parser._apply(func, flip)
-            return True
-        return False
-
-
+    def sub_parsers(self) -> List['Parser']:
+        return [self.parser]
