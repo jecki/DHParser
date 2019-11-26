@@ -1049,7 +1049,7 @@ class Grammar:
         self.document__ = EMPTY_STRING_VIEW   # type: StringView
         self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
         self.document_length__ = 0            # type: int
-        self._document_lbreaks__ = []          # type: List[int]
+        self._document_lbreaks__ = []         # type: List[int]
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
