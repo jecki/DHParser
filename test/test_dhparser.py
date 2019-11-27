@@ -64,7 +64,7 @@ class TestDHParserCommandLineTool:
                   '>test_dhparser_data/neu/example.xml')
         with open('test_dhparser_data/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
-        assert xml.find('<document>') >= 0, xml
+        assert xml.find('document') >= 0, xml
         os.remove('test_dhparser_data/neu/neuCompiler.py')
         os.remove('test_dhparser_data/neu/example.xml')
 

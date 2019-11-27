@@ -282,6 +282,8 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
+            set_config_value('history_tracking', True)
+            set_config_value('log_syntax_trees', {'cst', 'ast'})
         start_logging(log_dir)
         result, errors, _ = compile_src(file_name)
         if errors:
@@ -291,6 +293,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.serialize() if isinstance(result, Node) else result)
     else:
         print("Usage: EBNFCompiler.py [FILENAME]")

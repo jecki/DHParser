@@ -123,8 +123,8 @@ def finalize_presets():
             if existing_syncfile != syncfile_path:
                 atexit.register(remove_cfg_tempfile, syncfile_path)
             pickle.dump(CONFIG_PRESET, f)
-    if THREAD_LOCALS is not None:
-        THREAD_LOCALS.config = {}  # reset THREAD_LOCALS
+    # if THREAD_LOCALS is not None:
+    #     THREAD_LOCALS.config = {}  # reset THREAD_LOCALS
 
 
 def access_thread_locals() -> Any:
@@ -169,14 +169,12 @@ def set_config_value(key: Hashable, value: Any):
     :param key:    the key (an immutable, usually a string)
     :param value:  the value
     """
-    global THREAD_LOCALS
-    if THREAD_LOCALS is None:
-        import threading
-        THREAD_LOCALS = threading.local()
+    THREAD_LOCALS = access_thread_locals()
     try:
-        _ = THREAD_LOCALS.config
+        cfg = THREAD_LOCALS.config
     except AttributeError:
         THREAD_LOCALS.config = dict()
+        cfg = THREAD_LOCALS.config
     THREAD_LOCALS.config[key] = value
 
 
