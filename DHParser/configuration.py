@@ -371,7 +371,7 @@ CONFIG_PRESET['debug_compiler'] = False
 
 # Makes DHParser.dsl.grammar_provider() write generated Python code to
 # the log-file (if logging is on) or to the console (if logging is off)
-# Default value: False
+# Default value: '' (empty string, i.e. no log)
 CONFIG_PRESET['compiled_EBNF_log'] = ''
 
 

@@ -61,7 +61,7 @@ __all__ = ('WHITESPACE_PTYPE',
 
 #######################################################################
 #
-# parser base and mock parsers
+# parser-related definitions
 #
 #######################################################################
 
@@ -72,6 +72,7 @@ REGEXP_PTYPE = ':RegExp'
 LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
 
 ZOMBIE_TAG = "ZOMBIE__"
+
 
 #######################################################################
 #

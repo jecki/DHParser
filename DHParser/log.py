@@ -1,4 +1,4 @@
-# logging.py - logging and debugging for DHParser
+# log.py - logging and debugging for DHParser
 #
 # Copyright 2018  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -41,9 +41,12 @@ and abreviated parsing history.
 
 Example::
 
-    from DHParser import compile_source, logging
+    from DHParser import compile_source, logging, set_config_value
 
     start_logging("LOGS")
+    set_config_value('log_syntax_trees', {'cst', 'ast'})
+    set_config_value('history_tracking', True)
+    set_config_value('resume_notices', True)
     result, errors, ast = compile_source(source, preprocessor, grammar,
                                          transformer, compiler)
 """
@@ -76,7 +79,7 @@ __all__ = ('start_logging',
 
 #######################################################################
 #
-# logging context manager and logfile support
+# basic logging functionality
 #
 #######################################################################
 
@@ -517,5 +520,4 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
     return True
-
 

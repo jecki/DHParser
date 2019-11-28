@@ -46,7 +46,8 @@ from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cy
     RX_NEVER_MATCH, RxPatternType
 
 
-__all__ = ('Parser',
+__all__ = ('ParserError',
+           'Parser',
            'UnknownParserError',
            'GrammarErrorType',
            'GrammarError',
@@ -91,12 +92,9 @@ __all__ = ('Parser',
 
 ########################################################################
 #
-# Parser base class
+# ParserError class
 #
 ########################################################################
-
-
-EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 
 class ParserError(Exception):
@@ -107,8 +105,8 @@ class ParserError(Exception):
     occurred, the parser guard can resume the parsing process.
 
     Currently, the only case when a `ParserError` is thrown (and not some
-    different kind of error like `UnknownParserError`, is when a `Series`-
-    detects a missing mandatory element.
+    different kind of error like `UnknownParserError`) is when a `Series`-
+    or `AllOf`-parser detects a missing mandatory element.
     """
     def __init__(self, node: Node, rest: StringView, error: Optional[Error], first_throw: bool):
         self.node = node   # type: Node
@@ -201,6 +199,16 @@ def reentry_point(rest: StringView,
     if closest_match == upper_limit:
         closest_match = -1
     return closest_match
+
+
+########################################################################
+#
+# Parser base class
+#
+########################################################################
+
+
+EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 
 ApplyFunc = Callable[['Parser'], None]
@@ -497,7 +505,6 @@ class Parser:
             # Does this make sense? Or should it be changed?
             if history_tracking__:
                 # don't track returning parsers except in case an error has occurred
-                # remaining = len(rest)
                 if grammar.moving_forward__:
                     record = HistoryRecord(grammar.call_stack__, node, text,
                                            grammar.line_col__(text))
