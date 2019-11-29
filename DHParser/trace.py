@@ -32,9 +32,9 @@ be superceded by tracing.
 from typing import Tuple, Optional, List, Collection, Union
 
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord
-from DHParser.parse import Parser, ParserError, Grammar, ParseFunc
+from DHParser.parse import Parser, ParserError, ParseFunc, EMPTY_NODE
 
 __all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer')
 
@@ -45,6 +45,7 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     grammar.call_stack__.append(
         ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE)
           else (self.pname or self.tag_name)), location))
+    # TODO: Record history on turning points here to, i.e. when moving_forward is False
     grammar.moving_forward__ = True
 
     try:
@@ -55,10 +56,13 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
 
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
-    if grammar.moving_forward__ or grammar.most_recent_error__:
+    # TODO: Try recording all named parsers on the way back?
+    if (grammar.moving_forward__ or grammar.most_recent_error__) \
+            and (node != EMPTY_NODE or self.tag_name != WHITESPACE_PTYPE):
         errors = [grammar.most_recent_error__] if grammar.most_recent_error__ else []
         grammar.history__.append(HistoryRecord(
             grammar.call_stack__, node, text, grammar.line_col__(text), errors))
+        grammar.most_recent_error__ = None
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
 

@@ -351,6 +351,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
+        # return "->".join(tag_name for tag_name, _ in self.call_stack)
         short_stack = []
         anonymous_tail = True
         for tag_name, _ in reversed(self.call_stack):
@@ -361,7 +362,6 @@ class HistoryRecord:
                 short_stack.append(tag_name)
                 anonymous_tail = False
         return "->".join(reversed(short_stack))
-        # return "->".join(tag_name for tag_name, _ in self.call_stack)
 
     @property
     def status(self) -> str:
