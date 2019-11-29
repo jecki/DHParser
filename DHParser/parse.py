@@ -213,6 +213,7 @@ EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 ApplyFunc = Callable[['Parser'], None]
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
+ParseFunc = Callable[['Parser', StringView], Tuple[Optional[Node], StringView]]
 
 
 def copy_parser_attrs(src: 'Parser', duplicate: 'Parser'):
@@ -262,13 +263,16 @@ class Parser:
     contained parser is repeated zero times.
 
     Attributes and Properties:
+
         pname:  The parser's name or a (possibly empty) alias name in case
                 of an anonymous parser.
+
         anonymous: A property indicating that the parser remains anynomous
                 anonymous with respect to the nodes it returns. For performance
                 reasons this is implemented as an object variable rather
                 than a property. This property must always be equal to
                 `self.tag_name[0] == ":"`.
+
         drop_content: A property (for performance reasons implemented as
                 simple field) that, if set, induces the parser not to return
                 the parsed content or sub-tree if it has matched but the
@@ -276,9 +280,11 @@ class Parser:
                 dropped from the concrete syntax tree already. Only
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
+
         tag_name: The tag_name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 `pname`, otherwise it is the name of the parser's type.
+
         visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
@@ -294,6 +300,10 @@ class Parser:
                 (recursively) a second time, if it has already been
                 applied to this parser.
 
+        proxied: The original `_parse()`-method is stored here, if a
+                proxy (e.g. a tracing debugger) is installed via the
+                `set_proxy()`-method.
+
         _grammar:  A reference to the Grammar object to which the parser
                 is attached.
     """
@@ -305,6 +315,9 @@ class Parser:
         self.drop_content = False     # type: bool
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
+        # this indirection is required for Cython-compatibility
+        self.__parse = self._parse    # type: ParseMethod
+        # self.proxied = None           # type: Optional[ParseMethod]
         try:
             self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
         except NameError:
@@ -314,7 +327,7 @@ class Parser:
     def __deepcopy__(self, memo):
         """        Deepcopy method of the parser. Upon instantiation of a Grammar-
         object, parsers will be deep-copied to the Grammar object. If a
-        derived parser-class changes the signature of the constructor,
+        derived parser-class changes the signature of the `__init__`-constructor,
         `__deepcopy__`-method must be replaced (i.e. overridden without
         calling the same method from the superclass) by the derived class.
         """
@@ -413,11 +426,10 @@ class Parser:
                     ((self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
                       else (self.pname or self.tag_name)), location))
                 grammar.moving_forward__ = True
-                error = None
 
             # finally, the actual parser call!
             try:
-                node, rest = self._parse(text)
+                node, rest = self.__parse(text)
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
@@ -462,7 +474,7 @@ class Parser:
                     if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
-                error = pe.error  # needed for history tracking
+                grammar.most_recent_error__ = pe.error  # needed for history tracking
 
             if left_recursion_depth__:
                 self.recursion_counter[location] -= 1
@@ -509,12 +521,13 @@ class Parser:
                     record = HistoryRecord(grammar.call_stack__, node, text,
                                            grammar.line_col__(text))
                     grammar.history__.append(record)
-                elif error:
+                elif grammar.most_recent_error__:
                     # error_nid = id(node)  # type: int
                     # if error_nid in grammar.tree__.error_nodes:
                     record = HistoryRecord(grammar.call_stack__, node, text,
                                            grammar.line_col__(text),
-                                           [error])
+                                           [grammar.most_recent_error__])
+                    grammar.most_recent_error__ = None
                     grammar.history__.append(record)
                 grammar.moving_forward__ = False
                 grammar.call_stack__.pop()
@@ -539,12 +552,29 @@ class Parser:
         """
         return Alternative(self, other)
 
-
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
         raise NotImplementedError
+
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        """Sets a proxy that replaces the _parse()-method. The original
+        parse-method is copied to the `proxied`-filed of the Parser object and
+        can be called by the proxy. Call `set_proxy` with `None` to remove
+        a previously set proxy. Typical use case is the installation of a
+        tracing debugger. See module `trace`.
+        """
+        if proxy is None:
+            self.__parse = self._parse
+        else:
+            if type(proxy) != type(self._parse):
+                # assume that proxy is a function
+                proxy = proxy.__get__(self, type(self))
+            else:
+                # if proxy is a method it must be a method od self
+                assert proxy.__self__ == self
+            self.__parse = proxy
 
     @property
     def grammar(self) -> 'Grammar':
@@ -889,9 +919,10 @@ class Grammar:
                 and, eventually, i.e. one day in the future, for tracing through
                 the parsing process.
 
-        history__:  A list of parser-call-stacks. A parser-call-stack is
-                appended to the list each time a parser either matches, fails
-                or if a parser-error occurs.
+        history__:  A list of history records. A history record is appended to
+                the list each time a parser either matches, fails or if a
+                parser-error occurs. See class `log.HistoryRecord`. History
+                records store copies of the current call stack.
 
         moving_forward__: This flag indicates that the parsing process is currently
                 moving forward . It is needed to reduce noise in history recording
@@ -906,6 +937,9 @@ class Grammar:
         last_recursion_location__:  Last location where left recursion was
                 detected. This is used to avoid reduplicating warning messages
                 about left recursion.
+
+        most_recent_error__: The most recent parser error that has occurred
+                or `None`. This can be read by tracers. See module `trace`
 
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
@@ -1077,6 +1111,7 @@ class Grammar:
         self.moving_forward__ = False         # type: bool
         self.recursion_locations__ = set()    # type: Set[int]
         self.last_recursion_location__ = -1   # type: int
+        self.most_recent_error__ = None       # type: Optional[ParserError]
 
 
     @property
@@ -2733,6 +2768,10 @@ class Forward(Parser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # for the exceptional case in class Synonym where the ._parse method is called directly
         return self.parser(text)
+
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        """`set_proxy` has no effects on Forward-objects!"""
+        return
 
     def __cycle_guard(self, func, alt_return):
         """

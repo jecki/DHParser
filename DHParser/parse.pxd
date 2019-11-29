@@ -21,6 +21,7 @@ cdef class Parser:
     # def __add__(self, other)
     # def __or__(self, other)
     cpdef _parse(self, text)
+    cpdef set_proxy(self, proxy)
     cpdef _apply(self, func, flip)
     cpdef apply(self, func)
 
@@ -44,7 +45,7 @@ cdef class Grammar:
     cdef public object document__
     cdef public object _reversed__
     cdef public int document_length__
-    cdef public list document_lbreaks__
+    cdef public list _document_lbreaks__
     cdef public object variables__
     cdef public list rollback__
     cdef public int last_rb__loc__

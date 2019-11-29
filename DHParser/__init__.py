@@ -31,6 +31,7 @@ from .stringview import *
 from .syntaxtree import *
 from .testing import *
 from .toolkit import *
+from .trace import *
 from .transform import *
 from .versionnumber import *
 
@@ -47,6 +48,7 @@ __all__ = (compile.__all__ +
            syntaxtree.__all__ +
            testing.__all__ +
            toolkit.__all__ +
+           trace.__all__ +
            transform.__all__ +
            versionnumber.__all__)
 

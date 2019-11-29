@@ -43,7 +43,7 @@ except ImportError:
     import DHParser.shadow_cython as cython
 
 
-__all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW')
+__all__ = ('StringView', 'slow_real_indices', 'EMPTY_STRING_VIEW')
 
 
 @cython.cfunc
@@ -92,6 +92,8 @@ def pack_index(index: int, length: int) -> int:
     return 0 if index < 0 else length if index > length else index
 
 
+@cython.cfunc
+@cython.returns((cython.int, cython.int))
 @cython.locals(cbegin=cython.int, cend=cython.int, length=cython.int)
 def real_indices(begin: Optional[int],
                  end: Optional[int],
@@ -102,6 +104,13 @@ def real_indices(begin: Optional[int],
     cbegin = 0 if begin is None else begin
     cend = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
+
+
+def slow_real_indices(begin: Optional[int],
+                       end: Optional[int],
+                       length: int) -> Tuple[int, int]:
+    """Python callable real-indices function for testing."""
+    return real_indices(begin, end, length)
 
 
 class StringView:  # collections.abc.Sized
