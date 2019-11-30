@@ -42,6 +42,7 @@ from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import log_dir, is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
+from DHParser.trace import set_tracer, with_all_descendants, trace_history
 from DHParser.toolkit import load_if_file, re
 
 __all__ = ('unit_from_config',
@@ -413,7 +414,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             errflag = len(errata)
             try:
-                track_history = history_tracking or has_lookahead(parser_name)
+                if has_lookahead(parser_name):
+                    # set_tracer(with_all_descendants(parser[parser_name]), trace_history)
+                    track_history = True
                 cst = parser(test_code, parser_name, track_history=track_history)
             except UnknownParserError as upe:
                 cst = RootNode()
