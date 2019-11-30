@@ -57,14 +57,15 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
     # TODO: Try recording all named parsers on the way back?
-    if ((grammar.moving_forward__ or grammar.most_recent_error__
-         # or (node and self.tag_name[0] != ':')
-        )
-        and (node != EMPTY_NODE or self.tag_name != WHITESPACE_PTYPE)):
+    if ((grammar.moving_forward__ or grammar.most_recent_error__ or (node and not self.anonymous))
+            and (node != EMPTY_NODE or self.tag_name != WHITESPACE_PTYPE)):
         errors = [grammar.most_recent_error__] if grammar.most_recent_error__ else []
-        grammar.history__.append(HistoryRecord(
-            grammar.call_stack__, node, text, grammar.line_col__(text), errors))
         grammar.most_recent_error__ = None
+        line_col = grammar.line_col__(text)
+        record = HistoryRecord(grammar.call_stack__, node, rest, line_col, errors)
+        if (not grammar.history__ or line_col != grammar.history__[-1].line_col
+            or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):
+            grammar.history__.append(record)
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
 
@@ -93,5 +94,6 @@ def set_tracer(parsers: Union[Parser, Collection[Parser]], tracer: Optional[Pars
     if isinstance(parsers, Parser):
         parsers = [parsers]
     for parser in parsers:
-        parser.set_proxy(tracer)
+        if parser.ptype != ':Forward':
+            parser.set_proxy(tracer)
 

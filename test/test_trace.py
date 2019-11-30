@@ -47,6 +47,7 @@ class TestTrace:
         st = self.gr('2*(3+4)')
         start_logging()
         log_parsing_history(self.gr, 'trace.log')
+        print(st.serialize())
 
 
 

@@ -259,25 +259,29 @@ class HistoryRecord:
     MATCH = "MATCH"
     ERROR = "ERROR"
     FAIL = "FAIL"
-    Snapshot = collections.namedtuple('Snapshot', ['line', 'column', 'stack', 'status', 'text'])
+    Snapshot_Fields = ('line', 'column', 'stack', 'status', 'text')
+    Snapshot = collections.namedtuple('Snapshot', Snapshot_Fields)
 
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col ' \
-               'style="width:75%"/><col style="width:6%"/><col style="width:15%"/>\n</colgroup>'
+               'style="width:65%"/><col style="width:6%"/><col style="width:25%"/>\n</colgroup>'
     HEADINGS = ('<tr><th>L</th><th>C</th><th>parser call sequence</th>'
                 '<th>success</th><th>text matched or failed</th></tr>')
     HTML_LEAD_IN = (
         '<!DOCTYPE html>\n'
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
+        'table {border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
         'td,th {font-family:monospace; '
         'border-right: thin solid grey; border-bottom: thin solid grey}\n'
-        'td.line, td.column {color:darkgrey}\n'  # 'td.stack {}\n'
-        'td.status {font-weight:bold}\n'
-        'td.text {color:darkblue}\n'
-        'table {border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
-        'span {color:grey;}\nspan.match {color:darkgreen}\n'
-        'span.fail {color:darkgrey}\nspan.error {color:red}\n'
-        'span.matchstack {font-weight:bold;color:darkred}'
-        '\n</style>\n</head>\n<body>\n')
+        'td.line, td.column {color:darkgrey}\n'
+        '.text{color:darkblue}\n'
+        '.failtext {font-weight:normal; color:darkgrey}\n'
+        '.unmatched {font-weight:normal; color:darkgrey}\n'
+        '.fail {font-weight:bold; color:darkgrey}\n'
+        '.error {font-weight:bold; color:red}\n'
+        '.match {font-weight:bold; color:darkgreen}\n'
+        '.matchstack {font-weight:bold;color:darkred}\n'
+        'span {color:darkgrey}\n'
+        '</style>\n</head>\n<body>\n')
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List[str],
@@ -286,7 +290,8 @@ class HistoryRecord:
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
-        self.call_stack = [(tn, pos) for tn, pos in call_stack if tn != ":Forward"]  # type: List[Tuple[str, int]]
+        # self.call_stack = call_stack    # type: Tuple[Tuple[str, int],...]
+        self.call_stack = tuple((tn, pos) for tn, pos in call_stack if tn != ":Forward")  # type: Tuple[Tuple[str, int],...]
         self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
@@ -321,8 +326,13 @@ class HistoryRecord:
             '-&gt;', '<span>&shy;-&gt;</span>')
         status = html.escape(self.status)
         excerpt = html.escape(self.excerpt)
+        classes = list(HistoryRecord.Snapshot_Fields)
+        idx = {field_name: i for i, field_name in enumerate(classes)}
+        classes[idx['status']] = status.lower()
         if status == self.MATCH:
-            status = '<span class="match">' + status + '</span>'
+            n = max(40 - len(excerpt), 0)
+            dots = '...' if len(self.text) > n else ''
+            excerpt = excerpt + '<span class="unmatched">' + self.text[:n] + dots + '</span>'
             i = stack.rfind('-&gt;')
             chr = stack[i + 12:i + 13]
             while not chr.isidentifier() and i >= 0:
@@ -337,14 +347,12 @@ class HistoryRecord:
                     stack = stack[:i] + '<span class="matchstack">' + stack[i:k] \
                         + '</span>' + stack[k:]
         elif status == self.FAIL:
-            status = '<span class="fail">' + status + '</span>'
-        else:
+            classes[idx['text']] = 'failtext'
+        else:  # status == self.ERROR:
             stack += '<br/>\n' + status
-            status = '<span class="error">ERROR</span>'
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
-        # return ''.join(['<tr>'] + [('<td>%s</td>' % item) for item in tpl] + ['</tr>'])
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
-                                   for cls, item in zip(tpl._fields, tpl)] + ['</tr>'])
+                                   for cls, item in zip(classes, tpl)] + ['</tr>'])
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(str(e) for e in (self.errors))
@@ -370,11 +378,15 @@ class HistoryRecord:
 
     @property
     def excerpt(self):
-        length = len(self.node) if self.node else len(self.text)
-        excerpt = str(self.node)[:min(length, 20)] if self.node else str(self.text[:20])
+        if self.node:
+            l = len(self.node)
+            s = str(self.node)
+            excerpt = s[:18] + ' ... ' + s[-17:] if l > 40 else s[:40]
+        else:
+            l = len(self.text)
+            s = str(self.text[:40])
+            excerpt = s[:36] + ' ...' if l > 36 else s
         excerpt = escape_control_characters(excerpt)
-        if length > 20:
-            excerpt += '...'
         return excerpt
 
     # @property
