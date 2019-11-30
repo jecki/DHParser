@@ -41,7 +41,7 @@ from DHParser.log import HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_TAG, ResultType
+    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
     RX_NEVER_MATCH, RxPatternType
 
@@ -52,7 +52,6 @@ __all__ = ('ParserError',
            'GrammarErrorType',
            'GrammarError',
            'Grammar',
-           'EMPTY_NODE',
            'PreprocessorToken',
            'Token',
            'DropToken',
@@ -206,9 +205,6 @@ def reentry_point(rest: StringView,
 # Parser base class
 #
 ########################################################################
-
-
-EMPTY_NODE = FrozenNode(':EMPTY__', '')
 
 
 ApplyFunc = Callable[['Parser'], None]
@@ -1806,7 +1802,7 @@ class ZeroOrMore(Option):
         '.'
         >>> forever = ZeroOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
-        Node(:EMPTY__, )
+        Node(:EMPTY, )
 
     EBNF-Notation: ``{ ... }``
 
@@ -1851,7 +1847,7 @@ class OneOrMore(UnaryParser):
         ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ \'.\' ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
-        Node(:EMPTY__, )
+        Node(:EMPTY, )
 
     EBNF-Notation: ``{ ... }+``
 

@@ -61,7 +61,7 @@ from DHParser.configuration import access_presets, finalize_presets, get_config_
     set_config_value
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, ZOMBIE_TAG
+from DHParser.syntaxtree import Node, ZOMBIE_TAG, EMPTY_PTYPE
 from DHParser.toolkit import escape_control_characters
 
 __all__ = ('start_logging',
@@ -207,7 +207,8 @@ def append_log(log_name: str, *strings, echo: bool=False) -> None:
         ldir = log_dir()
     if ldir and log_name:
         log_path = os.path.join(ldir, log_name)
-        assert os.path.exists(log_path)
+        if not os.path.exists(log_path):
+            assert create_log(log_path), 'Could not create log file: "{}"'.format(log_path)
         with open(log_path, 'a', encoding='utf-8') as f:
             for text in strings:
                 f.write(text)
@@ -257,6 +258,7 @@ class HistoryRecord:
     __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors')
 
     MATCH = "MATCH"
+    DROP = "DROP"
     ERROR = "ERROR"
     FAIL = "FAIL"
     Snapshot_Fields = ('line', 'column', 'stack', 'status', 'text')
@@ -269,16 +271,17 @@ class HistoryRecord:
     HTML_LEAD_IN = (
         '<!DOCTYPE html>\n'
         '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
-        'table {border-spacing: 0px; border: thin solid darkgrey; width:100%}\n'
+        'table {border-spacing: 0px; border: thin solid grey; width:100%}\n'
         'td,th {font-family:monospace; '
         'border-right: thin solid grey; border-bottom: thin solid grey}\n'
-        'td.line, td.column {color:darkgrey}\n'
-        '.text{color:darkblue}\n'
-        '.failtext {font-weight:normal; color:darkgrey}\n'
-        '.unmatched {font-weight:normal; color:darkgrey}\n'
+        'td.line, td.column {color:grey}\n'
+        '.text{color:blue}\n'
+        '.failtext {font-weight:normal; color:grey}\n'
+        '.unmatched {font-weight:normal; color:lightgrey}\n'
         '.fail {font-weight:bold; color:darkgrey}\n'
         '.error {font-weight:bold; color:red}\n'
-        '.match {font-weight:bold; color:darkgreen}\n'
+        '.match {font-weight:bold; color:green}\n'
+        '.drop {font-weight:bold; color:darkslategrey}\n'
         '.matchstack {font-weight:bold;color:darkred}\n'
         'span {color:darkgrey}\n'
         '</style>\n</head>\n<body>\n')
@@ -329,7 +332,7 @@ class HistoryRecord:
         classes = list(HistoryRecord.Snapshot_Fields)
         idx = {field_name: i for i, field_name in enumerate(classes)}
         classes[idx['status']] = status.lower()
-        if status == self.MATCH:
+        if status in (self.MATCH, self.DROP):
             n = max(40 - len(excerpt), 0)
             dots = '...' if len(self.text) > n else ''
             excerpt = excerpt + '<span class="unmatched">' + self.text[:n] + dots + '</span>'
@@ -346,9 +349,11 @@ class HistoryRecord:
                 else:
                     stack = stack[:i] + '<span class="matchstack">' + stack[i:k] \
                         + '</span>' + stack[k:]
+            else:
+                stack = '<span class="matchstack">{}</span>'.format(stack)
         elif status == self.FAIL:
             classes[idx['text']] = 'failtext'
-        else:  # status == self.ERROR:
+        else:  # ERROR
             stack += '<br/>\n' + status
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
@@ -373,8 +378,16 @@ class HistoryRecord:
 
     @property
     def status(self) -> str:
-        return self.FAIL if self.node is None or self.node.tag_name == ZOMBIE_TAG else \
-            ('"%s"' % self.err_msg()) if self.errors else self.MATCH
+        if self.node is None or self.node.tag_name == ZOMBIE_TAG:
+            return self.FAIL
+        elif self.node.tag_name == EMPTY_PTYPE:
+            return self.DROP
+        elif self.errors:
+            return '"%s"' % self.err_msg()
+        else:
+            return self.MATCH
+        # return self.FAIL if self.node is None or self.node.tag_name == ZOMBIE_TAG else \
+        #     ('"%s"' % self.err_msg()) if self.errors else self.MATCH
 
     @property
     def excerpt(self):

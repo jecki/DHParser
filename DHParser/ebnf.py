@@ -834,7 +834,7 @@ class EBNFCompiler(Compiler):
 
         if DROP_WSPC in self.directives.drop or DROP_TOKEN in self.directives.drop:
             definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
-                                'Drop(RegExp(%s))' % EBNFCompiler.WHITESPACE_KEYWORD))
+                                'Drop(Whitespace(%s))' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,

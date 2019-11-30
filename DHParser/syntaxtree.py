@@ -40,6 +40,7 @@ from DHParser.toolkit import re, cython
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
            'REGEXP_PTYPE',
+           'EMPTY_PTYPE',
            'LEAF_PTYPES',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
@@ -48,6 +49,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'ChildrenType',
            'Node',
            'FrozenNode',
+           'EMPTY_NODE',
            'tree_sanity_check',
            'RootNode',
            'DHParser_JSONEncoder',
@@ -69,6 +71,7 @@ __all__ = ('WHITESPACE_PTYPE',
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Token'
 REGEXP_PTYPE = ':RegExp'
+EMPTY_PTYPE = ':EMPTY'
 LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
 
 ZOMBIE_TAG = "ZOMBIE__"
@@ -1254,6 +1257,7 @@ class FrozenNode(Node):
 
 
 PLACEHOLDER = FrozenNode('__PLACEHOLDER__', '')
+EMPTY_NODE = FrozenNode(EMPTY_PTYPE, '')
 
 
 def tree_sanity_check(tree: Node) -> bool:

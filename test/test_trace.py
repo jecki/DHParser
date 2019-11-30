@@ -26,27 +26,45 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import grammar_provider, with_all_descendants, with_unnamed_descendants, \
-    set_tracer, trace_history, log_parsing_history, start_logging
+    set_tracer, trace_history, log_parsing_history, start_logging, set_config_value
 
 
 class TestTrace:
     def setup(self):
-        minilang = """
+        start_logging()
+
+    def test_trace_simple(self):
+        lang = """
             expr = term { ("+"|"-") term }
             term = factor { ("*"|"/") factor }
             factor = /[0-9]+/~ | "(" expr ")"
             """
-        self.gr = grammar_provider(minilang)()
-
-    # def tear_down(self):
-    #    os.remove('trace.log')
-
-    def test_trace(self):
-        all_desc = with_all_descendants(self.gr.root_parser__)
+        gr = grammar_provider(lang)()
+        all_desc = with_all_descendants(gr.root_parser__)
         set_tracer(all_desc, trace_history)
-        st = self.gr('2*(3+4)')
-        start_logging()
-        log_parsing_history(self.gr, 'trace.log')
+        st = gr('2*(3+4)')
+        log_parsing_history(gr, 'trace_simple')
+        print(st.serialize())
+
+    def test_trace_drop(self):
+        lang = r"""
+            @ drop = token, whitespace
+            expression = term  { ("+" | "-") term}
+            term       = factor  { ("*"|"/") factor}
+            factor     = number | variable | "("  expression  ")"
+                       | constant | fixed
+            variable   = /[a-z]/~
+            number     = /\d+/~
+            constant   = "A" | "B"
+            fixed      = "X"
+            """
+        set_config_value('compiled_EBNF_log', 'test_trace_parser.py')
+        gr = grammar_provider(lang)()
+        all_desc = with_all_descendants(gr.root_parser__)
+        set_tracer(all_desc, trace_history)
+        # st = gr('2*(3+4)')
+        st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
+        log_parsing_history(gr, 'trace_drop')
         print(st.serialize())
 
 

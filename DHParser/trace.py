@@ -32,9 +32,10 @@ be superceded by tracing.
 from typing import Tuple, Optional, List, Collection, Union
 
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, \
+    EMPTY_PTYPE, EMPTY_NODE
 from DHParser.log import HistoryRecord
-from DHParser.parse import Parser, ParserError, ParseFunc, EMPTY_NODE
+from DHParser.parse import Parser, ParserError, ParseFunc
 
 __all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer')
 
@@ -57,12 +58,14 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
     # TODO: Try recording all named parsers on the way back?
+    delta = text._len - rest._len
     if ((grammar.moving_forward__ or grammar.most_recent_error__ or (node and not self.anonymous))
-            and (node != EMPTY_NODE or self.tag_name != WHITESPACE_PTYPE)):
+            and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace form history configurable
         errors = [grammar.most_recent_error__] if grammar.most_recent_error__ else []
         grammar.most_recent_error__ = None
         line_col = grammar.line_col__(text)
-        record = HistoryRecord(grammar.call_stack__, node, rest, line_col, errors)
+        nd = Node(node.tag_name, text[:delta]) if node else None
+        record = HistoryRecord(grammar.call_stack__, nd, rest, line_col, errors)
         if (not grammar.history__ or line_col != grammar.history__[-1].line_col
             or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):
             grammar.history__.append(record)
