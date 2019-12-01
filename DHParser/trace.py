@@ -60,11 +60,11 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     # TODO: Try recording all named parsers on the way back?
     delta = text._len - rest._len
     if ((grammar.moving_forward__ or grammar.most_recent_error__ or (node and not self.anonymous))
-            and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace form history configurable
+            and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace from history configurable
         errors = [grammar.most_recent_error__] if grammar.most_recent_error__ else []
         grammar.most_recent_error__ = None
         line_col = grammar.line_col__(text)
-        nd = Node(node.tag_name, text[:delta]) if node else None
+        nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
         record = HistoryRecord(grammar.call_stack__, nd, rest, line_col, errors)
         if (not grammar.history__ or line_col != grammar.history__[-1].line_col
             or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):

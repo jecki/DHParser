@@ -378,12 +378,19 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 break
         return is_artifact
 
-    history_tracking = get_config_value('history_tracking')
-    track_history = history_tracking
+    # history_tracking = get_config_value('history_tracking')
+    # track_history = history_tracking
 
     for parser_name, tests in test_unit.items():
         if not get_config_value('test_parallelization'):
             print('  ' + parser_name)
+
+        try:
+            if has_lookahead(parser_name):
+                set_tracer(with_all_descendants(parser[parser_name]), trace_history)
+                track_history = True
+        except UnknownParserError:
+            pass
 
         assert parser_name, "Missing parser name in test %s!" % unit_name
         assert not any(test_type in RESULT_STAGES for test_type in tests), \
@@ -414,10 +421,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             errflag = len(errata)
             try:
-                if has_lookahead(parser_name):
-                    # set_tracer(with_all_descendants(parser[parser_name]), trace_history)
-                    track_history = True
-                cst = parser(test_code, parser_name, track_history=track_history)
+                cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
@@ -481,8 +485,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             errflag = len(errata)
             # cst = parser(test_code, parser_name)
             try:
-                track_history = history_tracking or has_lookahead(parser_name)
-                cst = parser(test_code, parser_name, track_history=track_history)
+                # track_history = history_tracking or has_lookahead(parser_name)
+                cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_TAG, "").with_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
@@ -502,6 +506,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if verbose:
                 infostr = '    fail-test  "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+
+    # remove tracers, in case there are any:
+    set_tracer(with_all_descendants(parser.root_parser__), None)
 
     # write test-report
     if report:
