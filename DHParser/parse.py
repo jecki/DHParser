@@ -460,6 +460,7 @@ class Parser:
                             .with_pos(location)
                     self._add_resume_notice(rest, node)
                 elif pe.first_throw:
+                    # TODO: Will this option be needed, if history tracking is deferred to module "trace"?
                     if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:

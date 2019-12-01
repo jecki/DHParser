@@ -378,9 +378,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 break
         return is_artifact
 
-    # history_tracking = get_config_value('history_tracking')
-    # track_history = history_tracking
-
     for parser_name, tests in test_unit.items():
         if not get_config_value('test_parallelization'):
             print('  ' + parser_name)
@@ -483,9 +480,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
         for test_name, test_code in tests.get('fail', dict()).items():
             errflag = len(errata)
-            # cst = parser(test_code, parser_name)
             try:
-                # track_history = history_tracking or has_lookahead(parser_name)
                 cst = parser(test_code, parser_name)
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_TAG, "").with_pos(0)
