@@ -47,6 +47,9 @@ from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cy
 
 
 __all__ = ('ParserError',
+           'ApplyFunc',
+           'FlagFunc',
+           'ParseFunc',
            'Parser',
            'UnknownParserError',
            'GrammarErrorType',

@@ -35,7 +35,7 @@ from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, \
     EMPTY_PTYPE, EMPTY_NODE
 from DHParser.log import HistoryRecord
-from DHParser.parse import Parser, ParserError, ParseFunc
+from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
 __all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer')
 
@@ -78,6 +78,7 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
 def with_all_descendants(root: Parser) -> List[Parser]:
     """Returns a list with the parser `root` and all of its descendants."""
     descendants = []
+
     def visit(parser: Parser):
         descendants.append(parser)
     root.apply(visit)
@@ -93,10 +94,18 @@ def with_unnamed_descendants(root: Parser) -> List[Parser]:
     return descendants
 
 
-def set_tracer(parsers: Union[Parser, Collection[Parser]], tracer: Optional[ParseFunc]):
-    if isinstance(parsers, Parser):
+def set_tracer(parsers: Union[Grammar, Parser, Collection[Parser]], tracer: Optional[ParseFunc]):
+    if isinstance(parsers, Grammar):
+        parsers = parsers.all_parsers__
+    elif isinstance(parsers, Parser):
         parsers = [parsers]
-    for parser in parsers:
-        if parser.ptype != ':Forward':
-            parser.set_proxy(tracer)
+    if parsers:
+        assert all(parsers[0].grammar == parser.grammar for parser in parsers)
+        parsers[0].grammar.history_tracking__ = True
+        for parser in parsers:
+            if parser.ptype != ':Forward':
+                parser.set_proxy(tracer)
 
+
+def resume_notices(grammar: Grammar):
+    pass
