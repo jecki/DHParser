@@ -358,6 +358,7 @@ class Parser:
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
 
+    # TODO: Outsource this to trace.py !!!
     def _add_resume_notice(self, rest: StringView, err_node: Node) -> None:
         """Adds a resume notice to the error node with information about
         the reentry point and the parser."""
@@ -461,7 +462,7 @@ class Parser:
                             self.tag_name,
                             (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
                             .with_pos(location)
-                    self._add_resume_notice(rest, node)
+                    # self._add_resume_notice(rest, node)
                 elif pe.first_throw:
                     # TODO: Will this option be needed, if history tracking is deferred to module "trace"?
                     if history_tracking__:  grammar.call_stack__.pop()
@@ -474,6 +475,7 @@ class Parser:
                     if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
+                self._add_resume_notice(rest, node)
                 grammar.most_recent_error__ = pe.error  # needed for history tracking
 
             if left_recursion_depth__:
