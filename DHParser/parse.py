@@ -914,6 +914,40 @@ class Grammar:
                 location to which the parser backtracks. This is done by
                 calling method :func:`rollback_to__(location)`.
 
+        recursion_locations__:  Stores the locations where left recursion was
+                detected. Needed to provide minimal memoization for the left
+                recursion detection algorithm, but, strictly speaking, superfluous
+                if full memoization is enabled. (See :func:`Parser.__call__()`)
+
+        last_recursion_location__:  Last location where left recursion was
+                detected. This is used to avoid reduplicating warning messages
+                about left recursion.
+
+        memoization__:  Turns full memoization on or off. Turning memoization off
+                results in less memory usage and sometimes reduced parsing time.
+                In some situations it may drastically increase parsing time, so
+                it is safer to leave it on. (Default: on)
+
+
+        # tracing and debugging support
+
+        # These parameters are needed by the debugging functions in module
+        # `trace.py`. They should not be manipulated by the users of class
+        #  Grammar directly.
+
+        history_tracking__:  A flag indicating that the parsing history is
+                being tracked. This flag should not be manipulated by the
+                user. Use `trace.set_tracer(grammar, trace.trace_history)` to
+                turn (full) history tracking on and
+                `trace.set_tracer(grammar, None)` to turn it off. Default is off.
+
+        resume_notices__: A flag indicating that resume messages are generated
+                in addition to the error messages, in case the parser was able
+                to resume after an error. Use `trace.resume_notices(grammar)` to
+                turn resume messages on and `trace.set_tracer(grammar, None)`
+                to turn resume messages (as well as history recording) off.
+                Default is off.
+
         call_stack__:  A stack of the tag names and locations of all parsers
                 in the call chain to the currently processed parser during
                 parsing. The call stack can be thought of as a breadcrumb trail.
@@ -931,26 +965,14 @@ class Grammar:
                 and should not be considered as having a valid value if history
                 recording is turned off! (See :func:`Parser.__call__`)
 
-        recursion_locations__:  Stores the locations where left recursion was
-                detected. Needed to provide minimal memoization for the left
-                recursion detection algorithm, but, strictly speaking, superfluous
-                if full memoization is enabled. (See :func:`Parser.__call__()`)
-
-        last_recursion_location__:  Last location where left recursion was
-                detected. This is used to avoid reduplicating warning messages
-                about left recursion.
-
         most_recent_error__: The most recent parser error that has occurred
                 or `None`. This can be read by tracers. See module `trace`
 
-        memoization__:  Turns full memoization on or off. Turning memoization off
-                results in less memory usage and sometimes reduced parsing time.
-                In some situations it may drastically increase parsing time, so
-                it is safer to leave it on. (Default: on)
 
-        # Configuration parameters. These values of theses parameters are copied
-                from the global configuration in the constructor of the Grammar
-                object. (see mpodule `configuration.py`)
+        # Configuration parameters.
+
+        # These values of theses parameters are copied from the global configuration
+        # in the constructor of the Grammar object. (see mpodule `configuration.py`)
 
         flatten_tree__:  If True (default), anonymous nodes will be flattened
                 during parsing already. This greatly reduces the concrete syntax
@@ -969,14 +991,6 @@ class Grammar:
         reentry_search_window__: The number of following characters that the
                 parser considers when searching a reentry point when a syntax error
                 has been encountered. Default is 10.000 characters.
-
-        history_tracking__:  A flag indicating that the parsing history shall
-                be tracked. Default is off.
-
-        resume_notices__: When resuming after an error a notice message is added
-               in addition to the error message to report where, and, if history
-               tracking is turned on, with which parser the parsing process
-               will be resumed. Default is off.
     """
     python_src__ = ''  # type: str
     root__ = PARSER_PLACEHOLDER  # type: Parser
@@ -1045,12 +1059,12 @@ class Grammar:
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
         self.memoization__ = True              # type: bool
+        self.history_tracking__ = False        # type: bool
+        self.resume_notices__ = False          # type: bool
         self.flatten_tree__ = get_config_value('flatten_tree')                    # type: bool
         self.left_recursion_depth__ = get_config_value('left_recursion_depth')    # type: int
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
-        self.history_tracking__ = get_config_value('history_tracking')            # type: bool
-        self.resume_notices__ = get_config_value('resume_notices')                # type: bool
         self._reset__()
 
         # prepare parsers in the class, first

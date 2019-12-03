@@ -37,7 +37,8 @@ from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYP
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
-__all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer')
+__all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer',
+           'resume_notices_on')
 
 
 def add_resume_notice(parser, rest: StringView, err_node: Node) -> None:
@@ -121,6 +122,9 @@ def with_unnamed_descendants(root: Parser) -> List[Parser]:
 
 def set_tracer(parsers: Union[Grammar, Parser, Collection[Parser]], tracer: Optional[ParseFunc]):
     if isinstance(parsers, Grammar):
+        if tracer is None:
+            parsers.history_tracking__ = False
+            parsers.resume_notices__ = False
         parsers = parsers.all_parsers__
     elif isinstance(parsers, Parser):
         parsers = [parsers]

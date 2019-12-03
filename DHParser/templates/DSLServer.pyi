@@ -29,7 +29,7 @@ scriptpath = os.path.dirname(__file__)
 
 STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
-LOGGING_REQUEST = 'logging("")'
+LOGGING_REQUEST = "logging('')"
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
@@ -312,6 +312,7 @@ if __name__ == "__main__":
 
     # read and remove "--host ..." and "--port ..." parameters from sys.argv
     argv = []
+    i = 0
     i = 0
     while i < len(sys.argv):
         if sys.argv[i] in ('--host', '-h'):

@@ -36,6 +36,7 @@ if __name__ == "__main__":
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
             set_config_value('history_tracking', True)
+            set_config_value('resume_notices', True)
             set_config_value('log_syntax_trees', set(('cst', 'ast')))
         start_logging(log_dir)
         result, errors, _ = compile_src(file_name)

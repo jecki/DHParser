@@ -100,7 +100,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \\
     JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode, \\
-    RX_NEVER_MATCH
+    RX_NEVER_MATCH, set_tracer, resume_notices_on, trace_history
 '''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
 
 
@@ -341,6 +341,10 @@ def get_grammar() -> {NAME}Grammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 '''
 
