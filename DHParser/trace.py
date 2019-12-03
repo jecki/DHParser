@@ -31,13 +31,35 @@ be superceded by tracing.
 
 from typing import Tuple, Optional, List, Collection, Union
 
+from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, \
-    EMPTY_PTYPE, EMPTY_NODE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
 __all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer')
+
+
+def add_resume_notice(parser, rest: StringView, err_node: Node) -> None:
+    """Adds a resume notice to the error node with information about
+    the reentry point and the parser."""
+    if parser == parser._grammar.start_parser__:
+        return
+    call_stack = parser._grammar.call_stack__
+    if len(call_stack) >= 2:
+        i, N = -2, -len(call_stack)
+        while i >= N and call_stack[i][0][0:1] in (':', '/', '"', "'", "`"):
+            i -= 1
+        if i >= N and i != -2:
+            parent_info = "{}->{}".format(call_stack[i][0], call_stack[-2][0])
+        else:
+            parent_info = call_stack[-2][0]
+    else:
+        parent_info = "?"
+    notice = Error('Resuming from parser {} with parser {} at point: {}'
+                   .format(parser.pname or parser.ptype, parent_info, repr(rest[:10])),
+                   parser._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
+    parser._grammar.tree__.add_error(err_node, notice)
 
 
 def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -62,13 +84,16 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     if ((grammar.moving_forward__ or grammar.most_recent_error__ or (node and not self.anonymous))
             and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace from history configurable
         errors = [grammar.most_recent_error__] if grammar.most_recent_error__ else []
-        grammar.most_recent_error__ = None
         line_col = grammar.line_col__(text)
         nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
         record = HistoryRecord(grammar.call_stack__, nd, rest, line_col, errors)
         if (not grammar.history__ or line_col != grammar.history__[-1].line_col
             or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):
             grammar.history__.append(record)
+        if grammar.most_recent_error__:
+            if grammar.resume_notices__:
+                add_resume_notice(self, rest, grammar.most_recent_error__)
+            grammar.most_recent_error__ = None
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
 
@@ -107,5 +132,7 @@ def set_tracer(parsers: Union[Grammar, Parser, Collection[Parser]], tracer: Opti
                 parser.set_proxy(tracer)
 
 
-def resume_notices(grammar: Grammar):
-    pass
+def resume_notices_on(grammar: Grammar):
+    grammar.history_tracking__ = True
+    grammar.resume_notices__ = True
+    set_tracer(grammar, trace_history)
