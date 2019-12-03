@@ -22,14 +22,9 @@ all or some particular parsers of a grammar and trace the actions
 of these parsers, making use of the `call_stack__`, `history__`
 and `moving_forward__`, `most_recent_error__`-hooks in the
 Grammar-object.
-
-This allows for more flexible and at the same time more focused
-tracing of the parsing process than the (older) parsing-history-
-tracking-mechanism in the `parse` module, which will eventually
-be superceded by tracing.
 """
 
-from typing import Tuple, Optional, List, Collection, Union
+from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error
 from DHParser.stringview import StringView
@@ -120,7 +115,7 @@ def with_unnamed_descendants(root: Parser) -> List[Parser]:
     return descendants
 
 
-def set_tracer(parsers: Union[Grammar, Parser, Collection[Parser]], tracer: Optional[ParseFunc]):
+def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
     if isinstance(parsers, Grammar):
         if tracer is None:
             parsers.history_tracking__ = False
@@ -129,8 +124,10 @@ def set_tracer(parsers: Union[Grammar, Parser, Collection[Parser]], tracer: Opti
     elif isinstance(parsers, Parser):
         parsers = [parsers]
     if parsers:
-        assert all(parsers[0].grammar == parser.grammar for parser in parsers)
-        parsers[0].grammar.history_tracking__ = True
+        pivot = next(parsers.__iter__())
+        assert all(pivot.grammar == parser.grammar for parser in parsers)
+        if tracer is not None:
+            pivot.grammar.history_tracking__ = True
         for parser in parsers:
             if parser.ptype != ':Forward':
                 parser.set_proxy(tracer)

@@ -38,6 +38,7 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
+from DHParser.trace import set_tracer, trace_history, resume_notices_on
 
 
 
@@ -62,9 +63,10 @@ class TestParserError:
         letters = /[A-Za-z]+/
         """
         gr = grammar_provider(lang)()
-        st = gr('hard-time', track_history=True)
+        set_tracer(gr, trace_history)
+        st = gr('hard-time')
         assert not st.errors
-        st = gr('hard-', track_history=True)
+        st = gr('hard-')
         assert st.errors and not any(e.code == 1045 for e in st.errors)
 
 
@@ -526,7 +528,7 @@ class TestErrorRecovery:
         parser = grammar_provider(lang)()
         st = parser('AB_D')
         assert len(st.errors) == 1  # no additional "stopped before end"-error!
-        parser.resume_notices__ = True
+        resume_notices_on(parser)
         st = parser('AB_D')
         assert len(st.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in st.errors)
 
@@ -843,8 +845,9 @@ class TestReentryAfterError:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
-        gr.resume_notices__ = True
-        cst = gr(content, track_history=True)
+        resume_notices_on(gr)
+        cst = gr(content)
+        # print(cst.errors)
         assert len(cst.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in cst.errors)
 
     def test_several_resume_rules_innermost_rule_matching(self):

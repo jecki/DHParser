@@ -20,13 +20,15 @@ limitations under the License.
 """
 
 import os
+import re
 import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import grammar_provider, with_all_descendants, with_unnamed_descendants, \
-    set_tracer, trace_history, log_parsing_history, start_logging, set_config_value
+    set_tracer, trace_history, log_parsing_history, start_logging, set_config_value, \
+    resume_notices_on
 
 
 class TestTrace:
@@ -66,6 +68,37 @@ class TestTrace:
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
         log_parsing_history(gr, 'trace_drop')
         print(st.serialize())
+
+    def test_trace_resume(self):
+        lang = """
+        document = alpha [beta] gamma "."
+          alpha = "ALPHA" abc
+            abc = §"a" "b" "c"
+          beta = "BETA" (bac | bca)
+            bac = "b" "a" §"c"
+            bca = "b" "c" §"a"
+          gamma = "GAMMA" §(cab | cba)
+            cab = "c" "a" §"b"
+            cba = "c" "b" §"a"
+        """
+        gr = grammar_provider(lang)()
+        gr.resume_rules = dict()
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)')]
+        content = 'ALPHA acb BETA bac GAMMA cab .'
+        cst = gr(content)
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only one error message
+        assert len(cst.errors_sorted) == 1
+
+        # test resume notice
+        resume_notices_on(gr)
+        cst = gr(content)
+        # there should be one error message and one resume notice
+        assert len(cst.errors_sorted) == 2
+        set_tracer(gr, None)
+        assert not gr.history_tracking__
 
 
 

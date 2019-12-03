@@ -358,27 +358,27 @@ class Parser:
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
 
-    # TODO: Outsource this to trace.py !!!
-    def _add_resume_notice(self, rest: StringView, err_node: Node) -> None:
-        """Adds a resume notice to the error node with information about
-        the reentry point and the parser."""
-        if not self._grammar.resume_notices__ or self == self._grammar.start_parser__:
-            return
-        call_stack = self._grammar.call_stack__
-        if len(call_stack) >= 2:
-            i, N = -2, -len(call_stack)
-            while i >= N and call_stack[i][0][0:1] in (':', '/', '"', "'", "`"):
-                i -= 1
-            if i >= N and i != -2:
-                parent_info = "{}->{}".format(call_stack[i][0], call_stack[-2][0])
-            else:
-                parent_info = call_stack[-2][0]
-        else:
-            parent_info = "?"
-        notice = Error('Resuming from parser {} with parser {} at point: {}'
-                       .format(self.pname or self.ptype, parent_info, repr(rest[:10])),
-                       self._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
-        self._grammar.tree__.add_error(err_node, notice)
+    # # TODO: Outsource this to trace.py !!!
+    # def _add_resume_notice(self, rest: StringView, err_node: Node) -> None:
+    #     """Adds a resume notice to the error node with information about
+    #     the reentry point and the parser."""
+    #     if not self._grammar.resume_notices__ or self == self._grammar.start_parser__:
+    #         return
+    #     call_stack = self._grammar.call_stack__
+    #     if len(call_stack) >= 2:
+    #         i, N = -2, -len(call_stack)
+    #         while i >= N and call_stack[i][0][0:1] in (':', '/', '"', "'", "`"):
+    #             i -= 1
+    #         if i >= N and i != -2:
+    #             parent_info = "{}->{}".format(call_stack[i][0], call_stack[-2][0])
+    #         else:
+    #             parent_info = call_stack[-2][0]
+    #     else:
+    #         parent_info = "?"
+    #     notice = Error('Resuming from parser {} with parser {} at point: {}'
+    #                    .format(self.pname or self.ptype, parent_info, repr(rest[:10])),
+    #                    self._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
+    #     self._grammar.tree__.add_error(err_node, notice)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -419,13 +419,13 @@ class Parser:
                     return None, text
                 self.recursion_counter[location] += 1
 
-            # write current step to call stack, if history tracking is configured
-            history_tracking__ = grammar.history_tracking__
-            if history_tracking__:
-                grammar.call_stack__.append(
-                    ((self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
-                      else (self.pname or self.tag_name)), location))
-                grammar.moving_forward__ = True
+            # # write current step to call stack, if history tracking is configured
+            # history_tracking__ = grammar.history_tracking__
+            # if history_tracking__:
+            #     grammar.call_stack__.append(
+            #         ((self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
+            #           else (self.pname or self.tag_name)), location))
+            #     grammar.moving_forward__ = True
 
             # finally, the actual parser call!
             try:
@@ -465,17 +465,17 @@ class Parser:
                     # self._add_resume_notice(rest, node)
                 elif pe.first_throw:
                     # TODO: Will this option be needed, if history tracking is deferred to module "trace"?
-                    if history_tracking__:  grammar.call_stack__.pop()
+                    # if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:
                     node = Node(self.tag_name, pe.node).with_pos(location)  # try to create tree as faithful as possible
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
-                    if history_tracking__:  grammar.call_stack__.pop()
+                    # if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
-                self._add_resume_notice(rest, node)
+                # self._add_resume_notice(rest, node)
                 grammar.most_recent_error__ = pe.error  # needed for history tracking
 
             if left_recursion_depth__:
@@ -515,24 +515,24 @@ class Parser:
                     # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
                     visited[location] = (node, rest)
 
-            # Mind that memoized parser calls will not appear in the history record!
-            # Does this make sense? Or should it be changed?
-            if history_tracking__:
-                # don't track returning parsers except in case an error has occurred
-                if grammar.moving_forward__:
-                    record = HistoryRecord(grammar.call_stack__, node, text,
-                                           grammar.line_col__(text))
-                    grammar.history__.append(record)
-                elif grammar.most_recent_error__:
-                    # error_nid = id(node)  # type: int
-                    # if error_nid in grammar.tree__.error_nodes:
-                    record = HistoryRecord(grammar.call_stack__, node, text,
-                                           grammar.line_col__(text),
-                                           [grammar.most_recent_error__])
-                    grammar.most_recent_error__ = None
-                    grammar.history__.append(record)
-                grammar.moving_forward__ = False
-                grammar.call_stack__.pop()
+            # # Mind that memoized parser calls will not appear in the history record!
+            # # Does this make sense? Or should it be changed?
+            # if history_tracking__:
+            #     # don't track returning parsers except in case an error has occurred
+            #     if grammar.moving_forward__:
+            #         record = HistoryRecord(grammar.call_stack__, node, text,
+            #                                grammar.line_col__(text))
+            #         grammar.history__.append(record)
+            #     elif grammar.most_recent_error__:
+            #         # error_nid = id(node)  # type: int
+            #         # if error_nid in grammar.tree__.error_nodes:
+            #         record = HistoryRecord(grammar.call_stack__, node, text,
+            #                                grammar.line_col__(text),
+            #                                [grammar.most_recent_error__])
+            #         grammar.most_recent_error__ = None
+            #         grammar.history__.append(record)
+            #     grammar.moving_forward__ = False
+            #     grammar.call_stack__.pop()
 
         except RecursionError:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
@@ -1163,8 +1163,7 @@ class Grammar:
     def __call__(self,
                  document: str,
                  start_parser: Union[str, Parser] = "root_parser__",
-                 *, complete_match: bool = True,
-                 track_history: bool = False) -> RootNode:
+                 *, complete_match: bool = True) -> RootNode:
         """
         Parses a document with with parser-combinators.
 
@@ -1175,10 +1174,6 @@ class Grammar:
                 (i.e. particular parts of the EBNF-Grammar.)
             complete_match (bool): If True, an error is generated, if
                 `start_parser` did not match the entire document.
-            track_history (bool): If true, the parsing history will be
-                recorded in self. history__. If self.history_tracking__ is
-                True, the parsing history will always be recorded,
-                even if `False` is passed to the `track_history` parameter.
         Returns:
             Node: The root node to the parse tree.
         """
@@ -1219,10 +1214,10 @@ class Grammar:
                 parser.reset()
         else:
             self._dirty_flag__ = True
-        save_history_tracking = self.history_tracking__
-        self.history_tracking__ = track_history or self.history_tracking__ or self.resume_notices__
+        # save_history_tracking = self.history_tracking__
+        # self.history_tracking__ = track_history or self.history_tracking__ or self.resume_notices__
         # track history contains and retains the current tracking state
-        track_history = self.history_tracking__
+        # track_history = self.history_tracking__
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
@@ -1256,7 +1251,7 @@ class Grammar:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None:
-                    err_info = '' if not track_history else \
+                    err_info = '' if not self.history_tracking__ else \
                                '\n    Most advanced: %s\n    Last match:    %s;' % \
                                (str(HistoryRecord.most_advanced_match(self.history__)),
                                 str(HistoryRecord.last_match(self.history__)))
@@ -1293,20 +1288,20 @@ class Grammar:
                         error_code = Error.PARSER_STOPPED_BEFORE_END
                 stitches.append(Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches)))
                 self.tree__.new_error(stitches[-1], error_msg, error_code)
-                if self.history_tracking__:
-                    # # some parsers may have matched and left history records with nodes != None.
-                    # # Because these are not connected to the stitched root node, their pos-
-                    # # properties will not be initialized by setting the root node's pos property
-                    # # to zero. Therefore, their pos properties need to be initialized here
-                    # for record in self.history__:
-                    #     if record.node and record.node._pos < 0:
-                    #         record.node.with_pos(0)
-                    # print(self.call_stack__)
-                    # record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest,
-                    #                        self.line_col__(rest))
-                    # self.history__.append(record)
-                    # stop history tracking when parser returned too early
-                    self.history_tracking__ = False
+                # if self.history_tracking__:
+                #     # # some parsers may have matched and left history records with nodes != None.
+                #     # # Because these are not connected to the stitched root node, their pos-
+                #     # # properties will not be initialized by setting the root node's pos property
+                #     # # to zero. Therefore, their pos properties need to be initialized here
+                #     # for record in self.history__:
+                #     #     if record.node and record.node._pos < 0:
+                #     #         record.node.with_pos(0)
+                #     # print(self.call_stack__)
+                #     # record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest,
+                #     #                        self.line_col__(rest))
+                #     # self.history__.append(record)
+                #     # stop history tracking when parser returned too early
+                #     self.history_tracking__ = False
             else:
                 rest = ''  # if complete_match is False, ignore the rest and leave while loop
         if stitches:
@@ -1330,7 +1325,7 @@ class Grammar:
         if result:
             self.tree__.swallow(result)
         self.start_parser__ = None
-        self.history_tracking__ = save_history_tracking
+        # self.history_tracking__ = save_history_tracking
         return self.tree__
 
 
