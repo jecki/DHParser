@@ -82,6 +82,7 @@ class Error:
     LEFT_RECURSION_WARNING                   = ErrorCode(140)
 
     UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
+    CANNOT_VERIFY_TRANTABLE_WARNING          = ErrorCode(620)
 
     # error codes
 

@@ -33,7 +33,7 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors
-from DHParser.log import suspend_logging, resume_logging, is_logging, append_log
+from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
@@ -428,8 +428,24 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             source = f.read()
             sections = RX_SECTION_MARKER.split(source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
-            ast_trans_table = compile_python_object(DHPARSER_IMPORTS + ast,
-                                                    r'(?:\w+_)?AST_transformation_table$')
+            ast_trans_python_src = DHPARSER_IMPORTS + ast
+            ast_trans_table = dict()
+            try:
+                ast_trans_table = compile_python_object(ast_trans_python_src,
+                                                        r'(?:\w+_)?AST_transformation_table$')
+            except Exception as e:
+                if isinstance(e, NameError):
+                    err_str = 'NameError "{}" while compiling AST-Transformation. ' \
+                              'Possibly due to a forgotten import at the beginning ' \
+                              'of the AST-Block (!)'.format(str(e))
+                else:
+                    err_str = 'Exception {} while compiling AST-Tansformation: {}' \
+                              .format(str(type(e)), str(e))
+                messages.append(Error(err_str, 0, Error.CANNOT_VERIFY_TRANTABLE_WARNING))
+                if is_logging():
+                    with open(os.path.join(log_dir(), rootname + '_AST_src.py'), 'w',
+                              encoding='utf-8') as f:
+                        f.write(ast_trans_python_src)
             messages.extend(ebnf_compiler.verify_transformation_table(ast_trans_table))
             # TODO: Verify compiler
         except (PermissionError, FileNotFoundError, IOError):

@@ -1009,8 +1009,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 the flattened expression does not exceed the threshold length.
                 A negative number means that it will always be flattened.
         """
-
-        left_bracket, right_bracket, density = ('', '', 1) if compact else ('(', '\n)', 0)
+        left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', '\n)', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
         root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[RootNode]
 

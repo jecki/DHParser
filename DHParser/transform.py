@@ -49,6 +49,7 @@ __all__ = ('TransformationDict',
            'key_tag_name',
            'traverse',
            'always',
+           'neg',
            'is_named',
            'update_attr',
            'swap_attributes',
@@ -81,6 +82,7 @@ __all__ = ('TransformationDict',
            'matches_re',
            'has_content',
            'has_parent',
+           'has_descendant',
            'lstrip',
            'rstrip',
            'strip',
@@ -136,7 +138,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     list of parameters passed to the factory function will be converted
     into a collection.
 
-    Main benefit is readability of processing tables.
+    The primary benefit is the readability of the transformation-tables.
 
     Usage::
 
@@ -397,11 +399,21 @@ def always(context: List[Node]) -> bool:
     return True
 
 
+@transformation_factory(collections.abc.Callable)
+def neg(context: List[Node], bool_func: collections.abc.Callable):
+    """Returns the inverted boolean result of `bool_func(context)`"""
+    return not bool_func(context)
+
+
+# TODO: add and test `and`  and `or` operator
+
+
 def is_single_child(context: List[Node]) -> bool:
     """Returns ``True`` if the current node does not have any siblings."""
     return len(context[-2].children) == 1
 
 
+# TODO: ambiguous: named, tagging...
 def is_named(context: List[Node]) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
     return not context[-1].anonymous
@@ -412,6 +424,7 @@ def is_anonymous(context: List[Node]) -> bool:
     return context[-1].anonymous
 
 
+# TODO: can be removed, use: is_one_of(WHITESPACE_PTYPE)
 def is_insignificant_whitespace(context: List[Node]) -> bool:
     """Returns ``True`` for whitespace and comments defined with the
     ``@comment``-directive."""
@@ -492,14 +505,29 @@ def has_content(context: List[Node], regexp: str) -> bool:
     return bool(re.match(regexp, context[-1].content))
 
 
+# TODO: rename has_ancestor
 @transformation_factory(collections.abc.Set)
-def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+def has_parent(context: List[Node], tag_name_set: AbstractSet[str], start_level: int=2) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
+    :param start_level: "nearest" ancestor considered: 2 menans parent level,
+        3 grand-parents. To include the node itself, use 1.
     """
-    for i in range(2, len(context) + 1):
+    assert start_level > 0
+    for i in range(start_level, len(context) + 1):
         if context[-i].tag_name in tag_name_set:
+            return True
+    return False
+
+
+@transformation_factory(collections.abc.Set)
+def has_descendant(context: List[Node], tag_name_set: AbstractSet[str], stop_level: int=1) -> bool:
+    assert stop_level > 0
+    for child in context[-1].children:
+        if child.tag_name in tag_name_set:
+            return True
+        if stop_level > 1 and has_descendant(context + [child], tag_name_set, stop_level - 1):
             return True
     return False
 
