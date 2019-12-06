@@ -795,6 +795,7 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     node.result = tuple(result)
 
 
+# TODO: rename to filer- or transform-content
 @transformation_factory(collections.abc.Callable)
 def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
     """
@@ -805,6 +806,7 @@ def replace_content(context: List[Node], func: Callable):  # Callable[[Node], Re
     node.result = func(node.result)
 
 
+# TODO: rename to replace_content_with
 @transformation_factory  # (str)
 def replace_content_by(context: List[Node], content: str):  # Callable[[Node], ResultType]
     """
