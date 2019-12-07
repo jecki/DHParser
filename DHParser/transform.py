@@ -1181,6 +1181,33 @@ def remove_if(context: List[Node], condition: Callable):
         parent._set_result(tuple(nd for nd in parent.result if nd != node))
 
 
+#######################################################################
+#
+# constructive transformations:
+#
+# nodes may be added (attention: position value )
+#
+#######################################################################
+
+@transformation_factory(str)
+def delimit_children(context: List[Node], delimiter_tag_name: str, delimiter: str):
+    """Ensures that the children are delimited by `delimiter`. Adds a delimiting node
+    of type `delimiter_tag_name`, where this is nt the case."""
+    node = context[-1]
+    children = node.children
+    cl = [children[0]]
+    for i in range(1, len(children)):
+        last = cl[-1]
+        next = children[i]
+        if last.tag_name != delimiter_tag_name \
+                and next.tag_name != delimiter_tag_name \
+                and not last.content.endswith(delimiter) \
+                and not next.content.startswith(delimiter):
+            cl.append(Node(delimiter_tag_name, delimiter, True))
+        cl.append(next)
+    node.result = tuple(cl)
+
+
 ########################################################################
 #
 # AST semantic validation functions (EXPERIMENTAL!!!)
