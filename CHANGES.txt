@@ -11,6 +11,8 @@ DHParser Version 0.9.1
   and Whitespace-parsers
 - resuming after an error does not jump in to commentaries, any more (bugfix!)
 - some speed optimizations
+- refactoring: history tracking has been moved from parse.py to module 
+  trace.py (new) and log.py
 
 
 DHParser Version 0.9.0 (20.10.2019)
