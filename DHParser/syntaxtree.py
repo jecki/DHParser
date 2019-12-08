@@ -420,7 +420,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._pos >= 0:
             self._init_child_pos()
 
-    def _content(self) -> List[str]:
+    def leaf_data(self) -> List[str]:
         """
         Returns string content as list of string fragments
         that are gathered from all child nodes in order.
@@ -428,7 +428,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.children:
             fragments = []
             for child in self.children:
-                fragments.extend(child._content())
+                fragments.extend(child.leaf_data())
             return fragments
         self._result = str(self._result)
         return [self._result]
@@ -443,7 +443,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.children:
             fragments = []
             for child in self.children:
-                fragments.extend(child._content())
+                fragments.extend(child.leaf_data())
             return ''.join(fragments)
         self._result = str(self._result)
         return self._result
@@ -1445,43 +1445,6 @@ class DHParser_JSONEncoder(json.JSONEncoder):
             return str(cast(Error, obj))
         return json.JSONEncoder.default(self, obj)
 
-
-#######################################################################
-#
-#  string slices of a tree
-#
-#######################################################################
-
-
-class StringSlice:
-    def __init__(self, tree: Node):
-        self.tree = tree  # type: Node
-
-    @cython.locals(start=cython.int, stop=cython.int, delta=cython.int, l=cython.int, i=cython.int)
-    def __getitem__(self, index: Union[slice, int]) -> str:
-        try:
-            start, stop = real_indices(index.start, index.stop, self._len)
-            l = 0
-            str_list = []
-            for leaf in self.tree.select_if(lambda nd: bool(not nd.children)):
-                delta = len(leaf)
-                if l <= start < l + delta:
-                    str_list.append(leaf.result[start - l:stop - l])
-                elif l < stop:
-                    str_list.append(leaf.result[:stop - l])
-                if stop <= l + delta:
-                    return ''.join(str_list)
-                l += delta
-
-        except AttributeError:
-            # index is an integer value
-            i = index
-            l = 0
-            for leaf in self.tree.select_if(lambda nd: bool(not nd.children)):
-                delta = len(leaf)
-                if l <= i < l + delta:
-                    return leaf.result[i-l]
-                l += delta
 
 
 #######################################################################
