@@ -43,7 +43,7 @@ except ImportError:
     import DHParser.shadow_cython as cython
 
 
-__all__ = ('StringView', 'slow_real_indices', 'EMPTY_STRING_VIEW')
+__all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW')
 
 
 @cython.cfunc
@@ -95,9 +95,9 @@ def pack_index(index: int, length: int) -> int:
 @cython.cfunc
 @cython.returns((cython.int, cython.int))
 @cython.locals(cbegin=cython.int, cend=cython.int, length=cython.int)
-def real_indices(begin: Optional[int],
-                 end: Optional[int],
-                 length: int) -> Tuple[int, int]:
+def fast_real_indices(begin: Optional[int],
+                      end: Optional[int],
+                      length: int) -> Tuple[int, int]:
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
@@ -106,11 +106,11 @@ def real_indices(begin: Optional[int],
     return pack_index(cbegin, length), pack_index(cend, length)
 
 
-def slow_real_indices(begin: Optional[int],
-                       end: Optional[int],
-                       length: int) -> Tuple[int, int]:
+def real_indices(begin: Optional[int],
+                 end: Optional[int],
+                 length: int) -> Tuple[int, int]:
     """Python callable real-indices function for testing."""
-    return real_indices(begin, end, length)
+    return fast_real_indices(begin, end, length)
 
 
 class StringView:  # collections.abc.Sized
@@ -126,7 +126,7 @@ class StringView:  # collections.abc.Sized
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         # assert isinstance(text, str)
         self._text = text  # type: str
-        self._begin, self._end = real_indices(begin, end, len(text))
+        self._begin, self._end = fast_real_indices(begin, end, len(text))
         self._len = self._end - self._begin  # type: int
         if self._len < 0:
             self._len = 0
@@ -181,7 +181,7 @@ class StringView:  # collections.abc.Sized
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
         try:
-            start, stop = real_indices(index.start, index.stop, self._len)
+            start, stop = fast_real_indices(index.start, index.stop, self._len)
             return StringView(self._text, self._begin + start, self._begin + stop)
         except AttributeError:
             return StringView(self._text, self._begin + index, self._begin + index + 1)
@@ -205,7 +205,7 @@ class StringView:  # collections.abc.Sized
         elif start is None and end is None:
             return self._text.count(sub, self._begin, self._end)
         else:
-            _start, _end = real_indices(start, end, self._len)
+            _start, _end = fast_real_indices(start, end, self._len)
             return self._text.count(sub, self._begin + _start, self._begin + _end)
 
     @cython.locals(_start=cython.int, _end=cython.int)
@@ -223,7 +223,7 @@ class StringView:  # collections.abc.Sized
         elif start is None and end is None:
             return max(self._text.find(sub, self._begin, self._end) - self._begin, -1)
         else:
-            _start, _end = real_indices(start, end, self._len)
+            _start, _end = fast_real_indices(start, end, self._len)
             return max(self._text.find(sub, self._begin + _start, self._begin + _end)
                        - self._begin, -1)
 
@@ -242,7 +242,7 @@ class StringView:  # collections.abc.Sized
         if start is None and end is None:
             return max(self._text.rfind(sub, self._begin, self._end) - self._begin, -1)
         else:
-            _start, _end = real_indices(start, end, self._len)
+            _start, _end = fast_real_indices(start, end, self._len)
             return max(self._text.rfind(sub, self._begin + _start, self._begin + _end)
                        - self._begin, -1)
 

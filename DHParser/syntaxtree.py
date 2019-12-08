@@ -33,7 +33,7 @@ from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, U
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
-from DHParser.stringview import StringView
+from DHParser.stringview import StringView, real_indices
 from DHParser.toolkit import re, cython
 
 
@@ -1444,6 +1444,44 @@ class DHParser_JSONEncoder(json.JSONEncoder):
         elif isinstance(obj, Error):
             return str(cast(Error, obj))
         return json.JSONEncoder.default(self, obj)
+
+
+#######################################################################
+#
+#  string slices of a tree
+#
+#######################################################################
+
+
+class StringSlice:
+    def __init__(self, tree: Node):
+        self.tree = tree  # type: Node
+
+    @cython.locals(start=cython.int, stop=cython.int, delta=cython.int, l=cython.int, i=cython.int)
+    def __getitem__(self, index: Union[slice, int]) -> str:
+        try:
+            start, stop = real_indices(index.start, index.stop, self._len)
+            l = 0
+            str_list = []
+            for leaf in self.tree.select_if(lambda nd: bool(not nd.children)):
+                delta = len(leaf)
+                if l <= start < l + delta:
+                    str_list.append(leaf.result[start - l:stop - l])
+                elif l < stop:
+                    str_list.append(leaf.result[:stop - l])
+                if stop <= l + delta:
+                    return ''.join(str_list)
+                l += delta
+
+        except AttributeError:
+            # index is an integer value
+            i = index
+            l = 0
+            for leaf in self.tree.select_if(lambda nd: bool(not nd.children)):
+                delta = len(leaf)
+                if l <= i < l + delta:
+                    return leaf.result[i-l]
+                l += delta
 
 
 #######################################################################

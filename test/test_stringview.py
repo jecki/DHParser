@@ -26,19 +26,19 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import re
-from DHParser.stringview import StringView, EMPTY_STRING_VIEW, slow_real_indices
+from DHParser.stringview import StringView, EMPTY_STRING_VIEW, real_indices
 
 
 class TestStringView:
     def test_slow_real_indices(self):
-        assert slow_real_indices(3, 5, 10) == (3, 5)
-        assert slow_real_indices(None, None, 10) == (0, 10)
-        assert slow_real_indices(-2, -1, 10) == (8, 9)
-        assert slow_real_indices(-3, 11, 10) == (7, 10)
-        assert slow_real_indices(-5, -12, 10) == (5, 0)
-        assert slow_real_indices(-12, -5, 10) == (0, 5)
-        assert slow_real_indices(7, 6, 10) == (7, 6)
-        assert slow_real_indices(None, 0, 10) == (0, 0)
+        assert real_indices(3, 5, 10) == (3, 5)
+        assert real_indices(None, None, 10) == (0, 10)
+        assert real_indices(-2, -1, 10) == (8, 9)
+        assert real_indices(-3, 11, 10) == (7, 10)
+        assert real_indices(-5, -12, 10) == (5, 0)
+        assert real_indices(-12, -5, 10) == (0, 5)
+        assert real_indices(7, 6, 10) == (7, 6)
+        assert real_indices(None, 0, 10) == (0, 0)
 
     def test_creation(self):
         s = "0123456789"
