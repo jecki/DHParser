@@ -157,6 +157,7 @@ class EBNFLanguageServerProtocol:
         import json
         if self.shared.initialized or self.shared.processId != 0:
             return {"code": -32002, "message": "Server has already been initialized."}
+        self.shared.shutdown = False
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
         self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
@@ -174,6 +175,8 @@ class EBNFLanguageServerProtocol:
     @lsp_rpc
     def lsp_shutdown(self):
         self.shared.shutdown = True
+        self.shared.initialized = False
+        self.shared.processId = 0
         return {}
 
     def lsp_exit(self):
@@ -206,7 +209,7 @@ def run_server(host, port, log_path=None):
                          blocking=frozenset())
     if log_path is not None:
         EBNF_server.echo_log = True
-        print(EBNF_server.start_logging(log_path))
+        print(EBNF_server.start_logging(log_path.strip('" \'')))
 
     try:
         EBNF_server.run_server(host, port)  # returns only after server has stopped

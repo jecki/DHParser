@@ -14,7 +14,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.26.0"
+		"vscode": "^1.32.0"
 	},
 	"activationEvents": [
 		"onLanguage:ebnf"

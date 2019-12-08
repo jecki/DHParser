@@ -151,6 +151,7 @@ class DSLLanguageServerProtocol:
         import json
         if self.shared.initialized or self.shared.processId != 0:
             return {"code": -32002, "message": "Server has already been initialized."}
+        self.shared.shutdown = False
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
         self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
@@ -168,6 +169,8 @@ class DSLLanguageServerProtocol:
     @lsp_rpc
     def lsp_shutdown(self):
         self.shared.shutdown = True
+        self.shared.initialized = False
+        self.shared.processId = 0
         return {}
 
     def lsp_exit(self):
