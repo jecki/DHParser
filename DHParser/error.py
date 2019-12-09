@@ -103,7 +103,7 @@ class Error:
     COMPILER_CRASH                           = ErrorCode(10200)
     AST_TRANSFORM_CRASH                      = ErrorCode(10300)
 
-    def __init__(self, message: str, pos, code: ErrorCode = ERROR,
+    def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
         assert isinstance(code, ErrorCode)
         assert not isinstance(pos, ErrorCode)
@@ -128,7 +128,7 @@ class Error:
                % (self.message, repr(self.code), self.pos, self.orig_pos, self.line, self.column)
 
     @property
-    def pos(self):
+    def pos(self) -> int:
         return self._pos
 
     @pos.setter

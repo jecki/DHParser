@@ -1203,7 +1203,7 @@ def delimit_children(context: List[Node], delimiter_tag_name: str, delimiter: st
                 and next.tag_name != delimiter_tag_name \
                 and not last.content.endswith(delimiter) \
                 and not next.content.startswith(delimiter):
-            cl.append(Node(delimiter_tag_name, delimiter, True))
+            cl.append(Node(delimiter_tag_name, delimiter, True).with_pos(last.pos + len(last)))
         cl.append(next)
     node.result = tuple(cl)
 

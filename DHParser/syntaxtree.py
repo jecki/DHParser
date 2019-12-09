@@ -420,7 +420,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._pos >= 0:
             self._init_child_pos()
 
-    def leaf_data(self) -> List[str]:
+    def _leaf_data(self) -> List[str]:
         """
         Returns string content as list of string fragments
         that are gathered from all child nodes in order.
@@ -428,7 +428,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.children:
             fragments = []
             for child in self.children:
-                fragments.extend(child.leaf_data())
+                fragments.extend(child._leaf_data())
             return fragments
         self._result = str(self._result)
         return [self._result]
@@ -443,7 +443,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.children:
             fragments = []
             for child in self.children:
-                fragments.extend(child.leaf_data())
+                fragments.extend(child._leaf_data())
             return ''.join(fragments)
         self._result = str(self._result)
         return self._result
