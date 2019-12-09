@@ -27,13 +27,20 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import grammar_provider, with_all_descendants, with_unnamed_descendants, \
-    set_tracer, trace_history, log_parsing_history, start_logging, set_config_value, \
-    resume_notices_on
+    set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
+    set_config_value, resume_notices_on
 
 
 class TestTrace:
     def setup(self):
         start_logging()
+
+    def teardown(self):
+        LOG_DIR = log_dir()
+        if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
+            for fname in os.listdir(LOG_DIR):
+                os.remove(os.path.join(LOG_DIR, fname))
+            os.rmdir(LOG_DIR)
 
     def test_trace_simple(self):
         lang = """
@@ -46,7 +53,7 @@ class TestTrace:
         set_tracer(all_desc, trace_history)
         st = gr('2*(3+4)')
         log_parsing_history(gr, 'trace_simple')
-        print(st.serialize())
+        # print(st.serialize())
 
     def test_trace_drop(self):
         lang = r"""
@@ -67,7 +74,7 @@ class TestTrace:
         # st = gr('2*(3+4)')
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
         log_parsing_history(gr, 'trace_drop')
-        print(st.serialize())
+        # print(st.serialize())
 
     def test_trace_resume(self):
         lang = """

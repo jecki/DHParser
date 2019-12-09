@@ -234,16 +234,23 @@ class unrepr:
 #######################################################################
 
 
-def issubtype(sub_type, base_type):
+def issubtype(sub_type, base_type) -> bool:
     def origin(t):
         try:
             ot = t.__origin__
+            if ot is Union:
+                try:
+                    return tuple(a.__origin__ for a in t.__args__)
+                except AttributeError:
+                    return tuple(a.__origin__ for a in t.__union_args__)
         except AttributeError:
             if t == 'unicode':  # work-around for cython bug
-                return str
-            return t
-        return ot if ot is not None else t
-    return issubclass(origin(sub_type), origin(base_type))
+                return (str,)
+            return (t,)
+        return (ot,) if ot is not None else (t,)
+    true_st = origin(sub_type)
+    true_bt = origin(base_type)[0]
+    return any(issubclass(st, true_bt) for st in true_st)
 
 
 def isgenerictype(t):
