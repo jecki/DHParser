@@ -813,7 +813,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
-        assert len(cst.errors_sorted) == 1
+        assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
 
     def test_failing_resume_rule(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -833,7 +833,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
-        assert len(cst.errors_sorted) == 1
+        assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
 
     def test_several_reentry_points_second_point_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -861,7 +861,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
-        assert len(cst.errors_sorted) == 1
+        assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
         # multiple failures
         content = 'ALPHA acb BETA bad GAMMA cab .'
         cst = gr(content)
@@ -869,7 +869,7 @@ class TestReentryAfterError:
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
         # there should be only two error messages
-        assert len(cst.errors_sorted) == 2
+        assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 2
 
     def test_skip_comment_on_resume(self):
         lang = r"""
