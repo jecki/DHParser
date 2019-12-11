@@ -298,6 +298,7 @@ class HistoryRecord:
         self.node = node                # type: Optional[Node]
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
+        assert all(isinstance(err, Error) for err in errors)
         self.errors = errors            # type: List[Error]
 
     def __str__(self):

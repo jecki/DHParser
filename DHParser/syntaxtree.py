@@ -1025,8 +1025,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
             elif src is not None and node._pos >= 0:
                 txt.append(' `(pos %i)' % node.pos)
-            if root and id(node) in root.error_nodes:
-                txt.append(" `(err `%s)" % ' '.join(str(err) for err in root.get_errors(node)))
+            if root and id(node) in root.error_nodes and not node.has_attr('err'):
+                txt.append(" `(! `%s)" % ';  '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt) + '\n'
 
         def closing(node: Node) -> str:
@@ -1371,6 +1371,7 @@ class RootNode(Node):
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
+        assert isinstance(node, Node)
         if not node:
             node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
         else:
@@ -1378,7 +1379,8 @@ class RootNode(Node):
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
             # assert node.pos == error.pos or isinstance(node, FrozenNode)
         self.error_nodes.setdefault(id(node), []).append(error)
-        self.error_positions.setdefault(error.pos, set()).add(id(node))
+        if node.pos == error.pos:
+            self.error_positions.setdefault(error.pos, set()).add(id(node))
         self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         return self
@@ -1406,7 +1408,7 @@ class RootNode(Node):
         """
         node_id = id(node)           # type: int
         errors = []                  # type: List[Error]
-        for nid in self.error_positions.get(node.pos, frozenset()):
+        for nid in self.error_positions.get(node.pos, frozenset()) | set([node_id]):
             if nid == node_id:
                 errors.extend(self.error_nodes[nid])
             else:

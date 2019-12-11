@@ -88,7 +88,7 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
             grammar.history__.append(record)
         if grammar.most_recent_error__:
             if grammar.resume_notices__:
-                add_resume_notice(self, rest, grammar.most_recent_error__)
+                add_resume_notice(self, rest, node)
             grammar.most_recent_error__ = None
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()

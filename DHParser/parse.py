@@ -358,28 +358,6 @@ class Parser:
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
         self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
 
-    # # Outsourced to trace.py
-    # def _add_resume_notice(self, rest: StringView, err_node: Node) -> None:
-    #     """Adds a resume notice to the error node with information about
-    #     the reentry point and the parser."""
-    #     if not self._grammar.resume_notices__ or self == self._grammar.start_parser__:
-    #         return
-    #     call_stack = self._grammar.call_stack__
-    #     if len(call_stack) >= 2:
-    #         i, N = -2, -len(call_stack)
-    #         while i >= N and call_stack[i][0][0:1] in (':', '/', '"', "'", "`"):
-    #             i -= 1
-    #         if i >= N and i != -2:
-    #             parent_info = "{}->{}".format(call_stack[i][0], call_stack[-2][0])
-    #         else:
-    #             parent_info = call_stack[-2][0]
-    #     else:
-    #         parent_info = "?"
-    #     notice = Error('Resuming from parser {} with parser {} at point: {}'
-    #                    .format(self.pname or self.ptype, parent_info, repr(rest[:10])),
-    #                    self._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
-    #     self._grammar.tree__.add_error(err_node, notice)
-
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given text. This is a wrapper method that adds
@@ -387,14 +365,14 @@ class Parser:
         done in the overridden method `_parse()`. This wrapper-method can be thought of
         as a "parser guard", because it guards the parsing process.
         """
-        def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
-            if error_node:
-                error_node_id = id(error_node)
-                while error_node_id not in grammar.tree__.error_nodes and error_node.children:
-                    error_node = error_node.result[-1]
-                    error_node_id = id(error_node)
-            else:
-                error_node_id = 0
+        # def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
+        #     if error_node:
+        #         error_node_id = id(error_node)
+        #         while error_node_id not in grammar.tree__.error_nodes and error_node.children:
+        #             error_node = error_node.result[-1]
+        #             error_node_id = id(error_node)
+        #     else:
+        #         error_node_id = 0
 
         grammar = self._grammar
         location = grammar.document_length__ - text._len  # faster then len(text)?
@@ -418,14 +396,6 @@ class Parser:
                     grammar.recursion_locations__.add(location)
                     return None, text
                 self.recursion_counter[location] += 1
-
-            # # write current step to call stack, if history tracking is configured
-            # history_tracking__ = grammar.history_tracking__
-            # if history_tracking__:
-            #     grammar.call_stack__.append(
-            #         ((self.repr if self.tag_name in (':RegExp', ':Token', ':DropToken')
-            #           else (self.pname or self.tag_name)), location))
-            #     grammar.moving_forward__ = True
 
             # finally, the actual parser call!
             try:
@@ -451,7 +421,7 @@ class Parser:
                         tail = tuple()
                     else:
                         nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
-                        nd.attr['err'] = pe.error.message
+                        # nd.attr['err'] = pe.error.message
                         tail = (nd,)
                     rest = rest[i:]
                     if pe.first_throw:
@@ -514,25 +484,6 @@ class Parser:
                     #   matches will store its result in the cache
                     # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
                     visited[location] = (node, rest)
-
-            # # Mind that memoized parser calls will not appear in the history record!
-            # # Does this make sense? Or should it be changed?
-            # if history_tracking__:
-            #     # don't track returning parsers except in case an error has occurred
-            #     if grammar.moving_forward__:
-            #         record = HistoryRecord(grammar.call_stack__, node, text,
-            #                                grammar.line_col__(text))
-            #         grammar.history__.append(record)
-            #     elif grammar.most_recent_error__:
-            #         # error_nid = id(node)  # type: int
-            #         # if error_nid in grammar.tree__.error_nodes:
-            #         record = HistoryRecord(grammar.call_stack__, node, text,
-            #                                grammar.line_col__(text),
-            #                                [grammar.most_recent_error__])
-            #         grammar.most_recent_error__ = None
-            #         grammar.history__.append(record)
-            #     grammar.moving_forward__ = False
-            #     grammar.call_stack__.pop()
 
         except RecursionError:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
