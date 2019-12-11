@@ -446,7 +446,7 @@ class Parser:
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
                 # self._add_resume_notice(rest, node)
-                grammar.most_recent_error__ = pe.error  # needed for history tracking
+                grammar.most_recent_error__ = pe   # needed for history tracking
 
             if left_recursion_depth__:
                 self.recursion_counter[location] -= 1

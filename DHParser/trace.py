@@ -77,18 +77,19 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     # Don't track returning parsers except in case an error has occurred!
     # TODO: Try recording all named parsers on the way back?
     delta = text._len - rest._len
-    if ((grammar.moving_forward__ or grammar.most_recent_error__ or (node and not self.anonymous))
+    most_recent_parser_error = grammar.most_recent_error__
+    if ((grammar.moving_forward__ or most_recent_parser_error or (node and not self.anonymous))
             and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace from history configurable
-        errors = [grammar.most_recent_error__] if grammar.most_recent_error__ else []
+        errors = [most_recent_parser_error.error] if most_recent_parser_error else []
         line_col = grammar.line_col__(text)
         nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
         record = HistoryRecord(grammar.call_stack__, nd, rest, line_col, errors)
         if (not grammar.history__ or line_col != grammar.history__[-1].line_col
             or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):
             grammar.history__.append(record)
-        if grammar.most_recent_error__:
+        if most_recent_parser_error:
             if grammar.resume_notices__:
-                add_resume_notice(self, rest, node)
+                add_resume_notice(self, rest, most_recent_parser_error.node)
             grammar.most_recent_error__ = None
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
