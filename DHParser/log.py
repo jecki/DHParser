@@ -494,7 +494,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     """
     def write_log(history, log_name):
         htm = '.html' if html else ''
-        path = os.path.join(log_dir(), log_name + "_parser.log" + htm)
+        path = os.path.join(log_dir() or '', log_name + "_parser.log" + htm)
         if os.path.exists(path):
             os.remove(path)
             # print('WARNING: Log-file "%s" already existed and was deleted.' % path)
@@ -502,7 +502,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
             with open(path, "w", encoding="utf-8") as f:
                 if html:
                     f.write(HistoryRecord.HTML_LEAD_IN + '\n')
-                    f.write("\n".join(history))
+                    f.writelines(history)
                     f.write('\n</table>\n' + HistoryRecord.HTML_LEAD_OUT)
                 else:
                     f.write("\n".join(history))
@@ -516,7 +516,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
             log.append('\n'.join(['</table>\n<table>', HistoryRecord.COLGROUP]))
 
     if not is_logging():
-        return False
+        return
 
     if not log_file_name:
         name = grammar.__class__.__name__
