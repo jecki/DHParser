@@ -17,7 +17,7 @@ cdef int last_char(str text, int begin, int end, str chars)
 cdef int pack_index(int index, int length)
 
 @cython.locals(cbegin=cython.int, cend=cython.int, length=cython.int)
-cdef (cython.int, cython.int) real_indices(begin, end, int length)
+cdef (cython.int, cython.int) fast_real_indices(begin, end, int length)
 
 cdef class StringView:
     cdef str _text

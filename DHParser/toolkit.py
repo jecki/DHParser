@@ -245,7 +245,7 @@ def abbreviate_middle(s: str, max_length: int) -> str:
 
 
 def issubtype(sub_type, base_type) -> bool:
-    def origin(t):
+    def origin(t) -> tuple:
         try:
             ot = t.__origin__
             if ot is Union:

@@ -3,5 +3,5 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
-cpdef issubtype(subtype, base_type)
+# cpdef issubtype(subtype, base_type)
 cpdef isgenerictype(t)

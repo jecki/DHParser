@@ -10,10 +10,11 @@ cdef class Parser:
     cdef public bint anonymous
     cdef public bint drop_content
     cdef public str tag_name
-    cdef _grammar
+    cdef public object _grammar
     cdef object visited
     cdef object recursion_counter
     cdef object cycle_detection
+    cdef object __parse
 
     cpdef _parse(self, text)
     cpdef reset(self)

@@ -16,7 +16,7 @@ cdef class Node:
     # cpdef anonymous(self)
     # cpdef result(self)
     cpdef _set_result(self, result)
-    cpdef _content(self)
+    cpdef _leaf_data(self)
     # cpdef pos(self)
     cpdef with_pos(self, pos)
     # cpdef has_attr(self, attr)
