@@ -43,7 +43,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
-    RX_NEVER_MATCH, RxPatternType
+    abbreviate_middle, RX_NEVER_MATCH, RxPatternType
 
 
 __all__ = ('ParserError',
@@ -1463,7 +1463,7 @@ class Token(Parser):
         return None, text
 
     def __repr__(self):
-        return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % self.text
+        return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
 
 
 class RegExp(Parser):
@@ -1513,7 +1513,7 @@ class RegExp(Parser):
         return None, text
 
     def __repr__(self):
-        return escape_control_characters('/%s/' % self.regexp.pattern)
+        return escape_control_characters('/%s/' % abbreviate_middle(self.regexp.pattern, 120))
 
 
 def DropToken(text: str) -> Token:

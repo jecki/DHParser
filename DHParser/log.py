@@ -62,7 +62,7 @@ from DHParser.configuration import access_presets, finalize_presets, get_config_
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, ZOMBIE_TAG, EMPTY_PTYPE
-from DHParser.toolkit import escape_control_characters
+from DHParser.toolkit import escape_control_characters, abbreviate_middle
 
 __all__ = ('start_logging',
            'suspend_logging',
@@ -332,7 +332,7 @@ class HistoryRecord:
         excerpt = html.escape(self.excerpt)
         classes = list(HistoryRecord.Snapshot_Fields)
         idx = {field_name: i for i, field_name in enumerate(classes)}
-        classes[idx['status']] = status.lower()
+        classes[idx['status']] = 'error' if status.startswith('ERROR') else status.lower()
         if status in (self.MATCH, self.DROP):
             n = max(40 - len(excerpt), 0)
             dots = '...' if len(self.text) > n else ''
@@ -393,13 +393,10 @@ class HistoryRecord:
     @property
     def excerpt(self):
         if self.node:
-            l = len(self.node)
-            s = str(self.node)
-            excerpt = s[:18] + ' ... ' + s[-17:] if l > 40 else s[:40]
+            excerpt = abbreviate_middle(str(self.node), 40)
         else:
-            l = len(self.text)
-            s = str(self.text[:40])
-            excerpt = s[:36] + ' ...' if l > 36 else s
+            s = self.text
+            excerpt = s[:36] + ' ...' if len(s) > 36 else s
         excerpt = escape_control_characters(excerpt)
         return excerpt
 

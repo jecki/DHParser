@@ -61,6 +61,7 @@ __all__ = ('typing',
            'is_filename',
            'concurrent_ident',
            'unrepr',
+           'abbreviate_middle',
            'lstrip_docstring',
            'issubtype',
            'isgenerictype',
@@ -225,6 +226,18 @@ class unrepr:
 
     def __repr__(self) -> str:
         return self.s
+
+
+def abbreviate_middle(s: str, max_length: int) -> str:
+    """Shortens string `s` by replacing the middle part with an ellipsis
+    sign ` ... ` if the size of the string exceeds `max_length`."""
+    assert max_length > 6
+    l = len(s)  # type: int
+    if l > max_length:
+        a = max_length // 2 - 2  # type: int
+        b = max_length // 2 - 3  # type: int
+        s = s[:a] + ' ... ' + s[-b:] if l > 40 else s
+    return s
 
 
 #######################################################################
