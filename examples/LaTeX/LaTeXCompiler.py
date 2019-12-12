@@ -28,7 +28,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     flatten, is_empty, collapse, replace_content, remove_brackets, strip, \
     is_one_of, replace_content_by, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
-    access_thread_locals, recompile_grammar, peek
+    access_thread_locals, recompile_grammar, get_config_value
 from DHParser.log import start_logging
 
 
@@ -73,7 +73,7 @@ class LaTeXGrammar(Grammar):
     whitespace__ = Whitespace(WHITESPACE__)
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = Drop(RegExp(WSP_RE__))
+    dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
     _LB = RegExp('\\s*?\\n|$')
@@ -168,7 +168,7 @@ class LaTeXGrammar(Grammar):
     
 def get_grammar() -> LaTeXGrammar:
     """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.LaTeX_00000001_grammar_singleton
     except AttributeError:
@@ -176,6 +176,10 @@ def get_grammar() -> LaTeXGrammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.LaTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.LaTeX_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 

@@ -35,7 +35,7 @@ from DHParser import start_logging, is_filename, load_if_file, Grammar, Compiler
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, access_thread_locals
+    error_on, recompile_grammar, access_thread_locals, get_config_value
 
 
 #######################################################################
@@ -72,7 +72,7 @@ class XMLSnippetGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = Drop(RegExp(WSP_RE__))
+    dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
     S = RegExp('\\s+')
     Char = RegExp('\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]')
@@ -127,7 +127,7 @@ class XMLSnippetGrammar(Grammar):
     
 def get_grammar() -> XMLSnippetGrammar:
     """Returns a thread/process-exclusive XMLSnippetGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton
     except AttributeError:
@@ -135,6 +135,10 @@ def get_grammar() -> XMLSnippetGrammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.XMLSnippet_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 

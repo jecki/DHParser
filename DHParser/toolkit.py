@@ -42,7 +42,7 @@ from typing import Any, Iterable, Sequence, Set, Union, Dict
 try:
     import cython
     cython_optimized = cython.compiled  # type: bool
-    if cython_optimized:
+    if cython_optimized:  # not ?
         import DHParser.shadow_cython as cython
 except ImportError:
     cython_optimized = False

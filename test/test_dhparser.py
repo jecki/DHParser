@@ -63,7 +63,12 @@ class TestDHParserCommandLineTool:
         system(self.python + 'test_dhparser_data/neu/tst_neu_grammar.py ' + self.nulldevice)
         system(self.python + 'test_dhparser_data/neu/neuCompiler.py test_dhparser_data/neu/example.dsl '
                   '>test_dhparser_data/neu/example.xml')
-        _ = os.listdir('test_dhparser_data')  # prevent strange FileNotFound-Error in the following line
+        for i in range(3):
+            try:
+                _ = os.listdir('test_dhparser_data')  # prevent strange FileNotFound-Error in the following line
+                break
+            except FileNotFoundError:
+                time.sleep(1)
         with open('test_dhparser_data/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('document') >= 0, xml

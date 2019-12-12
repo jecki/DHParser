@@ -366,7 +366,14 @@ def traverse_locally(context: List[Node],
     traverse(context[-1], processing_table, key_func)
 
 
-@transformation_factory(tuple)
+# @transformation_factory(tuple)
+# def chain(context: List[Node], transformations: Tuple):
+#     """Successively apply all transformations in the given tuple."""
+#     for transform in transformations:
+#         transform(context)
+
+
+@transformation_factory
 def chain(context: List[Node], transformations: Tuple):
     """Successively apply all transformations in the given tuple."""
     for transform in transformations:

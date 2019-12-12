@@ -102,7 +102,7 @@ class LyrikGrammar(Grammar):
     
 def get_grammar() -> LyrikGrammar:
     """Returns a thread/process-exclusive LyrikGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
     except AttributeError:
@@ -110,6 +110,10 @@ def get_grammar() -> LyrikGrammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.Lyrik_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 

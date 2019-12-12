@@ -72,7 +72,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = Drop(RegExp(WSP_RE__))
+    dwsp__ = Drop(Whitespace(WSP_RE__))
     L = Series(RegExp('[ \\t]+'), dwsp__)
     ENDE = NegativeLookahead(RegExp('.'))
     JAHRESZAHL = RegExp('\\d\\d\\d\\d')
@@ -102,7 +102,7 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     
 def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
     """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
@@ -110,6 +110,10 @@ def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 

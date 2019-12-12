@@ -35,7 +35,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, access_thread_locals
+    error_on, recompile_grammar, access_thread_locals, get_config_value
 
 
 #######################################################################
@@ -75,7 +75,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = Drop(RegExp(WSP_RE__))
+    dwsp__ = Drop(Whitespace(WSP_RE__))
     VARIABLE = RegExp('[a-dj-z]')
     NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
     MINUS = RegExp('-')
@@ -111,7 +111,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     
 def get_grammar() -> ArithmeticRightRecursiveGrammar:
     """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
     except AttributeError:
@@ -119,6 +119,10 @@ def get_grammar() -> ArithmeticRightRecursiveGrammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 
