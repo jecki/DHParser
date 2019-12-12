@@ -355,13 +355,13 @@ class HistoryRecord:
         elif status == self.FAIL:
             classes[idx['text']] = 'failtext'
         else:  # ERROR
-            stack += '<br/>\n' + status
+            stack += '<br/>\n"%s"' % self.err_msg()
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
                                    for cls, item in zip(classes, tpl)] + ['</tr>'])
 
     def err_msg(self) -> str:
-        return self.ERROR + ": " + "; ".join(str(e) for e in (self.errors))
+        return self.ERROR + ": " + "; ".join(str(e) for e in self.errors)
 
     @property
     def stack(self) -> str:
@@ -384,7 +384,7 @@ class HistoryRecord:
         elif self.node.tag_name == EMPTY_PTYPE:
             return self.DROP
         elif self.errors:
-            return '"%s"' % self.err_msg()
+            return self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
         else:
             return self.MATCH
         # return self.FAIL if self.node is None or self.node.tag_name == ZOMBIE_TAG else \
