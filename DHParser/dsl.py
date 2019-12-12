@@ -37,7 +37,7 @@ from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, a
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
-from DHParser.transform import TransformationFunc
+from DHParser.transform import TransformationFunc, TransformationDict
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, compile_python_object, re
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
     Callable, Generator
@@ -429,7 +429,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             sections = RX_SECTION_MARKER.split(source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
             ast_trans_python_src = DHPARSER_IMPORTS + ast
-            ast_trans_table = dict()
+            ast_trans_table = dict()  # type: TransformationDict
             try:
                 ast_trans_table = compile_python_object(ast_trans_python_src,
                                                         r'(?:\w+_)?AST_transformation_table$')

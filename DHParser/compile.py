@@ -158,7 +158,7 @@ class Compiler:
         if self._dirty_flag:
             self.reset()
         self._dirty_flag = True
-        self.tree = root  # type: RootNode
+        self.tree = root
         # self.source = source  # type: str
         self.prepare()
         result = self.compile(root)
@@ -239,7 +239,7 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
         return name[:i] + '_out' if i >= 0 else name
 
 
-GrammarCallable = Union[Grammar, Callable[[str], Node], functools.partial]
+GrammarCallable = Union[Grammar, Callable[[str], RootNode], functools.partial]
 CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
 
 
@@ -339,7 +339,9 @@ def compile_source(source: str,
                 try:
                     result = compiler(syntax_tree)
                 except Exception as e:
-                    node = compiler.context[-1] if compiler.context else syntax_tree
+                    node = syntax_tree  # type: Node
+                    if isinstance(compiler, Compiler) and compiler.context:
+                        node = compiler.context[-1]
                     syntax_tree.new_error(
                         node, "Compilation failed, most likely, due to errors earlier "
                               "in the processing pipeline. Crash Message: %s: %s"

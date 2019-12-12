@@ -110,10 +110,7 @@ NEVER_MATCH_PATTERN = r'..(?<=^)'
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
 
 
-try:
-    RxPatternType = re.Pattern
-except AttributeError:
-    RxPatternType = type(re.compile(''))
+RxPatternType = Any
 
 
 def re_find(s, r, pos=0, endpos=9223372036854775807):

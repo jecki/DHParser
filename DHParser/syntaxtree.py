@@ -153,7 +153,7 @@ def create_match_function(criterion: CriteriaType) -> Callable:
         return lambda nd: nd.tag_name in criterion
     if isinstance(criterion, Callable):
         return criterion
-    assert "Criterion %s of type %s does not represent a legal criteria type"
+    raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
 
 
 ChildrenType = Tuple['Node', ...]
@@ -268,15 +268,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
         """
-        self._pos = -1                  # type: int
+        self._pos = -1                   # type: int
         # Assignment to self.result initializes the attr _result and children
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = result       # type: StrictResultType  # cast(StrictResultType, result)
+            self._result = result        # type: StrictResultType  # cast(StrictResultType, result)
             self.children = NO_CHILDREN  # type: ChildrenType
         else:
             self._set_result(result)
-        self.tag_name = tag_name        # type: str
+        self.tag_name = tag_name         # type: str
 
     def __deepcopy__(self, memo):
         if self.children:
@@ -336,7 +336,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.tag_name == other.tag_name and self.compare_attr(other, ignore_attr_order):
             if self.children:
                 return (len(self.children) == len(other.children)
-                        and all(a.equals(b, ignore_attr_order) 
+                        and all(a.equals(b, ignore_attr_order)
                                 for a, b in zip(self.children, other.children)))
             else:
                 return self.result == other.result
@@ -368,15 +368,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return not self.tag_name or self.tag_name[0] == ':'
 
     # node content ###
-
-    @property
-    def result(self) -> StrictResultType:
-        """
-        Returns the result from the parser that created the node.
-        Error messages are not included in the result. Use `self.content()`
-        if the result plus any error messages is needed.
-        """
-        return self._result
 
     def _set_result(self, result: ResultType):
         """
@@ -412,6 +403,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     child.with_pos(offset)
                 else:
                     offset = child._pos
+
+    @property
+    def result(self) -> StrictResultType:
+        """
+        Returns the result from the parser that created the node.
+        Error messages are not included in the result. Use `self.content()`
+        if the result plus any error messages is needed.
+        """
+        return self._result
 
     @result.setter
     def result(self, result: ResultType):
@@ -531,6 +531,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._xml_attr = OrderedDict()
         return self._xml_attr
 
+    @attr.setter
+    def attr(self, attr_dict: OrderedDict):
+        self._xml_attr = attr_dict
+
     def get_attr(self, attribute: str, default: str) -> str:
         """
         Returns the value of 'attribute' if attribute exists. If not, the
@@ -547,10 +551,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.attr.get(attribute, default)
         return default
 
-    def compare_attr(self, other: 'Node', ignore_order: bool=False) -> bool:
+    def compare_attr(self, other: 'Node', ignore_order: bool = False) -> bool:
         """
         Returns True, if `self` and `other` have the same attributes with the
-        same attribute values. If `ignore_order` is False (default), the 
+        same attribute values. If `ignore_order` is False (default), the
         attributes must also appear in the same order.
         """
         if self.has_attr():
@@ -567,7 +571,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', Iterator['Node']]:
+    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node']:
         """
         Returns the child node with the given index if ``index_or_tagname`` is
         an integer or the first child node with the given tag name. Examples::
@@ -859,10 +863,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if nd == children[i]:
                     return i
 
-        def left_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node']:
+        def left_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return (subst,) + result[index + 1:]
 
-        def right_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node']:
+        def right_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return result[:index] + (subst,)
 
         def cut(ctx: List['Node'], cut_func: Callable) -> 'Node':
@@ -875,7 +879,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if tainted or len(segment) != len(parent.result):
                     parent_copy = Node(parent.tag_name, segment)
                     if parent.has_attr():
-                        parent.copy.attr = parent.attr
+                        parent_copy.attr = parent.attr
                     child = parent_copy
                     tainted = True
                 else:
@@ -886,7 +890,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             begin, end = end, begin
         ctxA = self.reconstruct_context(begin)
         ctxB = self.reconstruct_context(end)
-        for a,b in zip(ctxA, ctxB):
+        for a, b in zip(ctxA, ctxB):
             if a != b:
                 break
             common_ancestor = a
@@ -1044,9 +1048,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_xml(self, src: str = None,
                indentation: int = 2,
-               inline_tags: Set[str] = frozenset(),
-               omit_tags: Set[str] = frozenset(),
-               empty_tags: Set[str] = frozenset()) -> str:
+               inline_tags: Set[str] = set(),
+               omit_tags: Set[str] = set(),
+               empty_tags: Set[str] = set()) -> str:
         """
         Returns content as XML-tree.
 
@@ -1136,7 +1140,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         assert isinstance(json_obj, Sequence)
         assert 2 <= len(json_obj) <= 4, str(json_obj)
         if isinstance(json_obj[1], str):
-            result = json_obj[1]
+            result = json_obj[1]  # type: StrictResultType
         else:
             result = tuple(Node.from_json_obj(item) for item in json_obj[1])
         node = Node(json_obj[0], result)
@@ -1148,9 +1152,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 node._pos = extra
         return node
 
-    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False, simplified=False) -> str:
-        return json.dumps(self.to_simplified_json_obj() if simplified else self.to_json_obj(),
-                          indent=indent, ensure_ascii=ensure_ascii,
+    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
+        return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
     # serialization meta-method ###
@@ -1247,11 +1250,11 @@ class FrozenNode(Node):
     def with_pos(self, pos: int) -> 'Node':
         pass
 
-    def to_json_obj(self) -> Dict:
+    def to_json_obj(self) -> List:
         raise NotImplementedError("Frozen nodes cannot and should not be serialized!")
 
     @staticmethod
-    def from_json_obj(json_obj: Dict) -> 'Node':
+    def from_json_obj(json_obj: Union[Dict, Sequence]) -> 'Node':
         raise NotImplementedError("Frozen nodes cannot and should not be deserialized!")
 
 

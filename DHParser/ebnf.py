@@ -28,7 +28,7 @@ from collections import OrderedDict
 from functools import partial
 import keyword
 import os
-from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any, cast
+from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
 
 from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
 from DHParser.configuration import THREAD_LOCALS, get_config_value
@@ -41,7 +41,7 @@ from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
     unrepr, compile_python_object, DHPARSER_PARENTDIR, RX_NEVER_MATCH
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
+    reduce_single_child, replace_by_single_child, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
 from DHParser.versionnumber import __version__
 
@@ -184,7 +184,7 @@ class EBNFGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
-    static_analysis_pending__ = []
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     WHITESPACE__ = r'\s*'
@@ -333,7 +333,7 @@ def get_preprocessor() -> PreprocessorFunc:
 GRAMMAR_FACTORY = '''
 def get_grammar() -> {NAME}Grammar:
     """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
     except AttributeError:
@@ -450,15 +450,15 @@ class EBNFDirectives:
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
-        self.comment = ''     # type: str
-        self.literalws = {'right'}  # type: Collection[str]
-        self.tokens = set()   # type: Collection[str]
-        self.filter = dict()  # type: Dict[str, str]
-        self.error = dict()   # type: Dict[str, List[Tuple[ReprType, ReprType]]]
-        self.skip = dict()    # type: Dict[str, List[Union[unrepr, str]]]
-        self.resume = dict()  # type: Dict[str, List[Union[unrepr, str]]]
-        self.drop = set()     # type: Set[str]
-        self._super_ws = None # type: Optional[str]
+        self.comment = ''      # type: str
+        self.literalws = {'right'}  # type: Set[str]
+        self.tokens = set()    # type: Set[str]
+        self.filter = dict()   # type: Dict[str, str]
+        self.error = dict()    # type: Dict[str, List[Tuple[ReprType, ReprType]]]
+        self.skip = dict()     # type: Dict[str, List[Union[unrepr, str]]]
+        self.resume = dict()   # type: Dict[str, List[Union[unrepr, str]]]
+        self.drop = set()      # type: Set[str]
+        self._super_ws = None  # type: Optional[str]
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -664,7 +664,6 @@ class EBNFCompiler(Compiler):
         self.grammar_name = grammar_name or "NameUnknown"
         self.grammar_source = load_if_file(grammar_source)
         return self
-
 
     # methods for generating skeleton code for preprocessor, transformer, and compiler
 
@@ -904,12 +903,13 @@ class EBNFCompiler(Compiler):
                         .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
                 except KeyError:
                     def match_function(nd: Node) -> bool:
-                        return nd.children and nd.children[0].content.startswith(symbol + '_')
+                        return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
                     dir_node = self.tree.pick(match_function)
-                    directive = dir_node.children[0].content
-                    self.tree.new_error(
-                        dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
-                        .format(directive, directive.split('_')[0]))
+                    if dir_node:
+                        directive = dir_node.children[0].content
+                        self.tree.new_error(
+                            dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
+                            .format(directive, directive.split('_')[0]))
 
         # prepare and add skip-rules
 
@@ -1035,7 +1035,8 @@ class EBNFCompiler(Compiler):
                                                       self.grammar_name)
                 _ = grammar_class()
                 grammar_python_src = grammar_python_src.replace(
-                    'static_analysis_pending__ = [True]', 'static_analysis_pending__ = []', 1)
+                    'static_analysis_pending__ = [True]',
+                    'static_analysis_pending__ = []  # type: List[bool]', 1)
             except NameError:
                 pass  # undefined name in the grammar are already caught and reported
             except GrammarError as error:
@@ -1484,6 +1485,7 @@ class EBNFCompiler(Compiler):
 
     def on_whitespace(self, node: Node) -> str:
         return self.WSPC_PARSER()
+
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     try:

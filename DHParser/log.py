@@ -111,7 +111,7 @@ def resume_logging(log_dir: str=''):
     set_config_value('log_dir', log_dir)
 
 
-def log_dir(path: str="") -> Union[str, bool]:
+def log_dir(path: str = "") -> str:
     """Creates a directory for log files (if it does not exist) and
     returns its path.
 
@@ -119,7 +119,7 @@ def log_dir(path: str="") -> Union[str, bool]:
     Don't use a directory name that could be the name of a directory
     for other purposes than logging.
 
-    ATTENTION: The log-dir is sotred thread locally, which means the log-dir
+    ATTENTION: The log-dir is stored thread locally, which means the log-dir
     as well as the information whether logging is turned on or off will not
     automatically be transferred to any subprocesses. This needs to be done
     explicitly. (See `testing.grammar_suite()` for an example, how this can
@@ -130,13 +130,12 @@ def log_dir(path: str="") -> Union[str, bool]:
             used: `configuration.get_config_value('log_dir')`.
 
     Returns:
-        name of the logging directory (str) or False (bool) if logging has
-        not been switched on with the logging-contextmanager (see below), yet.
+        str - name of the logging directory or '' if logging is turned off.
     """
     # the try-except clauses in the following are precautions for multithreading
     dirname = path if path else get_config_value('log_dir')
     if not dirname:
-        return False
+        return ''
     # `try ... except` rather `if os.path.exists(...)` to create directory
     # to ensure thread-saftey.
     try:
@@ -187,7 +186,7 @@ def create_log(log_name: str) -> str:
     return ''
 
 
-def append_log(log_name: str, *strings, echo: bool=False) -> None:
+def append_log(log_name: str, *strings, echo: bool = False) -> None:
     """
     Appends one or more strings to the log-file with the name 'log_name', if
     logging is turned on and log_name is not the empty string,
@@ -202,7 +201,7 @@ def append_log(log_name: str, *strings, echo: bool=False) -> None:
     :param echo: If True, the log message will be echoed on the terminal. This
         will also happen if logging is turned off.
     """
-    ldir, file_name = os.path.split(log_name)
+    ldir, _ = os.path.split(log_name)
     if not ldir:
         ldir = log_dir()
     if ldir and log_name:
@@ -262,7 +261,7 @@ class HistoryRecord:
     ERROR = "ERROR"
     FAIL = "FAIL"
     Snapshot_Fields = ('line', 'column', 'stack', 'status', 'text')
-    Snapshot = collections.namedtuple('Snapshot', Snapshot_Fields)
+    Snapshot = collections.namedtuple('Snapshot', ('line', 'column', 'stack', 'status', 'text'))
 
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col ' \
                'style="width:65%"/><col style="width:6%"/><col style="width:25%"/>\n</colgroup>'
@@ -287,15 +286,15 @@ class HistoryRecord:
         '</style>\n</head>\n<body>\n')
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
-    def __init__(self, call_stack: List[str],
-                 node: Optional[Node],
+    def __init__(self, call_stack: List[Tuple[str, int]],
+                 node: Node,
                  text: StringView,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         # self.call_stack = call_stack    # type: Tuple[Tuple[str, int],...]
         self.call_stack = tuple((tn, pos) for tn, pos in call_stack if tn != ":Forward")  # type: Tuple[Tuple[str, int],...]
-        self.node = node                # type: Optional[Node]
+        self.node = node                # type: Node
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
         assert all(isinstance(err, Error) for err in errors)
@@ -356,7 +355,7 @@ class HistoryRecord:
             classes[idx['text']] = 'failtext'
         else:  # ERROR
             stack += '<br/>\n"%s"' % self.err_msg()
-        tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)
+        tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
                                    for cls, item in zip(classes, tpl)] + ['</tr>'])
 
@@ -514,7 +513,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
             log.append('\n'.join(['</table>\n<table>', HistoryRecord.COLGROUP]))
 
     if not is_logging():
-        return
+        return False
 
     if not log_file_name:
         name = grammar.__class__.__name__

@@ -28,7 +28,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, EMPTY_NODE
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
@@ -58,7 +58,7 @@ def add_resume_notice(parser, rest: StringView, err_node: Node) -> None:
     parser._grammar.tree__.add_error(err_node, notice)
 
 
-def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
     grammar = self._grammar
     location = grammar.document_length__ - text._len
     grammar.call_stack__.append(
@@ -80,9 +80,9 @@ def trace_history(self, text: StringView) -> Tuple[Optional[Node], StringView]:
     parser_error = grammar.most_recent_error__
     if ((grammar.moving_forward__ or parser_error or (node and not self.anonymous))
             and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace from history configurable
-        errors = [parser_error.error] if parser_error else []
+        errors = [parser_error.error] if parser_error else []  # type: List[Error]
         line_col = grammar.line_col__(text)
-        nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
+        nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else EMPTY_NODE
         record = HistoryRecord(grammar.call_stack__, nd, rest, line_col, errors)
         if (not grammar.history__ or line_col != grammar.history__[-1].line_col
             or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):

@@ -32,7 +32,7 @@ for an example.
 
 from collections import defaultdict
 import copy
-from typing import Callable, cast, List, Tuple, Set, Container, Dict, \
+from typing import Callable, cast, List, Tuple, Sequence, Set, Dict, \
     DefaultDict, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
@@ -40,7 +40,7 @@ from DHParser.error import Error, linebreaks, line_col
 from DHParser.log import HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.syntaxtree import Node, FrozenNode, RootNode, WHITESPACE_PTYPE, \
+from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType
@@ -110,10 +110,10 @@ class ParserError(Exception):
     different kind of error like `UnknownParserError`) is when a `Series`-
     or `AllOf`-parser detects a missing mandatory element.
     """
-    def __init__(self, node: Node, rest: StringView, error: Optional[Error], first_throw: bool):
-        self.node = node   # type: Node
-        self.rest = rest   # type: StringView
-        self.error = error # type: Optional[Error]
+    def __init__(self, node: Node, rest: StringView, error: Error, first_throw: bool):
+        self.node = node    # type: Node
+        self.rest = rest    # type: StringView
+        self.error = error  # type: Error
         self.first_throw = first_throw  # type: bool
 
     def __str__(self):
@@ -212,7 +212,7 @@ def reentry_point(rest: StringView,
 
 ApplyFunc = Callable[['Parser'], None]
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc = Callable[['Parser', StringView], Tuple[Optional[Node], StringView]]
+ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
 
 
 def copy_parser_attrs(src: 'Parser', duplicate: 'Parser'):
@@ -315,8 +315,8 @@ class Parser:
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
-        self.__parse = self._parse    # type: ParseMethod
-        # self.proxied = None           # type: Optional[ParseMethod]
+        self.__parse = self._parse    # type: ParseFunc
+        # self.proxied = None           # type: Optional[ParseFunc]
         try:
             self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
         except NameError:
@@ -413,12 +413,12 @@ class Parser:
                     # if i < 0:
                     #     i = 1
                     try:
-                        zombie = pe.node[ZOMBIE_TAG]
+                        zombie = pe.node[ZOMBIE_TAG]  # type: Optional[Node]
                     except (KeyError, ValueError):
                         zombie = None
                     if zombie and not zombie.result:
                         zombie.result = rest[:i]
-                        tail = tuple()
+                        tail = tuple()  # type: ChildrenType
                     else:
                         nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
                         # nd.attr['err'] = pe.error.message
@@ -463,7 +463,7 @@ class Parser:
                                             "Refactor grammar to avoid slow parsing.",
                                             node.pos if node else location,
                                             Error.LEFT_RECURSION_WARNING))
-                            error_id = id(node)
+                            # error_id = id(node)
                             grammar.last_recursion_location__ = location
                     # don't overwrite any positive match (i.e. node not None) in the cache
                     # and don't add empty entries for parsers returning from left recursive calls!
@@ -525,7 +525,7 @@ class Parser:
                 # assume that proxy is a function
                 proxy = proxy.__get__(self, type(self))
             else:
-                # if proxy is a method it must be a method od self
+                # if proxy is a method it must be a method of self
                 assert proxy.__self__ == self
             self.__parse = proxy
 
@@ -553,11 +553,11 @@ class Parser:
         except NameError:  # Cython: No access to GRAMMA_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    def sub_parsers(self) -> List['Parser']:
+    def sub_parsers(self) -> Tuple['Parser', ...]:
         """Returns the list of sub-parsers if there are any.
         Overridden by Unary, Nary and Forward.
         """
-        return []
+        return tuple()
 
     def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
         """
@@ -1222,7 +1222,7 @@ class Grammar:
                                 and any('Lookahead' in tag for tag, _ in h.call_stack):
                             break
                     else:
-                        h = HistoryRecord([], None, StringView(''), (0, 0))
+                        h = HistoryRecord([], EMPTY_NODE, StringView(''), (0, 0))
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
@@ -1254,7 +1254,7 @@ class Grammar:
                 #     # stop history tracking when parser returned too early
                 #     self.history_tracking__ = False
             else:
-                rest = ''  # if complete_match is False, ignore the rest and leave while loop
+                rest = StringView('')  # if complete_match is False, ignore the rest and leave while loop
         if stitches:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
@@ -1323,7 +1323,7 @@ class Grammar:
 
     def static_analysis(self) -> List[GrammarErrorType]:
         """
-        EXPERIMENTAL 
+        EXPERIMENTAL
 
         Checks the parser tree statically for possible errors. At the moment,
         no checks are implemented
@@ -1403,11 +1403,11 @@ class PreprocessorToken(Parser):
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
-                node = Node(self.tag_name, '')
+                node = Node(self.tag_name, '')  # type: Node
                 self.grammar.tree__.new_error(
                     node,
                     'END_TOKEN delimiter missing from preprocessor token. '
-                    '(Most likely due to a preprocessor bug!)')  # type: Node
+                    '(Most likely due to a preprocessor bug!)')
                 return node, text[1:]
             elif end == 0:
                 node = Node(self.tag_name, '')
@@ -1517,11 +1517,11 @@ class RegExp(Parser):
 
 
 def DropToken(text: str) -> Token:
-    return Drop(Token(text))
+    return cast(Token, Drop(Token(text)))
 
 
 def DropRegExp(regexp) -> RegExp:
-    return Drop(RegExp(regexp))
+    return cast(RegExp, Drop(RegExp(regexp)))
 
 
 def withWS(parser_factory, wsL='', wsR=r'\s*'):
@@ -1553,7 +1553,7 @@ def TKN(token, wsL='', wsR=r'\s*'):
 
 def DTKN(token, wsL='', wsR=r'\s*'):
     """Syntactic Sugar for 'Series(Whitespace(wsL), DropToken(token), Whitespace(wsR))'"""
-    return withWS(lambda: DropToken(token), wsL, wsR)
+    return withWS(lambda: Drop(Token(token)), wsL, wsR)
 
 
 class Whitespace(RegExp):
@@ -1667,8 +1667,8 @@ class UnaryParser(MetaParser):
         copy_parser_attrs(self, duplicate)
         return duplicate
 
-    def sub_parsers(self) -> List['Parser']:
-        return [self.parser]
+    def sub_parsers(self) -> Tuple['Parser', ...]:
+        return (self.parser,)
 
 
 class NaryParser(MetaParser):
@@ -1701,12 +1701,12 @@ class NaryParser(MetaParser):
         if not self._grammar.resume_notices__:
             return
         notice = Error('Skipping within parser {} to point {}'
-                       .format(self.pname or self.pytpe, repr(_text[:10])),
+                       .format(self.pname or self.ptype, repr(_text[:10])),
                        self._grammar.document_length__ - len(_text),
                        Error.RESUME_NOTICE)
         self._grammar.tree__.add_error(err_node, notice)
 
-    def sub_parsers(self) -> List['Parser']:
+    def sub_parsers(self) -> Tuple['Parser', ...]:
         return self.parsers
 
 
@@ -2717,5 +2717,5 @@ class Forward(Parser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    def sub_parsers(self) -> List['Parser']:
-        return [self.parser]
+    def sub_parsers(self) -> Tuple['Parser', ...]:
+        return (self.parser,)

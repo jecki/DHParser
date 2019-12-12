@@ -53,7 +53,7 @@ import subprocess
 import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
-    Iterator, Any, cast
+    Iterator, Iterable, Any, cast
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -152,8 +152,8 @@ def substitute_default_host_and_port(host, port):
 
 
 def as_json_rpc(func: Callable,
-                params: Union[List[JSON_Type], Dict[str, JSON_Type]]=(),
-                ID: Optional[int]=None) -> str:
+                params: Union[List[JSON_Type], Dict[str, JSON_Type]] = [],
+                ID: Optional[int] = None) -> str:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
@@ -223,7 +223,7 @@ async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_
                 delay *= 1.5
             else:
                 delay = retry_timeout  # exit while loop
-    if connected:
+    if connected and reader is not None and writer is not None:
         return reader, writer
     else:
         raise save_error
@@ -233,7 +233,7 @@ def GMT_timestamp() -> str:
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
 
 
-ALL_RPCs = frozenset('*')  # Magic value denoting all remote procedures
+ALL_RPCs = set('*')  # Magic value denoting all remote procedures
 
 
 def default_fallback(*args, **kwargs) -> str:
@@ -313,7 +313,7 @@ class Server:
     """
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
-                 blocking: Set[str] = frozenset(),
+                 blocking: Set[str] = set(),
                  server_name: str = ''):
         self.server_name = server_name or '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
         if isinstance(rpc_functions, Dict):
@@ -377,7 +377,8 @@ class Server:
         self.finished_tasks = dict()    # type: Dict[int, Set[int]]
         self.connections = set()        # type: Set
         self.kill_switch = False        # type: bool
-        self.loop = None  # just for python 3.5 compatibility...
+        # just for python 3.5 compatibility...
+        self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
@@ -434,15 +435,15 @@ class Server:
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
                       params: Union[Dict, Sequence])\
-            -> Tuple[JSON_Type, RPC_Error_Type]:
+            -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Executes a method with the given parameters in a given executor
         (ThreadPoolExcecutor or ProcessPoolExecutor). `execute()`waits for the
         completion and returns the JSON result and an RPC error tuple (see the
         type definition above). The result may be None and the error may be
         zero, i.e. no error. If `executor` is `None`the method will be called
         directly instead of deferring it to an executor."""
-        result = None      # type: JSON_Type
-        rpc_error = None   # type: RPC_Error_Type
+        result = None      # type: Optional[JSON_Type]
+        rpc_error = None   # type: Optional[RPC_Error_Type]
         if params is None:
             params = tuple()
         has_kw_params = isinstance(params, Dict)
@@ -469,7 +470,7 @@ class Server:
         return result, rpc_error
 
     async def run(self, method_name: str, method: Callable, params: Union[Dict, Sequence]) \
-            -> Tuple[JSON_Type, RPC_Error_Type]:
+            -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Picks the right execution method (process, thread or direct execution) and
         runs it in the respective executor. In case of a broken ProcessPoolExecutor it
         restarts the ProcessPoolExecutor and tries to execute the method again."""
@@ -478,7 +479,8 @@ class Server:
         # c) in a process pool if it is cpu bound
         # see: https://docs.python.org/3/library/asyncio-eventloop.html
         #      #executing-code-in-thread-or-process-pools
-        result, rpc_error = None, None
+        result = None     # type: Optional[JSON_Type]
+        rpc_error = None  # type: Optional[RPC_Error_Type]
         executor = self.pp_executor if method_name in self.cpu_bound else \
             self.tp_executor if method_name in self.blocking else None
         result, rpc_error = await self.execute(executor, method, params)
@@ -563,7 +565,8 @@ class Server:
             await self.respond(writer, http_response("Data too large! Only %i MB allowed"
                                                      % (self.max_data_size // (1024 ** 2))))
         else:
-            result, rpc_error = None, None
+            result = None      # type: Optional[JSON_Type]
+            rpc_error = None   # type: Optional[RPC_Error_Type]
             m = re.match(RE_GREP_URL, data)
             # m = RX_GREP_URL(data.decode())
             if m:
@@ -599,7 +602,8 @@ class Server:
                                      writer: asyncio.StreamWriter,
                                      json_obj: Dict):
         # TODO: handle cancellation calls!
-        result, rpc_error = None, None
+        result = None      # type: Optional[JSON_Type]
+        rpc_error = None   # type: Optional[RPC_Error_Type]
         if json_obj.get('jsonrpc', '0.0') < '2.0':
             rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
                                 ' "%s" found.' % json_obj.get('jsonrpc', b'unknown')
@@ -652,8 +656,8 @@ class Server:
         id_writer = id(writer)  # type: int
         self.connections.add(id_writer)
         self.log('SERVER MESSAGE: New connection: ', str(id_writer), '\n')
-        self.active_tasks[id_writer] = dict()   # type: Dict[id, asyncio.Task]
-        self.finished_tasks[id_writer] = set()  # type: Set[int]
+        self.active_tasks[id_writer] = dict()
+        self.finished_tasks[id_writer] = set()
         buffer = b''  # type: bytes
         while not self.kill_switch and id_writer in self.connections:
             # reset the data variable
@@ -771,10 +775,10 @@ class Server:
             else:
                 # assume json
                 # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
-                json_id = 0
-                raw = None
-                json_obj = {}
-                rpc_error = None
+                json_id = 0       # type: int
+                raw = None        # type: Optional[JSON_Type]
+                json_obj = {}     # type: JSON_Type
+                rpc_error = None  # type: Optional[RPC_Error_Type]
                 # see: https://microsoft.github.io/language-server-protocol/specification#header-part
                 # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
                 i = data.find(b'{')
@@ -819,7 +823,7 @@ class Server:
             open_tasks = {task for id, task in self.active_tasks[id_writer].items()
                           if id not in self.finished_tasks[id_writer]}
             if open_tasks:
-                done, pending = await asyncio.wait(open_tasks, timeout=3.0)
+                done, pending = await asyncio.wait(open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
                 for task in pending:
                     task.cancel()
             del self.active_tasks[id_writer]
@@ -840,8 +844,8 @@ class Server:
             self.log('SERVER MESSAGE: Stopping Server: %i.\n\n' % id_writer)
             self.kill_switch = False  # reset flag
 
-    async def connection_py38(self, stream: 'asyncio.Stream'):
-        await self.connection(stream, stream)
+#     async def connection_py38(self, stream: 'asyncio.Stream'):
+#         await self.connection(stream, stream)
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         host, port = substitute_default_host_and_port(host, port)
@@ -942,7 +946,7 @@ class Server:
 
 def run_server(host, port, rpc_functions: RPC_Type,
                cpu_bound: Set[str] = ALL_RPCs,
-               blocking: Set[str] = frozenset()):
+               blocking: Set[str] = set()):
     """Start a server and wait until server is closed."""
     server = Server(rpc_functions, cpu_bound, blocking)
     server.run_server(host, port)
@@ -1127,7 +1131,7 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Sequence[Callable], Iterator[Call
             and not isinstance(lsp_funcs_or_instance, Iterator):
         # assume lsp_funcs_or_instance is the instance of a class
         lsp_funcs = (getattr(lsp_funcs_or_instance, attr)
-                     for attr in dir(lsp_funcs_or_instance) if not attr.startswith('__'))
+                     for attr in dir(lsp_funcs_or_instance) if not attr.startswith('__'))  # type: Iterable
     else:
         lsp_funcs = lsp_funcs_or_instance
     for func in lsp_funcs:

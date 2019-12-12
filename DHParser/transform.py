@@ -651,7 +651,7 @@ def replace_by_children(context: List[Node]):
         return
     node = context[-1]
     assert node.children
-    result = parent.result
+    result = parent.children  # type: Tuple[Node, ...]
     i = result.index(node)
     parent._set_result(result[:i] + node.children + result[i + 1:])
 
@@ -731,7 +731,7 @@ def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: 
                 if recursive:
                     flatten(context, condition, recursive)
                 new_result.extend(child.children)
-                update_attr(node, child)
+                update_attr(node, (child,))
             else:
                 new_result.append(child)
         context.pop()
@@ -978,14 +978,14 @@ def left_associative(context: List[Node]):
     node = context[-1]
     if len(node.children) >= 3:
         assert (len(node.children) + 1) % 2 == 0
-        rest = list(node.result)
+        rest = list(node.children)
         left, rest = rest[0], rest[1:]
         while rest:
             infix, right, rest = rest[0], rest[1], rest[2:]
             assert not infix.children
             assert infix.tag_name[0:1] != ":"
             left = Node(infix.tag_name, (left, right))
-        node.result = left
+        node.result = (left,)
 
 
 @transformation_factory(collections.abc.Set)
@@ -1193,7 +1193,7 @@ def remove_if(context: List[Node], condition: Callable):
         except IndexError:
             return
         node = context[-1]
-        parent._set_result(tuple(nd for nd in parent.result if nd != node))
+        parent._set_result(tuple(nd for nd in parent.children if nd != node))
 
 
 #######################################################################
