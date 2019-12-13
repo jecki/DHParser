@@ -211,6 +211,9 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
                             tuple(args) if issubtype(p1type, Sequence) else args
                         d = {params[0].name: c}
                         return partial(f, **d)
+                    assert p1type.__args__ is not None, "Please use more specific container " \
+                        "type, e.g. %s[Callable] instead of %s, in signature of function " \
+                        "%s !" % (str(p1type), str(p1type), f.__name__)
                     for alt_t in p1type.__args__:
                         f.register(type_guard(alt_t), gen_special)
                     # f.register(type_guard(p1type.__args__[0]), gen_special)
@@ -366,15 +369,8 @@ def traverse_locally(context: List[Node],
     traverse(context[-1], processing_table, key_func)
 
 
-# @transformation_factory(tuple)
-# def chain(context: List[Node], transformations: Tuple):
-#     """Successively apply all transformations in the given tuple."""
-#     for transform in transformations:
-#         transform(context)
-
-
-@transformation_factory
-def chain(context: List[Node], transformations: Tuple):
+@transformation_factory(tuple)
+def chain(context: List[Node], transformations: Tuple[Callable]):
     """Successively apply all transformations in the given tuple."""
     for transform in transformations:
         transform(context)

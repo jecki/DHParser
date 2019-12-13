@@ -16,7 +16,7 @@
 ########################################################################
 
 latexdoc       = preamble document
-preamble       = { [_WSPC]command }+
+preamble       = { [_WSPC] command }+
 
 document       = [_WSPC] "\begin{document}"
                  frontpages
