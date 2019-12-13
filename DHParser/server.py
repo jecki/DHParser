@@ -90,7 +90,8 @@ RPC_Type = Union[RPC_Table, List[Callable], Callable]
 RPC_Error_Type = Optional[Tuple[int, str]]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 
-RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'  # b'\s*(?:{|\[|"|\d|true|false|null)'
+RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'
+# b'\s*(?:{|\[|"|\d|true|false|null)'
 RE_GREP_URL = rb'GET ([^ \n]+) HTTP'
 RE_FUNCTION_CALL = rb'\s*(\w+)\(([^)]*)\)$'
 RX_CONTENT_LENGTH = re.compile(rb'Content-Length:\s*(\d+)')
@@ -158,7 +159,7 @@ def as_json_rpc(func: Callable,
     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def convert_argstr(s: str) -> Union[None, bool, int, str,  List, Dict]:
+def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
     """Convert string to suitable argument type"""
     s = s.strip()
     if s in ('None', 'null'):
@@ -204,8 +205,9 @@ def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
                     myloop.close()
 
 
-async def asyncio_connect(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-                    retry_timeout: float = 3.0) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def asyncio_connect(
+        host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
+        retry_timeout: float = 3.0) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     """Opens a connection with timeout retry-timeout."""
     host, port = substitute_default_host_and_port(host, port)
     delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
@@ -350,7 +352,7 @@ class Server:
         if logging_name not in self.rpc_table:
             self.rpc_table[logging_name] = self.rpc_logging
 
-        self.max_data_size = get_config_value('max_rpc_size')  #type: int
+        self.max_data_size = get_config_value('max_rpc_size')  # type: int
         # self.server_messages = Queue()  # type: Queue
 
         # shared variables
@@ -742,7 +744,7 @@ class Server:
                 # continue the loop until at least content_length + k bytes of data
                 # have been received
 
-            self.log('RECEIVE: ' , data.decode(), '\n')
+            self.log('RECEIVE: ', data.decode(), '\n')
 
             # remove finished tasks from active_tasks list,
             # so that the task-objects can be garbage collected
@@ -774,7 +776,8 @@ class Server:
 
             else:
                 # assume json
-                # TODO: add batch processing capability! (put calls to execute in asyncio tasks, use asyncio.gather)
+                # TODO: add batch processing capability!
+                #       (put calls to execute in asyncio tasks, use asyncio.gather)
                 json_id = 0       # type: int
                 raw = None        # type: Optional[JSON_Type]
                 json_obj = {}     # type: JSON_Type
@@ -786,20 +789,22 @@ class Server:
                     data = data[i:]
                 if len(data) > self.max_data_size:
                     rpc_error = -32600, "Request is too large! Only %i MB allowed" \
-                                % (self.max_data_size // (1024 ** 2))
+                        % (self.max_data_size // (1024 ** 2))
 
                 if rpc_error is None:
                     try:
                         raw = json.loads(data.decode())
                     except json.decoder.JSONDecodeError as e:
-                        rpc_error = -32700, "JSONDecodeError: " + (str(e) + str(data)).replace('"', "`")
+                        rpc_error = -32700, "JSONDecodeError: " \
+                            + (str(e) + str(data)).replace('"', "`")
 
                 if rpc_error is None:
                     if isinstance(raw, Dict):
                         json_obj = cast(Dict, raw)
                         json_id = json_obj.get('id', None)
                     else:
-                        rpc_error = -32700, 'Parse error: Request does not appear to be an RPC-call!?'
+                        rpc_error = -32700, \
+                            'Parse error: Request does not appear to be an RPC-call!?'
 
                 if rpc_error is None:
                     task = asyncio.ensure_future(self.handle_jsonrpc_request(
@@ -807,7 +812,8 @@ class Server:
                     assert json_id not in self.active_tasks, str(json_id)
                     self.active_tasks[id_writer][json_id] = task
                 else:
-                    await self.respond(writer,
+                    await self.respond(
+                        writer,
                         ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
                          % (rpc_error[0], rpc_error[1], json_id)))
 
@@ -823,7 +829,8 @@ class Server:
             open_tasks = {task for id, task in self.active_tasks[id_writer].items()
                           if id not in self.finished_tasks[id_writer]}
             if open_tasks:
-                done, pending = await asyncio.wait(open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
+                _, pending = await asyncio.wait(
+                    open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
                 for task in pending:
                     task.cancel()
             del self.active_tasks[id_writer]
@@ -1007,16 +1014,16 @@ python_interpreter_name_cached = ''
 
 
 def detach_server(host: str = USE_DEFAULT_HOST,
-                 port: int = USE_DEFAULT_PORT,
-                 initialization: str = '',
-                 parameters: str = 'lambda s: s',
-                 import_path: str = '.'):
+                  port: int = USE_DEFAULT_PORT,
+                  initialization: str = '',
+                  parameters: str = 'lambda s: s',
+                  import_path: str = '.'):
     """
     Start DHParser-Server in a separate process and return. The process remains
     active even after the parent process is closed. Useful for writing test code.
     """
     async def wait_for_connection(host, port):
-        reader, writer = await asyncio_connect(host, port)  # wait until server online
+        _, writer = await asyncio_connect(host, port)  # wait until server online
         writer.close()
         # if sys.version_info >= (3, 7):
         #     await writer.wait_closed()
@@ -1131,7 +1138,8 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Sequence[Callable], Iterator[Call
             and not isinstance(lsp_funcs_or_instance, Iterator):
         # assume lsp_funcs_or_instance is the instance of a class
         lsp_funcs = (getattr(lsp_funcs_or_instance, attr)
-                     for attr in dir(lsp_funcs_or_instance) if not attr.startswith('__'))  # type: Iterable
+                     for attr in dir(lsp_funcs_or_instance)
+                     if not attr.startswith('__'))  # type: Iterable
     else:
         lsp_funcs = lsp_funcs_or_instance
     for func in lsp_funcs:

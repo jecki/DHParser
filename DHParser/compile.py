@@ -37,7 +37,7 @@ compiler object.
 import copy
 import functools
 import os
-from typing import Any, Optional, Tuple, List, Union, Callable, cast
+from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
@@ -128,8 +128,8 @@ class Compiler:
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
         self._dirty_flag = False
-        self._debug = get_config_value('debug_compiler') # type: bool
-        self._debug_already_compiled = set()  # type: Set[Node]
+        self._debug = get_config_value('debug_compiler')  # type: bool
+        self._debug_already_compiled = set()              # type: Set[Node]
         self.finalizers = []  # type: List[Callable, Tuple]
 
     def prepare(self) -> None:
@@ -167,17 +167,6 @@ class Compiler:
             task(*parameters)
         self.finalize()
         return result
-
-    # Obsolete, because never used...
-    # def compile_children(self, node: Node) -> StrictResultType:
-    #     """Compiles all children of the given node and returns the tuple
-    #     of the compiled children or the node's (potentially empty) result
-    #     in case the node does not have any children.
-    #     """
-    #     if node.children:
-    #         return tuple(self.compile(child) for child in node.children)
-    #     else:
-    #         return node.result
 
     def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on

@@ -27,6 +27,7 @@ for CST -> AST transformations.
 """
 
 
+from collections import OrderedDict
 import collections.abc
 from functools import partial, singledispatch, reduce
 import inspect
@@ -525,7 +526,7 @@ def has_content(context: List[Node], regexp: str) -> bool:
 
 # TODO: rename has_ancestor
 @transformation_factory(collections.abc.Set)
-def has_parent(context: List[Node], tag_name_set: AbstractSet[str], start_level: int=2) -> bool:
+def has_parent(context: List[Node], tag_name_set: AbstractSet[str], start_level: int = 2) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
@@ -540,7 +541,8 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str], start_level:
 
 
 @transformation_factory(collections.abc.Set)
-def has_descendant(context: List[Node], tag_name_set: AbstractSet[str], stop_level: int=1) -> bool:
+def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
+                   stop_level: int = 1) -> bool:
     assert stop_level > 0
     for child in context[-1].children:
         if child.tag_name in tag_name_set:
@@ -586,7 +588,7 @@ def swap_attributes(node: Node, other: Node):
         elif NA:
             node._xml_attr = None
         if NA:
-            other._xml_attr = node._xml_attr
+            other._xml_attr = save
         elif OA:
             other._xml_attr = None
 

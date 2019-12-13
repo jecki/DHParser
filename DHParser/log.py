@@ -52,10 +52,9 @@ Example::
 """
 
 import collections
-import contextlib
 import html
 import os
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union
 
 from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
     set_config_value
@@ -103,7 +102,7 @@ def suspend_logging() -> str:
     return save
 
 
-def resume_logging(log_dir: str=''):
+def resume_logging(log_dir: str = ''):
     """Resumes logging in the current thread with the given log-dir."""
     if not 'log_dir':
         CFG = access_presets()
@@ -155,7 +154,7 @@ def log_dir(path: str = "") -> str:
     return dirname
 
 
-def is_logging(thread_local_query: bool=True) -> bool:
+def is_logging(thread_local_query: bool = True) -> bool:
     """-> True, if logging is turned on."""
     if thread_local_query:
         return bool(get_config_value('log_dir'))
@@ -293,7 +292,8 @@ class HistoryRecord:
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         # self.call_stack = call_stack    # type: Tuple[Tuple[str, int],...]
-        self.call_stack = tuple((tn, pos) for tn, pos in call_stack if tn != ":Forward")  # type: Tuple[Tuple[str, int],...]
+        self.call_stack = tuple((tn, pos) for tn, pos in call_stack
+                                if tn != ":Forward")  # type: Tuple[Tuple[str, int],...]
         self.node = node                # type: Node
         self.text = text                # type: StringView
         self.line_col = line_col        # type: Tuple[int, int]
@@ -355,7 +355,8 @@ class HistoryRecord:
             classes[idx['text']] = 'failtext'
         else:  # ERROR
             stack += '<br/>\n"%s"' % self.err_msg()
-        tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]), stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
+        tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]),
+                            stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
                                    for cls, item in zip(classes, tpl)] + ['</tr>'])
 
@@ -469,6 +470,7 @@ def log_ST(syntax_tree, log_file_name) -> bool:
         return True
     return False
 
+
 LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
 LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
 
@@ -542,4 +544,3 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
         heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
         write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
     return True
-

@@ -319,7 +319,7 @@ class StringView:  # collections.abc.Sized
         return regex.finditer(self._text, pos=self._begin, endpos=self._end)
 
     @cython.locals(begin=cython.int, end=cython.int)
-    def strip(self, chars = ' \n\t'):
+    def strip(self, chars=' \n\t'):
         """Returns a copy of the StringView `self` with leading and trailing
         whitespace removed.
         """
@@ -328,13 +328,13 @@ class StringView:  # collections.abc.Sized
         return self if begin == 0 and end == self._len else self[begin:end]
 
     @cython.locals(begin=cython.int)
-    def lstrip(self, chars = ' \n\t'):
+    def lstrip(self, chars=' \n\t'):
         """Returns a copy of `self` with leading whitespace removed."""
         begin = first_char(self._text, self._begin, self._end, chars) - self._begin
         return self if begin == 0 else self[begin:]
 
     @cython.locals(end=cython.int)
-    def rstrip(self, chars = ' \n\t'):
+    def rstrip(self, chars=' \n\t'):
         """Returns a copy of `self` with trailing whitespace removed."""
         end = last_char(self._text, self._begin, self._end, chars) - self._begin
         return self if end == self._len else self[:end]

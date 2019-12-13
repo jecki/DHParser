@@ -79,13 +79,14 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
     delta = text._len - rest._len
     parser_error = grammar.most_recent_error__
     if ((grammar.moving_forward__ or parser_error or (node and not self.anonymous))
-            and (self.tag_name != WHITESPACE_PTYPE)):  # TODO: Make dropping insignificant whitespace from history configurable
+            and (self.tag_name != WHITESPACE_PTYPE)):
+        # TODO: Make dropping insignificant whitespace from history configurable
         errors = [parser_error.error] if parser_error else []  # type: List[Error]
         line_col = grammar.line_col__(text)
         nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else EMPTY_NODE
         record = HistoryRecord(grammar.call_stack__, nd, rest, line_col, errors)
         if (not grammar.history__ or line_col != grammar.history__[-1].line_col
-            or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):
+                or record.call_stack != grammar.history__[-1].call_stack[:len(record.call_stack)]):
             grammar.history__.append(record)
         if parser_error:
             if grammar.resume_notices__:

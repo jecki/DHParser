@@ -1,0 +1,454 @@
+<latexdoc>
+  <preamble>
+    <documentclass err="Warning (100): Only one document language supported. Using defaultdict(<function empty_defaultdict at 0x7fb9e61d0040>, {}), ignoring english.">
+      <config>12pt, english, a4paper</config>
+      <block>
+        <text>article</text>
+      </block>
+    </documentclass>
+    <generic_command>
+      <CMDNAME>\usepackage</CMDNAME>
+      <config>natbib=true</config>
+      <block>
+        <text>biblatex</text>
+      </block>
+    </generic_command>
+    <generic_command>
+      <CMDNAME>\bibliography</CMDNAME>
+      <block>
+        <text>testdoc1.bib</text>
+      </block>
+    </generic_command>
+    <generic_command>
+      <CMDNAME>\usepackage</CMDNAME>
+      <block>
+        <text>graphicx</text>
+      </block>
+    </generic_command>
+  </preamble>
+  <document>
+    <frontpages>
+      <paragraph>
+        <generic_command>
+          <CMDNAME>\title</CMDNAME>
+          <block>
+            <text>LaTeX Test-Document</text>
+          </block>
+        </generic_command>
+      </paragraph>
+      <paragraph>
+        <generic_command>
+          <CMDNAME>\date</CMDNAME>
+          <block>
+            <text>May 2016</text>
+          </block>
+        </generic_command>
+      </paragraph>
+      <paragraph>
+        <generic_command>
+          <CMDNAME>\maketitle</CMDNAME>
+        </generic_command>
+      </paragraph>
+      <generic_block>
+        <begin_environment>abstract</begin_environment>
+        <paragraph>
+          <text>Here comes the Abstract </text>
+          <generic_command>
+            <CMDNAME>\ldots</CMDNAME>
+          </generic_command>
+          <text>. This part is </text>
+          <block>
+            <generic_command>
+              <CMDNAME>\em</CMDNAME>
+            </generic_command>
+            <text>emphasized</text>
+          </block>
+          <text>
+            .
+            
+          </text>
+        </paragraph>
+        <end_environment>abstract</end_environment>
+      </generic_block>
+      <paragraph>
+        <generic_command>
+          <CMDNAME>\newpage</CMDNAME>
+        </generic_command>
+      </paragraph>
+      <paragraph>
+        <generic_command>
+          <CMDNAME>\tableofcontents</CMDNAME>
+        </generic_command>
+      </paragraph>
+    </frontpages>
+    <Section>
+      <heading>Simple text components</heading>
+      <paragraph>
+        <text>This is the first section. It </text>
+        <text_command>
+          <BRACKETS>[</BRACKETS>
+        </text_command>
+        <text>contains</text>
+        <text_command>
+          <BRACKETS>]</BRACKETS>
+        </text_command>
+         
+        <text>
+          a reference to
+          Willibald 
+        </text>
+        <citet>
+          <config>32</config>
+          <block>
+            <text>Willibald2015</text>
+          </block>
+        </citet>
+        <text>
+          . Plus, it also refers to
+          Kunigunde's completed works 
+        </text>
+        <citep>
+          <block>
+            <text>Kunigunde2010</text>
+          </block>
+        </citep>
+        <text>.</text>
+      </paragraph>
+      <paragraph>
+        <text>
+          This is line that ends with a LaTeX-comment. 
+          This line continues the paragraph!
+        </text>
+      </paragraph>
+      <paragraph>
+        <text>These are several </text>
+        <LINEFEED>\\</LINEFEED>
+        
+        
+        <text>lines </text>
+        <LINEFEED>\\</LINEFEED>
+        
+        
+        <text>of text.</text>
+      </paragraph>
+      <paragraph>
+        <text>One paragraph</text>
+      </paragraph>
+      <paragraph>
+        <text>Another paragraph</text>
+      </paragraph>
+      <paragraph>
+        <text>Continuation of paragraph.</text>
+      </paragraph>
+      <SubSection>
+        <heading>Quotations</heading>
+        <paragraph>
+          <text>This is a subsection about quotations. And here is the quote:</text>
+        </paragraph>
+        <quotation>
+          <text>
+            Gerade hierauf beruht jene Glückseligkeit des ersten Viertels unseres Lebens,
+                in Folge welcher es nachher wie ein verolorenes Paradis hinter uns liegt.
+                Wir haben in der Kindheit nur wenige Beziehungen und geringe Bedürfnisse, also wenig
+                Anregung des Willens: der größere Theil unseres Wesens geht demnach im Erkennen auf.
+                
+          </text>
+          <citep>
+            <config>199</config>
+            <block>
+              <text>Schopenhauer1851</text>
+            </block>
+          </citep>
+        </quotation>
+      </SubSection>
+      <SubSection>
+        <heading>Bullet Lists</heading>
+        <paragraph>
+          <text>
+            Here comes a bullet list:
+            
+          </text>
+        </paragraph>
+        <itemize>
+          <item>
+            <paragraph>
+              <text>
+                one item
+                
+              </text>
+            </paragraph>
+          </item>
+          <item>
+            <paragraph>
+              <text>
+                another item
+                
+              </text>
+            </paragraph>
+          </item>
+          <item>
+            <paragraph>
+              <text>An item with several paragraphs</text>
+            </paragraph>
+            <paragraph>
+              <text>
+                This ist the second paragraph of the item. It should be visible that a new
+                      paragraph has started, but it should also be obvious that the second
+                      paragraph belongs to the same item as the first paragraph.
+                
+              </text>
+            </paragraph>
+          </item>
+        </itemize>
+        <paragraph>
+          <text>After the list the text condinues.</text>
+          <footnote>
+            <block_of_paragraphs>
+              <text>This is a footnote.</text>
+            </block_of_paragraphs>
+          </footnote>
+          <text>
+            Although there is no extra newline in the source,
+            it should be clear that this is a new paragraph.
+          </text>
+        </paragraph>
+        <enumerate>
+          <item>
+            <paragraph>
+              <text>
+                This is the first item of an enumeration.
+                
+              </text>
+            </paragraph>
+          </item>
+          <item>
+            <paragraph>
+              <text>
+                no the second item
+                
+              </text>
+            </paragraph>
+          </item>
+          <item>
+            <paragraph>
+              <text>
+                now the third
+                      
+              </text>
+            </paragraph>
+            <enumerate>
+              <item>
+                <paragraph>
+                  <text>
+                    first item of the nested enumeration
+                          
+                  </text>
+                </paragraph>
+              </item>
+              <item>
+                <paragraph>
+                  <text>
+                    second nested item
+                          
+                  </text>
+                </paragraph>
+              </item>
+            </enumerate>
+          </item>
+          <item>
+            <paragraph>
+              <text>
+                fourth item of the enumeration
+                
+              </text>
+            </paragraph>
+          </item>
+        </enumerate>
+      </SubSection>
+    </Section>
+    <Section>
+      <heading>Complex document components</heading>
+      <SubSection>
+        <heading>Images</heading>
+        <paragraph>
+          <text>This is, how images can be embedded in a document.</text>
+        </paragraph>
+        <figure>
+          <generic_block>
+            <begin_environment>center</begin_environment>
+            <paragraph>
+              <includegraphics>
+                <config>
+                  <text>width=</text>
+                  <CMDNAME>\textwidth</CMDNAME>
+                </config>
+                <block>
+                  <text>Graph.eps</text>
+                </block>
+              </includegraphics>
+              
+              
+              <caption>
+                <block>
+                  <generic_command>
+                    <CMDNAME>\label</CMDNAME>
+                    <block>
+                      <text>Graph</text>
+                    </block>
+                  </generic_command>
+                   
+                  <text>Evolutionary simulation of the reiterated Prisoner's Dilemma.</text>
+                </block>
+              </caption>
+            </paragraph>
+            <end_environment>center</end_environment>
+          </generic_block>
+        </figure>
+      </SubSection>
+      <SubSection>
+        <heading>Tables</heading>
+        <paragraph>
+          <text>
+            Following comes a complex figure with a table.
+            
+          </text>
+        </paragraph>
+        <figure>
+          <generic_block>
+            <begin_environment>center</begin_environment>
+            <generic_block>
+              <begin_environment>scriptsize</begin_environment>
+              <tabular>
+                <tabular_config>l|c|c|c|</tabular_config>
+                <tabular_row>
+                  <multicolumn>
+                    <INTEGER>1</INTEGER>
+                    <tabular_config>c</tabular_config>
+                  </multicolumn>
+                  <multicolumn>
+                    <INTEGER>1</INTEGER>
+                    <tabular_config>c</tabular_config>
+                  </multicolumn>
+                  <multicolumn>
+                    <INTEGER>2</INTEGER>
+                    <tabular_config>c</tabular_config>
+                  </multicolumn>
+                  <cline>
+                    <INTEGER>2</INTEGER>
+                    <INTEGER>4</INTEGER>
+                  </cline>
+                </tabular_row>
+                <tabular_row>
+                  <tabular_cell>
+                    <block>
+                      <generic_command>
+                        <CMDNAME>\bf</CMDNAME>
+                      </generic_command>
+                      <text>computer simulation</text>
+                    </block>
+                     
+                  </tabular_cell>
+                  <tabular_cell>
+                    <block>
+                      <generic_command>
+                        <CMDNAME>\bf</CMDNAME>
+                      </generic_command>
+                      <text>analog simulation</text>
+                    </block>
+                     
+                  </tabular_cell>
+                  <tabular_cell>
+                    <block>
+                      <generic_command>
+                        <CMDNAME>\bf</CMDNAME>
+                      </generic_command>
+                      <text>plain experiment</text>
+                    </block>
+                     
+                  </tabular_cell>
+                  <hline>\hline</hline>
+                </tabular_row>
+                <tabular_row>
+                  <tabular_cell>
+                    <text>
+                      materiality of object
+                                            
+                    </text>
+                  </tabular_cell>
+                  <tabular_cell>
+                    <text>semantic                  </text>
+                  </tabular_cell>
+                  <multicolumn>
+                    <INTEGER>2</INTEGER>
+                    <tabular_config>c|</tabular_config>
+                    <block_of_paragraphs>
+                      <text>material</text>
+                    </block_of_paragraphs>
+                  </multicolumn>
+                  <hline>\hline</hline>
+                </tabular_row>
+                <tabular_row>
+                  <tabular_cell>
+                    <text>
+                      relation to target
+                                            
+                    </text>
+                  </tabular_cell>
+                  <multicolumn>
+                    <INTEGER>2</INTEGER>
+                    <tabular_config>c|</tabular_config>
+                    <block_of_paragraphs>
+                      <text>representation</text>
+                    </block_of_paragraphs>
+                  </multicolumn>
+                  <tabular_cell>
+                    <text>representative </text>
+                  </tabular_cell>
+                  <hline>\hline</hline>
+                </tabular_row>
+                <tabular_row>
+                  <multicolumn>
+                    <INTEGER>1</INTEGER>
+                    <tabular_config>c</tabular_config>
+                  </multicolumn>
+                  <multicolumn>
+                    <INTEGER>2</INTEGER>
+                    <tabular_config>c</tabular_config>
+                  </multicolumn>
+                  <multicolumn>
+                    <INTEGER>1</INTEGER>
+                    <tabular_config>c</tabular_config>
+                  </multicolumn>
+                </tabular_row>
+              </tabular>
+              <end_environment>scriptsize</end_environment>
+            </generic_block>
+            <end_environment>center</end_environment>
+          </generic_block>
+          <paragraph>
+            <caption>
+              <block>
+                <text>Conceptual relation of simulations and experiments </text>
+                <citep>
+                  <config>page needed</config>
+                  <block>
+                    <text>Arnold2013</text>
+                  </block>
+                </citep>
+              </block>
+            </caption>
+            <generic_command>
+              <CMDNAME>\label</CMDNAME>
+              <block>
+                <text>SimulationExperimentsScheme</text>
+              </block>
+            </generic_command>
+          </paragraph>
+        </figure>
+      </SubSection>
+      <SubSection>
+        <heading>Mathematical Formulae</heading>
+      </SubSection>
+    </Section>
+  </document>
+</latexdoc>

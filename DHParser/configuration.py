@@ -29,7 +29,7 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
-from typing import Dict, Hashable, Any
+from typing import Dict, Any
 
 __all__ = ('access_presets',
            'finalize_presets',
@@ -175,7 +175,7 @@ def set_config_value(key: str, value: Any):
     except AttributeError:
         THREAD_LOCALS.config = dict()
         cfg = THREAD_LOCALS.config
-    THREAD_LOCALS.config[key] = value
+    cfg[key] = value
 
 
 ########################################################################

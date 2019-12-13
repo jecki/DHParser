@@ -37,7 +37,7 @@ the string representations of the error objects. For example::
 
 
 import bisect
-from typing import Iterable, Iterator, Union, Dict, Tuple, List
+from typing import Iterable, Iterator, Union, Tuple, List
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
@@ -230,17 +230,6 @@ def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
     line = bisect.bisect_left(lbreaks, pos)
     column = pos - lbreaks[line - 1]
     return line, column
-
-
-# def line_col(text: Union[StringView, str], pos: int) -> Tuple[int, int]:
-#     """
-#     Returns the position within a text as (line, column)-tuple.
-#     """
-#     if pos < 0 or add_pos > len(text):  # one character behind EOF is still an allowed position!
-#         raise ValueError('Position %i outside text of length %s !' % (pos, len(text)))
-#     line = text.count("\n", 0, pos) + 1
-#     column = pos - text.rfind("\n", 0, add_pos)
-#     return line, column
 
 
 def adjust_error_locations(errors: List[Error],

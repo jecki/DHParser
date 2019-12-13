@@ -264,7 +264,8 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
             append_log(log_name, grammar_src)
         else:
             print(grammar_src)
-    grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src, r'get_(?:\w+_)?grammar$')
+    grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src,
+                                            r'get_(?:\w+_)?grammar$')
     grammar_factory.python_src__ = grammar_src
     return grammar_factory
 
@@ -300,7 +301,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         # Assume source is an ebnf grammar.
         # Is there really any reasonable application case for this?
         log_dir = suspend_logging()
-        compiler_py, messages, n = compile_source(source, None, get_ebnf_grammar(),
+        compiler_py, messages, _ = compile_source(source, None, get_ebnf_grammar(),
                                                   get_ebnf_transformer(),
                                                   get_ebnf_compiler(compiler_suite, source))
         resume_logging(log_dir)
@@ -334,7 +335,7 @@ def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
         True, if ``compiler_suite`` seems to be out of date.
     """
     try:
-        n1, grammar, n2, n3 = load_compiler_suite(compiler_suite)
+        _, grammar, _, _ = load_compiler_suite(compiler_suite)
         return grammar_changed(grammar(), grammar_source)
     except ValueError:
         return True
@@ -558,8 +559,8 @@ def recompile_grammar(ebnf_filename, force=False,
     compiler_name = base + 'Compiler.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
     messages = []  # type: Iterable[Error]
-    if (not os.path.exists(compiler_name) or force or
-            grammar_changed(compiler_name, ebnf_filename)):
+    if (not os.path.exists(compiler_name) or force
+            or grammar_changed(compiler_name, ebnf_filename)):
         notify()
         messages = compile_on_disk(ebnf_filename)
         if messages:

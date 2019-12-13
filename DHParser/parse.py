@@ -32,7 +32,7 @@ for an example.
 
 from collections import defaultdict
 import copy
-from typing import Callable, cast, List, Tuple, Sequence, Set, Dict, \
+from typing import Callable, cast, List, Tuple, Set, Dict, \
     DefaultDict, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
@@ -432,20 +432,17 @@ class Parser:
                             self.tag_name,
                             (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
                             .with_pos(location)
-                    # self._add_resume_notice(rest, node)
                 elif pe.first_throw:
-                    # TODO: Will this option be needed, if history tracking is deferred to module "trace"?
-                    # if history_tracking__:  grammar.call_stack__.pop()
+                    # TODO: Is this case still needed with module "trace"?
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:
-                    node = Node(self.tag_name, pe.node).with_pos(location)  # try to create tree as faithful as possible
+                    # try to create tree as faithful as possible
+                    node = Node(self.tag_name, pe.node).with_pos(location)
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
-                    # if history_tracking__:  grammar.call_stack__.pop()
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
-                # self._add_resume_notice(rest, node)
                 grammar.most_recent_error__ = pe   # needed for history tracking
 
             if left_recursion_depth__:
@@ -482,7 +479,8 @@ class Parser:
                     #   because caching would interfere with changes of variable state
                     # - in case of left recursion, the first recursive step that
                     #   matches will store its result in the cache
-                    # TODO: need a unit-test concerning interference of variable manipulation and left recursion algorithm?
+                    # TODO: need a unit-test concerning interference of variable manipulation
+                    #       and left recursion algorithm?
                     visited[location] = (node, rest)
 
         except RecursionError:
@@ -1004,8 +1002,8 @@ class Grammar:
             else:
                 self.comment_rx__ = RX_NEVER_MATCH
         else:
-            assert ((self.__class__.COMMENT__ and
-                     self.__class__.COMMENT__ == self.comment_rx__.pattern)
+            assert ((self.__class__.COMMENT__
+                     and self.__class__.COMMENT__ == self.comment_rx__.pattern)
                     or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
@@ -1100,8 +1098,8 @@ class Grammar:
         """
         if parser.pname:
             # prevent overwriting instance variables or parsers of a different class
-            assert parser.pname not in self.__dict__ or \
-                   isinstance(self.__dict__[parser.pname], parser.__class__), \
+            assert (parser.pname not in self.__dict__
+                    or isinstance(self.__dict__[parser.pname], parser.__class__)), \
                 ('Cannot add parser "%s" because a field with the same name '
                  'already exists in grammar object: %s!'
                  % (parser.pname, str(self.__dict__[parser.pname])))
@@ -1151,12 +1149,13 @@ class Grammar:
             #     for tn, pos in h.call_stack:
             #         if is_lookahead(tn) and h.status == HistoryRecord.MATCH:
             #              print(h.call_stack, pos, h.line_col)
-            last_record = self.history__[-2] if len(self.history__) > 1 else None  # type: Optional[HistoryRecord]
+            last_record = self.history__[-2] if len(self.history__) > 1 \
+                else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
-                    and any(h.status == HistoryRecord.MATCH  # or was it HistoryRecord.MATCH !?
-                            and any(is_lookahead(tn) and location >= len(self.document__)
-                                    for tn, location in h.call_stack)
-                            for h in self.history__[:-1])
+                and any(h.status == HistoryRecord.MATCH  # or was it HistoryRecord.MATCH !?
+                        and any(is_lookahead(tn) and location >= len(self.document__)
+                                for tn, location in h.call_stack)
+                        for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
         if self._dirty_flag__:
@@ -1165,10 +1164,7 @@ class Grammar:
                 parser.reset()
         else:
             self._dirty_flag__ = True
-        # save_history_tracking = self.history_tracking__
-        # self.history_tracking__ = track_history or self.history_tracking__ or self.resume_notices__
-        # track history contains and retains the current tracking state
-        # track_history = self.history_tracking__
+
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
@@ -1254,7 +1250,8 @@ class Grammar:
                 #     # stop history tracking when parser returned too early
                 #     self.history_tracking__ = False
             else:
-                rest = StringView('')  # if complete_match is False, ignore the rest and leave while loop
+                # if complete_match is False, ignore the rest and leave while loop
+                rest = StringView('')
         if stitches:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
@@ -1334,10 +1331,11 @@ class Grammar:
         """
         error_list = []  # type: List[GrammarErrorType]
 
-        def visit_parser(parser: Parser) -> None:
-            nonlocal error_list
-
-        # self.root_parser__.apply(visit_parser)  # disabled, because no use case as of now
+        # disabled, because no use case as of now
+        # def visit_parser(parser: Parser) -> None:
+        #     nonlocal error_list
+        #
+        # self.root_parser__.apply(visit_parser)
         return error_list
 
 
@@ -1914,7 +1912,7 @@ def mandatory_violation(grammar: Grammar,
         else:
             msg = '%s expected, »%s« found!' % (expected, found)
     error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
-        if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
+                  if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)
     return error, err_node, text_[i:]
 
@@ -1950,7 +1948,7 @@ class Series(NaryParser):
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
-                 err_msgs: MessagesType=[],
+                 err_msgs: MessagesType = [],
                  skip: ResumeList = []) -> None:
         super(Series, self).__init__(*parsers)
         length = len(self.parsers)
@@ -2209,7 +2207,8 @@ class AllOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node is not None:
-                    if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
+                    if node._result or not node.tag_name.startswith(':'):
+                        # drop anonymous empty nodes
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -2229,7 +2228,7 @@ class AllOf(NaryParser):
                     if reloc < 0:
                         parsers = []
         assert len(results) <= len(self.parsers) \
-               or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
+            or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:
             raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
@@ -2278,7 +2277,8 @@ class SomeOf(NaryParser):
             for i, parser in enumerate(parsers):
                 node, text__ = parser(text_)
                 if node is not None:
-                    if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
+                    if node._result or not node.tag_name.startswith(':'):
+                        # drop anonymous empty nodes
                         results += (node,)
                         text_ = text__
                     del parsers[i]
@@ -2356,8 +2356,8 @@ class Lookahead(FlowParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
-                # static analysis requires lookahead to be disabled at document end
-                # or (self.grammar.static_analysis_pending__ and not text)):
+            # static analysis requires lookahead to be disabled at document end
+            # or (self.grammar.static_analysis_pending__ and not text)):
             return (EMPTY_NODE if self.anonymous else Node(self.tag_name, '')), text
         else:
             return None, text
@@ -2452,7 +2452,8 @@ class Capture(UnaryParser):
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
-                "Cannot capture content of returned by parser, the content of which will be dropped!"
+                "Cannot capture content of returned by parser, the content of which " \
+                "will be dropped!"
             self.grammar.variables__[self.pname].append(node.content)
             location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
@@ -2613,7 +2614,8 @@ class Synonym(UnaryParser):
         super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, text = self.parser._parse(text)  # circumvent Parser.__call__ as an optimization (dangerous?)
+        # circumvent Parser.__call__ as an optimization (dangerous?)
+        node, text = self.parser._parse(text)
         if node is not None:
             if self.drop_content:
                 return EMPTY_NODE, text

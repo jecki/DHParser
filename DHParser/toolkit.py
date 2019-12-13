@@ -229,11 +229,11 @@ def abbreviate_middle(s: str, max_length: int) -> str:
     """Shortens string `s` by replacing the middle part with an ellipsis
     sign ` ... ` if the size of the string exceeds `max_length`."""
     assert max_length > 6
-    l = len(s)  # type: int
-    if l > max_length:
+    length = len(s)  # type: int
+    if length > max_length:
         a = max_length // 2 - 2  # type: int
         b = max_length // 2 - 3  # type: int
-        s = s[:a] + ' ... ' + s[-b:] if l > 40 else s
+        s = s[:a] + ' ... ' + s[-b:] if length > 40 else s
     return s
 
 

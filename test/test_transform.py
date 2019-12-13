@@ -29,9 +29,9 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
     tree_sanity_check
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
-    traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, remove_tokens, \
-    transformation_factory, has_parent, contains_only_whitespace, is_insignificant_whitespace, \
-    merge_adjacent, is_one_of
+    traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
+    remove_tokens, transformation_factory, has_parent, contains_only_whitespace, \
+    is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -244,7 +244,8 @@ class TestComplexTransformations:
                  </Stelle>"""
         tree = parse_xml(xml)
         # print(flatten_sxpr(tree.as_sxpr()))
-        collapse_children_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT', self.Text)
+        collapse_children_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT',
+                             self.Text)
         assert tree.as_xml(inline_tags={'Stelle'}) == \
                "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"
 
@@ -278,7 +279,7 @@ class TestWhitespaceTransformations:
         assert all(i % 2 != 0 or (node.tag_name == "WORD" and ":Whitespace" not in node)
                    for i, node in enumerate(sentence))
 
-    def test_move_adjacent2(self):
+    def test_move_adjacent3(self):
         sentence = parse_sxpr('(SENTENCE  (:Whitespace " ") (:Whitespace " ")  '
                               '(TEXT (PHRASE "Guten Tag") (:Whitespace " ")))')
         transformations = {'TEXT': move_adjacent(is_insignificant_whitespace)}
@@ -301,6 +302,24 @@ class TestWhitespaceTransformations:
         sentence = parse_sxpr('(SENTENCE "Hallo Welt")')
         traverse(sentence, transformations)
         assert sentence.content == "Hallo Welt", sentence.content
+
+
+class TestAttributeHandling:
+    def test_swap_attributes(self):
+        A = Node('A', '')
+        B = Node('B', '')
+        A.attr['x'] = 'x'
+        swap_attributes(A, B)
+        assert not A.attr
+        assert B.attr['x'] == 'x'
+        swap_attributes(A, B)
+        assert not B.attr
+        assert A.attr['x'] == 'x'
+        B.attr['y'] = 'y'
+        swap_attributes(A, B)
+        assert A.attr['y'] == 'y'
+        assert B.attr['x'] == 'x'
+
 
 
 if __name__ == "__main__":

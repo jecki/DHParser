@@ -37,9 +37,9 @@ import os
 import sys
 from typing import Dict, List, Union, cast
 
-from DHParser.configuration import THREAD_LOCALS, get_config_value
+from DHParser.configuration import get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations
-from DHParser.log import log_dir, is_logging, clear_logs, log_parsing_history
+from DHParser.log import is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, with_all_descendants, trace_history
@@ -218,8 +218,8 @@ def unit_from_file(filename):
         intersection.sort()
         if intersection:
             errors.append("Same names %s assigned to match and fail test "
-                          "of parser %s." % (str(intersection), parser_name) +
-                          " Please, use different names!")
+                          "of parser %s." % (str(intersection), parser_name)
+                          + " Please, use different names!")
     if errors:
         raise EnvironmentError("Error(s) in Testfile %s :\n" % filename
                                + '\n'.join(errors))
@@ -355,10 +355,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if not get_config_value('test_supress_lookahead_failures'):
             return False
         raw_errors = cast(RootNode, syntax_tree).errors_sorted
-        is_artifact = ({e.code for e in raw_errors} <=
-                        {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
-                         # Error.PARSER_STOPPED_BEFORE_END,
-                         Error.PARSER_LOOKAHEAD_MATCH_ONLY}
+        is_artifact = ({e.code for e in raw_errors}
+                       <= {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
+                           # Error.PARSER_STOPPED_BEFORE_END,
+                           Error.PARSER_LOOKAHEAD_MATCH_ONLY}
                        or (len(raw_errors) == 1
                            and (raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
                                 #  case 2:  mandatory lookahead failure at end of text
@@ -486,7 +486,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             except UnknownParserError as upe:
                 node = Node(ZOMBIE_TAG, "").with_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
-                errata.append('Unknown parser "{}" in fail test "{}"!'.format(parser_name, test_name))
+                errata.append('Unknown parser "{}" in fail test "{}"!'.format(
+                    parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
@@ -705,7 +706,7 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
         os.chdir(path)
         keys = reversed(list(symbols.keys()))
         for i, k in enumerate(keys):
-            filename = '{num:0>2}_test_{section}'.format(num=i+1, section=k) + fmt
+            filename = '{num:0>2}_test_{section}'.format(num=i + 1, section=k) + fmt
             if not os.path.exists(filename):
                 print('Creating test file template "{name}".'.format(name=filename))
                 with open(filename, 'w', encoding='utf-8') as f:

@@ -27,13 +27,13 @@ from collections import OrderedDict
 import copy
 import json
 import sys
-from typing import Callable, cast, Iterator, Sequence, List, AbstractSet, Set, Union, Tuple, \
+from typing import Callable, cast, Iterator, Sequence, List, Set, Union, Tuple, \
     Container, Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
 from DHParser.error import Error, ErrorCode, linebreaks, line_col
-from DHParser.stringview import StringView, real_indices
+from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython
 
 
@@ -290,14 +290,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return duplicate
 
     def __str__(self):
-        if isinstance(self, RootNode):
-            root = cast(RootNode, self)
-            errors = root.errors_sorted
-            if errors:
-                e_pos = errors[0].pos
-                content = self.content
-                return content[:e_pos] + ' <<< Error on "%s" | %s >>> ' % \
-                    (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
         return self.content
 
     def __repr__(self):
@@ -322,7 +314,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __hash__(self):
         return hash(self.tag_name)
 
-    def equals(self, other: 'Node', ignore_attr_order: bool=False) -> bool:
+    def equals(self, other: 'Node', ignore_attr_order: bool = False) -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
         if their tag name is the same, if their results are equal and
@@ -624,7 +616,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return False
         raise ValueError('Leaf-node cannot contain other nodes')
 
-    @cython.locals(start=cython.int, stop=cython.int, i = cython.int)
+    @cython.locals(start=cython.int, stop=cython.int, i=cython.int)
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
         Returns the first index of the child that fulfills the criterion
@@ -772,7 +764,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return self.select_context_if(create_match_function(criterion), include_root, reverse)
 
-    def pick_context(self, criterion: CriteriaType, reverse: bool = False) -> Optional[List['Node']]:
+    def pick_context(self, criterion: CriteriaType,
+                     reverse: bool = False) -> Optional[List['Node']]:
         """
         Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
         relative to `self` is returned.
@@ -1015,7 +1008,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', '\n)', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
-        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[RootNode]
+        root = cast(RootNode, self) if isinstance(self, RootNode) \
+            else None  # type: Optional[RootNode]
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
@@ -1068,7 +1062,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             empty_tags:  A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
         """
-        root = cast(RootNode, self) if isinstance(self, RootNode) else None  # type: Optional[RootNode]
+        root = cast(RootNode, self) if isinstance(self, RootNode) \
+            else None  # type: Optional[RootNode]
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
@@ -1245,7 +1240,11 @@ class FrozenNode(Node):
 
     @property
     def attr(self):
-        raise AssertionError("Attributes cannot be accessed on a frozen node")
+        raise NotImplementedError("Attributes cannot be accessed on a frozen node")
+
+    @attr.setter
+    def attr(self, attr_dict: OrderedDict):
+        raise NotImplementedError("Frozen nodes cannot store attributes")
 
     def with_pos(self, pos: int) -> 'Node':
         pass
@@ -1324,6 +1323,15 @@ class RootNode(Node):
         self.inline_tags = set()  # type: Set[str]
         self.omit_tags = set()    # type: Set[str]
         self.empty_tags = set()   # type: Set[str]
+
+    def __str__(self):
+        errors = self.errors_sorted
+        if errors:
+            e_pos = errors[0].pos
+            content = self.content
+            return content[:e_pos] + ' <<< Error on "%s" | %s >>> ' % \
+                (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
+        return self.content
 
     def __deepcopy__(self, memodict={}):
         duplicate = self.__class__(None)
@@ -1415,7 +1423,7 @@ class RootNode(Node):
             if nid == node_id:
                 errors.extend(self.error_nodes[nid])
             else:
-                for nd in node.select_if(lambda n: id(n) == nid):
+                for _ in node.select_if(lambda n: id(n) == nid):
                     break
                 else:
                     # node is not connected to tree any more, but since errors
@@ -1449,7 +1457,6 @@ class DHParser_JSONEncoder(json.JSONEncoder):
         elif isinstance(obj, Error):
             return str(cast(Error, obj))
         return json.JSONEncoder.default(self, obj)
-
 
 
 #######################################################################
@@ -1498,7 +1505,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 k = 1
                 while level > 0:
                     if s[k] in ("'", '"'):
-                        k = s.find(str(s[k]), k+1)
+                        k = s.find(str(s[k]), k + 1)
                     if k < 0:
                         raise IndexError()
                     if s[k] == '(':
@@ -1718,7 +1725,7 @@ def parse_tree(xml_sxpr_json: str) -> Optional[Node]:
         except json.decoder.JSONDecodeError:
             m = re.match(r'\s*(.*)\n?', xml_sxpr_json)
             snippet = m.group(1) if m else ''
-            raise ValueError('Snippet seems to be neither S-expression nor XML: ' + snippet + ' ...')
+            raise ValueError('Snippet is neither S-expression nor XML: ' + snippet + ' ...')
 
 
 # if __name__ == "__main__":

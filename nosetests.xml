@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="1" errors="1" failures="0" skip="0"><testcase classname="test_transform.TestAttributeHandling" name="test_swap_attributes" time="40.129"><error type="builtins.KeyError" message="'y'"><![CDATA[Traceback (most recent call last):
+  File "/usr/lib/python3.8/unittest/case.py", line 60, in testPartExecutor
+    yield
+  File "/usr/lib/python3.8/unittest/case.py", line 676, in run
+    self._callTestMethod(testMethod)
+  File "/usr/lib/python3.8/unittest/case.py", line 633, in _callTestMethod
+    method()
+  File "/usr/lib/python3.8/site-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/eckhart/Entwicklung/DHParser/test/test_transform.py", line 318, in test_swap_attributes
+    B.attr['y'] == 'y'
+KeyError: 'y'
+]]></error></testcase></testsuite>

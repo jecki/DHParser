@@ -92,9 +92,9 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
-    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \\
-    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \\
-    keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \\
+    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \\
+    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
@@ -131,10 +131,14 @@ class EBNFGrammar(Grammar):
     r"""
     Parser for an EBNF source file, with this grammar:
 
-    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace = /\s*/                            # whitespace includes linefeed
-    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-    @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+    # comments start with '#' and eat all chars up to and including '\n'
+    @ comment    = /#.*(?:\n|$)/
+    # whitespace includes linefeed
+    @ whitespace = /\s*/
+    # trailing whitespace of literals will be ignored tacitly
+    @ literalws  = right
+
+    @ drop       = whitespace   # do not include whitespace in concrete syntax tree
 
     #: top-level
 
@@ -145,8 +149,9 @@ class EBNFGrammar(Grammar):
     #: components
 
     expression = term { "|" term }
-    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+    term       = { ["§"] factor }+          # "§" means all following factors mandatory
+    # negative lookahead !"=" to be sure it's not a definition
+    factor     = [flowmarker] [retrieveop] symbol !"="
                | [flowmarker] literal
                | [flowmarker] plaintext
                | [flowmarker] regexp
@@ -159,14 +164,14 @@ class EBNFGrammar(Grammar):
 
     #: flow-operators
 
-    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+    flowmarker = "!"  | "&"                 # '!' negative lookahead, '&' positive lookahead
+               | "-!" | "-&"                # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop = "::" | ":"                 # '::' pop, ':' retrieve
 
     #: groups
 
     group      = "(" §expression ")"
-    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+    unordered  = "<" §expression ">"        # elements of expression in arbitrary order
     oneormore  = "{" expression "}+"
     repetition = "{" §expression "}"
     option     = "[" §expression "]"
@@ -175,7 +180,7 @@ class EBNFGrammar(Grammar):
 
     symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
     literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
-               | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+               | /'(?:(?<!\\)\\'|[^'])*?'/~         # ignore whitespace following literals
     plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
     regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
     whitespace = /~/~                               # insignificant whitespace
@@ -198,25 +203,33 @@ class EBNFGrammar(Grammar):
                           Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), wsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
     option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
-    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__), mandatory=1)
+    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__),
+                        mandatory=1)
     oneormore = Series(Series(Token("{"), wsp__), expression, Series(Token("}+"), wsp__))
-    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__), mandatory=1)
+    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__),
+                       mandatory=1)
     group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
     retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
     flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
                              Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
     factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
-                                NegativeLookahead(Series(Token("="), wsp__))), Series(Option(flowmarker), literal),
-                         Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp),
-                         Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore),
-                         Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+                                NegativeLookahead(Series(Token("="), wsp__))),
+                         Series(Option(flowmarker), literal),
+                         Series(Option(flowmarker), plaintext),
+                         Series(Option(flowmarker), regexp),
+                         Series(Option(flowmarker), whitespace),
+                         Series(Option(flowmarker), oneormore),
+                         Series(Option(flowmarker), group),
+                         Series(Option(flowmarker), unordered), repetition, option)
     term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
     expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
     directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
                        Alternative(regexp, literal, symbol),
-                       ZeroOrMore(Series(Series(Token(","), wsp__), Alternative(regexp, literal, symbol))), mandatory=1)
+                       ZeroOrMore(Series(Series(Token(","), wsp__),
+                                         Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
-    syntax = Series(Option(Series(wsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    syntax = Series(Option(Series(wsp__, RegExp(''))),
+                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -939,7 +952,8 @@ class EBNFCompiler(Compiler):
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
 
-        article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '  # what about 'hour', 'universe' etc.?
+        article = 'an ' if self.grammar_name[0:1] in "AaEeIiOoUu" else 'a '
+        # what about 'hour', 'universe' etc.?
         show_source = get_config_value('add_grammar_source_to_parser_docstring')
         declarations = ['class ' + self.grammar_name
                         + 'Grammar(Grammar):',
@@ -1009,7 +1023,8 @@ class EBNFCompiler(Compiler):
         return self._result
 
 
-    ## compilation methods
+    # compilation methods ###
+
 
     def on_syntax(self, node: Node) -> str:
         definitions = []  # type: List[Tuple[str, str]]
@@ -1040,7 +1055,7 @@ class EBNFCompiler(Compiler):
             except NameError:
                 pass  # undefined name in the grammar are already caught and reported
             except GrammarError as error:
-                for sym, prs, err in error.errors:
+                for sym, _, err in error.errors:
                     symdef_node = self.rules[sym][0]
                     err.pos = self.rules[sym][0].pos
                     self.tree.add_error(symdef_node, err)
@@ -1078,7 +1093,8 @@ class EBNFCompiler(Compiler):
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
             # if self.drop_flag:
-            #     defn = 'Drop(%s)' % defn  # TODO: Recursively drop all contained parsers for optimization
+            #     defn = 'Drop(%s)' % defn
+            # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb
             trace = str(extract_tb(error.__traceback__)[-1])
@@ -1199,8 +1215,8 @@ class EBNFCompiler(Compiler):
                                     + ' must be defined before the symbol!')
             if node.children[1 if len(node.children) == 2 else 2].tag_name != 'literal':
                 self.tree.new_error(
-                    node, 'Directive "%s" requires message string or a a pair ' % key +
-                    '(regular expression or search string, message string) as argument!')
+                    node, 'Directive "%s" requires message string or a a pair ' % key
+                    + '(regular expression or search string, message string) as argument!')
             if len(node.children) == 2:
                 error_msgs.append(('', unrepr(node.children[1].content)))
             elif len(node.children) == 3:
@@ -1254,7 +1270,7 @@ class EBNFCompiler(Compiler):
             and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
             and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Token(')
                      or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
-                arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
+            arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
         if self.drop_flag:
             return 'Drop(' + parser_class + '(' + ', '.join(arguments) + '))'
         else:
@@ -1505,7 +1521,7 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
 #
 ########################################################################
 
-def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool=False) \
+def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool = False) \
         -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns
@@ -1518,5 +1534,4 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool=Fal
                           get_ebnf_grammar(),
                           get_ebnf_transformer(),
                           get_ebnf_compiler(branding, ebnf_source),
-                          preserve_AST = preserve_AST)
-
+                          preserve_AST=preserve_AST)
