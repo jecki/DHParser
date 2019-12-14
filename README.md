@@ -1,14 +1,14 @@
 DHParser
 ========
 
-DHParser - A parser generator and domain specific language (DSL) construction 
-           kit for the Digit Humanities
+DHParser - A parser generator and domain specific language (DSL)
+construction kit for the Digit Humanities
 
 
 Features
 --------
 
-* *Fail-tolerant parsing* 
+* *Fail-tolerant parsing*
 
 * *Customizable error reporting*
 
@@ -30,15 +30,15 @@ key_value_store.py:
 
     # A mini-DSL for a key value store
     from DHParser import *
-  
+
     # specify the grammar of your DSL in EBNF-notation
     grammar = '''@ drop = whitespace, token
-    key_store   = ~ { entry }             
-    entry       = key "=" value 
+    key_store   = ~ { entry }
+    entry       = key "=" value
     key         = /\w+/~                  # Scannerless parsing: Use regular
     value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
-    
-    # generating a parser is almost as simple as compiling a regular expression    
+
+    # generating a parser is almost as simple as compiling a regular expression
     parser_factory = grammar_provider(grammar)
     parser = parser_factory()             # parser factory for thread-safety
 
@@ -48,18 +48,18 @@ Now, parse some text and extract the data from the Python-shell:
     >>> text = '''
             title    = "Odysee 2001"
             director = "Stanley Kubrick"
-        '''         
-    >>> data = parser(text)  
+        '''
+    >>> data = parser(text)
     >>> for entry in data.select('entry'):
             print(entry['key'], entry['value'])
-    
+
     title "Odysee 2001"
     director "Stanley Kubrick"
 
 Or, serialize as XML:
-    
+
     >>> print(data.as_xml())
-    
+
     <key_store>
       <entry>
         <key>title</key>
@@ -69,7 +69,7 @@ Or, serialize as XML:
         <key>director</key>
         <value>"Stanley Kubrick"</value>
       </entry>
-    </key_store>    
+    </key_store>
 
 
 License
@@ -145,16 +145,16 @@ development or just using DHParser.
 Disclaimer
 ----------
 
-DHParser is still in development stage. While it is already quite mature, 
+DHParser is still in development stage. While it is already quite mature,
 there may still be changes to the API.
 
 
 Purpose
 -------
 
-DHParser is a parser-combinator-based parsing and compiling 
-infrastructure for domain specific languages (DSL) in Digital 
-Humanities projects. It leverages the power of Domain specific 
+DHParser is a parser-combinator-based parsing and compiling
+infrastructure for domain specific languages (DSL) in Digital
+Humanities projects. It leverages the power of Domain specific
 languages for the Digital Humanities.
 
 Domain specific languages are widespread in
@@ -182,14 +182,14 @@ is concerned, the use cases, requirements and challenges are somewhat
 different. For example, in the humanities annotating text is a central
 use case, which is mostly absent in computer science treatments.
 These differences might sooner or later require to develop the
-DSL-construction toolkits in a different direction. Also DHParser 
+DSL-construction toolkits in a different direction. Also DHParser
 emphasizes and evolutionary development model for grammars with
-unit-testing support, which fits the typical use cases in DH where DSLs 
-evolve in a discussion process between technicians and humanists. 
-Because the users of DSLs in the humanities are not necessarily very 
-technically mindes people, DHParser supports the construction of 
+unit-testing support, which fits the typical use cases in DH where DSLs
+evolve in a discussion process between technicians and humanists.
+Because the users of DSLs in the humanities are not necessarily very
+technically mindes people, DHParser supports the construction of
 fail-tolerant parsers with good error reporting in terms of locating
-the errors at the right spot and giving useful error messages. 
+the errors at the right spot and giving useful error messages.
 
 Also,
 DHParser shall (in the future) serve as a teaching tool, which
@@ -231,8 +231,8 @@ parsing process will be stored in a sub-directory named "LOG".
 Introduction
 ------------
 
-See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the 
-motivation and an overview how DHParser works or jump right into the 
+See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the
+motivation and an overview how DHParser works or jump right into the
 [Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
 learn how to setup and use DHParser.
 
@@ -321,7 +321,7 @@ are Mutuable at Runtime, University of Bristol 2007,
 Vegard Øye: General Parser Combinators in Racket, 2012,
 [epsil.github.io/gll/][vegard_2012]
 
-[vegard_2012]: https://epsil.github.io/gll/ 
+[vegard_2012]: https://epsil.github.io/gll/
 
 [seaton_2007]: http://chrisseaton.com/katahdin/katahdin.pdf
 

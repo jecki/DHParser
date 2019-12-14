@@ -72,13 +72,14 @@ def retrieve_host_and_port():
     cfg_filename = get_config_filename()
     try:
         with open(cfg_filename) as f:
-            print('Reading host and port from file: ' + cfg_filename)
             host, ports = f.read().strip(' \n').split(' ')
             port = int(ports)
+        print('Read host: {} port: {} from config file "{}".'.format(host, port, cfg_filename))
     except FileNotFoundError:
-        pass
+        print('Config file "{}" does not exist. Using host: {} port: {}.'
+              .format(cfg_filename, host, port))
     except ValueError:
-        print('removing invalid config file: ' + cfg_filename)
+        print('Removing invalid config file "{}".'.format(cfg_filename))
         os.remove(cfg_filename)
     return host, port
 
@@ -136,7 +137,6 @@ def lsp_rpc(f):
 
 class DSLLanguageServerProtocol:
     def __init__(self):
-        import json
         import multiprocessing
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()
@@ -226,9 +226,9 @@ def run_server(host, port, log_path=None):
         cfg_filename = get_config_filename()
         try:
             os.remove(cfg_filename)
-            print('removing temporary config file: ' + cfg_filename)
+            print('Removing temporary config file: "{}".'.format(cfg_filename))
         except FileNotFoundError:
-            pass
+            print('Config file "{}" does not exist any more.'.format(cfg_filename))
 
 
 async def send_request(request, host, port):
@@ -311,6 +311,7 @@ def parse_logging_args(argv):
 
 
 if __name__ == "__main__":
+    print('Executing ' + ' '.join(sys.argv))
     host, port = '', -1
 
     # read and remove "--host ..." and "--port ..." parameters from sys.argv
@@ -320,14 +321,14 @@ if __name__ == "__main__":
     while i < len(sys.argv):
         if sys.argv[i] in ('--host', '-h'):
             assert_if(i < len(sys.argv) - 1, 'host missing!')
-            host = sys.argv[i+1]
+            host = sys.argv[i + 1]
             i += 1
         elif sys.argv[i] in ('--port', '-p'):
             assert_if(i < len(sys.argv) - 1, 'port number missing!')
             try:
-                port = int(sys.argv[i+1])
+                port = int(sys.argv[i + 1])
             except ValueError:
-                assert_if(False, 'invalid port number: ' + sys.argv[i+1])
+                assert_if(False, 'invalid port number: ' + sys.argv[i + 1])
             i += 1
         else:
             argv.append(sys.argv[i])
@@ -346,7 +347,8 @@ if __name__ == "__main__":
         try:
             result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
             print('Server ' + str(result) + ' running on ' + host + ' ' + str(port))
-        except ConnectionRefusedError:
+        except ConnectionRefusedError as error:
+            print(error)
             print('No server running on: ' + host + ' ' + str(port))
 
     elif argv[1] == "--startserver":

@@ -61,7 +61,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "dd99769e9d1b161d3aade90986907d8c"
+    source_hash__ = "678cf594491b6ade65a4dd1f20897e61"
     anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
@@ -165,7 +165,8 @@ class LaTeXGrammar(Grammar):
     preamble = OneOrMore(Series(Option(_WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc
-    
+
+
 def get_grammar() -> LaTeXGrammar:
     """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
