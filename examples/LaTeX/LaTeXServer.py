@@ -219,7 +219,10 @@ def run_server(host, port, log_path=None):
     except OSError as e:
         print(e)
         print('Could not start server. Shutting down!')
-        sys.exit(1)
+        return 1
+    except KeyboardInterrupt:
+        print('Keyboard interrupt received.')
+        return 1
     finally:
         print('Server at host: {} port: {} has been stopped.'.format(host, port))
         cfg_filename = get_config_filename()
@@ -228,7 +231,7 @@ def run_server(host, port, log_path=None):
             print('Removing temporary config file: "{}".'.format(cfg_filename))
         except FileNotFoundError:
             print('Config file "{}" does not exist any more.'.format(cfg_filename))
-
+    return 0
 
 async def send_request(request, host, port):
     reader, writer = await asyncio.open_connection(host, port)
@@ -243,12 +246,12 @@ async def send_request(request, host, port):
 def start_server_daemon(host, port):
     import subprocess, time
     try:
-        subprocess.Popen([__file__, '--startserver', host, str(port)])
+        subprocess.Popen([__file__, '--startserver', host, str(port)], start_new_session=True)
     except OSError:
         try:
-            subprocess.Popen(['python3', __file__, '--startserver', host, str(port)])
+            subprocess.Popen(['python3', __file__, '--startserver', host, str(port)], start_new_session=True)
         except FileNotFoundError:
-            subprocess.Popen(['python', __file__, '--startserver', host, str(port)])
+            subprocess.Popen(['python', __file__, '--startserver', host, str(port)], start_new_session=True)
     countdown = 20
     delay = 0.05
     result = None
@@ -264,6 +267,21 @@ def start_server_daemon(host, port):
         print('Could not start server or establish connection in time :-(')
         sys.exit(1)
     print(result)
+
+
+def stay_tuned():
+    """Does not return as long as the server is running..."""
+    import time
+    try:
+        while True:
+            result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
+            print('Server ' + str(result) + ' still alive ' + host + ' ' + str(port))
+            time.sleep(1)
+    except ConnectionRefusedError:
+        print('No server running on: ' + host + ' ' + str(port) + ' Cannot stay tuned.')
+    except KeyboardInterrupt:
+        print('Keyboard interrupt received. Not staying tuned any more. Server may '
+              'still be running but could stop, if this process is being stopped.')
 
 
 def print_usage_and_exit():
@@ -335,6 +353,13 @@ if __name__ == "__main__":
     if len(argv) < 2:
         print_usage_and_exit()
 
+    try:
+        i = argv.index('--staytuned')
+        del argv[i]
+        stay_tuned_flag = True
+    except ValueError:
+        stay_tuned_flag = False
+
     if port < 0 or not host:
         # if host and port have not been specified explicitly on the command
         # line, try to retrieve them from (temporary) config file or use
@@ -365,6 +390,8 @@ if __name__ == "__main__":
         start_server_daemon(host, port)
         if log_request:
             print(asyncio_run(send_request(log_request, host, port)))
+        if stay_tuned_flag:
+            stay_tuned()
 
     elif argv[1] in ("--stopserver", "--killserver", "--stopdaemon", "--killdaemon"):
         try:
@@ -401,5 +428,7 @@ if __name__ == "__main__":
             print(result, '...')
         else:
             print(result)
+        if stay_tuned_flag:
+            stay_tuned()
     else:
         print_usage_and_exit()

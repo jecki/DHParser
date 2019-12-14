@@ -29,6 +29,33 @@
                 "reveal": "always",  // always, never, silent
                 "panel": "new"
             }
+        },
+        {
+            "label": "Stop-Server: LaTeX -> HTML",
+            "type": "shell",
+            "command": ["python3"],
+            "args": ["LaTeXServer.py", "--stopserver"],
+            "windows": {
+                "command": "python",
+                "args": ["LaTeXServer.py", "--stopserver"]
+            },
+            "problemMatcher": {
+                "owner": "tex",
+                "fileLocation": ["relative", "${workspaceRoot}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(Warning|Error).*?:\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",  // always, never, silent
+                "panel": "new"
+            }
         }
     ]
 }
