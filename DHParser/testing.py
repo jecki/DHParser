@@ -432,12 +432,17 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
-                # tests.setdefault('__err__', {})[test_name] = errata[-1]
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
+                ast.clear_errors()
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                # log_ST(ast, "match_%s_%s.ast" % (parser_name, clean_test_name))
+                if is_error(ast.error_flag):
+                    ast_errors = ast.errors_sorted
+                    adjust_error_locations(ast_errors, test_code)
+                    errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
+                                  (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
+                                   '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in ast_errors)))
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

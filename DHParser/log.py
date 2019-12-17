@@ -54,13 +54,13 @@ Example::
 import collections
 import html
 import os
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
     set_config_value
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, ZOMBIE_TAG, EMPTY_PTYPE
+from DHParser.syntaxtree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
 from DHParser.toolkit import escape_control_characters, abbreviate_middle
 
 __all__ = ('start_logging',
@@ -71,6 +71,8 @@ __all__ = ('start_logging',
            'create_log',
            'append_log',
            'clear_logs',
+           'NONE_TAG',
+           'NONE_NODE',
            'HistoryRecord',
            'log_ST',
            'log_parsing_history')
@@ -240,6 +242,10 @@ def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
 #######################################################################
 
 
+NONE_TAG = ":None"
+NONE_NODE = FrozenNode(NONE_TAG, '')
+
+
 class HistoryRecord:
     """
     Stores debugging information about one completed step in the
@@ -286,19 +292,19 @@ class HistoryRecord:
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
     def __init__(self, call_stack: List[Tuple[str, int]],
-                 node: Node,
+                 node: Optional[Node],
                  text: StringView,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         # self.call_stack = call_stack    # type: Tuple[Tuple[str, int],...]
         self.call_stack = tuple((tn, pos) for tn, pos in call_stack
-                                if tn != ":Forward")  # type: Tuple[Tuple[str, int],...]
-        self.node = node                # type: Node
-        self.text = text                # type: StringView
-        self.line_col = line_col        # type: Tuple[int, int]
+                                if tn != ":Forward")     # type: Tuple[Tuple[str, int],...]
+        self.node = NONE_NODE if node is None else node  # type: Node
+        self.text = text                                 # type: StringView
+        self.line_col = line_col                         # type: Tuple[int, int]
         assert all(isinstance(err, Error) for err in errors)
-        self.errors = errors            # type: List[Error]
+        self.errors = errors                             # type: List[Error]
 
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
@@ -379,7 +385,7 @@ class HistoryRecord:
 
     @property
     def status(self) -> str:
-        if self.node is None or self.node.tag_name == ZOMBIE_TAG:
+        if self.node is None or self.node.tag_name in (ZOMBIE_TAG, NONE_TAG):
             return self.FAIL
         elif self.node.tag_name == EMPTY_PTYPE:
             return self.DROP

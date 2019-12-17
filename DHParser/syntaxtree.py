@@ -1313,16 +1313,23 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None):
         super().__init__('__not_yet_ready__', '')
-        self.errors = []               # type: List[Error]
-        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
-        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
-        self.error_flag = 0
+        self.clear_errors()
         if node is not None:
             self.swallow(node)
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
         self.omit_tags = set()    # type: Set[str]
         self.empty_tags = set()   # type: Set[str]
+
+    def clear_errors(self):
+        """
+        Removes all error messages. This can be used to keep the error messages
+        of different subsequent phases of tree-processing separate.
+        """
+        self.errors = []               # type: List[Error]
+        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
+        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
+        self.error_flag = 0
 
     def __str__(self):
         errors = self.errors_sorted

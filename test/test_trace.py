@@ -73,8 +73,15 @@ class TestTrace:
         set_tracer(all_desc, trace_history)
         # st = gr('2*(3+4)')
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
+        serialization = st.serialize()
+        assert '*' not in serialization   # same for '/', '+', '-'
         log_parsing_history(gr, 'trace_drop')
-        # print(st.serialize())
+        history_fname = os.path.join(log_dir() or '', "trace_drop_full_parser.log.html")
+        with open(history_fname, 'r', encoding='utf-8') as f:
+            history_file = f.read()
+        assert "DROP" in history_file
+        assert "FAIL" in history_file
+        assert "MATCH" in history_file
 
     def test_trace_resume(self):
         lang = """
