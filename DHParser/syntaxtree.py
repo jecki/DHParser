@@ -230,8 +230,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             not add the error messages to the returned string.
 
         len (int):  The full length of the node's string result if the
-            node is a leaf node or, otherwise, the concatenated string
-            result's of its descendants. The figure always represents
+            node is a leaf node or, otherwise, the length of the concatenated
+            string result's of its descendants. The figure always represents
             the length before AST-transformation and will never change
             through AST-transformation. READ ONLY!
 

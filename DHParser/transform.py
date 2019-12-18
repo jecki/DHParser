@@ -1245,9 +1245,8 @@ def error_on(context: List[Node],
     node = context[-1]
     if condition(context):
         if error_msg:
-            cast(RootNode, context[0]).new_error(node, error_msg % node.tag_name
-                                                 if error_msg.find("%s") > 0
-                                                 else error_msg, error_code)
+            cast(RootNode, context[0]).new_error(node, error_msg.format(
+                tag_name=node.tag_name, content=node.content, pos=node.pos), error_code)
         else:
             cond_name = condition.__name__ if hasattr(condition, '__name__') \
                 else condition.__class__.__name__ if hasattr(condition, '__class__') \
