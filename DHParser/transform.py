@@ -764,7 +764,8 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfill the given `condition` into a single leaf node. If the adjacent child
-    nodes have different tag_names, the `target_tag` is used as the tag name for
+    nodes have different tag_names or tag_names starting with the marker for an
+    anonymous node ":", then `target_tag` is used as the tag name for
     the resulting node. Nodes that do not fulfil the condition will be preserved.
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
@@ -775,7 +776,6 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
 
     See `test_transform.TestComplexTransformations` for examples.
     """
-
     assert isinstance(target_tag, str)  # TODO: Delete this when safe
 
     node = context[-1]
@@ -786,7 +786,7 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
         nonlocal package
         if package:
             tag_name = package[0].tag_name
-            if any(nd.tag_name != tag_name for nd in package):
+            if tag_name.startswith(':') or any(nd.tag_name != tag_name for nd in package):
                 tag_name = target_tag
             s = "".join(nd.content for nd in package)
             # pivot = package[0].tag_name
