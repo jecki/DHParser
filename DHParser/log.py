@@ -364,7 +364,7 @@ class HistoryRecord:
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]),
                             stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
-                                   for cls, item in zip(classes, tpl)] + ['</tr>'])
+                                   for cls, item in zip(classes, tpl)] + ['</tr>\n'])
 
     def err_msg(self) -> str:
         return self.ERROR + ": " + "; ".join(str(e) for e in self.errors)
@@ -385,12 +385,12 @@ class HistoryRecord:
 
     @property
     def status(self) -> str:
-        if self.node is None or self.node.tag_name in (ZOMBIE_TAG, NONE_TAG):
+        if self.errors:
+            return self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
+        elif self.node is None or self.node.tag_name in (ZOMBIE_TAG, NONE_TAG):
             return self.FAIL
         elif self.node.tag_name == EMPTY_PTYPE:
             return self.DROP
-        elif self.errors:
-            return self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
         else:
             return self.MATCH
         # return self.FAIL if self.node is None or self.node.tag_name == ZOMBIE_TAG else \
@@ -542,7 +542,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     full_history.append(lead_in)
 
     for record in grammar.history__[-LOG_SIZE_THRESHOLD:]:
-        line = record.as_html_tr() if html else str(record)
+        line = record.as_html_tr() if html else (str(record) + '\n')
         append_line(full_history, line)
 
     write_log(full_history, log_file_name + '_full')

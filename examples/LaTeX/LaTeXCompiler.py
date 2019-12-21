@@ -165,8 +165,7 @@ class LaTeXGrammar(Grammar):
     preamble = OneOrMore(Series(Option(_WSPC), command))
     latexdoc = Series(preamble, document)
     root__ = latexdoc
-
-
+    
 def get_grammar() -> LaTeXGrammar:
     """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

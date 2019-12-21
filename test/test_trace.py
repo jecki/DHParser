@@ -26,7 +26,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser import grammar_provider, with_all_descendants, with_unnamed_descendants, \
+from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
     set_config_value, resume_notices_on
 
@@ -42,6 +42,14 @@ class TestTrace:
                 os.remove(os.path.join(LOG_DIR, fname))
             os.rmdir(LOG_DIR)
 
+    def get_history(self, name) -> str:
+        history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
+        # import webbrowser
+        # webbrowser.open(history_fname)
+        with open(history_fname, 'r', encoding='utf-8') as f:
+            history_file = f.read()
+        return history_file
+
     def test_trace_simple(self):
         lang = """
             expr = term { ("+"|"-") term }
@@ -49,11 +57,28 @@ class TestTrace:
             factor = /[0-9]+/~ | "(" expr ")"
             """
         gr = grammar_provider(lang)()
-        all_desc = with_all_descendants(gr.root_parser__)
+        all_desc = all_descendants(gr.root_parser__)
         set_tracer(all_desc, trace_history)
         st = gr('2*(3+4)')
+        assert(str(st)) == '2*(3+4)'
         log_parsing_history(gr, 'trace_simple')
-        # print(st.serialize())
+        history = self.get_history('trace_simple')
+        assert history.count('<tr>') == 25
+
+    def test_trace_stopped_early(self):
+        lang = """
+            expr = term { ("+"|"-") term }
+            term = factor { ("*"|"/") factor }
+            factor = /[0-9]+/~ | "(" expr ")"
+            """
+        gr = grammar_provider(lang)()
+        all_desc = all_descendants(gr.root_parser__)
+        set_tracer(all_desc, trace_history)
+        st = gr('2*(3+4)...')
+        # print(st.as_sxpr(compact=True))
+        log_parsing_history(gr, 'trace_simple')
+        history = self.get_history('trace_simple')
+        assert history.count('<tr>') == 26
 
     def test_trace_drop(self):
         lang = r"""
@@ -69,16 +94,14 @@ class TestTrace:
             """
         set_config_value('compiled_EBNF_log', 'test_trace_parser.py')
         gr = grammar_provider(lang)()
-        all_desc = with_all_descendants(gr.root_parser__)
+        all_desc = all_descendants(gr.root_parser__)
         set_tracer(all_desc, trace_history)
         # st = gr('2*(3+4)')
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
         serialization = st.serialize()
         assert '*' not in serialization   # same for '/', '+', '-'
         log_parsing_history(gr, 'trace_drop')
-        history_fname = os.path.join(log_dir() or '', "trace_drop_full_parser.log.html")
-        with open(history_fname, 'r', encoding='utf-8') as f:
-            history_file = f.read()
+        history_file = self.get_history('trace_drop')
         assert "DROP" in history_file
         assert "FAIL" in history_file
         assert "MATCH" in history_file

@@ -1,6 +1,6 @@
 <latexdoc>
   <preamble>
-    <documentclass err="Warning (100): Only one document language supported. Using defaultdict(<function empty_defaultdict at 0x7f2a0c3668b0>, {}), ignoring english.">
+    <documentclass err="Warning (100): Only one document language supported. Using defaultdict(<function empty_defaultdict at 0x7f208b88a670>, {}), ignoring english.">
       <config>12pt, english, a4paper</config>
       <block>
         <text>article</text>

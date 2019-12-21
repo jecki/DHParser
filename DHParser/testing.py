@@ -42,7 +42,7 @@ from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.log import is_logging, clear_logs, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
-from DHParser.trace import set_tracer, with_all_descendants, trace_history
+from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.toolkit import load_if_file, re
 
 __all__ = ('unit_from_config',
@@ -385,7 +385,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         track_history = False
         try:
             if has_lookahead(parser_name):
-                set_tracer(with_all_descendants(parser[parser_name]), trace_history)
+                set_tracer(all_descendants(parser[parser_name]), trace_history)
                 track_history = True
         except UnknownParserError:
             pass
@@ -510,7 +510,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
     # remove tracers, in case there are any:
-    set_tracer(with_all_descendants(parser.root_parser__), None)
+    set_tracer(all_descendants(parser.root_parser__), None)
 
     # write test-report
     if report:

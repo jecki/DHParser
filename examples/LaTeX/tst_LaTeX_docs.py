@@ -25,7 +25,11 @@ import os
 import pstats
 import sys
 
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 import DHParser.dsl
 import DHParser.log
@@ -34,7 +38,9 @@ from DHParser.log import log_parsing_history
 
 LOGGING = ''
 
-if not DHParser.dsl.recompile_grammar('LaTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
+grammar_path = os.path.join(fullpath, 'LaTeX.ebnf')
+if not DHParser.dsl.recompile_grammar(grammar_path, force=False):
+    # recompiles Grammar only if it has changed
     print('\nErrors while recompiling "LaTeX.ebnf":\n--------------------------------------\n\n')
     with open('LaTeX_ebnf_ERRORS.txt', encoding="utf-8") as f:
         print(f.read())
@@ -46,6 +52,7 @@ from LaTeXCompiler import get_grammar, get_transformer, get_compiler
 parser = get_grammar()
 transformer = get_transformer()
 compiler = get_compiler()
+
 
 def fail_on_error(src, result):
     if result.error_flag:
@@ -64,11 +71,12 @@ def tree_size(tree) -> int:
 
 def tst_func():
     DHParser.log.start_logging(LOGGING)
-    files = os.listdir('testdata')
+    test_dir = os.path.join(fullpath, 'testdata')
+    files = os.listdir(test_dir)
     files.sort()
     for file in files:
         if fnmatch.fnmatch(file, '*.tex') and file.lower().find('error') < 0:
-            filepath = os.path.join('testdata', file)
+            filepath = os.path.join(test_dir, file)
             with open(filepath, 'r', encoding='utf-8') as f:
                 doc = f.read()
 
@@ -123,6 +131,7 @@ def mem_profile(func):
     print("[ Top 20 ]")
     for stat in top_stats[:40]:
         print(stat)
+
 
 if __name__ == "__main__":
     cpu_profile(tst_func)

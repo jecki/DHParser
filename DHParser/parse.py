@@ -1233,22 +1233,13 @@ class Grammar:
                                 else " too often!" if self.max_parser_dropouts__ > 1 else "!"
                                      + " Terminating parser.")
                         error_code = Error.PARSER_STOPPED_BEFORE_END
-                stitches.append(Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches)))
-                self.tree__.new_error(stitches[-1], error_msg, error_code)
-                # if self.history_tracking__:
-                #     # # some parsers may have matched and left history records with nodes != None.
-                #     # # Because these are not connected to the stitched root node, their pos-
-                #     # # properties will not be initialized by setting the root node's pos property
-                #     # # to zero. Therefore, their pos properties need to be initialized here
-                #     # for record in self.history__:
-                #     #     if record.node and record.node._pos < 0:
-                #     #         record.node.with_pos(0)
-                #     # print(self.call_stack__)
-                #     # record = HistoryRecord(self.call_stack__.copy(), stitches[-1], rest,
-                #     #                        self.line_col__(rest))
-                #     # self.history__.append(record)
-                #     # stop history tracking when parser returned too early
-                #     self.history_tracking__ = False
+                stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))
+                stitches.append(stitch)
+                error = Error(error_msg, stitch.pos, error_code)
+                self.tree__.add_error(stitch, error)
+                if self.history_tracking__:
+                    self.history__.append(HistoryRecord([(stitch.tag_name, stitch.pos)], stitch,
+                                                        rest, self.line_col__(rest), [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
                 rest = StringView('')
@@ -1309,7 +1300,7 @@ class Grammar:
             else (self.document__.__len__() + 1)
 
 
-    def line_col__(self, text):
+    def line_col__(self, text: Union[StringView, str]) -> Tuple[int, int]:
         """
         Returns the line and column where text is located in the document.
         Does not check, whether text is actually a substring of the currently

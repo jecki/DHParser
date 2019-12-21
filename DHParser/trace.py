@@ -32,7 +32,7 @@ from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYP
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
-__all__ = ('trace_history', 'with_all_descendants', 'with_unnamed_descendants', 'set_tracer',
+__all__ = ('trace_history', 'all_descendants', 'set_tracer',
            'resume_notices_on')
 
 
@@ -98,7 +98,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
     return node, rest
 
 
-def with_all_descendants(root: Parser) -> List[Parser]:
+def all_descendants(root: Parser) -> List[Parser]:
     """Returns a list with the parser `root` and all of its descendants."""
     descendants = []
 
@@ -108,13 +108,13 @@ def with_all_descendants(root: Parser) -> List[Parser]:
     return descendants
 
 
-def with_unnamed_descendants(root: Parser) -> List[Parser]:
-    """Returns a list that contains the parser `root` and """
-    descendants = [root]
-    for parser in root.sub_parsers():
-        if not parser.pname:
-            descendants.extend(with_unnamed_descendants(parser))
-    return descendants
+# def with_unnamed_descendants(root: Parser) -> List[Parser]:
+#     """Returns a list that contains the parser `root` and only unnamed parsers."""
+#     descendants = [root]
+#     for parser in root.sub_parsers():
+#         if not parser.pname:
+#             descendants.extend(with_unnamed_descendants(parser))
+#     return descendants
 
 
 def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):

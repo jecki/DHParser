@@ -22,6 +22,7 @@ limitations under the License.
 import os
 import sys
 
+
 scriptpath = os.path.dirname(__file__) or '.'
 for path in (os.path.join('..', '..'), '.'):
     fullpath = os.path.abspath(os.path.join(scriptpath, path))
@@ -40,7 +41,8 @@ configuration.access_presets()['test_parallelization'] = True
 
 def recompile_grammar(grammar_src, force):
     # recompiles Grammar only if it has changed
-    if not dsl.recompile_grammar(grammar_src, force=force):
+    grammar_path = os.path.join(fullpath, grammar_src)
+    if not dsl.recompile_grammar(grammar_path, force=force):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
         with open('LaTeX_ebnf_ERRORS.txt') as f:
@@ -49,9 +51,11 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(glob_pattern):
-    DHParser.log.start_logging(os.path.join('test_grammar', 'LOGS'))
-    error_report = testing.grammar_suite('test_grammar', get_grammar, get_transformer,
-        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
+    test_path = os.path.join(fullpath, 'test_grammar')
+    DHParser.log.start_logging(os.path.join(test_path, 'LOGS'))
+    error_report = testing.grammar_suite(
+        test_path, get_grammar, get_transformer, fn_patterns=[glob_pattern], report='REPORT',
+        verbose=True)
     return error_report
 
 
@@ -69,4 +73,3 @@ if __name__ == '__main__':
             print(error_report)
             sys.exit(1)
         print('ready.')
-
