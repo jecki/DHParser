@@ -215,14 +215,6 @@ FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
 
 
-def copy_parser_attrs(src: 'Parser', duplicate: 'Parser'):
-    """Duplicates all parser attributes from source to dest."""
-    duplicate.pname = src.pname
-    duplicate.anonymous = src.anonymous
-    duplicate.drop_content = src.drop_content
-    duplicate.tag_name = src.tag_name
-
-
 class Parser:
     """
     (Abstract) Base class for Parser combinator parsers. Any parser
@@ -525,7 +517,7 @@ class Parser:
             else:
                 # if proxy is a method it must be a method of self
                 assert proxy.__self__ == self
-            self.__parse = proxy
+            self.__parse = cast(ParseFunc, proxy)
 
     @property
     def grammar(self) -> 'Grammar':
@@ -557,7 +549,8 @@ class Parser:
         """
         return tuple()
 
-    def _apply(self, func: ApplyFunc, flip: FlagFunc) -> bool:
+    def _apply(self, func: Callable[['Parser'], None], 
+              flip: Callable[[Callable, Set[Callable]], bool]) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers, if any exist.
@@ -578,12 +571,12 @@ class Parser:
                 parser._apply(func, flip)
             return True
 
-    def apply(self, func: ApplyFunc):
+    def apply(self, func: Callable[['Parser'], None]):
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers, if any exist. Traversal is pre-order.
         """
-        def positive_flip(f: ApplyFunc, flagged: Set[Callable]) -> bool:
+        def positive_flip(f: Callable[['Parser'], None], flagged: Set[Callable]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == True`
             as meaning that `f` has already been applied."""
@@ -593,7 +586,7 @@ class Parser:
                 flagged.add(f)
                 return False
 
-        def negative_flip(f: ApplyFunc, flagged: Set[Callable]) -> bool:
+        def negative_flip(f: Callable[['Parser'], None], flagged: Set[Callable]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == False`
             as meaning that `f` has already been applied."""
@@ -607,6 +600,14 @@ class Parser:
             self._apply(func, negative_flip)
         else:
             self._apply(func, positive_flip)
+
+
+def copy_parser_attrs(src: Parser, duplicate: Parser):
+    """Duplicates all parser attributes from source to dest."""
+    duplicate.pname = src.pname
+    duplicate.anonymous = src.anonymous
+    duplicate.drop_content = src.drop_content
+    duplicate.tag_name = src.tag_name
 
 
 def Drop(parser: Parser) -> Parser:
@@ -1896,6 +1897,7 @@ def mandatory_violation(grammar: Grammar,
                 grammar.tree__.add_error(err_node, error)
     else:
         if grammar.history_tracking__:
+            pname = ':root'
             for pname, _ in reversed(grammar.call_stack__):
                 if not pname.startswith(':'):
                     break
@@ -2647,7 +2649,7 @@ class Forward(Parser):
 
     def __init__(self):
         super(Forward, self).__init__()
-        self.parser = None
+        self.parser = None  # type: Optional[Parser]
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
@@ -2657,7 +2659,9 @@ class Forward(Parser):
         duplicate.tag_name = self.tag_name
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
-        duplicate.set(parser)
+        duplicate.parser = parser
+        if parser is not None:
+            duplicate.drop_content = parser.drop_content
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2710,5 +2714,7 @@ class Forward(Parser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    def sub_parsers(self) -> Tuple['Parser', ...]:
-        return (self.parser,)
+    def sub_parsers(self) -> Tuple[Parser, ...]:
+        if self.parser is not None:
+            return (self.parser,)
+        return tuple()

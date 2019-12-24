@@ -882,6 +882,7 @@ class EBNFCompiler(Compiler):
                         nd = self.rules[rule.s][0].children[1]
                         refined = self._gen_search_rule(nd)
                     except IndexError:
+                        nd = self.tree
                         refined = ""
                     if refined:
                         refined_rules.append(refined)

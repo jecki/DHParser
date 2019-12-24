@@ -211,11 +211,10 @@ def run_server(host, port, log_path=None):
     non_blocking = frozenset(('initialize', 'initialized', 'shutdown', 'exit'))
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=set(lsp_table.keys() - non_blocking),
-                        blocking=frozenset())
+                        blocking=set())
     if log_path is not None:
         DSL_server.echo_log = True
         print(DSL_server.start_logging(log_path))
-
     try:
         DSL_server.run_server(host, port)  # returns only after server has stopped
     except OSError as e:
@@ -224,6 +223,7 @@ def run_server(host, port, log_path=None):
         sys.exit(1)
     finally:
         cfg_filename = get_config_filename()
+        print('Server on %s:%i stopped' % (host, port))
         try:
             os.remove(cfg_filename)
             print('Removing temporary config file: "{}".'.format(cfg_filename))

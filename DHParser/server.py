@@ -213,6 +213,7 @@ async def asyncio_connect(
     delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
     connected = False
     reader, writer = None, None
+    save_error = ConnectionError
     while delay < retry_timeout:
         try:
             reader, writer = await asyncio.open_connection(host, port)

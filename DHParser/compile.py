@@ -130,7 +130,7 @@ class Compiler:
         self._dirty_flag = False
         self._debug = get_config_value('debug_compiler')  # type: bool
         self._debug_already_compiled = set()              # type: Set[Node]
-        self.finalizers = []  # type: List[Callable, Tuple]
+        self.finalizers = []  # type: List[Tuple[Callable, Tuple]]
 
     def prepare(self) -> None:
         """
@@ -172,7 +172,7 @@ class Compiler:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
-        children = node.children
+        children = node.children  # type: Tuple[Node, ...]
         if children:
             node.result = tuple(self.compile(nd) for nd in children)
         return node

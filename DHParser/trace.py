@@ -28,7 +28,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, EMPTY_NODE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 

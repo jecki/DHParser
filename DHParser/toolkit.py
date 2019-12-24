@@ -364,7 +364,7 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
-def compile_python_object(python_src, catch_obj_regex=""):
+def compile_python_object(python_src: str, catch_obj_regex="") -> Any:
     """
     Compiles the python source code and returns the (first) object
     the name of which is matched by ``catch_obj_regex``. If catch_obj

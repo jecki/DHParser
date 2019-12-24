@@ -880,7 +880,7 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     if tag_name in tag_names:
                         head.tag_name = tag_name
-                new_result.append(head)
+                    new_result.append(head)
             else:
                 new_result.append(children[i])
                 i += 1

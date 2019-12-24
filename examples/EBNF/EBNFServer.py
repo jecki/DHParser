@@ -145,12 +145,10 @@ class EBNFLanguageServerProtocol:
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
         self.shared.serverCapabilities = json.dumps({
-              "capabilities": {
-                "textDocumentSync": 1,
-                "completionProvider": {
-                  "resolveProvider": True
+            "textDocumentSync": 1,
+            "completionProvider": {
+                "resolveProvider": True
                 }
-              }
             })
 
     def lsp_initialize(self, **kwargs):
@@ -161,7 +159,7 @@ class EBNFLanguageServerProtocol:
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
         self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
-        return {'capabilities': json.loads(self.shared.serverCapabilities)}
+        return { 'capabilities': json.loads(self.shared.serverCapabilities)}
 
     def lsp_initialized(self, **kwargs):
         assert self.shared.processId != 0
@@ -206,11 +204,10 @@ def run_server(host, port, log_path=None):
     non_blocking = frozenset(('initialize', 'initialized', 'shutdown', 'exit'))
     EBNF_server = Server(rpc_functions=lsp_table,
                          cpu_bound=set(lsp_table.keys() - non_blocking),
-                         blocking=frozenset())
+                         blocking=set())
     if log_path is not None:
         EBNF_server.echo_log = True
         print(EBNF_server.start_logging(log_path.strip('" \'')))
-
     try:
         EBNF_server.run_server(host, port)  # returns only after server has stopped
     except OSError as e:
@@ -219,6 +216,7 @@ def run_server(host, port, log_path=None):
         sys.exit(1)
     finally:
         cfg_filename = get_config_filename()
+        print('Server on %s:%i stopped' % (host, port))
         try:
             os.remove(cfg_filename)
             print('removing temporary config file: ' + cfg_filename)

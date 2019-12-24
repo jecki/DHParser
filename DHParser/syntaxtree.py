@@ -149,17 +149,12 @@ def create_match_function(criterion: CriteriaType) -> Callable:
         return lambda nd: nd == criterion
     elif isinstance(criterion, str):
         return lambda nd: nd.tag_name == criterion
+    elif isinstance(criterion, Callable):
+        return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in criterion
-    if isinstance(criterion, Callable):
-        return criterion
     raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
 
-
-ChildrenType = Tuple['Node', ...]
-NO_CHILDREN = cast(ChildrenType, ())  # type: ChildrenType
-StrictResultType = Union[ChildrenType, StringView, str]
-ResultType = Union[ChildrenType, 'Node', StringView, str, None]
 
 RX_AMP = re.compile(r'&(?!\w+;)')
 
@@ -263,7 +258,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
 
-    def __init__(self, tag_name: str, result: ResultType, leafhint: bool = False) -> None:
+    def __init__(self, tag_name: str, 
+                 result: Union[Tuple['Node', ...], 'Node', StringView, str], 
+                 leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
         that generated the node and the parser's result.
@@ -272,8 +269,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # Assignment to self.result initializes the attr _result and children
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = result        # type: StrictResultType  # cast(StrictResultType, result)
-            self.children = NO_CHILDREN  # type: ChildrenType
+            self._result = result        # type: Union[Tuple['Node', ...], StringView, str]
+            self.children = tuple()      # type: Tuple[Node, ...]
         else:
             self._set_result(result)
         self.tag_name = tag_name         # type: str
@@ -361,7 +358,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # node content ###
 
-    def _set_result(self, result: ResultType):
+    def _set_result(self, result: Union[Tuple['Node', ...], 'Node', StringView, str]):
         """
         Sets the result of a node without assigning the position.
         An assignment to the `result`-property is to be preferred,
@@ -370,20 +367,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param result:  the new result of the note
         """
         if isinstance(result, Node):
-            self.children = (result,)
+            self.children = (result,)  # type: Tuple[Node, ...]
             self._result = self.children
         else:
             if isinstance(result, tuple):
                 self.children = result
                 self._result = result or ''
             else:
-                self.children = NO_CHILDREN
-                self._result = result  # cast(StrictResultType, result)
+                assert result is not None
+                self.children = tuple()
+                self._result = result
 
     def _init_child_pos(self):
         """Initialize position values of children with potentially
         unassigned positions, i.e. child.pos < 0."""
-        children = self.children
+        children = self.children  # type: Tuple['Node', ...]
         if children:
             offset = self._pos
             prev = children[0]
@@ -397,7 +395,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     offset = child._pos
 
     @property
-    def result(self) -> StrictResultType:
+    def result(self) -> Union[Tuple['Node', ...], StringView, str]:
         """
         Returns the result from the parser that created the node.
         Error messages are not included in the result. Use `self.content()`
@@ -406,7 +404,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._result
 
     @result.setter
-    def result(self, result: ResultType):
+    def result(self, result: Union[Tuple['Node', ...], 'Node', StringView, str]):
         self._set_result(result)
         # fix position values for children that are added after the parsing process
         if self._pos >= 0:
@@ -588,7 +586,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if isinstance(key, int):
                 return self.children[key]
             else:
-                mf = create_match_function(cast(CriteriaType, key))
+                mf = create_match_function(key)
                 for child in self.children:
                     if mf(child):
                         return child
@@ -881,6 +879,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         if begin.pos > end.pos:
             begin, end = end, begin
+        common_ancestor = self  # type: Node
         ctxA = self.reconstruct_context(begin)
         ctxB = self.reconstruct_context(end)
         for a, b in zip(ctxA, ctxB):
@@ -1135,7 +1134,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         assert isinstance(json_obj, Sequence)
         assert 2 <= len(json_obj) <= 4, str(json_obj)
         if isinstance(json_obj[1], str):
-            result = json_obj[1]  # type: StrictResultType
+            result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
         else:
             result = tuple(Node.from_json_obj(item) for item in json_obj[1])
         node = Node(json_obj[0], result)
@@ -1208,6 +1207,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                              % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
 
 
+ChildrenType = Tuple[Node, ...]
+StrictResultType = Union[ChildrenType, StringView, str]
+ResultType = Union[ChildrenType, Node, StringView, str]
+
+
 class FrozenNode(Node):
     """
     FrozenNode is an immutable kind of Node, i.e. it must not be changed
@@ -1231,7 +1235,7 @@ class FrozenNode(Node):
         super(FrozenNode, self).__init__(tag_name, result, True)
 
     @property
-    def result(self) -> StrictResultType:
+    def result(self) -> Union[Tuple[Node, ...], StringView, str]:
         return self._result
 
     @result.setter
@@ -1247,7 +1251,7 @@ class FrozenNode(Node):
         raise NotImplementedError("Frozen nodes cannot store attributes")
 
     def with_pos(self, pos: int) -> 'Node':
-        pass
+        raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
     def to_json_obj(self) -> List:
         raise NotImplementedError("Frozen nodes cannot and should not be serialized!")
@@ -1346,7 +1350,7 @@ class RootNode(Node):
             duplicate.children = copy.deepcopy(self.children)
             duplicate._result = duplicate.children
         else:
-            duplicate.children = NO_CHILDREN
+            duplicate.children = tuple()
             duplicate._result = self._result
         duplicate._pos = self._pos
         if self.has_attr():
@@ -1492,12 +1496,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     >>> tree['C'].pos
     1
     """
-
-    sxpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()
-    # mock_parsers = dict()  # type: Dict[StringView, MockParser]
-
     @cython.locals(level=cython.int, k=cython.int)
-    def next_block(s: StringView):
+    def next_block(s: StringView) -> Iterator[StringView]:
         """Generator that yields all characters until the next closing bracket
         that does not match an opening bracket matched earlier within the same
         package.
@@ -1553,7 +1553,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
             # read very special attribute pos
             if sxpr[2:5] == "pos" and 0 < k < i:
-                pos = int(sxpr[5:k].strip(' \'"').split(' ')[0])
+                pos = int(str(sxpr[5:k].strip(' \'"').split(' ')[0]))
             # ignore very special attribute err
             elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
                 m = sxpr.find('(', 5)
@@ -1566,10 +1566,10 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 if not RX_ATTR_NAME.match(attr):
                     raise ValueError('Illegal attribute name: ' + attr)
                 value = sxpr[i:k].strip()[1:-1]
-                attributes[attr] = value
+                attributes[attr] = str(value)
             sxpr = sxpr[k + 1:].strip()
         if sxpr[0] == '(':
-            result = tuple(inner_parser(block) for block in next_block(sxpr))  # type: ResultType
+            result = tuple(inner_parser(block) for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
@@ -1587,14 +1587,15 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                     end = sxpr.index(match.end())
                     lines.append(str(sxpr[:end]))
                     sxpr = sxpr[end:]
-            result = "\n".join(lines)
-        node = Node(name or ':' + class_name, result)
+            result = "\n".join(lines)  # # type: Union[Tuple[Node, ...], str]
+        node = Node(str(name or ':' + class_name), result)
         node._pos = pos
         if attributes:
             node.attr.update(attributes)
         return node
 
-    return inner_parser(StringView(sxpr) if isinstance(sxpr, str) else sxpr)
+    xpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()  # type: StringView
+    return inner_parser(xpr)
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
@@ -1685,9 +1686,9 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
         if len(res) == 1 and res[0].tag_name == TOKEN_PTYPE:
-            result = res[0].result
+            result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:
-            result = tuple(res)
+            result = tuple(res)  # type:Union[Tuple[Node, ...], StringView, str]
 
         node = Node(name or ':' + class_name, result)
         if not ignore_pos and '_pos' in attrs:

@@ -15,13 +15,12 @@
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
 
-
 """
 Module ``dsl`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
-
+import inspect
 import os
 import platform
 import stat
@@ -144,7 +143,8 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
         # read grammar
         grammar_src = load_if_file(grammar_representation)
         if is_python_code(grammar_src):
-            parser_py, messages = grammar_src, []  # type: str, List[Error]
+            parser_py = grammar_src  # type: str
+            messages = []            # type: List[Error]
         else:
             log_dir = suspend_logging()
             result, messages, _ = compile_source(
@@ -154,7 +154,11 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             resume_logging(log_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), grammar_src)
-        parser_root = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')()
+        grammar_class = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')
+        if inspect.isclass(grammar_class) and issubclass(grammar_class, Grammar):
+            parser_root = grammar_class()
+        else:
+            raise ValueError('Could not compile or Grammar class!')
     else:
         # assume that dsl_grammar is a ParserHQ-object or Grammar class
         grammar_src = ''
@@ -241,7 +245,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     return '\n'.join(src)
 
 
-def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
+def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
@@ -266,8 +270,10 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> Grammar:
             print(grammar_src)
     grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src,
                                             r'get_(?:\w+_)?grammar$')
-    grammar_factory.python_src__ = grammar_src
-    return grammar_factory
+    if isinstance(grammar_factory, Callable):
+        grammar_factory.python_src__ = grammar_src
+        return grammar_factory
+    raise ValueError('Could not compile grammar provider!')
 
 
 def load_compiler_suite(compiler_suite: str) -> \
@@ -290,7 +296,7 @@ def load_compiler_suite(compiler_suite: str) -> \
             _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = \
                 RX_SECTION_MARKER.split(source)
         except ValueError:
-            raise AssertionError('File "' + compiler_suite + '" seems to be corrupted. '
+            raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
                                  'Please delete or repair file manually.')
         # TODO: Compile in one step and pick parts from namespace later ?
         preprocessor = compile_python_object(imports + preprocessor_py,
@@ -311,8 +317,10 @@ def load_compiler_suite(compiler_suite: str) -> \
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
     compiler = compile_python_object(imports + compiler_py, r'get_(?:\w+_)?compiler$')
-
-    return preprocessor, parser, ast, compiler
+    if isinstance(preprocessor, Callable) and isinstance(parser, Callable) \
+            and isinstance(ast, Callable) and isinstance(compiler, Callable):
+        return preprocessor, parser, ast, compiler
+    raise ValueError('Could not generate compiler suite from source code!')
 
 
 def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
@@ -405,21 +413,26 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
         compiler1 = cfactory()
     else:
-        sfactory = get_ebnf_preprocessor
-        pfactory = get_ebnf_grammar
-        tfactory = get_ebnf_transformer
-        cfactory = get_ebnf_compiler
-        compiler1 = cfactory()
+        sfactory = get_ebnf_preprocessor # type: PreprocessorFactoryFunc
+        pfactory = get_ebnf_grammar      # type: ParserFactoryFunc
+        tfactory = get_ebnf_transformer  # type: TransformerFactoryFunc
+        cfactory = get_ebnf_compiler     # type: CompilerFactoryFunc
+        compiler1 = cfactory()           # type: Compiler
+
+    is_ebnf_compiler = False  # type: bool
+    if isinstance(compiler1, EBNFCompiler):
+        is_ebnf_compiler = True
         compiler1.set_grammar_name(compiler_name, source_file)
+    
     result, messages, _ = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
 
     if has_errors(messages):
         return messages
 
-    elif cfactory == get_ebnf_compiler:
+    elif is_ebnf_compiler:
         # trans == get_ebnf_transformer or trans == EBNFTransformer:
         # either an EBNF- or no compiler suite given
-        ebnf_compiler = cast(EBNFCompiler, compiler1)
+        ebnf_compiler = cast(EBNFCompiler, compiler1)  # type: EBNFCompiler
         global SECTION_MARKER, RX_SECTION_MARKER, PREPROCESSOR_SECTION, PARSER_SECTION, \
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
             DHPARSER_MAIN
