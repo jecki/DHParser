@@ -145,6 +145,7 @@ class DSLLanguageServerProtocol:
         self.shared.processId = 0
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
+        self.shared.serverInfo = '{ "name": "DSL-Server", "version": "0.1" }'
         self.shared.serverCapabilities = '{}'
 
     def lsp_initialize(self, **kwargs):
@@ -155,7 +156,8 @@ class DSLLanguageServerProtocol:
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
         self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
-        return {'capabilities': json.loads(self.shared.serverCapabilities)}
+        return {'capabilities': json.loads(self.shared.serverCapabilities),
+                'serverInfo': json.loads(self.shared.serverInfo)}
 
     def lsp_initialized(self, **kwargs):
         assert self.shared.processId != 0
@@ -186,14 +188,15 @@ def run_server(host, port, log_path=None):
         sys.path.append(scriptpath)
     if dhparserdir not in sys.path:
         sys.path.append(dhparserdir)
-    from DHParser.dsl import recompile_grammar
-    if not recompile_grammar(grammar_src, force=False,
-                             notify=lambda: print('recompiling ' + grammar_src)):
-        print('\nErrors while recompiling "%s":' % grammar_src +
-              '\n--------------------------------------\n\n')
-        with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
-            print(f.read())
-        sys.exit(1)
+    from tst_DSL_grammar import recompile_grammar
+    # from DHParser.dsl import recompile_grammar
+    # if not recompile_grammar(grammar_src, force=False,
+    #                          notify=lambda: print('recompiling ' + grammar_src)):
+    #     print('\nErrors while recompiling "%s":' % grammar_src +
+    #           '\n--------------------------------------\n\n')
+    #     with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
+    #         print(f.read())
+    #     sys.exit(1)
     recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
     from DSLCompiler import compile_src
     from DHParser.server import Server, gen_lsp_table

@@ -789,7 +789,7 @@ class Server:
                 if i > 0:
                     data = data[i:]
                 if len(data) > self.max_data_size:
-                    rpc_error = -32600, "Request is too large! Only %i MB allowed" \
+                    rpc_error = -32600, "JSON-package is too large! Only %i MB allowed" \
                         % (self.max_data_size // (1024 ** 2))
 
                 if rpc_error is None:
@@ -800,12 +800,12 @@ class Server:
                             + (str(e) + str(data)).replace('"', "`")
 
                 if rpc_error is None:
-                    if isinstance(raw, Dict):
+                    if isinstance(raw, Dict) and ('method' in raw or 'result' in raw):
                         json_obj = cast(Dict, raw)
                         json_id = json_obj.get('id', None)
                     else:
-                        rpc_error = -32700, \
-                            'Parse error: Request does not appear to be an RPC-call!?'
+                        rpc_error = -32700, 'Parse error: JSON-package does not appear '\
+                                            'to ba an RPC-call or -response!?'
 
                 if rpc_error is None:
                     task = asyncio.ensure_future(self.handle_jsonrpc_request(
@@ -813,10 +813,13 @@ class Server:
                     assert json_id not in self.active_tasks, str(json_id)
                     self.active_tasks[id_writer][json_id] = task
                 else:
-                    await self.respond(
-                        writer,
-                        ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
-                         % (rpc_error[0], rpc_error[1], json_id)))
+                    if json_id is None:
+                        response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}}'\
+                            % (rpc_error[0], rpc_error[1])
+                    else:
+                        response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"},'\
+                            ' "id": %s}' % (rpc_error[0], rpc_error[1], json_id)
+                    await self.respond(writer, response)
 
         if self.kill_switch or id_writer not in self.connections:
             # TODO: terminate all active tasks depending on this particular connection
@@ -834,6 +837,8 @@ class Server:
                     open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
                 for task in pending:
                     task.cancel()
+                # wait for task's cancellation to actually finish
+                await asyncio.gather(*pending, return_exceptions=True)
             del self.active_tasks[id_writer]
             del self.finished_tasks[id_writer]
 
@@ -851,9 +856,6 @@ class Server:
                 self.loop.stop()
             self.log('SERVER MESSAGE: Stopping Server: %i.\n\n' % id_writer)
             self.kill_switch = False  # reset flag
-
-#     async def connection_py38(self, stream: 'asyncio.Stream'):
-#         await self.connection(stream, stream)
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         host, port = substitute_default_host_and_port(host, port)
@@ -1115,7 +1117,7 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 #######################################################################
 
 
-def gen_lsp_table(lsp_funcs_or_instance: Union[Sequence[Callable], Iterator[Callable], Any],
+def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
                   prefix: str = '') -> RPC_Table:
     """Creates an RPC from a list of functions or from the methods
     of a class that implement the language server protocol.
@@ -1143,10 +1145,11 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Sequence[Callable], Iterator[Call
                      if not attr.startswith('__'))  # type: Iterable
     else:
         lsp_funcs = lsp_funcs_or_instance
+    len_prefix = len(prefix)
     for func in lsp_funcs:
         name = func.__name__ if hasattr(func, '__name__') else ''
         if name and name.startswith(prefix):
-            name = name[len(prefix):]
+            name = name[len_prefix:]
             name = name.replace('_', '/').replace('S/', '$/')
         rpc_table[name] = func
     return rpc_table

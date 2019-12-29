@@ -144,12 +144,14 @@ class EBNFLanguageServerProtocol:
         self.shared.processId = 0
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
+        self.shared.serverInfo = '{ "name": "DSL-Server", "version": "0.1" }'
         self.shared.serverCapabilities = json.dumps({
             "textDocumentSync": 1,
             "completionProvider": {
                 "resolveProvider": True
                 }
             })
+
 
     def lsp_initialize(self, **kwargs):
         import json
@@ -159,12 +161,18 @@ class EBNFLanguageServerProtocol:
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
         self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
-        return { 'capabilities': json.loads(self.shared.serverCapabilities)}
+        return {'capabilities': json.loads(self.shared.serverCapabilities),
+                'serverInfo': json.loads(self.shared.serverInfo)}
 
     def lsp_initialized(self, **kwargs):
         assert self.shared.processId != 0
         self.shared.initialized = True
         return None
+
+    @lsp_rpc
+    def lsp_textDocument_didOpen(self, **kwargs):
+        print(kwargs)
+        return {}
 
     @lsp_rpc
     def lsp_custom(self, **kwargs):
@@ -183,6 +191,13 @@ class EBNFLanguageServerProtocol:
 
 
 def run_server(host, port, log_path=None):
+    global scriptpath
+    grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, '../../'))
+    if scriptpath not in sys.path:
+        sys.path.append(scriptpath)
+    if dhparserdir not in sys.path:
+        sys.path.append(dhparserdir)
     try:
         from EBNFCompiler import compile_src
     except ModuleNotFoundError:

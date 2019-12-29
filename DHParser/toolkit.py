@@ -24,11 +24,11 @@ not in the toolkit-module. An acceptable exception from this rule are
 functions that are very generic.
 """
 
+import ast
 import hashlib
 import io
 import multiprocessing
 import os
-import parser
 import threading
 
 try:
@@ -305,14 +305,10 @@ def is_python_code(text_or_file: str) -> bool:
     Checks whether 'text_or_file' is python code or the name of a file that
     contains python code.
     """
-
     if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
-        # TODO: parser module will be deprecated from Python 3.9 onwards
-        #       ast.parse(text_or_file, 'file.py', 'exec')?
-        parser.suite(text_or_file)
-        # compile(text_or_file, '<string>', 'exec')
+        ast.parse(text_or_file)
         return True
     except (SyntaxError, ValueError, OverflowError):
         pass
