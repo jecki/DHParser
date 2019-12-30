@@ -109,32 +109,6 @@ def json_rpc(func, params={}, ID=None) -> str:
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def lsp_rpc(f):
-    """A decorator for LanguageServerProtocol-methods. This wrapper
-    filters out calls that are made before initializing the server and
-    after shutdown and returns an error message instead.
-    This decorator should only be used on methods of
-    LanguageServerProtocol-objects as it expects the first parameter
-    to be a the `self`-reference of this object.
-    All LSP-methods should be decorated with this decorator except
-    initialize and exit
-    """
-    import functools
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        try:
-            self = args[0]
-        except IndexError:
-            self = kwargs['self']
-        if self.shared.shutdown:
-            return {'code': -32600, 'message': 'language server already shut down'}
-        elif not self.shared.initialized:
-            return {'code': -32002, 'message': 'language server not initialized'}
-        else:
-            return f(*args, **kwargs)
-    return wrapper
-
-
 class DSLLanguageServerProtocol:
     def __init__(self):
         import multiprocessing
@@ -150,8 +124,9 @@ class DSLLanguageServerProtocol:
 
     def lsp_initialize(self, **kwargs):
         import json
-        if self.shared.initialized or self.shared.processId != 0:
-            return {"code": -32002, "message": "Server has already been initialized."}
+        # # This has been taken care of by DHParser.server.Server.lsp_verify_initialization()
+        # if self.shared.initialized or self.shared.processId != 0:
+        #     return {"code": -32002, "message": "Server has already been initialized."}
         self.shared.shutdown = False
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
@@ -164,11 +139,9 @@ class DSLLanguageServerProtocol:
         self.shared.initialized = True
         return None
 
-    @lsp_rpc
     def lsp_custom(self, **kwargs):
         return kwargs
 
-    @lsp_rpc
     def lsp_shutdown(self):
         self.shared.shutdown = True
         self.shared.initialized = False

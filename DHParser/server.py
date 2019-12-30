@@ -99,11 +99,19 @@ RE_DATA_START = rb'\r?\n\r?\n'
 
 SERVER_ERROR = "COMPILER-SERVER-ERROR"
 
+# DSL-Server run-stage
 SERVER_OFFLINE = 0
 SERVER_STARTING = 1
 SERVER_ONLINE = 2
 SERVER_TERMINATING = 3
 
+# Language-Server initializiation and shutdown-stage flag values
+LSP_INITIALIZING = "initializing"
+LSP_INITIALIZED = "initialized"
+LSP_SHUTTING_DOWN = "shutting-down"
+LSP_SHUTDOWN = "shut-down"
+
+# Response-header-templates
 HTTP_RESPONSE_HEADER = '''HTTP/1.1 200 OK
 Date: {date}
 Server: DHParser
@@ -139,7 +147,6 @@ STOP_SERVER_REQUEST = b"__STOP_SERVER__"
 STOP_SERVER_REQUEST_STR = STOP_SERVER_REQUEST.decode()
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = "logging('')"
-
 
 
 def substitute_default_host_and_port(host, port):
@@ -309,10 +316,11 @@ class Server:
                 this set, the connection will be closed as soon as possible.
         kill_switch:  If True the, the server will be shut down.
         loop:  The asyncio event loop within which the asyncio stream server is
-                run. This is only needed for Python 3.5 compatibility. If run
-                with a python version from 3.6 onwards, higher level asyncio
-                functions will be used.
-
+                run.
+        lsp_initialized: A string-flag indicating that the connection to a language
+                sever via json-rpc has been established.
+        lsp_shutdown: A string-flag indicating that the connection to a language server
+                via jason-rpc has been is or is being shutdown.
     """
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
@@ -380,8 +388,10 @@ class Server:
         self.finished_tasks = dict()    # type: Dict[int, Set[int]]
         self.connections = set()        # type: Set
         self.kill_switch = False        # type: bool
-        # just for python 3.5 compatibility...
         self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
+
+        self.lsp_initialized = ""       # type: str
+        self.lsp_shutdown = ""          # type: str
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
@@ -568,10 +578,7 @@ class Server:
             await self.respond(writer, http_response("Data too large! Only %i MB allowed"
                                                      % (self.max_data_size // (1024 ** 2))))
         else:
-            result = None      # type: Optional[JSON_Type]
-            rpc_error = None   # type: Optional[RPC_Error_Type]
             m = re.match(RE_GREP_URL, data)
-            # m = RX_GREP_URL(data.decode())
             if m:
                 func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
                 if func_name.encode() == STOP_SERVER_REQUEST:
@@ -627,18 +634,18 @@ class Server:
                 self.connections.remove(id(writer))
                 reader.feed_eof()
 
-        try:
-            try:
-                error = cast(Dict[str, str], result['error'])
-            except KeyError:
-                error = cast(Dict[str, str], result)
-            rpc_error = int(error['code']), error['message']
-        except TypeError:
-            pass  # result is not a dictionary, never mind
-        except KeyError:
-            pass  # no errors in result
-
         if rpc_error is None:
+            try:
+                # check for json-rpc errors contained within the result
+                try:
+                    error = cast(Dict[str, str], result['error'])
+                except KeyError:
+                    error = cast(Dict[str, str], result)
+                rpc_error = int(error['code']), error['message']
+            except TypeError:
+                pass  # result is not a dictionary, never mind
+            except KeyError:
+                pass  # no errors in result
             if json_id is not None and result is not None:
                 try:
                     json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
@@ -654,6 +661,36 @@ class Server:
         if result is not None or rpc_error is not None:
             await writer.drain()
         self.finished_tasks[id(writer)].add(json_id)
+
+    def lsp_verify_initialization(self, method: str) -> RPC_Error_Type:
+        """ Implements the lsp-initialization logic and returns an rpc-error if
+        either initialization went wrong or an rpc-method other than 'initialize'
+        was called on an uninitialized languge server.
+        """
+        if method == 'initialize':
+            if self.lsp_initialized:
+                return -32002, 'language Server already initializ(ed/ing).'
+            else:
+                self.lsp_initialized = LSP_INITIALIZING
+                self.lsp_shutdown = ''
+        elif method == "initialized":
+            if self.lsp_initialized == LSP_INITIALIZING:
+                self.lsp_initialized = LSP_INITIALIZED
+            else:
+                return -32002, 'initialized notification while ' \
+                               'language server was not in initializing state!'
+        elif method == 'shutdown':
+            self.lsp_shutdown = LSP_SHUTTING_DOWN
+            self.lsp_initialized = ''
+        elif method == 'exit':
+            self.lsp_shutdown = LSP_SHUTDOWN
+            self.lsp_initialized = ''
+        elif method != STOP_SERVER_REQUEST_STR:
+            if self.lsp_shutdown:
+                return -32600, 'language server already shut down'
+            elif self.lsp_initialized != LSP_INITIALIZED:
+                return -32002, 'language server not initialized'
+        return None
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         id_writer = id(writer)  # type: int
@@ -800,7 +837,7 @@ class Server:
                             + (str(e) + str(data)).replace('"', "`")
 
                 if rpc_error is None:
-                    if isinstance(raw, Dict) and ('method' in raw or 'result' in raw):
+                    if isinstance(raw, Dict):
                         json_obj = cast(Dict, raw)
                         json_id = json_obj.get('id', None)
                     else:
@@ -808,11 +845,23 @@ class Server:
                                             'to ba an RPC-call or -response!?'
 
                 if rpc_error is None:
-                    task = asyncio.ensure_future(self.handle_jsonrpc_request(
-                        json_id, reader, writer, json_obj))
-                    assert json_id not in self.active_tasks, str(json_id)
-                    self.active_tasks[id_writer][json_id] = task
-                else:
+                    # TODO: distinguish between responses and requests, here !!!
+                    method = json_obj.get('method', '')
+                    response = json_obj.get('result', None)
+                    if method:
+                        rpc_error = self.lsp_verify_initialization(method)
+                        if rpc_error is None:
+                            task = asyncio.ensure_future(self.handle_jsonrpc_request(
+                                json_id, reader, writer, json_obj))
+                            assert json_id not in self.active_tasks, str(json_id)
+                            self.active_tasks[id_writer][json_id] = task
+                    elif response is not None:
+                        pass # TODO: add response handling here
+                    else:
+                        rpc_error = -32700, 'Parse error: Not a valid JSON-RPC! '\
+                                            '"method" or "response"-field missing.'
+
+                if rpc_error is not None:
                     if json_id is None:
                         response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}}'\
                             % (rpc_error[0], rpc_error[1])
