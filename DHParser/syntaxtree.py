@@ -149,7 +149,7 @@ def create_match_function(criterion: CriteriaType) -> Callable:
         return lambda nd: nd == criterion
     elif isinstance(criterion, str):
         return lambda nd: nd.tag_name == criterion
-    elif isinstance(criterion, Callable):
+    elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in criterion

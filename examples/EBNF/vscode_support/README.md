@@ -1,4 +1,4 @@
-# EBNF LSP-integration for Visual Studio Code
+# EBNF Language Server Protocol-integration for Visual Studio Code
 
 See:
 - <https://code.visualstudio.com/api/language-extensions/language-server-extension-guide>

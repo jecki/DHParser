@@ -109,13 +109,21 @@ def json_rpc(func, params={}, ID=None) -> str:
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
+class DSLCPUBoundTasks:
+    pass
+
+
 class DSLLanguageServerProtocol:
+    """
+    For the specification and implementation of the language server protocol, see:
+        https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+        https://microsoft.github.io/language-server-protocol/
+        https://langserver.org/
+    """
     def __init__(self):
         import multiprocessing
         manager = multiprocessing.Manager()
         self.shared = manager.Namespace()
-        self.shared.initialized = False
-        self.shared.shutdown = False
         self.shared.processId = 0
         self.shared.rootUri = ''
         self.shared.clientCapabilities = ''
@@ -127,30 +135,19 @@ class DSLLanguageServerProtocol:
         # # This has been taken care of by DHParser.server.Server.lsp_verify_initialization()
         # if self.shared.initialized or self.shared.processId != 0:
         #     return {"code": -32002, "message": "Server has already been initialized."}
-        self.shared.shutdown = False
+        # self.shared.shutdown = False
         self.shared.processId = kwargs['processId']
         self.shared.rootUri = kwargs['rootUri']
         self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
         return {'capabilities': json.loads(self.shared.serverCapabilities),
                 'serverInfo': json.loads(self.shared.serverInfo)}
 
-    def lsp_initialized(self, **kwargs):
-        assert self.shared.processId != 0
-        self.shared.initialized = True
-        return None
-
     def lsp_custom(self, **kwargs):
         return kwargs
 
     def lsp_shutdown(self):
-        self.shared.shutdown = True
-        self.shared.initialized = False
         self.shared.processId = 0
         return {}
-
-    def lsp_exit(self):
-        self.shared.shutdown = True
-        return None
 
 
 def run_server(host, port, log_path=None):

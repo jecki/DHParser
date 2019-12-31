@@ -270,7 +270,7 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
             print(grammar_src)
     grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src,
                                             r'get_(?:\w+_)?grammar$')
-    if isinstance(grammar_factory, Callable):
+    if callable(grammar_factory):
         grammar_factory.python_src__ = grammar_src
         return grammar_factory
     raise ValueError('Could not compile grammar provider!')
@@ -317,8 +317,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
     compiler = compile_python_object(imports + compiler_py, r'get_(?:\w+_)?compiler$')
-    if isinstance(preprocessor, Callable) and isinstance(parser, Callable) \
-            and isinstance(ast, Callable) and isinstance(compiler, Callable):
+    if callable(preprocessor) and callable(parser) and callable(Callable) and callable(compiler):
         return preprocessor, parser, ast, compiler
     raise ValueError('Could not generate compiler suite from source code!')
 

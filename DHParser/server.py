@@ -340,7 +340,7 @@ class Server:
                 self.rpc_table[func.__name__] = func
             self.default = func_list[0].__name__
         else:
-            assert isinstance(rpc_functions, Callable)
+            assert callable(rpc_functions)
             func = cast(Callable, rpc_functions)
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
@@ -454,7 +454,8 @@ class Server:
         completion and returns the JSON result and an RPC error tuple (see the
         type definition above). The result may be None and the error may be
         zero, i.e. no error. If `executor` is `None`the method will be called
-        directly instead of deferring it to an executor."""
+        directly instead of deferring it to an executor.
+        """
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
         if params is None:
@@ -467,7 +468,10 @@ class Server:
         try:
             # print(executor, method, params)
             if executor is None:
-                result = method(**params) if has_kw_params else method(*params)
+                if asyncio.iscoroutine(method):
+                    result = await method(**params) if has_kw_params else method(*params)
+                else:
+                    result = method(**params) if has_kw_params else method(*params)
             elif has_kw_params:
                 result = await self.loop.run_in_executor(executor, partial(method, **params))
             else:
@@ -486,7 +490,8 @@ class Server:
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Picks the right execution method (process, thread or direct execution) and
         runs it in the respective executor. In case of a broken ProcessPoolExecutor it
-        restarts the ProcessPoolExecutor and tries to execute the method again."""
+        restarts the ProcessPoolExecutor and tries to execute the method again.
+        """
         # run method either a) directly if it is short running or
         # b) in a thread pool if it contains blocking io or
         # c) in a process pool if it is cpu bound
@@ -845,7 +850,6 @@ class Server:
                                             'to ba an RPC-call or -response!?'
 
                 if rpc_error is None:
-                    # TODO: distinguish between responses and requests, here !!!
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None)
                     if method:
@@ -862,12 +866,8 @@ class Server:
                                             '"method" or "response"-field missing.'
 
                 if rpc_error is not None:
-                    if json_id is None:
-                        response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}}'\
-                            % (rpc_error[0], rpc_error[1])
-                    else:
-                        response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"},'\
-                            ' "id": %s}' % (rpc_error[0], rpc_error[1], json_id)
+                    response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"},'\
+                        ' "id": %s}' % (rpc_error[0], rpc_error[1], json_id)
                     await self.respond(writer, response)
 
         if self.kill_switch or id_writer not in self.connections:
