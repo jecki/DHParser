@@ -82,6 +82,8 @@ __all__ = ('RPC_Table',
            'spawn_server',
            'stop_server',
            'has_server_stopped',
+           'gen_lsp_name',
+           'get_lsp_methods',
            'gen_lsp_table')
 
 
@@ -298,8 +300,8 @@ class Server:
         serving_task:  The task in which the asyncio.Server is run.
         stop_response:  The response string that is written to the stream as
                 answer to a stop request.
-        pp_executor:  A process-pool-executor for cpu-bound tasks
-        tp_executor:  A thread-pool-executor for blocking tasks
+        process_executor:  A process-pool-executor for cpu-bound tasks
+        thread_executor:  A thread-pool-executor for blocking tasks
         echo_log:   Read from the global configuration. If True, any log message
                 will also be echoed on the console.
         use_jsonrpc_header:  Read from the global configuration. If True, jsonrpc
@@ -374,11 +376,11 @@ class Server:
 
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
-        self.server = None        # type: Optional[asyncio.AbstractServer]
-        self.serving_task = None  # type: Optional[asyncio.Task]
-        self.stop_response = ''   # type: str
-        self.pp_executor = None   # type: Optional[ProcessPoolExecutor]
-        self.tp_executor = None   # type: Optional[ThreadPoolExecutor]
+        self.server = None              # type: Optional[asyncio.AbstractServer]
+        self.serving_task = None        # type: Optional[asyncio.Task]
+        self.stop_response = ''         # type: str
+        self.process_executor = None    # type: Optional[ProcessPoolExecutor]
+        self.thread_executor = None     # type: Optional[ThreadPoolExecutor]
 
         self.echo_log = get_config_value('echo_server_log')  # type: bool
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
@@ -503,14 +505,14 @@ class Server:
         #      #executing-code-in-thread-or-process-pools
         result = None     # type: Optional[JSON_Type]
         rpc_error = None  # type: Optional[RPC_Error_Type]
-        executor = self.pp_executor if method_name in self.cpu_bound else \
-            self.tp_executor if method_name in self.blocking else None
+        executor = self.process_executor if method_name in self.cpu_bound else \
+            self.thread_executor if method_name in self.blocking else None
         result, rpc_error = await self.execute(executor, method, params)
         if rpc_error is not None and rpc_error[0] == -32050:
             # if process pool is broken, try again:
-            self.pp_executor.shutdown(wait=True)
-            self.pp_executor = ProcessPoolExecutor()
-            result, rpc_error = await self.execute(self.pp_executor, method, params)
+            self.process_executor.shutdown(wait=True)
+            self.process_executor = ProcessPoolExecutor()
+            result, rpc_error = await self.execute(self.process_executor, method, params)
         return result, rpc_error
 
     async def respond(self, writer: asyncio.StreamWriter, response: Union[str, bytes]):
@@ -915,10 +917,10 @@ class Server:
         assert port >= 0
         # with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
         try:
-            if self.pp_executor is None:
-                self.pp_executor = ProcessPoolExecutor()
-            if self.tp_executor is None:
-                self.tp_executor = ThreadPoolExecutor()
+            if self.process_executor is None:
+                self.process_executor = ProcessPoolExecutor()
+            if self.thread_executor is None:
+                self.thread_executor = ThreadPoolExecutor()
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.host.value = host.encode()
             self.port.value = port
@@ -934,12 +936,12 @@ class Server:
         finally:
             if self.server is not None and sys.version_info < (3, 8):
                 await self.server.wait_closed()
-            if self.tp_executor is not None:
-                self.tp_executor.shutdown(wait=True)
-                self.tp_executor = None
-            if self.pp_executor is not None:
-                self.pp_executor.shutdown(wait=True)
-                self.pp_executor = None
+            if self.thread_executor is not None:
+                self.thread_executor.shutdown(wait=True)
+                self.thread_executor = None
+            if self.process_executor is not None:
+                self.process_executor.shutdown(wait=True)
+                self.process_executor = None
 
     def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         if host == USE_DEFAULT_HOST:
@@ -948,8 +950,8 @@ class Server:
             port = get_config_value('server_default_port')
         assert port >= 0
         with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
-            self.pp_executor = p
-            self.tp_executor = t
+            self.process_executor = p
+            self.thread_executor = t
             self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
             self.host.value = host.encode()
             self.port.value = port
@@ -1170,6 +1172,37 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 #######################################################################
 
 
+def lsp_candidates(cls: Any, prefix: str='') -> Iterator[str]:
+    """Returns an iterator over all method names from a class that either
+    have a certain prefix or, if no prefix was given, all non-special and
+    non-private-methods of the class."""
+    assert not prefix.startswith('_')
+    if prefix:
+        # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
+        for fn in dir(cls):
+            if fn.startswith(prefix) and callable(getattr(cls, fn)):
+                yield fn
+    else:
+        # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
+        for fn in dir(cls):
+            if not fn.startswith('_') and callable(getattr(cls, fn)):
+                yield fn
+
+
+def gen_lsp_name(func_name: str, prefix: str= '') -> str:
+    """Generates the name of an lsp-method from a function name,
+    e.g. "lsp_S_cacelRequest" -> "$/cancelRequest" """
+    assert func_name.startswith(prefix)
+    return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
+
+
+def get_lsp_methods(cls: Any, prefix: str= '') -> List[str]:
+    """Returns the language-server-protocol-method-names from class `cls`.
+    Methods are selected based on the prefix and their name converted in
+    accordance with the LSP-specification."""
+    return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
+
+
 def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
                   prefix: str = '') -> RPC_Table:
     """Creates an RPC from a list of functions or from the methods
@@ -1189,20 +1222,11 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
     >>> gen_lsp_table(lsp, 'lsp_').keys()
     dict_keys(['initialize', 'shutdown'])
     """
-    rpc_table = {}
-    if not isinstance(lsp_funcs_or_instance, Sequence) \
-            and not isinstance(lsp_funcs_or_instance, Iterator):
-        # assume lsp_funcs_or_instance is the instance of a class
-        lsp_funcs = (getattr(lsp_funcs_or_instance, attr)
-                     for attr in dir(lsp_funcs_or_instance)
-                     if not attr.startswith('__'))  # type: Iterable
-    else:
-        lsp_funcs = lsp_funcs_or_instance
-    len_prefix = len(prefix)
-    for func in lsp_funcs:
-        name = func.__name__ if hasattr(func, '__name__') else ''
-        if name and name.startswith(prefix):
-            name = name[len_prefix:]
-            name = name.replace('_', '/').replace('S/', '$/')
-        rpc_table[name] = func
+    if isinstance(lsp_funcs_or_instance, Iterable):
+        assert all(callable(func) for func in lsp_funcs_or_instance)
+        rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
+    # assume lsp_funcs_or_instance is the instance of a class
+    cls = lsp_funcs_or_instance
+    rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn) for fn in lsp_candidates(cls, prefix)}
     return rpc_table
+

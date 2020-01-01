@@ -198,6 +198,7 @@ def run_server(host, port, log_path=None):
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=set(lsp_table.keys() - non_blocking),
                         blocking=set())
+    DSL_lsp.register_server(DSL_server)
     if log_path is not None:
         DSL_server.echo_log = True
         print(DSL_server.start_logging(log_path))

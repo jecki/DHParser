@@ -108,81 +108,61 @@ def json_rpc(func, params={}, ID=None) -> str:
     return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
-def lsp_rpc(f):
-    """A decorator for LanguageServerProtocol-methods. This wrapper
-    filters out calls that are made before initializing the server and
-    after shutdown and returns an error message instead.
-    This decorator should only be used on methods of
-    LanguageServerProtocol-objects as it expects the first parameter
-    to be a the `self`-reference of this object.
-    All LSP-methods should be decorated with this decorator except
-    initialize and exit
-    """
-    import functools
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        try:
-            self = args[0]
-        except IndexError:
-            self = kwargs['self']
-        if self.shared.shutdown:
-            return {'code': -32600, 'message': 'language server already shut down'}
-        elif not self.shared.initialized:
-            return {'code': -32002, 'message': 'language server not initialized'}
-        else:
-            return f(*args, **kwargs)
-    return wrapper
+class EBNFCPUBoundTasks:
+    def __init__(self, lsp_data: dict):
+        self.lsp_data = lsp_data
+
+
+class EBNFBlockingTasks:
+    def __init__(self, lsp_data: dict):
+        self.lsp_data = lsp_data
 
 
 class EBNFLanguageServerProtocol:
+    """
+    For the specification and implementation of the language server protocol, see:
+        https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+        https://microsoft.github.io/language-server-protocol/
+        https://langserver.org/
+    """
     def __init__(self):
-        import json, multiprocessing
-        manager = multiprocessing.Manager()
-        self.shared = manager.Namespace()
-        self.shared.initialized = False
-        self.shared.shutdown = False
-        self.shared.processId = 0
-        self.shared.rootUri = ''
-        self.shared.clientCapabilities = ''
-        self.shared.serverInfo = '{ "name": "DSL-Server", "version": "0.1" }'
-        self.shared.serverCapabilities = json.dumps({
-            "textDocumentSync": 1,
-            "completionProvider": {
-                "resolveProvider": True
-                }
-            })
+        self.lsp_data = {
+            'processId': 0,
+            'rootUri': '',
+            'clientCapabilities': {},
+            'serverInfo': { "name": "EBNF-Server", "version": "0.2" },
+            'serverCapabilities': {
+                "textDocumentSync": 1,
+                "completionProvider": {
+                    "resolveProvider": True
+                    }
+            }
+        }
+        self.server = None
+        self.cpu_bound = EBNFCPUBoundTasks(self.lsp_data)
+        self.blocking = EBNFBlockingTasks(self.lsp_data)
 
+    def register_server(self, server):
+        self.server = server
 
     def lsp_initialize(self, **kwargs):
-        import json
-        if self.shared.initialized or self.shared.processId != 0:
-            return {"code": -32002, "message": "Server has already been initialized."}
-        self.shared.shutdown = False
-        self.shared.processId = kwargs['processId']
-        self.shared.rootUri = kwargs['rootUri']
-        self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
-        return {'capabilities': json.loads(self.shared.serverCapabilities),
-                'serverInfo': json.loads(self.shared.serverInfo)}
+        self.lsp_data['processId'] = kwargs['processId']
+        self.lsp_data['rootUri'] = kwargs['rootUri']
+        self.lsp_data['clientCapabilities'] = kwargs['capabilities']
+        return {'capabilities': self.lsp_data['serverCapabilities'],
+                'serverInfo': self.lsp_data['serverInfo']}
 
-    def lsp_initialized(self, **kwargs):
-        assert self.shared.processId != 0
-        self.shared.initialized = True
-        return None
-
-    @lsp_rpc
     def lsp_textDocument_didOpen(self, **kwargs):
         print(kwargs)
         return {}
 
-    @lsp_rpc
     def lsp_custom(self, **kwargs):
         return kwargs
 
-    @lsp_rpc
     def lsp_shutdown(self):
-        self.shared.shutdown = True
-        self.shared.initialized = False
-        self.shared.processId = 0
+        self.lsp_data['processId'] = 0
+        self.lsp_data['rootUri'] = ''
+        self.lsp_data['clientCapabilities'] = {}
         return {}
 
     def lsp_exit(self):
@@ -220,6 +200,7 @@ def run_server(host, port, log_path=None):
     EBNF_server = Server(rpc_functions=lsp_table,
                          cpu_bound=set(lsp_table.keys() - non_blocking),
                          blocking=set())
+    EBNF_lsp.register_server(EBNF_server)
     if log_path is not None:
         EBNF_server.echo_log = True
         print(EBNF_server.start_logging(log_path.strip('" \'')))
