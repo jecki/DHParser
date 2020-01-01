@@ -110,7 +110,13 @@ def json_rpc(func, params={}, ID=None) -> str:
 
 
 class DSLCPUBoundTasks:
-    pass
+    def __init__(self, lsp_data: dict):
+        self.lsp_data = lsp_data
+
+
+class DSLBlockingTasks:
+    def __init__(self, lsp_data: dict):
+        self.lsp_data = lsp_data
 
 
 class DSLLanguageServerProtocol:
@@ -121,14 +127,19 @@ class DSLLanguageServerProtocol:
         https://langserver.org/
     """
     def __init__(self):
-        import multiprocessing
-        manager = multiprocessing.Manager()
-        self.shared = manager.Namespace()
-        self.shared.processId = 0
-        self.shared.rootUri = ''
-        self.shared.clientCapabilities = ''
-        self.shared.serverInfo = '{ "name": "DSL-Server", "version": "0.1" }'
-        self.shared.serverCapabilities = '{}'
+        self.lsp_data = {
+            'processId': 0,
+            'rootUri': '',
+            'clientCapabilities': {},
+            'serverInfo': { "name": "DSL-Server", "version": "0.1" },
+            'serverCapabilities': {}
+        }
+        self.server = None
+        self.cpu_bound = DSLCPUBoundTasks(self.lsp_data)
+        self.blocking = DSLBlockingTasks(self.lsp_data)
+
+    def register_server(self, server):
+        self.server = server
 
     def lsp_initialize(self, **kwargs):
         import json
@@ -136,17 +147,19 @@ class DSLLanguageServerProtocol:
         # if self.shared.initialized or self.shared.processId != 0:
         #     return {"code": -32002, "message": "Server has already been initialized."}
         # self.shared.shutdown = False
-        self.shared.processId = kwargs['processId']
-        self.shared.rootUri = kwargs['rootUri']
-        self.shared.clientCapabilities = json.dumps(kwargs['capabilities'])
-        return {'capabilities': json.loads(self.shared.serverCapabilities),
-                'serverInfo': json.loads(self.shared.serverInfo)}
+        self.lsp_data['processId'] = kwargs['processId']
+        self.lsp_data['rootUri'] = kwargs['rootUri']
+        self.lsp_data['clientCapabilities'] = kwargs['capabilities']
+        return {'capabilities': self.lsp_data['serverCapabilities'],
+                'serverInfo': self.lsp_data['serverInfo']}
 
     def lsp_custom(self, **kwargs):
         return kwargs
 
     def lsp_shutdown(self):
-        self.shared.processId = 0
+        self.lsp_data['processId'] = 0
+        self.lsp_data['rootUri'] = ''
+        self.lsp_data['clientCapabilities'] = {}
         return {}
 
 

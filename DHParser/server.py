@@ -317,6 +317,9 @@ class Server:
         kill_switch:  If True the, the server will be shut down.
         loop:  The asyncio event loop within which the asyncio stream server is
                 run.
+
+        Language server protocol fields:
+
         lsp_initialized: A string-flag indicating that the connection to a language
                 sever via json-rpc has been established.
         lsp_shutdown: A string-flag indicating that the connection to a language server
@@ -392,6 +395,7 @@ class Server:
 
         self.lsp_initialized = ""       # type: str
         self.lsp_shutdown = ""          # type: str
+
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
@@ -668,7 +672,7 @@ class Server:
         self.finished_tasks[id(writer)].add(json_id)
 
     def lsp_verify_initialization(self, method: str) -> RPC_Error_Type:
-        """ Implements the lsp-initialization logic and returns an rpc-error if
+        """Implements the lsp-initialization logic and returns an rpc-error if
         either initialization went wrong or an rpc-method other than 'initialize'
         was called on an uninitialized languge server.
         """
