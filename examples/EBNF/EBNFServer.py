@@ -110,12 +110,16 @@ def json_rpc(func, params={}, ID=None) -> str:
 
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
+        from DHParser.server import gen_lsp_table
         self.lsp_data = lsp_data
+        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
 class EBNFBlockingTasks:
     def __init__(self, lsp_data: dict):
+        from DHParser.server import gen_lsp_table
         self.lsp_data = lsp_data
+        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
 class EBNFLanguageServerProtocol:
@@ -126,6 +130,7 @@ class EBNFLanguageServerProtocol:
         https://langserver.org/
     """
     def __init__(self):
+        from DHParser.server import gen_lsp_table
         self.lsp_data = {
             'processId': 0,
             'rootUri': '',
@@ -141,6 +146,12 @@ class EBNFLanguageServerProtocol:
         self.server = None
         self.cpu_bound = EBNFCPUBoundTasks(self.lsp_data)
         self.blocking = EBNFBlockingTasks(self.lsp_data)
+        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
+        self.lsp_fulltable = self.lsp_table.copy()
+        assert self.lsp_fulltable.keys().isdisjoint(self.cpu_bound.lsp_table.keys())
+        self.lsp_fulltable.update(self.cpu_bound.lsp_table)
+        assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
+        self.lsp_fulltable.update(self.blocking.lsp_table)
 
     def register_server(self, server):
         self.server = server
@@ -154,7 +165,7 @@ class EBNFLanguageServerProtocol:
 
     def lsp_textDocument_didOpen(self, **kwargs):
         print(kwargs)
-        return {}
+        return None
 
     def lsp_custom(self, **kwargs):
         return kwargs
@@ -164,10 +175,6 @@ class EBNFLanguageServerProtocol:
         self.lsp_data['rootUri'] = ''
         self.lsp_data['clientCapabilities'] = {}
         return {}
-
-    def lsp_exit(self):
-        self.shared.shutdown = True
-        return None
 
 
 def run_server(host, port, log_path=None):
@@ -194,12 +201,11 @@ def run_server(host, port, log_path=None):
 
     print('Starting server on %s:%i' % (host, port))
     EBNF_lsp = EBNFLanguageServerProtocol()
-    lsp_table = gen_lsp_table(EBNF_lsp, prefix='lsp_')
-    lsp_table.update({'default': compile_src})
-    non_blocking = frozenset(('initialize', 'initialized', 'shutdown', 'exit'))
+    lsp_table = EBNF_lsp.lsp_fulltable.copy()
+    lsp_table.setdefault('default', compile_src)
     EBNF_server = Server(rpc_functions=lsp_table,
-                         cpu_bound=set(lsp_table.keys() - non_blocking),
-                         blocking=set())
+                        cpu_bound=EBNF_lsp.cpu_bound.lsp_table.keys(),
+                        blocking=EBNF_lsp.blocking.lsp_table.keys())
     EBNF_lsp.register_server(EBNF_server)
     if log_path is not None:
         EBNF_server.echo_log = True

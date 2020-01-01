@@ -83,7 +83,6 @@ __all__ = ('RPC_Table',
            'stop_server',
            'has_server_stopped',
            'gen_lsp_name',
-           'get_lsp_methods',
            'gen_lsp_table')
 
 
@@ -1172,7 +1171,7 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 #######################################################################
 
 
-def lsp_candidates(cls: Any, prefix: str='') -> Iterator[str]:
+def lsp_candidates(cls: Any, prefix: str='lsp_') -> Iterator[str]:
     """Returns an iterator over all method names from a class that either
     have a certain prefix or, if no prefix was given, all non-special and
     non-private-methods of the class."""
@@ -1189,22 +1188,22 @@ def lsp_candidates(cls: Any, prefix: str='') -> Iterator[str]:
                 yield fn
 
 
-def gen_lsp_name(func_name: str, prefix: str= '') -> str:
+def gen_lsp_name(func_name: str, prefix: str= 'lsp_') -> str:
     """Generates the name of an lsp-method from a function name,
     e.g. "lsp_S_cacelRequest" -> "$/cancelRequest" """
     assert func_name.startswith(prefix)
     return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
 
 
-def get_lsp_methods(cls: Any, prefix: str= '') -> List[str]:
-    """Returns the language-server-protocol-method-names from class `cls`.
-    Methods are selected based on the prefix and their name converted in
-    accordance with the LSP-specification."""
-    return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
+# def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
+#     """Returns the language-server-protocol-method-names from class `cls`.
+#     Methods are selected based on the prefix and their name converted in
+#     accordance with the LSP-specification."""
+#     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
 
 
 def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
-                  prefix: str = '') -> RPC_Table:
+                  prefix: str = 'lsp_') -> RPC_Table:
     """Creates an RPC from a list of functions or from the methods
     of a class that implement the language server protocol.
     The dictionary keys are derived from the function name by replacing an
