@@ -679,7 +679,9 @@ class Server:
         """
         if method == 'initialize':
             if self.lsp_initialized:
-                return -32002, 'language Server already initializ(ed/ing).'
+                return -32002, 'language server already initializ(ed/ing)'
+            elif self.lsp_shutdown == LSP_SHUTTING_DOWN:
+                return -32002, 'cannot initialize language server while shutting down'
             else:
                 self.lsp_initialized = LSP_INITIALIZING
                 self.lsp_shutdown = ''
