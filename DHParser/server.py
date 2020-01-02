@@ -316,7 +316,10 @@ class Server:
                 objects) that are currently active. If an id is removed from
                 this set, the connection will be closed as soon as possible.
         kill_switch:  If True the, the server will be shut down.
-        loop:  The asyncio event loop within which the asyncio stream server is
+        response_queue:  An asynchronuous queue which stores the json-rpc responses
+                and errors received from a language server client as result of
+                commands initiated by the server.
+        loop:   The asyncio event loop within which the asyncio stream server is
                 run.
 
         Language server protocol fields:
@@ -392,6 +395,8 @@ class Server:
         self.finished_tasks = dict()    # type: Dict[int, Set[int]]
         self.connections = set()        # type: Set
         self.kill_switch = False        # type: bool
+        self.response_queue = None      # type: Optional[asyncio.Queue]
+        self.pending_responses = dict()  # type: Dict[int, List[JSON_Type]]
         self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
 
         self.lsp_initialized = ""       # type: str
@@ -685,6 +690,7 @@ class Server:
             else:
                 self.lsp_initialized = LSP_INITIALIZING
                 self.lsp_shutdown = ''
+                self.response_queue = asyncio.Queue(maxsize=100)
         elif method == "initialized":
             if self.lsp_initialized == LSP_INITIALIZING:
                 self.lsp_initialized = LSP_INITIALIZED
@@ -694,6 +700,7 @@ class Server:
         elif method == 'shutdown':
             self.lsp_shutdown = LSP_SHUTTING_DOWN
             self.lsp_initialized = ''
+            self.response_queue = None  # drop potentially non empty queue
         elif method == 'exit':
             self.lsp_shutdown = LSP_SHUTDOWN
             self.lsp_initialized = ''
@@ -703,6 +710,9 @@ class Server:
             elif self.lsp_initialized != LSP_INITIALIZED:
                 return -32002, 'language server not initialized'
         return None
+
+    async def client_response(self, jsonrpc_id):
+        pass
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         id_writer = id(writer)  # type: int
@@ -858,7 +868,7 @@ class Server:
 
                 if rpc_error is None:
                     method = json_obj.get('method', '')
-                    response = json_obj.get('result', None)
+                    response = json_obj.get('result', None) or json_obj.get('error', None)
                     if method:
                         rpc_error = self.lsp_verify_initialization(method)
                         if rpc_error is None:
@@ -867,7 +877,7 @@ class Server:
                             assert json_id not in self.active_tasks, str(json_id)
                             self.active_tasks[id_writer][json_id] = task
                     elif response is not None:
-                        pass # TODO: add response handling here
+                        self.response_queue.put_nowait(json_obj)
                     else:
                         rpc_error = -32700, 'Parse error: Not a valid JSON-RPC! '\
                                             '"method" or "response"-field missing.'
