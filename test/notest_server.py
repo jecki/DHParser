@@ -476,6 +476,31 @@ class TestLanguageServer:
 
         asyncio_run(initialization_sequence())
 
+    # def test_multiple_connections(self):
+    #     self.start_server()
+    #     async def initialization_sequence():
+    #         reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+    #         writer.write(json_rpc('initialize',
+    #                               {'processId': 702,
+    #                                'rootUri': 'file://~/tmp',
+    #                                'capabilities': {}}).encode())
+    #         response = (await reader.read(8192)).decode()
+    #         i = response.find('{')
+    #         # print(len(response), response)
+    #         res = json.loads(response[i:])
+    #         assert 'result' in res and 'capabilities' in res['result'], str(res)
+    #
+    #         writer.write(json_rpc('initialized', {}).encode())
+    #
+    #         writer.write(json_rpc('custom', {'test': 1}).encode())
+    #         response = (await reader.read(8192)).decode()
+    #         assert response.find('test') >= 0
+    #
+    #         writer.close()
+    #         if sys.version_info >= (3, 7):  await writer.wait_closed()
+    #
+    #     asyncio_run(initialization_sequence())
+
 
 if __name__ == "__main__":
     if "--killserver" in sys.argv:

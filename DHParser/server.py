@@ -536,14 +536,26 @@ class Server:
         self.log('RESPONSE: ', response.decode(), '\n\n')
         # print('returned: ', response)
         try:
-            if sys.version_info >= (3, 9):
-                await writer.write(response)
-            else:
-                writer.write(response)
-                await writer.drain()
+            writer.write(response)
+            await writer.drain()
         except ConnectionError as err:
             self.log('ERROR when wrting data: ', str(err), '\n')
             self.connections.remove(id(writer))
+
+    async def server_call(self, json_obj: JSON_Type):
+        """Issues a json-rpc call from the server to the client."""
+        pass
+
+    async def client_response(self, call_id: int) -> JSON_Type:
+        """Waits for and returns the response from the lsp-client to the call
+        with the id `call_id`."""
+        pending = self.pending_responses.get(call_id, [])
+        while not pending:
+            response = await self.response_queue.get()
+            self.pending_responses.setdefault(call_id, []).insert(0, response)
+            pending = self.pending_responses.get(call_id, [])
+        response = pending.pop()
+        return response
 
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
@@ -710,9 +722,6 @@ class Server:
             elif self.lsp_initialized != LSP_INITIALIZED:
                 return -32002, 'language server not initialized'
         return None
-
-    async def client_response(self, jsonrpc_id):
-        pass
 
     async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         id_writer = id(writer)  # type: int
