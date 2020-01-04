@@ -252,8 +252,7 @@ def default_fallback(*args, **kwargs) -> str:
 
 
 def http_response(html: str) -> bytes:
-    """
-    Embeds an html-string in a http header and returns the http-package
+    """Embeds an html-string in a http header and returns the http-package
     as byte-string.
     """
     gmt = GMT_timestamp()
@@ -266,9 +265,16 @@ def http_response(html: str) -> bytes:
     return response.encode() + encoded_html
 
 
+def incomplete_header(data: Union[bytes, bytearray]) -> bool:
+    """Returns `True` if data appears to represent an incomplete header."""
+    return b'Content-Length'.startswith(data) or \
+           (data.startswith(b'Content-Length') and data.find(b'\n\n') < 0)
+
+
 def gen_task_id() -> int:
     """Generate a unique task id. This is always a negative number to
-    distinguish the taks id's from the json-rpc ids."""
+    distinguish the taks id's from the json-rpc ids.
+    """
     THREAD_LOCALS = access_thread_locals()
     try:
         value = THREAD_LOCALS.DHParser_server_task_id
@@ -278,7 +284,6 @@ def gen_task_id() -> int:
         value = -1
     assert value < 0
     return value
-
 
 
 class Connection:
@@ -634,7 +639,8 @@ class Server:
                         % (str(type(response)), str(response))).encode()
         if self.use_jsonrpc_header and response.startswith(b'{'):
             response = JSONRPC_HEADER.format(length=len(response)).encode() + response
-        self.log('RESPONSE: ', response.decode(), '\n\n')
+        if self.log_file:  # avoid data decoding if logging is off
+            self.log('RESPONSE: ', response.decode(), '\n\n')
         # print('returned: ', response)
         try:
             writer.write(response)
@@ -646,7 +652,7 @@ class Server:
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
                                        writer: asyncio.StreamWriter,
-                                       data: bytes):
+                                       data: Union[bytes, bytearray]):
         """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
         if len(data) > self.max_data_size:
             await self.respond(writer, "Data too large! Only %i MB allowed"
@@ -686,7 +692,7 @@ class Server:
     async def handle_http_request(self, task_id: int,
                                   reader: asyncio.StreamReader,
                                   writer: asyncio.StreamWriter,
-                                  data: bytes):
+                                  data: Union[bytes, bytearray]):
         if len(data) > self.max_data_size:
             await self.respond(writer, http_response("Data too large! Only %i MB allowed"
                                                      % (self.max_data_size // (1024 ** 2))))
@@ -794,10 +800,14 @@ class Server:
             self.connection = Connection(reader, writer)
             id_connection = str(id(self.connection))
             self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')
-            buffer = b''  # type: bytes
-        while not self.kill_switch and self.connection.alive:
+
+        def connection_alive() -> bool:
+            return not self.kill_switch and self.connection.alive and not reader.at_eof()
+
+        buffer = bytearray()  # type: bytearray
+        while connection_alive():
             # reset the data variable
-            data = b''  # type: bytes
+            data = bytearray() # type: bytearray
             # reset the content length
             content_length = 0  # type: int
             # reset the length of the header, represented by the variable `k`
@@ -835,13 +845,12 @@ class Server:
             #
             # see also: test/test_server.TestLanguageServer.test_varying_data_chunk_sizes
 
-            while (content_length <= 0 or len(data) < content_length + k) \
-                    and self.connection.alive and not self.kill_switch and not reader.at_eof():
+            while (content_length <= 0 or len(data) < content_length + k) and connection_alive():
                 if buffer:
                     # if there is any data in the buffer, retrieve this first,
                     # before awaiting further data from the stream
                     data += buffer
-                    buffer = b''
+                    buffer = bytearray()
                 else:
                     try:
                         data += await reader.read(self.max_data_size + 1)
@@ -851,9 +860,7 @@ class Server:
                         break
                 if content_length <= 0:
                     # If content-length has not been set, look for it in the
-                    # received data package. This assumes that if there is
-                    # a header at all, it is transmitted in one chunk and not
-                    # in pieces, e.g. b'Cont', b'ent-Length: 52'!
+                    # received data package.
                     # TODO: Check with the TDP-manual, whether this assumption can be relied on!
                     i = data.find(b'Content-Length:', 0, 512)
                     m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
@@ -866,7 +873,7 @@ class Server:
                                 # cut the data of at header size plus content-length
                                 buffer = data[k + content_length:]
                                 data = data[:k + content_length]
-                    else:
+                    elif not incomplete_header(data):
                         # no header or no context-length given
                         # set `context_length` to the size of the data to break the loop
                         content_length = len(data)
@@ -877,7 +884,8 @@ class Server:
                 # continue the loop until at least content_length + k bytes of data
                 # have been received
 
-            self.log('RECEIVE: ', data.decode(), '\n')
+            if self.log_file:   # avoid decoding if logging is off
+                self.log('RECEIVE: ', data.decode(), '\n')
 
             if self.connection.alive:
                 if not data and reader.at_eof():
@@ -920,7 +928,7 @@ class Server:
 
                 if rpc_error is None:
                     try:
-                        raw = json.loads(data.decode())
+                        raw = json.loads(data)
                     except json.decoder.JSONDecodeError as e:
                         rpc_error = -32700, "JSONDecodeError: " \
                             + (str(e) + str(data)).replace('"', "`")
