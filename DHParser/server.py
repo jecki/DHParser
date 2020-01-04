@@ -78,6 +78,8 @@ __all__ = ('RPC_Table',
            'ALL_RPCs',
            'asyncio_run',
            'asyncio_connect',
+           'split_header',
+           'Connection',
            'Server',
            'spawn_server',
            'stop_server',
@@ -90,6 +92,7 @@ RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 RPC_Error_Type = Optional[Tuple[int, str]]
 JSON_Type = Union[Dict, Sequence, str, int, None]
+BytesType = Union[bytes, bytearray]
 
 RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'
 # b'\s*(?:{|\[|"|\d|true|false|null)'
@@ -265,10 +268,33 @@ def http_response(html: str) -> bytes:
     return response.encode() + encoded_html
 
 
-def incomplete_header(data: Union[bytes, bytearray]) -> bool:
+def incomplete_header(data: BytesType) -> bool:
     """Returns `True` if data appears to represent an incomplete header."""
     return b'Content-Length'.startswith(data) or \
-           (data.startswith(b'Content-Length') and data.find(b'\n\n') < 0)
+           (data.startswith(b'Content-Length') and not re_find(data, RE_DATA_START))
+
+
+def split_header(data: BytesType) -> Tuple[BytesType, BytesType, BytesType]:
+    """Splits the given data-chunk and returns tuple (header, data, backlog).
+    If the data-chunk is incomplete it will be returned unchanged while the
+    returned header remains empty."""
+    header = b''
+    backlog = b''
+    i = data.find(b'Content-Length:', 0, 512)
+    m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+    if m:
+        content_length = int(m.group(1))
+        m2 = re_find(data, RE_DATA_START)
+        if m2:
+            header_size = m2.end()
+            if len(data) >= header_size + content_length:
+                # cut the data of at header size plus content-length
+                header = data[:header_size]
+                backlog = data[header_size + content_length:]
+                data = data[header_size:header_size + content_length]
+    elif not incomplete_header(data):
+        raise ValueError('data does not contain a valid header')
+    return header, data, backlog
 
 
 def gen_task_id() -> int:
@@ -652,7 +678,7 @@ class Server:
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
                                        writer: asyncio.StreamWriter,
-                                       data: Union[bytes, bytearray]):
+                                       data: BytesType):
         """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
         if len(data) > self.max_data_size:
             await self.respond(writer, "Data too large! Only %i MB allowed"
@@ -692,7 +718,7 @@ class Server:
     async def handle_http_request(self, task_id: int,
                                   reader: asyncio.StreamReader,
                                   writer: asyncio.StreamWriter,
-                                  data: Union[bytes, bytearray]):
+                                  data: BytesType):
         if len(data) > self.max_data_size:
             await self.respond(writer, http_response("Data too large! Only %i MB allowed"
                                                      % (self.max_data_size // (1024 ** 2))))
@@ -859,9 +885,7 @@ class Server:
                         self.connection.alive = False
                         break
                 if content_length <= 0:
-                    # If content-length has not been set, look for it in the
-                    # received data package.
-                    # TODO: Check with the TDP-manual, whether this assumption can be relied on!
+                    # If content-length has not been set, look for it in the received data package.
                     i = data.find(b'Content-Length:', 0, 512)
                     m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
                     if m:

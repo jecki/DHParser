@@ -47,7 +47,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import set_config_value
 from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
-    has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
+    split_header, has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
 
 TEST_PORT = 8000 + os.getpid() % 1000
 # adding pid % 100 hopefully prevents interference, if `test_server.py` is run in
@@ -178,7 +178,7 @@ class TestServer:
             if p is not None:
                 p.join()
 
-    def notest_long_running_task(self):
+    def test_long_running_task(self):
         """Test, whether delegation of (long-running) tasks to
         processes or threads works."""
         sequence = []
@@ -188,17 +188,19 @@ class TestServer:
             SLOW, FAST = 0.01, 0.001
 
         async def run_tasks():
+            def extract_result(data: bytes):
+                header, data, backlog = split_header(data)
+                return json.loads(data)['result']
+
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             sequence.append(SLOW)
             sequence.append(FAST)
             writer.write(json_rpc('long_running', {'duration': SLOW}).encode())
-            await writer.drain()
             writer.write(json_rpc('long_running', {'duration': FAST}).encode())
             await writer.drain()
             # TODO: add support for custom JSON-RPC-Package splitup to server.py
-            sequence.append((await reader.read(500)).decode())
-            sequence.append((await reader.read(500)).decode())
-            print(sequence)
+            sequence.append(extract_result(await reader.read(500)))
+            sequence.append(extract_result(await reader.read(500)))
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
 
@@ -218,7 +220,8 @@ class TestServer:
             p = None
             try:
                 p = spawn_server('127.0.0.1', TEST_PORT,
-                                 (long_running, frozenset(), frozenset(['long_running'])))
+                                 (long_running, frozenset(), frozenset(['long_running']),
+                                  'Long-Running-Test', False))
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -229,7 +232,8 @@ class TestServer:
         p = None
         try:
             p = spawn_server('127.0.0.1', TEST_PORT,
-                             (long_running, frozenset(), frozenset()))
+                             (long_running, frozenset(), frozenset(),
+                              'Long-Running-Test', False))
             asyncio_run(run_tasks())
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
