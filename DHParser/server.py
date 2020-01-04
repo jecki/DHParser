@@ -808,26 +808,16 @@ class Server:
         self.connection.task_done(json_id)
 
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        if self.connection is not None:
-            _data = await reader.read(len(STOP_SERVER_REQUEST))  # type: bytes
-            writer.write_eof()
-            await writer.drain()
-            writer.close()
-            # t = writer.transport()
-            # print(t, t.is_closing())
-            if sys.version_info >= (3, 7):  await writer.wait_closed()
-            if _data.startswith(STOP_SERVER_REQUEST):
-                # stop existing connection and kill server
-                reader, writer = self.connection.reader, self.connection.writer
-                self.kill_switch = True
-            else:
-                return  # return, but keep existing connection alive
-        else:
+        if self.connection is None:
             self.connection = Connection(reader, writer)
             id_connection = str(id(self.connection))
             self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')
+            primary_connection = True
+        else:
+            primary_connection = False
 
         def connection_alive() -> bool:
+            """-> `False` if connection is dead or shall be shut down."""
             return not self.kill_switch and self.connection.alive and not reader.at_eof()
 
         buffer = bytearray()  # type: bytearray
@@ -882,7 +872,8 @@ class Server:
                         data += await reader.read(self.max_data_size + 1)
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
-                        self.connection.alive = False
+                        if primary_connection:
+                            self.connection.alive = False
                         break
                 if content_length <= 0:
                     # If content-length has not been set, look for it in the received data package.
@@ -911,8 +902,8 @@ class Server:
             if self.log_file:   # avoid decoding if logging is off
                 self.log('RECEIVE: ', data.decode(), '\n')
 
-            if self.connection.alive:
-                if not data and reader.at_eof():
+            if self.connection.alive and primary_connection:
+                if not data and self.connection.reader.at_eof():
                     self.connection.alive = False
                     break
                 # remove finished tasks from active_tasks list,
@@ -926,13 +917,19 @@ class Server:
             if data.startswith(b'GET'):
                 # HTTP request
                 task_id = gen_task_id()
-                self.connection.create_task(task_id, self.handle_http_request(
-                    task_id, reader, writer, data))
+                if primary_connection:
+                    self.connection.create_task(task_id, self.handle_http_request(
+                        task_id, reader, writer, data))
+                else:
+                    await self.handle_http_request(task_id, reader, writer, data)
             elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
                 task_id = gen_task_id()
-                self.connection.create_task(task_id, self.handle_plaindata_request(
-                    task_id, reader, writer, data))
+                if primary_connection:
+                    self.connection.create_task(task_id, self.handle_plaindata_request(
+                        task_id, reader, writer, data))
+                else:
+                    await self.handle_plaindata_request(task_id, reader, writer, data)
             else:
                 # assume json
                 # TODO: add batch processing capability!
@@ -969,12 +966,19 @@ class Server:
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None) or json_obj.get('error', None)
                     if method:
-                        rpc_error = self.connection.verify_initialization(method, self.strict_lsp)
-                        if rpc_error is None:
-                            self.connection.create_task(json_id, self.handle_jsonrpc_request(
-                                json_id, reader, writer, json_obj))
+                        if primary_connection:
+                            rpc_error = self.connection.verify_initialization(method, self.strict_lsp)
+                            if rpc_error is None:
+                                self.connection.create_task(json_id, self.handle_jsonrpc_request(
+                                    json_id, reader, writer, json_obj))
+                        else:
+                            if method == 'initialize':
+                                rpc_error = -32002, 'server is already connected to another client'
+                            else:
+                                await self.handle_jsonrpc_request(json_id, reader, writer, json_obj)
                     elif response is not None:
-                        self.connection.put_response(json_obj)
+                        if primary_connection:
+                            self.connection.put_response(json_obj)
                     else:
                         rpc_error = -32700, 'Parse error: Not a valid JSON-RPC! '\
                                             '"method" or "response"-field missing.'
@@ -983,6 +987,11 @@ class Server:
                     response = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"},'\
                         ' "id": %s}' % (rpc_error[0], rpc_error[1], json_id)
                     await self.respond(writer, response)
+
+            if not primary_connection:
+                # for secondary connections only one request is allowed before terminating
+                # the connection
+                return
 
         if self.kill_switch or not self.connection.alive:
             # TODO: terminate all active tasks depending on this particular connection
