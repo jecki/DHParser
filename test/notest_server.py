@@ -410,6 +410,7 @@ class TestLanguageServer:
 
             async def send(request: str, expect_response: bool = True) -> str:
                 writer.write(request.encode())
+                await writer.drain()
                 if expect_response:
                     return (await reader.read(8192)).decode()
                 return ''
@@ -420,6 +421,20 @@ class TestLanguageServer:
             i = response.find('{') - 1
             res = json.loads(response[i:])
             assert 'result' in res and 'capabilities' in res['result'], str(res)
+
+            r2, w2 = await asyncio_connect('127.0.0.1', TEST_PORT)
+            w2.write(json_rpc('initialize', {'processId': 701,
+                'rootUri': 'file://~/tmp', 'capabilities': {}}).encode())
+            fail = await r2.read(8192)
+            assert b'error' in fail and b'already connected' in fail
+            w2.write_eof();  w2.close();  await w2.wait_closed()
+
+            r2, w2 = await asyncio_connect('127.0.0.1', TEST_PORT)
+            w2.write(json_rpc('custom', {}).encode())
+            fail = await r2.read(8192)
+            assert b'result' not in fail
+            assert b'not a service function' in fail
+            w2.write_eof();  w2.close();  await w2.wait_closed()
 
             response = await send(json_rpc('custom', {}))
             assert response.find('error') >= 0

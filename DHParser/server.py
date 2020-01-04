@@ -816,14 +816,19 @@ class Server:
             method = self.rpc_table[method_name]
             params = json_obj['params'] if 'params' in json_obj else {}
             if service_call:
-                err_func = lambda *args, **kwargs: \
-                    '{"jsonrpc": "2.0", "error": {"code": -32601, "message": '\
-                    '"%s is not a service function"}, "id": %i}' % (method_name, json_id)
+                err_func = lambda *args, **kwargs: {"error": {"code": -32601,
+                    "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
                 self.connection.alive = False
                 reader.feed_eof()
+
+        if isinstance(result, Dict) and 'error' in result:
+            try:
+                rpc_error = result['error']['code'], result['error']['message']
+            except KeyError:
+                rpc_error = -32603, 'Inconclusive error object: ' + str(result)
 
         if rpc_error is None:
             try:
