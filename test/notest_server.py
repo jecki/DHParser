@@ -47,7 +47,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import set_config_value
 from DHParser.server import Server, spawn_server, stop_server, asyncio_run, asyncio_connect, \
-    split_header, has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST, IDENTIFY_REQUEST, SERVER_OFFLINE
+    split_header, has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST, SERVER_OFFLINE
 
 TEST_PORT = 8000 + os.getpid() % 1000
 # adding pid % 100 hopefully prevents interference, if `test_server.py` is run in
@@ -120,6 +120,40 @@ class TestServer:
             if p is not None:
                 p.join()
 
+    def test_service_call(self):
+        async def identify_server():
+            main_reader, main_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            main_writer.write(IDENTIFY_REQUEST.encode())
+            data = await main_reader.read(500)
+            assert b'alread connected' not in data
+
+            service_reader, service_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            service_writer.write(IDENTIFY_REQUEST.encode())
+            data = await service_reader.read(500)
+            assert b'already connected' in data
+            await asyncio.sleep(0.01)
+            assert service_reader.at_eof()
+
+            service_reader, service_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            service_writer.write(json_rpc('identify', {}).encode())
+            data = await service_reader.read(500)
+            print(data)
+            assert b'already connected' in data
+            await asyncio.sleep(0.01)
+            assert service_reader.at_eof()
+
+            main_writer.close()
+            if sys.version_info >= (3, 7):  await main_writer.wait_closed()
+        p = None
+        try:
+            p = spawn_server('127.0.0.1', TEST_PORT)
+            asyncio_run(identify_server())
+        finally:
+            stop_server('127.0.0.1', TEST_PORT)
+            if p is not None:
+                p.join()
+
+
     def test_identify(self):
         """Test server's 'identify/'-command."""
         async def send_request(request):
@@ -156,19 +190,19 @@ class TestServer:
         try:
             # plain text stop request
             p = spawn_server('127.0.0.1', TEST_PORT, (compiler_dummy, set()))
-            asyncio_run(terminate_server(STOP_SERVER_REQUEST,
+            asyncio_run(terminate_server(STOP_SERVER_REQUEST_BYTES,
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
             # http stop request
             p = spawn_server('127.0.0.1', TEST_PORT, (compiler_dummy, set()))
-            asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST + b' HTTP',
+            asyncio_run(terminate_server(b'GET ' + STOP_SERVER_REQUEST_BYTES + b' HTTP',
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
 
             # json_rpc stop request
             p = spawn_server('127.0.0.1', TEST_PORT, (compiler_dummy, set()))
-            jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST.decode(),
+            jsonrpc = json.dumps({"jsonrpc": "2.0", "method": STOP_SERVER_REQUEST_BYTES.decode(),
                                   'id': 1})
             asyncio_run(terminate_server(jsonrpc.encode(),
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
@@ -185,7 +219,7 @@ class TestServer:
         if self.spawn:
             SLOW, FAST = 0.1, 0.01
         else:
-            SLOW, FAST = 0.01, 0.001
+            SLOW, FAST = 0.02, 0.001
 
         async def run_tasks():
             def extract_result(data: bytes):
@@ -198,7 +232,6 @@ class TestServer:
             writer.write(json_rpc('long_running', {'duration': SLOW}).encode())
             writer.write(json_rpc('long_running', {'duration': FAST}).encode())
             await writer.drain()
-            # TODO: add support for custom JSON-RPC-Package splitup to server.py
             sequence.append(extract_result(await reader.read(500)))
             sequence.append(extract_result(await reader.read(500)))
             writer.close()

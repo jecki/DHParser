@@ -27,7 +27,7 @@ import sys
 
 scriptpath = os.path.dirname(__file__)
 
-STOP_SERVER_REQUEST = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
+STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = "logging('')"
 
@@ -370,7 +370,7 @@ if __name__ == "__main__":
 
     elif argv[1] in ("--stopserver", "--killserver", "--stopdaemon", "--killdaemon"):
         try:
-            result = asyncio_run(send_request(STOP_SERVER_REQUEST, host, port))
+            result = asyncio_run(send_request(STOP_SERVER_REQUEST_BYTES, host, port))
         except ConnectionRefusedError as e:
             print(e)
             sys.exit(1)

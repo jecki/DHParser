@@ -42,7 +42,7 @@ For JSON see:
 """
 
 import asyncio
-from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import Future, Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 import json
@@ -72,7 +72,7 @@ __all__ = ('RPC_Table',
            'SERVER_TERMINATING',
            'USE_DEFAULT_HOST',
            'USE_DEFAULT_PORT',
-           'STOP_SERVER_REQUEST',
+           'STOP_SERVER_REQUEST_BYTES',
            'IDENTIFY_REQUEST',
            'LOGGING_REQUEST',
            'ALL_RPCs',
@@ -147,8 +147,8 @@ UNKNOWN_FUNC_HTML = ONELINER_HTML.format(
 USE_DEFAULT_HOST = ''
 USE_DEFAULT_PORT = -1
 
-STOP_SERVER_REQUEST = b"__STOP_SERVER__"
-STOP_SERVER_REQUEST_STR = STOP_SERVER_REQUEST.decode()
+STOP_SERVER_REQUEST = "__STOP_SERVER__"
+STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = "logging('')"
 
@@ -356,9 +356,11 @@ class Connection:
         self.lsp_initialized = ""        # type: str
         self.lsp_shutdown = ""           # type: str
 
-    def create_task(self, json_id: int, coroutine: Coroutine):
+    def create_task(self, json_id: int, coroutine: Coroutine) -> Future:
         assert json_id not in self.active_tasks
-        self.active_tasks[json_id] = asyncio.ensure_future(coroutine)
+        task = asyncio.ensure_future(coroutine)
+        self.active_tasks[json_id] = task
+        return task
 
     def task_done(self, json_id: int):
         assert json_id in self.active_tasks
@@ -382,7 +384,10 @@ class Connection:
 
     async def server_call(self, json_obj: JSON_Type):
         """Issues a json-rpc call from the server to the client."""
-        pass
+        request = json.dumps(json_obj).encode()
+        request = JSONRPC_HEADER.format(length=len(request)) + request
+        self.writer.write(request)
+        await self.writer.drain()
 
     async def client_response(self, call_id: int) -> JSON_Type:
         """Waits for and returns the response from the lsp-client to the call
@@ -422,7 +427,7 @@ class Connection:
         elif method == 'exit':
             self.lsp_shutdown = LSP_SHUTDOWN
             self.lsp_initialized = ''
-        elif strict and method != STOP_SERVER_REQUEST_STR:
+        elif strict and method != STOP_SERVER_REQUEST:
             if self.lsp_shutdown:
                 return -32600, 'language server already shut down'
             elif self.lsp_initialized != LSP_INITIALIZED:
@@ -491,7 +496,7 @@ class Server:
             func = cast(Callable, rpc_functions)
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
-        assert STOP_SERVER_REQUEST_STR not in self.rpc_table
+        assert STOP_SERVER_REQUEST not in self.rpc_table
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -531,9 +536,20 @@ class Server:
         if get_config_value('log_server'):
             self.start_logging()
 
+        self.register_service_rpc(IDENTIFY_REQUEST, self.rpc_identify_server)
+        self.register_service_rpc(LOGGING_REQUEST, self.rpc_logging)
+
         self.connection = None          # type: Optional[Connection]
         self.kill_switch = False        # type: bool
         self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
+
+    def register_service_rpc(self, name, method):
+        """Registers a service request """
+        name = name[:name.find('(')]
+        if name in self.rpc_table:
+            self.log('Service {} is shadowed by an rpc-call with the same name.'.format(name))
+        else:
+            self.rpc_table[name] = method
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
@@ -560,9 +576,12 @@ class Server:
         if self.log_file:
             append_log(self.log_file, *args, echo=self.echo_log)
 
-    def rpc_identify_server(self):
+    def rpc_identify_server(self, service_call: bool = False):
         """Returns an identification string for the server."""
-        return "DHParser " + __version__ + " " + self.server_name
+        if service_call:
+            return "DHParser " + __version__ + " " + self.server_name + " already connected"
+        else:
+            return "DHParser " + __version__ + " " + self.server_name
 
     def rpc_logging(self, *args) -> str:
         """Starts logging with either a) the default filename, if args is
@@ -670,20 +689,35 @@ class Server:
         # print('returned: ', response)
         try:
             writer.write(response)
-            # await writer.drain()
+            await writer.drain()
         except ConnectionError as err:
             self.log('ERROR when wrting data: ', str(err), '\n')
             self.connection.alive = False
 
+    def amend_service_call(self, func_name: str, func: Callable, argument: Union[Tuple, Dict],
+                           err_func: Callable)-> Tuple[Callable, Union[Tuple, Dict]]:
+        if argument is None:
+            argument = ()
+        if getattr(func, '__self__', None) == self:
+            if isinstance(argument, Dict):
+                params = argument.copy()
+                params.update({'service_call': True})
+                return func, params
+            else:
+                return func, argument + (True,)
+        else:
+            return err_func, {} if isinstance(argument, Dict) else ()
+
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
                                        writer: asyncio.StreamWriter,
-                                       data: BytesType):
-        """Processes a request in plain-data-format, i.e. neither http nor json_rpc"""
+                                       data: BytesType,
+                                       service_call: bool = False):
+        """Processes a request in plain-data-format, i.e. neither http nor json-rpc"""
         if len(data) > self.max_data_size:
             await self.respond(writer, "Data too large! Only %i MB allowed"
                                % (self.max_data_size // (1024 ** 2)))
-        elif data.startswith(STOP_SERVER_REQUEST):
+        elif data.startswith(STOP_SERVER_REQUEST_BYTES):
             await self.respond(writer, self.stop_response)
             self.kill_switch = True
             reader.feed_eof()
@@ -699,9 +733,12 @@ class Server:
             else:
                 func_name = self.default
                 argument = (data.decode(),)
+
             err_func = lambda *args, **kwargs: \
                 'No function named "%s" known to server %s !' % (func_name, self.server_name)
             func = self.rpc_table.get(func_name, err_func)
+            if service_call:
+                func, argument = self.amend_service_call(func_name, func, argument, err_func)
             result, rpc_error = await self.run(func_name, func, argument)
             if rpc_error is None:
                 if isinstance(result, str):
@@ -718,7 +755,8 @@ class Server:
     async def handle_http_request(self, task_id: int,
                                   reader: asyncio.StreamReader,
                                   writer: asyncio.StreamWriter,
-                                  data: BytesType):
+                                  data: BytesType,
+                                  service_call: bool = False):
         if len(data) > self.max_data_size:
             await self.respond(writer, http_response("Data too large! Only %i MB allowed"
                                                      % (self.max_data_size // (1024 ** 2))))
@@ -726,15 +764,17 @@ class Server:
             m = re.match(RE_GREP_URL, data)
             if m:
                 func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
-                if func_name.encode() == STOP_SERVER_REQUEST:
+                if func_name.encode() == STOP_SERVER_REQUEST_BYTES:
                     await self.respond(
                         writer, http_response(ONELINER_HTML.format(line=self.stop_response)))
                     self.kill_switch = True
                     reader.feed_eof()
                 else:
-                    func = self.rpc_table.get(func_name,
-                                              lambda _: UNKNOWN_FUNC_HTML.format(func=func_name))
-                    # result = func(argument) if argument is not None else func()
+                    err_func = lambda _: UNKNOWN_FUNC_HTML.format(func=func_name)
+                    func = self.rpc_table.get(func_name, err_func)
+                    if service_call:
+                        func, argument = self.amend_service_call(
+                            func_name, func, argument, err_func)
                     result, rpc_error = await self.run(func.__name__, func,
                                                        (argument,) if argument else ())
                     if rpc_error is None:
@@ -755,7 +795,8 @@ class Server:
     async def handle_jsonrpc_request(self, json_id: int,
                                      reader: asyncio.StreamReader,
                                      writer: asyncio.StreamWriter,
-                                     json_obj: Dict):
+                                     json_obj: Dict,
+                                     service_call: bool = False):
         # TODO: handle cancellation calls!
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
@@ -764,7 +805,7 @@ class Server:
                                 ' "%s" found.' % json_obj.get('jsonrpc', b'unknown')
         elif 'method' not in json_obj:
             rpc_error = -32600, 'Invalid Request: No method specified.'
-        elif json_obj['method'] == STOP_SERVER_REQUEST_STR:
+        elif json_obj['method'] == STOP_SERVER_REQUEST:
             result = self.stop_response
             self.kill_switch = True
             reader.feed_eof()
@@ -773,7 +814,12 @@ class Server:
         else:
             method_name = json_obj['method']
             method = self.rpc_table[method_name]
-            params = json_obj['params'] if 'params' in json_obj else ()
+            params = json_obj['params'] if 'params' in json_obj else {}
+            if service_call:
+                err_func = lambda *args, **kwargs: \
+                    '{"jsonrpc": "2.0", "error": {"code": -32601, "message": '\
+                    '"%s is not a service function"}, "id": %i}' % (method_name, json_id)
+                method, params = self.amend_service_call(method_name, method, params, err_func)
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
                 self.connection.alive = False
@@ -812,9 +858,8 @@ class Server:
             self.connection = Connection(reader, writer)
             id_connection = str(id(self.connection))
             self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')
-            primary_connection = True
         else:
-            primary_connection = False
+            id_connection = ''
 
         def connection_alive() -> bool:
             """-> `False` if connection is dead or shall be shut down."""
@@ -872,7 +917,7 @@ class Server:
                         data += await reader.read(self.max_data_size + 1)
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
-                        if primary_connection:
+                        if id_connection:
                             self.connection.alive = False
                         break
                 if content_length <= 0:
@@ -902,34 +947,30 @@ class Server:
             if self.log_file:   # avoid decoding if logging is off
                 self.log('RECEIVE: ', data.decode(), '\n')
 
-            if self.connection.alive and primary_connection:
-                if not data and self.connection.reader.at_eof():
-                    self.connection.alive = False
+            if id_connection:
+                if self.connection.alive:
+                    if not data and self.connection.reader.at_eof():
+                        self.connection.alive = False
+                        break
+                    # remove finished tasks from active_tasks list,
+                    # so that the task-objects can be garbage collected
+                    for task_id in self.connection.finished_tasks:
+                        del self.connection.active_tasks[task_id]
+                    self.connection.finished_tasks = set()
+                else:
                     break
-                # remove finished tasks from active_tasks list,
-                # so that the task-objects can be garbage collected
-                for task_id in self.connection.finished_tasks:
-                    del self.connection.active_tasks[task_id]
-                self.connection.finished_tasks = set()
-            else:
-                break
 
+            task = None
             if data.startswith(b'GET'):
                 # HTTP request
                 task_id = gen_task_id()
-                if primary_connection:
-                    self.connection.create_task(task_id, self.handle_http_request(
-                        task_id, reader, writer, data))
-                else:
-                    await self.handle_http_request(task_id, reader, writer, data)
+                task = self.connection.create_task(task_id, self.handle_http_request(
+                    task_id, reader, writer, data, service_call=not id_connection))
             elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
                 task_id = gen_task_id()
-                if primary_connection:
-                    self.connection.create_task(task_id, self.handle_plaindata_request(
-                        task_id, reader, writer, data))
-                else:
-                    await self.handle_plaindata_request(task_id, reader, writer, data)
+                task = self.connection.create_task(task_id, self.handle_plaindata_request(
+                    task_id, reader, writer, data, service_call=not id_connection))
             else:
                 # assume json
                 # TODO: add batch processing capability!
@@ -966,18 +1007,17 @@ class Server:
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None) or json_obj.get('error', None)
                     if method:
-                        if primary_connection:
-                            rpc_error = self.connection.verify_initialization(method, self.strict_lsp)
+                        if id_connection or method != 'initialize':
+                            rpc_error = self.connection.verify_initialization(
+                                method, self.strict_lsp and id_connection)
                             if rpc_error is None:
-                                self.connection.create_task(json_id, self.handle_jsonrpc_request(
-                                    json_id, reader, writer, json_obj))
+                                task = self.connection.create_task(
+                                    json_id, self.handle_jsonrpc_request(
+                                        json_id, reader, writer, json_obj, not id_connection))
                         else:
-                            if method == 'initialize':
-                                rpc_error = -32002, 'server is already connected to another client'
-                            else:
-                                await self.handle_jsonrpc_request(json_id, reader, writer, json_obj)
+                            rpc_error = -32002, 'server is already connected to another client'
                     elif response is not None:
-                        if primary_connection:
+                        if id_connection:
                             self.connection.put_response(json_obj)
                     else:
                         rpc_error = -32700, 'Parse error: Not a valid JSON-RPC! '\
@@ -988,20 +1028,28 @@ class Server:
                         ' "id": %s}' % (rpc_error[0], rpc_error[1], json_id)
                     await self.respond(writer, response)
 
-            if not primary_connection:
+            if not id_connection:
+                if task:
+                    await task
                 # for secondary connections only one request is allowed before terminating
-                # the connection
+                try:
+                    writer.write_eof()
+                    await writer.drain()
+                    writer.close()
+                    # await writer.wait_closed()
+                except (ConnectionError, OSError) as err:
+                    self.log('ERROR during shutdown of service connection: ', str(err), '\n')
+                self.log('SERVER MESSAGE: Closing service-connection.')
                 return
 
         if self.kill_switch or not self.connection.alive:
-            # TODO: terminate all active tasks depending on this particular connection
             try:
                 writer.write_eof()
                 await writer.drain()
                 writer.close()
             except (ConnectionError, OSError) as err:
                 self.log('ERROR while shutdown: ', str(err), '\n')
-            self.log('SERVER MESSAGE: Closing Connection: {}.\n\n'.format(id_connection))
+            self.log('SERVER MESSAGE: Closing connection: {}.\n\n'.format(id_connection))
             await self.connection.cleanup()
             self.connection = None
 
@@ -1016,7 +1064,7 @@ class Server:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
-            self.log('SERVER MESSAGE: Stopping Server: %i.\n\n'.format(id_connection))
+            self.log('SERVER MESSAGE: Stopping server: %i.\n\n'.format(id_connection))
             self.kill_switch = False  # reset flag
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
@@ -1253,7 +1301,7 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
     async def send_stop_server(host: str, port: int) -> Optional[Exception]:
         try:
             reader, writer = await asyncio.open_connection(host, port)
-            writer.write(STOP_SERVER_REQUEST)
+            writer.write(STOP_SERVER_REQUEST_BYTES)
             await writer.drain()
             _ = await reader.read(1024)
             writer.write_eof()
