@@ -143,7 +143,7 @@ class EBNFLanguageServerProtocol:
                     }
             }
         }
-        self.server = None
+        self.connection = None
         self.cpu_bound = EBNFCPUBoundTasks(self.lsp_data)
         self.blocking = EBNFBlockingTasks(self.lsp_data)
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
@@ -153,8 +153,8 @@ class EBNFLanguageServerProtocol:
         assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
         self.lsp_fulltable.update(self.blocking.lsp_table)
 
-    def register_server(self, server):
-        self.server = server
+    def connect(self, connection):
+        self.connection = connection
 
     def lsp_initialize(self, **kwargs):
         self.lsp_data['processId'] = kwargs['processId']
@@ -204,9 +204,11 @@ def run_server(host, port, log_path=None):
     lsp_table = EBNF_lsp.lsp_fulltable.copy()
     lsp_table.setdefault('default', compile_src)
     EBNF_server = Server(rpc_functions=lsp_table,
-                        cpu_bound=EBNF_lsp.cpu_bound.lsp_table.keys(),
-                        blocking=EBNF_lsp.blocking.lsp_table.keys())
-    EBNF_lsp.register_server(EBNF_server)
+                         cpu_bound=set(EBNF_lsp.cpu_bound.lsp_table.keys()),
+                         blocking=set(EBNF_lsp.blocking.lsp_table.keys()),
+                         connection_callback=EBNF_lsp.connect,
+                         server_name='EBNFServer',
+                         strict_lsp=True)
     if log_path is not None:
         EBNF_server.echo_log = True
         print(EBNF_server.start_logging(log_path.strip('" \'')))

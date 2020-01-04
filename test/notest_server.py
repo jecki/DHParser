@@ -137,7 +137,6 @@ class TestServer:
             service_reader, service_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             service_writer.write(json_rpc('identify', {}).encode())
             data = await service_reader.read(500)
-            print(data)
             assert b'already connected' in data
             await asyncio.sleep(0.01)
             assert service_reader.at_eof()
@@ -242,7 +241,7 @@ class TestServer:
             try:
                 p = spawn_server('127.0.0.1', TEST_PORT,
                                  (long_running, frozenset(['long_running']), frozenset(),
-                                  'Long-Running-Test', False))
+                                  lambda cn: None, 'Long-Running-Test', False))
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -254,7 +253,7 @@ class TestServer:
             try:
                 p = spawn_server('127.0.0.1', TEST_PORT,
                                  (long_running, frozenset(), frozenset(['long_running']),
-                                  'Long-Running-Test', False))
+                                  lambda cn: None, 'Long-Running-Test', False))
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -266,7 +265,7 @@ class TestServer:
         try:
             p = spawn_server('127.0.0.1', TEST_PORT,
                              (long_running, frozenset(), frozenset(),
-                              'Long-Running-Test', False))
+                              lambda cn: None, 'Long-Running-Test', False))
             asyncio_run(run_tasks())
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
@@ -427,14 +426,16 @@ class TestLanguageServer:
                 'rootUri': 'file://~/tmp', 'capabilities': {}}).encode())
             fail = await r2.read(8192)
             assert b'error' in fail and b'already connected' in fail
-            w2.write_eof();  w2.close();  await w2.wait_closed()
+            w2.write_eof();  w2.close()
+            if sys.version_info >= (3, 7):  await w2.wait_closed()
 
             r2, w2 = await asyncio_connect('127.0.0.1', TEST_PORT)
             w2.write(json_rpc('custom', {}).encode())
             fail = await r2.read(8192)
             assert b'result' not in fail
             assert b'not a service function' in fail
-            w2.write_eof();  w2.close();  await w2.wait_closed()
+            w2.write_eof();  w2.close()
+            if sys.version_info >= (3, 7):  await w2.wait_closed()
 
             response = await send(json_rpc('custom', {}))
             assert response.find('error') >= 0

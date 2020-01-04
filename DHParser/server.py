@@ -93,6 +93,7 @@ RPC_Type = Union[RPC_Table, List[Callable], Callable]
 RPC_Error_Type = Optional[Tuple[int, str]]
 JSON_Type = Union[Dict, Sequence, str, int, None]
 BytesType = Union[bytes, bytearray]
+ConnectionCallback = Callable[['Connection'], None]
 
 RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'
 # b'\s*(?:{|\[|"|\d|true|false|null)'
@@ -380,6 +381,9 @@ class Connection:
         self.finished_tasks = set()
 
     def put_response(self, json_obj: JSON_Type):
+        """Adds a client-response to the waiting queue. The responses
+        to a particual task can be queried with the `client_response()`-
+        coroutine."""
         self.response_queue.put_nowait(json_obj)
 
     async def server_call(self, json_obj: JSON_Type):
@@ -447,6 +451,9 @@ class Server:
                 will be run in separate processes
         blocking:   Set of functions that contain blocking calls (e.g. IO-calls)
                 and will therefore be run in separate threads.
+        connection_callback:  A callback function that is called with the
+                connection object as argument when a connection to a client
+                is established
         max_data_size:  Maximal size of a data chunk that can be read by the
                 server at a time.
         stage:  The operation stage, the server is in. Can be on of the four values:
@@ -475,6 +482,7 @@ class Server:
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
                  blocking: Set[str] = set(),
+                 connection_callback: ConnectionCallback = lambda cn: None,
                  server_name: str = '',
                  strict_lsp: bool = True):
         self.server_name = server_name or '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
@@ -506,12 +514,7 @@ class Server:
         assert not (self.cpu_bound - self.rpc_table.keys())
         assert not (self.blocking - self.rpc_table.keys())
 
-        identify_name = IDENTIFY_REQUEST[:IDENTIFY_REQUEST.find('(')]
-        if identify_name not in self.rpc_table:
-            self.rpc_table[identify_name] = self.rpc_identify_server
-        logging_name = LOGGING_REQUEST[:LOGGING_REQUEST.find('(')]
-        if logging_name not in self.rpc_table:
-            self.rpc_table[logging_name] = self.rpc_logging
+        self.connection_callback = connection_callback
 
         self.max_data_size = get_config_value('max_rpc_size')  # type: int
         # self.server_messages = Queue()  # type: Queue
@@ -679,7 +682,7 @@ class Server:
         if isinstance(response, str):
             response = response.encode()
         elif not isinstance(response, bytes):
-            response = ('Illegal response type %s of reponse object %s. '
+            response = ('Illegal response type %s of response object %s. '
                         'Only bytes and str allowed!'
                         % (str(type(response)), str(response))).encode()
         if self.use_jsonrpc_header and response.startswith(b'{'):
@@ -691,7 +694,7 @@ class Server:
             writer.write(response)
             await writer.drain()
         except ConnectionError as err:
-            self.log('ERROR when wrting data: ', str(err), '\n')
+            self.log('ERROR when writing data: ', str(err), '\n')
             self.connection.alive = False
 
     def amend_service_call(self, func_name: str, func: Callable, argument: Union[Tuple, Dict],
@@ -995,7 +998,8 @@ class Server:
 
                 if rpc_error is None:
                     try:
-                        raw = json.loads(data)
+                        raw = json.loads(data) if sys.version_info >= (3, 6) \
+                            else json.loads(data.decode())
                     except json.decoder.JSONDecodeError as e:
                         rpc_error = -32700, "JSONDecodeError: " \
                             + (str(e) + str(data)).replace('"', "`")
@@ -1041,7 +1045,7 @@ class Server:
                     writer.write_eof()
                     await writer.drain()
                     writer.close()
-                    # await writer.wait_closed()
+                    # if sys.version_info >= (3, 7):  await writer.wait_closed()
                 except (ConnectionError, OSError) as err:
                     self.log('ERROR during shutdown of service connection: ', str(err), '\n')
                 self.log('SERVER MESSAGE: Closing service-connection.')
@@ -1172,10 +1176,11 @@ class Server:
 def run_server(host, port, rpc_functions: RPC_Type,
                cpu_bound: Set[str] = ALL_RPCs,
                blocking: Set[str] = set(),
+               cn_callback = lambda cn: None,
                name: str = '',
                strict_lsp: bool = True):
     """Start a server and wait until server is closed."""
-    server = Server(rpc_functions, cpu_bound, blocking, name, strict_lsp)
+    server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
     server.run_server(host, port)
 
 

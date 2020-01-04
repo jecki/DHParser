@@ -139,7 +139,7 @@ class DSLLanguageServerProtocol:
             'serverInfo': { "name": "DSL-Server", "version": "0.1" },
             'serverCapabilities': {}
         }
-        self.server = None
+        self.connection = None
         self.cpu_bound = DSLCPUBoundTasks(self.lsp_data)
         self.blocking = DSLBlockingTasks(self.lsp_data)
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
@@ -149,8 +149,8 @@ class DSLLanguageServerProtocol:
         assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
         self.lsp_fulltable.update(self.blocking.lsp_table)
 
-    def register_server(self, server):
-        self.server = server
+    def connect(self, connection):
+        self.connection = connection
 
     def lsp_initialize(self, **kwargs):
         import json
@@ -207,8 +207,10 @@ def run_server(host, port, log_path=None):
     lsp_table.setdefault('default', compile_src)
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=DSL_lsp.cpu_bound.lsp_table.keys(),
-                        blocking=DSL_lsp.blocking.lsp_table.keys())
-    DSL_lsp.register_server(DSL_server)
+                        blocking=DSL_lsp.blocking.lsp_table.keys(),
+                        connection_callback=DSL_lsp.connect,
+                        server_name="DSLServer",
+                        strict_lsp=True)
     if log_path is not None:
         DSL_server.echo_log = True
         print(DSL_server.start_logging(log_path))
