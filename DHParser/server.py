@@ -280,11 +280,133 @@ def gen_task_id() -> int:
     return value
 
 
+
+class Connection:
+    """Class Connections encapsulates connection-specific data for the Server
+    class (see below). At the moment, however, only one connection is accepted at
+    one and the same time, assuming there is a one-on-one relationship between
+    the Text-Editor (i.e. the client) and the language server. Still, it serves
+    clarity to encapsulate the connection specific state.
+
+    Currently, logging is not encapsulated, assuming that for the purpose of
+    debugging the language server it is better not to have more than one
+    connection at a time, anyway.
+
+    Attributes:
+        alive: Boolean flag, indicating that the connection is still alive.
+                When set to false the connection will be closed, but the
+                server will not be stopped.
+        reader: the stream-reader for this connection
+        writer: the stream-writer for this connection
+        active_tasks: A dictionary that maps task id's (resp. jsonrpc id's)
+                to their futures to keep track of  any running task.
+        finished_tasks: a set of task id's (resp. jsonrpc id's) for tasks
+                that have been finished and should be removed from the
+                `active_tasks`-dictionary at the next possible time.
+        response_queue:  An asynchronous queue which stores the json-rpc responses
+                and errors received from a language server client as result of
+                commands initiated by the server.
+        pending_responses:  A dictionary of jsonrpc-/task-id's to lists of
+                JSON-objects that have been fetched from the the response queue
+                but not yet been collected by the calling task.
+        lsp_initialized: A string-flag indicating that the connection to a language
+                sever via json-rpc has been established.
+        lsp_shutdown: A string-flag indicating that the connection to a language server
+                via jason-rpc has been is or is being shutdown.
+    """
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        self.alive = True                # type: bool
+        self.reader = reader             # type: asyncio.StreamReader
+        self.writer = writer             # type: asyncio.StreamWriter
+        self.active_tasks = dict()       # type: Dict[int, asyncio.Future]
+        self.finished_tasks = set()      # type: Set[int]
+        self.response_queue = None       # type: Optional[asyncio.Queue]
+        self.pending_responses = dict()  # type: Dict[int, List[JSON_Type]]
+        self.lsp_initialized = ""        # type: str
+        self.lsp_shutdown = ""           # type: str
+
+    def create_task(self, json_id: int, coroutine: Coroutine):
+        assert json_id not in self.active_tasks
+        self.active_tasks[json_id] = asyncio.ensure_future(coroutine)
+
+    def task_done(self, json_id: int):
+        assert json_id in self.active_tasks
+        self.finished_tasks.add(json_id)
+
+    async def cleanup(self):
+        open_tasks = {task for id, task in self.active_tasks.items()
+                      if id not in self.finished_tasks}
+        if open_tasks:
+            _, pending = await asyncio.wait(
+                open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
+            for task in pending:
+                task.cancel()
+            # wait for task's cancellation to actually finish
+            await asyncio.gather(*pending, return_exceptions=True)
+        self.active_tasks = dict()
+        self.finished_tasks = set()
+
+    def put_response(self, json_obj: JSON_Type):
+        self.response_queue.put_nowait(json_obj)
+
+    async def server_call(self, json_obj: JSON_Type):
+        """Issues a json-rpc call from the server to the client."""
+        pass
+
+    async def client_response(self, call_id: int) -> JSON_Type:
+        """Waits for and returns the response from the lsp-client to the call
+        with the id `call_id`."""
+        pending = self.pending_responses.get(call_id, [])
+        while not pending:
+            response = await self.response_queue.get()
+            self.pending_responses.setdefault(call_id, []).insert(0, response)
+            pending = self.pending_responses.get(call_id, [])
+        response = pending.pop()
+        return response
+
+    def verify_initialization(self, method: str, strict: bool = True) -> RPC_Error_Type:
+        """Implements the LSP-initialization logic and returns an rpc-error if
+        either initialization went wrong or an rpc-method other than 'initialize'
+        was called on an uninitialized languge server.
+        """
+        if method == 'initialize':
+            if self.lsp_initialized:
+                return -32002, 'language server already initializ(ed/ing)'
+            elif self.lsp_shutdown == LSP_SHUTTING_DOWN:
+                return -32002, 'cannot initialize language server while shutting down'
+            else:
+                self.lsp_initialized = LSP_INITIALIZING
+                self.lsp_shutdown = ''
+                self.response_queue = asyncio.Queue(maxsize=100)
+        elif method == "initialized":
+            if self.lsp_initialized == LSP_INITIALIZING:
+                self.lsp_initialized = LSP_INITIALIZED
+            else:
+                return -32002, 'initialized notification while ' \
+                               'language server was not in initializing state!'
+        elif method == 'shutdown':
+            self.lsp_shutdown = LSP_SHUTTING_DOWN
+            self.lsp_initialized = ''
+            self.response_queue = None  # drop potentially non empty queue
+        elif method == 'exit':
+            self.lsp_shutdown = LSP_SHUTDOWN
+            self.lsp_initialized = ''
+        elif strict and method != STOP_SERVER_REQUEST_STR:
+            if self.lsp_shutdown:
+                return -32600, 'language server already shut down'
+            elif self.lsp_initialized != LSP_INITIALIZED:
+                return -32002, 'language server not initialized'
+        return None
+
+
 class Server:
     """
 
     Attributes:
         server_name: A name for the server. Defaults to 'CLASSNAME_OBJECTID'
+        strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls. If
+                `False` json-rpc calls will be processes even without prior
+                initialization, just like plain data or http calls.
         cpu_bound:  Set of function names of functions that are cpu-bound and
                 will be run in separate processes
         blocking:   Set of functions that contain blocking calls (e.g. IO-calls)
@@ -307,33 +429,20 @@ class Server:
                 calls or responses will always be preceeded by a simple header of
                 the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
                 the byte-size of the rpc-package.
-        active_tasks: A dictionary that maps the connection's id (i.e. the id of
-                its stream writer) to a mapping of task id's (resp. jsonrpc id's)
-                to their tasks to keep track of  any running task.
-        finished_tasks: A dictionary that maps the connection's id (i.e. the id
-                of its stream writer) to a set of task id's (resp. jsonrpc id's)
-        connections:  A set of connection id's (i.e. id's of stream writer
-                objects) that are currently active. If an id is removed from
-                this set, the connection will be closed as soon as possible.
+        connection: An instance of the connection class representing the data of the
+                current connection or None, if there is no connection at the moment.
+                Note: There can be only one connection to the server at a time!
         kill_switch:  If True the, the server will be shut down.
-        response_queue:  An asynchronuous queue which stores the json-rpc responses
-                and errors received from a language server client as result of
-                commands initiated by the server.
         loop:   The asyncio event loop within which the asyncio stream server is
                 run.
-
-        Language server protocol fields:
-
-        lsp_initialized: A string-flag indicating that the connection to a language
-                sever via json-rpc has been established.
-        lsp_shutdown: A string-flag indicating that the connection to a language server
-                via jason-rpc has been is or is being shutdown.
     """
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
                  blocking: Set[str] = set(),
-                 server_name: str = ''):
+                 server_name: str = '',
+                 strict_lsp: bool = True):
         self.server_name = server_name or '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
+        self.strict_lsp = strict_lsp
         if isinstance(rpc_functions, Dict):
             self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
             if 'default' not in self.rpc_table:
@@ -391,17 +500,9 @@ class Server:
         if get_config_value('log_server'):
             self.start_logging()
 
-        self.active_tasks = dict()      # type: Dict[int, Dict[int, asyncio.Future]]
-        self.finished_tasks = dict()    # type: Dict[int, Set[int]]
-        self.connections = set()        # type: Set
+        self.connection = None          # type: Optional[Connection]
         self.kill_switch = False        # type: bool
-        self.response_queue = None      # type: Optional[asyncio.Queue]
-        self.pending_responses = dict()  # type: Dict[int, List[JSON_Type]]
         self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
-
-        self.lsp_initialized = ""       # type: str
-        self.lsp_shutdown = ""          # type: str
-
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
@@ -537,25 +638,10 @@ class Server:
         # print('returned: ', response)
         try:
             writer.write(response)
-            await writer.drain()
+            # await writer.drain()
         except ConnectionError as err:
             self.log('ERROR when wrting data: ', str(err), '\n')
-            self.connections.remove(id(writer))
-
-    async def server_call(self, json_obj: JSON_Type):
-        """Issues a json-rpc call from the server to the client."""
-        pass
-
-    async def client_response(self, call_id: int) -> JSON_Type:
-        """Waits for and returns the response from the lsp-client to the call
-        with the id `call_id`."""
-        pending = self.pending_responses.get(call_id, [])
-        while not pending:
-            response = await self.response_queue.get()
-            self.pending_responses.setdefault(call_id, []).insert(0, response)
-            pending = self.pending_responses.get(call_id, [])
-        response = pending.pop()
-        return response
+            self.connection.alive = False
 
     async def handle_plaindata_request(self, task_id: int,
                                        reader: asyncio.StreamReader,
@@ -595,7 +681,7 @@ class Server:
                         await self.respond(writer, str(err))
             else:
                 await self.respond(writer, rpc_error[1])
-        self.finished_tasks[id(writer)].add(task_id)
+        self.connection.task_done(task_id)
 
     async def handle_http_request(self, task_id: int,
                                   reader: asyncio.StreamReader,
@@ -632,7 +718,7 @@ class Server:
                                 await self.respond(writer, http_response(str(err)))
                     else:
                         await self.respond(writer, http_response(rpc_error[1]))
-        self.finished_tasks[id(writer)].add(task_id)
+        self.connection.task_done(task_id)
 
     async def handle_jsonrpc_request(self, json_id: int,
                                      reader: asyncio.StreamReader,
@@ -658,7 +744,7 @@ class Server:
             params = json_obj['params'] if 'params' in json_obj else ()
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
-                self.connections.remove(id(writer))
+                self.connection.alive = False
                 reader.feed_eof()
 
         if rpc_error is None:
@@ -687,50 +773,29 @@ class Server:
 
         if result is not None or rpc_error is not None:
             await writer.drain()
-        self.finished_tasks[id(writer)].add(json_id)
+        self.connection.task_done(json_id)
 
-    def lsp_verify_initialization(self, method: str) -> RPC_Error_Type:
-        """Implements the lsp-initialization logic and returns an rpc-error if
-        either initialization went wrong or an rpc-method other than 'initialize'
-        was called on an uninitialized languge server.
-        """
-        if method == 'initialize':
-            if self.lsp_initialized:
-                return -32002, 'language server already initializ(ed/ing)'
-            elif self.lsp_shutdown == LSP_SHUTTING_DOWN:
-                return -32002, 'cannot initialize language server while shutting down'
+    async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        if self.connection is not None:
+            _data = await reader.read(len(STOP_SERVER_REQUEST))  # type: bytes
+            writer.write_eof()
+            await writer.drain()
+            writer.close()
+            # t = writer.transport()
+            # print(t, t.is_closing())
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            if _data.startswith(STOP_SERVER_REQUEST):
+                # stop existing connection and kill server
+                reader, writer = self.connection.reader, self.connection.writer
+                self.kill_switch = True
             else:
-                self.lsp_initialized = LSP_INITIALIZING
-                self.lsp_shutdown = ''
-                self.response_queue = asyncio.Queue(maxsize=100)
-        elif method == "initialized":
-            if self.lsp_initialized == LSP_INITIALIZING:
-                self.lsp_initialized = LSP_INITIALIZED
-            else:
-                return -32002, 'initialized notification while ' \
-                               'language server was not in initializing state!'
-        elif method == 'shutdown':
-            self.lsp_shutdown = LSP_SHUTTING_DOWN
-            self.lsp_initialized = ''
-            self.response_queue = None  # drop potentially non empty queue
-        elif method == 'exit':
-            self.lsp_shutdown = LSP_SHUTDOWN
-            self.lsp_initialized = ''
-        elif method != STOP_SERVER_REQUEST_STR:
-            if self.lsp_shutdown:
-                return -32600, 'language server already shut down'
-            elif self.lsp_initialized != LSP_INITIALIZED:
-                return -32002, 'language server not initialized'
-        return None
-
-    async def connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        id_writer = id(writer)  # type: int
-        self.connections.add(id_writer)
-        self.log('SERVER MESSAGE: New connection: ', str(id_writer), '\n')
-        self.active_tasks[id_writer] = dict()
-        self.finished_tasks[id_writer] = set()
-        buffer = b''  # type: bytes
-        while not self.kill_switch and id_writer in self.connections:
+                return  # return, but keep existing connection alive
+        else:
+            self.connection = Connection(reader, writer)
+            id_connection = str(id(self.connection))
+            self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')
+            buffer = b''  # type: bytes
+        while not self.kill_switch and self.connection.alive:
             # reset the data variable
             data = b''  # type: bytes
             # reset the content length
@@ -771,8 +836,7 @@ class Server:
             # see also: test/test_server.TestLanguageServer.test_varying_data_chunk_sizes
 
             while (content_length <= 0 or len(data) < content_length + k) \
-                    and not self.kill_switch and id_writer in self.connections \
-                    and not reader.at_eof():
+                    and self.connection.alive and not self.kill_switch and not reader.at_eof():
                 if buffer:
                     # if there is any data in the buffer, retrieve this first,
                     # before awaiting further data from the stream
@@ -783,7 +847,7 @@ class Server:
                         data += await reader.read(self.max_data_size + 1)
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
-                        self.connections.remove(id_writer)
+                        self.connection.alive = False
                         break
                 if content_length <= 0:
                     # If content-length has not been set, look for it in the
@@ -815,34 +879,28 @@ class Server:
 
             self.log('RECEIVE: ', data.decode(), '\n')
 
-            # remove finished tasks from active_tasks list,
-            # so that the task-objects can be garbage collected
-            for task_id in self.finished_tasks[id_writer]:
-                del self.active_tasks[id_writer][task_id]
-            self.finished_tasks[id_writer] = set()
-
-            if id_writer not in self.connections:
-                break
-            elif not data and reader.at_eof():
-                self.connections.remove(id_writer)
+            if self.connection.alive:
+                if not data and reader.at_eof():
+                    self.connection.alive = False
+                    break
+                # remove finished tasks from active_tasks list,
+                # so that the task-objects can be garbage collected
+                for task_id in self.connection.finished_tasks:
+                    del self.connection.active_tasks[task_id]
+                self.connection.finished_tasks = set()
+            else:
                 break
 
             if data.startswith(b'GET'):
                 # HTTP request
                 task_id = gen_task_id()
-                task = asyncio.ensure_future(self.handle_http_request(
+                self.connection.create_task(task_id, self.handle_http_request(
                     task_id, reader, writer, data))
-                assert task_id not in self.active_tasks, str(task_id)
-                self.active_tasks[id_writer][task_id] = task
-
             elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
                 task_id = gen_task_id()
-                task = asyncio.ensure_future(self.handle_plaindata_request(
+                self.connection.create_task(task_id, self.handle_plaindata_request(
                     task_id, reader, writer, data))
-                assert task_id not in self.active_tasks, str(task_id)
-                self.active_tasks[id_writer][task_id] = task
-
             else:
                 # assume json
                 # TODO: add batch processing capability!
@@ -879,14 +937,12 @@ class Server:
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None) or json_obj.get('error', None)
                     if method:
-                        rpc_error = self.lsp_verify_initialization(method)
+                        rpc_error = self.connection.verify_initialization(method, self.strict_lsp)
                         if rpc_error is None:
-                            task = asyncio.ensure_future(self.handle_jsonrpc_request(
+                            self.connection.create_task(json_id, self.handle_jsonrpc_request(
                                 json_id, reader, writer, json_obj))
-                            assert json_id not in self.active_tasks, str(json_id)
-                            self.active_tasks[id_writer][json_id] = task
                     elif response is not None:
-                        self.response_queue.put_nowait(json_obj)
+                        self.connection.put_response(json_obj)
                     else:
                         rpc_error = -32700, 'Parse error: Not a valid JSON-RPC! '\
                                             '"method" or "response"-field missing.'
@@ -896,7 +952,7 @@ class Server:
                         ' "id": %s}' % (rpc_error[0], rpc_error[1], json_id)
                     await self.respond(writer, response)
 
-        if self.kill_switch or id_writer not in self.connections:
+        if self.kill_switch or not self.connection.alive:
             # TODO: terminate all active tasks depending on this particular connection
             try:
                 writer.write_eof()
@@ -904,23 +960,13 @@ class Server:
                 writer.close()
             except (ConnectionError, OSError) as err:
                 self.log('ERROR while shutdown: ', str(err), '\n')
-            self.log('SERVER MESSAGE: Closing Connection: %i.\n\n' % id_writer)
-            open_tasks = {task for id, task in self.active_tasks[id_writer].items()
-                          if id not in self.finished_tasks[id_writer]}
-            if open_tasks:
-                _, pending = await asyncio.wait(
-                    open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
-                for task in pending:
-                    task.cancel()
-                # wait for task's cancellation to actually finish
-                await asyncio.gather(*pending, return_exceptions=True)
-            del self.active_tasks[id_writer]
-            del self.finished_tasks[id_writer]
+            self.log('SERVER MESSAGE: Closing Connection: {}.\n\n'.format(id_connection))
+            await self.connection.cleanup()
+            self.connection = None
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed?
             # TODO: terminate all connections
-            self.connections = set()
             self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
@@ -929,7 +975,7 @@ class Server:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
-            self.log('SERVER MESSAGE: Stopping Server: %i.\n\n' % id_writer)
+            self.log('SERVER MESSAGE: Stopping Server: %i.\n\n'.format(id_connection))
             self.kill_switch = False  # reset flag
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
@@ -947,7 +993,7 @@ class Server:
             self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
             self.server = cast(asyncio.AbstractServer,
-                               await asyncio.start_server(self.connection, host, port))
+                               await asyncio.start_server(self.handle, host, port))
             async with self.server:
                 self.stage.value = SERVER_ONLINE
                 # self.server_messages.put(SERVER_ONLINE)
@@ -983,7 +1029,7 @@ class Server:
             self.server = cast(
                 asyncio.base_events.Server,
                 self.loop.run_until_complete(
-                    asyncio.start_server(self.connection, host, port, loop=self.loop)))
+                    asyncio.start_server(self.handle, host, port, loop=self.loop)))
             try:
                 self.stage.value = SERVER_ONLINE
                 # self.server_messages.put(SERVER_ONLINE)
@@ -1031,9 +1077,11 @@ class Server:
 
 def run_server(host, port, rpc_functions: RPC_Type,
                cpu_bound: Set[str] = ALL_RPCs,
-               blocking: Set[str] = set()):
+               blocking: Set[str] = set(),
+               name: str = '',
+               strict_lsp: bool = True):
     """Start a server and wait until server is closed."""
-    server = Server(rpc_functions, cpu_bound, blocking)
+    server = Server(rpc_functions, cpu_bound, blocking, name, strict_lsp)
     server.run_server(host, port)
 
 

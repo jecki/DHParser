@@ -41,6 +41,7 @@ if __name__ == "__main__" and sys.platform.lower().startswith('win'):
     multiprocessing.set_start_method('spawn')   # 'spawn' (windows and linux)
                                                 # or 'fork' or 'forkserver' (linux only)
 
+
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
@@ -57,7 +58,7 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
     return src
 
 
-def long_running(duration: str) -> str:
+def long_running(duration: float) -> str:
     time.sleep(float(duration))
     return(duration)
 
@@ -84,7 +85,7 @@ jrpc_id = 0
 def json_rpc(method: str, params: dict) -> str:
     global jrpc_id
     jrpc_id += 1
-    s = json.dumps({'jsonrpc': '2.0', 'id':jrpc_id, 'method':method, 'params': params})
+    s = json.dumps({'jsonrpc': '2.0', 'id': jrpc_id, 'method': method, 'params': params})
     return 'Content-Length: %i\n\n' % len(s) + s
 
 
@@ -182,27 +183,31 @@ class TestServer:
         processes or threads works."""
         sequence = []
         if self.spawn:
-            SLOW, FAST = '0.1', '0.01'
+            SLOW, FAST = 0.1, 0.01
         else:
-            SLOW, FAST = '0.01', '0.001'
-
-        async def call_remote(argument):
-            sequence.append(argument)
-            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
-            writer.write(argument.encode())
-            sequence.append((await reader.read(500)).decode())
-            writer.close()
-            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            SLOW, FAST = 0.01, 0.001
 
         async def run_tasks():
-            await asyncio.gather(call_remote(SLOW),
-                                 call_remote(FAST))
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
+            sequence.append(SLOW)
+            sequence.append(FAST)
+            writer.write(json_rpc('long_running', {'duration': SLOW}).encode())
+            await writer.drain()
+            writer.write(json_rpc('long_running', {'duration': FAST}).encode())
+            await writer.drain()
+            # TODO: add support for custom JSON-RPC-Package splitup to server.py
+            sequence.append((await reader.read(500)).decode())
+            sequence.append((await reader.read(500)).decode())
+            print(sequence)
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
 
         if sys.version_info >= (3, 6):
             p = None
             try:
                 p = spawn_server('127.0.0.1', TEST_PORT,
-                                 (long_running, frozenset(['long_running']), frozenset()))
+                                 (long_running, frozenset(['long_running']), frozenset(),
+                                  'Long-Running-Test', False))
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
@@ -362,50 +367,61 @@ class TestLanguageServer:
 
     def test_initialize(self):
         self.start_server()
-        response = send_request(json_rpc('initialize',
-                                         {'processId': 701,
-                                          'rootUri': 'file://~/tmp',
-                                          'capabilities': {}}))
-        i = response.find('{') - 1
-        res = json.loads(response[i:])
-        assert 'result' in res and 'capabilities' in res['result'], str(res)
 
-        response = send_request(json_rpc('custom', {}))
-        assert response.find('error') >= 0
+        async def sequence_test():
+            reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
 
-        response = send_request(json_rpc('initialized', {}), expect_response=False)
-        assert response == '', response
+            async def send(request: str, expect_response: bool = True) -> str:
+                writer.write(request.encode())
+                if expect_response:
+                    return (await reader.read(8192)).decode()
+                return ''
+            response = await send(json_rpc('initialize',
+                                             {'processId': 701,
+                                              'rootUri': 'file://~/tmp',
+                                              'capabilities': {}}))
+            i = response.find('{') - 1
+            res = json.loads(response[i:])
+            assert 'result' in res and 'capabilities' in res['result'], str(res)
 
-        response = send_request(json_rpc('custom', {'test': 1}))
-        assert response.find('test') >= 0
+            response = await send(json_rpc('custom', {}))
+            assert response.find('error') >= 0
 
-        response = send_request(json_rpc('check', {}))
-        assert response.find('701') >= 0
+            response = await send(json_rpc('initialized', {}), expect_response=False)
+            assert response == '', response
 
-        response = send_request(json_rpc('non_existant_function', {}))
-        assert response.find('-32601') >= 0  # method not found
-        response = send_request(json_rpc('non_existant_function', {'a': 1, 'b': 2, 'c': 3}))
-        assert response.find('-32601') >= 0  # method not found
+            response = await send(json_rpc('custom', {'test': 1}))
+            assert response.find('test') >= 0, str(response)
 
-        # test plain-data call
-        response = send_request('custom(1)')
-        assert response.find('1') >= 0
+            response = await send(json_rpc('check', {}))
+            assert response.find('701') >= 0
 
-        # test plain-data false call
-        response = send_request('non_existant_function()')
-        assert response.find('No function named "non_extistant_function"')
-        response = send_request('non_existant_function(1)')
-        assert response.find('No function named "non_extistant_function"')
+            response = await send(json_rpc('non_existant_function', {}))
+            assert response.find('-32601') >= 0  # method not found
+            response = await send(json_rpc('non_existant_function', {'a': 1, 'b': 2, 'c': 3}))
+            assert response.find('-32601') >= 0  # method not found
 
-        response = send_request(json_rpc('shutdown', {}))
-        assert response.find('error') < 0
+            # test plain-data call
+            response = await send('custom(1)')
+            assert response.find('1') >= 0
 
-        # after shutdown, any function call except "exit()" should yield error
-        response = send_request(json_rpc('custom', {}))
-        assert response.find('error') >= 0
+            # test plain-data false call
+            response = await send('non_existant_function()')
+            assert response.find('No function named "non_extistant_function"')
+            response = await send('non_existant_function(1)')
+            assert response.find('No function named "non_extistant_function"')
 
-        response = send_request(json_rpc('exit', {}))
-        assert response == '', response
+            response = await send(json_rpc('shutdown', {}))
+            assert response.find('error') < 0
+
+            # after shutdown, any function call except "exit()" should yield error
+            response = await send(json_rpc('custom', {}))
+            assert response.find('error') >= 0
+
+            response = await send(json_rpc('exit', {}))
+            assert response == '', response
+
+        asyncio_run(sequence_test())
 
     def test_initialization_sequence(self):
         self.start_server()
