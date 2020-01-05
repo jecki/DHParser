@@ -358,7 +358,8 @@ class Connection:
         self.lsp_shutdown = ""           # type: str
 
     def create_task(self, json_id: int, coroutine: Coroutine) -> Future:
-        assert json_id not in self.active_tasks
+        assert json_id not in self.active_tasks, \
+            "JSON-id {} already used!".format(json_id)
         task = asyncio.ensure_future(coroutine)
         self.active_tasks[json_id] = task
         return task
@@ -451,6 +452,10 @@ class Server:
                 will be run in separate processes
         blocking:   Set of functions that contain blocking calls (e.g. IO-calls)
                 and will therefore be run in separate threads.
+        rpc_table: Table mapping LSP-method names to Python functions
+        known_methods: Set of all known LSP-methods. This includes the methods
+                in the rpc-table and the four initialization methods,
+                'initialize', "initialized', 'shudown', 'exit'
         connection_callback:  A callback function that is called with the
                 connection object as argument when a connection to a client
                 is established
@@ -485,7 +490,7 @@ class Server:
                  connection_callback: ConnectionCallback = lambda cn: None,
                  server_name: str = '',
                  strict_lsp: bool = True):
-        self.server_name = server_name or '%s_%s' % (self.__class__.__name__, hex(id(self))[2:])
+        self.server_name = server_name or self.__class__.__name__
         self.strict_lsp = strict_lsp
         if isinstance(rpc_functions, Dict):
             self.rpc_table = cast(RPC_Table, rpc_functions)  # type: RPC_Table
@@ -505,6 +510,8 @@ class Server:
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
         assert STOP_SERVER_REQUEST not in self.rpc_table
+        self.known_methods = set(self.rpc_table.keys()) | \
+            {'initialize', 'initialized', 'shutdown', 'exit'}
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -556,7 +563,7 @@ class Server:
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
-            filename = self.server_name + '.log'
+            filename = self.server_name + '_' + hex(id(self))[2:] + '.log'
         if not log_dir():
             filename = os.path.join('.', filename)
         self.log_file = create_log(filename)
@@ -803,19 +810,20 @@ class Server:
         # TODO: handle cancellation calls!
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
+        method_name = json_obj.get('method', '')
         if json_obj.get('jsonrpc', '0.0') < '2.0':
             rpc_error = -32600, 'Invalid Request: jsonrpc version 2.0 needed, version "' \
                                 ' "%s" found.' % json_obj.get('jsonrpc', b'unknown')
-        elif 'method' not in json_obj:
+        elif not method_name:
             rpc_error = -32600, 'Invalid Request: No method specified.'
-        elif json_obj['method'] == STOP_SERVER_REQUEST:
+        elif method_name == STOP_SERVER_REQUEST:
             result = self.stop_response
             self.kill_switch = True
             reader.feed_eof()
-        elif json_obj['method'] not in self.rpc_table:
+        elif method_name not in self.known_methods:  # self.rpc_table:
             rpc_error = -32601, 'Method not found: ' + str(json_obj['method'])
-        else:
-            method_name = json_obj['method']
+        elif method_name in self.rpc_table:
+            # method_name = json_obj['method']
             method = self.rpc_table[method_name]
             params = json_obj['params'] if 'params' in json_obj else {}
             if service_call:
@@ -854,8 +862,8 @@ class Server:
 
         if rpc_error is not None:
             await self.respond(
-                writer, ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'
-                         % (rpc_error[0], rpc_error[1], json_id)))
+                writer, ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}' %
+                         (rpc_error[0], rpc_error[1], str(json_id) if json_id >= 0 else 'null')))
 
         if result is not None or rpc_error is not None:
             await writer.drain()
@@ -1007,7 +1015,7 @@ class Server:
                 if rpc_error is None:
                     if isinstance(raw, Dict):
                         json_obj = cast(Dict, raw)
-                        json_id = json_obj.get('id', None)
+                        json_id = json_obj.get('id', gen_task_id())
                     else:
                         rpc_error = -32700, 'Parse error: JSON-package does not appear '\
                                             'to ba an RPC-call or -response!?'

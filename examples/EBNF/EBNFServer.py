@@ -137,10 +137,11 @@ class EBNFLanguageServerProtocol:
             'clientCapabilities': {},
             'serverInfo': { "name": "EBNF-Server", "version": "0.2" },
             'serverCapabilities': {
-                "textDocumentSync": 1,
+                "textDocumentSync": 2,  # incremental
                 "completionProvider": {
-                    "resolveProvider": True
-                    }
+                    "resolveProvider": False,
+                    "triggerCharacters": ['#', '*']
+                }
             }
         }
         self.connection = None
@@ -163,10 +164,6 @@ class EBNFLanguageServerProtocol:
         return {'capabilities': self.lsp_data['serverCapabilities'],
                 'serverInfo': self.lsp_data['serverInfo']}
 
-    def lsp_textDocument_didOpen(self, **kwargs):
-        print(kwargs)
-        return None
-
     def lsp_custom(self, **kwargs):
         return kwargs
 
@@ -175,6 +172,26 @@ class EBNFLanguageServerProtocol:
         self.lsp_data['rootUri'] = ''
         self.lsp_data['clientCapabilities'] = {}
         return {}
+
+    def lsp_textDocument_didOpen(self, textDocument):
+        return None
+
+    def lsp_textDocument_didSave(self, **kwargs):
+        return None
+
+    def lsp_textDocument_didClose(self, **kwargs):
+        return None
+
+    def lsp_textDocument_didChange(self, **kwargs):
+        return None
+
+    def lsp_textDocument_completion(self, **kwargs):
+        print('completion', kwargs)
+        return None
+
+    def lsp_S_cancelRequest(self, **kwargs):
+        return None
+
 
 
 def run_server(host, port, log_path=None):
