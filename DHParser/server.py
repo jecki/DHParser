@@ -64,7 +64,9 @@ from DHParser.versionnumber import __version__
 
 __all__ = ('RPC_Table',
            'RPC_Type',
+           'RPC_Error_Type',
            'JSON_Type',
+           'ConnectionCallback',
            'SERVER_ERROR',
            'SERVER_OFFLINE',
            'SERVER_STARTING',
@@ -80,6 +82,7 @@ __all__ = ('RPC_Table',
            'asyncio_connect',
            'split_header',
            'Connection',
+           'connection_cb_dummy',
            'Server',
            'spawn_server',
            'stop_server',
@@ -440,6 +443,10 @@ class Connection:
         return None
 
 
+def connection_cb_dummy(connection: Connection) -> None:
+    pass
+
+
 class Server:
     """
 
@@ -487,7 +494,7 @@ class Server:
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
                  blocking: Set[str] = set(),
-                 connection_callback: ConnectionCallback = lambda cn: None,
+                 connection_callback: ConnectionCallback = connection_cb_dummy,
                  server_name: str = '',
                  strict_lsp: bool = True):
         self.server_name = server_name or self.__class__.__name__
@@ -510,8 +517,6 @@ class Server:
             self.rpc_table = {func.__name__: func}
             self.default = func.__name__
         assert STOP_SERVER_REQUEST not in self.rpc_table
-        self.known_methods = set(self.rpc_table.keys()) | \
-            {'initialize', 'initialized', 'shutdown', 'exit'}
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
@@ -553,6 +558,9 @@ class Server:
         self.kill_switch = False        # type: bool
         self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
 
+        self.known_methods = set(self.rpc_table.keys()) | \
+            {'initialize', 'initialized', 'shutdown', 'exit'}  # see self.verify_initialization()
+
     def register_service_rpc(self, name, method):
         """Registers a service request """
         name = name[:name.find('(')]
@@ -560,6 +568,7 @@ class Server:
             self.log('Service {} is shadowed by an rpc-call with the same name.'.format(name))
         else:
             self.rpc_table[name] = method
+            # self.known_methods.add(name)
 
     def start_logging(self, filename: str = "") -> str:
         if not filename:
@@ -1184,7 +1193,7 @@ class Server:
 def run_server(host, port, rpc_functions: RPC_Type,
                cpu_bound: Set[str] = ALL_RPCs,
                blocking: Set[str] = set(),
-               cn_callback = lambda cn: None,
+               cn_callback: ConnectionCallback = connection_cb_dummy,
                name: str = '',
                strict_lsp: bool = True):
     """Start a server and wait until server is closed."""
