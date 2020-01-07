@@ -348,6 +348,9 @@ class Connection:
                 sever via json-rpc has been established.
         lsp_shutdown: A string-flag indicating that the connection to a language server
                 via jason-rpc has been is or is being shutdown.
+        log_file:  Name of the server-log. Mirrors Server.log_file
+        echo_log:  If `True` log messages will be echoed to the console. Mirrors
+                Server.log_file
     """
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         self.alive = True                # type: bool
@@ -359,6 +362,10 @@ class Connection:
         self.pending_responses = dict()  # type: Dict[int, List[JSON_Type]]
         self.lsp_initialized = ""        # type: str
         self.lsp_shutdown = ""           # type: str
+        self.log_file = ""               # type: str
+        self.echo_log = False            # type: bool
+
+    # async-task support
 
     def create_task(self, json_id: int, coroutine: Coroutine) -> Future:
         assert json_id not in self.active_tasks, \
@@ -384,15 +391,22 @@ class Connection:
         self.active_tasks = dict()
         self.finished_tasks = set()
 
+    # server initiated LSP-calls-support
+
     def put_response(self, json_obj: JSON_Type):
         """Adds a client-response to the waiting queue. The responses
         to a particual task can be queried with the `client_response()`-
         coroutine."""
+        if self.log_file:
+            self.log('RESULT: ', json.dumps(json_obj))
         self.response_queue.put_nowait(json_obj)
 
     async def server_call(self, json_obj: JSON_Type):
         """Issues a json-rpc call from the server to the client."""
-        request = json.dumps(json_obj).encode()
+        json_str = json.dumps(json_obj)
+        if self.log_file:
+            self.log('CALL: ', json_str, '\n\n')
+        request = json_str.encode()
         request = JSONRPC_HEADER.format(length=len(request)) + request
         self.writer.write(request)
         await self.writer.drain()
@@ -407,6 +421,8 @@ class Connection:
             pending = self.pending_responses.get(call_id, [])
         response = pending.pop()
         return response
+
+    # LSP-initialization support
 
     def verify_initialization(self, method: str, strict: bool = True) -> RPC_Error_Type:
         """Implements the LSP-initialization logic and returns an rpc-error if
@@ -441,6 +457,11 @@ class Connection:
             elif self.lsp_initialized != LSP_INITIALIZED:
                 return -32002, 'language server not initialized'
         return None
+
+    # logging support
+
+    def log(self, *args):
+        append_log(self.log_file, *args, echo=self.echo_log)
 
 
 def connection_cb_dummy(connection: Connection) -> None:
@@ -480,6 +501,7 @@ class Server:
         thread_executor:  A thread-pool-executor for blocking tasks
         echo_log:   Read from the global configuration. If True, any log message
                 will also be echoed on the console.
+        log_file:  The file-name of the server-log.
         use_jsonrpc_header:  Read from the global configuration. If True, jsonrpc
                 calls or responses will always be preceeded by a simple header of
                 the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
@@ -544,12 +566,11 @@ class Server:
         self.process_executor = None    # type: Optional[ProcessPoolExecutor]
         self.thread_executor = None     # type: Optional[ThreadPoolExecutor]
 
-        self.echo_log = get_config_value('echo_server_log')  # type: bool
-        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
-
-        self.log_file = ''              # type: str
+        self._log_file = ''             # type: str
         if get_config_value('log_server'):
             self.start_logging()
+        self._echo_log = get_config_value('echo_server_log')  # type: bool
+        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
 
         self.register_service_rpc(IDENTIFY_REQUEST, self.rpc_identify_server)
         self.register_service_rpc(LOGGING_REQUEST, self.rpc_logging)
@@ -560,6 +581,26 @@ class Server:
 
         self.known_methods = set(self.rpc_table.keys()) | \
             {'initialize', 'initialized', 'shutdown', 'exit'}  # see self.verify_initialization()
+
+    @property
+    def log_file(self):
+        return self._log_file
+
+    @log_file.setter
+    def log_file(self, value: str):
+        self.log_file = value
+        if self.connection:
+            self.connection.log_file = value
+
+    @property
+    def echo_log(self):
+        return self._echo_log
+
+    @echo_log.setter
+    def echo_log(self, value: bool):
+        self.echo_log = value
+        if self.connection:
+            self.connection.echo_log = value
 
     def register_service_rpc(self, name, method):
         """Registers a service request """
@@ -881,6 +922,8 @@ class Server:
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         if self.connection is None:
             self.connection = Connection(reader, writer)
+            self.connection.log_file = self.log_file
+            self.connection.echo_log = self.echo_log
             id_connection = str(id(self.connection))
             self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')
         else:
