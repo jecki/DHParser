@@ -601,7 +601,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     err_N = 0
     if all_errors:
         for filename in all_errors:
-            error_report.append('Errors found by unit test "%s":\n' % filename)
+            error_report.append('\n\nErrors found by unit test "%s":\n' % filename)
             err_N += len(all_errors[filename])
             for error in all_errors[filename]:
                 error_report.append('\t' + '\n\t'.join(error.split('\n')))
