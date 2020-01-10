@@ -291,6 +291,13 @@ def get_report(test_unit) -> str:
     return '\n'.join(report)
 
 
+POSSIBLE_ARTIFACTS = frozenset((
+    Error.PARSER_LOOKAHEAD_MATCH_ONLY,
+    Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
+    Error.MANDATORY_CONTINUATION_AT_EOF
+))
+
+
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False):
     """
     Unit tests for a grammar-parser and ast transformations.
@@ -426,10 +433,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             clean_test_name = str(test_name).replace('*', '')
             # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
+            errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
-                errors = cst.errors_sorted
+                errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
                 adjust_error_locations(errors, test_code)
-                errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
+                errata.append('Match test "%s" for parser "%s" failed:'
+                              '\n\tExpr.:  %s\n\n\t%s\n\n' %
                               (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
             if "ast" in tests or report:
@@ -440,9 +449,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 if is_error(ast.error_flag):
                     ast_errors = ast.errors_sorted
                     adjust_error_locations(ast_errors, test_code)
-                    errata.append('Match test "%s" for parser "%s" failed:\n\tExpr.:  %s\n\n\t%s\n\n' %
-                                  (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                   '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in ast_errors)))
+                    if errors:
+                        errata.append('\n\t'.join(
+                            str(m).replace('\n', '\n\t\t') for m in ast_errors))
+                    else:
+                        errata.append('Match test "%s" for parser "%s" failed:'
+                                      '\n\tExpr.:  %s\n\n\t%s\n\n' %
+                                      (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
+                                       '\n\t'.join(
+                                           str(m).replace('\n', '\n\t\t') for m in ast_errors)))
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

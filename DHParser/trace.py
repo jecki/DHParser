@@ -28,7 +28,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, PLACEHOLDER
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
@@ -71,6 +71,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         node, rest = self._parse(text)
     except ParserError as pe:
         grammar.call_stack__.pop()
+        if self == grammar.start_parser__:
+            grammar.history__.append(HistoryRecord(
+                grammar.call_stack__, pe.node, pe.rest, grammar.line_col__(pe.rest), [pe.error]))
         raise pe
 
     # Mind that memoized parser calls will not appear in the history record!

@@ -1226,7 +1226,7 @@ class FrozenNode(Node):
     transformation any more. This can be verified with `tree_sanity_check()`.
     """
 
-    def __init__(self, tag_name: str, result: ResultType) -> None:
+    def __init__(self, tag_name: str, result: ResultType, leafhint: bool = True) -> None:
         if isinstance(result, str) or isinstance(result, StringView):
             result = str(result)
         else:

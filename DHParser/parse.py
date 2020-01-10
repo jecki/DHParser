@@ -433,6 +433,7 @@ class Parser:
                 else:
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
+                    print("HERE")
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
                 grammar.most_recent_error__ = pe   # needed for history tracking
