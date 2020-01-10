@@ -72,8 +72,10 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
     except ParserError as pe:
         grammar.call_stack__.pop()
         if self == grammar.start_parser__:
+            rest = text[pe.error.pos:]
+            # TODO: get the call stack from when the error occured, here
             grammar.history__.append(HistoryRecord(
-                grammar.call_stack__, pe.node, pe.rest, grammar.line_col__(pe.rest), [pe.error]))
+                grammar.call_stack__, pe.node, pe.rest, grammar.line_col__(rest), [pe.error]))
         raise pe
 
     # Mind that memoized parser calls will not appear in the history record!
