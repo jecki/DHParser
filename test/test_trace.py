@@ -31,6 +31,15 @@ from DHParser import grammar_provider, all_descendants, \
     set_config_value, resume_notices_on
 
 
+def get_history(name) -> str:
+    history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
+    import webbrowser
+    webbrowser.open(history_fname)
+    with open(history_fname, 'r', encoding='utf-8') as f:
+        history_file = f.read()
+    return history_file
+
+
 class TestTrace:
     def setup(self):
         start_logging()
@@ -41,14 +50,6 @@ class TestTrace:
             for fname in os.listdir(LOG_DIR):
                 os.remove(os.path.join(LOG_DIR, fname))
             os.rmdir(LOG_DIR)
-
-    def get_history(self, name) -> str:
-        history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
-        # import webbrowser
-        # webbrowser.open(history_fname)
-        with open(history_fname, 'r', encoding='utf-8') as f:
-            history_file = f.read()
-        return history_file
 
     def test_trace_simple(self):
         lang = """
@@ -62,7 +63,7 @@ class TestTrace:
         st = gr('2*(3+4)')
         assert(str(st)) == '2*(3+4)'
         log_parsing_history(gr, 'trace_simple')
-        history = self.get_history('trace_simple')
+        history = get_history('trace_simple')
         assert history.count('<tr>') == 25
 
     def test_trace_stopped_early(self):
@@ -77,7 +78,7 @@ class TestTrace:
         st = gr('2*(3+4)...')
         # print(st.as_sxpr(compact=True))
         log_parsing_history(gr, 'trace_simple')
-        history = self.get_history('trace_simple')
+        history = get_history('trace_simple')
         assert history.count('<tr>') == 26
 
     def test_trace_drop(self):
@@ -101,7 +102,7 @@ class TestTrace:
         serialization = st.serialize()
         assert '*' not in serialization   # same for '/', '+', '-'
         log_parsing_history(gr, 'trace_drop')
-        history_file = self.get_history('trace_drop')
+        history_file = get_history('trace_drop')
         assert "DROP" in history_file
         assert "FAIL" in history_file
         assert "MATCH" in history_file
@@ -137,6 +138,30 @@ class TestTrace:
         set_tracer(gr, None)
         assert not gr.history_tracking__
 
+
+class TestErrorReporting:
+    def setup(self):
+        start_logging()
+
+    def teardown(self):
+        LOG_DIR = log_dir()
+        if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
+            for fname in os.listdir(LOG_DIR):
+                os.remove(os.path.join(LOG_DIR, fname))
+            os.rmdir(LOG_DIR)
+
+    def test_trace_skip_clause(self):
+        lang = """
+        document = series | /.*/
+        @series_skip = /(?=[A-Z])/
+        series = "A" "B" §"C" "D"
+        """
+        gr = grammar_provider(lang)()
+        set_tracer(all_descendants(gr.root_parser__), trace_history)
+        st = gr('AB_D')
+        print(st.errors)
+        log_parsing_history(gr, 'trace_skip_clause')
+        get_history('trace_skip_clause')
 
 
 if __name__ == "__main__":

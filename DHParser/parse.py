@@ -307,7 +307,7 @@ class Parser:
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
-        self.__parse = self._parse    # type: ParseFunc
+        self._parse_proxy = self._parse    # type: ParseFunc
         # self.proxied = None           # type: Optional[ParseFunc]
         try:
             self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
@@ -391,7 +391,7 @@ class Parser:
 
             # finally, the actual parser call!
             try:
-                node, rest = self.__parse(text)
+                node, rest = self._parse_proxy(text)
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
@@ -511,7 +511,7 @@ class Parser:
         tracing debugger. See module `trace`.
         """
         if proxy is None:
-            self.__parse = self._parse
+            self._parse_proxy = self._parse
         else:
             if type(proxy) != type(self._parse):
                 # assume that proxy is a function
@@ -519,7 +519,7 @@ class Parser:
             else:
                 # if proxy is a method it must be a method of self
                 assert proxy.__self__ == self
-            self.__parse = cast(ParseFunc, proxy)
+            self._parse_proxy = cast(ParseFunc, proxy)
 
     @property
     def grammar(self) -> 'Grammar':
@@ -1698,6 +1698,7 @@ class NaryParser(MetaParser):
                        Error.RESUME_NOTICE)
         self._grammar.tree__.add_error(err_node, notice)
 
+
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return self.parsers
 
@@ -1909,6 +1910,8 @@ def mandatory_violation(grammar: Grammar,
     error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
                   if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
     grammar.tree__.add_error(err_node, error)
+    if reloc >= 0:
+        grammar.most_recent_error__ = ParserError(None, text_, error, first_throw=True)
     return error, err_node, text_[i:]
 
 
