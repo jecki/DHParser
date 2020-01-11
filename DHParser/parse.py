@@ -73,6 +73,7 @@ __all__ = ('ParserError',
            'Option',
            'ZeroOrMore',
            'OneOrMore',
+           'MandatoryNary',
            'Series',
            'Alternative',
            'AllOf',
@@ -1835,7 +1836,7 @@ MessagesType = List[Tuple[Union[str, Any], str]]
 NO_MANDATORY = 1000
 
 
-class MandatoryElementsParser(NaryParser):
+class MandatoryNary(NaryParser):
     r"""
     Attributes:
         mandatory:  Number of the element starting at which the element
@@ -1856,7 +1857,7 @@ class MandatoryElementsParser(NaryParser):
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = []) -> None:
-        super(MandatoryElementsParser, self).__init__(*parsers)
+        super(MandatoryNary, self).__init__(*parsers)
         length = len(self.parsers)
         if mandatory < 0:
             mandatory += length
@@ -1947,7 +1948,7 @@ class MandatoryElementsParser(NaryParser):
         return error, err_node, text_[i:]
 
 
-class Series(MandatoryElementsParser):
+class Series(MandatoryNary):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
     the series.
@@ -2119,7 +2120,7 @@ class Alternative(NaryParser):
         return self
 
 
-class AllOf(MandatoryElementsParser):
+class AllOf(MandatoryNary):
     """
     Matches if all elements of a list of parsers match. Each parser must
     match exactly once. Other than in a sequence, the order in which

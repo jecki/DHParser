@@ -140,7 +140,14 @@ class Error:
     @property
     def severity(self):
         """Returns a string representation of the error level, e.g. "warning"."""
-        return "Warning" if is_warning(self.code) else "Error"
+        if self.code < Error.WARNING:
+            return "Notice"
+        elif self.code < Error.ERROR:
+            return "Warning"
+        elif self.code < Error.FATAL:
+            return "Error"
+        else:
+            return "Fatal"
 
     def visualize(self, document: str) -> str:
         """Shows the line of the document and the position where the error

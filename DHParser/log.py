@@ -73,6 +73,7 @@ __all__ = ('start_logging',
            'clear_logs',
            'NONE_TAG',
            'NONE_NODE',
+           'freeze_callstack',
            'HistoryRecord',
            'log_ST',
            'log_parsing_history')
@@ -246,6 +247,11 @@ NONE_TAG = ":None"
 NONE_NODE = FrozenNode(NONE_TAG, '')
 
 
+def freeze_callstack(call_stack: List[Tuple[str, int]]) -> Tuple[Tuple[str, int], ...]:
+    """Returns a frozen copy of the call stack."""
+    return  tuple((tn, pos) for tn, pos in call_stack if tn != ":Forward")
+
+
 class HistoryRecord:
     """
     Stores debugging information about one completed step in the
@@ -292,15 +298,17 @@ class HistoryRecord:
         '</style>\n</head>\n<body>\n')
     HTML_LEAD_OUT = '\n</body>\n</html>\n'
 
-    def __init__(self, call_stack: List[Tuple[str, int]],
+    def __init__(self, call_stack: Union[List[Tuple[str, int]], Tuple[Tuple[str, int], ...]],
                  node: Optional[Node],
                  text: StringView,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
         # copy call stack, dropping uninformative Forward-Parsers
         # self.call_stack = call_stack    # type: Tuple[Tuple[str, int],...]
-        self.call_stack = tuple((tn, pos) for tn, pos in call_stack
-                                if tn != ":Forward")     # type: Tuple[Tuple[str, int],...]
+        if isinstance(call_stack, tuple):
+            self.call_stack = call_stack  # type: Tuple[Tuple[str, int],...]
+        else:
+            self.call_stack = freeze_callstack(call_stack)
         self.node = NONE_NODE if node is None else node  # type: Node
         self.text = text                                 # type: StringView
         self.line_col = line_col                         # type: Tuple[int, int]
