@@ -28,13 +28,16 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
-    set_config_value, resume_notices_on
+    set_config_value, resume_notices_on, Error
 
 
 def get_history(name) -> str:
     history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
-    import webbrowser
+    # just for debugging:
+    import webbrowser, time
     webbrowser.open(history_fname)
+    time.sleep(1)
+    # ------------------
     with open(history_fname, 'r', encoding='utf-8') as f:
         history_file = f.read()
     return history_file
@@ -62,9 +65,16 @@ class TestTrace:
         set_tracer(all_desc, trace_history)
         st = gr('2*(3+4)')
         assert(str(st)) == '2*(3+4)'
+        history = gr.history__
+        for record in history:
+            if record.status.startswith(record.FAIL):
+                # check if the first failed parser yields an excerpt
+                assert record.excerpt
+                break
+        assert len(history) == 24
         log_parsing_history(gr, 'trace_simple')
         history = get_history('trace_simple')
-        assert history.count('<tr>') == 25
+        assert history.count('<tr>') == 25  # same as len(history) + 1 title row
 
     def test_trace_stopped_early(self):
         lang = """
@@ -75,10 +85,10 @@ class TestTrace:
         gr = grammar_provider(lang)()
         all_desc = all_descendants(gr.root_parser__)
         set_tracer(all_desc, trace_history)
-        st = gr('2*(3+4)...')
+        st = gr('2*(3+4)xxx')
         # print(st.as_sxpr(compact=True))
-        log_parsing_history(gr, 'trace_simple')
-        history = get_history('trace_simple')
+        log_parsing_history(gr, 'trace_stopped_early')
+        history = get_history('trace_stopped_early')
         assert history.count('<tr>') == 26
 
     def test_trace_drop(self):
@@ -125,7 +135,7 @@ class TestTrace:
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, cst.as_sxpr()
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
@@ -141,6 +151,18 @@ class TestTrace:
 
 class TestErrorReporting:
     def setup(self):
+        lang = """
+        document = alpha [beta] gamma "."
+          alpha = "ALPHA" abc
+            abc = §"a" "b" "c"
+          beta = "BETA" (bac | bca)
+            bac = "b" "a" §"c"
+            bca = "b" "c" §"a"
+          gamma = "GAMMA" §(cab | cba)
+            cab = "c" "a" §"b"
+            cba = "c" "b" §"a"
+        """
+        self.gr = grammar_provider(lang)()
         start_logging()
 
     def teardown(self):
@@ -150,6 +172,24 @@ class TestErrorReporting:
                 os.remove(os.path.join(LOG_DIR, fname))
             os.rmdir(LOG_DIR)
 
+    def test_trace_noskip(self):
+        lang = """
+        document = series | /.*/
+        series = "A" "B" §"C" "D"
+        """
+        gr = grammar_provider(lang)()
+        set_tracer(all_descendants(gr.root_parser__), trace_history)
+        _ = gr('AB_D')
+        for record in gr.history__:
+            if record.status.startswith(record.ERROR):
+                assert record.excerpt == '_D'
+                if record.errors[0].code == Error.PARSER_STOPPED_BEFORE_END:
+                    break
+        else:
+            assert False, "Missing Error!"
+        # log_parsing_history(gr, 'trace_noskip')
+        # get_history('trace_noskip')
+
     def test_trace_skip_clause(self):
         lang = """
         document = series | /.*/
@@ -157,11 +197,31 @@ class TestErrorReporting:
         series = "A" "B" §"C" "D"
         """
         gr = grammar_provider(lang)()
-        set_tracer(all_descendants(gr.root_parser__), trace_history)
-        st = gr('AB_D')
-        print(st.errors)
+        resume_notices_on(gr)
+        _ = gr('AB_D')
+        for record in gr.history__:
+            if record.status.startswith(record.ERROR):
+                assert record.excerpt == '_D'
+                break
+        else:
+            assert False, "Missing Error!"
+        # log_parsing_history(gr, 'trace_skip_clause')
+        # get_history('trace_skip_clause')
+
+    def test_trace_resume(self):
+        gr = self.gr;  gr.resume_rules = dict()
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)')]
+        resume_notices_on(gr)
+        content = 'ALPHA acb BETA bac GAMMA cab .'
+        cst = gr(content)
+        assert cst.error_flag
+        assert cst.content == content
+        assert cst.pick('alpha').content.startswith('ALPHA')
+        # because of resuming, there should be only one error message
+        assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
         log_parsing_history(gr, 'trace_skip_clause')
         get_history('trace_skip_clause')
+
 
 
 if __name__ == "__main__":

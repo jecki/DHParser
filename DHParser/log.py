@@ -281,6 +281,7 @@ class HistoryRecord:
         'td.line, td.column {color:grey}\n'
         '.text{color:blue}\n'
         '.failtext {font-weight:normal; color:grey}\n'
+        '.errortext {font-weight:normal; color:darkred}\n'
         '.unmatched {font-weight:normal; color:lightgrey}\n'
         '.fail {font-weight:bold; color:darkgrey}\n'
         '.error {font-weight:bold; color:red}\n'
@@ -361,6 +362,7 @@ class HistoryRecord:
             classes[idx['text']] = 'failtext'
         else:  # ERROR
             stack += '<br/>\n"%s"' % self.err_msg()
+            classes[idx['text']] = 'errortext'
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]),
                             stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
         return ''.join(['<tr>'] + [('<td class="%s">%s</td>' % (cls, item))
@@ -387,7 +389,7 @@ class HistoryRecord:
     def status(self) -> str:
         if self.errors:
             return self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
-        elif self.node is None or self.node.tag_name in (ZOMBIE_TAG, NONE_TAG):
+        elif self.node.tag_name in (NONE_TAG, ZOMBIE_TAG):
             return self.FAIL
         elif self.node.tag_name == EMPTY_PTYPE:
             return self.DROP
@@ -398,7 +400,7 @@ class HistoryRecord:
 
     @property
     def excerpt(self):
-        if self.node:
+        if self.node.tag_name not in (NONE_TAG, ZOMBIE_TAG) and not self.errors:
             excerpt = abbreviate_middle(str(self.node), 40)
         else:
             s = self.text
@@ -413,7 +415,7 @@ class HistoryRecord:
 
     @property
     def remaining(self) -> int:
-        return len(self.text) - (len(self.node) if self.node else 0)
+        return len(self.text) - len(self.node)
 
     @staticmethod
     def last_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
@@ -497,7 +499,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
             otherwise as plain test. (Browsers might take a few seconds or
             minutes to display the table for long histories.)
     """
-    def write_log(history, log_name):
+    def write_log(history: List[str], log_name: str) -> None:
         htm = '.html' if html else ''
         path = os.path.join(log_dir() or '', log_name + "_parser.log" + htm)
         if os.path.exists(path):
@@ -512,7 +514,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
                 else:
                     f.write("\n".join(history))
 
-    def append_line(log, line):
+    def append_line(log: List[str], line: str) -> None:
         """Appends a line to a list of HTML table rows. Starts a new
         table every 100 rows to allow browser to speed up rendering.
         Does this really work...?"""

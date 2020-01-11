@@ -111,6 +111,7 @@ class ParserError(Exception):
     or `AllOf`-parser detects a missing mandatory element.
     """
     def __init__(self, node: Node, rest: StringView, error: Error, first_throw: bool):
+        assert node is not None
         self.node = node    # type: Node
         self.rest = rest    # type: StringView
         self.error = error  # type: Error
@@ -402,8 +403,7 @@ class Parser:
                 if i >= 0 or self == grammar.start_parser__:
                     assert pe.node.children or (not pe.node.result)
                     # apply reentry-rule or catch error at root-parser
-                    # if i < 0:
-                    #     i = 1
+                    if i < 0:  i = 0
                     try:
                         zombie = pe.node[ZOMBIE_TAG]  # type: Optional[Node]
                     except (KeyError, ValueError):
@@ -435,9 +435,6 @@ class Parser:
                         else pe.node  # type: ResultType
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
-                # TODO: can this be moved to trace.py, e.g. if pe.first_throw...
-                #       should it be the first thrown error, rather than the last?
-                grammar.most_recent_error__ = pe   # needed for history tracking
 
             if left_recursion_depth__:
                 self.recursion_counter[location] -= 1
@@ -1241,8 +1238,9 @@ class Grammar:
                 error = Error(error_msg, stitch.pos, error_code)
                 self.tree__.add_error(stitch, error)
                 if self.history_tracking__:
+                    lc = line_col(self.document_lbreaks__, error.pos)
                     self.history__.append(HistoryRecord([(stitch.tag_name, stitch.pos)], stitch,
-                                                        rest, self.line_col__(rest), [error]))
+                                                        self.document__[error.pos:], lc, [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
                 rest = StringView('')
@@ -1686,19 +1684,6 @@ class NaryParser(MetaParser):
         copy_parser_attrs(self, duplicate)
         return duplicate
 
-    def _add_skip_notice(self, _text: StringView, err_node: Node) -> None:
-        """Adds a skip-notice to the parse tree's error-list for a parser
-        that support skipping parts of the text, when an error occurred
-        (Series, AllOf)."""
-        if not self._grammar.resume_notices__:
-            return
-        notice = Error('Skipping within parser {} to point {}'
-                       .format(self.pname or self.ptype, repr(_text[:10])),
-                       self._grammar.document_length__ - len(_text),
-                       Error.RESUME_NOTICE)
-        self._grammar.tree__.add_error(err_node, notice)
-
-
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return self.parsers
 
@@ -1850,85 +1835,134 @@ MessagesType = List[Tuple[Union[str, Any], str]]
 NO_MANDATORY = 1000
 
 
-@cython.locals(i=cython.int, location=cython.int)
-def mandatory_violation(grammar: Grammar,
-                        text_: StringView,
-                        failed_on_lookahead: bool,
-                        expected: str,
-                        err_msgs: MessagesType,
-                        reloc: int) -> Tuple[Error, Node, StringView]:
-    """
-    Choses the right error message in case of a mandatory violation and
-    returns an error with this message, an error node, to which the error
-    is attached, and the text segment where parsing is to continue.
-
-    This is a helper function that abstracts functionality that is
-    needed by the AllOf- as well as the Series-parser.
-
-    :param grammar: the grammar
-    :param text_: the point, where the mandatory violation. As usual the
-            string view represents the remaining text from this point.
-    :param failed_on_lookahead: True if the violating parser was a
-            Lookahead-Parser.
-    :param expected:  the expected (but not found) text at this point.
-    :param err_msgs:  A list of pairs of regular expressions (or simple
-            strings for that matter) and error messages that are chosen
-            if the regular expression matches the text where the error
-            occurred.
-    :param reloc: A position value that represents the reentry point for
-            parsing after the error occurred.
-
-    :return:   a tuple of an error object, a zombie node at the position
-            where the mandatory violation occurred and to which the error
-            object is attached and a string view for continuing the
-            parsing process
-    """
-    i = reloc if reloc >= 0 else 0
-    location = grammar.document_length__ - len(text_)
-    err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
-    found = text_[:10].replace('\n', '\\n ') + '...'
-    for search, message in err_msgs:
-        rxs = not isinstance(search, str)
-        if (rxs and text_.match(search)) or (not rxs and text_.startswith(search)):
-            try:
-                msg = message.format(expected, found)
-                break
-            except (ValueError, KeyError, IndexError) as e:
-                error = Error("Malformed error format string »{}« leads to »{}«"
-                              .format(message, str(e)),
-                              location, Error.MALFORMED_ERROR_STRING)
-                grammar.tree__.add_error(err_node, error)
-    else:
-        if grammar.history_tracking__:
-            pname = ':root'
-            for pname, _ in reversed(grammar.call_stack__):
-                if not pname.startswith(':'):
-                    break
-            msg = '%s expected by parser %s, »%s« found!' % (expected, pname, found)
-        else:
-            msg = '%s expected, »%s« found!' % (expected, found)
-    error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
-                  if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
-    grammar.tree__.add_error(err_node, error)
-    if reloc >= 0:
-        grammar.most_recent_error__ = ParserError(None, text_, error, first_throw=True)
-    return error, err_node, text_[i:]
-
-
-class Series(NaryParser):
+class MandatoryElementsParser(NaryParser):
     r"""
-    Matches if each of a series of parsers matches exactly in the order of
-    the series.
-
     Attributes:
-        mandatory (int):  Number of the element starting at which the element
+        mandatory:  Number of the element starting at which the element
                 and all following elements are considered "mandatory". This
                 means that rather than returning a non-match an error message
                 is issued. The default value is NO_MANDATORY, which means that
                 no elements are mandatory.
-        errmsg (str):  An optional error message that overrides the default
-               message for mandatory continuation errors. This can be used to
-               provide more helpful error messages to the user.
+        err_msgs:  A list of pairs of regular expressions (or simple
+                strings for that matter) and error messages that are chosen
+                if the regular expression matches the text where the error
+                occurred.
+        skip_list: A list of regular expressions. The rest of the text is searched for
+                each of these. The closest match is the point where parsing will be
+                resumed.
+    """
+
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NO_MANDATORY,
+                 err_msgs: MessagesType = [],
+                 skip: ResumeList = []) -> None:
+        super(MandatoryElementsParser, self).__init__(*parsers)
+        length = len(self.parsers)
+        if mandatory < 0:
+            mandatory += length
+
+        assert not (mandatory == NO_MANDATORY and err_msgs), \
+            'Custom error messages require that parameter "mandatory" is set!'
+        assert not (mandatory == NO_MANDATORY and skip), \
+            'Search expressions for skipping text require that parameter "mandatory" is set!'
+        assert length > 0, \
+            'Number of elements %i is below minimum length of 1' % length
+        assert length < NO_MANDATORY, \
+            'Number of elemnts %i of series exceeds maximum length of %i' % (length, NO_MANDATORY)
+
+        assert 0 <= mandatory < length or mandatory == NO_MANDATORY
+
+        self.mandatory = mandatory  # type: int
+        self.err_msgs = err_msgs    # type: MessagesType
+        self.skip = skip            # type: ResumeList
+
+    def get_reentry_point(self, text_: StringView) -> int:
+        """Returns a reentry-point determined by the skip-list in `self.skip`.
+        If no reentry-point was found or the skip-list ist empty, -1 is returned.
+        """
+        if self.skip:
+            gr = self._grammar
+            return reentry_point(text_, self.skip, gr.comment_rx__, gr.reentry_search_window__)
+        return -1
+
+    @cython.locals(i=cython.int, location=cython.int)
+    def mandatory_violation(self,
+                            text_: StringView,
+                            failed_on_lookahead: bool,
+                            expected: str,
+                            reloc: int) -> Tuple[Error, Node, StringView]:
+        """
+        Choses the right error message in case of a mandatory violation and
+        returns an error with this message, an error node, to which the error
+        is attached, and the text segment where parsing is to continue.
+
+        This is a helper function that abstracts functionality that is
+        needed by the AllOf- as well as the Series-parser.
+
+        :param parser: the grammar
+        :param text_: the point, where the mandatory violation. As usual the
+                string view represents the remaining text from this point.
+        :param failed_on_lookahead: True if the violating parser was a
+                Lookahead-Parser.
+        :param expected:  the expected (but not found) text at this point.
+        :param reloc: A position value that represents the reentry point for
+                parsing after the error occurred.
+
+        :return:   a tuple of an error object, a zombie node at the position
+                where the mandatory violation occurred and to which the error
+                object is attached and a string view for continuing the
+                parsing process
+        """
+        grammar = self._grammar
+        i = reloc if reloc >= 0 else 0
+        location = grammar.document_length__ - len(text_)
+        err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
+        found = text_[:10].replace('\n', '\\n ') + '...'
+        for search, message in self.err_msgs:
+            rxs = not isinstance(search, str)
+            if (rxs and text_.match(search)) or (not rxs and text_.startswith(search)):
+                try:
+                    msg = message.format(expected, found)
+                    break
+                except (ValueError, KeyError, IndexError) as e:
+                    error = Error("Malformed error format string »{}« leads to »{}«"
+                                  .format(message, str(e)),
+                                  location, Error.MALFORMED_ERROR_STRING)
+                    grammar.tree__.add_error(err_node, error)
+        else:
+            if grammar.history_tracking__:
+                pname = ':root'
+                for pname, _ in reversed(grammar.call_stack__):
+                    if not pname.startswith(':'):
+                        break
+                msg = '%s expected by parser %s, »%s« found!' % (expected, pname, found)
+            else:
+                msg = '%s expected, »%s« found!' % (expected, found)
+        error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
+                      if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
+        grammar.tree__.add_error(err_node, error)
+        if reloc >= 0:
+            errors = [error]
+            if grammar.resume_notices__:
+                target = text_[reloc:]
+                if len(target) >= 10:
+                    target = target[:7] + '...'
+                notice = Error('Skipping within parser {} to point {}'
+                               .format(self.pname or self.ptype, repr(target)),
+                               self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+                grammar.tree__.add_error(err_node, notice)
+                errors.append(notice)
+            if grammar.history_tracking__:
+                lc = line_col(grammar.document_lbreaks__, location)
+                grammar.history__.append(HistoryRecord(
+                    grammar.call_stack__, None, text_, lc, errors))
+        return error, err_node, text_[i:]
+
+
+class Series(MandatoryElementsParser):
+    r"""
+    Matches if each of a series of parsers matches exactly in the order of
+    the series.
 
     Example::
 
@@ -1943,31 +1977,6 @@ class Series(NaryParser):
     EBNF-Example:  ``series = letter letter_or_digit``
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
-
-    def __init__(self, *parsers: Parser,
-                 mandatory: int = NO_MANDATORY,
-                 err_msgs: MessagesType = [],
-                 skip: ResumeList = []) -> None:
-        super(Series, self).__init__(*parsers)
-        length = len(self.parsers)
-        if mandatory < 0:
-            mandatory += length
-
-        assert not (mandatory == NO_MANDATORY and err_msgs), \
-            'Custom error messages require that parameter "mandatory" is set!'
-        assert not (mandatory == NO_MANDATORY and skip), \
-            'Search expressions for skipping text require that parameter "mandatory" is set!'
-
-        assert length > 0, \
-            'Length of series %i is below minimum length of 1' % length
-        assert length < NO_MANDATORY, \
-            'Length %i of series exceeds maximum length of %i' % (length, NO_MANDATORY)
-
-        assert 0 <= mandatory < length or mandatory == NO_MANDATORY
-
-        self.mandatory = mandatory  # type: int
-        self.err_msgs = err_msgs    # type: MessagesType
-        self.skip = skip            # type: ResumeList
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
@@ -1987,12 +1996,9 @@ class Series(NaryParser):
                 if pos < self.mandatory:
                     return None, text
                 else:
-                    grammar = self.grammar
-                    reloc = reentry_point(text_, self.skip, grammar.comment_rx__,
-                                          grammar.reentry_search_window__) if self.skip else -1
-                    error, node, text_ = mandatory_violation(
-                        grammar, text_, isinstance(parser, Lookahead), parser.repr,
-                        self.err_msgs, reloc)
+                    reloc = self.get_reentry_point(text_)
+                    error, node, text_ = self.mandatory_violation(
+                        text_, isinstance(parser, Lookahead), parser.repr, reloc)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         rest = text_
@@ -2000,7 +2006,6 @@ class Series(NaryParser):
                         if nd is not None:
                             results += (node,)
                             node = nd
-                        self._add_skip_notice(rest, node)
                     else:
                         results += (node,)
                         break
@@ -2023,7 +2028,7 @@ class Series(NaryParser):
     # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
 
     @staticmethod
-    def combined_mandatory(left: Parser, right: Parser):
+    def combined_mandatory(left: 'Series', right: 'Series'):
         """
         Returns the position of the first mandatory element (if any) when
         parsers `left` and `right` are joined to a sequence.
@@ -2126,7 +2131,7 @@ class Alternative(NaryParser):
         return self
 
 
-class AllOf(NaryParser):
+class AllOf(MandatoryElementsParser):
     """
     Matches if all elements of a list of parsers match. Each parser must
     match exactly once. Other than in a sequence, the order in which
@@ -2169,24 +2174,8 @@ class AllOf(NaryParser):
 
             parsers = series.parsers
 
-        super(AllOf, self).__init__(*parsers)
+        super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         self.num_parsers = len(self.parsers)  # type: int
-        if mandatory < 0:
-            mandatory += self.num_parsers
-
-        assert not (mandatory == NO_MANDATORY and err_msgs), \
-            'Custom error messages require that parameter "mandatory" is set!'
-        assert not (mandatory == NO_MANDATORY and skip), \
-            'Search expressions for skipping text require that parameter "mandatory" is set!'
-        assert self.num_parsers > 0, \
-            'Number of elements %i is below minimum of 1' % self.num_parsers
-        assert self.num_parsers < NO_MANDATORY, \
-            'Number of elemnts %i of exceeds maximum of %i' % (self.num_parsers, NO_MANDATORY)
-        assert 0 <= mandatory < self.num_parsers or mandatory == NO_MANDATORY
-
-        self.mandatory = mandatory  # type: int
-        self.err_msgs = err_msgs    # type: MessagesType
-        self.skip = skip            # type: ResumeList
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
@@ -2215,13 +2204,11 @@ class AllOf(NaryParser):
                 if self.num_parsers - len(parsers) < self.mandatory:
                     return None, text
                 else:
-                    grammar = self.grammar
-                    reloc = reentry_point(text_, self.skip, grammar.comment_rx__,
-                                          grammar.reentry_search_window__) if self.skip else -1
+                    reloc = self.get_reentry_point(text_)
                     expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
                     lookahead = any([isinstance(p, Lookahead) for p in parsers])
-                    error, err_node, text_ = mandatory_violation(
-                        grammar, text_, lookahead, expected, self.err_msgs, reloc)
+                    error, err_node, text_ = self.mandatory_violation(
+                        text_, lookahead, expected, reloc)
                     results += (err_node,)
                     if reloc < 0:
                         parsers = []

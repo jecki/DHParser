@@ -1393,10 +1393,10 @@ class RootNode(Node):
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
-        assert isinstance(node, Node)
         if not node:
             node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
         else:
+            assert isinstance(node, Node)
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
             # assert node.pos == error.pos or isinstance(node, FrozenNode)

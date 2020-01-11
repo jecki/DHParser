@@ -531,6 +531,7 @@ class TestErrorRecovery:
         resume_notices_on(parser)
         st = parser('AB_D')
         assert len(st.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in st.errors)
+        assert 'Skipping' in str(st.errors_sorted[1])
 
 
     def test_AllOf_skip(self):
@@ -824,7 +825,7 @@ class TestReentryAfterError:
         assert cst.content == content
         # assert cst.pick('alpha').content.startswith('ALPHA')
 
-    def test_severl_reentry_points(self):
+    def test_several_reentry_points(self):
         gr = self.gr;  gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
@@ -847,7 +848,6 @@ class TestReentryAfterError:
         assert len(cst.errors_sorted) == 1
         resume_notices_on(gr)
         cst = gr(content)
-        # print(cst.errors)
         assert len(cst.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in cst.errors)
 
     def test_several_resume_rules_innermost_rule_matching(self):
