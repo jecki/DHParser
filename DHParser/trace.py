@@ -36,22 +36,13 @@ __all__ = ('trace_history', 'all_descendants', 'set_tracer',
            'resume_notices_on')
 
 
-
-def add_resume_notice(parser, rest: StringView, err_node: Node) -> None:
-    """Adds a resume notice to the error node with information about
-    the reentry point and the parser."""
-    notice = Error('Resuming from {} with parser {} at point: {}'
-                   .format(err_node.tag_name, parser.tag_name, repr(rest[:10])),
-                   parser._grammar.document_length__ - len(rest), Error.RESUME_NOTICE)
-    parser._grammar.tree__.add_error(err_node, notice)
-
-
 def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
     grammar = self._grammar
     location = grammar.document_length__ - text._len
 
     if grammar.most_recent_error__:
-        # add resume notice
+        # add resume notice (mind that skip notices are added by
+        # `parse.MandatoryElementsParser.mandatory_violation()`
         pe = grammar.most_recent_error__
         grammar.most_recent_error__ = None
         if grammar.resume_notices__:
@@ -72,28 +63,17 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
           else (self.pname or self.tag_name)), location))
     grammar.moving_forward__ = True
 
-    # if grammar.most_recent_error__:
-    #     save_error = grammar.most_recent_error__
-    #     grammar.most_recent_error__ = None
-    # else:
-    #     save_error = None
-
     try:
         node, rest = self._parse(text)
     except ParserError as pe:
         grammar.call_stack__.pop()
         if pe.first_throw:
+            # add error message to history
             grammar.most_recent_error__ = pe
             lc = line_col(grammar.document_lbreaks__, pe.error.pos)
             nd = pe.node
             grammar.history__.append(
                 HistoryRecord(grammar.call_stack__, nd, pe.rest[len(nd):], lc, [pe.error]))
-        # if self == grammar.start_parser__:
-        #     lc = line_col(grammar.document_lbreaks__, pe.error.pos)
-        #     # TODO: get the call stack from when the error occured, here
-        #     nd = pe.node
-        #     grammar.history__.append(
-        #         HistoryRecord(grammar.call_stack__, nd, pe.rest[len(nd):], lc, [pe.error]))
         raise pe
 
     # Mind that memoized parser calls will not appear in the history record!
@@ -101,6 +81,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     if ((grammar.moving_forward__ or (node and not self.anonymous))
             and (self.tag_name != WHITESPACE_PTYPE)):
+        # record history
         # TODO: Make dropping insignificant whitespace from history configurable
         delta = text._len - rest._len
         nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
@@ -111,8 +92,6 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]):
             grammar.history__.append(record)
 
-    # if save_error:
-    #     grammar.most_recent_error__ = save_error
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
     return node, rest

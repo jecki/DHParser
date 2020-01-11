@@ -31,13 +31,12 @@ from DHParser import grammar_provider, all_descendants, \
     set_config_value, resume_notices_on, Error
 
 
-def get_history(name) -> str:
+def get_history(name, show: bool = False) -> str:
     history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
-    # just for debugging:
-    import webbrowser, time
-    webbrowser.open(history_fname)
-    time.sleep(1)
-    # ------------------
+    if show:
+        import webbrowser, time
+        webbrowser.open(history_fname)
+        time.sleep(1)
     with open(history_fname, 'r', encoding='utf-8') as f:
         history_file = f.read()
     return history_file
@@ -187,8 +186,8 @@ class TestErrorReporting:
                     break
         else:
             assert False, "Missing Error!"
-        log_parsing_history(gr, 'trace_noskip')
-        get_history('trace_noskip')
+        # log_parsing_history(gr, 'trace_noskip')
+        # get_history('trace_noskip')
 
     def test_trace_skip_clause(self):
         lang = """
@@ -205,8 +204,8 @@ class TestErrorReporting:
                 break
         else:
             assert False, "Missing Error!"
-        log_parsing_history(gr, 'trace_skip_clause')
-        get_history('trace_skip_clause')
+        # log_parsing_history(gr, 'trace_skip_clause')
+        # get_history('trace_skip_clause')
 
     def test_trace_resume(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -219,9 +218,38 @@ class TestErrorReporting:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
-        log_parsing_history(gr, 'trace_skip_clause')
-        get_history('trace_skip_clause')
+        # log_parsing_history(gr, 'trace_resume')
+        # get_history('trace_resume')
 
+    def test_trace_resume_complex_case(self):
+        lang = r"""
+            @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
+            document = block_A block_B
+            @ block_A_resume = /(?=x)/
+            block_A = "a" §"b" "c"
+            block_B = "x" "y" "z"
+        """
+        def mini_suite(grammar):
+            tree = grammar('abc/*x*/xyz')
+            assert not tree.errors
+            tree = grammar('abDxyz')
+            mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
+            assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
+            # log_parsing_history(grammar, 'trace_resume_complex_1')
+            # get_history('trace_resume_complex_1')
+            tree = grammar('abD/*x*/xyz')
+            assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
+            # log_parsing_history(grammar, 'trace_resume_complex_2')
+            # get_history('trace_resume_complex_2', show=True)
+            tree = grammar('aD /*x*/ c /* a */ /*x*/xyz')
+            assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
+            # log_parsing_history(grammar, 'trace_resume_complex_3')
+            # get_history('trace_resume_complex_3')
+
+        # test regex-defined resume rule
+        grammar = grammar_provider(lang)()
+        resume_notices_on(grammar)
+        mini_suite(grammar)
 
 
 if __name__ == "__main__":
