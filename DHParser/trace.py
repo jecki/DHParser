@@ -49,16 +49,34 @@ def add_resume_notice(parser, rest: StringView, err_node: Node) -> None:
 def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
     grammar = self._grammar
     location = grammar.document_length__ - text._len
+
+    if grammar.most_recent_error__:
+        # add resume notice
+        pe = grammar.most_recent_error__
+        grammar.most_recent_error__ = None
+        if grammar.resume_notices__:
+            text_ = pe.rest[len(pe.node):]
+            target = text_
+            if len(target) >= 10:
+                target = target[:7] + '...'
+            notice = Error('Resuming from parser "{}" with parser "{}" at point: {}'
+                           .format(pe.node.tag_name, grammar.call_stack__[-1][0], repr(target)),
+                           grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+            grammar.tree__.add_error(pe.node, notice)
+            lc = line_col(grammar.document_lbreaks__, location)
+            grammar.history__.append(HistoryRecord(
+                grammar.call_stack__, None, text_, lc, [notice]))
+
     grammar.call_stack__.append(
         ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE)
           else (self.pname or self.tag_name)), location))
     grammar.moving_forward__ = True
 
-    if grammar.most_recent_error__:
-        save_error = grammar.most_recent_error__
-        grammar.most_recent_error__ = None
-    else:
-        save_error = None
+    # if grammar.most_recent_error__:
+    #     save_error = grammar.most_recent_error__
+    #     grammar.most_recent_error__ = None
+    # else:
+    #     save_error = None
 
     try:
         node, rest = self._parse(text)
@@ -80,36 +98,21 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
-    delta = text._len - rest._len
-    pe = grammar.most_recent_error__
-    if ((grammar.moving_forward__ or pe or (node and not self.anonymous))
+
+    if ((grammar.moving_forward__ or (node and not self.anonymous))
             and (self.tag_name != WHITESPACE_PTYPE)):
         # TODO: Make dropping insignificant whitespace from history configurable
-        errors = [pe.error] if pe else []  # type: List[Error]
+        delta = text._len - rest._len
         nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
-        record = HistoryRecord(grammar.call_stack__, nd, pe.rest if pe else rest, lc, errors)
+        record = HistoryRecord(grammar.call_stack__, nd, rest, lc, [])
         cs_len = len(record.call_stack)
         if (not grammar.history__ or lc != grammar.history__[-1].line_col
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]):
             grammar.history__.append(record)
 
-    if pe:
-        grammar.most_recent_error__ = None
-        if grammar.resume_notices__:
-            # add_resume_notice(self, pe.rest[len(pe.node):], pe.node)
-            text_ = pe.rest[len(pe.node):]
-            target = text_
-            if len(target) >= 10:
-                target = target[:7] + '...'
-            notice = Error('Resuming from {} with parser {} at point: {}'
-                           .format(pe.node.tag_name, self.tag_name, repr(target)),
-                           self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
-            self._grammar.tree__.add_error(pe.node, notice)
-
-
-    if save_error:
-        grammar.most_recent_error__ = save_error
+    # if save_error:
+    #     grammar.most_recent_error__ = save_error
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
     return node, rest

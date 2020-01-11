@@ -187,8 +187,8 @@ class TestErrorReporting:
                     break
         else:
             assert False, "Missing Error!"
-        # log_parsing_history(gr, 'trace_noskip')
-        # get_history('trace_noskip')
+        log_parsing_history(gr, 'trace_noskip')
+        get_history('trace_noskip')
 
     def test_trace_skip_clause(self):
         lang = """
@@ -205,8 +205,8 @@ class TestErrorReporting:
                 break
         else:
             assert False, "Missing Error!"
-        # log_parsing_history(gr, 'trace_skip_clause')
-        # get_history('trace_skip_clause')
+        log_parsing_history(gr, 'trace_skip_clause')
+        get_history('trace_skip_clause')
 
     def test_trace_resume(self):
         gr = self.gr;  gr.resume_rules = dict()
