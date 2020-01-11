@@ -1935,27 +1935,15 @@ class MandatoryElementsParser(NaryParser):
                 for pname, _ in reversed(grammar.call_stack__):
                     if not pname.startswith(':'):
                         break
-                msg = '%s expected by parser %s, »%s« found!' % (expected, pname, found)
+                msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
             else:
                 msg = '%s expected, »%s« found!' % (expected, found)
         error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
                       if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
-            errors = [error]
-            if grammar.resume_notices__:
-                target = text_[reloc:]
-                if len(target) >= 10:
-                    target = target[:7] + '...'
-                notice = Error('Skipping within parser {} to point {}'
-                               .format(self.pname or self.ptype, repr(target)),
-                               self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
-                grammar.tree__.add_error(err_node, notice)
-                errors.append(notice)
-            if grammar.history_tracking__:
-                lc = line_col(grammar.document_lbreaks__, location)
-                grammar.history__.append(HistoryRecord(
-                    grammar.call_stack__, None, text_, lc, errors))
+            # signal error to tracer directly, because this error is not raised!
+            grammar.most_recent_error__ = ParserError(err_node, text_, error, first_throw=False)
         return error, err_node, text_[i:]
 
 

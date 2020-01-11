@@ -28,7 +28,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error, line_col
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, PLACEHOLDER
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 
@@ -45,18 +45,37 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # `parse.MandatoryElementsParser.mandatory_violation()`
         pe = grammar.most_recent_error__
         grammar.most_recent_error__ = None
+
+        errors = [pe.error]
+        # ignore inflated length due to gap jumping (see parse.Parser.__call__)
+        l = sum(len(nd) for nd in pe.node.select_if(lambda n: True, include_root=True)
+                if not nd.children and nd.tag_name != ZOMBIE_TAG)
+        text_ = pe.rest[l:]
+        lc = line_col(grammar.document_lbreaks__, pe.error.pos)
+        # grammar.history__.append(
+        #     HistoryRecord(grammar.call_stack__, pe.node, text_, lc, [pe.error]))
+
         if grammar.resume_notices__:
-            text_ = pe.rest[len(pe.node):]
-            target = text_
+            target = text
             if len(target) >= 10:
                 target = target[:7] + '...'
-            notice = Error('Resuming from parser "{}" with parser "{}" at point: {}'
-                           .format(pe.node.tag_name, grammar.call_stack__[-1][0], repr(target)),
-                           grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+            if pe.first_throw:
+                # resume notice
+                notice = Error('Resuming from parser "{}" with parser "{}" at point: {}'
+                               .format(pe.node.tag_name, grammar.call_stack__[-1][0],
+                                       repr(target)),
+                               grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+            else:
+                # skip notice
+                notice = Error('Skipping within parser {} to point {}'
+                               .format(grammar.call_stack__[-1][0], repr(target)),
+                               self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+
             grammar.tree__.add_error(pe.node, notice)
-            lc = line_col(grammar.document_lbreaks__, location)
-            grammar.history__.append(HistoryRecord(
-                grammar.call_stack__, None, text_, lc, [notice]))
+            errors.append(notice)
+
+        grammar.history__.append(HistoryRecord(
+            grammar.call_stack__, pe.node, text_, lc, errors))
 
     grammar.call_stack__.append(
         ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE)
@@ -64,16 +83,18 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
     grammar.moving_forward__ = True
 
     try:
-        node, rest = self._parse(text)
+        node, rest = self._parse(text)   # <===== call to the actual parser!
     except ParserError as pe:
         grammar.call_stack__.pop()
         if pe.first_throw:
-            # add error message to history
             grammar.most_recent_error__ = pe
-            lc = line_col(grammar.document_lbreaks__, pe.error.pos)
-            nd = pe.node
+        if self == grammar.start_parser__:
+            fe = grammar.most_recent_error__
+            lc = line_col(grammar.document_lbreaks__, fe.error.pos)
+            # TODO: get the call stack from when the error occured, here
+            nd = fe.node
             grammar.history__.append(
-                HistoryRecord(grammar.call_stack__, nd, pe.rest[len(nd):], lc, [pe.error]))
+                HistoryRecord(grammar.call_stack__, nd, fe.rest[len(nd):], lc, [fe.error]))
         raise pe
 
     # Mind that memoized parser calls will not appear in the history record!

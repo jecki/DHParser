@@ -26,12 +26,15 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
+REVEAL = False
+
+
 from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
     set_config_value, resume_notices_on, Error
 
 
-def get_history(name, show: bool = False) -> str:
+def get_history(name, show: bool = REVEAL) -> str:
     history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
     if show:
         import webbrowser, time
@@ -40,6 +43,12 @@ def get_history(name, show: bool = False) -> str:
     with open(history_fname, 'r', encoding='utf-8') as f:
         history_file = f.read()
     return history_file
+
+
+def reveal(grammar, name):
+    if REVEAL:
+        log_parsing_history(grammar, name)
+        get_history(name, show=True)
 
 
 class TestTrace:
@@ -186,8 +195,7 @@ class TestErrorReporting:
                     break
         else:
             assert False, "Missing Error!"
-        # log_parsing_history(gr, 'trace_noskip')
-        # get_history('trace_noskip')
+        reveal(gr, 'trace_noskip')
 
     def test_trace_skip_clause(self):
         lang = """
@@ -197,15 +205,15 @@ class TestErrorReporting:
         """
         gr = grammar_provider(lang)()
         resume_notices_on(gr)
-        _ = gr('AB_D')
+        st = gr('AB_D')
+        assert 'Skipping' in str(st.errors_sorted[1])
         for record in gr.history__:
             if record.status.startswith(record.ERROR):
                 assert record.excerpt == '_D'
                 break
         else:
             assert False, "Missing Error!"
-        # log_parsing_history(gr, 'trace_skip_clause')
-        # get_history('trace_skip_clause')
+        reveal(gr, 'trace_skip_clause')
 
     def test_trace_resume(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -218,8 +226,7 @@ class TestErrorReporting:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
-        # log_parsing_history(gr, 'trace_resume')
-        # get_history('trace_resume')
+        reveal(gr, 'trace_resume')
 
     def test_trace_resume_complex_case(self):
         lang = r"""
@@ -232,19 +239,19 @@ class TestErrorReporting:
         def mini_suite(grammar):
             tree = grammar('abc/*x*/xyz')
             assert not tree.errors
+
             tree = grammar('abDxyz')
             mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
             assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
-            # log_parsing_history(grammar, 'trace_resume_complex_1')
-            # get_history('trace_resume_complex_1')
+            reveal(grammar, 'trace_resume_complex_1')
+
             tree = grammar('abD/*x*/xyz')
             assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
-            # log_parsing_history(grammar, 'trace_resume_complex_2')
-            # get_history('trace_resume_complex_2', show=True)
+            reveal(grammar, 'trace_resume_complex_2')
+
             tree = grammar('aD /*x*/ c /* a */ /*x*/xyz')
             assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
-            # log_parsing_history(grammar, 'trace_resume_complex_3')
-            # get_history('trace_resume_complex_3')
+            reveal(grammar, 'trace_resume_complex_3')
 
         # test regex-defined resume rule
         grammar = grammar_provider(lang)()
