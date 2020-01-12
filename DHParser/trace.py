@@ -31,34 +31,38 @@ from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import freeze_callstack, HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
+from DHParser.toolkit import cython
 
 __all__ = ('trace_history', 'all_descendants', 'set_tracer',
            'resume_notices_on')
 
 
+@cython.locals(location=cython.int, loc=cython.int, delta=cython.int, cs_len=cython.int)
 def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
-    grammar = self._grammar
-    location = grammar.document_length__ - text._len
+    grammar = self._grammar  # type: Grammar
+    location = grammar.document_length__ - text._len  # type: int
 
     if grammar.most_recent_error__:
         # add resume notice (mind that skip notices are added by
         # `parse.MandatoryElementsParser.mandatory_violation()`
-        pe = grammar.most_recent_error__
+        mre = grammar.most_recent_error__  # type: ParserError
         grammar.most_recent_error__ = None
 
-        errors = [pe.error]
+        errors = [mre.error]  # List[Error]
         # ignore inflated length due to gap jumping (see parse.Parser.__call__)
-        loc = sum(len(nd) for nd in pe.node.select_if(lambda n: True, include_root=True)
-                  if not nd.children and nd.tag_name != ZOMBIE_TAG)
-        text_ = pe.rest[loc:]
-        lc = line_col(grammar.document_lbreaks__, pe.error.pos)
+        loc = 0  # type: int
+        for nd in mre.node.select_if(lambda n: True, include_root=True):
+            if not nd.children and nd.tag_name != ZOMBIE_TAG:
+                loc += len(nd)
+        text_ = mre.rest[loc:]
+        lc = line_col(grammar.document_lbreaks__, mre.error.pos)
         target = text
         if len(target) >= 10:
             target = target[:7] + '...'
-        if pe.first_throw:
+        if mre.first_throw:
             # resume notice
             notice = Error('Resuming from parser "{}" with parser "{}" at point: {}'
-                           .format(pe.node.tag_name, grammar.call_stack__[-1][0],
+                           .format(mre.node.tag_name, grammar.call_stack__[-1][0],
                                    repr(target)),
                            grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
         else:
@@ -67,10 +71,10 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
                            .format(grammar.call_stack__[-1][0], repr(target)),
                            self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
         if grammar.resume_notices__:
-            grammar.tree__.add_error(pe.node, notice)
+            grammar.tree__.add_error(mre.node, notice)
         errors.append(notice)
         grammar.history__.append(HistoryRecord(
-            getattr(pe, 'frozen_callstack', grammar.call_stack__), pe.node, text_, lc, errors))
+            getattr(mre, 'frozen_callstack', grammar.call_stack__), mre.node, text_, lc, errors))
 
     grammar.call_stack__.append(
         ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE)

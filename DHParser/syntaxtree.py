@@ -486,10 +486,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         existence of any attributes.
         """
         try:
+            if self._xml_attr is None:  # cython compatibility
+                return False
             return attr in self._xml_attr if bool(attr) else bool(self._xml_attr)
         except (AttributeError, TypeError):
-            pass
-        return False
+            return False
 
     @property
     def attr(self):

@@ -581,15 +581,26 @@ def swap_attributes(node: Node, other: Node):
     NA = node.has_attr()
     OA = other.has_attr()
     if NA or OA:
-        save = node._xml_attr if NA else None
-        if OA:
-            node._xml_attr = other._xml_attr
-        elif NA:
-            node._xml_attr = None
-        if NA:
-            other._xml_attr = save
-        elif OA:
-            other._xml_attr = None
+        try:
+            save = node._xml_attr if NA else None
+            if OA:
+                node._xml_attr = other._xml_attr
+            elif NA:
+                node._xml_attr = None
+            if NA:
+                other._xml_attr = save
+            elif OA:
+                other._xml_attr = None
+        except AttributeError:  # cython compatibility
+            save = node.attr if NA else None
+            if OA:
+                node.attr = other.attr
+            elif NA:
+                node.attr = None
+            if NA:
+                other.attr = save
+            elif OA:
+                other.attr = None
 
 
 def _replace_by(node: Node, child: Node):

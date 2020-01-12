@@ -14,7 +14,7 @@ cdef class Parser:
     cdef object visited
     cdef object recursion_counter
     cdef object cycle_detection
-    cdef object __parse
+    cdef object _parse_proxy
 
     cpdef _parse(self, text)
     cpdef reset(self)
@@ -88,19 +88,19 @@ cdef class ZeroOrMore(Option):
 cdef class OneOrMore(UnaryParser):
     pass
 
-cdef class Series(NaryParser):
+cdef class MandatoryNary(NaryParser):
     cdef public int mandatory
     cdef public object err_msgs
     cdef public object skip
+
+cdef class Series(MandatoryNary):
+    pass
 
 cdef class Alternative(NaryParser):
     pass
 
-cdef class AllOf(NaryParser):
+cdef class AllOf(MandatoryNary):
     cdef public int num_parsers
-    cdef public int mandatory
-    cdef public object err_msgs
-    cdef public object skip
 
 cdef class SomeOf(NaryParser):
     pass

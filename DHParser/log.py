@@ -417,7 +417,7 @@ class HistoryRecord:
         else:
             s = self.text
             excerpt = s[:36] + ' ...' if len(s) > 36 else s
-        excerpt = escape_control_characters(excerpt)
+        excerpt = escape_control_characters(str(excerpt))
         return excerpt
 
     # @property
