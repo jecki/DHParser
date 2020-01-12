@@ -41,7 +41,7 @@ from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
-from DHParser.syntaxtree import Node, RootNode, ZOMBIE_TAG, StrictResultType
+from DHParser.syntaxtree import Node, RootNode
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
@@ -411,5 +411,6 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     return tree
 
 
-# TODO: Verify compiler against grammar, i.e. make sure that for all on_X()-methods, `X` is the name of a parser
+# TODO: Verify compiler against grammar,
+#       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
 # TODO: AST validation against an ASDSL-Specification

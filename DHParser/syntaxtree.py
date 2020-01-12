@@ -258,8 +258,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
 
-    def __init__(self, tag_name: str, 
-                 result: Union[Tuple['Node', ...], 'Node', StringView, str], 
+    def __init__(self, tag_name: str,
+                 result: Union[Tuple['Node', ...], 'Node', StringView, str],
                  leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with the ``Parser``-Instance
@@ -367,7 +367,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param result:  the new result of the note
         """
         if isinstance(result, Node):
-            self.children = (result,)  # type: Tuple[Node, ...]
+            self.children = (result,)
             self._result = self.children
         else:
             if isinstance(result, tuple):
@@ -1569,7 +1569,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                 attributes[attr] = str(value)
             sxpr = sxpr[k + 1:].strip()
         if sxpr[0] == '(':
-            result = tuple(inner_parser(block) for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
+            result = tuple(inner_parser(block)
+                           for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
         else:
             lines = []
             while sxpr and sxpr[0:1] != ')':
@@ -1688,7 +1689,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         if len(res) == 1 and res[0].tag_name == TOKEN_PTYPE:
             result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:
-            result = tuple(res)  # type:Union[Tuple[Node, ...], StringView, str]
+            result = tuple(res)
 
         node = Node(name or ':' + class_name, result)
         if not ignore_pos and '_pos' in attrs:

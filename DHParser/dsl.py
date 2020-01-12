@@ -297,7 +297,7 @@ def load_compiler_suite(compiler_suite: str) -> \
                 RX_SECTION_MARKER.split(source)
         except ValueError:
             raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
-                                 'Please delete or repair file manually.')
+                             'Please delete or repair file manually.')
         # TODO: Compile in one step and pick parts from namespace later ?
         preprocessor = compile_python_object(imports + preprocessor_py,
                                              r'get_(?:\w+_)?preprocessor$')
@@ -412,17 +412,17 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
         compiler1 = cfactory()
     else:
-        sfactory = get_ebnf_preprocessor # type: PreprocessorFactoryFunc
-        pfactory = get_ebnf_grammar      # type: ParserFactoryFunc
-        tfactory = get_ebnf_transformer  # type: TransformerFactoryFunc
-        cfactory = get_ebnf_compiler     # type: CompilerFactoryFunc
-        compiler1 = cfactory()           # type: Compiler
+        sfactory = get_ebnf_preprocessor  # PreprocessorFactoryFunc
+        pfactory = get_ebnf_grammar       # ParserFactoryFunc
+        tfactory = get_ebnf_transformer   # TransformerFactoryFunc
+        cfactory = get_ebnf_compiler      # CompilerFactoryFunc
+        compiler1 = cfactory()            # Compiler
 
     is_ebnf_compiler = False  # type: bool
     if isinstance(compiler1, EBNFCompiler):
         is_ebnf_compiler = True
         compiler1.set_grammar_name(compiler_name, source_file)
-    
+
     result, messages, _ = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
 
     if has_errors(messages):

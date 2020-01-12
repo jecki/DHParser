@@ -780,7 +780,8 @@ class EBNFCompiler(Compiler):
         expression. Makes sure that multi-line regular expressions are
         prepended by the multi-line-flag. Returns the regular expression string.
         """
-        # TODO: Support atomic grouping: https://stackoverflow.com/questions/13577372/do-python-regular-expressions-have-an-equivalent-to-rubys-atomic-grouping
+        # TODO: Support atomic grouping: https://stackoverflow.com/questions/13577372/
+        #       do-python-regular-expressions-have-an-equivalent-to-rubys-atomic-grouping
         flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
         if flags:
             rx = "(?%s)%s" % ("".join(flags), rx)

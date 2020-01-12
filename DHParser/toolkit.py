@@ -370,7 +370,7 @@ def compile_python_object(python_src: str, catch_obj_regex="") -> Any:
     if isinstance(catch_obj_regex, str):
         catch_obj_regex = re.compile(catch_obj_regex)
     code = compile(python_src, '<string>', 'exec')
-    namespace = {}
+    namespace = {}  # type: Dict[str, Any]
     exec(code, namespace)  # safety risk?
     if catch_obj_regex:
         matches = [key for key in namespace if catch_obj_regex.match(key)]

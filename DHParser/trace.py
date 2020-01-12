@@ -48,9 +48,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
         errors = [pe.error]
         # ignore inflated length due to gap jumping (see parse.Parser.__call__)
-        l = sum(len(nd) for nd in pe.node.select_if(lambda n: True, include_root=True)
-                if not nd.children and nd.tag_name != ZOMBIE_TAG)
-        text_ = pe.rest[l:]
+        loc = sum(len(nd) for nd in pe.node.select_if(lambda n: True, include_root=True)
+                  if not nd.children and nd.tag_name != ZOMBIE_TAG)
+        text_ = pe.rest[loc:]
         lc = line_col(grammar.document_lbreaks__, pe.error.pos)
         target = text
         if len(target) >= 10:
@@ -83,8 +83,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         if pe.first_throw:
             pe.frozen_callstack = freeze_callstack(grammar.call_stack__)
             grammar.most_recent_error__ = pe
-        if self == grammar.start_parser__:
-            fe = grammar.most_recent_error__
+        if self == grammar.start_parser__ and grammar.most_recent_error__:
+            fe = grammar.most_recent_error__  # type: ParserError
             lc = line_col(grammar.document_lbreaks__, fe.error.pos)
             # TODO: get the call stack from when the error occured, here
             nd = fe.node
@@ -101,9 +101,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # record history
         # TODO: Make dropping insignificant whitespace from history configurable
         delta = text._len - rest._len
-        nd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
+        hnd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
-        record = HistoryRecord(grammar.call_stack__, nd, rest, lc, [])
+        record = HistoryRecord(grammar.call_stack__, hnd, rest, lc, [])
         cs_len = len(record.call_stack)
         if (not grammar.history__ or lc != grammar.history__[-1].line_col
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]

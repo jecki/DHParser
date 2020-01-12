@@ -42,7 +42,7 @@ For JSON see:
 """
 
 import asyncio
-from concurrent.futures import Future, Executor, ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 import json
@@ -53,7 +53,7 @@ import subprocess
 import sys
 import time
 from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
-    Iterator, Iterable, Any, cast
+    Iterator, Iterable, Any, cast, Type
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -66,6 +66,7 @@ __all__ = ('RPC_Table',
            'RPC_Type',
            'RPC_Error_Type',
            'JSON_Type',
+           'JSON_Dict',
            'ConnectionCallback',
            'SERVER_ERROR',
            'SERVER_OFFLINE',
@@ -95,6 +96,7 @@ RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 RPC_Error_Type = Optional[Tuple[int, str]]
 JSON_Type = Union[Dict, Sequence, str, int, None]
+JSON_Dict = Dict[str, JSON_Type]
 BytesType = Union[bytes, bytearray]
 ConnectionCallback = Callable[['Connection'], None]
 
@@ -131,7 +133,7 @@ X-Pad: avoid browser bug
 
 '''
 
-JSONRPC_HEADER = '''Content-Length: {length}\r\n\r\n'''
+JSONRPC_HEADER = b'''Content-Length: %i\r\n\r\n'''
 
 ONELINER_HTML = '''<!DOCTYPE html>
 <html lang="en" xml:lang="en">
@@ -228,7 +230,7 @@ async def asyncio_connect(
     delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
     connected = False
     reader, writer = None, None
-    save_error = ConnectionError
+    save_error = ConnectionError  # type: Union[Type[ConnectionError], ConnectionRefusedError]
     while delay < retry_timeout:
         try:
             reader, writer = await asyncio.open_connection(host, port)
@@ -367,7 +369,7 @@ class Connection:
 
     # async-task support
 
-    def create_task(self, json_id: int, coroutine: Coroutine) -> Future:
+    def create_task(self, json_id: int, coroutine: Coroutine) -> asyncio.futures.Future:
         assert json_id not in self.active_tasks, \
             "JSON-id {} already used!".format(json_id)
         task = asyncio.ensure_future(coroutine)
@@ -399,6 +401,7 @@ class Connection:
         coroutine."""
         if self.log_file:
             self.log('RESULT: ', json.dumps(json_obj))
+        assert self.response_queue is not None
         self.response_queue.put_nowait(json_obj)
 
     async def server_call(self, json_obj: JSON_Type):
@@ -407,7 +410,7 @@ class Connection:
         if self.log_file:
             self.log('CALL: ', json_str, '\n\n')
         request = json_str.encode()
-        request = JSONRPC_HEADER.format(length=len(request)) + request
+        request = JSONRPC_HEADER % len(request) + request
         self.writer.write(request)
         await self.writer.drain()
 
@@ -416,6 +419,7 @@ class Connection:
         with the id `call_id`."""
         pending = self.pending_responses.get(call_id, [])
         while not pending:
+            assert self.response_queue is not None
             response = await self.response_queue.get()
             self.pending_responses.setdefault(call_id, []).insert(0, response)
             pending = self.pending_responses.get(call_id, [])
@@ -684,7 +688,7 @@ class Server:
         has_kw_params = isinstance(params, Dict)
         if not (has_kw_params or isinstance(params, Sequence)):
             rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
-                        % (str(type(params)), str(params))
+                % (str(type(params)), str(params))
             return result, rpc_error
         try:
             # print(executor, method, params)
@@ -694,8 +698,11 @@ class Server:
                 else:
                     result = method(**params) if has_kw_params else method(*params)
             elif has_kw_params:
+                # if self.loop is None:  raise AssertionError('No task loop!?')
+                assert self.loop, "No task loop!?"
                 result = await self.loop.run_in_executor(executor, partial(method, **params))
             else:
+                assert self.loop, "No task loop!?"
                 result = await self.loop.run_in_executor(executor, partial(method, *params))
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
@@ -725,6 +732,7 @@ class Server:
         result, rpc_error = await self.execute(executor, method, params)
         if rpc_error is not None and rpc_error[0] == -32050:
             # if process pool is broken, try again:
+            assert self.process_executor
             self.process_executor.shutdown(wait=True)
             self.process_executor = ProcessPoolExecutor()
             result, rpc_error = await self.execute(self.process_executor, method, params)
@@ -743,7 +751,7 @@ class Server:
                         'Only bytes and str allowed!'
                         % (str(type(response)), str(response))).encode()
         if self.use_jsonrpc_header and response.startswith(b'{'):
-            response = JSONRPC_HEADER.format(length=len(response)).encode() + response
+            response = JSONRPC_HEADER % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
             self.log('RESPONSE: ', response.decode(), '\n\n')
         # print('returned: ', response)
@@ -752,10 +760,11 @@ class Server:
             await writer.drain()
         except ConnectionError as err:
             self.log('ERROR when writing data: ', str(err), '\n')
-            self.connection.alive = False
+            if self.connection:
+                self.connection.alive = False
 
     def amend_service_call(self, func_name: str, func: Callable, argument: Union[Tuple, Dict],
-                           err_func: Callable)-> Tuple[Callable, Union[Tuple, Dict]]:
+                           err_func: Callable) -> Tuple[Callable, Union[Tuple, Dict]]:
         if argument is None:
             argument = ()
         if getattr(func, '__self__', None) == self:
@@ -787,7 +796,8 @@ class Server:
                 func_name = m.group(1).decode()
                 argstr = m.group(2).decode()
                 if argstr:
-                    argument = tuple(convert_argstr(s) for s in argstr.split(','))
+                    argument = tuple(convert_argstr(s)
+                                     for s in argstr.split(','))  # type: Union[Tuple, Dict]
                 else:
                     argument = ()
             else:
@@ -796,7 +806,7 @@ class Server:
 
             err_func = lambda *args, **kwargs: \
                 'No function named "%s" known to server %s !' % (func_name, self.server_name)
-            func = self.rpc_table.get(func_name, err_func)
+            func = self.rpc_table.get(func_name, err_func)  # type: Callable
             if service_call:
                 func, argument = self.amend_service_call(func_name, func, argument, err_func)
             result, rpc_error = await self.run(func_name, func, argument)
@@ -810,6 +820,7 @@ class Server:
                         await self.respond(writer, str(err))
             else:
                 await self.respond(writer, rpc_error[1])
+        assert self.connection
         self.connection.task_done(task_id)
 
     async def handle_http_request(self, task_id: int,
@@ -850,6 +861,7 @@ class Server:
                                 await self.respond(writer, http_response(str(err)))
                     else:
                         await self.respond(writer, http_response(rpc_error[1]))
+        assert self.connection
         self.connection.task_done(task_id)
 
     async def handle_jsonrpc_request(self, json_id: int,
@@ -877,11 +889,13 @@ class Server:
             method = self.rpc_table[method_name]
             params = json_obj['params'] if 'params' in json_obj else {}
             if service_call:
-                err_func = lambda *args, **kwargs: {"error": {"code": -32601,
-                    "message": "%s is not a service function" % method_name}}
+                err_func = lambda *args, **kwargs: {
+                    "error": {"code": -32601,
+                              "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
             result, rpc_error = await self.run(method_name, method, params)
             if method_name == 'exit':
+                assert self.connection
                 self.connection.alive = False
                 reader.feed_eof()
 
@@ -917,6 +931,7 @@ class Server:
 
         if result is not None or rpc_error is not None:
             await writer.drain()
+        assert self.connection
         self.connection.task_done(json_id)
 
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -931,12 +946,13 @@ class Server:
 
         def connection_alive() -> bool:
             """-> `False` if connection is dead or shall be shut down."""
+            assert self.connection
             return not self.kill_switch and self.connection.alive and not reader.at_eof()
 
         buffer = bytearray()  # type: bytearray
         while connection_alive():
             # reset the data variable
-            data = bytearray() # type: bytearray
+            data = bytearray()  # type: bytearray
             # reset the content length
             content_length = 0  # type: int
             # reset the length of the header, represented by the variable `k`
@@ -1045,7 +1061,7 @@ class Server:
                 #       (put calls to execute in asyncio tasks, use asyncio.gather)
                 json_id = 0       # type: int
                 raw = None        # type: Optional[JSON_Type]
-                json_obj = {}     # type: JSON_Type
+                json_obj = {}     # type: JSON_Dict
                 rpc_error = None  # type: Optional[RPC_Error_Type]
                 # see: https://microsoft.github.io/language-server-protocol/specification#header-part
                 # i = max(data.find(b'\n\n'), data.find(b'\r\n\r\n')) + 2
@@ -1066,8 +1082,9 @@ class Server:
 
                 if rpc_error is None:
                     if isinstance(raw, Dict):
-                        json_obj = cast(Dict, raw)
-                        json_id = json_obj.get('id', gen_task_id())
+                        json_obj = cast(JSON_Dict, raw)
+                        raw_id = cast(Union[str, int], json_obj.get('id', gen_task_id()))
+                        json_id = int(raw_id)
                     else:
                         rpc_error = -32700, 'Parse error: JSON-package does not appear '\
                                             'to ba an RPC-call or -response!?'
@@ -1076,13 +1093,14 @@ class Server:
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None) or json_obj.get('error', None)
                     if method:
+                        assert isinstance(method, str)
                         if id_connection or method != 'initialize':
                             rpc_error = self.connection.verify_initialization(
-                                method, self.strict_lsp and id_connection)
+                                method, self.strict_lsp and bool(id_connection))
                             if rpc_error is None:
                                 task = self.connection.create_task(
                                     json_id, self.handle_jsonrpc_request(
-                                        json_id, reader, writer, json_obj, not id_connection))
+                                        json_id, reader, writer, json_obj, not bool(id_connection)))
                         else:
                             rpc_error = -32002, 'server is already connected to another client'
                     elif response is not None:
@@ -1128,12 +1146,13 @@ class Server:
             self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
+                assert self.serving_task
                 self.serving_task.cancel()
             else:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
-            self.log('SERVER MESSAGE: Stopping server: %i.\n\n'.format(id_connection))
+            self.log('SERVER MESSAGE: Stopping server: {}.\n\n'.format(id_connection))
             self.kill_switch = False  # reset flag
 
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
@@ -1184,6 +1203,7 @@ class Server:
                 asyncio.set_event_loop(self.loop)
             else:
                 self.loop = loop
+            assert self.loop is not None
             self.server = cast(
                 asyncio.base_events.Server,
                 self.loop.run_until_complete(
@@ -1399,7 +1419,7 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 #######################################################################
 
 
-def lsp_candidates(cls: Any, prefix: str='lsp_') -> Iterator[str]:
+def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
     """Returns an iterator over all method names from a class that either
     have a certain prefix or, if no prefix was given, all non-special and
     non-private-methods of the class."""
@@ -1416,7 +1436,7 @@ def lsp_candidates(cls: Any, prefix: str='lsp_') -> Iterator[str]:
                 yield fn
 
 
-def gen_lsp_name(func_name: str, prefix: str= 'lsp_') -> str:
+def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
     """Generates the name of an lsp-method from a function name,
     e.g. "lsp_S_cacelRequest" -> "$/cancelRequest" """
     assert func_name.startswith(prefix)
@@ -1456,4 +1476,3 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
     cls = lsp_funcs_or_instance
     rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn) for fn in lsp_candidates(cls, prefix)}
     return rpc_table
-

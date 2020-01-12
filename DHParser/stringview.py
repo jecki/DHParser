@@ -32,7 +32,7 @@ speedup. The modules comes with a ``stringview.pxd`` that contains some type
 declarations to more fully exploit the benefits of the Cython-compiler.
 """
 
-from typing import Optional, Union, Iterable, Tuple, List
+from typing import Optional, Union, Iterable, Tuple, List, Sequence
 
 try:
     import cython
@@ -340,7 +340,7 @@ class StringView:  # collections.abc.Sized
         return self if end == self._len else self[:end]
 
     @cython.locals(length=cython.int, i=cython.int, k=cython.int)
-    def split(self, sep=None) -> List[Union['StringView', str]]:
+    def split(self, sep=None) -> Sequence[Union['StringView', str]]:
         """Returns a list of the words in `self`, using `sep` as the
         delimiter string.  If `sep` is not specified or is None, any
         whitespace string is a separator and empty strings are

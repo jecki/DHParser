@@ -93,8 +93,7 @@ class TestTrace:
         gr = grammar_provider(lang)()
         all_desc = all_descendants(gr.root_parser__)
         set_tracer(all_desc, trace_history)
-        st = gr('2*(3+4)xxx')
-        # print(st.as_sxpr(compact=True))
+        _ = gr('2*(3+4)xxx')
         log_parsing_history(gr, 'trace_stopped_early')
         history = get_history('trace_stopped_early')
         assert history.count('<tr>') == 26
@@ -236,6 +235,7 @@ class TestErrorReporting:
             block_A = "a" §"b" "c"
             block_B = "x" "y" "z"
         """
+
         def mini_suite(grammar):
             tree = grammar('abc/*x*/xyz')
             assert not tree.errors

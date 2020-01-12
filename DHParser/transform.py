@@ -27,7 +27,6 @@ for CST -> AST transformations.
 """
 
 
-from collections import OrderedDict
 import collections.abc
 from functools import partial, singledispatch, reduce
 import inspect
@@ -37,7 +36,7 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
-    RootNode, parse_sxpr, flatten_sxpr
+    RootNode
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
 
 

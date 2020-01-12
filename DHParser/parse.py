@@ -37,7 +37,7 @@ from typing import Callable, cast, List, Tuple, Set, Dict, \
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, linebreaks, line_col
-from DHParser.log import HistoryRecord
+from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
@@ -117,6 +117,7 @@ class ParserError(Exception):
         self.rest = rest    # type: StringView
         self.error = error  # type: Error
         self.first_throw = first_throw  # type: bool
+        self.frozen_callstack = tuple()  # type: Tuple[CallItem, ...]  # tag_name, location
 
     def __str__(self):
         return "%i: %s    %s" % (self.node.pos, str(self.rest[:25]), repr(self.node))
@@ -511,8 +512,8 @@ class Parser:
         if proxy is None:
             self._parse_proxy = self._parse
         else:
-            if type(proxy) != type(self._parse):
-                # assume that proxy is a function
+            if not isinstance(proxy, type(self._parse)):
+                # assume that proxy is a function and bind it to self
                 proxy = proxy.__get__(self, type(self))
             else:
                 # if proxy is a method it must be a method of self
@@ -536,8 +537,8 @@ class Parser:
                 self._grammar = grammar
                 # self._grammar_assigned_notifier()
             elif self._grammar != grammar:
-                  raise AssertionError("Parser has already been assigned"
-                                       "to a different Grammar object!")
+                raise AssertionError("Parser has already been assigned"
+                                     "to a different Grammar object!")
         except AttributeError:
             pass  # ignore setting of grammar attribute for placeholder parser
         except NameError:  # Cython: No access to GRAMMA_PLACEHOLDER, yet :-(
@@ -549,8 +550,8 @@ class Parser:
         """
         return tuple()
 
-    def _apply(self, func: Callable[['Parser'], None], 
-              flip: Callable[[Callable, Set[Callable]], bool]) -> bool:
+    def _apply(self, func: Callable[['Parser'], None],
+               flip: Callable[[Callable, Set[Callable]], bool]) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers, if any exist.
@@ -620,6 +621,11 @@ def Drop(parser: Parser) -> Parser:
 
 
 PARSER_PLACEHOLDER = Parser()
+
+
+def is_parser_placeholder(parser: Optional[Parser]) -> bool:
+    """Returns True, if `parser` is `None` or merely a placeholder for a parser."""
+    return not parser or parser.ptype == ":Parser"
 
 
 ########################################################################
@@ -1070,7 +1076,7 @@ class Grammar:
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -1              # type: int
         # support for call stack tracing
-        self.call_stack__ = []                # type: List[Tuple[str, int]]  # tag_name, location
+        self.call_stack__ = []                # type: List[CallItem]  # tag_name, location
         # snapshots of call stacks
         self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
@@ -1990,7 +1996,6 @@ class Series(MandatoryNary):
                         text_, isinstance(parser, Lookahead), parser.repr, reloc)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
-                        rest = text_
                         nd, text_ = parser(text_)  # try current parser again
                         if nd is not None:
                             results += (node,)
@@ -2017,7 +2022,7 @@ class Series(MandatoryNary):
     # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
 
     @staticmethod
-    def combined_mandatory(left: 'Series', right: 'Series'):
+    def combined_mandatory(left: Parser, right: Parser) -> int:
         """
         Returns the position of the first mandatory element (if any) when
         parsers `left` and `right` are joined to a sequence.
@@ -2630,7 +2635,7 @@ class Forward(Parser):
 
     def __init__(self):
         super(Forward, self).__init__()
-        self.parser = None  # type: Optional[Parser]
+        self.parser = PARSER_PLACEHOLDER  # type: Parser
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
@@ -2641,8 +2646,7 @@ class Forward(Parser):
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser
-        if parser is not None:
-            duplicate.drop_content = parser.drop_content
+        duplicate.drop_content = parser.drop_content
         return duplicate
 
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2696,6 +2700,6 @@ class Forward(Parser):
         self.drop_content = parser.drop_content
 
     def sub_parsers(self) -> Tuple[Parser, ...]:
-        if self.parser is not None:
-            return (self.parser,)
-        return tuple()
+        if is_parser_placeholder(self.parser):
+            return tuple()
+        return (self.parser,)
