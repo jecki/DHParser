@@ -62,6 +62,7 @@ __all__ = ('typing',
            'concurrent_ident',
            'unrepr',
            'abbreviate_middle',
+           'escape_formatstr',
            'lstrip_docstring',
            'issubtype',
            'isgenerictype',
@@ -234,6 +235,15 @@ def abbreviate_middle(s: str, max_length: int) -> str:
         a = max_length // 2 - 2  # type: int
         b = max_length // 2 - 3  # type: int
         s = s[:a] + ' ... ' + s[-b:] if length > 40 else s
+    return s
+
+
+def escape_formatstr(s: str) -> str:
+    """Replaces single curly braces by double curly-braces in string `s`,
+    so that they are not misinterpreted as place-holder by "".format().
+    """
+    s = re.sub(r'(?<!\{)\{(?!\{)', '{{', s)
+    s = re.sub(r'(?<!\})\}(?!\})', '}}', s)
     return s
 
 

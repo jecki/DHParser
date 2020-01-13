@@ -52,6 +52,7 @@ Example::
 """
 
 import collections
+import contextlib
 import html
 import os
 from typing import List, Tuple, Union, Optional
@@ -68,6 +69,7 @@ __all__ = ('CallItem',
            'suspend_logging',
            'resume_logging',
            'log_dir',
+           'local_log_dir',
            'is_logging',
            'create_log',
            'append_log',
@@ -138,12 +140,11 @@ def log_dir(path: str = "") -> str:
     Returns:
         str - name of the logging directory or '' if logging is turned off.
     """
-    # the try-except clauses in the following are precautions for multithreading
     dirname = path if path else get_config_value('log_dir')
     if not dirname:
         return ''
-    # `try ... except` rather `if os.path.exists(...)` to create directory
-    # to ensure thread-saftey.
+    dirname = os.path.normpath(dirname)
+    # `try ... except` rather than `if os.path.exists(...)` for thread-safety
     try:
         os.mkdir(dirname)
         info_file_name = os.path.join(dirname, 'info.txt')
@@ -159,6 +160,18 @@ def log_dir(path: str = "") -> str:
                                           'because it is not a directory!')
     set_config_value('log_dir', dirname)
     return dirname
+
+
+@contextlib.contextmanager
+def local_log_dir(path: str = './LOGS'):
+    """Context manager for temporarily switching to a different log-directory."""
+    assert path, "Pathname cannot be empty"
+    saved_log_dir = get_config_value('log_dir')
+    log_dir(path)
+    try:
+        yield
+    finally:
+        set_config_value('log_dir', saved_log_dir)
 
 
 def is_logging(thread_local_query: bool = True) -> bool:
@@ -513,7 +526,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     """
     def write_log(history: List[str], log_name: str) -> None:
         htm = '.html' if html else ''
-        path = os.path.join(log_dir() or '', log_name + "_parser.log" + htm)
+        path = os.path.join(log_dir(), log_name + "_parser.log" + htm)
         if os.path.exists(path):
             os.remove(path)
             # print('WARNING: Log-file "%s" already existed and was deleted.' % path)

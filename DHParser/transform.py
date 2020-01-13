@@ -37,7 +37,8 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode
-from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython, \
+    escape_formatstr
 
 
 __all__ = ('TransformationDict',
@@ -109,6 +110,7 @@ __all__ = ('TransformationDict',
            'forbid',
            'require',
            'assert_content',
+           'add_error',
            'error_on',
            'assert_has_children',
            'peek')
@@ -1233,6 +1235,27 @@ def delimit_children(context: List[Node], delimiter_tag_name: str, delimiter: st
 #
 ########################################################################
 
+
+@transformation_factory
+@transformation_factory(str)
+def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = Error.ERROR):
+    """
+    Raises an error unconditionally. This makes sense in case illegal pathes are
+    encoded in the syntax to provide more accurate error messages.
+    """
+    node = context[-1]
+    if not error_msg:
+        error_msg = "Syntax Error"
+    try:
+        cast(RootNode, context[0]).new_error(node, error_msg.format(
+             tag_name=node.tag_name, content=node.content, pos=node.pos), error_code)
+    except KeyError as key_error:
+        cast(RootNode, context[0].new_error(
+            node, 'Schlüssel %s nicht erlaubt in Format-Zeichenkette: "%s"! '
+            'Erlaubt sind "tag_name", "content", "pos"' % (str(key_error), error_msg),
+            Error.AST_TRANSFORM_CRASH))
+
+
 @transformation_factory(collections.abc.Callable)
 def error_on(context: List[Node],
              condition: Callable,
@@ -1243,15 +1266,12 @@ def error_on(context: List[Node],
     """
     node = context[-1]
     if condition(context):
-        if error_msg:
-            cast(RootNode, context[0]).new_error(node, error_msg.format(
-                tag_name=node.tag_name, content=node.content, pos=node.pos), error_code)
-        else:
+        if not error_msg:
             cond_name = condition.__name__ if hasattr(condition, '__name__') \
                 else condition.__class__.__name__ if hasattr(condition, '__class__') \
                 else '<unknown>'
-            cast(RootNode, context[0]).new_error(node, "transform.error_on: Failed to meet"
-                                                 "condition " + cond_name, error_code)
+            error_msg = "transform.error_on: Failed to meet condition " + cond_name
+        add_error(context, error_msg, error_code)
 
 #
 # @transformation_factory(collections.abc.Callable)

@@ -39,7 +39,7 @@ from typing import Dict, List, Union, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations
-from DHParser.log import is_logging, clear_logs, log_parsing_history
+from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
@@ -62,32 +62,6 @@ __all__ = ('unit_from_config',
 
 UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst'}
 RESULT_STAGES = {'__cst__', '__ast__', '__err__'}
-
-# def unit_from_configfile(config_filename):
-#     """
-#     Reads a grammar unit test from a config file.
-#     """
-#     cfg = configparser.ConfigParser(interpolation=None)
-#     cfg.read(config_filename, encoding="utf8")
-#     OD = collections.OrderedDict
-#     unit = OD()
-#     for section in cfg.sections():
-#         symbol, stage = section.split(':')
-#         if stage not in UNIT_STAGES:
-#             if symbol in UNIT_STAGES:
-#                 symbol, stage = stage, symbol
-#             else:
-#                 raise ValueError('Test stage %s not in: ' % (stage, str(UNIT_STAGES)))
-#         for testkey, testcode in cfg[section].items():
-#             if testcode[:3] + testcode[-3:] in {"''''''", '""""""'}:
-#                 testcode = testcode[3:-3]
-#                 # testcode = testcode.replace('\\#', '#')
-#                 testcode = re.sub(r'(?<!\\)\\#', '#', testcode).replace('\\\\', '\\')
-#             elif testcode[:1] + testcode[-1:] in {"''", '""'}:
-#                 testcode = testcode[1:-1]
-#             unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
-#     # print(json.dumps(unit, sort_keys=True, indent=4))
-#     return unit
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
@@ -431,7 +405,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
-            # log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
+            # with local_log_dir('./LOGS'):
+            #     log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
@@ -450,8 +425,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     ast_errors = ast.errors_sorted
                     adjust_error_locations(ast_errors, test_code)
                     if errors:
-                        errata.append('\n\t'.join(
-                            str(m).replace('\n', '\n\t\t') for m in ast_errors))
+                        if errata:  errata[-1] = errata[-1].rstrip('\n')
+                        ast_errors.append('\n')
+                        errata.append('\t' + '\n\t'.join(
+                            str(msg).replace('\n', '\n\t\t') for msg in ast_errors))
                     else:
                         errata.append('Match test "%s" for parser "%s" failed:'
                                       '\n\tExpr.:  %s\n\n\t%s\n\n' %
@@ -492,7 +469,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of failure!
                 if is_logging() and track_history:
-                    log_parsing_history(parser, "match_%s_%s.log" % (parser_name, clean_test_name))
+                    with local_log_dir('./LOGS'):
+                        log_parsing_history(parser, "match_%s_%s.log" %
+                                            (parser_name, clean_test_name))
 
         if verbose and 'fail' in tests:
             write('  Fail-Tests for parser "' + parser_name + '"')
@@ -515,7 +494,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
                 if is_logging() and track_history:
-                    log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
+                    with local_log_dir('./LOGS'):
+                        log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
                 adjust_error_locations(cst.errors, test_code)
                 tests.setdefault('__msg__', {})[test_name] = \
