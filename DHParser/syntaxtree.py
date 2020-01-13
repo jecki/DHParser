@@ -1177,16 +1177,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif switch == COMPACT_SERIALIZATION.lower():
             return self.as_sxpr(compact=True)
         elif switch == SMART_SERIALIZATION.lower():
-            threshold = get_config_value('flatten_sxpr_threshold')
+            flatten_threshold = get_config_value('flatten_sxpr_threshold')
+            compact_threshold = get_config_value('compact_sxpr_threshold')
             vsize = 0
             for nd in self.select_if(lambda _: True, include_root=True):
                 if nd.children:
                     vsize += 1
-                if vsize > get_config_value('compact_sxpr_threshold'):
+                if vsize > compact_threshold:
                     return self.as_sxpr(compact=True)
-            if threshold <= 0:
+            if flatten_threshold <= 0:
                 return self.as_sxpr(compact=True)
-            sxpr = self.as_sxpr(flatten_threshold=threshold)
+            sxpr = self.as_sxpr(flatten_threshold=flatten_threshold)
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
