@@ -36,7 +36,6 @@ from DHParser.error import Error, ErrorCode, linebreaks, line_col
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython
 
-
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
            'REGEXP_PTYPE',
@@ -486,8 +485,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         existence of any attributes.
         """
         try:
-            if self._xml_attr is None:  # cython compatibility
-                return False
             return attr in self._xml_attr if bool(attr) else bool(self._xml_attr)
         except (AttributeError, TypeError):
             return False

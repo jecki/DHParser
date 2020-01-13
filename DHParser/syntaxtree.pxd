@@ -9,7 +9,7 @@ cdef class Node:
     cdef public object _result
     cdef public tuple children
     cdef public str tag_name
-    cdef object _xml_attr
+    cdef public object _xml_attr
 
     # cpdef equals(self, other, ignore_attr_order)
     # cpdef get(self,  index_or_tagname, surrogate)
