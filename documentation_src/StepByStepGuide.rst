@@ -386,13 +386,13 @@ at the end of the "fail"-case::
 
     [fail:document]
     F1: """This test should fail, because neither
-       comma nor full have been defined anywhere"""
+       comma nor full stop have been defined anywhere"""
 
 The format of the test-files should be pretty self-explanatory. It is a simple
 ini-file, where the section markers hold the name of the grammar-rule to be
-tested which is either preceded by "match" or "fail". "match means" that the
+tested which is either preceded by "match" or "fail". "match" means that the
 following examples should be matched by the grammar-rule. "fail" means they
-should *not* match. It is just as important that a parser or grammar-rules
+should *not* match. It is just as important that a parser (or grammar-rules)
 does not match those strings it should not match as it is that it matches
 those strings that it should match. The individual test-cases all get a name,
 in this case M1, M2, F1, but if you prefer more meaningful names this is also
@@ -405,8 +405,8 @@ tell that it worked::
 
     $ python poetryCompiler.py example.dsl
 
-So far, we have seen *in nuce* how the development workflow for a building up
-DSL-grammar goes. Let's take this a step further by adding more capabilities
+So far, we have seen *in nuce* how the development workflow for building up
+a DSL-grammar goes. Let's take this a step further by adding more capabilities
 to our grammar.
 
 Extending the example DSL further
@@ -707,34 +707,31 @@ what this means and how this works, briefly.
     parser-part of this script (i.e. the class derived from class Grammar),
     because this part is completely auto-generated and can therefore be
     overwritten safely. The other parts of that script, including the
-    AST-transformation-dictionary, if never changed once it has been generated,
-    because it needs to be filled in by hand by the designer of the DSL and the
-    hand-made changes should not be overwritten. There it is left as it is when
-    regenerating the parser. However, this means, if you add symbols to your
-    grammar later, you will not find them as keys in the
+    AST-transformation-dictionary, are never changed once they have been generated,
+    because they need to be filled in by hand by the designer of the DSL and the
+    hand-made changes should not be overwritten. However, this means,
+    if you add symbols to your grammar later, you will not find them as keys in the
     AST-transformation-table, but you'll have to add them yourself.
 
     The comments in the compiler-script clearly indicate which parts can be
-    edited by hand safely, i.e. without running the risk of being overwritten, an
+    edited by hand safely, i.e. without running the risk of being overwritten, and
     which cannot.
 
 We can either specify no operator (empty list), a single operator or a list of
 operators for transforming a node. There is a difference between specifying an
 empty list for a particular tag-name or leaving out a tag-name completely. In the
 latter case the "*"-joker is applied, in place of the missing list of operators.
-In the former case only the "+"-joker is applied. If a list of operators is
+In the former case only the "<" and ">"-jokers are applied. If a list of operators is
 specified, these operators will be applied in sequence one after the other. We
-also call the list of operators or the single operator if there is only one
-*transformation* for a particular tag (or parser name or parser type for that
-matter).
+also call the list of operators the *transformation* for a particular tag.
 
 Because the AST-transformation works through the table from the inside to the
 outside, it is reasonable to do the same when designing the AST-transformations,
 to proceed in the same order. The innermost nodes that concern us are the nodes
 captured by the <WORD>-parser, or simply, <WORD>-nodes. As we can see, these
 nodes usually contain a <:RegExp>-node and a <:Whitespace>-node. As the "WORD"
-parser is defined as a simple regular expression with followed by optional
-whitespace in our grammar, we now that this must always be the case, although
+parser is defined as a simple regular expression which is followed by optional
+whitespace in our grammar, we know that this must always be the case, although
 the whitespace may occasionally be empty. Thus, we can eliminate the
 uninformative child nodes by removing whitespace first and the reducing the
 single left over child node. The respective line in the AST-transformation-table
@@ -760,11 +757,9 @@ Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
 
     ...
 
-It starts to become more readable and concise, but there are sill some oddities.
-Firstly, the Tokens that deliminate parts of sentences still contain whitespace.
-Secondly, if several <part>-nodes follow each other in a <sentence>-node, the
-<part>-nodes after the first one are enclosed by a <:Series>-node or even a
-cascade of <:ZeroOrMore> and <:Series>-nodes. As for the <:Token>-nodes, we
+It starts to become more readable and concise.
+Still, the Tokens that deliminate parts of sentences still contain whitespace.
+As for the <:Token>-nodes, we
 can do the same trick as with the WORD-nodes::
 
     ":Token": [remove_whitespace, reduce_single_child],
