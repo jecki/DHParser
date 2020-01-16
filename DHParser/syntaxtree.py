@@ -292,9 +292,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
         # name, ptype = (self._tag_name.split(':') + [''])[:2]
         # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
-        rarg = str(self) if not self.children else \
+        rarg = ("'%s'" % str(self)) if not self.children else \
             "(" + ", ".join(child.__repr__() for child in self.children) + ")"
-        return "Node(%s, %s)" % (self.tag_name, rarg)
+        rep = ["Node('%s', %s)" % (self.tag_name, rarg)]
+        if self.has_attr():
+            rep.append('.with_attr(%s)' % repr(dict(self.attr)))
+        if self._pos >= 0:
+            rep.append('.with_pos(%i)' % self._pos)
+        return ''.join(rep)
 
     def __len__(self):
         return (sum(child.__len__() for child in self.children)
@@ -538,6 +543,38 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.has_attr():
             return self.attr.get(attribute, default)
         return default
+
+    def with_attr(self, *attr_dict, **attributes):
+        """
+        Adds the attributes which are passed to `with_attr()` either as an
+        attribute dictionary or as keyword parameters to the node's attributes
+        and returns `self`.
+        :param attr_dict:  a dictionary of attribute keys and values
+        :param attributes: alternatively, a squences of keyword parameters
+        :return: `self`
+
+        Example:
+        >>> node = Node('test', '').with_attr(animal = "frog", plant= "tree")
+        >>> dict(node.attr)
+        {'animal': 'frog', 'plant': 'tree'}
+        >>> node.with_attr({'building': 'skyscraper'})
+        Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})
+        """
+        if attr_dict:
+            assert not attributes, "Node.with_attr() can be called either exclusively with " \
+                "keyword parameters, or a single non-keyword parameter and no keyword parameters!"
+            assert len(attr_dict) == 1, "Node.with_attr() must not be called with more than one " \
+                "non-keyword parameter."
+            dictionary = attr_dict[0]
+            assert isinstance(dictionary, dict), "The non-keyword parameter passed to " \
+                "Node.with_attr() must be of type dict, not %s." % str(type(dictionary))
+            # assert all(isinstance(a, str) and isinstance(v, str) for a, v in attr_dict.items())
+            if dictionary:  # do not update with an empty dictionary
+                self.attr.update(dictionary)
+        elif attributes:
+            # assert all(isinstance(a, str) and isinstance(v, str) for a, v in attributes.items())
+            self.attr.update(attributes)
+        return self
 
     def compare_attr(self, other: 'Node', ignore_order: bool = False) -> bool:
         """
