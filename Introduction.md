@@ -119,7 +119,7 @@ You can try: Download DHParser from the
 [gitlab-repository](https://gitlab.lrz.de/badw-it/DHParser) and enter
 the directory `examples/Tutorial` on the command line interface (shell).
 Just run `python LyrikCompiler_example.py` (you need to have installed
-[Python](https://www.python.org/) Version 3.4 or higher on your
+[Python](https://www.python.org/) Version 3.5 or higher on your
 computer). The output will be something like this:
 
     <gedicht>
