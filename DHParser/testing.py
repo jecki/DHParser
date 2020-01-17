@@ -361,7 +361,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
     for parser_name, tests in test_unit.items():
         if not get_config_value('test_parallelization'):
-            print('  ' + parser_name)
+            print('  Testing parser: ' + parser_name)
 
         track_history = False
         try:
@@ -396,7 +396,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
         for test_name, test_code in tests.get('match', dict()).items():
             if not get_config_value('test_parallelization'):
-                print('    ' + str(test_name))
+                print('    Test: ' + str(test_name))
 
             errflag = len(errata)
             try:

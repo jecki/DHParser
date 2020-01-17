@@ -63,6 +63,7 @@ __all__ = ('TransformationDict',
            'collapse_children_if',
            'replace_content',
            'replace_content_by',
+           'add_attributes',
            'normalize_whitespace',
            'merge_adjacent',
            'merge_results',
@@ -110,6 +111,8 @@ __all__ = ('TransformationDict',
            'forbid',
            'require',
            'assert_content',
+           'delimit_children',
+           'insert_delimiter',
            'add_error',
            'error_on',
            'assert_has_children',
@@ -837,6 +840,15 @@ def replace_content_by(context: List[Node], content: str):  # Callable[[Node], R
     node.result = content
 
 
+@transformation_factory
+def add_attributes(context: List[Node], attributes: dict):  # Dict[str, str]
+    """
+    Adds the attributes in the dictionary to the XML-Attributes of the last node
+    in the given context.
+    """
+    context[-1].attrs.update(attributes)
+
+
 def normalize_whitespace(context):
     """
     Normalizes Whitespace inside a leaf node, i.e. any sequence of
@@ -1210,12 +1222,19 @@ def remove_if(context: List[Node], condition: Callable):
 #
 #######################################################################
 
+
 @transformation_factory(str)
-def delimit_children(context: List[Node], delimiter_tag_name: str, delimiter: str):
-    """Ensures that the children are delimited by `delimiter`. Adds a delimiting node
-    of type `delimiter_tag_name`, where this is nt the case."""
+def delimit_children(context: List[Node],
+                     delimiter_tag_name: str,
+                     delimiter: str,
+                     attributes: dict = {}):    # Dict[str, str]
+    """
+    Ensures that the children are delimited by `delimiter`. Adds a delimiting node
+    of type `delimiter_tag_name`, where this is not the case.
+    """
     node = context[-1]
     children = node.children
+    assert children
     cl = [children[0]]
     for i in range(1, len(children)):
         last = cl[-1]
@@ -1224,9 +1243,45 @@ def delimit_children(context: List[Node], delimiter_tag_name: str, delimiter: st
                 and next.tag_name != delimiter_tag_name \
                 and not last.content.endswith(delimiter) \
                 and not next.content.startswith(delimiter):
-            cl.append(Node(delimiter_tag_name, delimiter, True).with_pos(last.pos + len(last)))
+            cl.append(Node(delimiter_tag_name, delimiter, True)\
+                      .with_pos(last.pos + len(last))\
+                      .with_attr(attributes))
+            # pos-value of new node will resemble the source-position as faithful as possible
         cl.append(next)
     node.result = tuple(cl)
+
+
+@transformation_factory(int)
+def insert_delimiter(context: List[Node],
+                     position: int,
+                     delimiter_tag_name: str,
+                     delimiter: str,
+                     attributes: dict = {}):  # Dict[str, str]
+    """
+    Inserts a delimiter at a specific position within the children.
+    """
+    node = context[-1]
+    children = node.children
+    nd = Node(delimiter_tag_name, delimiter, True).with_attr(attributes)
+    text_pos = node.pos
+    if children:
+        if position < 0:
+            position = len(children) + position
+        head = children[:position]
+        if head:
+            prev = head[-1]
+            text_pos = prev.pos + len(prev)
+            if prev.tag_name == delimiter_tag_name or prev.content.endswith(delimiter):
+                return
+        tail = children[position:]
+        if tail:
+            next = tail[0]
+            if next.tag_name == delimiter_tag_name or next.content.startswith(delimiter):
+                return
+        node.result = head + (nd.with_pos(text_pos),) + tail
+    else:
+        assert position == 0
+        node.result = (nd.with_pos(text_pos),)
 
 
 ########################################################################

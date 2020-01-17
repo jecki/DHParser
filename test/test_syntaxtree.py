@@ -205,6 +205,15 @@ class TestNode:
         assert str(self.unique_tree) == "ceh"
         assert str(self.recurr_tree) == "xey"
 
+    def test_repr(self):
+        assert repr(Node('test1', 'content1')) == "Node('test1', 'content1')"
+        assert repr(Node('test2', (Node('child1', 'content1'), Node('child2', 'content2')))) \
+            == "Node('test2', (Node('child1', 'content1'), Node('child2', 'content2')))"
+        assert repr(Node('test', '').with_attr(attr='value')) \
+            == "Node('test', '').with_attr({'attr': 'value'})"
+        assert repr(Node('test', '').with_pos(0).with_attr(attr='value')) \
+            == "Node('test', '').with_attr({'attr': 'value'}).with_pos(0)"
+
     def test_select_subnodes(self):
         tags = [node.tag_name
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
@@ -529,7 +538,6 @@ class TestSegementExtraction:
         C = tree.pick('C')
         segment = tree.milestone_segment(B, C)
         assert segment.equals(parse_sxpr('(left (B "b") (C "c"))'))
-
 
 class TestPositionAssignment:
     def test_position_assignment(self):

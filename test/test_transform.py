@@ -31,7 +31,8 @@ from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_parent, contains_only_whitespace, \
-    is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes
+    is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes, delimit_children, \
+    insert_delimiter
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -319,6 +320,35 @@ class TestAttributeHandling:
         swap_attributes(A, B)
         assert A.attr['y'] == 'y'
         assert B.attr['x'] == 'x'
+
+
+class TestConstructiveTransformations:
+    def test_add_delimiters(self):
+        tree = parse_sxpr('(A (B 1) (B 2) (B 3))').with_pos(0)
+        trans_table = {'A': delimit_children('c', ',')}
+        traverse(tree, trans_table)
+        original_result = tree.serialize()
+        assert original_result == '(A (B "1") (c ",") (B "2") (c ",") (B "3"))', original_result
+        traverse(tree, trans_table)
+        new_result = tree.serialize()
+        assert new_result == original_result, new_result
+
+    def test_insert_nodes(self):
+        tree = parse_sxpr('(A (B 1) (B 2) (X 3))').with_pos(0)
+        trans_table = {'A': insert_delimiter(0, 'c', '=>')}
+        traverse(tree, trans_table)
+        result1 = tree.serialize()
+        assert result1 == '(A (c "=>") (B "1") (B "2") (X "3"))', result1
+
+        trans_table = {'A': insert_delimiter(1000, 'd', '<=')}
+        traverse(tree, trans_table)
+        result2 = tree.serialize()
+        assert result2 == '(A (c "=>") (B "1") (B "2") (X "3") (d "<="))', result2
+        trans_table = {'A': insert_delimiter(-2, 'e', '|')}
+        traverse(tree, trans_table)
+        result3 = tree.serialize()
+        assert result3 == '(A (c "=>") (B "1") (B "2") (e "|") (X "3") (d "<="))', result3
+
 
 
 
