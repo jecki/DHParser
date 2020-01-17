@@ -294,7 +294,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
         rarg = ("'%s'" % str(self)) if not self.children else \
             "(" + ", ".join(child.__repr__() for child in self.children) + ")"
-        rep = ["Node('%s', %s)" % (self.tag_name, rarg)]
+        return "Node('%s', %s)" % (self.tag_name, rarg)
+
+    @property
+    def repr(self) -> str:
+        """Retrun a full (re-)executable representation of `self` including
+        attributes and position value.
+        """
+        rep = [repr(self)]
         if self.has_attr():
             rep.append('.with_attr(%s)' % repr(dict(self.attr)))
         if self._pos >= 0:
@@ -557,8 +564,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         >>> node = Node('test', '').with_attr(animal = "frog", plant= "tree")
         >>> dict(node.attr)
         {'animal': 'frog', 'plant': 'tree'}
-        >>> node.with_attr({'building': 'skyscraper'})
-        Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})
+        >>> node.with_attr({'building': 'skyscraper'}).repr
+        "Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})"
         """
         if attr_dict:
             assert not attributes, "Node.with_attr() can be called either exclusively with " \

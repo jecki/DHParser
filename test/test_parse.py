@@ -170,13 +170,13 @@ class TestInfiLoopsAndRecursion:
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
-        assert repr(result) == "Node(':EMPTY', '').with_pos(0)", repr(result)
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
     def test_break_inifnite_loop_OneOrMore(self):
         forever = OneOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
         print(repr(result))
-        assert repr(result) == "Node(':EMPTY', '').with_pos(0)", repr(result)
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
     # def test_infinite_loops(self):
     #     minilang = """forever = { // } \n"""

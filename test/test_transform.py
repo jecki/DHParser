@@ -32,7 +32,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_parent, contains_only_whitespace, \
     is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes, delimit_children, \
-    insert_delimiter
+    insert, node_maker
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -323,28 +323,40 @@ class TestAttributeHandling:
 
 
 class TestConstructiveTransformations:
-    def test_add_delimiters(self):
+    def test_add_delimiter(self):
         tree = parse_sxpr('(A (B 1) (B 2) (B 3))').with_pos(0)
-        trans_table = {'A': delimit_children('c', ',')}
+        trans_table = {'A': delimit_children(node_maker('c', ','))}
         traverse(tree, trans_table)
         original_result = tree.serialize()
         assert original_result == '(A (B "1") (c ",") (B "2") (c ",") (B "3"))', original_result
+
+
+    def test_complex_delimiter(self):
+        tree = parse_sxpr('(A (B 1) (B 2) (B 3))').with_pos(0)
+        nm = node_maker('d', (node_maker('c', ','), node_maker('l', ' ')))
+        n = nm()
+        print('\n', type(n), n.serialize())
+        trans_table = {'A': delimit_children(
+            node_maker('d', (node_maker('c', ','), node_maker('l', ' '))))}
         traverse(tree, trans_table)
-        new_result = tree.serialize()
-        assert new_result == original_result, new_result
+        original_result = tree.serialize()
+        assert original_result \
+            == '(A (B "1") (d (c ",") (l " ")) (B "2") (d (c ",") (l " ")) (B "3"))', \
+            original_result
+
 
     def test_insert_nodes(self):
         tree = parse_sxpr('(A (B 1) (B 2) (X 3))').with_pos(0)
-        trans_table = {'A': insert_delimiter(0, 'c', '=>')}
+        trans_table = {'A': insert(0, node_maker('c', '=>'))}
         traverse(tree, trans_table)
         result1 = tree.serialize()
         assert result1 == '(A (c "=>") (B "1") (B "2") (X "3"))', result1
 
-        trans_table = {'A': insert_delimiter(1000, 'd', '<=')}
+        trans_table = {'A': insert(1000, node_maker('d', '<='))}
         traverse(tree, trans_table)
         result2 = tree.serialize()
         assert result2 == '(A (c "=>") (B "1") (B "2") (X "3") (d "<="))', result2
-        trans_table = {'A': insert_delimiter(-2, 'e', '|')}
+        trans_table = {'A': insert(-2, node_maker('e', '|'))}
         traverse(tree, trans_table)
         result3 = tree.serialize()
         assert result3 == '(A (c "=>") (B "1") (B "2") (e "|") (X "3") (d "<="))', result3

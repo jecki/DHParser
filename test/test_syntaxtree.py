@@ -209,10 +209,14 @@ class TestNode:
         assert repr(Node('test1', 'content1')) == "Node('test1', 'content1')"
         assert repr(Node('test2', (Node('child1', 'content1'), Node('child2', 'content2')))) \
             == "Node('test2', (Node('child1', 'content1'), Node('child2', 'content2')))"
-        assert repr(Node('test', '').with_attr(attr='value')) \
-            == "Node('test', '').with_attr({'attr': 'value'})"
-        assert repr(Node('test', '').with_pos(0).with_attr(attr='value')) \
-            == "Node('test', '').with_attr({'attr': 'value'}).with_pos(0)"
+
+        test3 = Node('test', '').with_attr(attr='value')
+        assert repr(test3) == "Node('test', '')"
+        assert test3.repr == "Node('test', '').with_attr({'attr': 'value'})"
+
+        test4 = Node('test', '').with_pos(0).with_attr(attr='value')
+        assert repr(test4) == "Node('test', '')"
+        assert test4.repr == "Node('test', '').with_attr({'attr': 'value'}).with_pos(0)"
 
     def test_select_subnodes(self):
         tags = [node.tag_name

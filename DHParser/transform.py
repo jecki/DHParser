@@ -111,8 +111,9 @@ __all__ = ('TransformationDict',
            'forbid',
            'require',
            'assert_content',
+           'node_maker',
            'delimit_children',
-           'insert_delimiter',
+           'insert',
            'add_error',
            'error_on',
            'assert_has_children',
@@ -1222,12 +1223,48 @@ def remove_if(context: List[Node], condition: Callable):
 #
 #######################################################################
 
+NodeGenerator = Callable[[], Node]
+DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]
 
-@transformation_factory(str)
-def delimit_children(context: List[Node],
-                     delimiter_tag_name: str,
-                     delimiter: str,
-                     attributes: dict = {}):    # Dict[str, str]
+
+def node_maker(tag_name: str,
+               result: DynamicResultType,
+               attributes: dict={}) -> Callable:
+    """
+    Returns a parameter-free function that upon calling returns a freshly
+    instantiated node with the given result, where `result` can again
+    contain recursively nested node-factory functions in place of Nodes.
+
+    Example:
+        >>> factory = node_maker('d', (node_maker('c', ','), node_maker('l', ' ')))
+        >>> node = factory()
+        >>> node.serialize()
+        (d (c ",") (l " "))
+    """
+    def dynamic_result(result: DynamicResultType) -> Union[Tuple[Node, ...], Node, str]:
+        if isinstance(result, str):
+            return result
+        elif isinstance(result, tuple):
+            return tuple(node_generator() for node_generator in result)
+        else:
+            assert isinstance(result, Callable)
+            return result()
+
+    def create_leaf() -> Node:
+        assert isinstance(result, str)
+        return Node(tag_name, result, True).with_attr(attributes)
+
+    def create_branch() -> Node:
+        return Node(tag_name, dynamic_result(result)).with_attr(attributes)
+
+    if isinstance(result, str):
+        return create_leaf
+    else:
+        return create_branch
+
+
+@transformation_factory(collections.abc.Callable)
+def delimit_children(context: List[Node], node_factory: Callable):
     """
     Ensures that the children are delimited by `delimiter`. Adds a delimiting node
     of type `delimiter_tag_name`, where this is not the case.
@@ -1235,53 +1272,34 @@ def delimit_children(context: List[Node],
     node = context[-1]
     children = node.children
     assert children
-    cl = [children[0]]
-    for i in range(1, len(children)):
-        last = cl[-1]
-        next = children[i]
-        if last.tag_name != delimiter_tag_name \
-                and next.tag_name != delimiter_tag_name \
-                and not last.content.endswith(delimiter) \
-                and not next.content.startswith(delimiter):
-            cl.append(Node(delimiter_tag_name, delimiter, True)\
-                      .with_pos(last.pos + len(last))\
-                      .with_attr(attributes))
-            # pos-value of new node will resemble the source-position as faithful as possible
+    last = children[0]
+    cl = [last]
+    for next in children[1:]:
+        nd = node_factory().with_pos(last.pos)
+        cl.append(nd)
         cl.append(next)
+        last = next
     node.result = tuple(cl)
 
 
 @transformation_factory(int)
-def insert_delimiter(context: List[Node],
-                     position: int,
-                     delimiter_tag_name: str,
-                     delimiter: str,
-                     attributes: dict = {}):  # Dict[str, str]
+def insert(context: List[Node], position: int, node_factory: Callable):
     """
-    Inserts a delimiter at a specific position within the children.
+    Inserts a delimiter at a specific position within the children,
+    if there does not already exist a delimiter.
     """
     node = context[-1]
     children = node.children
-    nd = Node(delimiter_tag_name, delimiter, True).with_attr(attributes)
-    text_pos = node.pos
+    nd = node_factory()
     if children:
         if position < 0:
             position = len(children) + position
         head = children[:position]
-        if head:
-            prev = head[-1]
-            text_pos = prev.pos + len(prev)
-            if prev.tag_name == delimiter_tag_name or prev.content.endswith(delimiter):
-                return
         tail = children[position:]
-        if tail:
-            next = tail[0]
-            if next.tag_name == delimiter_tag_name or next.content.startswith(delimiter):
-                return
-        node.result = head + (nd.with_pos(text_pos),) + tail
+        node.result = head + (nd.with_pos(node.pos),) + tail
     else:
         assert position == 0
-        node.result = (nd.with_pos(text_pos),)
+        node.result = (nd.with_pos(node.pos),)
 
 
 ########################################################################
