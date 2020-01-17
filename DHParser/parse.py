@@ -1753,7 +1753,7 @@ class ZeroOrMore(Option):
         '.'
         >>> forever = ZeroOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
-        Node(:EMPTY, )
+        Node(':EMPTY', '').with_pos(0)
 
     EBNF-Notation: ``{ ... }``
 
@@ -1798,7 +1798,7 @@ class OneOrMore(UnaryParser):
         ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ \'.\' ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
-        Node(:EMPTY, )
+        Node(':EMPTY', '').with_pos(0)
 
     EBNF-Notation: ``{ ... }+``
 

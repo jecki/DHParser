@@ -36,7 +36,7 @@ from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
-    RootNode
+    RootNode, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython, \
     escape_formatstr
 
