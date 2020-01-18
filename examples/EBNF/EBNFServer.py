@@ -137,7 +137,7 @@ class EBNFLanguageServerProtocol:
             'clientCapabilities': {},
             'serverInfo': { "name": "EBNF-Server", "version": "0.2" },
             'serverCapabilities': {
-                "textDocumentSync": 2,  # incremental
+                "textDocumentSync": 1,  # 0 = None, 1 = full, 2 = incremental
                 "completionProvider": {
                     "resolveProvider": False,
                     "triggerCharacters": ['#', '*']
@@ -176,7 +176,7 @@ class EBNFLanguageServerProtocol:
     def lsp_textDocument_didOpen(self, textDocument):
         return None
 
-    def lsp_textDocument_didSave(self, **kwargs):
+    async def lsp_textDocument_didSave(self, **kwargs):
         return None
 
     def lsp_textDocument_didClose(self, **kwargs):

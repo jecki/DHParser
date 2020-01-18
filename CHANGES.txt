@@ -5,7 +5,8 @@ DHParser Version 0.9.1
   an error can be added to the error messages. (See config-parameter
   "resume_notices".)
 - added support for tag-less parsers: i.e. parser that are assigned to a
-  symbol with leading underscore will be treated as anonymous parsers
+  symbol that matches a certain regular expression, say, a leading underscore
+  will be treated as anonymous parsers
 - extended support for dropping of content during parsing-stage, now any
   tag-less parser's content can be dropped, not only that of the Token
   and Whitespace-parsers

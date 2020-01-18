@@ -592,7 +592,7 @@ class Server:
 
     @log_file.setter
     def log_file(self, value: str):
-        self.log_file = value
+        self._log_file = value
         if self.connection:
             self.connection.log_file = value
 
@@ -602,7 +602,7 @@ class Server:
 
     @echo_log.setter
     def echo_log(self, value: bool):
-        self.echo_log = value
+        self._echo_log = value
         if self.connection:
             self.connection.echo_log = value
 
@@ -693,8 +693,8 @@ class Server:
         try:
             # print(executor, method, params)
             if executor is None:
-                if asyncio.iscoroutine(method):
-                    result = await method(**params) if has_kw_params else method(*params)
+                if asyncio.iscoroutinefunction(method):
+                    result = await method(**params) if has_kw_params else await method(*params)
                 else:
                     result = method(**params) if has_kw_params else method(*params)
             elif has_kw_params:
@@ -732,6 +732,8 @@ class Server:
         result, rpc_error = await self.execute(executor, method, params)
         if rpc_error is not None and rpc_error[0] == -32050:
             # if process pool is broken, try again:
+            self.log('WARNING: Broken ProcessPoolExecutor detected. '
+                     'Starting a new ProcessPoolExecutor')
             assert self.process_executor
             self.process_executor.shutdown(wait=True)
             self.process_executor = ProcessPoolExecutor()
@@ -754,7 +756,6 @@ class Server:
             response = JSONRPC_HEADER % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
             self.log('RESPONSE: ', response.decode(), '\n\n')
-        # print('returned: ', response)
         try:
             writer.write(response)
             await writer.drain()
