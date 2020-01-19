@@ -116,7 +116,7 @@ class EBNFCPUBoundTasks:
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
-    def compile_EBNF(self, ):
+    def compile_EBNF(self, text: str):
         from DHParser.ebnf import compile_ebnf
 
 
@@ -159,6 +159,9 @@ class EBNFLanguageServerProtocol:
         assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
         self.lsp_fulltable.update(self.blocking.lsp_table)
 
+        self.pending_changes = dict()  # uri -> text
+
+
     def connect(self, connection):
         self.connection = connection
 
@@ -181,15 +184,23 @@ class EBNFLanguageServerProtocol:
     def lsp_textDocument_didOpen(self, textDocument):
         return None
 
-    async def lsp_textDocument_didSave(self, **kwargs):
-        pp = self.exec.process_executor
-
+    def lsp_textDocument_didSave(self, **kwargs):
         return None
 
     def lsp_textDocument_didClose(self, **kwargs):
         return None
 
-    def lsp_textDocument_didChange(self, **kwargs):
+    def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
+        uri = textDocument['uri']
+        self.pending_changes[uri] = contentChanges[0]['text']
+        asyncio.sleep(3)
+        text = self.pending_changes.get(uri, None)
+        if text:
+            exenv = self.connection.exec
+            del self.pending_changes[uri]
+            result, rpc_error = await exenv.execute(exenv.process_executor,
+                                                    self.cpu_bound.compile_EBNF,
+                                                    (text,))
         return None
 
     def lsp_textDocument_completion(self, **kwargs):

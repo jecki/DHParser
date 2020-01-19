@@ -328,24 +328,38 @@ class ExecutionEnvironment:
         process_executor:  A process-pool-executor for cpu-bound tasks
         thread_executor:   A thread-pool-executor for blocking tasks
         loop:              The asynchronous event loop for running coroutines
+        log_file:          The name of the log-file to which error messages
+                           are written if an executor raises a Broken-Error.
+        _closed            A Flag that is set to True after the `shutdown()`-
+                           method has been called. After that any
+                           call to the `execute()`-method yields an error.
     """
     def __init__(self, event_loop: asyncio.AbstractEventLoop):
-        self.process_executor = ProcessPoolExecutor()  # type: ProcessPoolExecutor
-        self.thread_executor = ThreadPoolExecutor()    # type: ThreadPoolExecutor
+        self.process_executor = ProcessPoolExecutor()  # type: Optional[ProcessPoolExecutor]
+        self.thread_executor = ThreadPoolExecutor()    # type: Optional[ThreadPoolExecutor]
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
+        self._closed = False                           # type: bool
+
+    def __del__(self):
+        self.shutdown(False)
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
                       params: Union[Dict, Sequence])\
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Executes a method with the given parameters in a given executor
-        (ThreadPoolExcecutor or ProcessPoolExecutor). `execute()`waits for the
-        completion and returns the JSON result and an RPC error tuple (see the
-        type definition above). The result may be None and the error may be
+        (`ThreadPoolExcecutor` or `ProcessPoolExecutor`). `execute()`waits for
+        the completion and returns the JSON result and an RPC error tuple (see
+        the type definition above). The result may be None and the error may be
         zero, i.e. no error. If `executor` is `None`the method will be called
         directly instead of deferring it to an executor.
         """
+        if self._closed:
+            return None, (-32000,
+                          "Server Error: Execution environment has already been shut down! "\
+                          "Cannot process method {} with parameters {} any more."\
+                          .format(method, params))
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
         if params is None:
@@ -394,12 +408,17 @@ class ExecutionEnvironment:
             rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
         return result, rpc_error
 
-    def shutdown(self):
+    def shutdown(self, wait: bool = True):
+        """Shuts the thread and process executor of the execution environment. The
+        wait parameter is passed to the shutdown-method of the thread and
+        process-executor.
+        """
+        self._closed = True
         if self.thread_executor is not None:
-            self.thread_executor.shutdown(wait=True)
+            self.thread_executor.shutdown(wait=wait)
             self.thread_executor = None
         if self.process_executor is not None:
-            self.process_executor.shutdown(wait=True)
+            self.process_executor.shutdown(wait=wait)
             self.process_executor = None
 
 
