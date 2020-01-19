@@ -318,6 +318,78 @@ def gen_task_id() -> int:
     return value
 
 
+class ExecutionEnvironment:
+    """Class ExecutionEnvironment provides methods for executing server tasks
+    in separate processes, threads, as asynchronous task or as simple function.
+
+    Attributes:
+        process_executor:  A process-pool-executor for cpu-bound tasks
+        thread_executor:   A thread-pool-executor for blocking tasks
+        loop:              The asynchronous event loop for running coroutines
+    """
+    def __init__(self, event_loop: asyncio.AbstractEventLoop):
+        self.process_executor = ProcessPoolExecutor()  # type: ProcessPoolExecutor
+        self.thread_executor = ThreadPoolExecutor()    # type: ThreadPoolExecutor
+        self.loop = event_loop                         # type: asyncio.AbstractEventLoop
+        self.log_file = ''                             # type: str
+
+    async def execute(self, executor: Optional[Executor],
+                      method: Callable,
+                      params: Union[Dict, Sequence])\
+            -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
+        """Executes a method with the given parameters in a given executor
+        (ThreadPoolExcecutor or ProcessPoolExecutor). `execute()`waits for the
+        completion and returns the JSON result and an RPC error tuple (see the
+        type definition above). The result may be None and the error may be
+        zero, i.e. no error. If `executor` is `None`the method will be called
+        directly instead of deferring it to an executor.
+        """
+        result = None      # type: Optional[JSON_Type]
+        rpc_error = None   # type: Optional[RPC_Error_Type]
+        if params is None:
+            params = tuple()
+        if isinstance(params, Dict):
+            executable = partial(method, **params)
+        elif isinstance(params, Sequence):
+            executable = partial(method, *params)
+        else:
+            rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
+                        % (str(type(params)), str(params))
+            return result, rpc_error
+        try:
+            # print(executor, method, params)
+            if executor is None:
+                result = await executable() if asyncio.iscoroutinefunction(method) else executable()
+            else:
+                result = await self.loop.run_in_executor(executor, executable)
+        except TypeError as e:
+            rpc_error = -32602, "Invalid Params: " + str(e)
+        except NameError as e:
+            rpc_error = -32601, "Method not found: " + str(e)
+        except BrokenProcessPool as e:
+            if self.log_file:
+                append_log(self.log_file, 'WARNING: Broken ProcessPoolExecutor detected. '
+                           'Starting a new ProcessPoolExecutor', echo=True)
+            try:
+                # restart process pool and try again once
+                self.process_executor.shutdown(wait=True)
+                self.process_executor = ProcessPoolExecutor()
+                await self.loop.run_in_executor(executor, executable)
+            except BrokenProcessPool as e:
+                rpc_error = -32050, "Broken Executor: " + str(e)
+        except Exception as e:
+            rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
+        return result, rpc_error
+
+    def shutdown(self):
+        if self.thread_executor is not None:
+            self.thread_executor.shutdown(wait=True)
+            self.thread_executor = None
+        if self.process_executor is not None:
+            self.process_executor.shutdown(wait=True)
+            self.process_executor = None
+
+
 class Connection:
     """Class Connections encapsulates connection-specific data for the Server
     class (see below). At the moment, however, only one connection is accepted at
@@ -335,6 +407,7 @@ class Connection:
                 server will not be stopped.
         reader: the stream-reader for this connection
         writer: the stream-writer for this connection
+        exec:   the execution environment of the server
         active_tasks: A dictionary that maps task id's (resp. jsonrpc id's)
                 to their futures to keep track of  any running task.
         finished_tasks: a set of task id's (resp. jsonrpc id's) for tasks
@@ -354,10 +427,13 @@ class Connection:
         echo_log:  If `True` log messages will be echoed to the console. Mirrors
                 Server.log_file
     """
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    def __init__(self, reader: asyncio.StreamReader,
+                 writer: asyncio.StreamWriter,
+                 exec_env: ExecutionEnvironment):
         self.alive = True                # type: bool
         self.reader = reader             # type: asyncio.StreamReader
         self.writer = writer             # type: asyncio.StreamWriter
+        self.exec = exec_env             # type: ExecutionEnvironment
         self.active_tasks = dict()       # type: Dict[int, asyncio.Future]
         self.finished_tasks = set()      # type: Set[int]
         self.response_queue = None       # type: Optional[asyncio.Queue]
@@ -465,7 +541,8 @@ class Connection:
     # logging support
 
     def log(self, *args):
-        append_log(self.log_file, *args, echo=self.echo_log)
+        if self.log_file:
+            append_log(self.log_file, *args, echo=self.echo_log)
 
 
 def connection_cb_dummy(connection: Connection) -> None:
@@ -501,8 +578,6 @@ class Server:
         serving_task:  The task in which the asyncio.Server is run.
         stop_response:  The response string that is written to the stream as
                 answer to a stop request.
-        process_executor:  A process-pool-executor for cpu-bound tasks
-        thread_executor:  A thread-pool-executor for blocking tasks
         echo_log:   Read from the global configuration. If True, any log message
                 will also be echoed on the console.
         log_file:  The file-name of the server-log.
@@ -510,6 +585,9 @@ class Server:
                 calls or responses will always be preceeded by a simple header of
                 the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
                 the byte-size of the rpc-package.
+        exec:   An instance of the execution environment that delegates tasks to
+                separate processes, threads, asynchronous tasks or simple function
+                calls.
         connection: An instance of the connection class representing the data of the
                 current connection or None, if there is no connection at the moment.
                 Note: There can be only one connection to the server at a time!
@@ -564,13 +642,11 @@ class Server:
 
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
-        self.server = None              # type: Optional[asyncio.AbstractServer]
-        self.serving_task = None        # type: Optional[asyncio.Task]
-        self.stop_response = ''         # type: str
-        self.process_executor = None    # type: Optional[ProcessPoolExecutor]
-        self.thread_executor = None     # type: Optional[ThreadPoolExecutor]
+        self.server = None        # type: Optional[asyncio.AbstractServer]
+        self.serving_task = None  # type: Optional[asyncio.Task]
+        self.stop_response = ''   # type: str
 
-        self._log_file = ''             # type: str
+        self._log_file = ''       # type: str
         if get_config_value('log_server'):
             self.start_logging()
         self._echo_log = get_config_value('echo_server_log')  # type: bool
@@ -579,9 +655,10 @@ class Server:
         self.register_service_rpc(IDENTIFY_REQUEST, self.rpc_identify_server)
         self.register_service_rpc(LOGGING_REQUEST, self.rpc_logging)
 
-        self.connection = None          # type: Optional[Connection]
-        self.kill_switch = False        # type: bool
-        self.loop = None                # type: Optional[asyncio.AbstractEventLoop]
+        self.exec = None          # type: Optional[ExecutionEnvironment]
+        self.connection = None    # type: Optional[Connection]
+        self.kill_switch = False  # type: bool
+        self.loop = None          # type: Optional[asyncio.AbstractEventLoop]
 
         self.known_methods = set(self.rpc_table.keys()) | \
             {'initialize', 'initialized', 'shutdown', 'exit'}  # see self.verify_initialization()
@@ -595,6 +672,8 @@ class Server:
         self._log_file = value
         if self.connection:
             self.connection.log_file = value
+        if self.exec:
+            self.exec.log_file = value
 
     @property
     def echo_log(self):
@@ -670,50 +749,6 @@ class Server:
         else:
             return self.start_logging()
 
-    async def execute(self, executor: Optional[Executor],
-                      method: Callable,
-                      params: Union[Dict, Sequence])\
-            -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
-        """Executes a method with the given parameters in a given executor
-        (ThreadPoolExcecutor or ProcessPoolExecutor). `execute()`waits for the
-        completion and returns the JSON result and an RPC error tuple (see the
-        type definition above). The result may be None and the error may be
-        zero, i.e. no error. If `executor` is `None`the method will be called
-        directly instead of deferring it to an executor.
-        """
-        result = None      # type: Optional[JSON_Type]
-        rpc_error = None   # type: Optional[RPC_Error_Type]
-        if params is None:
-            params = tuple()
-        has_kw_params = isinstance(params, Dict)
-        if not (has_kw_params or isinstance(params, Sequence)):
-            rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
-                % (str(type(params)), str(params))
-            return result, rpc_error
-        try:
-            # print(executor, method, params)
-            if executor is None:
-                if asyncio.iscoroutinefunction(method):
-                    result = await method(**params) if has_kw_params else await method(*params)
-                else:
-                    result = method(**params) if has_kw_params else method(*params)
-            elif has_kw_params:
-                # if self.loop is None:  raise AssertionError('No task loop!?')
-                assert self.loop, "No task loop!?"
-                result = await self.loop.run_in_executor(executor, partial(method, **params))
-            else:
-                assert self.loop, "No task loop!?"
-                result = await self.loop.run_in_executor(executor, partial(method, *params))
-        except TypeError as e:
-            rpc_error = -32602, "Invalid Params: " + str(e)
-        except NameError as e:
-            rpc_error = -32601, "Method not found: " + str(e)
-        except BrokenProcessPool as e:
-            rpc_error = -32050, "Broken Executor: " + str(e)
-        except Exception as e:
-            rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
-        return result, rpc_error
-
     async def run(self, method_name: str, method: Callable, params: Union[Dict, Sequence]) \
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Picks the right execution method (process, thread or direct execution) and
@@ -725,19 +760,9 @@ class Server:
         # c) in a process pool if it is cpu bound
         # see: https://docs.python.org/3/library/asyncio-eventloop.html
         #      #executing-code-in-thread-or-process-pools
-        result = None     # type: Optional[JSON_Type]
-        rpc_error = None  # type: Optional[RPC_Error_Type]
-        executor = self.process_executor if method_name in self.cpu_bound else \
-            self.thread_executor if method_name in self.blocking else None
-        result, rpc_error = await self.execute(executor, method, params)
-        if rpc_error is not None and rpc_error[0] == -32050:
-            # if process pool is broken, try again:
-            self.log('WARNING: Broken ProcessPoolExecutor detected. '
-                     'Starting a new ProcessPoolExecutor')
-            assert self.process_executor
-            self.process_executor.shutdown(wait=True)
-            self.process_executor = ProcessPoolExecutor()
-            result, rpc_error = await self.execute(self.process_executor, method, params)
+        executor = self.exec.process_executor if method_name in self.cpu_bound else \
+            self.exec.thread_executor if method_name in self.blocking else None
+        result, rpc_error = await self.exec.execute(executor, method, params)
         return result, rpc_error
 
     async def respond(self, writer: asyncio.StreamWriter, response: Union[str, bytes]):
@@ -937,7 +962,7 @@ class Server:
 
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         if self.connection is None:
-            self.connection = Connection(reader, writer)
+            self.connection = Connection(reader, writer, self.exec)
             self.connection.log_file = self.log_file
             self.connection.echo_log = self.echo_log
             id_connection = str(id(self.connection))
@@ -1159,17 +1184,14 @@ class Server:
     async def serve(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT):
         host, port = substitute_default_host_and_port(host, port)
         assert port >= 0
-        # with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
+        self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
+        self.host.value = host.encode()
+        self.port.value = port
+        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+            else asyncio.get_event_loop()
         try:
-            if self.process_executor is None:
-                self.process_executor = ProcessPoolExecutor()
-            if self.thread_executor is None:
-                self.thread_executor = ThreadPoolExecutor()
-            self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
-            self.host.value = host.encode()
-            self.port.value = port
-            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-                else asyncio.get_event_loop()
+            self.exec = ExecutionEnvironment(self.loop)
+            self.exec.log_file = self.log_file
             self.server = cast(asyncio.AbstractServer,
                                await asyncio.start_server(self.handle, host, port))
             async with self.server:
@@ -1180,31 +1202,25 @@ class Server:
         finally:
             if self.server is not None and sys.version_info < (3, 8):
                 await self.server.wait_closed()
-            if self.thread_executor is not None:
-                self.thread_executor.shutdown(wait=True)
-                self.thread_executor = None
-            if self.process_executor is not None:
-                self.process_executor.shutdown(wait=True)
-                self.process_executor = None
+            if self.exec:
+                self.exec.shutdown()
+                self.exec = None
 
     def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
-        if host == USE_DEFAULT_HOST:
-            host = get_config_value('server_default_host')
-        if port == USE_DEFAULT_PORT:
-            port = get_config_value('server_default_port')
+        host, port = substitute_default_host_and_port(host, port)
         assert port >= 0
-        with ProcessPoolExecutor() as p, ThreadPoolExecutor() as t:
-            self.process_executor = p
-            self.thread_executor = t
-            self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
-            self.host.value = host.encode()
-            self.port.value = port
-            if loop is None:
-                self.loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.loop)
-            else:
-                self.loop = loop
-            assert self.loop is not None
+        self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
+        self.host.value = host.encode()
+        self.port.value = port
+        if loop is None:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+        else:
+            self.loop = loop
+        assert self.loop is not None
+        try:
+            self.exec = ExecutionEnvironment(self.loop)
+            self.exec.log_file = self.log_file
             self.server = cast(
                 asyncio.base_events.Server,
                 self.loop.run_until_complete(
@@ -1218,17 +1234,16 @@ class Server:
                 try:
                     self.loop.run_until_complete(self.server.wait_closed())
                 finally:
-                    if loop is None:
-                        try:
-                            self.loop.run_until_complete(self.loop.shutdown_asyncgens())
-                        finally:
-                            asyncio.set_event_loop(None)
-                            self.loop.close()
-                            self.loop = None
-
-    # def _empty_message_queue(self):
-    #     while not self.server_messages.empty():
-    #         self.server_messages.get()
+                    try:
+                        self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+                    finally:
+                        asyncio.set_event_loop(None)
+                        self.loop.close()
+                        self.loop = None
+        finally:
+            if self.exec:
+                self.exec.shutdown()
+                self.exec = None
 
     def run_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         """

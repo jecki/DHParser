@@ -224,7 +224,7 @@ class TestServer:
         async def run_tasks():
             def extract_result(data: bytes):
                 header, data, backlog = split_header(data)
-                return json.loads(data)['result']
+                return json.loads(data.decode())['result']
 
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             sequence.append(SLOW)
