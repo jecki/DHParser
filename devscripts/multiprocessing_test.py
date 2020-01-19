@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import functools, asyncio, multiprocessing, time, concurrent.futures
 
 class Work:

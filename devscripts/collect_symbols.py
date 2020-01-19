@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """collect_symbols.py - Lists all exported symbols from DHParser modules
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)

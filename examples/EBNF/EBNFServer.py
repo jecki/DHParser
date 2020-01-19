@@ -110,9 +110,14 @@ def json_rpc(func, params={}, ID=None) -> str:
 
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
+        from DHParser.compile import ResultTuple
         from DHParser.server import gen_lsp_table
+
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
+
+    def compile_EBNF(self, ):
+        from DHParser.ebnf import compile_ebnf
 
 
 class EBNFBlockingTasks:
@@ -177,6 +182,8 @@ class EBNFLanguageServerProtocol:
         return None
 
     async def lsp_textDocument_didSave(self, **kwargs):
+        pp = self.exec.process_executor
+
         return None
 
     def lsp_textDocument_didClose(self, **kwargs):

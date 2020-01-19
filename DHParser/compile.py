@@ -51,6 +51,9 @@ from DHParser.toolkit import load_if_file, is_filename
 
 __all__ = ('CompilerError',
            'Compiler',
+           'GrammarCallable',
+           'CompilerCallable',
+           'ResultTuple',
            'compile_source',
            'visitor_name',
            'TreeProcessor',
@@ -230,6 +233,7 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 
 GrammarCallable = Union[Grammar, Callable[[str], RootNode], functools.partial]
 CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
+ResultTuple = Tuple[Optional[Any], List[Error], Optional[Node]]
 
 
 def compile_source(source: str,

@@ -30,7 +30,7 @@ import keyword
 import os
 from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
 
-from DHParser.compile import CompilerError, Compiler, compile_source, visitor_name
+from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
 from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, mixin_noempty, Forward, RegExp, \
@@ -1525,7 +1525,7 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
 ########################################################################
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool = False) \
-        -> Tuple[Optional[Any], List[Error], Optional[Node]]:
+        -> ResultTuple:
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns
     a tuple of the python code of the compiler, a list of warnings or errors

@@ -44,6 +44,7 @@ For JSON see:
 import asyncio
 from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+from concurrent.futures.thread import BrokenThreadPool
 from functools import partial
 import json
 from multiprocessing import Process, Value, Array
@@ -377,7 +378,18 @@ class ExecutionEnvironment:
                 self.process_executor = ProcessPoolExecutor()
                 await self.loop.run_in_executor(executor, executable)
             except BrokenProcessPool as e:
-                rpc_error = -32050, "Broken Executor: " + str(e)
+                rpc_error = -32050, str(e)
+        except BrokenThreadPool as e:
+            if self.log_file:
+                append_log(self.log_file, 'WARNING: Broken ThreadPoolExecutor detected. '
+                           'Starting a new ThreadPoolExecutor', echo=True)
+            try:
+                # restart thread pool and try again once
+                self.thread_executor.shutdown(wait=True)
+                self.thread_executor = ThreadPoolExecutor()
+                await self.loop.run_in_executor(executor, executable)
+            except BrokenThreadPool as e:
+                rpc_error = -32060, str(e)
         except Exception as e:
             rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
         return result, rpc_error
