@@ -305,6 +305,11 @@ def split_header(data: BytesType) -> Tuple[BytesType, BytesType, BytesType]:
     return header, data, backlog
 
 
+def strip_header_delimiter(data: str) -> Tuple[str]:
+    i = max(data.find('\n'), data.find('\r'))
+    return (data[:i].rstrip(), '\n', data[i:].lstrip()) if i >= 0 else (data,)
+
+
 def gen_task_id() -> int:
     """Generate a unique task id. This is always a negative number to
     distinguish the taks id's from the json-rpc ids.
@@ -373,7 +378,6 @@ class ExecutionEnvironment:
                         % (str(type(params)), str(params))
             return result, rpc_error
         try:
-            # print(executor, method, params)
             if executor is None:
                 result = await executable() if asyncio.iscoroutinefunction(method) else executable()
             else:
@@ -487,6 +491,7 @@ class Connection:
     def task_done(self, json_id: int):
         assert json_id in self.active_tasks
         self.finished_tasks.add(json_id)
+        # do not do: del self.active_tasks[json_id] !!!
 
     async def cleanup(self):
         open_tasks = {task for id, task in self.active_tasks.items()
@@ -812,7 +817,7 @@ class Server:
         if self.use_jsonrpc_header and response.startswith(b'{'):
             response = JSONRPC_HEADER % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
-            self.log('RESPONSE: ', response.decode(), '\n\n')
+            self.log('RESPONSE: ', *strip_header_delimiter(response.decode()), '\n\n')
         try:
             writer.write(response)
             await writer.drain()
@@ -940,6 +945,10 @@ class Server:
             result = self.stop_response
             self.kill_switch = True
             reader.feed_eof()
+        elif method_name == 'exit':
+            assert self.connection
+            self.connection.alive = False
+            reader.feed_eof()
         elif method_name not in self.known_methods:  # self.rpc_table:
             rpc_error = -32601, 'Method not found: ' + str(json_obj['method'])
         elif method_name in self.rpc_table:
@@ -952,10 +961,6 @@ class Server:
                               "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
             result, rpc_error = await self.run(method_name, method, params)
-            if method_name == 'exit':
-                assert self.connection
-                self.connection.alive = False
-                reader.feed_eof()
 
         if isinstance(result, Dict) and 'error' in result:
             try:
@@ -998,6 +1003,7 @@ class Server:
             self.connection.log_file = self.log_file
             self.connection.echo_log = self.echo_log
             id_connection = str(id(self.connection))
+            self.connection_callback(self.connection)
             self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')
         else:
             id_connection = ''
@@ -1087,7 +1093,7 @@ class Server:
                 # have been received
 
             if self.log_file:   # avoid decoding if logging is off
-                self.log('RECEIVE: ', data.decode(), '\n')
+                self.log('RECEIVE: ', *strip_header_delimiter(data.decode()), '\n\n')
 
             if id_connection:
                 if self.connection.alive:
@@ -1159,6 +1165,9 @@ class Server:
                                 task = self.connection.create_task(
                                     json_id, self.handle_jsonrpc_request(
                                         json_id, reader, writer, json_obj, not bool(id_connection)))
+                                if method == 'exit':
+                                    await task
+                                    task = None
                         else:
                             rpc_error = -32002, 'server is already connected to another client'
                     elif response is not None:
@@ -1176,6 +1185,7 @@ class Server:
             if not id_connection:
                 if task:
                     await task
+                    task = None
                 # for secondary connections only one request is allowed before terminating
                 try:
                     writer.write_eof()
@@ -1188,14 +1198,14 @@ class Server:
                 return
 
         if self.kill_switch or not self.connection.alive:
+            await self.connection.cleanup()
             try:
                 writer.write_eof()
                 await writer.drain()
                 writer.close()
             except (ConnectionError, OSError) as err:
-                self.log('ERROR while shutdown: ', str(err), '\n')
+                self.log('ERROR while exiting: ', str(err), '\n')
             self.log('SERVER MESSAGE: Closing connection: {}.\n\n'.format(id_connection))
-            await self.connection.cleanup()
             self.connection = None
 
         if self.kill_switch:
@@ -1398,7 +1408,6 @@ def detach_server(host: str = USE_DEFAULT_HOST,
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization, LOGGING=logging,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
-    # print(run_server_script)
     if sys.version_info >= (3, 6):
         subprocess.Popen([interpreter, '-c', run_server_script], encoding="utf-8")
     else:

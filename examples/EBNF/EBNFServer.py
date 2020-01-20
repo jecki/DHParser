@@ -190,10 +190,10 @@ class EBNFLanguageServerProtocol:
     def lsp_textDocument_didClose(self, **kwargs):
         return None
 
-    def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
+    async def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
         uri = textDocument['uri']
         self.pending_changes[uri] = contentChanges[0]['text']
-        asyncio.sleep(3)
+        await asyncio.sleep(3)
         text = self.pending_changes.get(uri, None)
         if text:
             exenv = self.connection.exec
