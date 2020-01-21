@@ -71,7 +71,7 @@ function startLangServerTCP(addr: number) : Disposable {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
 			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
 		},
-		outputChannel: logChannel,
+		// outputChannel: logChannel,
 		initializationFailedHandler: function(error: ResponseError<InitializeError> | Error | any): boolean {
 			console.log('InitializationFailed');
 			console.log(error.toString());
@@ -79,7 +79,6 @@ function startLangServerTCP(addr: number) : Disposable {
 		}
 	};
 
-	console.log('starting lang server');
 	client = new LanguageClient(
 		'EBNFLanguageServer',
 		`ebnf tcp lang server (port ${addr})`,
@@ -90,7 +89,7 @@ function startLangServerTCP(addr: number) : Disposable {
 }
 
 export function activate(context: ExtensionContext) {
-	console.log('activating language server connector!');
+	// console.log('activating language server connector!');
 	let disposable = startLangServerTCP(defaultPort);
 	context.subscriptions.push(disposable);
 }
