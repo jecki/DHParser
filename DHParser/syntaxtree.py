@@ -1467,12 +1467,20 @@ class RootNode(Node):
     def get_errors(self, node: Node) -> List[Error]:
         """
         Returns the List of errors that occurred on the node or any child node
-        at the same position that has already been removed from the tree,
+        at the position of the node that has already been removed from the tree,
         for example, because it was an anonymous empty child node.
+        The position of the node is here understood to cover then range:
+        [node.pos, node.pos + len(node)[
         """
         node_id = id(node)           # type: int
         errors = []                  # type: List[Error]
-        for nid in self.error_positions.get(node.pos, frozenset()):
+        start_pos = node.pos
+        end_pos = node.pos + len(node)
+        error_node_ids = set()
+        for pos in self.error_positions.keys():   # TODO: use bisect here...
+            if start_pos <= pos < end_pos:
+                error_node_ids.update(self.error_positions[pos])
+        for nid in error_node_ids:
             if nid == node_id:
                 # add the node's errors
                 errors.extend(self.error_nodes[nid])
