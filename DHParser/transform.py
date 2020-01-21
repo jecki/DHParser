@@ -32,7 +32,7 @@ from functools import partial, singledispatch, reduce
 import inspect
 import operator
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Text
+    Tuple, List, Sequence, Union, Optional, Text
 
 from DHParser.error import Error, ErrorCode
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
@@ -113,6 +113,7 @@ __all__ = ('TransformationDict',
            'assert_content',
            'node_maker',
            'delimit_children',
+           'positions_of',
            'insert',
            'add_error',
            'error_on',
@@ -424,7 +425,7 @@ def always(context: List[Node]) -> bool:
 
 
 @transformation_factory(collections.abc.Callable)
-def neg(context: List[Node], bool_func: collections.abc.Callable):
+def neg(context: List[Node], bool_func: collections.abc.Callable) -> bool:
     """Returns the inverted boolean result of `bool_func(context)`"""
     return not bool_func(context)
 
@@ -1263,43 +1264,98 @@ def node_maker(tag_name: str,
         return create_branch
 
 
+# @transformation_factory(collections.abc.Callable)
+# def delimit_children(context: List[Node], node_factory: Callable):
+#     """
+#     Ensures that the children are delimited by `delimiter`. Adds a delimiting node
+#     of type `delimiter_tag_name`, where this is not the case.
+#     """
+#     node = context[-1]
+#     children = node.children
+#     assert children
+#     last = children[0]
+#     cl = [last]
+#     for next in children[1:]:
+#         nd = node_factory().with_pos(last.pos)
+#         cl.append(nd)
+#         cl.append(next)
+#         last = next
+#     node.result = tuple(cl)
+
+
+@transformation_factory(collections.abc.Set)
+def positions_of(context: List[Node], tag_names: AbstractSet[str] = frozenset()) -> Tuple[int]:
+    """Returns a (potentially empty) tuple of the positions of the
+    children that have one of the given `tag_names`.
+    """
+    return tuple(i for i, c in enumerate(context[-1].children) if c.tag_name in tag_names)
+
+
+@transformation_factory
+def delimiter_positions(context: List[Node]):
+    return tuple(range(1, len(context[-1].children)))
+
+
+# @transformation_factory(int, collections.abc.Callable)
+# def insert(context: List[Node], position: Union[int, Callable], node_factory: Callable):
+#     """
+#     Inserts a delimiter at a specific position within the children. If
+#     `position` is `None` nothing will be inserted.
+#     Example:
+#         insert(pos_of('paragraph'), node_maker('LF', '\n'))
+#     """
+#     if callable(position):
+#         result = position(context)
+#         if result is None:
+#             return
+#         else:
+#             pos = cast(int, result)
+#     else:
+#         pos = position
+#     node = context[-1]
+#     children = node.children
+#     nd = node_factory()
+#     if children:
+#         if pos < 0:
+#             pos = len(children) + pos
+#         head = children[:pos]
+#         tail = children[pos:]
+#         node.result = head + (nd.with_pos(node.pos),) + tail
+#     else:
+#         assert not node.result and pos == 0, str(node.result)
+#         node.result = (nd.with_pos(node.pos),)
+
+
+@transformation_factory(int, tuple, collections.abc.Callable)
+def insert(context: List[Node], position: Union[int, tuple, Callable], node_factory: Callable):
+    """
+    Inserts a delimiter at a specific position within the children. If
+    `position` is `None` nothing will be inserted.
+    Example:
+        insert(pos_of('paragraph'), node_maker('LF', '\n'))
+    """
+    if callable(position):
+        position = position(context)
+    if isinstance(position, int):
+        pos_tuple = (position,)
+    elif not position:  # empty tuple or None
+        return
+    else:
+        pos_tuple = position
+    node = context[-1]
+    children = list(node.children)
+    assert children or not node.result, "Cannot add nodes to a leaf-node!"
+    L = len(children)
+    pos_tuple = sorted(tuple((p if p >= 0 else (p + L)) for p in pos_tuple), reverse=True)
+    for pos in pos_tuple:
+        assert 0 <= pos <= L, "position %i exceeds insertion bounds 0 <= pos <= %i" % (pos, L)
+        children.insert(pos, node_factory())
+    node.result = tuple(children)
+
+
 @transformation_factory(collections.abc.Callable)
 def delimit_children(context: List[Node], node_factory: Callable):
-    """
-    Ensures that the children are delimited by `delimiter`. Adds a delimiting node
-    of type `delimiter_tag_name`, where this is not the case.
-    """
-    node = context[-1]
-    children = node.children
-    assert children
-    last = children[0]
-    cl = [last]
-    for next in children[1:]:
-        nd = node_factory().with_pos(last.pos)
-        cl.append(nd)
-        cl.append(next)
-        last = next
-    node.result = tuple(cl)
-
-
-@transformation_factory(int)
-def insert(context: List[Node], position: int, node_factory: Callable):
-    """
-    Inserts a delimiter at a specific position within the children,
-    if there does not already exist a delimiter.
-    """
-    node = context[-1]
-    children = node.children
-    nd = node_factory()
-    if children:
-        if position < 0:
-            position = len(children) + position
-        head = children[:position]
-        tail = children[position:]
-        node.result = head + (nd.with_pos(node.pos),) + tail
-    else:
-        assert position == 0
-        node.result = (nd.with_pos(node.pos),)
+    insert(context, delimiter_positions, node_factory)
 
 
 ########################################################################
@@ -1396,4 +1452,4 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
 
 def peek(context: List[Node]):
     """For debugging: Prints the last node in the context as S-expression."""
-    print(context[-1].as_sxpr())
+    print(context[-1].as_sxpr(compact=True))

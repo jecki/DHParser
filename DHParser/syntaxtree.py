@@ -943,7 +943,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 i += 1
         except (IndexError, ValueError):
             pass
-        # print(left_children[:i], right_children[-1:])
         new_ca = Node(common_ancestor.tag_name, left_children[:i] + right_children[k + i:])
         if common_ancestor.has_attr():
             new_ca.attr = common_ancestor.attr
@@ -1473,8 +1472,9 @@ class RootNode(Node):
         """
         node_id = id(node)           # type: int
         errors = []                  # type: List[Error]
-        for nid in self.error_positions.get(node.pos, frozenset()) | set([node_id]):
+        for nid in self.error_positions.get(node.pos, frozenset()):
             if nid == node_id:
+                # add the node's errors
                 errors.extend(self.error_nodes[nid])
             else:
                 for _ in node.select_if(lambda n: id(n) == nid):

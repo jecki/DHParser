@@ -338,6 +338,22 @@ class TestRootNode:
         assert result.startswith('3 <<< Error on ".1416" | Parser stopped before end!'), \
             str(result)
 
+    def test_get_errors(self):
+        # TODO: extend this test to the more compilcated case of removed nodes
+        number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
+        result = Grammar(number)("3.1416")
+        assert not result.get_errors(result.children[1])
+        assert not result.get_errors(result)
+
+        result = Grammar(number)("x.1416")
+        assert result.get_errors(result[0])
+        assert not result.get_errors(result)
+
+        number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
+        result = Grammar(number)("3.1416")
+        assert not result.get_errors(result)
+        assert result.get_errors(result[1])
+
 
 class TestNodeFind:
     """Test the item-access-functions of class Node.

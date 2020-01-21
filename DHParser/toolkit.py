@@ -255,6 +255,10 @@ def escape_formatstr(s: str) -> str:
 
 
 def issubtype(sub_type, base_type) -> bool:
+    """Returns `True` if sub_type is a sub_type of `base_type`.
+    WARNING: Implementation is somewhat "hackish" and might break
+    with new Python-versions.
+    """
     def origin(t) -> tuple:
         try:
             ot = t.__origin__
@@ -262,7 +266,10 @@ def issubtype(sub_type, base_type) -> bool:
                 try:
                     return tuple(a.__origin__ for a in t.__args__)
                 except AttributeError:
-                    return tuple(a.__origin__ for a in t.__union_args__)
+                    try:
+                        return tuple(a.__origin__ for a in t.__union_args__)
+                    except AttributeError:
+                        return t.__args__
         except AttributeError:
             if t == 'unicode':  # work-around for cython bug
                 return (str,)
@@ -274,6 +281,9 @@ def issubtype(sub_type, base_type) -> bool:
 
 
 def isgenerictype(t):
+    """Returns `True` if `t` is a generic type.
+    WARNING: This is very "hackish". Caller must make sure that `t`
+    actually is a type!"""
     return str(t).endswith(']')
 
 
