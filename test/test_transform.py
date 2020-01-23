@@ -370,11 +370,23 @@ class TestConstructiveTransformations:
         assert result5 == '(A)'
 
     def test_positions_of(self):
+        tree = parse_sxpr('(A (B 1) (C 1) (B 2))').with_pos(0)
+        assert positions_of([tree], 'A') == ()
+        assert positions_of([tree], 'X') == ()
+        assert positions_of([tree], 'C') == (1,)
+        assert positions_of([tree], 'B') == (0, 2)
+
         tree = parse_sxpr('(A (B 1) (C 2) (D 3))').with_pos(0)
         trans_table = {'A': insert(positions_of('D'), node_maker('X', '0'))}
         traverse(tree, trans_table)
         result1 = tree.serialize()
         assert result1 == '(A (B "1") (C "2") (X "0") (D "3"))', result1
+
+        trans_table = {'A': insert(positions_of('Z'), node_maker('X', '0'))}
+        traverse(tree, trans_table)
+        result2 = tree.serialize()
+        assert result2 == '(A (B "1") (C "2") (X "0") (D "3"))', result2
+
 
 
 

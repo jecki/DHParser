@@ -29,7 +29,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG
+    flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -235,6 +235,40 @@ class TestNode:
                                           include_root=True, reverse=True):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
+
+    def test_select_children(self):
+        tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
+        children = list(nd.tag_name for nd in tree.select_children(ALL_NODES))
+        assert children == ['B', 'C', 'B']
+        B_values = list(nd.content for nd in tree.select_children('B', reverse=True))
+        assert B_values == ['2', '1']
+        B_indices = tree.indices('B')
+        print(B_indices)
+
+    def test_single_child_selection(self):
+        tree = parse_sxpr('(A (B 1) (C 1) (B 2))')
+        assert 'B' in tree
+        assert 'X' not in tree
+        assert tree['B'].equals(Node('B', '1'))
+        item_w_value_2 = lambda nd: nd.content == '2'
+        assert item_w_value_2 in tree
+        item_w_value_4 = lambda nd: nd.content == '4'
+        assert item_w_value_4 not in tree
+        assert tree[item_w_value_2].equals(Node('B', '2'))
+        try:
+            tree[item_w_value_4]
+            assert False
+        except KeyError:
+            pass
+        assert tree.get('B', EMPTY_NODE).equals(Node('B', '1'))
+        assert tree.get(item_w_value_2, EMPTY_NODE).equals(Node('B', '2'))
+        assert tree.get(item_w_value_4, EMPTY_NODE).equals(EMPTY_NODE)
+        assert tree.index('C') == 1
+        try:
+            tree.index('X')
+            assert False
+        except ValueError:
+            pass
 
     def test_find(self):
         found = list(self.unique_tree.select_if(lambda nd: not nd.children and nd.result == "e"))

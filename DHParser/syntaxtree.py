@@ -46,6 +46,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'ResultType',
            'StrictResultType',
            'ChildrenType',
+           'CriteriaType',
+           'ALL_NODES',
            'Node',
            'FrozenNode',
            'EMPTY_NODE',
@@ -136,6 +138,7 @@ def flatten_xml(xml: str) -> str:
 # - one of several tag_names
 # - a function Node -> bool
 CriteriaType = Union['Node', str, Container[str], Callable]
+ALL_NODES = lambda nd: True
 
 
 def create_match_function(criterion: CriteriaType) -> Callable:
@@ -341,19 +344,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 return self.result == other.result
         return False
-
-    def get(self, index_or_tagname: Union[int, str],
-            surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
-        """Returns the child node with the given index if ``index_or_tagname``
-        is an integer or the first child node with the given tag name. If no
-        child with the given index or tag_name exists, the ``surrogate`` is
-        returned instead. This mimics the behaviour of Python's dictionary's
-        get-method.
-        """
-        try:
-            return self[index_or_tagname]
-        except KeyError:
-            return surrogate
 
     @property
     def anonymous(self) -> bool:
@@ -636,6 +626,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     else KeyError(str(key))
         raise ValueError('Leaf-nodes have no children that can be indexed!')
 
+    def get(self, index_or_tagname: Union[CriteriaType, int],
+            surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
+        """Returns the child node with the given index if ``index_or_tagname``
+        is an integer or the first child node with the given tag name. If no
+        child with the given index or tag_name exists, the ``surrogate`` is
+        returned instead. This mimics the behaviour of Python's dictionary's
+        get-method.
+        """
+        try:
+            return self[index_or_tagname]
+        except KeyError:
+            return surrogate
+
     def __contains__(self, what: CriteriaType) -> bool:
         """
         Returns true if a child with the given tag name exists.
@@ -681,6 +684,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 break
         raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
 
+    @cython.locals(i=cython.int)
+    def indices(self, what: CriteriaType) -> Tuple[int]:
+        """
+        Returns the indices of all children that fulfil the criterion `what`.
+        """
+        mf = create_match_function(what)
+        children = self.children
+        return tuple(i for i in range(len(children)) if mf(children[i]))
+
     def select_if(self, match_function: Callable,
                   include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
@@ -691,13 +703,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         given `match_function` evaluates to True. The tree is
         traversed pre-order.
         """
-        if include_root and match_function(self):
-            yield self
+        if include_root:
+            if match_function(self):
+                yield self
+        elif not self.children and self.result:
+            raise ValueError("Leaf-Node %s does not have any descendants to iterate over"
+                             % self.serialize())
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
             if match_function(child):
                 yield child
-            yield from child.select_if(match_function, False, reverse)
+            if child.children:
+                yield from child.select_if(match_function, False, reverse)
 
     def select(self, criterion: CriteriaType,
                include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
@@ -733,6 +750,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             '(X (c "d"))'
         """
         return self.select_if(create_match_function(criterion), include_root, reverse)
+
+    def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
+        """Returns an iterator over all direct children of a node that"""
+        if not self.children and self.result:
+            raise ValueError("Leaf-Node %s does not have any children to iterate over"
+                             % self.serialize())
+        match_function = create_match_function(criterion)
+        if reverse:
+            for child in reversed(tuple(self.select_children(criterion, False))):
+                yield child
+        else:
+            for child in self.children:
+                if match_function(child):
+                    yield child
 
     def pick(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
         """
@@ -787,12 +818,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if include_root and match_function(self):
             yield [self]
+        elif not self.children and self.result:
+            raise ValueError("Leaf-Node %s does not have any descendants to iterate over"
+                             % self.serialize())
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
             if match_function(child):
                 yield [self, child]
-            for context in child.select_context_if(match_function, False, reverse):
-                yield [self] + context
+            if child.children:
+                for context in child.select_context_if(match_function, False, reverse):
+                    yield [self] + context
 
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
@@ -1484,7 +1519,7 @@ class RootNode(Node):
             if nid == node_id:
                 # add the node's errors
                 errors.extend(self.error_nodes[nid])
-            else:
+            elif node.children:
                 for _ in node.select_if(lambda n: id(n) == nid):
                     break
                 else:
