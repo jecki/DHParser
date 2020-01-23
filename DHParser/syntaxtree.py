@@ -614,17 +614,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             IndexError: if key was an integer index that did not exist
             ValueError: if the __getitem__ has been called on a leaf node.
         """
-        if self.children:
-            if isinstance(key, int):
-                return self.children[key]
-            else:
-                mf = create_match_function(key)
-                for child in self.children:
-                    if mf(child):
-                        return child
-                raise IndexError('index out of range') if isinstance(key, int) \
-                    else KeyError(str(key))
-        raise ValueError('Leaf-nodes have no children that can be indexed!')
+        if isinstance(key, int):
+            return self.children[key]
+        else:
+            mf = create_match_function(key)
+            for child in self.children:
+                if mf(child):
+                    return child
+            raise IndexError('index out of range') if isinstance(key, int) \
+                else KeyError(str(key))
 
     def get(self, index_or_tagname: Union[CriteriaType, int],
             surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
@@ -651,13 +649,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             bool:  True, if at least one child which fulfills the criterion
                 exists
         """
-        if self.children:
-            mf = create_match_function(what)
-            for child in self.children:
-                if mf(child):
-                    return True
-            return False
-        raise ValueError('Leaf-node cannot contain other nodes')
+        mf = create_match_function(what)
+        for child in self.children:
+            if mf(child):
+                return True
+        return False
 
     @cython.locals(start=cython.int, stop=cython.int, i=cython.int)
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
@@ -703,12 +699,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         given `match_function` evaluates to True. The tree is
         traversed pre-order.
         """
-        if include_root:
-            if match_function(self):
-                yield self
-        elif not self.children and self.result:
-            raise ValueError("Leaf-Node %s does not have any descendants to iterate over"
-                             % self.serialize())
+        if include_root and match_function(self):
+            yield self
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
             if match_function(child):
@@ -753,9 +745,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
         """Returns an iterator over all direct children of a node that"""
-        if not self.children and self.result:
-            raise ValueError("Leaf-Node %s does not have any children to iterate over"
-                             % self.serialize())
+        # if not self.children and self.result:
+        #     raise ValueError("Leaf-Node %s does not have any children to iterate over"
+        #                      % self.serialize())
         match_function = create_match_function(criterion)
         if reverse:
             for child in reversed(tuple(self.select_children(criterion, False))):
@@ -818,9 +810,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if include_root and match_function(self):
             yield [self]
-        elif not self.children and self.result:
-            raise ValueError("Leaf-Node %s does not have any descendants to iterate over"
-                             % self.serialize())
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
             if match_function(child):
