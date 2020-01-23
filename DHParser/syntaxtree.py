@@ -1499,7 +1499,7 @@ class RootNode(Node):
         node_id = id(node)           # type: int
         errors = []                  # type: List[Error]
         start_pos = node.pos
-        end_pos = node.pos + len(node)
+        end_pos = node.pos + max(len(node), 1)
         error_node_ids = set()
         for pos in self.error_positions.keys():   # TODO: use bisect here...
             if start_pos <= pos < end_pos:
