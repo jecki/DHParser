@@ -39,6 +39,13 @@ The communication, i.e. requests and responses, follows the json-rpc protocol:
 For JSON see:
 
     https://json.org/
+
+The `server`-module contains some rudimentary support for the language server protocol.
+For the specification and implementation of the language server protocol, see:
+    https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+    https://microsoft.github.io/language-server-protocol/
+    https://langserver.org/
+
 """
 
 import asyncio
