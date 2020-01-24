@@ -51,7 +51,12 @@ For the specification and implementation of the language server protocol, see:
 import asyncio
 from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
-from concurrent.futures.thread import BrokenThreadPool
+try:
+    from concurrent.futures.thread import BrokenThreadPool
+except ImportError:
+    # BrokenThreadPool requires Python version >= 3.8
+    class BrokenThreadPool:
+        pass
 from functools import partial
 import json
 from multiprocessing import Process, Value, Array
