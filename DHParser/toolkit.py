@@ -32,8 +32,6 @@ import multiprocessing
 import os
 import threading
 
-from DHParser import StringView
-
 try:
     import regex as re
 except ImportError:
@@ -50,6 +48,8 @@ try:
 except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
+
+from DHParser.stringview import StringView
 
 
 __all__ = ('typing',

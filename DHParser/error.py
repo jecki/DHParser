@@ -39,6 +39,7 @@ from typing import Iterable, Iterator, Union, List
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
+from DHParser.toolkit import linebreaks, line_col
 
 
 __all__ = ('ErrorCode',
@@ -49,8 +50,6 @@ __all__ = ('ErrorCode',
            'has_errors',
            'only_errors',
            'adjust_error_locations')
-
-from DHParser.toolkit import linebreaks, line_col
 
 
 class ErrorCode(int):
