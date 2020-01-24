@@ -5,9 +5,4 @@
 
 import cython
 
-@cython.locals(i=cython.int)
-cpdef linebreaks(test)
-
-@cython.locals(line=cython.int, column=cython.int)
-cpdef line_col(lbreaks, pos)
 

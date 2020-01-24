@@ -26,12 +26,12 @@ Grammar-object.
 
 from typing import Tuple, Optional, List, Iterable, Union
 
-from DHParser.error import Error, line_col
+from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import freeze_callstack, HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
-from DHParser.toolkit import cython
+from DHParser.toolkit import cython, line_col
 
 __all__ = ('trace_history', 'all_descendants', 'set_tracer',
            'resume_notices_on')

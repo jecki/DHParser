@@ -31,7 +31,8 @@ try:
 except ImportError:
     import re
 
-from DHParser.error import linebreaks, line_col
+from DHParser.toolkit import linebreaks, line_col
+
 
 class TestErrorSupport:
     def mini_suite(self, s, lbreaks, offset):

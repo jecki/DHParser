@@ -32,9 +32,9 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, Tuple, 
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
-from DHParser.error import Error, ErrorCode, linebreaks, line_col
+from DHParser.error import Error, ErrorCode
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, cython
+from DHParser.toolkit import re, cython, linebreaks, line_col
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',

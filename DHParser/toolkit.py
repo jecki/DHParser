@@ -25,11 +25,14 @@ functions that are very generic.
 """
 
 import ast
+import bisect
 import hashlib
 import io
 import multiprocessing
 import os
 import threading
+
+from DHParser import StringView
 
 try:
     import regex as re
@@ -37,7 +40,7 @@ except ImportError:
     import re
 import sys
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple
 
 try:
     import cython
@@ -403,6 +406,63 @@ def compile_python_object(python_src: str, catch_obj_regex="") -> Any:
         return namespace[matches[0]] if matches else None
     else:
         return namespace
+
+
+#######################################################################
+#
+# text services
+#
+#######################################################################
+
+
+@cython.locals(i=cython.int)
+def linebreaks(text: Union[StringView, str]) -> List[int]:
+    """
+    Returns a list of indices all line breaks in the text.
+    """
+    lbr = [-1]
+    i = text.find('\n', 0)
+    while i >= 0:
+        lbr.append(i)
+        i = text.find('\n', i + 1)
+    lbr.append(len(text))
+    return lbr
+
+
+@cython.locals(line=cython.int, column=cython.int, pos=cython.int)
+def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
+    """
+    Returns the position within a text as (line, column)-tuple based
+    on a list of all line breaks, including -1 and EOF.
+    """
+    if not lbreaks and pos >= 0:
+        return 0, pos
+    if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
+        raise ValueError('Position %i outside text of length %s !' % (pos, lbreaks[-1]))
+    line = bisect.bisect_left(lbreaks, pos)
+    column = pos - lbreaks[line - 1]
+    return line, column
+
+
+@cython.locals(line=cython.int, column=cython.int, i=cython.int)
+def text_pos(text: Union[StringView, str],
+             line: int, column: int,
+             lbreaks: List[int] = []) -> int:
+    """
+    Returns the text-position for a given line and column or -1 if the line
+    and column exceed the size of the text.
+    """
+    if lbreaks:
+        try:
+            return lbreaks[line] + column - 1
+        except IndexError:
+            return -1
+    else:
+        i = 0
+        while line > 0 and i >= 0:
+            i = text.find('\n', i + 1)
+            line -= 1
+        return i + column - 1
 
 
 #######################################################################

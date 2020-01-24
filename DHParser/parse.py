@@ -36,15 +36,14 @@ from typing import Callable, cast, List, Tuple, Set, Dict, \
     DefaultDict, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, linebreaks, line_col
+from DHParser.error import Error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
-    abbreviate_middle, RX_NEVER_MATCH, RxPatternType
-
+    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col
 
 __all__ = ('ParserError',
            'ApplyFunc',

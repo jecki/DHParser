@@ -35,9 +35,7 @@ the string representations of the error objects. For example::
             print("There have been warnings, but no errors.")
 """
 
-
-import bisect
-from typing import Iterable, Iterator, Union, Tuple, List
+from typing import Iterable, Iterator, Union, List
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
@@ -50,9 +48,9 @@ __all__ = ('ErrorCode',
            'is_warning',
            'has_errors',
            'only_errors',
-           'linebreaks',
-           'line_col',
            'adjust_error_locations')
+
+from DHParser.toolkit import linebreaks, line_col
 
 
 class ErrorCode(int):
@@ -210,33 +208,6 @@ def only_errors(messages: Iterable[Error], level: int = Error.ERROR) -> Iterator
 # Setting of line, column and position properties of error messages.
 #
 #######################################################################
-
-
-def linebreaks(text: Union[StringView, str]) -> List[int]:
-    """
-    Returns a list of indices all line breaks in the text.
-    """
-    lbr = [-1]
-    i = text.find('\n', 0)
-    while i >= 0:
-        lbr.append(i)
-        i = text.find('\n', i + 1)
-    lbr.append(len(text))
-    return lbr
-
-
-def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
-    """
-    Returns the position within a text as (line, column)-tuple based
-    on a list of all line breaks, including -1 and EOF.
-    """
-    if not lbreaks and pos >= 0:
-        return 0, pos
-    if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
-        raise ValueError('Position %i outside text of length %s !' % (pos, lbreaks[-1]))
-    line = bisect.bisect_left(lbreaks, pos)
-    column = pos - lbreaks[line - 1]
-    return line, column
 
 
 def adjust_error_locations(errors: List[Error],
