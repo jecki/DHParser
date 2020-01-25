@@ -137,40 +137,64 @@ class EBNFLanguageServerProtocol:
     """
 
     directive_completions = [
-        {'label':         r'@ anonymous = ${1:/_\w+/}',
+        {'label':         'anonymous',
+         'insertText':    r'@ anonymous = /${1:_\w+}/',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'A list of symbols or a regular expression to identify those '
                           'definitions that shall not yield named tags in the syntax tree.'},
-        {'label':          r'@ comment = ${1:/#.*(?:\n|$)/ }',
-         'documentation': 'A regular expression for comments.' },
-        {'label':          r'@ drop = ${1:whitespace, token, regexp}',
+
+        {'label':         'comment',
+         'insertText':    r'@ comment = /${1:#.*(?:\n|$)}/',
+         'insertTextFormat': 2,  # snippet
+         'documentation': 'A regular expression for comments.'},
+
+        {'label':         'drop',
+         'insertText':    r'@ drop = ${1:whitespace, token, regexp}',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'A list of definitions for which the parsed content shall be '
                           'dropped rather than included in the syntax tree. The special '
                           'values "whitespace", "token" and "regexp" stand for their '
                           'respective classes instead of particular definitions.'},
-        {'label':         '@ ignorecase = {1|yes,no|}',
+
+        {'label':         'ignorecase',
+         'insertText':    '@ ignorecase = ${1|yes,no|}',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'Ignore the case in regular expressions.'},
-        {'label':         r'@ literalws = ${1|right,left,both,none|}',
+
+        {'label':         'literalws',
+         'insertText':    r'@ literalws = ${1|right,left,both,none|}',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'Determines one which side (if any) of a string-literal the '
                           'whitespace shall be eaten' },
-        {'label':         r'@ whitespace ${1:/\s*/}',
+        {'label':         'whitespace',
+         'insertText':    r'@ whitespace = /${1:\s*}/',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'A regular expression for insignificant whitespace. '
                           '(Insignificant whitespace is denoted by a tilde ~)'},
-        {'label':         r'@ {1:SYMBOL}_resume = ${1:/ /}',
+        {'label':         'resume',
+         'insertText':    r'@ ${1:SYMBOL}_resume = /${2: }/',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'A list of regular expressions identifying a place where the parent '
                           'parser shall catch up the parsing process, if within the given parser '
                           'an element marked as mandatory with the §-sign did not match. '
                           '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
-        {'label':         r'@ {1:SYMBOL}_skip = ${1:/ /}',
+        {'label':         'skip',
+         'insertText':    r'@ ${1:SYMBOL}_skip = /${2: }/',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'A list of regular expressions to identify a place to which a series-'
                           'parser shall skip, if a mandatory "§"-item did not match. The parser '
                           'skips to the place after the match except for lookahead-expressions.'
                           '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
-        {'label':         r'@ {1:SYMBOL}_error',
+        {'label':         'error',
+         'insertText':    r'@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"',
+         'insertTextFormat': 2,  # snippet
          'dcoumentation': 'An error message preceded by a regular expression or stirng-literal '
                           'that will be emitted instead of the stock message, if a mandatory '
                           'element violation occured within the given parser. '
                           '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
-        {'label':         r'@ {1:SYMBOL}_filter = ${1:funcname}',
+        {'label':         'filter',
+         'insertText':    r'@ ${1:SYMBOL}_filter = ${2:funcname}',
+         'insertTextFormat': 2,  # snippet
          'documentation': 'Name of a Python-filter-function that is applied when retrieving '
                           'a stored symbol. (EBNF-Extensions by DHParser.)'}
     ]
@@ -252,7 +276,7 @@ class EBNFLanguageServerProtocol:
         from DHParser.toolkit import text_pos
         text = self.current_text[textDocument['uri']]
         if context['triggerKind'] == 2:  # Trigger Character
-
+            return self.directive_completions
         line = position['line']
         col = position['character']
         pos = text_pos(text, line, col)
