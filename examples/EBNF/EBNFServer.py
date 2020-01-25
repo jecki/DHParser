@@ -188,7 +188,7 @@ class EBNFLanguageServerProtocol:
         {'label':         'error',
          'insertText':    r'@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"',
          'insertTextFormat': 2,  # snippet
-         'dcoumentation': 'An error message preceded by a regular expression or stirng-literal '
+         'dcoumentation': 'An error message preceded by a regular expression or string-literal '
                           'that will be emitted instead of the stock message, if a mandatory '
                           'element violation occured within the given parser. '
                           '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
