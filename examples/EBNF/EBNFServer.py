@@ -117,6 +117,7 @@ class EBNFCPUBoundTasks:
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
     def compile_EBNF(self, text: str):
+        print('compile_EBNF')
         from DHParser.ebnf import compile_ebnf
 
 
@@ -134,6 +135,47 @@ class EBNFLanguageServerProtocol:
         https://microsoft.github.io/language-server-protocol/
         https://langserver.org/
     """
+
+    directive_completions = [
+        {'label':         r'@ anonymous = ${1:/_\w+/}',
+         'documentation': 'A list of symbols or a regular expression to identify those '
+                          'definitions that shall not yield named tags in the syntax tree.'},
+        {'label':          r'@ comment = ${1:/#.*(?:\n|$)/ }',
+         'documentation': 'A regular expression for comments.' },
+        {'label':          r'@ drop = ${1:whitespace, token, regexp}',
+         'documentation': 'A list of definitions for which the parsed content shall be '
+                          'dropped rather than included in the syntax tree. The special '
+                          'values "whitespace", "token" and "regexp" stand for their '
+                          'respective classes instead of particular definitions.'},
+        {'label':         '@ ignorecase = {1|yes,no|}',
+         'documentation': 'Ignore the case in regular expressions.'},
+        {'label':         r'@ literalws = ${1|right,left,both,none|}',
+         'documentation': 'Determines one which side (if any) of a string-literal the '
+                          'whitespace shall be eaten' },
+        {'label':         r'@ whitespace ${1:/\s*/}',
+         'documentation': 'A regular expression for insignificant whitespace. '
+                          '(Insignificant whitespace is denoted by a tilde ~)'},
+        {'label':         r'@ {1:SYMBOL}_resume = ${1:/ /}',
+         'documentation': 'A list of regular expressions identifying a place where the parent '
+                          'parser shall catch up the parsing process, if within the given parser '
+                          'an element marked as mandatory with the §-sign did not match. '
+                          '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
+        {'label':         r'@ {1:SYMBOL}_skip = ${1:/ /}',
+         'documentation': 'A list of regular expressions to identify a place to which a series-'
+                          'parser shall skip, if a mandatory "§"-item did not match. The parser '
+                          'skips to the place after the match except for lookahead-expressions.'
+                          '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
+        {'label':         r'@ {1:SYMBOL}_error',
+         'dcoumentation': 'An error message preceded by a regular expression or stirng-literal '
+                          'that will be emitted instead of the stock message, if a mandatory '
+                          'element violation occured within the given parser. '
+                          '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
+        {'label':         r'@ {1:SYMBOL}_filter = ${1:funcname}',
+         'documentation': 'Name of a Python-filter-function that is applied when retrieving '
+                          'a stored symbol. (EBNF-Extensions by DHParser.)'}
+    ]
+
+
     def __init__(self):
         from DHParser.server import gen_lsp_table
         self.lsp_data = {
@@ -145,7 +187,7 @@ class EBNFLanguageServerProtocol:
                 "textDocumentSync": 1,  # 0 = None, 1 = full, 2 = incremental
                 "completionProvider": {
                     "resolveProvider": False,
-                    "triggerCharacters": ['#', '*']
+                    "triggerCharacters": ['@']
                 }
             }
         }
@@ -160,6 +202,7 @@ class EBNFLanguageServerProtocol:
         self.lsp_fulltable.update(self.blocking.lsp_table)
 
         self.pending_changes = dict()  # uri -> text
+        self.current_text = dict()     # uri -> text
 
 
     def connect(self, connection):
@@ -192,7 +235,9 @@ class EBNFLanguageServerProtocol:
 
     async def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
         uri = textDocument['uri']
-        self.pending_changes[uri] = contentChanges[0]['text']
+        text = contentChanges[0]['text']
+        self.current_text[uri] = text
+        self.pending_changes[uri] = text
         await asyncio.sleep(3)
         text = self.pending_changes.get(uri, None)
         if text:
@@ -203,13 +248,19 @@ class EBNFLanguageServerProtocol:
                                                     (text,))
         return None
 
-    def lsp_textDocument_completion(self, **kwargs):
-        print('completion', kwargs)
+    def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
+        from DHParser.toolkit import text_pos
+        text = self.current_text[textDocument['uri']]
+        if context['triggerKind'] == 2:  # Trigger Character
+
+        line = position['line']
+        col = position['character']
+        pos = text_pos(text, line, col)
+        char = text[pos]
         return None
 
     def lsp_S_cancelRequest(self, **kwargs):
         return None
-
 
 
 def run_server(host, port, log_path=None):
