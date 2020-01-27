@@ -24,6 +24,7 @@ parser classes are defined in the ``parse`` module.
 """
 
 from collections import OrderedDict
+import bisect
 import copy
 import json
 import sys
@@ -1464,7 +1465,20 @@ class RootNode(Node):
         Adds an Error object to the tree, locating it at a specific node.
         """
         if not node:
-            node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
+            pos_list =[]
+            node_list = []
+            for nd in self.select_if(lambda nd: not nd.children):
+                if nd.pos <= error.pos < nd.pos + len(nd):
+                    node = nd
+                    break
+                pos_list.append(nd.pos)
+                node_list.append(nd)
+            else:
+                # pos_list.append(nd.pos + len(nd))
+                node_list.append(nd)
+                i = bisect.bisect(pos_list, error.pos)
+                print(i, pos_list[-1], len(node_list))
+                node = node_list[i]
         else:
             assert isinstance(node, Node)
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \

@@ -391,9 +391,17 @@ class TestRootNode:
     def test_copy_errors(self):
         tree = RootNode(parse_sxpr('(A (B "1") (C "2"))').with_pos(0))
         tree.add_error(tree['C'], Error('error', 1))
+        tree.add_error(None, Error('unspecific error', 2))
         save = tree.as_sxpr()
+        print(save)
+        print(tree.errors)
+        # print(tree.as_sxpr())
         tree_copy = copy.deepcopy(tree)
-        assert tree_copy.as_sxpr() == save  # is the error message still included?
+        print(tree.errors)
+        print(tree_copy.errors)
+        compare = tree_copy.as_sxpr()
+        print(compare)
+        assert compare == save  # is the error message still included?
 
 class TestNodeFind:
     """Test the item-access-functions of class Node.
