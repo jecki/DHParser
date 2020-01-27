@@ -1240,7 +1240,7 @@ def node_maker(tag_name: str,
         >>> factory = node_maker('d', (node_maker('c', ','), node_maker('l', ' ')))
         >>> node = factory()
         >>> node.serialize()
-        (d (c ",") (l " "))
+        '(d (c ",") (l " "))'
     """
     def dynamic_result(result: DynamicResultType) -> Union[Tuple[Node, ...], Node, str]:
         if isinstance(result, str):

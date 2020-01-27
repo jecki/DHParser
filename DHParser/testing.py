@@ -418,11 +418,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
-                ast.clear_errors()
+                old_errors = set(ast.errors)
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
-                if is_error(ast.error_flag):
-                    ast_errors = ast.errors_sorted
+                ast_errors = [e for e in ast.errors if e not in old_errors]
+                ast_errors.sort(key=lambda e: e.pos)
+                if is_error(max(e.code for e in ast_errors) if ast_errors else 0):
                     adjust_error_locations(ast_errors, test_code)
                     if errors:
                         if errata:  errata[-1] = errata[-1].rstrip('\n')

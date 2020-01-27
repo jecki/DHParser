@@ -24,6 +24,7 @@ parser classes are defined in the ``parse`` module.
 """
 
 from collections import OrderedDict
+import bisect
 import copy
 import json
 import sys
@@ -1087,6 +1088,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
             elif src is not None and node._pos >= 0:
                 txt.append(' `(pos %i)' % node.pos)
+            # if node.tag_name == ZOMBIE_TAG:
+            #     print(node.pos, id(node), id(node) in root.error_nodes, root.get_errors(node))
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
                 txt.append(" `(%s)" % ';  '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt) + '\n'
@@ -1134,15 +1137,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
             txt = ['<', node.tag_name]
-            has_reserved_attrs = node.has_attr() \
-                and any(r in node.attr for r in {'err', 'line', 'col'})
             if node.has_attr():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
-            if src and not has_reserved_attrs:
+            if src and not (node.has_attr('line') or node.has_attr('col')):
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node._pos))
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
-            if root and id(node) in root.error_nodes and not has_reserved_attrs:
+            if root and id(node) in root.error_nodes and not node.has_attr('err'):
                 txt.append(' err="%s"' % ''.join(str(err).replace('"', "'")
                                                  for err in root.get_errors(node)))
             if node.tag_name in empty_tags:
@@ -1411,6 +1412,7 @@ class RootNode(Node):
         return self.content
 
     def __deepcopy__(self, memodict={}):
+        old_node_ids = [id(nd) for nd in self.select_if(lambda n: True, include_root=True)]
         duplicate = self.__class__(None)
         if self.children:
             duplicate.children = copy.deepcopy(self.children)
@@ -1419,12 +1421,15 @@ class RootNode(Node):
             duplicate.children = tuple()
             duplicate._result = self._result
         duplicate._pos = self._pos
+        new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
+        map_id = dict(zip(old_node_ids, new_node_ids))
         if self.has_attr():
             duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
         duplicate.errors = copy.copy(self.errors)
-        duplicate.error_nodes = copy.copy(self.error_nodes)
-        duplicate.error_positions = copy.deepcopy(self.error_positions)
+        duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
+        duplicate.error_positions = {pos: {map_id.get(i, i) for i in s}
+                                     for pos, s in self.error_positions.items()}
         duplicate.error_flag = self.error_flag
         duplicate.inline_tags = self.inline_tags
         duplicate.omit_tags = self.omit_tags
@@ -1460,7 +1465,20 @@ class RootNode(Node):
         Adds an Error object to the tree, locating it at a specific node.
         """
         if not node:
-            node = Node(ZOMBIE_TAG, '').with_pos(error.pos)
+            # find the first leaf-node from the left that could contain the error
+            # judging from its position
+            pos_list =[]
+            node_list = []
+            for nd in self.select_if(lambda nd: not nd.children):
+                if nd.pos <= error.pos < nd.pos + len(nd):
+                    node = nd
+                    break
+                pos_list.append(nd.pos)
+                node_list.append(nd)
+            else:
+                node_list.append(nd)
+                i = bisect.bisect(pos_list, error.pos)
+                node = node_list[i]
         else:
             assert isinstance(node, Node)
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
