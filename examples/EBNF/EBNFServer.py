@@ -135,69 +135,44 @@ class EBNFLanguageServerProtocol:
         https://microsoft.github.io/language-server-protocol/
         https://langserver.org/
     """
-
-    directive_completions = [
-        {'label':         'anonymous',
-         'insertText':    r'@ anonymous = /${1:_\w+}/',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'A list of symbols or a regular expression to identify those '
-                          'definitions that shall not yield named tags in the syntax tree.'},
-
-        {'label':         'comment',
-         'insertText':    r'@ comment = /${1:#.*(?:\n|$)}/',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'A regular expression for comments.'},
-
-        {'label':         'drop',
-         'insertText':    r'@ drop = ${1:whitespace, token, regexp}',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'A list of definitions for which the parsed content shall be '
-                          'dropped rather than included in the syntax tree. The special '
-                          'values "whitespace", "token" and "regexp" stand for their '
-                          'respective classes instead of particular definitions.'},
-
-        {'label':         'ignorecase',
-         'insertText':    '@ ignorecase = ${1|yes,no|}',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'Ignore the case in regular expressions.'},
-
-        {'label':         'literalws',
-         'insertText':    r'@ literalws = ${1|right,left,both,none|}',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'Determines one which side (if any) of a string-literal the '
-                          'whitespace shall be eaten' },
-        {'label':         'whitespace',
-         'insertText':    r'@ whitespace = /${1:\s*}/',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'A regular expression for insignificant whitespace. '
-                          '(Insignificant whitespace is denoted by a tilde ~)'},
-        {'label':         'resume',
-         'insertText':    r'@ ${1:SYMBOL}_resume = /${2: }/',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'A list of regular expressions identifying a place where the parent '
-                          'parser shall catch up the parsing process, if within the given parser '
-                          'an element marked as mandatory with the §-sign did not match. '
-                          '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
-        {'label':         'skip',
-         'insertText':    r'@ ${1:SYMBOL}_skip = /${2: }/',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'A list of regular expressions to identify a place to which a series-'
-                          'parser shall skip, if a mandatory "§"-item did not match. The parser '
-                          'skips to the place after the match except for lookahead-expressions.'
-                          '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
-        {'label':         'error',
-         'insertText':    r'@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"',
-         'insertTextFormat': 2,  # snippet
-         'dcoumentation': 'An error message preceded by a regular expression or string-literal '
-                          'that will be emitted instead of the stock message, if a mandatory '
-                          'element violation occured within the given parser. '
-                          '(The mandatory-marker § is an EBNF-Extension by DHParser.)'},
-        {'label':         'filter',
-         'insertText':    r'@ ${1:SYMBOL}_filter = ${2:funcname}',
-         'insertTextFormat': 2,  # snippet
-         'documentation': 'Name of a Python-filter-function that is applied when retrieving '
-                          'a stored symbol. (EBNF-Extensions by DHParser.)'}
-    ]
+    from typing import NamedTuple
+    CompletionItem = NamedTuple('CompletionItem', [('label', str),
+                                                   ('insertText', str),
+                                                   ('insertTextFormat', int),
+                                                   ('documentation', str)])
+    completions = [['anonymous', '@ anonymous = /${1:_\\w+}/', 2,
+                    'List of symbols or a regular expression to identify those definitions '
+                    'that shall not yield named tags in the syntax tree.'],
+                   ['comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
+                    'Regular expression for comments.'],
+                   ['drop', '@ drop = ${1:whitespace, token, regexp}', 2,
+                    'List of definitions for which the parsed content shall be dropped rather '
+                    'than included in the syntax tree. The special values "whitespace", "token" '
+                    'and "regexp" stand for their respective classes instead of particular '
+                    'definitions.'],
+                   ['ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
+                    'Ignore the case wihin regular expressions.'],
+                   ['literalws', '@ literalws = ${1|right,left,both,none|}', 2,
+                    'Determines one which side (if any) of a string-literal the whitespace '
+                    'shall be eaten'],
+                   ['whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
+                    'insignificant whitespace (denoted by a tilde ~)'],
+                   ['resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
+                    'expressions identifying a place where the parent parser shall catch up the '
+                    'parsing process, if within the given parser an element marked as mandatory '
+                    'with the §-sign did not match. (DHParser-extension to EBNF.)'],
+                   ['skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
+                    'A list of regular expressions to identify a place to which a series-parser '
+                    'shall skip, if a mandatory "§"-item did not match. The parser skips to the '
+                    'place after the match except for lookahead-expressions. '
+                    '(DHParser-extension to EBNF.)'],
+                   ['error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
+                    'An error message preceded by a regular expression or string-literal that '
+                    'will be emitted instead of the stock message, if a mandatory element '
+                    'violation occured within the given parser. (DHParser-extension to EBNF)'],
+                   ['filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
+                    'Name of a Python-filter-function that is applied when retrieving a stored '
+                    'symbol. (DHParser-extension to EBNF)']]
 
 
     def __init__(self):

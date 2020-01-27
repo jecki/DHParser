@@ -171,6 +171,7 @@ class TestStringHelpers:
 class TestTypeSystemSupport:
     def test_issubtype(self):
         assert issubtype(typing.List, collections.abc.Sequence)
+        assert issubtype(typing.Tuple, type(tuple()))
 
 
 
