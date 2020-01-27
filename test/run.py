@@ -36,7 +36,8 @@ def run_unittests(command):
 
 
 if __name__ == "__main__":
-    interpreters = ['python3 ' if os.system('python3 -V') == 0 else 'python ']
+    interpreters = [sys.executable + ' ']
+    # ['python3 ' if os.system('python3 -V') == 0 else 'python ']
     if os.system('python3.5 -V') == 0:
         interpreters.append('python3.5 ')
     elif os.system('~/.local/bin/python3.5 -V') == 0:

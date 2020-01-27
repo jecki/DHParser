@@ -1385,8 +1385,6 @@ LOGGING_BLOCK = """from DHParser.log import start_logging
     set_config_value('log_server', True)
     set_config_value('echo_server_log', True)"""
 
-python_interpreter_name_cached = ''
-
 
 def detach_server(host: str = USE_DEFAULT_HOST,
                   port: int = USE_DEFAULT_PORT,
@@ -1406,13 +1404,10 @@ def detach_server(host: str = USE_DEFAULT_HOST,
     global python_interpreter_name_cached
     host, port = substitute_default_host_and_port(host, port)
     null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
-    if python_interpreter_name_cached:
-        interpreter = python_interpreter_name_cached
-    else:
-        interpreter = 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
-        # interpreter = '/home/eckhart/.local/bin/python3.8'
-        # interpreter = "pypy3"
-        python_interpreter_name_cached = interpreter
+    interpreter = sys.executable
+    # 'python3' if os.system('python3 -V' + null_device) == 0 else 'python'
+    # interpreter = '/home/eckhart/.local/bin/python3.8'
+    # interpreter = "pypy3"
     logging = ''  # type: str
     if is_logging() and get_config_value('log_server'):
         logging = LOGGING_BLOCK.format(LOGDIR=get_config_value('log_dir').replace('\\', '\\\\'),

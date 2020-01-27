@@ -24,6 +24,7 @@ import asyncio
 import os
 import sys
 
+assert sys.version_info >= (3,5,7), "DHParser requires at least Python-Version 3.5.7"
 
 scriptpath = os.path.dirname(__file__)
 

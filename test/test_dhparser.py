@@ -43,7 +43,7 @@ class TestDHParserCommandLineTool:
         if not os.path.exists('test_dhparser_data'):
             os.mkdir('test_dhparser_data')
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
-        self.python = 'python3 ' if system('python3 -V' + self.nulldevice) == 0 else 'python '
+        self.python = sys.executable + ' '
 
     def teardown(self):
         if os.path.exists('test_dhparser_data/neu/neuServer.py'):
