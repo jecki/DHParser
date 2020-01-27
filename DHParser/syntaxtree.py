@@ -1465,6 +1465,8 @@ class RootNode(Node):
         Adds an Error object to the tree, locating it at a specific node.
         """
         if not node:
+            # find the first leaf-node from the left that could contain the error
+            # judging from its position
             pos_list =[]
             node_list = []
             for nd in self.select_if(lambda nd: not nd.children):
@@ -1474,10 +1476,8 @@ class RootNode(Node):
                 pos_list.append(nd.pos)
                 node_list.append(nd)
             else:
-                # pos_list.append(nd.pos + len(nd))
                 node_list.append(nd)
                 i = bisect.bisect(pos_list, error.pos)
-                print(i, pos_list[-1], len(node_list))
                 node = node_list[i]
         else:
             assert isinstance(node, Node)

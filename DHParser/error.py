@@ -105,6 +105,7 @@ class Error:
         assert isinstance(code, ErrorCode)
         assert not isinstance(pos, ErrorCode)
         assert code >= 0
+        assert pos >= 0
         self.message = message    # type: str
         self._pos = pos           # type: int
         # TODO: Add some logic to avoid double assignment of the same error code?

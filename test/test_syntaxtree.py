@@ -393,14 +393,8 @@ class TestRootNode:
         tree.add_error(tree['C'], Error('error', 1))
         tree.add_error(None, Error('unspecific error', 2))
         save = tree.as_sxpr()
-        print(save)
-        print(tree.errors)
-        # print(tree.as_sxpr())
         tree_copy = copy.deepcopy(tree)
-        print(tree.errors)
-        print(tree_copy.errors)
         compare = tree_copy.as_sxpr()
-        print(compare)
         assert compare == save  # is the error message still included?
 
 class TestNodeFind:
