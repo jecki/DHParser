@@ -18,6 +18,9 @@ permissions and limitations under the License.
 
 # Flat namespace for the DHParser Package. Is this a good idea...?
 
+import sys
+assert sys.version_info >= (3, 5, 3), "DHParser requires at least Python-Version 3.5.3!"
+
 from .compile import *
 from .configuration import *
 from .dsl import *
