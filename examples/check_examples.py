@@ -4,8 +4,10 @@
 scripts"""
 
 import fnmatch
-import os
 import platform
+import os
+import sys
+
 
 if __name__ == "__main__":
     scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -48,7 +50,7 @@ if __name__ == "__main__":
 
     save = os.getcwd()
     os.chdir(os.path.join(scriptdir, 'Tutorial'))
-    python = 'python3 ' if os.system('python3 -V') == 0 else 'python '
+    python = sys.executable + ' '
     check(os.system(python + ' LyrikCompiler.py Lyrisches_Intermezzo_IV.txt'))
     check(os.system(python + ' LyrikCompiler_example.py Lyrisches_Intermezzo_IV.txt'))
 

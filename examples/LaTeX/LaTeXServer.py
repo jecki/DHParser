@@ -248,10 +248,7 @@ def start_server_daemon(host, port):
     try:
         subprocess.Popen([__file__, '--startserver', host, str(port)], start_new_session=True)
     except OSError:
-        try:
-            subprocess.Popen(['python3', __file__, '--startserver', host, str(port)], start_new_session=True)
-        except FileNotFoundError:
-            subprocess.Popen(['python', __file__, '--startserver', host, str(port)], start_new_session=True)
+        subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)], start_new_session=True)
     countdown = 20
     delay = 0.05
     result = None

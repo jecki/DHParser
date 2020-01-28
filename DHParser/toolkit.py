@@ -30,13 +30,16 @@ import hashlib
 import io
 import multiprocessing
 import os
+import sys
 import threading
+
+assert sys.version_info >= (3, 5, 3), "DHParser requires at least Python-Version 3.5.3!"
 
 try:
     import regex as re
 except ImportError:
     import re
-import sys
+
 import typing
 from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple
 
