@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """tst_ArithmeticRightRecursive_grammar.py - runs the unit tests for the ArithmeticRightRecursive-grammar
 """

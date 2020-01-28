@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """Runs the dhparser test-suite with several installed interpreters"""
 

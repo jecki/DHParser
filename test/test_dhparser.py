@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_dhparser.py - tests of the dhparser.py command line tool
 

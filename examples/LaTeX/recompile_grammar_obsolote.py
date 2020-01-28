@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """recompile_grammar.py - recompiles any .ebnf files in the current 
                           directory if necessary

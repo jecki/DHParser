@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """Goes through all examples and runs any tst_*.py or recompile_grammar.py
 scripts"""

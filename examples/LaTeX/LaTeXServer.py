@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """LaTeXServer.py - starts a server (if not already running) for the
                     compilation of LaTeX

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """tst_LaTeX_doc.py - tests with full documents in subdir 'testdata'
 

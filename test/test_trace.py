@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_trace.py - unit tests for the trace-module of DHParser
 

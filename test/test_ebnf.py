@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_ebnf.py - tests of the ebnf module of DHParser 
                              

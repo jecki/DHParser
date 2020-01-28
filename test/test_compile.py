@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_compile.py - unit tests for the compile-module of DHParser
 

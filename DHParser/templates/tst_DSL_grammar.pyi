@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
 """

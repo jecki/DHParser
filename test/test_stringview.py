@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_stringview.py - tests of the stringview-module of DHParser
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """notest_server.py - tests of the server module of DHParser
 

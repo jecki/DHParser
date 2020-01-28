@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """dhparser_rename.py - rename a dhparser project properly
 

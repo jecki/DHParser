@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """collect_symbols.py - Lists all exported symbols from DHParser modules
 

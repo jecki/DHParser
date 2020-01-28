@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_error.py - tests of the error-handling-module of DHParser
 

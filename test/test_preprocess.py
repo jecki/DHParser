@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """test_preprocess.py - tests of the preprocessor-module of DHParser
 

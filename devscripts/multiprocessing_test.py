@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import functools, asyncio, multiprocessing, time, concurrent.futures
 
