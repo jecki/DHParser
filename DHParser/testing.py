@@ -235,19 +235,19 @@ def get_report(test_unit) -> str:
         for test_name, test_code in tests.get('match', dict()).items():
             heading = 'Match-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
-            report.append('### Test-code:')
+            report.append('### Test-code:\n')
             report.append(indent(test_code))
             error = tests.get('__err__', {}).get(test_name, "")
             if error:
-                report.append('\n### Error:')
+                report.append('\n### Error:\n')
                 report.append(error)
             ast = tests.get('__ast__', {}).get(test_name, None)
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
-                report.append('\n### CST')
+                report.append('\n### CST\n')
                 report.append(indent(cst.serialize('cst')))
             if ast:
-                report.append('\n### AST')
+                report.append('\n### AST\n')
                 report.append(indent(ast.serialize('ast')))
         for test_name, test_code in tests.get('fail', dict()).items():
             heading = 'Fail-test "%s"' % test_name
@@ -256,11 +256,11 @@ def get_report(test_unit) -> str:
             report.append(indent(test_code))
             messages = tests.get('__msg__', {}).get(test_name, "")
             if messages:
-                report.append('\n### Messages:')
+                report.append('\n### Messages:\n')
                 report.append(messages)
             error = tests.get('__err__', {}).get(test_name, "")
             if error:
-                report.append('\n### Error:')
+                report.append('\n### Error:\n')
                 report.append(error)
     return '\n'.join(report)
 
@@ -270,6 +270,17 @@ POSSIBLE_ARTIFACTS = frozenset((
     Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
     Error.MANDATORY_CONTINUATION_AT_EOF
 ))
+
+
+def md_codeblock(code: str) -> str:
+    """Formats a piece of code as Markdown inline-code or code-block,
+    depending on whethter it stretches over several lines or not."""
+    if '\n' not in code:
+        return '`' + code + '`'
+    else:
+        # linefeeds = re.match('\s*', code).group(0).count('\n')
+        lines = code.strip().split('\n')
+        return '\n\n\t' + '\n\t'.join(lines)
 
 
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False):
@@ -413,9 +424,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
                 adjust_error_locations(errors, test_code)
                 errata.append('Match test "%s" for parser "%s" failed:'
-                              '\n\tExpr.:  %s\n\n\t%s\n\n' %
-                              (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                               '\n\t'.join(str(m).replace('\n', '\n\t\t') for m in errors)))
+                              '\nExpr.:  %s\n\n%s\n\n' %
+                              (test_name, parser_name, md_codeblock(test_code),
+                               '\n'.join(str(m).replace('\n', '\n') for m in errors)))
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 old_errors = set(ast.errors)
