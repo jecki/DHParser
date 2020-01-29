@@ -1394,6 +1394,7 @@ class RootNode(Node):
 
     def clear_errors(self):
         """
+        DEPRECATED: Should not be ued any more!
         Removes all error messages. This can be used to keep the error messages
         of different subsequent phases of tree-processing separate.
         """
