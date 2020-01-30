@@ -21,6 +21,7 @@ limitations under the License.
 """
 
 import asyncio
+from itertools import chain
 import os
 import sys
 
@@ -136,11 +137,7 @@ class EBNFLanguageServerProtocol:
         https://microsoft.github.io/language-server-protocol/
         https://langserver.org/
     """
-    from typing import NamedTuple
-    CompletionItem = NamedTuple('CompletionItem', [('label', str),
-                                                   ('insertText', str),
-                                                   ('insertTextFormat', int),
-                                                   ('documentation', str)])
+    completion_fields = ['label', 'insertText', 'insertTextFormat', 'documentation']
     completions = [['anonymous', '@ anonymous = /${1:_\\w+}/', 2,
                     'List of symbols or a regular expression to identify those definitions '
                     'that shall not yield named tags in the syntax tree.'],
@@ -204,6 +201,9 @@ class EBNFLanguageServerProtocol:
         self.pending_changes = dict()  # uri -> text
         self.current_text = dict()     # uri -> text
 
+        self.completionItems = [{k: v for k, v in chain(zip(self.completion_fields, item),
+                                                        [['kind', 2]])}
+                                for item in self.completions]
 
     def connect(self, connection):
         self.connection = connection
@@ -252,7 +252,7 @@ class EBNFLanguageServerProtocol:
         from DHParser.toolkit import text_pos
         text = self.current_text[textDocument['uri']]
         if context['triggerKind'] == 2:  # Trigger Character
-            return self.directive_completions
+            return self.completionItems
         line = position['line']
         col = position['character']
         pos = text_pos(text, line, col)
