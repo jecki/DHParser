@@ -25,3 +25,6 @@ cdef class StringView:
     cdef readonly int _len
     cdef str _fullstring
 
+
+# class TextBuffer
+

@@ -26,7 +26,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import re
-from DHParser.stringview import StringView, EMPTY_STRING_VIEW, real_indices
+from DHParser.stringview import StringView, TextBuffer, EMPTY_STRING_VIEW, real_indices
 
 
 class TestStringView:
@@ -148,6 +148,26 @@ class TestStringView:
     def text_split(self):
         s = StringView(' 1,2,3,4,5 ', 1, -1)
         assert s.split(',') == ['1', '2', '3', '4', '5']
+
+
+class TestTextBuffer:
+    def setup(self):
+        self.test_text = "\n".join([
+        "To be or not to be",
+        "that is the question.",
+        "Whether it is nobler in mind to suffer",
+        "the slings and arrows of misfortune,",
+        "or, by opposing them, end them."
+        ])
+
+    def test_update(self):
+        t = TextBuffer(self.test_text)
+        # single line
+        t.update(1, 8, 1, 11, 'a')
+        assert str(t).startswith('To be or not to be\nthat is a question.\nWhether ')
+        # several lines
+        t.update(1, 10, 2, 7, 'question;\nwhether')
+        assert str(t).startswith("To be or not to be\nthat is a question;\nwhether ")
 
 
 if __name__ == "__main__":

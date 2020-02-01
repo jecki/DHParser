@@ -21,7 +21,6 @@ limitations under the License.
 """
 
 import asyncio
-from itertools import chain
 import os
 import sys
 
@@ -199,7 +198,7 @@ class EBNFLanguageServerProtocol:
         self.lsp_fulltable.update(self.blocking.lsp_table)
 
         self.pending_changes = dict()  # uri -> text
-        self.current_text = dict()     # uri -> text
+        self.current_text = dict()     # uri -> TextBuffer
 
         # self.completionItems = [{k: v for k, v in chain(zip(self.completion_fields, item),
         #                                                 [['kind', 2]])}
@@ -225,6 +224,10 @@ class EBNFLanguageServerProtocol:
         return {}
 
     def lsp_textDocument_didOpen(self, textDocument):
+        from DHParser.stringview import TextBuffer
+        uri = textDocument['uri']
+        text = textDocument['text']
+        self.current_text[uri] = TextBuffer(text, int(textDocument.get('version', 0)))
         return None
 
     def lsp_textDocument_didSave(self, **kwargs):
@@ -235,17 +238,27 @@ class EBNFLanguageServerProtocol:
 
     async def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
         uri = textDocument['uri']
-        text = contentChanges[0]['text']
-        self.current_text[uri] = text
-        self.pending_changes[uri] = text
-        await asyncio.sleep(3)
-        text = self.pending_changes.get(uri, None)
-        if text:
-            exenv = self.connection.exec
-            del self.pending_changes[uri]
-            result, rpc_error = await exenv.execute(exenv.process_executor,
-                                                    self.cpu_bound.compile_EBNF,
-                                                    (text,))
+        version = int(textDocument['version'])
+        if uri not in self.current_text:
+            return {}, (-32602, "Invalid uri: " + uri)
+        if contentChanges:
+            from DHParser.stringview import TextBuffer
+            if 'range' in contentChanges[0]:
+                text = self.current_text[uri]
+                text.textEdits(contentChanges, version)
+                self.pending_changes[uri] = text
+            else:
+                text = TextBuffer(contentChanges[0]['text'], version)
+                self.current_text[uri] = text
+
+            await asyncio.sleep(3)
+            text = self.pending_changes.get(uri, None)
+            if text:
+                exenv = self.connection.exec
+                del self.pending_changes[uri]
+                result, rpc_error = await exenv.execute(exenv.process_executor,
+                                                        self.cpu_bound.compile_EBNF,
+                                                        (str(text),))
         return None
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
