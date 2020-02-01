@@ -184,7 +184,6 @@ class TestServer:
             data = await reader.read(500)
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
-            # print(data)
             assert data.find(expected_response) >= 0, str(data)
         p = None
         try:
@@ -487,7 +486,6 @@ class TestLanguageServer:
                                    'capabilities': {}}).encode())
             response = (await reader.read(8192)).decode()
             i = response.find('{')
-            # print(len(response), response)
             res = json.loads(response[i:])
             assert 'result' in res and 'capabilities' in res['result'], str(res)
 
@@ -512,7 +510,6 @@ class TestLanguageServer:
                                    'capabilities': {}}).encode())
             response = (await reader.read(8192)).decode()
             i = response.find('{')
-            # print(len(response), response)
             res = json.loads(response[i:])
             assert 'result' in res and 'capabilities' in res['result'], str(res)
 

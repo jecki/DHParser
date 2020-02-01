@@ -175,7 +175,6 @@ class TestInfiLoopsAndRecursion:
     def test_break_inifnite_loop_OneOrMore(self):
         forever = OneOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
-        print(repr(result))
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
     # def test_infinite_loops(self):

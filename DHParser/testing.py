@@ -757,14 +757,19 @@ def run_tests_in_class(cls_name, namespace, methods=()):
         if methods:
             obj = instantiate(cls_name, namespace)
             for name in methods:
-                print("Running " + cls_name + "." + name)
-                exec('obj.' + name + '()')
+                func = obj.__getattribute__(name)
+                if callable(func):
+                    print("Running " + cls_name + "." + name)
+                    func()
+                    # exec('obj.' + name + '()')
         else:
             obj = instantiate(cls_name, namespace)
             for name in dir(obj):
                 if name.lower().startswith("test"):
-                    print("Running " + cls_name + "." + name)
-                    exec('obj.' + name + '()')
+                    func = obj.__getattribute__(name)
+                    if callable(func):
+                        print("Running " + cls_name + "." + name)
+                        func()
     finally:
         if "teardown" in dir(obj):
             obj.teardown()

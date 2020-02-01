@@ -243,7 +243,7 @@ class TestNode:
         B_values = list(nd.content for nd in tree.select_children('B', reverse=True))
         assert B_values == ['2', '1']
         B_indices = tree.indices('B')
-        print(B_indices)
+        assert B_indices == (0, 2)
 
     def test_single_child_selection(self):
         tree = parse_sxpr('(A (B 1) (C 1) (B 2))')
@@ -538,11 +538,6 @@ class TestSerialization:
         assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == \
                '<T class="kursiv">Hallo</T> Welt!'
 
-
-    # def test_xml2(self):
-    #     tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
-    #     print(tree.as_xml())
-    #     print(tree.as_xml(inline_tags={'A'}))
 
 class TestSegementExtraction:
     def test_get_context(self):

@@ -332,7 +332,6 @@ class TestConstructiveTransformations:
         tree = parse_sxpr('(A (B 1) (B 2) (B 3))').with_pos(0)
         nm = node_maker('d', (node_maker('c', ','), node_maker('l', ' ')))
         n = nm()
-        # print('\n', type(n), n.serialize())
         trans_table = {'A': delimit_children(
             node_maker('d', (node_maker('c', ','), node_maker('l', ' '))))}
         traverse(tree, trans_table)

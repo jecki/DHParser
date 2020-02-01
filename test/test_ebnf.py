@@ -626,7 +626,6 @@ class TestCustomizedResumeParsing:
         gr = self.gr
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')

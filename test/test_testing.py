@@ -323,8 +323,6 @@ class TestLookahead:
         assert any(e.code == Error.MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
         errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac,
                               'REPORT_TestLookahead')
-        for e in errata:
-            print (e)
         assert not errata, str(errata)
         errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac,
                               'REPORT_TestLookahead')

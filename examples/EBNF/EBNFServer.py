@@ -129,6 +129,9 @@ class EBNFBlockingTasks:
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
+RECOMPILE_DELAY = 0.5
+
+
 class EBNFLanguageServerProtocol:
     """
     For the specification and implementation of the language server protocol, see:
@@ -223,11 +226,26 @@ class EBNFLanguageServerProtocol:
         self.lsp_data['clientCapabilities'] = {}
         return {}
 
-    def lsp_textDocument_didOpen(self, textDocument):
+    async def compile_text(self, uri: str) -> None:
+        text_buffer = self.pending_changes.get(uri, None)
+        if text_buffer:
+            exenv = self.connection.exec
+            del self.pending_changes[uri]
+            result, rpc_error = await exenv.execute(exenv.process_executor,
+                                                    self.cpu_bound.compile_EBNF,
+                                                    (text_buffer.snapshot(),))
+            # werte Ergebnis aus
+            # sende eine PublishDiagnostics-Notification via self.connect
+        return None
+
+    async def lsp_textDocument_didOpen(self, textDocument):
         from DHParser.stringview import TextBuffer
         uri = textDocument['uri']
         text = textDocument['text']
-        self.current_text[uri] = TextBuffer(text, int(textDocument.get('version', 0)))
+        text_buffer = TextBuffer(text, int(textDocument.get('version', 0)))
+        self.current_text[uri] = text_buffer
+        self.pending_changes[uri] = text_buffer
+        await self.compile_text(uri)
         return None
 
     def lsp_textDocument_didSave(self, **kwargs):
@@ -244,21 +262,14 @@ class EBNFLanguageServerProtocol:
         if contentChanges:
             from DHParser.stringview import TextBuffer
             if 'range' in contentChanges[0]:
-                text = self.current_text[uri]
-                text.textEdits(contentChanges, version)
-                self.pending_changes[uri] = text
+                text_buffer = self.current_text[uri]
+                text_buffer.textEdits(contentChanges, version)
+                self.pending_changes[uri] = text_buffer
             else:
-                text = TextBuffer(contentChanges[0]['text'], version)
-                self.current_text[uri] = text
-
-            await asyncio.sleep(3)
-            text = self.pending_changes.get(uri, None)
-            if text:
-                exenv = self.connection.exec
-                del self.pending_changes[uri]
-                result, rpc_error = await exenv.execute(exenv.process_executor,
-                                                        self.cpu_bound.compile_EBNF,
-                                                        (str(text),))
+                text_buffer = TextBuffer(contentChanges[0]['text'], version)
+                self.current_text[uri] = text_buffer
+            await asyncio.sleep(RECOMPILE_DELAY)
+            await self.compile_text(uri)
         return None
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):

@@ -160,7 +160,7 @@ class TestTextBuffer:
         "or, by opposing them, end them."
         ])
 
-    def test_update(self):
+    def test_buffer_update(self):
         t = TextBuffer(self.test_text)
         # single line
         t.update(1, 8, 1, 11, 'a')
