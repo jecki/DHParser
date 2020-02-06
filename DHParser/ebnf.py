@@ -828,7 +828,7 @@ class EBNFCompiler(Compiler):
         return search_list
 
 
-    def assemble_parser(self, definitions: List[Tuple[str, str]], root_node: Node) -> str:
+    def assemble_parser(self, definitions: List[Tuple[str, str]]) -> str:
         """
         Creates the Python code for the parser after compilation of
         the EBNF-Grammar
@@ -996,7 +996,6 @@ class EBNFCompiler(Compiler):
             if symbol not in defined_symbols:
                 self.tree.new_error(self.symbols[symbol],
                                     "Missing definition for symbol '%s'" % symbol)
-                # root_node.error_flag = True
 
         # check for unconnected rules
 
@@ -1043,10 +1042,9 @@ class EBNFCompiler(Compiler):
             else:
                 assert nd.tag_name == "directive", nd.as_sxpr()
                 self.compile(nd)
-            # node.error_flag = max(node.error_flag, nd.error_flag)
         self.definitions.update(definitions)
 
-        grammar_python_src = self.assemble_parser(definitions, node)
+        grammar_python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':
             try:
                 grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,

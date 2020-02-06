@@ -118,8 +118,14 @@ class EBNFCPUBoundTasks:
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
     def compile_EBNF(self, text: str):
-        print('compile_EBNF')
-        from DHParser.ebnf import compile_ebnf
+        from DHParser.compile import compile_source
+        from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
+            get_ebnf_compiler
+        compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
+        result, messages, _ = compile_source(
+            text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
+        # TODO: return errors as well as (distilled) information about symbols for code propositions
+        return None
 
 
 class EBNFBlockingTasks:
