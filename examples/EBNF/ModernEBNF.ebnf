@@ -15,16 +15,8 @@ directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | litera
 
 expression = term { "|" term }
 term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-           | [flowmarker] literal
-           | [flowmarker] plaintext
-           | [flowmarker] regexp
-           | [flowmarker] whitespace
-           | [flowmarker] oneormore
-           | [flowmarker] group
-           | [flowmarker] unordered
-           | repetition
-           | option
+factor     = repetition | option
+           | [flowmarker] (unordered | oneormore | element)
 
 #: flow-operators
 
@@ -32,13 +24,24 @@ flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' po
            | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
 retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
 
-#: groups
+#: operators
+
+unordered  = interleave "^" interleave { "^" interleave }  # "interleaving" elements in arbitrary order
+interleave = oneormore | repetition | option | element
+oneormore  = element "+"
+repetition = element "*"
+option     = element "?"
+
+#: elements
+
+element    = [retrieveop] symbol !"="           # negative lookahead to be sure it's not a definition
+           | literal
+           | plaintext
+           | regexp
+           | whitespace
+           | group
 
 group      = "(" §expression ")"
-unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-oneormore  = "{" expression "}+"
-repetition = "{" §expression "}"
-option     = "[" §expression "]"
 
 #: leaf-elements
 
