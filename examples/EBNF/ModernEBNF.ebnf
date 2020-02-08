@@ -26,7 +26,7 @@ retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
 
 #: operators
 
-unordered  = interleave "^" interleave { "^" interleave }  # "interleaving" elements in arbitrary order
+unordered  = interleave { "^" interleave }+     # "interleaving" elements in arbitrary order
 interleave = oneormore | repetition | option | element
 oneormore  = element "+"
 repetition = element "*"
