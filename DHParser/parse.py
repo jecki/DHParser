@@ -1045,6 +1045,8 @@ class Grammar:
             except (NameError, AttributeError):
                 pass  # don't fail the initialization of PLACEHOLDER
 
+    def __str__(self):
+        return self.__class__.__name__
 
     def __getitem__(self, key):
         try:
@@ -1058,7 +1060,6 @@ class Grammar:
                 assert self[key] == parser
                 return self[key]
             raise UnknownParserError('Unknown parser "%s" !' % key)
-
 
     def __contains__(self, key):
         return key in self.__dict__ or hasattr(self, key)
@@ -1316,9 +1317,23 @@ class Grammar:
         return line_col(self.document_lbreaks__, self.document_length__ - len(text))
 
 
+    def as_ebnf(self) -> str:
+        """
+        EXPERIMENTAL. Does not yet support serialization of DHParser- directives.
+
+        Serializes the Grammar object as a grammar-description in the
+        Extended Backus-Naur-Form.
+        """
+        ebnf = []
+        for entry, parser in self.__dict__.items():
+            if isinstance(parser, Parser) and sane_parser_name(entry):
+                ebnf.append(str(parser))
+        return '\n'.join(ebnf)
+
+
     def static_analysis(self) -> List[GrammarErrorType]:
         """
-        EXPERIMENTAL
+        EXPERIMENTAL!!!
 
         Checks the parser tree statically for possible errors. At the moment,
         no checks are implemented
@@ -1459,7 +1474,8 @@ class Token(Parser):
         return None, text
 
     def __repr__(self):
-        return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
+        return '`%s`' % abbreviate_middle(self.text, 80)
+        # return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
 
 
 class RegExp(Parser):
@@ -1509,7 +1525,17 @@ class RegExp(Parser):
         return None, text
 
     def __repr__(self):
-        return escape_control_characters('/%s/' % abbreviate_middle(self.regexp.pattern, 120))
+        pattern = self.regexp.pattern
+        try:
+            if pattern == self._grammar.WSP_RE__:
+                return '~'
+            elif pattern == self._grammar.COMMENT__:
+                return 'comment__'
+            elif pattern == self._grammar.WHITESPACE__:
+                return 'whitespace__'
+        except (AttributeError, NameError):
+            pass
+        return escape_control_characters('/%s/' % abbreviate_middle(pattern, 120))
 
 
 def DropToken(text: str) -> Token:
@@ -2097,6 +2123,8 @@ class Alternative(NaryParser):
         return None, text
 
     def __repr__(self):
+        if self.pname:
+            return ' | '.join(parser.repr for parser in self.parsers)
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
     def reset(self):

@@ -326,6 +326,11 @@ def get_ebnf_transformer() -> TransformationFunc:
     return transformer
 
 
+def serialize_EBNF_AST(ast: Node) -> str:
+    """Converts the AST generated from and EBNF-text back to EBNF."""
+    pass
+
+
 ########################################################################
 #
 # EBNF abstract syntax tree to Python parser compilation
