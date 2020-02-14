@@ -40,8 +40,15 @@ class TestDHParserCommandLineTool:
     def setup(self):
         self.cwd = os.getcwd()
         os.chdir(scriptpath)
-        if not os.path.exists('test_dhparser_data'):
-            os.mkdir('test_dhparser_data')
+        # avoid race-condition
+        counter = 10
+        while counter > 0:
+            try:
+                os.mkdir('test_dhparser_data')
+                counter = 0
+            except FileExistsError:
+                time.sleep(1)
+                counter -= 1
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
         self.python = sys.executable + ' '
 

@@ -1555,15 +1555,6 @@ class RootNode(Node):
                            empty_tags=self.empty_tags)
 
 
-class DHParser_JSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Node):
-            return cast(Node, obj).to_json_obj()
-        elif isinstance(obj, Error):
-            return str(cast(Error, obj))
-        return json.JSONEncoder.default(self, obj)
-
-
 #######################################################################
 #
 # S-expression- and XML-parsers and JSON-reader
@@ -1798,6 +1789,19 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
     _, tree = parse_full_content(xml[start:])
     assert _.match(RX_WHITESPACE_TAIL), _
     return tree
+
+
+class DHParser_JSONEncoder(json.JSONEncoder):
+    """A JSON-encoder that also encodes syntaxtree.Node- and error.Error-objects
+    as valid json objects. Error-objects are encoded as strings. Node-objects
+    are encoded using Node.as_json.
+    """
+    def default(self, obj):
+        if isinstance(obj, Node):
+            return cast(Node, obj).to_json_obj()
+        elif isinstance(obj, Error):
+            return str(cast(Error, obj))
+        return json.JSONEncoder.default(self, obj)
 
 
 def parse_json_syntaxtree(json_str: str) -> Node:

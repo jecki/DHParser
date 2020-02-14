@@ -69,6 +69,7 @@ __all__ = ('typing',
            'unrepr',
            'abbreviate_middle',
            'escape_formatstr',
+           'as_identifier',
            'linebreaks',
            'line_col',
            'text_pos',
@@ -254,6 +255,35 @@ def escape_formatstr(s: str) -> str:
     s = re.sub(r'(?<!\{)\{(?!\{)', '{{', s)
     s = re.sub(r'(?<!\})\}(?!\})', '}}', s)
     return s
+
+
+RX_IDENTIFIER = re.compile('\w+')
+RX_NON_IDENTIFIER = re.compile('[^\w]+')
+
+
+def as_identifier(s: str, replacement: str = "_") -> str:
+    """Converts a string to an identifier that matches /\w+/ by
+    substituting any character not matching /\w/ with the given
+    replacement string:
+
+    >>> as_identifier('EBNF-m')
+    'EBNF_m'
+    """
+    ident = []
+    i = 0
+    while i < len(s):
+        m = RX_IDENTIFIER.match(s, i)
+        if m:
+            ident.append(m.group(0))
+            rng = m.span(0)
+            i += rng[1] - rng[0]
+        m = RX_NON_IDENTIFIER.match(s, i)
+        if m:
+            rng = m.span(0)
+            delta = rng[1] - rng[0]
+            ident.append(replacement * delta)
+            i += rng[1] - rng[0]
+    return ''.join(ident)
 
 
 #######################################################################

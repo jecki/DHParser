@@ -474,7 +474,7 @@ class TestSeries:
 
     def test_ebnf_serialization(self):
         ebnf_grammar = get_ebnf_grammar()
-        print(ebnf_grammar.as_ebnf())
+        # print(ebnf_grammar.as_ebnf())
 
 
 

@@ -37,7 +37,8 @@ from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
 from DHParser.transform import TransformationFunc, TransformationDict
-from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, compile_python_object, re
+from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, compile_python_object, \
+    re, as_identifier
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
     Callable, Generator
 
@@ -407,7 +408,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
     rootname = os.path.splitext(filepath)[0]
-    compiler_name = os.path.basename(rootname)
+    compiler_name = as_identifier(os.path.basename(rootname))
     if compiler_suite:
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
         compiler1 = cfactory()

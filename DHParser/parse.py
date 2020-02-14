@@ -1820,7 +1820,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ \'.\' ~" did not match! >>> '
+        ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ `.` ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node(':EMPTY', '')

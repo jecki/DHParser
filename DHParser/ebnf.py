@@ -326,7 +326,95 @@ def get_ebnf_transformer() -> TransformationFunc:
     return transformer
 
 
-def serialize_EBNF_AST(ast: Node) -> str:
+########################################################################
+#
+# Decompiling ASTs back to EBNF-Text (UNFINISHED AND EXPERIMENTAL!!!)
+#
+########################################################################
+
+class EBNFDecompiler(Compiler):
+    """Converts AST representing an EBNF-syntax-description back to
+    EBNF-text."""
+
+    def __init__(self):
+        super(EBNFDecompiler, self).__init__()
+
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
+
+    def on_syntax(self, node):
+        return self.fallback_compiler(node)
+
+    # def on_definition(self, node):
+    #     return node
+
+    # def on_directive(self, node):
+    #     return node
+
+    # def on_expression(self, node):
+    #     return node
+
+    # def on_term(self, node):
+    #     return node
+
+    def on_factor(self, node):
+        return [self.compile(child) for child in node.children]
+
+    def on_flowmarker(self, node):
+        return [node.content]
+
+    # def on_retrieveop(self, node):
+    #     return node
+
+    def on_unordered(self, node):
+        assert len(node.children) == 1
+        return ['<'] + self.compile(node.children[0]) + ['>']
+
+    # def on_interleave(self, node):
+    #     return node
+
+    def on_oneormore(self, node):
+        assert len(node.children) == 1
+        return ['{ '] + self.compile(node.children[0]) + [' }+']
+
+    def on_repetition(self, node):
+        assert len(node.children) == 1
+        return ['{ '] + self.compile(node.children[0]) + [' }']
+
+    def on_option(self, node):
+        assert len(node.children) == 1
+        return ['['] + self.compile(node.children[0]) + [']']
+
+    # def on_element(self, node):
+    #     return node
+
+    # def on_group(self, node):
+    #     return node
+
+    def on_symbol(self, node):
+        return [node.content]
+
+    def on_literal(self, node):
+        return [node.content]
+
+    def on_plaintext(self, node):
+        return ['`' + node.content + '`']
+
+    def on_regexp(self, node):
+        return [node.content]
+
+    def on_whitespace(self, node):
+        return [node.content]
+
+    def on_Token(self, node):
+        return ['`' + node.content + '`']
+
+    # def on_EOF(self, node):
+    #     return node
+
+
+def serialize_AST_as_EBNF(ast: Node) -> str:
     """Converts the AST generated from and EBNF-text back to EBNF."""
     pass
 
