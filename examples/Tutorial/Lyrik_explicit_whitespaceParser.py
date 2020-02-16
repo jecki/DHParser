@@ -104,12 +104,12 @@ def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
     """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton
+            THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -291,7 +291,7 @@ def compile_src(source):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     parser_update = False
 
     def notify():
@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -329,4 +329,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: Lyrik_explicit_whitespaceCompiler.py [FILENAME]")
+        print("Usage: Lyrik_explicit_whitespaceParser.py [FILENAME]")

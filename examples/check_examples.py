@@ -51,8 +51,8 @@ if __name__ == "__main__":
     save = os.getcwd()
     os.chdir(os.path.join(scriptdir, 'Tutorial'))
     python = sys.executable + ' '
-    check(os.system(python + ' LyrikCompiler.py Lyrisches_Intermezzo_IV.txt'))
-    check(os.system(python + ' LyrikCompiler_example.py Lyrisches_Intermezzo_IV.txt'))
+    check(os.system(python + ' LyrikParser.py Lyrisches_Intermezzo_IV.txt'))
+    check(os.system(python + ' LyrikParser_example.py Lyrisches_Intermezzo_IV.txt'))
 
     os.chdir(save)
     print()

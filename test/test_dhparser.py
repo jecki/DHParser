@@ -69,12 +69,12 @@ class TestDHParserCommandLineTool:
         # test compiler creation and execution
         system(self.python + '../DHParser/scripts/dhparser.py test_dhparser_data/neu ' + self.nulldevice)
         system(self.python + 'test_dhparser_data/neu/tst_neu_grammar.py ' + self.nulldevice)
-        system(self.python + 'test_dhparser_data/neu/neuCompiler.py test_dhparser_data/neu/example.dsl '
+        system(self.python + 'test_dhparser_data/neu/neuParser.py test_dhparser_data/neu/example.dsl '
                   '>test_dhparser_data/neu/example.xml')
         with open('test_dhparser_data/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('document') >= 0, xml
-        os.remove('test_dhparser_data/neu/neuCompiler.py')
+        os.remove('test_dhparser_data/neu/neuParser.py')
         os.remove('test_dhparser_data/neu/example.xml')
 
         # test server

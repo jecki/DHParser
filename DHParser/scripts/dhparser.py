@@ -113,9 +113,9 @@ def create_project(path: str):
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     os.chmod('%sServer.py' % name, 0o755)
     # The following is left to the user as an exercise
-    # print('Creating file "%s".' % (name + 'Compiler.py'))
+    # print('Creating file "%s".' % (name + 'Parser.py'))
     # recompile_grammar(name + '.ebnf', force=True)
-    print('\nNow generate a DSL compiler from the EBNF-grammar by running\n'
+    print('\nNow generate a DSL-parser from the EBNF-grammar by running\n'
           '\n    python tst_%s_gramar.py\n' % name)
     os.chdir(curr_dir)
 

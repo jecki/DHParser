@@ -75,8 +75,9 @@ from functools import partial
 import os
 import sys
 
-if r'{dhparser_parentdir}' not in sys.path:
-    sys.path.append(r'{dhparser_parentdir}')
+dhparser_parentdir = os.path.abspath(r'{dhparser_parentdir}')
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
@@ -102,7 +103,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_parent
-'''.format(dhparser_parentdir=DHPARSER_PARENTDIR)
+'''
 
 
 ########################################################################
@@ -1140,8 +1141,9 @@ class EBNFCompiler(Compiler):
         grammar_python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':
             try:
-                grammar_class = compile_python_object(DHPARSER_IMPORTS + grammar_python_src,
-                                                      self.grammar_name)
+                grammar_class = compile_python_object(
+                    DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR)
+                    + grammar_python_src, self.grammar_name)
                 _ = grammar_class()
                 grammar_python_src = grammar_python_src.replace(
                     'static_analysis_pending__ = [True]',

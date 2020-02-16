@@ -65,6 +65,7 @@ __all__ = ('typing',
            'escape_re',
            'escape_control_characters',
            'is_filename',
+           'relative_path',
            'concurrent_ident',
            'unrepr',
            'abbreviate_middle',
@@ -191,10 +192,30 @@ def is_filename(strg: str) -> bool:
     """
     Tries to guess whether string ``strg`` is a file name.
     """
-
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
     #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
+
+
+@cython.locals(i=cython.int, L=cython.int)
+def relative_path(from_path: str, to_path: str) -> str:
+    """Returns the relative path in order to open a file from
+    `to_path` when the script is runing in `from_path`. Example:
+
+        >>> relative_path('project/common/dir_A', 'project/dir_B')
+        '../../dir_B'
+    """
+    from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
+    to_path = os.path.normpath(os.path.abspath(to_path)).replace('\\', '/')
+    if from_path and from_path[-1] != '/':
+        from_path += '/'
+    if to_path and to_path[-1] != '/':
+        to_path += '/'
+    i = 0
+    L = min(len(from_path), len(to_path))
+    while i < L and from_path[i] == to_path[i]:
+        i += 1
+    return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
 
 
 def concurrent_ident() -> str:

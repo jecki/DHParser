@@ -302,11 +302,11 @@ def run_server(host, port, log_path=None):
     if dhparserdir not in sys.path:
         sys.path.append(dhparserdir)
     try:
-        from EBNFCompiler import compile_src
+        from EBNFParser import compile_src
     except ModuleNotFoundError:
         from tst_EBNF_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'EBNF.ebnf'), force=False)
-        from EBNFCompiler import compile_src
+        from EBNFParser import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:

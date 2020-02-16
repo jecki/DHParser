@@ -316,4 +316,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: LyrikCompiler.py [FILENAME]")
+        print("Usage: LyrikParser.py [FILENAME]")

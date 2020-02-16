@@ -652,7 +652,7 @@ def compile_src(source):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     parser_update = False
 
     def notify():
@@ -662,7 +662,7 @@ if __name__ == "__main__":
 
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -690,4 +690,4 @@ if __name__ == "__main__":
         else:
             print(result.customized_XML() if isinstance(result, Node) else result)
     else:
-        print("Usage: LaTeXCompiler.py [FILENAME]")
+        print("Usage: LaTeXParser.py [FILENAME]")

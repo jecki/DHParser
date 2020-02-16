@@ -44,7 +44,7 @@ def check_projectdir(path: str) -> bool:
                 return False
         return True
 
-    return check(name + '.ebnf', name + 'Compiler.py', "tst_%s_grammar.py" % name)
+    return check(name + '.ebnf', name + 'Parser.py', "tst_%s_grammar.py" % name)
 
 
 def rename_projectdir(path: str, new: str) -> bool:
@@ -57,9 +57,9 @@ def rename_projectdir(path: str, new: str) -> bool:
     save = os.getcwd()
     os.chdir(path)
     os.rename(name + '.ebnf', new + '.ebnf')
-    os.rename(name + 'Compiler.py', new + 'Compiler.py')
+    os.rename(name + 'Parser.py', new + 'Parser.py')
     os.rename('tst_%s_grammar.py' % name, 'tst_%s_grammar.py' % new)
-    for fname in (new + 'Compiler.py', 'tst_%s_grammar.py' % new):
+    for fname in (new + 'Parser.py', 'tst_%s_grammar.py' % new):
         with open(fname, 'r', encoding='utf-8') as f:
             content = f.read()
         with open(fname, 'w', encoding='utf-8') as f:

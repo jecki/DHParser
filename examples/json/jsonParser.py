@@ -7,7 +7,6 @@
 #######################################################################
 
 
-import collections
 from functools import partial
 import os
 import sys
@@ -35,9 +34,9 @@ from DHParser import start_logging, is_filename, load_if_file, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
-    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets
+    error_on, recompile_grammar, left_associative, lean_left, \
+    set_config_value, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals
 
 
 #######################################################################
@@ -46,11 +45,12 @@ from DHParser import start_logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def yamlPreprocessor(text):
+def jsonPreprocessor(text):
     return text, lambda i: i
 
+
 def get_preprocessor() -> PreprocessorFunc:
-    return yamlPreprocessor
+    return jsonPreprocessor
 
 
 #######################################################################
@@ -59,12 +59,11 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class yamlGrammar(Grammar):
-    r"""Parser for a yaml source file.
+class jsonGrammar(Grammar):
+    r"""Parser for a json source file.
     """
-    element = Forward()
-    value = Forward()
-    source_hash__ = "9660424d926b901b9654279f23e6c1f1"
+    _element = Forward()
+    source_hash__ = "31833295329c0325d087229c3d932092"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
@@ -75,35 +74,38 @@ class yamlGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
+    _EOF = NegativeLookahead(RegExp('.'))
     EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
-    FRAC = Option(Series(Drop(Token(".")), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(Drop(Token("-"))), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
-    HEX = RegExp('[0-9a-fA-F]')
-    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
-    CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
+    DOT = Token(".")
+    FRAC = Option(Series(DOT, RegExp('[0-9]+')))
+    NEG = Token("-")
+    INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
+    UNICODE = Series(Series(Drop(Token("\\u")), dwsp__), HEX, HEX)
+    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
+    PLAIN = RegExp('[^"\\\\]+')
+    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Token('"')), CHARACTERS, Drop(Token('"')), dwsp__)
-    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), value)))), Series(Drop(Token("]")), dwsp__))
-    member = Series(string, Series(Drop(Token(":")), dwsp__), element)
-    object = Series(Series(Drop(Token("{")), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), member)))), Series(Drop(Token("}")), dwsp__))
-    value.set(Alternative(object, array, string, number, bool, null))
-    element.set(Synonym(value))
-    json = Series(dwsp__, element, EOF)
+    string = Series(Drop(Token('"')), _CHARACTERS, Drop(Token('"')), dwsp__, mandatory=1)
+    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), _element)))), Series(Drop(Token("]")), dwsp__))
+    member = Series(string, Series(Drop(Token(":")), dwsp__), _element, mandatory=1)
+    object = Series(Series(Drop(Token("{")), dwsp__), member, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), member, mandatory=1)), Series(Drop(Token("}")), dwsp__), mandatory=3)
+    _element.set(Alternative(object, array, string, number, bool, null))
+    json = Series(dwsp__, _element, _EOF)
     root__ = json
     
-def get_grammar() -> yamlGrammar:
-    """Returns a thread/process-exclusive yamlGrammar-singleton."""
+def get_grammar() -> jsonGrammar:
+    """Returns a thread/process-exclusive jsonGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.yaml_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.yaml_00000001_grammar_singleton = yamlGrammar()
+        THREAD_LOCALS.json_00000001_grammar_singleton = jsonGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.yaml_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.yaml_00000001_grammar_singleton
+            THREAD_LOCALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -117,43 +119,27 @@ def get_grammar() -> yamlGrammar:
 #
 #######################################################################
 
-yaml_AST_transformation_table = {
-    # AST Transformations for the yaml-grammar
-    "<": flatten,
-    "json": [],
-    "element": [],
-    "value": [],
-    "object": [],
-    "member": [],
-    "array": [],
-    "string": [],
-    "number": [],
-    "bool": [],
-    "null": [],
-    "CHARACTERS": [],
-    "ESCAPE": [],
-    "HEX": [],
-    "INT": [],
-    "FRAC": [],
-    "EXP": [],
-    "EOF": [],
-    "*": replace_by_single_child
+json_AST_transformation_table = {
+    # AST Transformations for the json-grammar
+    "json": [replace_by_single_child],
+    "number": [collapse],
+    "string": [reduce_single_child],
 }
 
 
-def CreateyamlTransformer() -> TransformationFunc:
+def CreatejsonTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=yaml_AST_transformation_table.copy())
+    return partial(traverse, processing_table=json_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        THREAD_LOCALS = access_thread_locals()
-        transformer = THREAD_LOCALS.yaml_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.yaml_00000001_transformer_singleton = CreateyamlTransformer()
-        transformer = THREAD_LOCALS.yaml_00000001_transformer_singleton
+        THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     return transformer
 
 
@@ -163,76 +149,47 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class yamlCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a yaml source file.
+class jsonCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a json source file.
     """
 
     def __init__(self):
-        super(yamlCompiler, self).__init__()
+        super(jsonCompiler, self).__init__()
 
     def reset(self):
         super().reset()
-        # initialize your variables here, not in the constructor!
+        self._None_check = False
 
-    def on_json(self, node):
-        return self.fallback_compiler(node)
+    def on_object(self, node):
+        return dict(self.compile(child) for child in node.children)
 
-    # def on_element(self, node):
-    #     return node
+    def on_member(self, node) -> tuple:
+        return (self.compile(node.children[0]), self.compile(node.children[1]))
 
-    # def on_value(self, node):
-    #     return node
+    def on_array(self, node) -> list:
+        return [self.compile(child) for child in node.children]
 
-    # def on_object(self, node):
-    #     return node
+    def on_string(self, node) -> str:
+        return node.content
 
-    # def on_member(self, node):
-    #     return node
+    def on_number(self, node) -> float:
+        return float(node.content)
 
-    # def on_array(self, node):
-    #     return node
+    def on_bool(self, node) -> bool:
+        return True if node.content == "true" else False
 
-    # def on_string(self, node):
-    #     return node
-
-    # def on_number(self, node):
-    #     return node
-
-    # def on_bool(self, node):
-    #     return node
-
-    # def on_null(self, node):
-    #     return node
-
-    # def on_CHARACTERS(self, node):
-    #     return node
-
-    # def on_ESCAPE(self, node):
-    #     return node
-
-    # def on_HEX(self, node):
-    #     return node
-
-    # def on_INT(self, node):
-    #     return node
-
-    # def on_FRAC(self, node):
-    #     return node
-
-    # def on_EXP(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
-    #     return node
+    def on_null(self, node) -> None:
+        return None
 
 
-def get_compiler() -> yamlCompiler:
-    """Returns a thread/process-exclusive yamlCompiler-singleton."""
+def get_compiler() -> jsonCompiler:
+    """Returns a thread/process-exclusive jsonCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.yaml_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.yaml_00000001_compiler_singleton = yamlCompiler()
-        compiler = THREAD_LOCALS.yaml_00000001_compiler_singleton
+        THREAD_LOCALS.json_00000001_compiler_singleton = jsonCompiler()
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     return compiler
 
 
@@ -241,6 +198,7 @@ def get_compiler() -> yamlCompiler:
 # END OF DHPARSER-SECTIONS
 #
 #######################################################################
+
 
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
@@ -255,11 +213,11 @@ def compile_src(source, log_dir=''):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False,
                                   notify=lambda:print('recompiling ' + grammar_path)):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -280,6 +238,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.as_sxpr() if isinstance(result, Node) else result)
     else:
-        print("Usage: yamlCompiler.py [FILENAME]")
+        print("Usage: jsonParser.py [FILENAME]")

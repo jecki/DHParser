@@ -65,7 +65,7 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptpath, 'yaml.ebnf'),
                           force=False)
         sys.path.append('.')
-        from yamlCompiler import get_grammar, get_transformer
+        from yamlParser import get_grammar, get_transformer
         error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')
