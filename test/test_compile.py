@@ -98,7 +98,8 @@ class TestCompilerClass:
             s = compiler.compile(tree)
             assert False, "TypeError expected"
         except TypeError as e:
-            assert "DHParser.compile.Compiler.fallback_compiler()" in str(e)
+            assert "DHParser.compile.Compiler.fallback_compiler()" in str(e), \
+                "Incorrect Error Message: " + str(e)
             pass
 
 
