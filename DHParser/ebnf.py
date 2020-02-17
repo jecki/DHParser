@@ -1122,6 +1122,12 @@ class EBNFCompiler(Compiler):
     # compilation methods ###
 
 
+    def on_ZOMBIE__(self, node: Node) -> str:
+        result = ['Errors in EBNF-source! Fragments found: ']
+        result.extend([str(self.compile(child)) for child in node.children])
+        return '\n'.join(result)
+
+
     def on_syntax(self, node: Node) -> str:
         definitions = []  # type: List[Tuple[str, str]]
 

@@ -44,8 +44,12 @@ if __name__ == "__main__":
                         and (name == "recompile_grammar.py" or fnmatch.fnmatch(name, 'tst_*.py')):
                     print(os.path.join(example_path, name))
                     for grammar in ebnf:
-                        check(os.system(interpreter + name + ' ' + grammar))
-                    check(os.system(interpreter + name))
+                        call = interpreter + name + ' ' + grammar
+                        # print("CALL: ", call)
+                        check(os.system(call))
+                    call = interpreter + name
+                    # print("CALL: ", call)
+                    check(os.system(call))
             os.chdir(save)
 
     save = os.getcwd()

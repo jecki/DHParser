@@ -19,6 +19,7 @@ try:
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
+    from DHParser.toolkit import is_filename
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -34,7 +35,11 @@ def recompile_grammar(grammar_src, force):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('EBNF_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        if is_filename(grammar_src):
+            err_name = grammar_src.replace('.', '_') + '_ERRORS.txt'
+        else:
+            err_name = 'EBNF_ebnf_ERRORS.txt'
+        with open(err_name, encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
 
