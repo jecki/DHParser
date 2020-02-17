@@ -50,7 +50,10 @@ __all__ = ('TransformationDict',
            'key_tag_name',
            'traverse',
            'always',
+           'never',
            'neg',
+           'any_of',
+           'all_of',
            'is_named',
            'update_attr',
            'swap_attributes',
@@ -406,6 +409,38 @@ def apply_unless(context: List[Node], transformation: Callable, condition: Calla
         transformation(context)
 
 
+## boolean operators
+
+
+def always(context: List[Node]) -> bool:
+    """Always returns True, no matter what the state of the context is."""
+    return True
+
+
+def never(context: List[Node]) -> bool:
+    """Always returns True, no matter what the state of the context is."""
+    return False
+
+@transformation_factory(collections.abc.Callable)
+def neg(context: List[Node], bool_func: collections.abc.Callable) -> bool:
+    """Returns the inverted boolean result of `bool_func(context)`"""
+    return not bool_func(context)
+
+
+@transformation_factory(collections.abc.Set)
+def any_of(context: List[Node], bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+    """Returns True, if any of the bool functions in `bool_func_set` evaluate to True
+    for the given context."""
+    return any(bf(context) for bf in bool_func_set)
+
+
+@transformation_factory(collections.abc.Set)
+def all_of(context: List[Node], bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+    """Returns True, if all of the bool functions in `bool_func_set` evaluate to True
+    for the given context."""
+    return all(bf(context) for bf in bool_func_set)
+
+
 #######################################################################
 #
 # conditionals that determine whether the context (or the last node in
@@ -417,20 +452,6 @@ def apply_unless(context: List[Node], transformation: Callable, condition: Calla
 # the last element of the list is the node itself.
 #
 #######################################################################
-
-
-def always(context: List[Node]) -> bool:
-    """Always returns True, no matter what the state of the context is."""
-    return True
-
-
-@transformation_factory(collections.abc.Callable)
-def neg(context: List[Node], bool_func: collections.abc.Callable) -> bool:
-    """Returns the inverted boolean result of `bool_func(context)`"""
-    return not bool_func(context)
-
-
-# TODO: add and test `and`  and `or` operator
 
 
 def is_single_child(context: List[Node]) -> bool:
