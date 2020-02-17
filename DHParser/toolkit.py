@@ -278,12 +278,12 @@ def escape_formatstr(s: str) -> str:
     return s
 
 
-RX_IDENTIFIER = re.compile('\w+')
-RX_NON_IDENTIFIER = re.compile('[^\w]+')
+RX_IDENTIFIER = re.compile(r'\w+')
+RX_NON_IDENTIFIER = re.compile(r'[^\w]+')
 
 
 def as_identifier(s: str, replacement: str = "_") -> str:
-    """Converts a string to an identifier that matches /\w+/ by
+    r"""Converts a string to an identifier that matches /\w+/ by
     substituting any character not matching /\w/ with the given
     replacement string:
 

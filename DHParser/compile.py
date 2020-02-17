@@ -176,18 +176,19 @@ class Compiler:
         all those node types for which no compiler method `on_XXX` has
         been defined."""
         result = []
-        for child in node.children:
-            nd = self.compile(child)
-            if not isinstance(nd, Node):
-                tn = node.tag_name
-                raise ValueError(
-                    'Fallback compiler for Node `%s` received a value of type '
-                    '`%s` from child `%s` instead of the required return type `Node`. '
-                    'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
-                    'method `on_%s(self, node)` in class `%s` to avoid this error!'
-                    % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
-            result.append(nd)
-        node.result = tuple(result)
+        if node.children:
+            for child in node.children:
+                nd = self.compile(child)
+                if not isinstance(nd, Node):
+                    tn = node.tag_name
+                    raise TypeError(
+                        'Fallback compiler for Node `%s` received a value of type '
+                        '`%s` from child `%s` instead of the required return type `Node`. '
+                        'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
+                        'method `on_%s(self, node)` in class `%s` to avoid this error!'
+                        % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+                result.append(nd)
+            node.result = tuple(result)
         return node
 
     def compile(self, node: Node) -> Any:

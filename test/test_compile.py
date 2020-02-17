@@ -19,6 +19,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import copy
 import os
 import sys
 
@@ -28,20 +29,77 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser import parse_sxpr, Compiler
 
 
-# class TestCompilerClass:
-#     def test_error_propagations(self):
-#         tree = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))))')
-#         A = tree
-#         B = next(tree.select_if(lambda node: str(node) == "1"))
-#         D = next(tree.select_if(lambda node: node.parser.name == "D"))
-#         F = next(tree.select_if(lambda node: str(node) == "3"))
-#         B.new_error("Error in child node")
-#         F.new_error("Error in child's child node")
-#         Compiler.propagate_error_flags(tree, lazy=True)
-#         assert A.error_flag
-#         assert not D.error_flag
-#         Compiler.propagate_error_flags(tree, lazy=False)
-#         assert D.error_flag
+class ZeroTestCompiler(Compiler):
+    pass
+
+
+class SerializingTestCompiler(Compiler):
+    def serialize(self, node):
+        if node.children:
+            content = [self.compile(child) for child in node.children]
+            return ' '.join(['(' + node.tag_name] + content) + ')'
+        else:
+            return '(' + node.tag_name + ' ' + node.content + ')'
+
+    def on_A(self, node):
+        return self.serialize(node)
+
+    def on_B(self, node):
+        return self.serialize(node)
+
+    def on_C(self, node):
+        return self.serialize(node)
+
+    def on_D(self, node):
+        return self.serialize(node)
+
+    def on_E(self, node):
+        return self.serialize(node)
+
+    def on_F(self, node):
+        return self.serialize(node)
+
+
+class TestCompilerClass:
+    def setup(self):
+        self.original = parse_sxpr('(A (B "1") (C (D (E "2") (F "3"))))')
+
+    def test_zero_compiler(self):
+        """Tests the fallback-method and boilerplate of the compiler."""
+        tree = copy.deepcopy(self.original)
+        compiler = ZeroTestCompiler()
+        tree = compiler.compile(tree)
+        assert tree.equals(self.original), tree.as_sxpr()
+
+    def test_non_Node_return_type(self):
+        """Tests a compiler that returns strings, not Nodes."""
+        tree = copy.deepcopy(self.original)
+        compiler = SerializingTestCompiler()
+        s = compiler.compile(tree)
+        assert s == "(A (B 1) (C (D (E 2) (F 3))))"
+
+    def test_fallback_failure1(self):
+        """Tests failure when leaf-node is mistakenly handled by fallback."""
+        tree = copy.deepcopy(self.original)
+        compiler = SerializingTestCompiler()
+        compiler.on_F = compiler.fallback_compiler
+        try:
+            s = compiler.compile(tree)
+            assert False, "TypeError expected"
+        except TypeError:
+            pass
+
+    def test_fallback_failure2(self):
+        """Tests failure when branch-node is mistakenly handled by fallback."""
+        tree = copy.deepcopy(self.original)
+        compiler = SerializingTestCompiler()
+        compiler.on_D = compiler.fallback_compiler
+        try:
+            s = compiler.compile(tree)
+            assert False, "TypeError expected"
+        except TypeError as e:
+            assert "DHParser.compile.Compiler.fallback_compiler()" in str(e)
+            pass
 
 
 if __name__ == "__main__":
