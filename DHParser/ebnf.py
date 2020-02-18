@@ -351,19 +351,42 @@ class EBNFDecompiler(Compiler):
         # initialize your variables here, not in the constructor!
 
     def on_syntax(self, node):
-        return self.fallback_compiler(node)
+        return '\n'.join(''.join(self.compile(child)) for child in node.children)
 
-    # def on_definition(self, node):
-    #     return node
+    def on_definition(self, node):
+        children = node.children
+        assert len(children) == 2
+        return [self.compile(children[0]), ' = ', self.compile(children[1])]
 
-    # def on_directive(self, node):
-    #     return node
+    def on_directive(self, node):
+        children = node.children
+        assert children
+        result = ['@', self.compile(children[0])]
+        if len(children) > 1:
+            result.extend([' = ', self.compile(children[1])])
+        for child in children[2:]:
+            result.extend([' , ', self.compile(child)])
+        return result
 
-    # def on_expression(self, node):
-    #     return node
+    def on_expression(self, node):
+        result = ['('] if self.context[-2].tag_name == "term" else []
+        for child in node.children:
+            result.extend(self.compile(child))
+            if result[-1] != "§":
+                result.append('|')
+        result.pop()
+        if self.context[-2].tag_name == "term":
+            result.append('(')
+        return result
 
-    # def on_term(self, node):
-    #     return node
+    def on_term(self, node):
+        result = []
+        for child in node.children:
+            result.extend(self.compile(child))
+            if result[-1] != "§":
+                result.append(' ')
+        result.pop()
+        return result
 
     def on_factor(self, node):
         return [self.compile(child) for child in node.children]
@@ -406,7 +429,7 @@ class EBNFDecompiler(Compiler):
         return [node.content]
 
     def on_plaintext(self, node):
-        return ['`' + node.content + '`']
+        return [node.content]
 
     def on_regexp(self, node):
         return [node.content]
@@ -415,7 +438,7 @@ class EBNFDecompiler(Compiler):
         return [node.content]
 
     def on_Token(self, node):
-        return ['`' + node.content + '`']
+        return [node.content]
 
     # def on_EOF(self, node):
     #     return node
@@ -522,6 +545,7 @@ class EBNFDirectives:
                 be either 'left', 'right', 'none', 'both'
 
         tokens:  set of the names of preprocessor tokens
+
         filter:  mapping of symbols to python filter functions that
                 will be called on any retrieve / pop - operations on
                 these symbols

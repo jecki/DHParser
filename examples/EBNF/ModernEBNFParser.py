@@ -76,7 +76,7 @@ class ModernEBNFGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = Drop(Whitespace(WSP_RE__))
+    dwsp__ = Whitespace(WSP_RE__)  # Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)

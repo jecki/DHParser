@@ -121,28 +121,33 @@ def get_grammar() -> ClassicEBNFGrammar:
 #######################################################################
 
 ClassicEBNF_AST_transformation_table = {
-    # AST Transformations for the ClassicEBNF-grammar
-    "<": flatten,
-    "syntax": [],
-    "definition": [],
-    "directive": [],
-    "expression": [],
-    "term": [],
-    "factor": [],
-    "flowmarker": [],
-    "retrieveop": [],
-    "group": [],
-    "unordered": [],
-    "oneormore": [],
-    "repetition": [],
-    "option": [],
-    "symbol": [],
-    "literal": [],
-    "plaintext": [],
-    "regexp": [],
-    "whitespace": [],
-    "EOF": [],
-    "*": replace_by_single_child
+    # AST Transformations for EBNF-grammar
+    "<":
+        [remove_empty],  # remove_whitespace
+    "syntax":
+        [],  # otherwise '"*": replace_by_single_child' would be applied
+    "directive, definition":
+        [flatten, remove_tokens('@', '=', ',')],
+    "expression":
+        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
+    "term":
+        [replace_by_single_child, flatten],  # supports both idioms:
+    # "{ factor }+" and "factor { factor }"
+    "factor, flowmarker, retrieveop":
+        replace_by_single_child,
+    "group":
+        [remove_brackets, replace_by_single_child],
+    "unordered":
+        remove_brackets,
+    "oneormore, repetition, option":
+        [reduce_single_child, remove_brackets,
+         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
+    "symbol, literal, regexp":
+        reduce_single_child,
+    (TOKEN_PTYPE, WHITESPACE_PTYPE):
+        reduce_single_child,
+    "*":
+        replace_by_single_child
 }
 
 
