@@ -75,7 +75,13 @@ from functools import partial
 import os
 import sys
 
-dhparser_parentdir = os.path.abspath(r'{dhparser_parentdir}')
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'{dhparser_parentdir}'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
