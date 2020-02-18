@@ -470,7 +470,7 @@ class Connection:
         lsp_initialized: A string-flag indicating that the connection to a language
                 sever via json-rpc has been established.
         lsp_shutdown: A string-flag indicating that the connection to a language server
-                via jason-rpc has been is or is being shutdown.
+                via jason-rpc has been is or is being shut down.
         log_file:  Name of the server-log. Mirrors Server.log_file
         echo_log:  If `True` log messages will be echoed to the console. Mirrors
                 Server.log_file
