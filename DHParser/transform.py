@@ -674,7 +674,7 @@ def replace_by_children(context: List[Node]):
     Eliminates the last node in the context by replacing it with its children.
     The attributes of this node will be dropped. In case the last node is
     the root-note (i.e. len(context) == 1), it will only be eliminated, if
-    there is but one child..
+    there is but one child.
     """
     try:
         parent = context[-2]
@@ -682,10 +682,10 @@ def replace_by_children(context: List[Node]):
         replace_by_single_child(context)
         return
     node = context[-1]
-    assert node.children
-    result = parent.children  # type: Tuple[Node, ...]
-    i = result.index(node)
-    parent._set_result(result[:i] + node.children + result[i + 1:])
+    if node.children:
+        result = parent.children  # type: Tuple[Node, ...]
+        i = result.index(node)
+        parent._set_result(result[:i] + node.children + result[i + 1:])
 
 
 def reduce_single_child(context: List[Node]):
@@ -869,7 +869,7 @@ def add_attributes(context: List[Node], attributes: dict):  # Dict[str, str]
     Adds the attributes in the dictionary to the XML-Attributes of the last node
     in the given context.
     """
-    context[-1].attrs.update(attributes)
+    context[-1].attr.update(attributes)
 
 
 def normalize_whitespace(context):
