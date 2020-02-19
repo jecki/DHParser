@@ -49,9 +49,11 @@ from DHParser.versionnumber import __version__
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
+           'get_ebnf_decompiler',
            'get_ebnf_compiler',
            'EBNFGrammar',
            'EBNFTransform',
+           'EBNFDecompiler',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed',
@@ -350,6 +352,11 @@ class EBNFDecompiler(Compiler):
         super().reset()
         # initialize your variables here, not in the constructor!
 
+    def on_ZOMBIE__(self, node: Node) -> str:
+        result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
+        result.extend([str(self.compile(child)) for child in node.children])
+        return '\n\n'.join(result)
+
     def on_syntax(self, node):
         return '\n'.join(''.join(self.compile(child)) for child in node.children)
 
@@ -394,8 +401,8 @@ class EBNFDecompiler(Compiler):
     def on_flowmarker(self, node):
         return [node.content]
 
-    # def on_retrieveop(self, node):
-    #     return node
+    def on_retrieveop(self, node):
+        return [node.content]
 
     def on_unordered(self, node):
         assert len(node.children) == 1
@@ -444,9 +451,13 @@ class EBNFDecompiler(Compiler):
     #     return node
 
 
-def serialize_AST_as_EBNF(ast: Node) -> str:
-    """Converts the AST generated from and EBNF-text back to EBNF."""
-    pass
+def get_ebnf_decompiler() -> EBNFGrammar:
+    try:
+        grammar = THREAD_LOCALS.ebnf_grammar_singleton
+        return grammar
+    except AttributeError:
+        THREAD_LOCALS.ebnf_grammar_singleton = EBNFDecompiler()
+        return THREAD_LOCALS.ebnf_grammar_singleton
 
 
 ########################################################################

@@ -1535,7 +1535,7 @@ class RegExp(Parser):
                 return 'whitespace__'
         except (AttributeError, NameError):
             pass
-        return escape_control_characters('/%s/' % abbreviate_middle(pattern, 120))
+        return '/' + escape_control_characters('%s' % abbreviate_middle(pattern, 118)) + '/'
 
 
 def DropToken(text: str) -> Token:

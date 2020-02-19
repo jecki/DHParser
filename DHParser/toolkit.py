@@ -165,11 +165,11 @@ def escape_re(strg: str) -> str:
 
 
 def escape_control_characters(strg: str) -> str:
+    r"""
+    Replace all control characters (e.g. `\n` `\t`) as well as the
+    forward slash `/` in a string by their backslashed representation.
     """
-    Replace all control characters (e.g. \n \t) in a string by their backslashed representation.
-    """
-
-    return repr(strg).replace('\\\\', '\\')[1:-1]
+    return repr(strg).replace('\\\\', '\\').replace('/', '\\/')[1:-1]
 
 
 def lstrip_docstring(docstring: str) -> str:
