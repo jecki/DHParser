@@ -33,7 +33,7 @@ from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+    EBNFDirectives, get_ebnf_decompiler, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import CompilationError, compileDSL, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
@@ -784,6 +784,78 @@ class TestAllOfResume:
         assert len(st.errors_sorted) == 2
         st = gr('EXY EXYZ.')
         assert len(st.errors_sorted) == 1
+
+
+EBNF = r"""
+# EBNF-Grammar in EBNF
+
+@ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+@ whitespace = /\s*/                            # whitespace includes linefeed
+@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+@ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+ 
+#: top-level
+
+syntax     = [~//] { definition | directive } §EOF
+definition = symbol §"=" expression
+directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
+
+#: components
+
+expression = term { "|" term }
+term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+           | [flowmarker] literal
+           | [flowmarker] plaintext
+           | [flowmarker] regexp
+           | [flowmarker] whitespace
+           | [flowmarker] oneormore
+           | [flowmarker] group
+           | [flowmarker] unordered
+           | repetition
+           | option
+
+#: flow-operators
+
+flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+           | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+
+#: groups
+
+group      = "(" §expression ")"
+unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+oneormore  = "{" expression "}+"
+repetition = "{" §expression "}"
+option     = "[" §expression "]"
+
+#: leaf-elements
+
+symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+           | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+whitespace = /~/~                               # insignificant whitespace
+
+EOF = !/./
+"""
+
+
+class TestEBNFDecompile:
+    def test_sameflavor(self):
+        """Check if compiling a decompiled AST yields the same AST."""
+        grammar = get_ebnf_grammar()
+        transform = get_ebnf_transformer()
+        decompile = get_ebnf_decompiler()
+        st1 = grammar(EBNF)
+        transform(st1)
+        decompiled_EBNF = decompile(st1)
+        st2 = grammar(decompiled_EBNF)
+        assert st2.error_flag == 0
+        transform(st2)
+        assert st1.equals(st2)
+
 
 
 if __name__ == "__main__":

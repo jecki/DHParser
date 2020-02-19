@@ -363,16 +363,16 @@ class EBNFDecompiler(Compiler):
     def on_definition(self, node):
         children = node.children
         assert len(children) == 2
-        return [self.compile(children[0]), ' = ', self.compile(children[1])]
+        return self.compile(children[0]) + [' = '] + self.compile(children[1])
 
     def on_directive(self, node):
         children = node.children
         assert children
-        result = ['@', self.compile(children[0])]
+        result = ['@'] + self.compile(children[0])
         if len(children) > 1:
-            result.extend([' = ', self.compile(children[1])])
+            result.extend([' = '] + self.compile(children[1]))
         for child in children[2:]:
-            result.extend([' , ', self.compile(child)])
+            result.extend([' , '] + self.compile(child))
         return result
 
     def on_expression(self, node):
@@ -383,7 +383,7 @@ class EBNFDecompiler(Compiler):
                 result.append('|')
         result.pop()
         if self.context[-2].tag_name == "term":
-            result.append('(')
+            result.append(')')
         return result
 
     def on_term(self, node):
@@ -396,7 +396,10 @@ class EBNFDecompiler(Compiler):
         return result
 
     def on_factor(self, node):
-        return [self.compile(child) for child in node.children]
+        result = []
+        for child in node.children:
+            result.extend(self.compile(child))
+        return result
 
     def on_flowmarker(self, node):
         return [node.content]
@@ -426,9 +429,6 @@ class EBNFDecompiler(Compiler):
     # def on_element(self, node):
     #     return node
 
-    # def on_group(self, node):
-    #     return node
-
     def on_symbol(self, node):
         return [node.content]
 
@@ -447,17 +447,14 @@ class EBNFDecompiler(Compiler):
     def on_Token(self, node):
         return [node.content]
 
-    # def on_EOF(self, node):
-    #     return node
-
 
 def get_ebnf_decompiler() -> EBNFGrammar:
     try:
-        grammar = THREAD_LOCALS.ebnf_grammar_singleton
-        return grammar
+        decompiler = THREAD_LOCALS.ebnf_decompiler_singleton  # type: EBNFDecompiler
+        return decompiler
     except AttributeError:
-        THREAD_LOCALS.ebnf_grammar_singleton = EBNFDecompiler()
-        return THREAD_LOCALS.ebnf_grammar_singleton
+        THREAD_LOCALS.ebnf_decompiler_singleton = EBNFDecompiler()
+        return THREAD_LOCALS.ebnf_decompiler_singleton
 
 
 ########################################################################
