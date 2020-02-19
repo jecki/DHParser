@@ -352,6 +352,11 @@ class EBNFDecompiler(Compiler):
         super().reset()
         # initialize your variables here, not in the constructor!
 
+    def fallback_compiler(self, node: Node) -> Any:
+        """Fallback for flowmarker, retrieveop, symbol, literal, plaintest,
+        regexp, whitespace and Token."""
+        return [node.content]
+
     def on_ZOMBIE__(self, node: Node) -> str:
         result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
         result.extend([str(self.compile(child)) for child in node.children])
@@ -380,7 +385,7 @@ class EBNFDecompiler(Compiler):
         for child in node.children:
             result.extend(self.compile(child))
             if result[-1] != "§":
-                result.append('|')
+                result.append(' | ')
         result.pop()
         if self.context[-2].tag_name == "term":
             result.append(')')
@@ -400,12 +405,6 @@ class EBNFDecompiler(Compiler):
         for child in node.children:
             result.extend(self.compile(child))
         return result
-
-    def on_flowmarker(self, node):
-        return [node.content]
-
-    def on_retrieveop(self, node):
-        return [node.content]
 
     def on_unordered(self, node):
         assert len(node.children) == 1
@@ -428,24 +427,6 @@ class EBNFDecompiler(Compiler):
 
     # def on_element(self, node):
     #     return node
-
-    def on_symbol(self, node):
-        return [node.content]
-
-    def on_literal(self, node):
-        return [node.content]
-
-    def on_plaintext(self, node):
-        return [node.content]
-
-    def on_regexp(self, node):
-        return [node.content]
-
-    def on_whitespace(self, node):
-        return [node.content]
-
-    def on_Token(self, node):
-        return [node.content]
 
 
 def get_ebnf_decompiler() -> EBNFGrammar:
