@@ -285,6 +285,19 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
     raise ValueError('Could not compile grammar provider!')
 
 
+def split_source(file_name: str, file_content: str) -> Tuple[str]:
+    """Splits the `file_content` into the seven sections: intro, imports,
+    preprocessor_py, parser_py, ast_py, compiler_py, outro.
+    Raises a value error, if the number of sections if not equal to 7.
+    """
+    sections = RX_SECTION_MARKER.split(file_content)
+    ls = len(sections)
+    if ls != 7:
+        raise ValueError('File "%s" contains %i instead of 7 sections. Please '
+                         'delete or repair file manually.' % (file_name, ls))
+    return sections
+
+
 def load_compiler_suite(compiler_suite: str) -> \
         Tuple[PreprocessorFactoryFunc, ParserFactoryFunc,
               TransformerFactoryFunc, CompilerFactoryFunc]:
@@ -302,12 +315,8 @@ def load_compiler_suite(compiler_suite: str) -> \
     dhpath = relative_path(os.path.dirname('.'), DHPARSER_PARENTDIR)
     imports = DHPARSER_IMPORTS.format(dhparser_parentdir = dhpath)
     if is_python_code(compiler_suite):
-        try:
-            _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = \
-                RX_SECTION_MARKER.split(source)
-        except ValueError:
-            raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
-                             'Please delete or repair file manually.')
+        sections = split_source(compiler_suite, source)
+        _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
         # TODO: Compile in one step and pick parts from namespace later ?
         preprocessor = compile_python_object(imports + preprocessor_py,
                                              r'get_(?:\w+_)?preprocessor$')
@@ -448,11 +457,12 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             DHPARSER_MAIN
         f = None
         try:
-            f = open(rootname + 'Parser.py', 'r', encoding="utf-8")
+            parser_name = rootname + 'Parser.py'
+            f = open(parser_name, 'r', encoding="utf-8")
             source = f.read()
-            sections = RX_SECTION_MARKER.split(source)
+            sections = split_source(parser_name, source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
-            ast_trans_python_src = DHPARSER_IMPORTS.format(dhparser_parentdir = dhpath) + ast
+            ast_trans_python_src = DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath) + ast
             ast_trans_table = dict()  # type: TransformationDict
             try:
                 ast_trans_table = compile_python_object(ast_trans_python_src,
@@ -474,10 +484,6 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             # TODO: Verify compiler
         except (PermissionError, FileNotFoundError, IOError):
             intro, imports, preprocessor, _, ast, compiler, outro = '', '', '', '', '', '', ''
-        except ValueError:
-            name = '"' + rootname + 'Parser.py"'
-            raise ValueError('Could not identify all required sections in ' + name
-                             + '. Please delete or repair ' + name + ' manually!')
         finally:
             if f:
                 f.close()

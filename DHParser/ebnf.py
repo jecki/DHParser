@@ -451,12 +451,14 @@ TransformerFactoryFunc = Callable[[], TransformationFunc]
 CompilerFactoryFunc = Callable[[], Compiler]
 
 PREPROCESSOR_FACTORY = '''
+
 def get_preprocessor() -> PreprocessorFunc:
     return {NAME}Preprocessor
 '''
 
 
 GRAMMAR_FACTORY = '''
+
 def get_grammar() -> {NAME}Grammar:
     """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -476,10 +478,12 @@ def get_grammar() -> {NAME}Grammar:
 
 
 TRANSFORMER_FACTORY = '''
+
 def Create{NAME}Transformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
+
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
@@ -494,6 +498,7 @@ def get_transformer() -> TransformationFunc:
 
 
 COMPILER_FACTORY = '''
+
 def get_compiler() -> {NAME}Compiler:
     """Returns a thread/process-exclusive {NAME}Compiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
