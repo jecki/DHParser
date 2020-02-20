@@ -69,6 +69,7 @@ __all__ = ('TransformationDict',
            'add_attributes',
            'normalize_whitespace',
            'merge_adjacent',
+           'merge_connected',
            'merge_results',
            'move_adjacent',
            'left_associative',
@@ -889,7 +890,7 @@ def normalize_whitespace(context):
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_adjacent(context, condition: Callable, tag_name: str = ''):
+def merge_adjacent(context: List[Node], condition: Callable, tag_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
@@ -912,10 +913,59 @@ def merge_adjacent(context, condition: Callable, tag_name: str = ''):
                     adjacent = children[k:i]
                     head = adjacent[0]
                     tag_names = {nd.tag_name for nd in adjacent}
-                    # TODO: update attributes
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    for nd in adjacent[1:]:
+                        update_attr(head, nd)
                     if tag_name in tag_names:
                         head.tag_name = tag_name
+                    new_result.append(head)
+            else:
+                new_result.append(children[i])
+                i += 1
+        node._set_result(tuple(new_result))
+
+
+@transformation_factory(collections.abc.Callable)
+def merge_connected(context: List[Node], content: Callable, delimiter: Callable,
+                    content_name: str = '', delimiter_name: str = ''):
+    """
+    Merges sequences of content and delimiters. Other than `merge_adjacent()`, which
+    does not this distinction, delimiters at the fringe of content blocks are not
+    included in the merge.
+    :param context:     The context, i.e. list of "ancestor" nodes, rangeing from the
+            root node (`context[0]`) to the current node (`context[-1]`)
+    :param content:     Condition to identify content nodes. (List[Node] -> bool)
+    :param delimiter:   Condition to identify delimiter nodes. (List[Node] -> bool)
+    :param content_name:    tag name for the merged content blocks
+    :param delimiter_name:  tag name for the merged delimiters at the fringe
+    :return:
+    """
+    # first, merge all delimiters
+    merge_adjacent(context, delimiter, delimiter_name)
+    node = context[-1]
+    children = node.children
+    if children:
+        new_result = []
+        i = 0
+        L = len(children)
+        while i < L:
+            if content([children[i]]):
+                initial = () if children[i].children else ''
+                k = i
+                i += 1
+                while i < L and (content([children[i]]) or delimiter([children[i]])):
+                    i += 1
+                if delimiter([children[i-1]]):
+                    i -= 1
+                if i > k:
+                    adjacent = children[k:i]
+                    head = adjacent[0]
+                    tag_names = {nd.tag_name for nd in adjacent}
+                    head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    for nd in adjacent[1:]:
+                        update_attr(head, nd)
+                    if content_name in tag_names:
+                        head.tag_name = content_name
                     new_result.append(head)
             else:
                 new_result.append(children[i])
