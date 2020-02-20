@@ -226,12 +226,12 @@ class TestNode:
     def test_select_context(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
-        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+        for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
                                           include_root=True, reverse=False):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['ad', 'af', 'afg']
         contexts = []
-        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+        for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
                                           include_root=True, reverse=True):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']

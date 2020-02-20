@@ -144,18 +144,36 @@ ALL_NODES = lambda nd: True
 
 def create_match_function(criterion: CriteriaType) -> Callable:
     """
-    Returns a valid match function (Node -> bool) for the given criterion.
-    Match functions are used to find an select particular nodes from a
+    Returns a valid match-function (Node -> bool) for the given criterion.
+    Match-functions are used to find an select particular nodes from a
     tree of nodes.
     """
     if isinstance(criterion, Node):
-        return lambda nd: nd == criterion
+        return lambda nd: nd.equals(criterion)
     elif isinstance(criterion, str):
         return lambda nd: nd.tag_name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in criterion
+    raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
+
+
+def create_context_match_function(criterion: CriteriaType) -> Callable:
+    """
+    Returns a valid context-match-function (List[Node] -> bool) for the
+    given criterion. Context-match-functions are used to find and select
+    particular contexts (lists of ancestors up to and including a particular
+    node) from a tree of nodes.
+    """
+    if isinstance(criterion, Node):
+        return lambda ctx: ctx[-1].equals(criterion)
+    elif isinstance(criterion, str):
+        return lambda ctx: ctx[-1].tag_name == criterion
+    elif callable(criterion):
+        return cast(Callable, criterion)
+    elif isinstance(criterion, Container):
+        return lambda ctx: ctx[-1].tag_name in criterion
     raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
 
 
@@ -803,21 +821,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_context_if(self, match_function: Callable,
                           include_root: bool = False,
-                          reverse: bool = False) -> Iterator[List['Node']]:
+                          reverse: bool = False,
+                          parent_context=[]) -> Iterator[List['Node']]:
         """
         Like `Node.select_if()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
-        the matching nodes.
+        the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
+        receives the complete context as argument, rather than just the last node!
         """
-        if include_root and match_function(self):
-            yield [self]
+        context = parent_context + [self]
+        if include_root and match_function(context):
+            yield context
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
-            if match_function(child):
-                yield [self, child]
+            child_context = context + [child]
+            if match_function(child_context):
+                yield child_context
             if child.children:
-                for context in child.select_context_if(match_function, False, reverse):
-                    yield [self] + context
+                for matched in child.select_context_if(match_function, False, reverse, context):
+                    yield matched
 
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
@@ -847,7 +869,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         relative to `self` is returned.
         """
         end = 0
-        for ctx in self.select_context_if(lambda nd: not nd.children, include_root=True):
+        for ctx in self.select_context_if(lambda ctx: not ctx[-1].children, include_root=True):
             end = end + len(ctx[-1])
             if location < end:
                 return ctx
