@@ -62,6 +62,7 @@ __all__ = ('TransformationDict',
            'reduce_single_child',
            'replace_or_reduce',
            'change_tag_name',
+           'replace_tag_names',
            'collapse',
            'collapse_children_if',
            'replace_content',
@@ -721,7 +722,7 @@ def replace_or_reduce(context: List[Node], condition: Callable = is_named):
 @transformation_factory(str)
 def change_tag_name(context: List[Node], tag_name: str, restriction: Callable = always):
     """
-    Changes the tag name of a node.
+    Changes the tag name of the last node in the context.
 
     Parameters:
         restriction: A function of the context that returns False in cases
@@ -732,6 +733,20 @@ def change_tag_name(context: List[Node], tag_name: str, restriction: Callable = 
     if restriction(context):
         node = context[-1]
         node.tag_name = tag_name
+
+
+@transformation_factory(dict)
+def replace_tag_names(context: List[Node], replacements: Dict[str, str]):
+    """
+    Replaces the tag names of the children of the last node in the context
+    according to the raplcement dictionary.
+    :param context:      The current context (i.e. list of ancestors and current node)
+    :param replacements: A dictionary of tag_name. Each tag name of a child node that
+                         exists as a key in the dictionary will be replaces by the
+                         value for that key.
+    """
+    for child in context[-1].children:
+        child.tag_name = replacements.get(child.tag_name, child.tag_name)
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1305,7 +1320,8 @@ def node_maker(tag_name: str,
     """
     Returns a parameter-free function that upon calling returns a freshly
     instantiated node with the given result, where `result` can again
-    contain recursively nested node-factory functions in place of Nodes.
+    contain recursively nested node-factory functions which will be
+    evaluated before instantiating the node.
 
     Example:
         >>> factory = node_maker('d', (node_maker('c', ','), node_maker('l', ' ')))

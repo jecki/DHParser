@@ -441,12 +441,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         ast_errors.append('\n')
                         errata.append('\t' + '\n\t'.join(
                             str(msg).replace('\n', '\n\t\t') for msg in ast_errors))
-                    else:
-                        errata.append('Match test "%s" for parser "%s" failed:'
-                                      '\n\tExpr.:  %s\n\n\t%s\n\n' %
-                                      (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                       '\n\t'.join(
-                                           str(m).replace('\n', '\n\t\t') for m in ast_errors)))
+                    # else:  # should not be reported, because AST can be tested independently!!!
+                    #     errata.append('Match test "%s" for parser "%s" failed on AST:'
+                    #                   '\n\tExpr.:  %s\n\n\t%s\n\n' %
+                    #                   (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
+                    #                    '\n\t'.join(
+                    #                        str(m).replace('\n', '\n\t\t') for m in ast_errors)))
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
