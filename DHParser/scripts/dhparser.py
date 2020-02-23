@@ -36,7 +36,8 @@ else:
 templatedir = os.path.join(os.path.dirname(scriptdir.rstrip('/')), 'templates')
 
 from DHParser.compile import compile_source
-from DHParser.dsl import compileDSL, compile_on_disk  # , recompile_grammar
+from DHParser.dsl import compileDSL, compile_on_disk
+from DHParser.error import is_error
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import start_logging
 from DHParser.toolkit import re
@@ -193,21 +194,43 @@ def main():
                 print("Selftest FAILED :-(\n")
                 sys.exit(1)
             print("Selftest SUCCEEDED :-)\n")
-        elif os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
-            _errors = compile_on_disk(sys.argv[1],
-                                      sys.argv[2] if len(sys.argv) > 2 else "")
-            if _errors:
-                print('\n\n'.join(str(err) for err in _errors))
-                sys.exit(1)
         else:
-            create_project(sys.argv[1])
+            if sys.argv[1].lower() in ('-ast', '--ast'):
+                try:
+                    with open(sys.argv[2], 'r', encoding='utf-8') as f:
+                        ebnf = f.read()
+                    syntax_tree = get_ebnf_grammar()(ebnf)
+                    if is_error(syntax_tree.error_flag):
+                        print('\n\n'.join(str(err) for err in syntax_tree.errors_sorted))
+                        sys.exit(1)
+                    get_ebnf_transformer()(syntax_tree)
+                    if is_error(syntax_tree.error_flag):
+                        print('\n\n'.join(str(err) for err in syntax_tree.errors_sorted))
+                        sys.exit(1)
+                    print(syntax_tree.as_sxpr(compact=True))
+                except IndexError:
+                    print("Usage:  dhparser.py -ast FILENAME.ebnf")
+                    sys.exit(1)
+                except FileNotFoundError:
+                    print('File "%s" not found!' % sys.arg[2])
+                    sys.exit(1)
+                except IOError as e:
+                    print('Could not read file "%s": %s' % (sys.argv[2], str(e)))
+            elif os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
+                _errors = compile_on_disk(sys.argv[1])
+                if _errors:
+                    print('\n\n'.join(str(err) for err in _errors))
+                    sys.exit(1)
+            else:
+                create_project(sys.argv[1])
     else:
         print('Usage: \n'
-              '    dhparser.py DSL_FILENAME [COMPILER]  - to compile a file\n'
-              '    dhparser.py PROJECTNAME  - to create a new project\n\n')
-        choice = input('Would you now like to ...\n'
+              '    dhparser.py PROJECTNAME  - to create a new project\n'
+              '    dhparser.py FILENAME.ebnf  - to produce a python-parser from an EBNF-grammar\n'
+              '    dhparser.py --selftest  - to run a self-test\n')
+        choice = input('\nWould you now like to ...\n'
                        '  [1] create a new project\n'
-                       '  [2] compile an ebnf-grammar or a dsl-file\n'
+                       '  [2] compile an ebnf-grammar\n'
                        '  [3] run a self-test\n'
                        '  [q] to quit\n'
                        'Please chose 1, 2 or 3> ')
@@ -217,15 +240,10 @@ def main():
         elif choice.strip() == '2':
             file_path = input('Please enter a file path for compilation > ')
             if os.path.exists(file_path) and os.path.isfile(file_path):
-                compiler_suite = input('Compiler suite or ENTER (for ebnf) > ')
-                if not compiler_suite or (os.path.exists(compiler_suite)
-                                          and os.path.isfile(compiler_suite)):
-                    _errors = compile_on_disk(file_path, compiler_suite)
-                    if _errors:
-                        print('\n\n'.join(str(err) for err in _errors))
-                        sys.exit(1)
-                else:
-                    print('Compiler suite %s not found! Aborting' % compiler_suite)
+                _errors = compile_on_disk(file_path)
+                if _errors:
+                    print('\n\n'.join(str(err) for err in _errors))
+                    sys.exit(1)
             else:
                 print('File %s not found! Aborting.' % file_path)
                 sys.exit(1)
