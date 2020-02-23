@@ -256,68 +256,69 @@ class TestCompilerErrors:
         assert not bool(messages), messages
 
 
+EBNF = r"""
+    # EBNF-Grammar in EBNF
+
+    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace = /\s*/                            # whitespace includes linefeed
+    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+    @ drop       = whitespace                       # no whitespace in concrete syntax tree
+
+    syntax     = [~//] { definition | directive } §EOF
+    definition = symbol §"=" expression
+    directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
+
+    expression = term { "|" term }
+    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+               | [flowmarker] literal
+               | [flowmarker] plaintext
+               | [flowmarker] regexp
+               | [flowmarker] whitespace
+               | [flowmarker] oneormore
+               | [flowmarker] group
+               | [flowmarker] unordered
+               | repetition
+               | option
+
+    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+
+    group      = "(" §expression ")"
+    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
+    oneormore  = "{" expression "}+"
+    repetition = "{" §expression "}"
+    option     = "[" §expression "]"
+
+    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
+               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
+    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
+    regexp     = /\/(?:\\(?:\/)|[^\/])*?\//~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    whitespace = /~/~                               # insignificant whitespace
+
+    EOF = !/./
+    """
+
+
 class TestSelfHosting:
-    grammar = r"""
-        # EBNF-Grammar in EBNF
-
-        @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-        @ whitespace = /\s*/                            # whitespace includes linefeed
-        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ drop       = whitespace                       # no whitespace in concrete syntax tree
-        
-        syntax     = [~//] { definition | directive } §EOF
-        definition = symbol §"=" expression
-        directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
-        
-        expression = term { "|" term }
-        term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-        factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-                   | [flowmarker] literal
-                   | [flowmarker] plaintext
-                   | [flowmarker] regexp
-                   | [flowmarker] whitespace
-                   | [flowmarker] oneormore
-                   | [flowmarker] group
-                   | [flowmarker] unordered
-                   | repetition
-                   | option
-        
-        flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-                   | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-        retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
-        
-        group      = "(" §expression ")"
-        unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-        oneormore  = "{" expression "}+"
-        repetition = "{" §expression "}"
-        option     = "[" §expression "]"
-        
-        symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-        literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                   | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-        plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-        regexp     = /\/(?:\\(?:\/)|[^\/])*?\//~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-        whitespace = /~/~                               # insignificant whitespace
-        
-        EOF = !/./
-        """
-
     def test_self(self):
         compiler_name = "EBNF"
-        compiler = get_ebnf_compiler(compiler_name, self.grammar)
+        compiler = get_ebnf_compiler(compiler_name, EBNF)
         parser = get_ebnf_grammar()
-        result, errors, syntax_tree = compile_source(self.grammar, None, parser,
+        result, errors, syntax_tree = compile_source(EBNF, None, parser,
                                             get_ebnf_transformer(), compiler)
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
-        compileDSL(self.grammar, nil_preprocessor, result, get_ebnf_transformer(), compiler)
+        compileDSL(EBNF, nil_preprocessor, result, get_ebnf_transformer(), compiler)
 
     def multiprocessing_task(self):
         compiler_name = "EBNF"
-        compiler = get_ebnf_compiler(compiler_name, self.grammar)
+        compiler = get_ebnf_compiler(compiler_name, EBNF)
         parser = get_ebnf_grammar()
-        result, errors, syntax_tree = compile_source(self.grammar, None, parser,
+        result, errors, syntax_tree = compile_source(EBNF, None, parser,
                                             get_ebnf_transformer(), compiler)
         return errors
 
@@ -782,62 +783,6 @@ class TestAllOfResume:
         assert len(st.errors_sorted) == 2
         st = gr('EXY EXYZ.')
         assert len(st.errors_sorted) == 1
-
-
-EBNF = r"""
-# EBNF-Grammar in EBNF
-
-@ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-@ whitespace = /\s*/                            # whitespace includes linefeed
-@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ drop       = whitespace                       # do not include whitespace in concrete syntax tree
- 
-#: top-level
-
-syntax     = [~//] { definition | directive } §EOF
-definition = symbol §"=" expression
-directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
-
-#: components
-
-expression = term { "|" term }
-term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-           | [flowmarker] literal
-           | [flowmarker] plaintext
-           | [flowmarker] regexp
-           | [flowmarker] whitespace
-           | [flowmarker] oneormore
-           | [flowmarker] group
-           | [flowmarker] unordered
-           | repetition
-           | option
-
-#: flow-operators
-
-flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-           | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
-
-#: groups
-
-group      = "(" §expression ")"
-unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-oneormore  = "{" expression "}+"
-repetition = "{" §expression "}"
-option     = "[" §expression "]"
-
-#: leaf-elements
-
-symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
-           | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
-plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
-regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-whitespace = /~/~                               # insignificant whitespace
-
-EOF = !/./
-"""
 
 
 class TestEBNFDecompile:

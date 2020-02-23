@@ -1319,12 +1319,9 @@ class Grammar:
 
     def as_ebnf(self) -> str:
         """
-        EXPERIMENTAL. Does not yet support serialization of DHParser- directives.
-
         Serializes the Grammar object as a grammar-description in the
-        Extended Backus-Naur-Form.
+        Extended Backus-Naur-Form. Does not serialize directives!
         """
-        ebnf = []
         for entry, parser in self.__dict__.items():
             if isinstance(parser, Parser) and sane_parser_name(entry):
                 ebnf.append(str(parser))
