@@ -1320,11 +1320,16 @@ class Grammar:
     def as_ebnf(self) -> str:
         """
         Serializes the Grammar object as a grammar-description in the
-        Extended Backus-Naur-Form. Does not serialize directives!
+        Extended Backus-Naur-Form. Does not serialize directives and
+        may contain abbreviations with three dots " ... " for very long
+        expressions.
         """
+        ebnf = ['# This grammar does not include any of the DHParser-specific ',
+                '# directives and may contain abbreviations ("...")!', '']
         for entry, parser in self.__dict__.items():
             if isinstance(parser, Parser) and sane_parser_name(entry):
                 ebnf.append(str(parser))
+        ebnf.append('')
         return '\n'.join(ebnf)
 
 

@@ -50,6 +50,7 @@ class TestWhitespace:
     def test_non_empty_derivation(self):
         pass
 
+
 class TestParserError:
     def test_parser_error_str(self):
         pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), None, True)
@@ -475,7 +476,8 @@ class TestSeries:
     def test_ebnf_serialization(self):
         ebnf_grammar = get_ebnf_grammar()
         # TODO: Add test here
-        # print(ebnf_grammar.as_ebnf())
+        ebnf = ebnf_grammar.as_ebnf()
+        print(ebnf)
 
 
 
