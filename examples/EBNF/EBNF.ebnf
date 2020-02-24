@@ -4,7 +4,7 @@
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
- 
+
 #: top-level
 
 syntax     = [~//] { definition | directive } §EOF

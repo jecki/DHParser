@@ -477,7 +477,7 @@ class TestSeries:
         ebnf_grammar = get_ebnf_grammar()
         # TODO: Add test here
         ebnf = ebnf_grammar.as_ebnf()
-        print(ebnf)
+        # print(ebnf)
 
 
 

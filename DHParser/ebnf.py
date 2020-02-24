@@ -555,15 +555,16 @@ class EBNFDirectives:
         skip:  mapping of symbols to a list of search expressions. A
                 search expressions can be either a string ot a regular
                 expression. The closest match is the point of reentry
-                for the series-parser when a mandatory item failed to
-                match the following text.
+                for the series- or allof-parser when a mandatory item
+                failed to match the following text.
 
         resume:  mapping of symbols to a list of search expressions. A
                 search expressions can be either a string ot a regular
                 expression. The closest match is the point of reentry
                 for after a parsing error has error occurred. Other
                 than the skip field, this configures resuming after
-                the failing parser has returned.
+                the failing parser (`parser.Series` or `parser.AllOf`)
+                has returned.
 
         drop:   A set that may contain the elements `DROP_TOKEN` and
                 `DROP_WSP', 'DROP_REGEXP' or any name of a symbol
@@ -724,7 +725,7 @@ class EBNFCompiler(Compiler):
     WHITESPACE_PARSER_KEYWORD = "wsp__"
     DROP_WHITESPACE_PARSER_KEYWORD = "dwsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
-    SKIP_RULES_SUFFIX = '_skip__'
+    SKIP_RULES_KEYWORD = 'skip_rules__'
     ERR_MSG_SUFFIX = '_err_msg__'
     COMMENT_OR_WHITESPACE = {COMMENT_PARSER_KEYWORD, DROP_COMMENT_PARSER_KEYWORD,
                              RAW_WS_PARSER_KEYWORD, DROP_RAW_WS_PARSER_KEYWORD,
@@ -994,7 +995,7 @@ class EBNFCompiler(Compiler):
 
         resume_rules = dict()  # type: Dict[str, List[ReprType]]
         for symbol, raw_rules in self.directives.resume.items():
-            refined_rules = []
+            refined_rules = []  # type: List[ReprType]
             for rule in raw_rules:
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
                     try:
@@ -1047,8 +1048,9 @@ class EBNFCompiler(Compiler):
 
         # prepare and add skip-rules
 
+        skip_rules = dict()  # # type: Dict[str, List[ReprType]]
         for symbol, skip in self.directives.skip.items():
-            skip_rules = []  # type: List[ReprType]
+            rules = []  # type: List[ReprType]
             for search in skip:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1056,8 +1058,9 @@ class EBNFCompiler(Compiler):
                         search = self._gen_search_rule(nd)
                     except IndexError:
                         search = ''
-                skip_rules.append(search)
-            definitions.append((symbol + self.SKIP_RULES_SUFFIX, repr(skip_rules)))
+                rules.append(search)
+            skip_rules[symbol] = rules
+        definitions.append((self.SKIP_RULES_KEYWORD, repr(skip_rules)))
 
         for symbol in self.directives.skip.keys():
             if symbol not in self.consumed_skip_rules:
@@ -1445,7 +1448,9 @@ class EBNFCompiler(Compiler):
                         Error.AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
-                    custom_args.append('skip=' + current_symbol + self.SKIP_RULES_SUFFIX)
+                    custom_args.append('skip={skip_rules_name}["{symbol}"]'
+                                       .format(skip_rules_name=self.SKIP_RULES_KEYWORD,
+                                               symbol=current_symbol))
                     self.consumed_skip_rules.add(current_symbol)
         return tuple(filtered_children), custom_args
 
