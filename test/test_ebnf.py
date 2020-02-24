@@ -268,8 +268,8 @@ EBNF = r"""
     definition = symbol §"=" expression
     directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
 
-    expression = term { "|" term }
-    term       = { ["§"] factor }+                       # "§" means all following factors mandatory
+    expression = sequence { "|" sequence }
+    sequence       = { ["§"] factor }+                       # "§" means all following factors mandatory
     factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
                | [flowmarker] literal
                | [flowmarker] plaintext

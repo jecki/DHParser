@@ -158,8 +158,8 @@ class EBNFGrammar(Grammar):
 
     #: components
 
-    expression = term { "|" term }
-    term       = { ["§"] factor }+          # "§" means all following factors mandatory
+    expression = sequence { "|" sequence }
+    sequence       = { ["§"] factor }+          # "§" means all following factors mandatory
     # negative lookahead !"=" to be sure it's not a definition
     factor     = [flowmarker] [retrieveop] symbol !"="
                | [flowmarker] literal
@@ -231,8 +231,8 @@ class EBNFGrammar(Grammar):
                          Series(Option(flowmarker), oneormore),
                          Series(Option(flowmarker), group),
                          Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), wsp__), term))))
+    sequence = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
+    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), wsp__), sequence))))
     directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
                        Alternative(regexp, literal, symbol),
                        ZeroOrMore(Series(Series(Token(","), wsp__),
@@ -301,7 +301,7 @@ EBNF_AST_transformation_table = {
         [flatten, remove_tokens('@', '=', ',')],
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
-    "term":
+    "sequence":
         [replace_by_single_child, flatten],  # supports both idioms:
                                              # "{ factor }+" and "factor { factor }"
     "factor, flowmarker, retrieveop":
@@ -381,17 +381,17 @@ class EBNFDecompiler(Compiler):
         return result
 
     def on_expression(self, node):
-        result = ['('] if self.context[-2].tag_name == "term" else []
+        result = ['('] if self.context[-2].tag_name == "sequence" else []
         for child in node.children:
             result.extend(self.compile(child))
             if result[-1] != "§":
                 result.append(' | ')
         result.pop()
-        if self.context[-2].tag_name == "term":
+        if self.context[-2].tag_name == "sequence":
             result.append(')')
         return result
 
-    def on_term(self, node):
+    def on_sequence(self, node):
         result = []
         for child in node.children:
             result.extend(self.compile(child))
@@ -1479,7 +1479,7 @@ class EBNFCompiler(Compiler):
         return tuple(filtered_children), custom_args
 
 
-    def on_term(self, node) -> str:
+    def on_sequence(self, node) -> str:
         filtered_result, custom_args = self._error_customization(node)
         mock_node = Node(node.tag_name, filtered_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
@@ -1565,7 +1565,7 @@ class EBNFCompiler(Compiler):
         # return self.non_terminal(node, 'Unordered')
         assert len(node.children) == 1
         nd = node.children[0]
-        if nd.tag_name == "term":
+        if nd.tag_name == "sequence":
             filtered_result, custom_args = self._error_customization(nd)
             mock_node = Node(nd.tag_name, filtered_result)
             return self.non_terminal(mock_node, 'AllOf', custom_args)
