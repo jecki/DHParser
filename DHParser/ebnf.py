@@ -957,15 +957,15 @@ class EBNFCompiler(Compiler):
             """Pretty-print skip- and resume-rule and error-messages dictionaries
             to avoid excessively long lines in the generated python source."""
             assert ruleset
-            indent = "\n" + " " * (len(rule_name) + 8)
+            indent = ",\n" + " " * (len(rule_name) + 8)
             rule_repr = []
             for k, v in ruleset.items():
                 if len(v) > 1:
-                    delimiter = ', ' + indent + ' ' * (len(k) + 5)
+                    delimiter = indent + ' ' * (len(k) + 5)
                     val = '[' + delimiter.join(str(it) for it in v) + ']'
                 else:
                     val = v
-                rule_repr.append("'{key}': {value},".format(key=k, value=str(val)))
+                rule_repr.append("'{key}': {value}".format(key=k, value=str(val)))
             rule_repr[0] = '{' + rule_repr[0]
             rule_repr[-1] = rule_repr[-1] + '}'
             return rule_name, indent.join(rule_repr)
